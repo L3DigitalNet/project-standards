@@ -1,8 +1,21 @@
 """Tests for the Markdown frontmatter validator.
 
-The 15 numbered cases map directly to the test requirements in the standard's
-implementation spec. Cases 1-14 exercise schema behaviour through `validate_file`;
-case 15 exercises config include/exclude resolution through `main`.
+See ``tests/README.md`` for the testing strategy these cases implement.
+
+Organisation (the three layers from the strategy doc):
+
+  * Numbered cases 1-15 — the original spec-mapped schema/config cases. Cases 1-14
+    exercise schema behaviour through ``validate_file``; case 15 covers config
+    include/exclude resolution through ``main``.
+  * "Unit" section — pure helpers in isolation (``parse_frontmatter``,
+    ``_coerce_dates``, ``resolve_schema_path``, ``find_bundled_schema``,
+    ``load_config``) including their malformed-input fallbacks.
+  * "Integration" section — the ``main`` CLI exit-code contract (0/1/2) and flags.
+  * "Contract / dogfood" section — the shipped ``examples/`` and bundled schema.
+
+Exit-code contract for ``validate-frontmatter`` (asserted in the Integration section):
+  0 = all matched files valid (or nothing matched); 1 = validation errors;
+  2 = operator error (schema missing / unreadable / not a valid JSON Schema).
 """
 
 from __future__ import annotations
@@ -16,7 +29,15 @@ import pytest
 import yaml
 from jsonschema import Draft202012Validator
 
-from tools.validate_frontmatter import main, validate_file
+from tools.validate_frontmatter import (
+    collect_paths,
+    find_bundled_schema,
+    load_config,
+    main,
+    parse_frontmatter,
+    resolve_schema_path,
+    validate_file,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = _REPO_ROOT / "schemas" / "markdown-frontmatter.schema.json"
@@ -217,8 +238,6 @@ def test_exclude_dir_glob_matches_nested_files(
     <=3.12, so glob-based exclusion silently leaked nested files (e.g. docs/decisions/*)
     on older interpreters. fnmatch-based exclusion is version-independent.
     """
-    from tools.validate_frontmatter import collect_paths
-
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
     (tmp_path / "docs" / "keep.md").write_text("x", encoding="utf-8")
     (tmp_path / "docs" / "decisions" / "adr.md").write_text("x", encoding="utf-8")
@@ -226,3 +245,280 @@ def test_exclude_dir_glob_matches_nested_files(
 
     got = [p.as_posix() for p in collect_paths([], None, ["docs/**/*.md"], ["docs/decisions/**"])]
     assert got == ["docs/keep.md"]
+
+
+# ===========================================================================
+# Unit — parse_frontmatter
+#
+# The block detector and YAML loader. Its contract: return a mapping for a valid
+# leading frontmatter block, or None for anything else (no block, a non-mapping
+# block, an unterminated block). None is what makes "no frontmatter found" work.
+# ===========================================================================
+
+
+def test_parse_returns_mapping() -> None:
+    assert parse_frontmatter("---\nid: x\ntitle: T\n---\n\nbody\n") == {"id": "x", "title": "T"}
+
+
+def test_parse_no_block_returns_none() -> None:
+    assert parse_frontmatter("# Just a heading\n\nProse.\n") is None
+
+
+def test_parse_block_not_at_top_returns_none() -> None:
+    # A leading line before the fence means it is not frontmatter (\A anchor).
+    assert parse_frontmatter("intro\n\n---\nid: x\n---\n") is None
+
+
+def test_parse_unterminated_block_returns_none() -> None:
+    assert parse_frontmatter("---\nid: x\ntitle: T\n") is None
+
+
+def test_parse_non_mapping_block_returns_none() -> None:
+    # A YAML list is valid YAML but not a frontmatter mapping.
+    assert parse_frontmatter("---\n- a\n- b\n---\n") is None
+
+
+def test_parse_scalar_block_returns_none() -> None:
+    assert parse_frontmatter("---\njust a bare string\n---\n") is None
+
+
+def test_parse_empty_block_returns_none() -> None:
+    # safe_load("") is None, which is not a mapping.
+    assert parse_frontmatter("---\n\n---\n") is None
+
+
+def test_parse_crlf_line_endings() -> None:
+    # Authoring on Windows / a CRLF editor must still parse (regex allows \r?\n).
+    crlf = _doc(MINIMAL).replace("\n", "\r\n")
+    parsed = parse_frontmatter(crlf)
+    assert parsed is not None
+    assert parsed["id"] == MINIMAL["id"]
+
+
+# _coerce_dates is exercised here through the public surface: YAML safe_load turns
+# an unquoted date into a datetime.date, which parse_frontmatter must hand back as
+# an ISO string so the string-typed schema accepts it.
+def test_parse_coerces_unquoted_dates_to_iso_strings() -> None:
+    parsed = parse_frontmatter("---\ncreated: 2026-06-02\n---\n")
+    assert parsed is not None
+    assert parsed == {"created": "2026-06-02"}
+    assert isinstance(parsed["created"], str)
+
+
+def test_parse_coerces_dates_nested() -> None:
+    text = "---\ndates:\n  - 2026-06-02\nmeta:\n  reviewed: 2025-01-01\n---\n"
+    assert parse_frontmatter(text) == {
+        "dates": ["2026-06-02"],
+        "meta": {"reviewed": "2025-01-01"},
+    }
+
+
+# ===========================================================================
+# Unit — schema resolution (resolve_schema_path / find_bundled_schema)
+#
+# A bare token is a bundled schema *name*; anything with a separator or a .json
+# suffix is a filesystem *path*. This is what lets a config say either
+# schema: markdown-frontmatter   or   schema: ./my/custom.schema.json
+# ===========================================================================
+
+
+def test_resolve_bare_name_is_bundled_schema() -> None:
+    resolved = resolve_schema_path("markdown-frontmatter")
+    assert resolved.name == "markdown-frontmatter.schema.json"
+    assert resolved.is_file()
+
+
+def test_resolve_none_defaults_to_bundled() -> None:
+    assert resolve_schema_path(None).name == "markdown-frontmatter.schema.json"
+
+
+def test_resolve_json_suffix_is_treated_as_path() -> None:
+    assert resolve_schema_path("custom.json") == Path("custom.json")
+
+
+def test_resolve_value_with_separator_is_treated_as_path() -> None:
+    assert resolve_schema_path("schemas/custom.schema.json") == Path("schemas/custom.schema.json")
+
+
+def test_find_bundled_schema_resolves_real_schema() -> None:
+    assert find_bundled_schema("markdown-frontmatter").is_file()
+
+
+def test_find_bundled_schema_missing_returns_canonical_path() -> None:
+    # Unknown name: return the canonical source path (not raise) so the caller
+    # surfaces a clear read error against the expected location.
+    resolved = find_bundled_schema("does-not-exist")
+    assert resolved.name == "does-not-exist.schema.json"
+    assert not resolved.exists()
+
+
+# ===========================================================================
+# Unit — load_config
+#
+# Reads the nested markdown.frontmatter section. Every branch must degrade to safe
+# defaults (required=True, empty include/exclude, schema=None) rather than raise,
+# because a missing or malformed config should not crash CI — it should fall back
+# to "validate everything, require frontmatter".
+# ===========================================================================
+
+
+def test_load_config_missing_file_uses_defaults(tmp_path: Path) -> None:
+    cfg = load_config(tmp_path / "nope.yml")
+    assert cfg.required is True
+    assert cfg.schema is None
+    assert cfg.include == []
+    assert cfg.exclude == []
+
+
+def test_load_config_full(tmp_path: Path) -> None:
+    path = _write_config(tmp_path, include=["docs/*.md"], exclude=["docs/x.md"])
+    cfg = load_config(path)
+    assert cfg.schema == "markdown-frontmatter"
+    assert cfg.required is True
+    assert cfg.include == ["docs/*.md"]
+    assert cfg.exclude == ["docs/x.md"]
+
+
+def test_load_config_required_false_is_honoured(tmp_path: Path) -> None:
+    path = tmp_path / ".project-standards.yml"
+    body = {"markdown": {"frontmatter": {"required": False}}}
+    path.write_text(yaml.safe_dump(body), encoding="utf-8")
+    assert load_config(path).required is False
+
+
+def test_load_config_top_level_not_mapping_uses_defaults(tmp_path: Path) -> None:
+    path = tmp_path / ".project-standards.yml"
+    path.write_text("- just\n- a\n- list\n", encoding="utf-8")
+    assert load_config(path).required is True
+
+
+def test_load_config_partial_nesting_uses_defaults(tmp_path: Path) -> None:
+    # `markdown` present but no `frontmatter` child — must not crash.
+    path = tmp_path / ".project-standards.yml"
+    path.write_text("markdown:\n  other: 1\n", encoding="utf-8")
+    cfg = load_config(path)
+    assert cfg.include == [] and cfg.schema is None
+
+
+# _as_str_list is covered here through the public surface: a non-list `include`
+# value must coerce to an empty list rather than propagate a wrong type.
+def test_load_config_non_list_include_coerced_to_empty(tmp_path: Path) -> None:
+    path = tmp_path / ".project-standards.yml"
+    path.write_text("markdown:\n  frontmatter:\n    include: not-a-list\n", encoding="utf-8")
+    assert load_config(path).include == []
+
+
+# ===========================================================================
+# Unit — validate_file edge cases
+# ===========================================================================
+
+
+def test_no_require_frontmatter_skips_missing(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    path = _write(tmp_path, "# No frontmatter\n\nProse.\n")
+    assert validate_file(path, validator, require_frontmatter=False) == []
+
+
+def test_unreadable_path_reports_error(tmp_path: Path, validator: Draft202012Validator) -> None:
+    # A directory cannot be read as text -> OSError branch -> a "cannot read file" error.
+    target = tmp_path / "is-a-dir.md"
+    target.mkdir()
+    errors = validate_file(target, validator, require_frontmatter=True)
+    assert len(errors) == 1
+    assert "cannot read file" in errors[0]
+
+
+def test_error_message_includes_field_path(tmp_path: Path, validator: Draft202012Validator) -> None:
+    # An item-level failure must name the indexed path (tags.0), proving the
+    # field-formatting in validate_file walks error.path correctly.
+    meta = {**MINIMAL, "tags": ["Not Kebab"]}
+    errors = _check(tmp_path, validator, _doc(meta))
+    assert any("[tags.0]" in e for e in errors)
+
+
+def test_root_level_error_labelled_root(tmp_path: Path, validator: Draft202012Validator) -> None:
+    meta = dict(MINIMAL)
+    del meta["title"]
+    errors = _check(tmp_path, validator, _doc(meta))
+    assert any("[(root)]" in e and "required" in e for e in errors)
+
+
+# ===========================================================================
+# Integration — the main() CLI exit-code contract (0 / 1 / 2) and flags
+# ===========================================================================
+
+
+def test_main_missing_schema_file_returns_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["--schema", "nonexistent.json", "--quiet"]) == 2
+
+
+def test_main_invalid_schema_returns_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Valid JSON, but not a valid Draft 2020-12 schema (`type` must be a known type).
+    bad = tmp_path / "bad.schema.json"
+    bad.write_text(json.dumps({"type": "banana"}), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert main(["--schema", str(bad), "--quiet"]) == 2
+
+
+def test_main_no_files_matched_returns_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["--quiet"]) == 0
+
+
+def test_main_valid_explicit_file_returns_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, _doc(MINIMAL), name="good.md")
+    monkeypatch.chdir(tmp_path)
+    assert main(["good.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 0
+
+
+def test_main_invalid_explicit_file_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, _doc({**MINIMAL, "doc_type": "nonsense"}), name="bad.md")
+    monkeypatch.chdir(tmp_path)
+    assert main(["bad.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 1
+
+
+def test_main_glob_flag_collects_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write(tmp_path, _doc(MINIMAL), name="a.md")
+    monkeypatch.chdir(tmp_path)
+    assert main(["--glob", "*.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 0
+
+
+def test_main_no_require_frontmatter_flag_passes_plain_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, "# No frontmatter\n", name="plain.md")
+    monkeypatch.chdir(tmp_path)
+    args = ["plain.md", "--schema", str(SCHEMA_PATH), "--no-require-frontmatter", "--quiet"]
+    assert main(args) == 0
+
+
+# ===========================================================================
+# Contract / dogfood — the shipped artifacts must stay valid for consumers
+# ===========================================================================
+
+EXAMPLE_FILES = sorted((_REPO_ROOT / "examples").glob("*.md"))
+
+
+def test_examples_directory_is_not_empty() -> None:
+    # Guard the parametrization below: an empty glob would make the dogfood test
+    # vacuously pass, hiding a missing examples/ directory.
+    assert EXAMPLE_FILES, "expected worked examples under examples/"
+
+
+@pytest.mark.parametrize("example", EXAMPLE_FILES, ids=[p.name for p in EXAMPLE_FILES])
+def test_shipped_example_validates(example: Path, validator: Draft202012Validator) -> None:
+    assert validate_file(example, validator, require_frontmatter=True) == []
+
+
+def test_bundled_schema_is_valid_draft2020() -> None:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    # Raises SchemaError if the shipped contract is itself malformed.
+    Draft202012Validator.check_schema(schema)  # pyright: ignore[reportUnknownMemberType]

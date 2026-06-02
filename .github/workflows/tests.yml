@@ -1,0 +1,58 @@
+name: Tests
+
+# Developer gate for the validator's own logic: pytest + ruff + pyright.
+# This is distinct from validate-markdown-frontmatter.yml, which is the *runtime*
+# gate (the reusable workflow consumers call to validate their Markdown). Keeping
+# them separate means downstream repos never inherit this repo's test toolchain.
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "tools/**"
+      - "tests/**"
+      - "schemas/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "tools/**"
+      - "tests/**"
+      - "schemas/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/tests.yml"
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the floor (requires-python / ruff+pyright target). 3.13 and 3.14
+        # bracket the glob('**') behaviour change that the exclude regression test
+        # guards — drop the spread and that guard stops guarding anything.
+        python-version: ["3.11", "3.13", "3.14"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type-check (pyright)
+        run: uv run pyright
+
+      - name: Test (pytest)
+        run: uv run pytest
