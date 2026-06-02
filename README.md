@@ -166,10 +166,12 @@ The validator exits `0` when all checked files pass and non-zero when any file f
 
 ## Versioning
 
-Releases/tags are the contract (`v1.0.0`, `v1.1.0`, `v2.0.0`):
+Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but the contract is the **consuming repo's validation outcome** — a release's level reflects the worst-case impact of any change across the standard, schema, validator, and workflow.
 
-- **Additive change** → tag a new minor (`v1.1.0`); roll consuming repos forward when convenient.
-- **Breaking change** → tag a new major (`v2.0.0`); leave old `v1.x` tags intact and migrate repos intentionally.
+- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v1`); a repo that passed yesterday still passes today.
+- **MAJOR** → may newly-fail a previously-passing repo (a new required field, a stricter rule, even a validator bug fix); old `vN.x` tags stay intact, and consumers migrate intentionally.
+
+See [`standards/versioning.md`](standards/versioning.md) for the full classification table, the previously-passing rule, and release requirements.
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
