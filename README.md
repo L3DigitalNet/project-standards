@@ -88,9 +88,19 @@ The validator exits `0` when all checked files pass and non-zero when any file f
 
 ### Add validation to another GitHub repository
 
-Each consuming repo needs two small files.
+Each consuming repo needs two small files, in two different places:
 
-**1. A config file `.project-standards.yml`** declaring which files the standard applies to:
+```text
+some-repo/
+├── .project-standards.yml          # config — repo root
+└── .github/
+    └── workflows/
+        └── validate-standards.yml  # workflow — must live under .github/workflows/
+```
+
+The config can technically live anywhere as long as `config-path` points to it, but the root is the default the validator and the example below assume. The workflow has no choice: GitHub only discovers workflow files under `.github/workflows/`.
+
+**1. A config file at the repo root, `.project-standards.yml`,** declaring which files the standard applies to:
 
 ```yaml
 standards_version: 'v1.0.0'
@@ -102,14 +112,22 @@ markdown:
     include:
       - 'README.md'
       - 'docs/**/*.md'
-      - 'CLAUDE.md'
-      - 'AGENTS.md'
     exclude:
       - 'CHANGELOG.md'
       - 'LICENSE.md'
+      # Agent-instruction files are harness configuration, not managed docs — never frontmatter.
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - '.claude/**'
+      - '.agents/**'
+      - '.codex/**'
+      - '.github/**'
+      - '.obsidian/**'
+      - 'docs/adr/**'
+      - 'docs/decisions/**'
 ```
 
-**2. A workflow** that calls the reusable workflow from this repo:
+**2. A workflow under `.github/workflows/`** (e.g. `validate-standards.yml`) that calls the reusable workflow from this repo:
 
 ```yaml
 name: Validate project standards
@@ -135,19 +153,13 @@ Reference the reusable workflow by **release tag** (`@v1.0.0`), not `@main`. Tag
 
 ## ADR Standard
 
-Architecture Decision Records capture significant, hard-to-reverse decisions. This repo adopts the
-[MADR](https://adr.github.io/madr/) format on top of the canonical frontmatter profile.
+Architecture Decision Records capture significant, hard-to-reverse decisions. This repo adopts the [MADR](https://adr.github.io/madr/) format on top of the canonical frontmatter profile.
 
-- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure,
-  the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the
-  supersession workflow.
-- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`,
-  `adr-bare.md`, and `adr-bare-minimal.md` variants.
+- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md` variants.
 - **Example:** [`examples/adr.example.md`](examples/adr.example.md).
 
-ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles
-(`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, so the
-universal frontmatter vocabulary stays small.
+ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, so the universal frontmatter vocabulary stays small.
 
 ## Versioning the standard
 

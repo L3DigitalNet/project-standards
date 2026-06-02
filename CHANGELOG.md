@@ -42,6 +42,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `examples/adr.example.md` — converted to MADR structure (PostgreSQL decision), with ADR roles
   under the `project` namespace.
 
+### Changed
+
+- Clarified scope in `standards/markdown-frontmatter.md`: agent-instruction files (`CLAUDE.md`,
+  `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`) must never carry frontmatter. Updated the README
+  downstream-example config to exclude them.
+
 ## [0.1.0] — 2026-06-02
 
 ### Added

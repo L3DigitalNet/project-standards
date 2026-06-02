@@ -32,6 +32,10 @@ This standard defines a small, portable, tool-neutral set of YAML frontmatter fi
 
 The machine-readable contract is [`schemas/markdown-frontmatter.schema.json`](../schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12). The validator [`tools/validate_frontmatter.py`](../tools/validate_frontmatter.py) enforces this schema in CI and locally.
 
+### Files that never carry frontmatter
+
+Agent-instruction files are harness configuration, not managed documents, and must **never** carry frontmatter: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, or `.codex/`. Consuming repositories exclude these in `.project-standards.yml` rather than adding metadata to them. The repo's human-facing root `README.md` is a managed document, but a repository may exclude it if it prefers not to render a frontmatter table on its landing page.
+
 ## Profiles
 
 ### Minimal frontmatter
