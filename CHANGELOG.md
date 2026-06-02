@@ -29,6 +29,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-06-02
+
 ### Added
 
 - **ADR Standard** — Architecture Decision Records using the [MADR](https://adr.github.io/madr/)
@@ -47,6 +49,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Clarified scope in `standards/markdown-frontmatter.md`: agent-instruction files (`CLAUDE.md`,
   `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`) must never carry frontmatter. Updated the README
   downstream-example config to exclude them.
+
+### Fixed
+
+- Validator exclude patterns now match via `fnmatch` on the file path instead of `Path.glob`,
+  making directory excludes (e.g. `docs/decisions/**`) behave identically across Python versions.
+  Previously such patterns silently failed to exclude nested files on Python ≤3.12, where a
+  trailing `**` matches directories only.
 
 ## [0.1.0] — 2026-06-02
 
