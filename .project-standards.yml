@@ -1,0 +1,23 @@
+# Configuration for the Markdown Frontmatter Standard validator.
+# Consumed by tools/validate_frontmatter.py and the CI workflow.
+# This is also the canonical example of the downstream config shape.
+
+standards_version: "v1.0.0"
+
+markdown:
+  frontmatter:
+    # Bundled schema name (resolves to schemas/markdown-frontmatter.schema.json),
+    # or a path to a schema file.
+    schema: "markdown-frontmatter"
+    required: true
+    include:
+      - "CHANGELOG.md"
+      - "standards/**/*.md"
+      - "examples/**/*.md"
+    exclude:
+      # Templates carry intentional placeholders (YYYY-MM-DD, replace-with-stable-id)
+      # that do not satisfy the schema's date and id patterns.
+      - "templates/**"
+      # README.md is the human-facing landing page; GitHub renders frontmatter as a
+      # table there. Downstream repos may still include their README — that is their call.
+      - "README.md"

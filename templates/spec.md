@@ -1,0 +1,52 @@
+---
+schema_version: "1.0"
+id: "replace-with-stable-id"
+title: "Spec: Feature or Change Name"
+description: "One-sentence description of what this specification defines."
+doc_type: "spec"
+status: "draft"
+created: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+reviewed: null
+owner: ""
+tags: []
+aliases: []
+related: []
+source: []
+confidence: "unknown"
+visibility: "internal"
+license: null
+---
+
+# Spec: Feature or Change Name
+
+## Summary
+
+One paragraph. What does this spec define and why?
+
+## Problem
+
+What need or gap does this address?
+
+## Goals
+
+-
+
+## Non-Goals
+
+-
+
+## Design
+
+### Overview
+
+### Details
+
+## Alternatives Considered
+
+| Option | Reason rejected |
+| --- | --- |
+
+## Open Questions
+
+-
