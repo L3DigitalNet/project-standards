@@ -206,3 +206,23 @@ def test_config_exclude_drops_bad(workspace: Path) -> None:
 def test_config_include_bad_fails(workspace: Path) -> None:
     _write_config(workspace, include=["docs/*.md"], exclude=[])
     assert main(["--config", ".project-standards.yml", "--quiet"]) == 1
+
+
+def test_exclude_dir_glob_matches_nested_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `dir/**` exclude must drop files beneath it on every Python version.
+
+    Regression guard: Path.glob's `**` matches files on 3.13+ but only directories on
+    <=3.12, so glob-based exclusion silently leaked nested files (e.g. docs/decisions/*)
+    on older interpreters. fnmatch-based exclusion is version-independent.
+    """
+    from tools.validate_frontmatter import collect_paths
+
+    (tmp_path / "docs" / "decisions").mkdir(parents=True)
+    (tmp_path / "docs" / "keep.md").write_text("x", encoding="utf-8")
+    (tmp_path / "docs" / "decisions" / "adr.md").write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    got = [p.as_posix() for p in collect_paths([], None, ["docs/**/*.md"], ["docs/decisions/**"])]
+    assert got == ["docs/keep.md"]
