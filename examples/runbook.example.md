@@ -1,36 +1,35 @@
 ---
-schema_version: "1.0"
-id: "restart-netbox-after-config-change"
-title: "Restart netbox after config change"
-description: "Procedure to safely reload netbox after editing its configuration."
-doc_type: "runbook"
-status: "active"
-created: "2026-03-10"
-updated: "2026-06-02"
-reviewed: "2026-06-02"
-owner: "platform-team"
+schema_version: '1.0'
+id: 'restart-netbox-after-config-change'
+title: 'Restart netbox after config change'
+description: 'Procedure to safely reload netbox after editing its configuration.'
+doc_type: 'runbook'
+status: 'active'
+created: '2026-03-10'
+updated: '2026-06-02'
+reviewed: '2026-06-02'
+owner: 'platform-team'
 tags:
   - netbox
   - restart
 aliases:
   - netbox-restart
 related:
-  - "adr-0001-use-postgresql-for-persistent-storage"
+  - 'adr-0001-use-postgresql-for-persistent-storage'
 source: []
-confidence: "high"
-visibility: "internal"
+confidence: 'high'
+visibility: 'internal'
 license: null
 project:
-  service: "netbox"
-  environment: "home-lab"
+  service: 'netbox'
+  environment: 'home-lab'
 ---
 
 # Restart netbox after config change
 
 ## Trigger
 
-Use this runbook after editing `/opt/netbox/netbox/configuration.py` or any file under
-`/opt/netbox/netbox/` that requires a gunicorn/worker reload (e.g. custom scripts, plugins).
+Use this runbook after editing `/opt/netbox/netbox/configuration.py` or any file under `/opt/netbox/netbox/` that requires a gunicorn/worker reload (e.g. custom scripts, plugins).
 
 Also triggered by: config management runs that report a changed `configuration.py`.
 
@@ -84,8 +83,7 @@ If netbox fails to start, check the gunicorn log for the error:
 sudo journalctl -u netbox -n 50
 ```
 
-Common causes: syntax error in `configuration.py`, missing plugin package.
-Revert the config change and restart again.
+Common causes: syntax error in `configuration.py`, missing plugin package. Revert the config change and restart again.
 
 ## References
 

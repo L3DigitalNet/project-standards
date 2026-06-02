@@ -1,24 +1,24 @@
 ---
-schema_version: "1.0"
-id: "immutable-infrastructure"
-title: "Immutable Infrastructure"
-description: "Servers and containers are replaced wholesale on every change rather than modified in place."
-doc_type: "concept"
-status: "active"
-created: "2026-06-02"
-updated: "2026-06-02"
+schema_version: '1.0'
+id: 'immutable-infrastructure'
+title: 'Immutable Infrastructure'
+description: 'Servers and containers are replaced wholesale on every change rather than modified in place.'
+doc_type: 'concept'
+status: 'active'
+created: '2026-06-02'
+updated: '2026-06-02'
 reviewed: null
-owner: "platform-team"
+owner: 'platform-team'
 tags:
   - infrastructure
   - deployment
 aliases:
   - immutable-infra
 related:
-  - "adr-0001-use-postgresql-for-persistent-storage"
+  - 'adr-0001-use-postgresql-for-persistent-storage'
 source: []
-confidence: "high"
-visibility: "internal"
+confidence: 'high'
+visibility: 'internal'
 license: null
 ---
 
@@ -30,15 +30,11 @@ Servers and containers are never modified after deployment — they are replaced
 
 ## Context
 
-Traditional "mutable" infrastructure accumulates configuration drift over time: manual fixes,
-one-off package installs, and undocumented changes that are impossible to reproduce. Immutable
-infrastructure eliminates this class of problem by treating every change as a fresh deployment.
+Traditional "mutable" infrastructure accumulates configuration drift over time: manual fixes, one-off package installs, and undocumented changes that are impossible to reproduce. Immutable infrastructure eliminates this class of problem by treating every change as a fresh deployment.
 
 ## Core Idea
 
-Every artifact — container image, VM snapshot, or disk image — is built once from a declarative
-source (Dockerfile, Packer template, NixOS config). Deployments swap the artifact; they never
-`ssh` in and patch the running instance.
+Every artifact — container image, VM snapshot, or disk image — is built once from a declarative source (Dockerfile, Packer template, NixOS config). Deployments swap the artifact; they never `ssh` in and patch the running instance.
 
 ## Implications
 
