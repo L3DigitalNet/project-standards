@@ -1,8 +1,11 @@
 # Project Standards
 
-Shared standards, schemas, templates, and validation tooling for documentation across all projects. This repository is the single source of truth; individual projects consume it via a small config file and a reusable CI workflow rather than vendoring their own copies.
+Shared standards, schemas, templates, and validation tooling for documentation across all projects. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them through a small config file plus a reusable CI workflow — rather than vendoring their own copies.
 
-## Layout
+- **Looking for what's standardised here?** See [Standards](#standards).
+- **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
+
+## Repository layout
 
 ```text
 project-standards/
@@ -15,19 +18,19 @@ project-standards/
 └── .github/      # reusable CI workflows
 ```
 
-## Markdown Frontmatter Standard
+## Standards
 
-### What it is for
+The standards this repository defines. Each is a human-readable document under [`standards/`](standards/), enforced by the shared validator.
 
-A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation. It gives every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, not at the top level.
+### Markdown Frontmatter Standard
 
-### Where the canonical standard lives
+A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard (human-readable):** [`standards/markdown-frontmatter.md`](standards/markdown-frontmatter.md)
-- **Schema (machine-readable):** [`schemas/markdown-frontmatter.schema.json`](schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Standard:** [`standards/markdown-frontmatter.md`](standards/markdown-frontmatter.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
 - **Templates:** [`templates/`](templates/) · **Examples:** [`examples/`](examples/)
 
-### Minimal frontmatter
+Minimal frontmatter (the eleven required fields):
 
 ```yaml
 ---
@@ -45,7 +48,7 @@ related: []
 ---
 ```
 
-### Standard frontmatter
+Standard frontmatter (recommended for most documents):
 
 ```yaml
 ---
@@ -69,26 +72,21 @@ license: null
 ---
 ```
 
-See the standard for the full field definitions and the controlled values for `doc_type`, `status`, `confidence`, and `visibility`.
+See the standard for full field definitions and the controlled values for `doc_type`, `status`, `confidence`, and `visibility`.
 
-### Validate locally
+### ADR Standard
 
-```bash
-# Install dependencies (uv manages the environment)
-uv sync --dev
+Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-# Validate using the repo config (default: .project-standards.yml)
-uv run validate-frontmatter --config .project-standards.yml
+- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](examples/adr.example.md).
 
-# Validate explicit files or globs against a specific schema
-uv run validate-frontmatter --schema schemas/markdown-frontmatter.schema.json examples/*.md
-```
+ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
-The validator exits `0` when all checked files pass and non-zero when any file fails, printing file-specific errors.
+## Consuming the standards
 
-### Add validation to another GitHub repository
-
-Each consuming repo needs two small files, in two different places:
+A consuming repository adopts the standards by adding **two files** — a config that says _which files to check_, and a workflow that _runs the shared validator in CI_. This is the same regardless of which standards you use.
 
 ```text
 some-repo/
@@ -98,9 +96,11 @@ some-repo/
         └── validate-standards.yml  # workflow — must live under .github/workflows/
 ```
 
-The config can technically live anywhere as long as `config-path` points to it, but the root is the default the validator and the example below assume. The workflow has no choice: GitHub only discovers workflow files under `.github/workflows/`.
+The config may live anywhere as long as the workflow's `config-path` points to it, but the repo root is the default. The workflow has no choice: GitHub only discovers workflows under `.github/workflows/`.
 
-**1. A config file at the repo root, `.project-standards.yml`,** declaring which files the standard applies to:
+### 1. Config — `.project-standards.yml`
+
+Declares which files the standard applies to:
 
 ```yaml
 standards_version: 'v1.0.0'
@@ -127,7 +127,9 @@ markdown:
       - 'docs/decisions/**'
 ```
 
-**2. A workflow under `.github/workflows/`** (e.g. `validate-standards.yml`) that calls the reusable workflow from this repo:
+### 2. Workflow — `.github/workflows/validate-standards.yml`
+
+Calls the reusable workflow from this repo:
 
 ```yaml
 name: Validate project standards
@@ -145,27 +147,40 @@ jobs:
       config-path: '.project-standards.yml'
 ```
 
-The reusable workflow installs the validator from this repo (`uv tool install git+...`), so the consuming repo does not need to vendor the schema or the Python code — the bundled schema travels with the install.
+The reusable workflow installs the validator with `uv tool install git+...`, so the consuming repo does not vendor the schema or the Python code — the bundled schema travels with the install.
 
 ### Pin to a release tag, not `main`
 
-Reference the reusable workflow by **release tag** (`@v1.0.0`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. Use `@main` only for the standards repo's own development or for deliberate test repos. GitHub also supports pinning by commit SHA for maximum stability.
+Reference the reusable workflow by **release tag** (`@v1.0.0`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. Use `@main` only for this repo's own development or deliberate test repos. GitHub also supports pinning by commit SHA for maximum stability.
 
-## ADR Standard
+### Run the check locally (optional)
 
-Architecture Decision Records capture significant, hard-to-reverse decisions. This repo adopts the [MADR](https://adr.github.io/madr/) format on top of the canonical frontmatter profile.
+Validate before pushing, using the released tool directly — no checkout of this repo required:
 
-- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md` variants.
-- **Example:** [`examples/adr.example.md`](examples/adr.example.md).
+```bash
+uvx --from git+https://github.com/chrisdpurcell/project-standards@v1.0.0 \
+  validate-frontmatter --config .project-standards.yml
+```
 
-ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, so the universal frontmatter vocabulary stays small.
+The validator exits `0` when all checked files pass and non-zero when any file fails, printing file-specific errors.
 
-## Versioning the standard
+## Versioning
 
-Use releases/tags as the contract (`v1.0.0`, `v1.1.0`, `v2.0.0`).
+Releases/tags are the contract (`v1.0.0`, `v1.1.0`, `v2.0.0`):
 
-- **Additive change** → tag a new minor (`v1.1.0`), roll consuming repos forward when convenient.
-- **Breaking change** → tag a new major (`v2.0.0`), leave old `v1.x` tags intact, migrate repos intentionally.
+- **Additive change** → tag a new minor (`v1.1.0`); roll consuming repos forward when convenient.
+- **Breaking change** → tag a new major (`v2.0.0`); leave old `v1.x` tags intact and migrate repos intentionally.
 
-For private standards repos called by private consumers, enable cross-repository access under the standards repo's **Actions** settings.
+For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
+
+## Developing this repository
+
+Working on the standards or the validator itself:
+
+```bash
+uv sync --dev                                                # set up the environment
+uv run pytest                                                # validator tests
+uv run ruff check .                                          # lint
+uv run pyright                                               # type-check
+uv run validate-frontmatter --config .project-standards.yml  # dogfood the standard
+```

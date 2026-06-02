@@ -21,3 +21,9 @@ markdown:
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"
+      # Agent-instruction files are harness configuration, not managed docs — never frontmatter.
+      - "CLAUDE.md"
+      - "AGENTS.md"
+      - ".claude/**"
+      - ".agents/**"
+      - ".codex/**"
