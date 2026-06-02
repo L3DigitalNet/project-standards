@@ -89,15 +89,19 @@ Every release MUST:
    `vMAJOR.MINOR.PATCH` on the release commit. Full-version tags are
    **immutable** — never deleted, moved, or repointed once pushed.
 2. **Advance the moving major tag.** Maintain a `vMAJOR` tag that always points
-   at the newest release within that major, and force-move it on each release:
+   at the newest release within that major. Repoint it locally, then move it on
+   the remote by **deleting and re-pushing** — not `git push --force`. The force
+   flag is unnecessary for a tag move, can clobber branch history, and is
+   blocked by this repository's force-push guard (`release-pipeline`):
 
    ```bash
    git tag -fs vN -m "project-standards vN (-> vN.M.P)" <release-commit>
-   git push -f origin vN
+   git push origin :refs/tags/vN   # delete the old remote tag
+   git push origin vN              # re-push it at the release commit
    ```
 
-   Only the moving major tag is ever force-moved. Never force-move a
-   full-version tag.
+   Only the moving major tag is ever repointed. Never delete or move a
+   full-version tag once it is pushed.
 3. **Bump the package version** in `pyproject.toml` and regenerate `uv.lock` in
    the release commit, so `uv tool install` resolves a version that matches the
    tag.
