@@ -133,6 +133,22 @@ The reusable workflow installs the validator from this repo (`uv tool install gi
 
 Reference the reusable workflow by **release tag** (`@v1.0.0`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. Use `@main` only for the standards repo's own development or for deliberate test repos. GitHub also supports pinning by commit SHA for maximum stability.
 
+## ADR Standard
+
+Architecture Decision Records capture significant, hard-to-reverse decisions. This repo adopts the
+[MADR](https://adr.github.io/madr/) format on top of the canonical frontmatter profile.
+
+- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure,
+  the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the
+  supersession workflow.
+- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`,
+  `adr-bare.md`, and `adr-bare-minimal.md` variants.
+- **Example:** [`examples/adr.example.md`](examples/adr.example.md).
+
+ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles
+(`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, so the
+universal frontmatter vocabulary stays small.
+
 ## Versioning the standard
 
 Use releases/tags as the contract (`v1.0.0`, `v1.1.0`, `v2.0.0`).

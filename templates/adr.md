@@ -1,47 +1,81 @@
 ---
-schema_version: "1.0"
-id: "adr-0000-short-title"
-title: "ADR 0000: Short Title"
-description: "Decision record for a significant architectural or project decision."
-doc_type: "adr"
-status: "draft"
-created: "YYYY-MM-DD"
-updated: "YYYY-MM-DD"
+schema_version: '1.0'
+id: 'adr-0000-short-title'
+title: 'ADR 0000: Short Title'
+description: 'Decision record for a significant architectural or project decision.'
+doc_type: 'adr'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
 reviewed: null
-owner: ""
+owner: ''
 tags: []
 aliases: []
 related: []
 source: []
-confidence: "unknown"
-visibility: "internal"
+confidence: 'unknown'
+visibility: 'internal'
 license: null
 supersedes: []
 superseded_by: null
+project:
+  decision_makers: []
+  consulted: []
+  informed: []
 ---
 
-# ADR 0000: Short Title
+# {short title, representative of solved problem and found solution}
 
-## Status
+## Context and Problem Statement
 
-Draft.
+{Describe the context and problem statement, e.g., in free form using two to three sentences or in
+the form of an illustrative story. You may want to articulate the problem in the form of a
+question. Make the scope of the decision explicit.}
 
-## Context
+<!-- Optional. Remove if unused. -->
+## Decision Drivers
 
-Describe the situation, constraints, and forces that led to this decision.
+- {decision driver 1, e.g., a desired quality, constraint, or force}
+- {decision driver 2}
 
-## Decision
+## Considered Options
 
-State the decision clearly.
+- {title of option 1}
+- {title of option 2}
+- {title of option 3}
 
-## Consequences
+## Decision Outcome
 
-Describe the expected tradeoffs, benefits, costs, and risks.
+Chosen option: "{title of option 1}", because {justification — e.g., the only option meeting a
+k.o. criterion, resolves a key force, or comes out best (see below)}.
 
-## Alternatives Considered
+<!-- Optional. Remove if unused. -->
+### Consequences
 
-List the meaningful alternatives and why they were not selected.
+- Good, because {positive consequence}
+- Bad, because {negative consequence}
 
-## References
+<!-- Optional. Remove if unused. -->
+### Confirmation
 
-List supporting documents, links, or sources.
+{How is compliance with this decision confirmed? A review, a test, an automated fitness function?}
+
+<!-- Optional. Remove if unused. -->
+## Pros and Cons of the Options
+
+### {title of option 1}
+
+- Good, because {argument}
+- Neutral, because {argument}
+- Bad, because {argument}
+
+### {title of option 2}
+
+- Good, because {argument}
+- Bad, because {argument}
+
+<!-- Optional. Remove if unused. -->
+## More Information
+
+{Additional evidence/confidence, team agreement, when/how to realize the decision, when to
+revisit it, and links to related decisions.}

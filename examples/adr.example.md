@@ -23,37 +23,76 @@ visibility: 'internal'
 license: null
 supersedes: []
 superseded_by: null
+project:
+  decision_makers:
+    - chris
+  consulted:
+    - platform-team
+  informed:
+    - all-engineering
 ---
 
 # ADR 0001: Use PostgreSQL for persistent storage
 
-## Status
+MADR status: **accepted**.
 
-Active.
+## Context and Problem Statement
 
-## Context
+Services need a relational data store with ACID transactions, JSON columns, and full-text search.
+Which engine should be the default for all services that require persistent structured data?
 
-The application requires a relational data store with support for ACID transactions, JSON columns, and full-text search. Three options were evaluated: PostgreSQL, MySQL 8, and SQLite.
+## Decision Drivers
 
-SQLite was ruled out early: the single-writer limitation is a non-starter for concurrent services. MySQL 8 is a viable choice, but the team has significantly more operational experience with PostgreSQL, its extension ecosystem (`pgvector`, `TimescaleDB`) is stronger, and its JSON support is more mature.
+- Operational experience already on the team.
+- Strength of the extension ecosystem (vector search, time-series).
+- Maturity of JSON/JSONB support for hybrid relational/document workloads.
+- Support for concurrent writers.
 
-## Decision
+## Considered Options
 
-Use PostgreSQL 16 as the primary relational datastore for all services that require persistent structured data.
+- PostgreSQL 16
+- MySQL 8
+- SQLite
 
-## Consequences
+## Decision Outcome
 
-- Team expertise reduces operational overhead.
-- `pgvector` and `TimescaleDB` extensions are available if needed.
-- Strong JSON/JSONB support avoids a separate document store for hybrid workloads.
-- One more managed service to operate (backup, PITR, failover).
-- Services that only need key-value storage carry the overhead of a full relational engine.
+Chosen option: **PostgreSQL 16**, because it meets every decision driver — the team has the most
+operational experience with it, its extension ecosystem (`pgvector`, `TimescaleDB`) is the
+strongest, and its JSON/JSONB support is the most mature of the options.
 
-## Alternatives Considered
+### Consequences
 
-- **MySQL 8** — viable, but less team experience and a weaker extension ecosystem.
-- **SQLite** — rejected; single-writer limitation unsuitable for concurrent services.
+- Good, because team expertise reduces operational overhead.
+- Good, because `pgvector`/`TimescaleDB` are available without adding another datastore.
+- Good, because JSONB avoids a separate document store for hybrid workloads.
+- Bad, because it is one more managed service to operate (backup, PITR, failover).
+- Neutral, because services that only need key-value storage carry a full relational engine.
 
-## References
+### Confirmation
 
-- [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/)
+New service specs are reviewed against this ADR; a service introducing a different relational
+engine must supersede this ADR or document a scoped exception.
+
+## Pros and Cons of the Options
+
+### PostgreSQL 16
+
+- Good, because of deep team experience and a strong extension ecosystem.
+- Good, because JSONB covers hybrid workloads.
+- Bad, because operating it (HA, backups) is non-trivial.
+
+### MySQL 8
+
+- Good, because it is a capable, widely-deployed relational engine.
+- Bad, because the team has less operational experience with it.
+- Bad, because its extension ecosystem is weaker for the anticipated workloads.
+
+### SQLite
+
+- Good, because it is zero-ops and file-based.
+- Bad, because the single-writer limitation is a non-starter for concurrent services.
+
+## More Information
+
+Revisit if a service emerges whose scale or workload PostgreSQL cannot serve economically. See
+the [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/).

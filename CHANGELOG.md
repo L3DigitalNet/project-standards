@@ -29,6 +29,19 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **ADR Standard** — Architecture Decision Records using the [MADR](https://adr.github.io/madr/)
+  format layered on the canonical frontmatter profile.
+- `standards/adr.md` — the governing ADR standard: when to write an ADR, MADR body structure
+  (required vs optional sections), the MADR→canonical field and status mappings, ID/filename and
+  `docs/decisions/` directory conventions, and the supersession workflow.
+- `templates/adr.md` (full, with explanations) plus `templates/adr-minimal.md`,
+  `templates/adr-bare.md`, and `templates/adr-bare-minimal.md` MADR variants. Replaces the prior
+  simple ADR template.
+- `examples/adr.example.md` — converted to MADR structure (PostgreSQL decision), with ADR roles
+  under the `project` namespace.
+
 ## [0.1.0] — 2026-06-02
 
 ### Added
