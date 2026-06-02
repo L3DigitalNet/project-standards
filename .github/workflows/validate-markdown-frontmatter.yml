@@ -23,7 +23,7 @@ on:
   #
   #   jobs:
   #     validate:
-  #       uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1.0.0
+  #       uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
   #       with:
   #         config-path: .project-standards.yml
   workflow_call:
@@ -46,10 +46,17 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
+        with:
+          # Only this repo ships a uv.lock for the cache to key on. Consuming
+          # repos install the validator via `uv tool install` from git and have
+          # no lockfile, so enabling the cache there only produces the
+          # "cache will never get invalidated" warning. Gate it on the same
+          # caller-identity check the install/validate steps below use.
+          enable-cache: ${{ github.repository == 'chrisdpurcell/project-standards' }}
 
       # Running inside this repo (push/PR or self-call): use the local source.
       - name: Install validator (this repo)

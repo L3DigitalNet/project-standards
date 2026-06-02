@@ -142,7 +142,7 @@ on:
 
 jobs:
   validate:
-    uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1.0.0
+    uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
     with:
       config-path: '.project-standards.yml'
 ```
@@ -151,14 +151,14 @@ The reusable workflow installs the validator with `uv tool install git+...`, so 
 
 ### Pin to a release tag, not `main`
 
-Reference the reusable workflow by **release tag** (`@v1.0.0`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. Use `@main` only for this repo's own development or deliberate test repos. GitHub also supports pinning by commit SHA for maximum stability.
+Reference the reusable workflow by **major tag** (`@v1`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. The major tag is safe to track because any change that could fail a previously-passing repo — a new required field, a stricter rule — ships only as a new major (`@v2`); `@v1` receives just bug fixes and backward-compatible updates. For an immutable pin, use a full version tag (`@v1.0.1`) or a commit SHA. Use `@main` only for this repo's own development or deliberate test repos.
 
 ### Run the check locally (optional)
 
 Validate before pushing, using the released tool directly — no checkout of this repo required:
 
 ```bash
-uvx --from git+https://github.com/chrisdpurcell/project-standards@v1.0.0 \
+uvx --from git+https://github.com/chrisdpurcell/project-standards@v1 \
   validate-frontmatter --config .project-standards.yml
 ```
 
