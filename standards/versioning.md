@@ -112,7 +112,7 @@ Pin the reusable workflow and the CLI by **major tag** to receive
 non-breaking fixes automatically:
 
 ```yaml
-uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
+uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
 ```
 
 - **`@vMAJOR`** (recommended) — tracks the latest release in that major. The

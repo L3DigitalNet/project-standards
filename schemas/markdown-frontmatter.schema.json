@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/chrisdpurcell/project-standards/main/schemas/markdown-frontmatter.schema.json",
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/schemas/markdown-frontmatter.schema.json",
   "title": "Markdown Frontmatter Standard",
   "description": "Canonical metadata profile for project documentation. See standards/markdown-frontmatter.md for the governing standard.",
   "type": "object",

@@ -142,7 +142,7 @@ on:
 
 jobs:
   validate:
-    uses: chrisdpurcell/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
     with:
       config-path: '.project-standards.yml'
 ```
@@ -158,7 +158,7 @@ Reference the reusable workflow by **major tag** (`@v1`), not `@main`. Tags are 
 Validate before pushing, using the released tool directly — no checkout of this repo required:
 
 ```bash
-uvx --from git+https://github.com/chrisdpurcell/project-standards@v1 \
+uvx --from git+https://github.com/L3DigitalNet/project-standards@v1 \
   validate-frontmatter --config .project-standards.yml
 ```
 
