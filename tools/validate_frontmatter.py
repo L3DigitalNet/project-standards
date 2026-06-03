@@ -47,6 +47,7 @@ _DEFAULT_CONFIG = Path(".project-standards.yml")
 # Schema location (works both from a source checkout and an installed wheel)
 # ---------------------------------------------------------------------------
 
+
 def find_bundled_schema(name: str) -> Path:
     """Resolve a bundled schema *name* to its on-disk path.
 
@@ -57,7 +58,7 @@ def find_bundled_schema(name: str) -> Path:
     filename = f"{name}.schema.json"
     candidates = [
         Path(__file__).parent.parent / "schemas" / filename,  # source checkout
-        Path(__file__).parent / "schemas" / filename,         # packaged wheel
+        Path(__file__).parent / "schemas" / filename,  # packaged wheel
     ]
     for candidate in candidates:
         if candidate.exists():
@@ -81,6 +82,7 @@ def resolve_schema_path(schema_value: str | None) -> Path:
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
+
 
 def _coerce_dates(obj: Any) -> Any:
     """Recursively convert datetime.date/datetime to ISO strings.
@@ -116,6 +118,7 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
 # Validation
 # ---------------------------------------------------------------------------
 
+
 def validate_file(
     path: Path,
     validator: Draft202012Validator,
@@ -144,6 +147,7 @@ def validate_file(
 # ---------------------------------------------------------------------------
 # Path collection
 # ---------------------------------------------------------------------------
+
 
 def collect_paths(
     explicit: list[Path],
@@ -174,8 +178,9 @@ def collect_paths(
     # rather than Path.glob. Path.glob's `**` semantics are version-dependent (on Python
     # 3.13+ a trailing `**` also matches files; on <=3.12 it matches directories only),
     # so a directory pattern like "docs/decisions/**" would silently fail to exclude the
-    # files beneath it on older interpreters. fnmatch's `*` spans path separators, giving
-    # consistent prefix-style exclusion on every supported Python version.
+    # files beneath it on older interpreters. fnmatch's `*` spans path
+    # separators, giving consistent prefix-style exclusion on every supported
+    # Python version.
     def is_excluded(path: Path) -> bool:
         posix = path.as_posix()
         return any(fnmatchcase(posix, pattern) for pattern in exclude_patterns)
@@ -186,6 +191,7 @@ def collect_paths(
 # ---------------------------------------------------------------------------
 # Config (nested markdown.frontmatter shape)
 # ---------------------------------------------------------------------------
+
 
 class FrontmatterConfig:
     """Resolved view of the `markdown.frontmatter` section of the config file."""
@@ -212,7 +218,7 @@ def _as_str_list(value: Any) -> list[str]:
 
 
 def load_config(path: Path) -> FrontmatterConfig:
-    """Read the nested `markdown.frontmatter` config; missing keys fall back to defaults."""
+    """Read nested `markdown.frontmatter`; missing keys fall back to defaults."""
     schema: str | None = None
     include: list[str] = []
     exclude: list[str] = []
@@ -234,12 +240,15 @@ def load_config(path: Path) -> FrontmatterConfig:
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
 
-    return FrontmatterConfig(schema=schema, include=include, exclude=exclude, required=required)
+    return FrontmatterConfig(
+        schema=schema, include=include, exclude=exclude, required=required
+    )
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -288,7 +297,9 @@ def main(argv: list[str] | None = None) -> int:
 
     config = load_config(args.config)
 
-    schema_path = args.schema if args.schema is not None else resolve_schema_path(config.schema)
+    schema_path = (
+        args.schema if args.schema is not None else resolve_schema_path(config.schema)
+    )
     try:
         schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -312,7 +323,9 @@ def main(argv: list[str] | None = None) -> int:
 
     all_errors: list[str] = []
     for path in paths:
-        all_errors.extend(validate_file(path, validator, require_frontmatter=require_frontmatter))
+        all_errors.extend(
+            validate_file(path, validator, require_frontmatter=require_frontmatter)
+        )
 
     if all_errors:
         for err in all_errors:

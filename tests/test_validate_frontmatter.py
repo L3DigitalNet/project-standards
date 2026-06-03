@@ -106,14 +106,18 @@ def test_valid_standard_passes(tmp_path: Path, validator: Draft202012Validator) 
 
 
 # 3.
-def test_missing_frontmatter_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_missing_frontmatter_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     errors = _check(tmp_path, validator, "# No frontmatter here\n\nJust prose.\n")
     assert errors
     assert "no frontmatter" in errors[0]
 
 
 # 4.
-def test_frontmatter_not_at_top_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_frontmatter_not_at_top_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     content = _doc(MINIMAL, leading="Some intro paragraph.\n\n")
     errors = _check(tmp_path, validator, content)
     assert errors
@@ -121,7 +125,9 @@ def test_frontmatter_not_at_top_fails(tmp_path: Path, validator: Draft202012Vali
 
 
 # 5.
-def test_missing_required_field_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_missing_required_field_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = dict(MINIMAL)
     del meta["title"]
     errors = _check(tmp_path, validator, _doc(meta))
@@ -129,7 +135,9 @@ def test_missing_required_field_fails(tmp_path: Path, validator: Draft202012Vali
 
 
 # 6.
-def test_invalid_doc_type_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_invalid_doc_type_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**MINIMAL, "doc_type": "blogpost"}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("doc_type" in e for e in errors)
@@ -143,34 +151,44 @@ def test_invalid_status_fails(tmp_path: Path, validator: Draft202012Validator) -
 
 
 # 8.
-def test_invalid_confidence_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_invalid_confidence_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**STANDARD, "confidence": "very-high"}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("confidence" in e for e in errors)
 
 
 # 9.
-def test_invalid_date_format_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_invalid_date_format_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**MINIMAL, "created": "06/02/2026"}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("created" in e for e in errors)
 
 
 # 10.
-def test_unknown_top_level_field_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_unknown_top_level_field_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**MINIMAL, "category": "misc"}
     errors = _check(tmp_path, validator, _doc(meta))
     assert errors
 
 
 # 11.
-def test_project_extension_passes(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_project_extension_passes(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**STANDARD, "project": {"service": "netbox", "env": "home-lab"}}
     assert _check(tmp_path, validator, _doc(meta)) == []
 
 
 # 12.
-def test_publish_extension_passes(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_publish_extension_passes(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**STANDARD, "publish": {"slug": "test", "draft": False}}
     assert _check(tmp_path, validator, _doc(meta)) == []
 
@@ -183,7 +201,9 @@ def test_duplicate_tags_fail(tmp_path: Path, validator: Draft202012Validator) ->
 
 
 # 14.
-def test_invalid_tag_format_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_invalid_tag_format_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**MINIMAL, "tags": ["Not Kebab"]}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("tags" in e for e in errors)
@@ -199,7 +219,9 @@ def test_invalid_tag_format_fails(tmp_path: Path, validator: Draft202012Validato
 # ===========================================================================
 
 
-def test_schema_version_1_1_accepted(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_schema_version_1_1_accepted(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**STANDARD, "schema_version": "1.1", "consumer": "agent"}
     assert _check(tmp_path, validator, _doc(meta)) == []
 
@@ -226,7 +248,9 @@ def test_consumer_enum_values_accepted(
     assert _check(tmp_path, validator, _doc(meta)) == []
 
 
-def test_consumer_invalid_value_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_consumer_invalid_value_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = {**STANDARD, "schema_version": "1.1", "consumer": "robot"}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("consumer" in e for e in errors)
@@ -234,7 +258,9 @@ def test_consumer_invalid_value_fails(tmp_path: Path, validator: Draft202012Vali
 
 def test_consumer_is_optional(tmp_path: Path, validator: Draft202012Validator) -> None:
     # consumer absent from an otherwise-standard 1.1 document must still pass.
-    assert _check(tmp_path, validator, _doc({**STANDARD, "schema_version": "1.1"})) == []
+    assert (
+        _check(tmp_path, validator, _doc({**STANDARD, "schema_version": "1.1"})) == []
+    )
 
 
 # 15.
@@ -295,7 +321,10 @@ def test_exclude_dir_glob_matches_nested_files(
     (tmp_path / "docs" / "decisions" / "adr.md").write_text("x", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
-    got = [p.as_posix() for p in collect_paths([], None, ["docs/**/*.md"], ["docs/decisions/**"])]
+    got = [
+        p.as_posix()
+        for p in collect_paths([], None, ["docs/**/*.md"], ["docs/decisions/**"])
+    ]
     assert got == ["docs/keep.md"]
 
 
@@ -309,7 +338,10 @@ def test_exclude_dir_glob_matches_nested_files(
 
 
 def test_parse_returns_mapping() -> None:
-    assert parse_frontmatter("---\nid: x\ntitle: T\n---\n\nbody\n") == {"id": "x", "title": "T"}
+    assert parse_frontmatter("---\nid: x\ntitle: T\n---\n\nbody\n") == {
+        "id": "x",
+        "title": "T",
+    }
 
 
 def test_parse_no_block_returns_none() -> None:
@@ -389,7 +421,9 @@ def test_resolve_json_suffix_is_treated_as_path() -> None:
 
 
 def test_resolve_value_with_separator_is_treated_as_path() -> None:
-    assert resolve_schema_path("schemas/custom.schema.json") == Path("schemas/custom.schema.json")
+    assert resolve_schema_path("schemas/custom.schema.json") == Path(
+        "schemas/custom.schema.json"
+    )
 
 
 def test_find_bundled_schema_resolves_real_schema() -> None:
@@ -456,7 +490,9 @@ def test_load_config_partial_nesting_uses_defaults(tmp_path: Path) -> None:
 # value must coerce to an empty list rather than propagate a wrong type.
 def test_load_config_non_list_include_coerced_to_empty(tmp_path: Path) -> None:
     path = tmp_path / ".project-standards.yml"
-    path.write_text("markdown:\n  frontmatter:\n    include: not-a-list\n", encoding="utf-8")
+    path.write_text(
+        "markdown:\n  frontmatter:\n    include: not-a-list\n", encoding="utf-8"
+    )
     assert load_config(path).include == []
 
 
@@ -472,8 +508,11 @@ def test_no_require_frontmatter_skips_missing(
     assert validate_file(path, validator, require_frontmatter=False) == []
 
 
-def test_unreadable_path_reports_error(tmp_path: Path, validator: Draft202012Validator) -> None:
-    # A directory cannot be read as text -> OSError branch -> a "cannot read file" error.
+def test_unreadable_path_reports_error(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # A directory cannot be read as text, which reaches the OSError branch and
+    # reports a "cannot read file" error.
     target = tmp_path / "is-a-dir.md"
     target.mkdir()
     errors = validate_file(target, validator, require_frontmatter=True)
@@ -481,7 +520,9 @@ def test_unreadable_path_reports_error(tmp_path: Path, validator: Draft202012Val
     assert "cannot read file" in errors[0]
 
 
-def test_error_message_includes_field_path(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_error_message_includes_field_path(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     # An item-level failure must name the indexed path (tags.0), proving the
     # field-formatting in validate_file walks error.path correctly.
     meta = {**MINIMAL, "tags": ["Not Kebab"]}
@@ -489,7 +530,9 @@ def test_error_message_includes_field_path(tmp_path: Path, validator: Draft20201
     assert any("[tags.0]" in e for e in errors)
 
 
-def test_root_level_error_labelled_root(tmp_path: Path, validator: Draft202012Validator) -> None:
+def test_root_level_error_labelled_root(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
     meta = dict(MINIMAL)
     del meta["title"]
     errors = _check(tmp_path, validator, _doc(meta))
@@ -508,7 +551,9 @@ def test_main_missing_schema_file_returns_2(
     assert main(["--schema", "nonexistent.json", "--quiet"]) == 2
 
 
-def test_main_invalid_schema_returns_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_invalid_schema_returns_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Valid JSON, but not a valid Draft 2020-12 schema (`type` must be a known type).
     bad = tmp_path / "bad.schema.json"
     bad.write_text(json.dumps({"type": "banana"}), encoding="utf-8")
@@ -516,7 +561,9 @@ def test_main_invalid_schema_returns_2(tmp_path: Path, monkeypatch: pytest.Monke
     assert main(["--schema", str(bad), "--quiet"]) == 2
 
 
-def test_main_no_files_matched_returns_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_no_files_matched_returns_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     assert main(["--quiet"]) == 0
 
@@ -537,7 +584,9 @@ def test_main_invalid_explicit_file_returns_1(
     assert main(["bad.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 1
 
 
-def test_main_glob_flag_collects_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_glob_flag_collects_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write(tmp_path, _doc(MINIMAL), name="a.md")
     monkeypatch.chdir(tmp_path)
     assert main(["--glob", "*.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 0
@@ -548,7 +597,13 @@ def test_main_no_require_frontmatter_flag_passes_plain_file(
 ) -> None:
     _write(tmp_path, "# No frontmatter\n", name="plain.md")
     monkeypatch.chdir(tmp_path)
-    args = ["plain.md", "--schema", str(SCHEMA_PATH), "--no-require-frontmatter", "--quiet"]
+    args = [
+        "plain.md",
+        "--schema",
+        str(SCHEMA_PATH),
+        "--no-require-frontmatter",
+        "--quiet",
+    ]
     assert main(args) == 0
 
 
@@ -566,7 +621,9 @@ def test_examples_directory_is_not_empty() -> None:
 
 
 @pytest.mark.parametrize("example", EXAMPLE_FILES, ids=[p.name for p in EXAMPLE_FILES])
-def test_shipped_example_validates(example: Path, validator: Draft202012Validator) -> None:
+def test_shipped_example_validates(
+    example: Path, validator: Draft202012Validator
+) -> None:
     assert validate_file(example, validator, require_frontmatter=True) == []
 
 
