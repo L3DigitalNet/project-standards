@@ -197,16 +197,16 @@ String values **MUST** be quoted. Single or double quotes are both acceptable; t
 Correct:
 
 ```yaml
-title: 'YAML Frontmatter Standard'
-id: 'yaml-frontmatter-standard'
+title: 'Markdown Frontmatter Standard'
+id: 'markdown-frontmatter-standard'
 created: '2026-06-01'
 ```
 
 Incorrect:
 
 ```yaml
-title: YAML Frontmatter Standard
-id: yaml-frontmatter-standard
+title: Markdown Frontmatter Standard
+id: markdown-frontmatter-standard
 created: 2026-06-01
 ```
 
@@ -293,7 +293,7 @@ Rules:
 Good:
 
 ```yaml
-description: 'Specification for writing, validating, and maintaining YAML frontmatter in Markdown knowledge-base documents.'
+description: 'Specification for writing, validating, and maintaining Markdown frontmatter in knowledge-base documents.'
 ```
 
 Bad:

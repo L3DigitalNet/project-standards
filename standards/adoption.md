@@ -35,7 +35,7 @@ license: null
 > make the changes is here. Where you want the authoritative source, the links in
 > [§8](#8-authoritative-references-pinned) point at the pinned release.
 >
-> **Target release:** `project-standards` **v1.1.0** — pin the moving major tag
+> **Target release:** `project-standards` **v1.2.0** — pin the moving major tag
 > **`@v1`** (it receives only backward-compatible updates; see [§7](#7-versioning--staying-in-compliance)).
 > **Owner repo:** `github.com/L3DigitalNet/project-standards`.
 
@@ -50,7 +50,7 @@ A repository is **compliant** when:
 
 Do not modify any file under `.claude/`, `.agents/`, `.codex/`, or the repo's
 `CLAUDE.md` / `AGENTS.md` — see [§4.1](#41-which-files-are-managed). Do not invent
-new top-level frontmatter fields — see [§4.4](#44-formatting-rules).
+new top-level frontmatter fields — see [§4.4](#44-controlled-values--formatting-rules).
 
 ## 1. Prerequisites
 
@@ -65,7 +65,7 @@ frontmatter is required, and which paths are validated (`include`) vs skipped
 (`exclude`).
 
 ```yaml
-standards_version: 'v1.1.0'
+standards_version: 'v1.2.0'
 
 markdown:
   frontmatter:
@@ -133,7 +133,7 @@ jobs:
 > installed; it **defaults to `main`**, so if you omit it your validation silently
 > floats on the latest unreleased schema. Always set `standards-ref` to the **same
 > major** as the `uses:` pin (`'v1'`). For a fully immutable pin, set both to
-> `v1.1.0`.
+> `v1.2.0`.
 
 The reusable workflow installs the validator with `uv tool install git+…@<standards-ref>`;
 the schema travels inside the wheel, so the consuming repo never vendors schema or
@@ -179,7 +179,7 @@ pre-existing documents do not block compliance; prefer `'1.1'` going forward.)
 ### 4.3 Recommended optional fields (the standard profile)
 
 For most documents, add these too. Place them in canonical order (see
-[§4.4](#44-formatting-rules)):
+[§4.4](#44-controlled-values--formatting-rules)):
 
 ```yaml
 reviewed: null            # date string or null — last correctness review
@@ -327,12 +327,12 @@ Compliance is reached when this exits `0`.
   planned `2.0.0` will enforce repo-root-relative link paths). Read the changelog
   migration notes, bump both pins from `@v1` to `@v2`, and re-run validation before
   merging.
-- For byte-for-byte reproducibility, pin both refs to a full version (`v1.1.0`) or a
+- For byte-for-byte reproducibility, pin both refs to a full version (`v1.2.0`) or a
   commit SHA instead of the moving major tag.
 
 ## 8. Authoritative references (pinned)
 
-The governing documents at the current release (replace `v1` with `v1.1.0` for an
+The governing documents at the current release (replace `v1` with `v1.2.0` for an
 immutable read):
 
 - **The standard** — [`standards/markdown-frontmatter.md@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/standards/markdown-frontmatter.md)

@@ -62,7 +62,7 @@ Classify each release by the highest-severity change it contains.
 | --- | --- | --- | --- |
 | **Standard / schema** | New *required* field; a rule made stricter (tighter enum or pattern); an enum value **removed**; a field removed or renamed | A new *optional* field; an enum value **added**; a new template, example, or extension namespace | Wording or typo fix in non-normative prose |
 | **Validator CLI** | Any change that makes a previously-passing document fail; a flag or command removed or renamed; a default changed so pass/fail differs; a config key removed or renamed; the minimum Python raised | A new opt-in flag or command; a new config option with a backward-compatible default; new output that does not change any pass/fail result | A crash or message-text fix with **no** outcome change; an internal refactor; a dependency bump with no behavior change |
-| **Reusable workflow** | A `workflow_call` input removed or renamed; a default changed so a caller's outcome differs; any behavior that can fail a previously-passing caller | A new optional input with a default; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
+| **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
 
 ## The previously-passing rule
 

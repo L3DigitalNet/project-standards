@@ -106,7 +106,7 @@ The config may live anywhere as long as the workflow's `config-path` points to i
 Declares which files the standard applies to:
 
 ```yaml
-standards_version: 'v1.0.0'
+standards_version: 'v1.2.0'
 
 markdown:
   frontmatter:
@@ -126,9 +126,9 @@ markdown:
       - '.codex/**'
       - '.github/**'
       - '.obsidian/**'
-      - 'docs/adr/**'
-      - 'docs/decisions/**'
 ```
+
+ADRs are **managed** documents (they carry full frontmatter — see the ADR Standard), so do **not** exclude `docs/adr/**` or `docs/decisions/**`; let them validate.
 
 ### 2. Workflow — `.github/workflows/validate-standards.yml`
 
@@ -148,7 +148,10 @@ jobs:
     uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
     with:
       config-path: '.project-standards.yml'
+      standards-ref: 'v1'
 ```
+
+> **Pin both refs.** `@v1` on the `uses:` line pins the **workflow definition**; `standards-ref` pins the **validator + bundled schema** that gets installed. Keep them on the same major (`v1`) so your validation can't drift onto unreleased changes. (`standards-ref` defaults to `v1`, but set it explicitly to make the pin obvious; use a full version like `v1.2.0` for an immutable pin.)
 
 The reusable workflow installs the validator with `uv tool install git+...`, so the consuming repo does not vendor the schema or the Python code — the bundled schema travels with the install.
 
