@@ -1,5 +1,8 @@
 # Implementation Note — Frontmatter Standard V1.1
 
+**Superseded by** the release plan at [`../plans/00-overview.md`](../plans/00-overview.md) —
+this note's checklist is now Step 2 (schema) and Step 7 (changelog) there. Kept for reference.
+
 **Status:** proposal is in polishing; schema/standards implementation NOT yet started.
 Source of truth for the proposed changes: [`schema.frontmatter.md`](schema.frontmatter.md) (titled "PROPOSED V1.1").
 
