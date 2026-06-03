@@ -608,6 +608,61 @@ def test_main_no_require_frontmatter_flag_passes_plain_file(
 
 
 # ===========================================================================
+# Crash-safety / robustness (1.2.0)
+#
+# Malformed YAML must surface as a clean error + the documented exit code, never
+# an uncaught traceback — a single downstream typo should not crash the tool.
+# Plus: the bundled schema must resolve in the *installed wheel* layout, not only
+# from a source checkout (the contract every `uv tool install` consumer relies on).
+# ===========================================================================
+
+
+def test_malformed_yaml_frontmatter_is_reported_not_raised(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # An unterminated flow sequence is a YAML *syntax* error (distinct from a
+    # non-mapping or absent block). It must become one clean error, not a traceback.
+    content = "---\nid: [unclosed\n---\n\n# Doc\n"
+    errors = _check(tmp_path, validator, content)
+    assert len(errors) == 1
+    assert "YAML" in errors[0]
+
+
+def test_main_malformed_yaml_frontmatter_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, "---\nid: [unclosed\n---\n\n# Doc\n", name="bad.md")
+    monkeypatch.chdir(tmp_path)
+    assert main(["bad.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 1
+
+
+def test_main_malformed_config_returns_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A broken config is an operator error -> exit 2, not a crash.
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown: [unclosed\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert main(["--config", ".project-standards.yml", "--quiet"]) == 2
+
+
+def test_find_bundled_schema_resolves_installed_wheel_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # In the wheel, the schema is force-included at <package>/schemas/ (pyproject
+    # [tool.hatch.build.targets.wheel.force-include]). Simulate that layout and
+    # confirm find_bundled_schema's installed candidate (module_dir/schemas) wins.
+    from tools import validate_frontmatter as vf
+
+    pkg = tmp_path / "tools"
+    (pkg / "schemas").mkdir(parents=True)
+    schema = pkg / "schemas" / "markdown-frontmatter.schema.json"
+    schema.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(vf, "__file__", str(pkg / "validate_frontmatter.py"))
+    assert vf.find_bundled_schema("markdown-frontmatter") == schema
+
+
+# ===========================================================================
 # Contract / dogfood — the shipped artifacts must stay valid for consumers
 # ===========================================================================
 

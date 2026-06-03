@@ -43,6 +43,19 @@ _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
 _DEFAULT_CONFIG = Path(".project-standards.yml")
 
 
+class FrontmatterParseError(ValueError):
+    """A frontmatter block is present but is not valid YAML.
+
+    Distinct from "no block" / "non-mapping block" (which parse_frontmatter
+    returns None for): this is a syntax error in an otherwise-present block, and
+    must surface as a clean validation error rather than an uncaught traceback.
+    """
+
+
+class ConfigError(ValueError):
+    """The config file exists but is not valid YAML — an operator error (exit 2)."""
+
+
 # ---------------------------------------------------------------------------
 # Schema location (works both from a source checkout and an installed wheel)
 # ---------------------------------------------------------------------------
@@ -108,7 +121,10 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
     match = _FRONTMATTER_RE.match(text)
     if not match:
         return None
-    loaded = yaml.safe_load(match.group(1))
+    try:
+        loaded = yaml.safe_load(match.group(1))
+    except yaml.YAMLError as exc:
+        raise FrontmatterParseError(str(exc)) from exc
     if not isinstance(loaded, dict):
         return None
     return cast("dict[str, Any]", _coerce_dates(loaded))
@@ -131,7 +147,10 @@ def validate_file(
     except OSError as exc:
         return [f"{path}: cannot read file: {exc}"]
 
-    meta = parse_frontmatter(text)
+    try:
+        meta = parse_frontmatter(text)
+    except FrontmatterParseError as exc:
+        return [f"{path}: invalid YAML frontmatter: {exc}"]
     if meta is None:
         if require_frontmatter:
             return [f"{path}: no frontmatter found at top of file"]
@@ -225,7 +244,10 @@ def load_config(path: Path) -> FrontmatterConfig:
     required = True
 
     if path.exists():
-        raw: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+        try:
+            raw: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise ConfigError(f"cannot parse config {path}: {exc}") from exc
         if isinstance(raw, dict):
             raw_dict = cast("dict[str, Any]", raw)
             markdown = raw_dict.get("markdown")
@@ -295,7 +317,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    config = load_config(args.config)
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     schema_path = (
         args.schema if args.schema is not None else resolve_schema_path(config.schema)
