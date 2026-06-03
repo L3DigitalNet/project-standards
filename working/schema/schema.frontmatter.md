@@ -8,7 +8,7 @@ A **managed document** is any Markdown file this standard governs — one expect
 
 The machine-readable contract is [`schemas/markdown-frontmatter.schema.json`](../schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12). The validator [`tools/validate_frontmatter.py`](../tools/validate_frontmatter.py) enforces this schema in CI and locally. Where this document and that schema disagree, **the schema is authoritative**: it is what the validator checks, and this document explains and expands on it.
 
-This document specifies **schema version 1.1**, an additive revision that introduces the `consumer` field. Conforming documents set `schema_version: '1.1'`; the value is the contract's version pin, so the machine schema's `schema_version` enum must list every accepted version.
+This document specifies **schema version 1.1**, an additive revision that introduces the `consumer` field. Conforming documents set `schema_version: '1.1'` (see [Versioning and compatibility](#versioning-and-compatibility)).
 
 ### Files that never carry frontmatter
 
@@ -63,7 +63,7 @@ license: null
 ---
 ```
 
-## Field Definitions
+## Field definitions
 
 | Field | Required | Type | Purpose |
 | --- | --: | --- | --- |
@@ -77,6 +77,7 @@ license: null
 | `updated` | Yes | date string | Last meaningful content update in `YYYY-MM-DD` format. |
 | `reviewed` | No | date string or null | Last correctness review date. Distinct from `updated`. |
 | `owner` | No | string | Person, team, repo, or role responsible for maintenance. |
+| `consumer` | No | string enum | Intended reader/consumer of the document. |
 | `tags` | Yes | array of strings | Discovery labels. Prefer lowercase kebab-case. |
 | `aliases` | Yes | array of strings | Alternate names, abbreviations, or likely search terms. |
 | `related` | Yes | array of strings | Related documents as repo-root-relative paths. |
@@ -84,11 +85,10 @@ license: null
 | `confidence` | No | string enum | Reliability signal for LLM and human use. |
 | `visibility` | No | string enum | Exposure level. |
 | `license` | No | string or null | License or reuse terms, if applicable. |
-| `consumer` | No | string enum | Intended consumer/reader/implementer of the doc. |
 
 Optional relationship fields are also permitted when needed: `supersedes` (array), `superseded_by` (string or null), `depends_on` (array), and `applies_to` (array).
 
-## Controlled Values
+## Controlled values
 
 ### `doc_type`
 
@@ -147,16 +147,16 @@ Optional relationship fields are also permitted when needed: `supersedes` (array
 | `user`    | Intended to be read by humans.                |
 | `agent`   | Intended to be read by LLM agents.            |
 | `mix`     | Intended to be read by humans and LLM agents. |
-| `unknown` | Intended end-user is not known.               |
+| `unknown` | Intended consumer is not known.               |
 
-## Formatting Rules
+## Formatting rules
 
 General conventions. Topic-specific rules live in their own sections; this list covers only the rules with no dedicated home, then points to the rest.
 
 - Use YAML frontmatter delimited by `---` at the very top of the file.
 - Use `snake_case` field names.
 - Use `doc_type`, not `type`.
-- Keep `updated` separate from `reviewed` (see Field Definitions).
+- Keep `updated` separate from `reviewed` (see Field definitions).
 - Prefer stable kebab-case IDs for ordinary documents; prefer prefixed numeric IDs for ADRs, such as `adr-0001-use-netbox-as-source-of-truth`.
 - Use optional relationship fields (`supersedes`, `superseded_by`, `depends_on`, `applies_to`) only when needed.
 
@@ -220,7 +220,7 @@ Array fields **MUST NOT** contain duplicate items; the validator rejects duplica
 
 ## Canonical key order
 
-Agents **MUST** write keys in this order when present:
+Keys **MUST** appear in this order when present:
 
 ```text
 schema_version
@@ -333,7 +333,7 @@ All document links — in `related`, `supersedes`, `superseded_by`, `depends_on`
 
 `applies_to` is **not** a document link — it holds free-form scope identifiers (services, components, environments) — so it is exempt from this rule.
 
-Use document-level links, not section-level (`#`) links, unless the schema is revised. Root-relative link form is enforced by `tools/validate_frontmatter.py`.
+Use document-level links, not section-level (`#`) links, until a future schema revision permits them. In frontmatter this form is enforced by `tools/validate_frontmatter.py`; in document bodies it is a convention the validator does not check.
 
 Correct:
 
@@ -377,11 +377,11 @@ project:
 
 The field policy is: universal fields at the top level; project-specific fields under `project` or `x_project`; publishing-specific fields under `publish`.
 
-## Versioning & compatibility
+## Versioning and compatibility
 
 Two version numbers are in play, and they are **not** the same:
 
-- **`schema_version`** (this document) — the version of the _metadata schema_: the field set and controlled vocabularies. It changes only when those change, and carries no patch component. This release moves it from `1.0` to `1.1` by adding the optional `consumer` field. The machine schema's `schema_version` enum lists every value still accepted (`['1.0', '1.1']`), so existing `1.0` documents stay valid.
+- **`schema_version`** (this document) — the version of the **metadata schema**: the field set and controlled vocabularies. It changes only when those change, and carries no patch component. This release moves it from `1.0` to `1.1` by adding the optional `consumer` field. The machine schema's `schema_version` enum lists every value still accepted (`["1.0", "1.1"]`), so existing `1.0` documents stay valid.
 - **The repository release tag** (`vMAJOR.MINOR.PATCH`) — versions all four shipped components together (the standard, the JSON schema, the validator CLI, and the reusable workflow). Its classification rules, tagging, and consumption model are defined in [`standards/versioning.md`](../standards/versioning.md) and are not repeated here.
 
 How they relate: an **additive** schema change like this one cannot make a previously-passing document fail, so under the [previously-passing rule](../standards/versioning.md) it ships as a **minor** repository release (the next `vN.MINOR.0`) and reaches `@vN` consumers automatically. Removing a field or controlled value, or tightening a pattern, would be a **major** release that consumers adopt deliberately.
@@ -403,7 +403,7 @@ This template lists every universal top-level field in canonical order. Required
 ```yaml
 ---
 schema_version: '1.1'
-id: 'replace-with-kebab-case-id'
+id: 'replace-with-stable-id'
 title: 'Replace With Human Title'
 description: 'One-line description of what this document contains and when an agent should use it.'
 doc_type: 'note'
