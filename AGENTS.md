@@ -16,7 +16,8 @@ See [README.md](README.md) for the full surface and consumption instructions.
 
 ## General
 
-- **MANDATORY:** No external conventions requiring creating, deleting, or changing files should be used in this project. _DO NOT_ implement v3 handoff or similar systems. This repo is itself a conventions source; keep it self-contained.
+- **MANDATORY: stay self-contained.** Do not import external/global agent conventions into this repo — in particular the workstation **v3 handoff system** (its `docs/` lifetime-partitioning, SessionStart hooks, or tracked global config files). This repo is itself a conventions source. The single sanctioned exception is the self-contained session handoff below.
+- **Session handoff.** [`working/HANDOFF.md`](working/HANDOFF.md) is the living handoff: read it at session start, keep it current during work, update it at session end. It is just one file plus `working/archive/<version>/` (frozen per-release planning docs) — no hooks, no global config, nothing outside `working/`. See the header of `HANDOFF.md` for the ritual. `working/**` is scratch space and is excluded from frontmatter validation.
 - **Dogfood the standards.** Managed Markdown here (`standards/`, `examples/`, `CHANGELOG.md`) carries canonical frontmatter and must validate. Run the validator before finishing: `uv run validate-frontmatter --config .project-standards.yml`.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. They are harness configuration, not managed documents.
 - **Keep the toolchain green.** Before committing changes to the validator or tests, run `uv run pytest`, `uv run ruff check .`, and `uv run pyright` — all must pass.
