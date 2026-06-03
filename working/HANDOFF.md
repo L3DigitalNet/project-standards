@@ -26,84 +26,76 @@
 
 ---
 
-## Current state — V1.1 (`1.1.0`) ready to release
+## Current state — `1.2.0` released
 
-Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (all V1.1
-work; `main` stays stable). As of 2026-06-03:
+Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main`
+holds releases, moving tag `v1` tracks the newest). As of 2026-06-03 the published
+line is:
 
-Implementation **and** the pre-release review are complete and committed on
-`testing`; the full gate is green (`validate-frontmatter` ✓ 8, `pytest` 66,
-`ruff` clean at line-length 88, `pyright` 0). Everything except the release
-mechanics (Steps 9–10) is done.
-
-The detailed 10-step plan and per-step decision records are archived at
-[`archive/v1.1.0/`](archive/v1.1.0/) — start at
-[`archive/v1.1.0/plans/00-overview.md`](archive/v1.1.0/plans/00-overview.md).
-
-| Step | State |
+| Tag | What shipped |
 | --- | --- |
-| 1 scoping → 7 changelog | ✅ committed on `testing` |
-| 6 migration | ⛔ skipped (Path A — no link migration) |
-| Pre-release review + fixes | ✅ README staleness, schema key-order, dogfood uniformity; ruff line-length 88 split into its own commit |
-| 8 verify gate | ✅ green (re-run on the release commit) |
-| 9 release | ⏳ **needs user** |
-| 10 post-release | ⏳ |
+| `v1.0.x` | initial Markdown Frontmatter + ADR + Versioning standards, validator, reusable workflow |
+| `v1.1.0` | optional `consumer` field; `schema_version` enum widened to accept `1.1` |
+| `v1.2.0` | `standards/adoption.md` (agent onboarding/compliance procedure); `standards-ref` pinning hardened (workflow default `main`→`v1`); validator no longer crashes on malformed YAML; README/standard/versioning doc fixes |
 
-## Next action — cut the release (Step 9, needs user)
+Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ line-length 88,
+`pyright` 0. Per-release planning is archived under [`archive/`](archive/) (one
+folder per release; start at the version's `README.md`).
 
-1. **Integrate `testing → main`** (merge vs rebase — see
-   `superpowers:finishing-a-development-branch`). The release commit + tags
-   belong on `main`.
-2. **Release commit on `main`:** bump `pyproject.toml` `1.0.2` → `1.1.0`;
-   regenerate `uv.lock`; change the `CHANGELOG.md` heading
-   `## [1.1.0] — unreleased` → `## [1.1.0] — <date>`.
-3. **Tag + push — outward-facing, explicit user approval:** annotated
-   GPG-signed `v1.1.0` (key `9375AFEFA6F841B0`); move `v1` by delete-and-re-push
-   (never `--force`; the `release-pipeline` guard is server-side); push commit +
-   tags to `github.com/L3DigitalNet/project-standards`.
-4. **Step 10 — post-release:** confirm the tag resolves and
-   `uvx … @v1` / `uv tool install` picks up `1.1.0`; optional downstream `@v1`
-   smoke test.
+## Next action — none pending
 
-## Locked decisions (do not relitigate)
+`1.2.0` is shipped and verified. No open work item. The only thing on the radar is
+the **`2.0.0`** under _Future work_ — undertake deliberately, not by default.
 
-- **Path A → `1.1.0`** (additive minor): `consumer` + the `'1.1'` enum widening
-  are both MINOR-class.
-- Add `consumer`, enum `user | agent | mix | unknown`. **Keep `license`.**
-- Link form (repo-root-relative paths) is **documented convention only** this
-  release — _not_ schema-enforced. Path-pattern enforcement is deferred to a
-  future `2.0.0` (it would be breaking: 7 in-repo docs use bare-id links).
-- `schema_version` (the metadata-schema version) is **distinct** from the repo
-  release tag (`vMAJOR.MINOR.PATCH`); the latter is governed by
-  [`../standards/versioning.md`](../standards/versioning.md).
-- Every managed doc in this repo now declares `schema_version: '1.1'`.
+## Locked decisions / standing context (do not relitigate)
+
+- **Link form is convention, not enforced.** Repo-root-relative paths are a
+  documented SHOULD; the schema does **not** check link shape. Enforcing it is the
+  headline **`2.0.0`** change (breaking — in-repo and consumer docs use bare-id
+  links), requiring a major bump + migration notes.
+- **`standards-ref` must track the `@vN` workflow pin.** The reusable workflow now
+  defaults it to `v1`; consumers should still set it explicitly. Documented in
+  `README.md` and `standards/adoption.md`.
+- **One tag ships four components** (standard, schema, validator, workflow); classify
+  every release by the previously-passing rule in
+  [`../standards/versioning.md`](../standards/versioning.md). A default/behaviour
+  change that _cannot_ fail a previously-passing caller is **MINOR** (the
+  classification table now states this explicitly).
+- Every managed doc in this repo declares `schema_version: '1.1'`.
 
 ## Key files
 
 | Path | Role |
 | --- | --- |
 | `working/HANDOFF.md` | this file — the living handoff |
-| [`archive/v1.1.0/`](archive/v1.1.0/) | frozen V1.1 plans, converged proposal, `consumer` provenance |
-| `schemas/markdown-frontmatter.schema.json` | authoritative machine contract (V1.1 applied) |
-| `standards/markdown-frontmatter.md` | the published standard (promoted to V1.1) |
-| `standards/versioning.md` | release ritual + previously-passing rule (authoritative) |
-| `CHANGELOG.md` | carries `## [1.1.0] — unreleased`; date it in the release commit |
-| `pyproject.toml` | bump `1.0.2` → `1.1.0` at release |
+| [`archive/`](archive/) | frozen per-release planning docs (`v1.1.0/`, …) |
+| `standards/markdown-frontmatter.md` | the published standard |
+| `standards/adoption.md` | agent onboarding & compliance procedure (hand to consuming repos) |
+| `standards/versioning.md` | release ritual + change classification (authoritative) |
+| `schemas/markdown-frontmatter.schema.json` | authoritative machine contract |
+| `tools/validate_frontmatter.py` · `tests/` | validator CLI + tests |
+| `.github/workflows/validate-markdown-frontmatter.yml` | reusable workflow consumers call |
+| `CHANGELOG.md` · `pyproject.toml` | changelog + package version (bump at release) |
 
-## Constraints to respect (from `AGENTS.md` + `standards/versioning.md`)
+## Constraints / release ritual (from `AGENTS.md` + `standards/versioning.md`)
 
 - The JSON schema is **authoritative**; update it first, prose follows.
-- **Previously-passing rule:** any change that can fail a previously-passing doc → MAJOR.
-- One version tags all four components (standard, schema, validator, workflow).
-- Release: annotated **GPG-signed**, immutable full-version tag; move `vN` by
-  delete-and-re-push (**never `git push --force`**); bump `pyproject.toml` +
-  regenerate `uv.lock`; Keep a Changelog format.
-- Green gate before tagging: `validate-frontmatter`, `pytest`, `ruff check`, `pyright`.
+- **Previously-passing rule:** any change that can fail a previously-passing
+  consumer doc or workflow run → MAJOR.
+- Release: bump `pyproject.toml` + regen `uv.lock`; date the `CHANGELOG.md` section;
+  green gate; fast-forward `main` to `testing`; annotated **GPG-signed** immutable
+  `vMAJOR.MINOR.PATCH` tag (key `9375AFEFA6F841B0`); move `v1` by
+  **delete-and-re-push** (never `--force`; the server-side `release-pipeline-tags`
+  ruleset allows the `v1` move, blocks `v*.*.*` deletion); push `main` + `testing` +
+  tags; verify `uvx … @v1` resolves the new version.
 - **Dogfood:** managed Markdown here must validate; never add frontmatter to
   `CLAUDE.md` / `AGENTS.md` / `.claude/**`.
 
 ## Open questions
 
-- ~~Q1–Q3~~ resolved during the build (see `archive/v1.1.0/plans/`).
-- **Q4 (Step 9):** confirm the GPG key + the server-side `release-pipeline` guard
-  behaviour before moving the `v1` tag.
+- None open.
+
+## Future work
+
+- **`2.0.0` (deliberate, breaking):** enforce repo-root-relative link patterns in the
+  schema; migrate in-repo bare-id links; write consumer migration notes; bump to `@v2`.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "project-standards"
-version = "1.1.0"
+version = "1.2.0"
 description = "Reusable project standards, templates, schemas, and validation tools."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
