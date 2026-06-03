@@ -1,59 +1,36 @@
 # HANDOFF — Frontmatter Standard V1.1 release work
 
-> **New session: start here.** Read this file, then
-> [`plans/00-overview.md`](plans/00-overview.md) (the release plan) and
-> [`schema/schema.frontmatter.md`](schema/schema.frontmatter.md) (the converged spec).
-> Repo: `/home/chris/projects/project-standards`. Today is 2026-06-03.
-> **Branch:** all V1.1 release work happens on the `testing` branch (created 2026-06-03);
-> `main` stays stable. Verify with `git switch testing` before starting.
+> **New session: start here.** Read this file, then [`plans/00-overview.md`](plans/00-overview.md) (the release plan) and [`schema/schema.frontmatter.md`](schema/schema.frontmatter.md) (the converged spec). Repo: `/home/chris/projects/project-standards`. Today is 2026-06-03. **Branch:** all V1.1 release work happens on the `testing` branch (created 2026-06-03); `main` stays stable. Verify with `git switch testing` before starting.
 
 ## Where we are
 
-We have spent this session reviewing and polishing a **proposed v1.1 of the Markdown
-Frontmatter Standard** to convergence (multi-pass: internal consistency, doc↔schema
-cross-checks, layout, live-code verification, spelling). The spec is now internally
-consistent and self-converged — **no substantive findings remain.**
+We have spent this session reviewing and polishing a **proposed v1.1 of the Markdown Frontmatter Standard** to convergence (multi-pass: internal consistency, doc↔schema cross-checks, layout, live-code verification, spelling). The spec is now internally consistent and self-converged — **no substantive findings remain.**
 
-All work lives in **`working/` (untracked, local only)**. **Nothing in the real repo
-(`schemas/`, `standards/`, `templates/`, `examples/`, `tests/`, `CHANGELOG.md`,
-`pyproject.toml`) has been changed.** This is still 100% pre-implementation.
+All work lives in **`working/` (untracked, local only)**. **Nothing in the real repo (`schemas/`, `standards/`, `templates/`, `examples/`, `tests/`, `CHANGELOG.md`, `pyproject.toml`) has been changed.** This is still 100% pre-implementation.
 
 ## The next action
 
-Begin **Step 1 of the release plan: release scoping & version classification** — a
-**decision gate** that fixes the version number. Detail doc `plans/01-scoping.md` is
-**not yet written**; writing/working it is the next task.
+Begin **Step 2 of the release plan: update the JSON schema** (authoritative, do first). Step 1 is **DONE** — see [`plans/01-scoping.md`](plans/01-scoping.md). Detail doc `plans/02-schema.md` is **not yet written**.
 
-### ⚠️ The decision that blocks everything
+Step 2 scope (Path A): add the optional `consumer` property + enum (`user|agent|mix|unknown`); add `'1.1'` to the `schema_version` enum (keep `'1.0'`); narrow the `visibility` description. **Do NOT** add `items.pattern` to link fields — that is the deferred breaking change.
 
-"V1.1" and "enforce link patterns in the schema" cannot both be true:
+### ✅ Step 1 decision (was the gate): Path A — `1.1.0` (minor)
 
-- Adding `consumer` is **additive → `1.1.0`** (minor).
-- Adding link-path `items.pattern`s to `related`/`supersedes`/etc. **tightens a rule**,
-  and existing repo docs already violate it (`standards/adr.md` uses a bare ID
-  `markdown-frontmatter-standard` in `related`). Per `standards/versioning.md`'s
-  **previously-passing rule**, that is **breaking → `2.0.0`**.
+Resolved 2026-06-03 with the user. Full rationale + evidence in `plans/01-scoping.md`.
 
-Two paths to choose from (this is open question Q1):
-
-- **Path A — `1.1.0`:** ship `consumer` + links as *documented convention only* (no
-  schema pattern yet); defer pattern enforcement to a future `2.0.0`. Would require
-  softening the spec's "enforced by the validator" link claim to "by convention."
-- **Path B — `2.0.0`:** enforce link patterns now + migrate every in-repo doc to path
-  form + write consumer migration notes.
-
-**Do not start Step 2 (schema edits) until this is decided.**
+- **Target version `1.1.0`** (current release `1.0.2` on moving tag `v1`).
+- `consumer` (additive) + `'1.1'` enum widening are both MINOR-class.
+- The repo-root link rule ships as **documented convention only** — no schema `items.pattern` this release. Enforcing it would tighten a rule and newly-fail **7** currently-passing managed docs (`standards/adr.md`, `standards/versioning.md`, `CHANGELOG.md`, and all four `examples/*.example.md`), making it MAJOR → deferred to a future `2.0.0`.
+- **Spec edit this forces (do in Step 3):** soften the "enforced by the validator" link claim at `schema/schema.frontmatter.md:336` to "by convention," and drop the `(PROPOSED V1.1)` title qualifier.
+- **Step 6 (migration) does not run** under Path A.
 
 ## Decisions already locked (do not relitigate)
 
 - Add `consumer` field, enum `user | agent | mix | unknown`.
-- **Keep `license`** (re-added; removing it would be breaking — this is why the release
-  is additive, not a removal).
-- Links use **repo-root-relative paths**, extension included (Option A); `applies_to` is
-  exempt (free-form scope identifiers, not links).
+- **Keep `license`** (re-added; removing it would be breaking — this is why the release is additive, not a removal).
+- Links use **repo-root-relative paths**, extension included (Option A); `applies_to` is exempt (free-form scope identifiers, not links).
 - `schema_version` value moves `1.0 → 1.1`.
-- `schema_version` (metadata-schema version) is **distinct** from the repo release tag
-  (`vMAJOR.MINOR.PATCH`); the latter is governed by `standards/versioning.md`.
+- `schema_version` (metadata-schema version) is **distinct** from the repo release tag (`vMAJOR.MINOR.PATCH`); the latter is governed by `standards/versioning.md`.
 
 ## Key files
 
@@ -75,24 +52,19 @@ Two paths to choose from (this is open question Q1):
 - The JSON schema is **authoritative**; update it first, prose follows.
 - **Previously-passing rule:** any change that can fail a previously-passing doc → MAJOR.
 - One version tags all four components (standard, schema, validator, workflow).
-- Release: annotated **GPG-signed**, immutable full-version tag; move `vN` by
-  delete-and-re-push (**never `git push --force`** — `release-pipeline` guard blocks it);
-  bump `pyproject.toml` + regenerate `uv.lock`; Keep a Changelog format.
-- Green gate before tagging: `uv run validate-frontmatter --config .project-standards.yml`,
-  `uv run pytest`, `uv run ruff check .`, `uv run pyright`.
-- **Dogfood:** managed Markdown here must validate; never add frontmatter to
-  `CLAUDE.md`/`AGENTS.md`/`.claude/**`.
+- Release: annotated **GPG-signed**, immutable full-version tag; move `vN` by delete-and-re-push (**never `git push --force`** — `release-pipeline` guard blocks it); bump `pyproject.toml` + regenerate `uv.lock`; Keep a Changelog format.
+- Green gate before tagging: `uv run validate-frontmatter --config .project-standards.yml`, `uv run pytest`, `uv run ruff check .`, `uv run pyright`.
+- **Dogfood:** managed Markdown here must validate; never add frontmatter to `CLAUDE.md`/`AGENTS.md`/`.claude/**`.
 
 ## Open questions (parked for per-step planning)
 
-- **Q1 (Step 1):** Path A (`1.1.0`, convention-only links) or Path B (`2.0.0`, enforced links)?
-- **Q2 (Step 3):** Does the spec *replace* `standards/markdown-frontmatter.md` or merge in?
-  Which new sections (Versioning, Validation) stay vs defer to `versioning.md` / `README.md`?
+- ~~**Q1 (Step 1):** Path A or Path B?~~ **RESOLVED → Path A (`1.1.0`).** See `plans/01-scoping.md`.
+- **Q2 (Step 3):** Does the spec _replace_ `standards/markdown-frontmatter.md` or merge in? Which new sections (Versioning, Validation) stay vs defer to `versioning.md` / `README.md`?
 - **Q3 (Step 5):** Existing `tests/` fixtures pattern to extend, or a new invalid-cases corpus?
 - **Q4 (Step 9):** Confirm GPG key + `release-pipeline` guard behavior before the `vN` tag move.
 
 ## Suggested first move in the new session
 
-1. Read this file + `plans/00-overview.md`.
-2. Resolve **Q1** (Path A vs B) with the user — it gates everything.
-3. Write `plans/01-scoping.md` capturing the decision + rationale + resulting version.
+1. Read this file + `plans/00-overview.md` + `plans/01-scoping.md` (the locked decision).
+2. Write `plans/02-schema.md`, then edit `schemas/markdown-frontmatter.schema.json`: add `consumer` + enum, add `'1.1'` to the `schema_version` enum, narrow the `visibility` description. No link patterns.
+3. Re-validate the schema as Draft 2020-12, then proceed to Steps 3–5.
