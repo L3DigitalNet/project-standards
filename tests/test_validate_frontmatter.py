@@ -7,6 +7,10 @@ Organisation (the three layers from the strategy doc):
   * Numbered cases 1-15 — the original spec-mapped schema/config cases. Cases 1-14
     exercise schema behaviour through ``validate_file``; case 15 covers config
     include/exclude resolution through ``main``.
+  * "Schema V1.1" section — the additive 1.1.0 surface (the optional ``consumer``
+    enum and the widened ``schema_version`` enum), sitting after the numbered
+    schema cases. ``MINIMAL``/``STANDARD`` stay pinned at ``1.0`` so the rest of
+    the suite doubles as backward-compatibility coverage.
   * "Unit" section — pure helpers in isolation (``parse_frontmatter``,
     ``_coerce_dates``, ``resolve_schema_path``, ``find_bundled_schema``,
     ``load_config``) including their malformed-input fallbacks.
@@ -183,6 +187,54 @@ def test_invalid_tag_format_fails(tmp_path: Path, validator: Draft202012Validato
     meta = {**MINIMAL, "tags": ["Not Kebab"]}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("tags" in e for e in errors)
+
+
+# ===========================================================================
+# Schema V1.1 — additive surface (release 1.1.0, Path A)
+#
+# Two changes: schema_version gains "1.1" (keeping "1.0"), and `consumer` is a
+# new OPTIONAL standard-profile enum. These cases pin both the new acceptances
+# and the still-rejected neighbours. No link-pattern cases: Path A ships the
+# repo-root link rule as convention only, not schema-enforced (deferred to 2.0.0).
+# ===========================================================================
+
+
+def test_schema_version_1_1_accepted(tmp_path: Path, validator: Draft202012Validator) -> None:
+    meta = {**STANDARD, "schema_version": "1.1", "consumer": "agent"}
+    assert _check(tmp_path, validator, _doc(meta)) == []
+
+
+def test_schema_version_1_0_still_accepted(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # Backward-compat contract for a minor bump: 1.0 documents must stay valid.
+    assert _check(tmp_path, validator, _doc({**MINIMAL, "schema_version": "1.0"})) == []
+
+
+def test_schema_version_unknown_value_fails(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    errors = _check(tmp_path, validator, _doc({**MINIMAL, "schema_version": "1.2"}))
+    assert any("schema_version" in e for e in errors)
+
+
+@pytest.mark.parametrize("value", ["user", "agent", "mix", "unknown"])
+def test_consumer_enum_values_accepted(
+    tmp_path: Path, validator: Draft202012Validator, value: str
+) -> None:
+    meta = {**STANDARD, "schema_version": "1.1", "consumer": value}
+    assert _check(tmp_path, validator, _doc(meta)) == []
+
+
+def test_consumer_invalid_value_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+    meta = {**STANDARD, "schema_version": "1.1", "consumer": "robot"}
+    errors = _check(tmp_path, validator, _doc(meta))
+    assert any("consumer" in e for e in errors)
+
+
+def test_consumer_is_optional(tmp_path: Path, validator: Draft202012Validator) -> None:
+    # consumer absent from an otherwise-standard 1.1 document must still pass.
+    assert _check(tmp_path, validator, _doc({**STANDARD, "schema_version": "1.1"})) == []
 
 
 # 15.
