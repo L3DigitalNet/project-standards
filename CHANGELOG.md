@@ -26,7 +26,7 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] — unreleased
+## [1.1.0] — 2026-06-03
 
 ### Added
 
