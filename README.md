@@ -89,6 +89,8 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specifi
 
 A consuming repository adopts the standards by adding **two files** — a config that says _which files to check_, and a workflow that _runs the shared validator in CI_. This is the same regardless of which standards you use.
 
+> **Adopting with an agent?** Hand it [`standards/adoption.md`](standards/adoption.md) — a self-contained, step-by-step onboarding & compliance procedure (config, CI pinning, the full frontmatter rules, a worked example, and a compliance checklist).
+
 ```text
 some-repo/
 ├── .project-standards.yml          # config — repo root
