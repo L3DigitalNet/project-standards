@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-02'
+updated: '2026-06-03'
 reviewed: null
 owner: ''
 tags:
@@ -27,6 +27,10 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- **Project license** — added the Apache-2.0 `LICENSE` file and Python package metadata so GitHub and built wheels identify the project license consistently.
 
 ### Changed
 

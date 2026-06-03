@@ -186,3 +186,7 @@ uv run ruff check .                                          # lint
 uv run pyright                                               # type-check
 uv run validate-frontmatter --config .project-standards.yml  # dogfood the standard
 ```
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
