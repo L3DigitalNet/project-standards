@@ -4,25 +4,38 @@
 
 ## Where we are
 
-We have spent this session reviewing and polishing a **proposed v1.1 of the Markdown Frontmatter Standard** to convergence (multi-pass: internal consistency, doc↔schema cross-checks, layout, live-code verification, spelling). The spec is now internally consistent and self-converged — **no substantive findings remain.**
+**Steps 1–5 of the release plan are DONE and committed on `testing`** (target `1.1.0`, Path A). The implementation is complete and the full toolchain is green (`validate-frontmatter` ✓ 8, `pytest` 66, `ruff` clean, `pyright` 0). What remains is the changelog + the release mechanics (tag/push), which need user-driven decisions.
 
-All work lives in **`working/` (untracked, local only)**. **Nothing in the real repo (`schemas/`, `standards/`, `templates/`, `examples/`, `tests/`, `CHANGELOG.md`, `pyproject.toml`) has been changed.** This is still 100% pre-implementation.
+Commits this session (newest first): `b7dfe81` Step 5 tests · `6974867` Step 4 templates/examples · `ef1aeb1` Step 3 standard · `3f1e0ff` Step 2 schema · `d09ec58` Step 1 scoping. Each step's decision record is in `plans/0N-*.md`.
+
+| Step | State | Notes |
+| --- | --- | --- |
+| 1 scoping | ✅ | Path A, `1.1.0` |
+| 2 schema | ✅ | `consumer` + `'1.1'` enum + narrowed `visibility`; no link patterns |
+| 3 standard | ✅ | promoted wholesale; links→SHOULD/convention; Versioning/Validation trimmed to pointers |
+| 4 templates/examples | ✅ | `1.1` + `consumer` everywhere; examples use varied values; minimal yml version-only |
+| 5 tests | ✅ | +9 additive cases; fixtures stay `1.0` for back-compat coverage |
+| 6 migration | ⛔ skipped | Path A — no link migration |
+| 7 changelog | ⏳ next | see release findings below |
+| 8 verify gate | ⏳ | already green; re-run on the release commit |
+| 9 release | ⏳ user | bump + uv.lock + GPG tag + move `v1` + push |
+| 10 post-release | ⏳ | tag/install resolves; consumer smoke test |
 
 ## The next action
 
-Begin **Step 2 of the release plan: update the JSON schema** (authoritative, do first). Step 1 is **DONE** — see [`plans/01-scoping.md`](plans/01-scoping.md). Detail doc `plans/02-schema.md` is **not yet written**.
+**Step 7 (changelog), then the release sequence (8–10).** Three findings refine how:
 
-Step 2 scope (Path A): add the optional `consumer` property + enum (`user|agent|mix|unknown`); add `'1.1'` to the `schema_version` enum (keep `'1.0'`); narrow the `visibility` description. **Do NOT** add `items.pattern` to link fields — that is the deferred breaking change.
+1. **`[Unreleased]` already has two pre-existing entries** (Apache-2.0 `LICENSE` add; versioning-standard force-push wording). Both additive/non-breaking. Step 7 must fold these into the `[v1.1.0]` section **together with** the new frontmatter entries (`Added: consumer`; `Changed: visibility` description + link rule now stated as convention; `schema_version` `1.1`).
+2. **The `release-pipeline` guard is server-side** (no local pre-push hook — only `.sample` files). Tag move uses delete-and-re-push, never `--force`. Confirm against the GitHub ruleset (Q4).
+3. **Release requires integrating `testing → main`.** The work is on `testing`; the release commit + `v1.1.0` tag + moved `v1` belong on `main`. Decide merge vs rebase (consider `superpowers:finishing-a-development-branch`). Pushing an org repo (`github.com/L3DigitalNet/project-standards`) + moving the `v1` tag is **outward-facing — needs explicit user approval.**
 
 ### ✅ Step 1 decision (was the gate): Path A — `1.1.0` (minor)
 
-Resolved 2026-06-03 with the user. Full rationale + evidence in `plans/01-scoping.md`.
+Full rationale + evidence in `plans/01-scoping.md`.
 
 - **Target version `1.1.0`** (current release `1.0.2` on moving tag `v1`).
 - `consumer` (additive) + `'1.1'` enum widening are both MINOR-class.
-- The repo-root link rule ships as **documented convention only** — no schema `items.pattern` this release. Enforcing it would tighten a rule and newly-fail **7** currently-passing managed docs (`standards/adr.md`, `standards/versioning.md`, `CHANGELOG.md`, and all four `examples/*.example.md`), making it MAJOR → deferred to a future `2.0.0`.
-- **Spec edit this forces (do in Step 3):** soften the "enforced by the validator" link claim at `schema/schema.frontmatter.md:336` to "by convention," and drop the `(PROPOSED V1.1)` title qualifier.
-- **Step 6 (migration) does not run** under Path A.
+- The repo-root link rule ships as **documented convention only** — no schema `items.pattern` this release. Enforcing it would tighten a rule and newly-fail **7** currently-passing managed docs, making it MAJOR → deferred to a future `2.0.0`.
 
 ## Decisions already locked (do not relitigate)
 
