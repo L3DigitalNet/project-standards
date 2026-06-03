@@ -1,5 +1,5 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'adr-0000-short-title'
 title: 'ADR 0000: Short Title'
 description: 'Decision record for a significant architectural or project decision.'
@@ -9,6 +9,7 @@ created: 'YYYY-MM-DD'
 updated: 'YYYY-MM-DD'
 reviewed: null
 owner: ''
+consumer: 'unknown'
 tags: []
 aliases: []
 related: []

@@ -1,5 +1,5 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'immutable-infrastructure'
 title: 'Immutable Infrastructure'
 description: 'Servers and containers are replaced wholesale on every change rather than modified in place.'
@@ -9,6 +9,7 @@ created: '2026-06-02'
 updated: '2026-06-02'
 reviewed: null
 owner: 'platform-team'
+consumer: 'mix'
 tags:
   - infrastructure
   - deployment

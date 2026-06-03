@@ -1,5 +1,5 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'adr-0001-use-postgresql-for-persistent-storage'
 title: 'ADR 0001: Use PostgreSQL for persistent storage'
 description: 'Records the decision to standardise on PostgreSQL 16 as the primary relational datastore.'
@@ -9,6 +9,7 @@ created: '2026-01-15'
 updated: '2026-05-30'
 reviewed: '2026-05-30'
 owner: 'platform-team'
+consumer: 'user'
 tags:
   - database
   - storage

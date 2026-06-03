@@ -1,5 +1,5 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'tailscale-acl-gotcha'
 title: 'Tailscale ACL tag ordering gotcha'
 description: 'A working note on why a Tailscale ACL rule silently failed until tag order was fixed.'
@@ -9,6 +9,7 @@ created: '2026-06-02'
 updated: '2026-06-02'
 reviewed: null
 owner: ''
+consumer: 'agent'
 tags:
   - tailscale
   - networking

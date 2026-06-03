@@ -1,5 +1,5 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'restart-netbox-after-config-change'
 title: 'Restart netbox after config change'
 description: 'Procedure to safely reload netbox after editing its configuration.'
@@ -9,6 +9,7 @@ created: '2026-03-10'
 updated: '2026-06-02'
 reviewed: '2026-06-02'
 owner: 'platform-team'
+consumer: 'user'
 tags:
   - netbox
   - restart

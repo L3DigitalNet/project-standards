@@ -1,5 +1,5 @@
 ---
-schema_version: "1.0"
+schema_version: "1.1"
 id: "replace-with-stable-id"
 title: "Runbook: Procedure Name"
 description: "One-sentence description of the operational procedure."
@@ -9,6 +9,7 @@ created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 reviewed: null
 owner: ""
+consumer: "unknown"
 tags: []
 aliases: []
 related: []
