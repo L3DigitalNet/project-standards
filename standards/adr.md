@@ -1,12 +1,12 @@
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'adr-standard'
 title: 'Architecture Decision Record (ADR) Standard'
 description: 'How to write Architecture Decision Records using the MADR format with canonical frontmatter.'
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-02'
+updated: '2026-06-03'
 reviewed: null
 owner: ''
 tags:
@@ -56,7 +56,7 @@ namespace (the schema rejects unknown top-level fields, so they cannot sit at th
 
 ```yaml
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'adr-0001-use-postgresql-for-persistent-storage'
 title: 'ADR 0001: Use PostgreSQL for persistent storage'
 description: 'One-sentence summary of the decision.'

@@ -120,31 +120,6 @@
       "uniqueItems": true,
       "description": "Related document IDs or relative paths."
     },
-    "source": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true,
-      "description": "Sources used to create or support the document."
-    },
-    "confidence": {
-      "type": "string",
-      "enum": ["high", "medium", "low", "unknown"],
-      "description": "Reliability signal for LLM and human use."
-    },
-    "visibility": {
-      "type": "string",
-      "enum": ["private", "internal", "public"],
-      "description": "Exposure level."
-    },
-    "license": {
-      "anyOf": [
-        { "type": "string" },
-        { "type": "null" }
-      ],
-      "description": "License or reuse terms, if applicable."
-    },
     "supersedes": {
       "type": "array",
       "items": { "type": "string" },
@@ -169,6 +144,31 @@
       "items": { "type": "string" },
       "uniqueItems": true,
       "description": "Scopes, services, or components this document applies to."
+    },
+    "source": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Sources used to create or support the document."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low", "unknown"],
+      "description": "Reliability signal for LLM and human use."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["private", "internal", "public"],
+      "description": "Exposure level."
+    },
+    "license": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ],
+      "description": "License or reuse terms, if applicable."
     },
     "publish": {
       "type": "object",

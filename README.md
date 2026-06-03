@@ -34,7 +34,7 @@ Minimal frontmatter (the eleven required fields):
 
 ```yaml
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'replace-with-stable-id'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
@@ -52,7 +52,7 @@ Standard frontmatter (recommended for most documents):
 
 ```yaml
 ---
-schema_version: '1.0'
+schema_version: '1.1'
 id: 'replace-with-stable-id'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
@@ -62,6 +62,7 @@ created: '2026-06-02'
 updated: '2026-06-02'
 reviewed: null
 owner: ''
+consumer: 'unknown'
 tags: []
 aliases: []
 related: []
@@ -72,7 +73,7 @@ license: null
 ---
 ```
 
-See the standard for full field definitions and the controlled values for `doc_type`, `status`, `confidence`, and `visibility`.
+See the standard for full field definitions and the controlled values for `doc_type`, `status`, `confidence`, `visibility`, and `consumer`.
 
 ### ADR Standard
 
