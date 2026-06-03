@@ -1,6 +1,4 @@
-# Agent Instructions for Project: project-standards
-
-For Claude Code specific instructions see [CLAUDE.md](CLAUDE.md)
+# AGENTS.md
 
 ## Project Purpose
 
