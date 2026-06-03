@@ -32,27 +32,17 @@ license: null
 
 ## Purpose
 
-An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse
-decision: the context that forced it, the options considered, the option chosen, and the
-consequences. ADRs are the durable, reviewable memory of *why* a system is the way it is.
+An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
 
-This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Any Decision Records) as
-the body format, layered on top of the repository's
-[Markdown Frontmatter Standard](markdown-frontmatter.md) for metadata. General ADR background is
-at <https://adr.github.io/>.
+This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Any Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](markdown-frontmatter.md) for metadata. General ADR background is at <https://adr.github.io/>.
 
 ## When to write an ADR
 
-Write an ADR when a decision is **significant** and **costly to reverse**: choosing a datastore,
-a network segmentation model, an auth approach, a deployment target, a directory convention that
-many files will follow. Do not write an ADR for routine, easily-reversed choices — use a
-`doc_type: decision` note or an ordinary `note` for those.
+Write an ADR when a decision is **significant** and **costly to reverse**: choosing a datastore, a network segmentation model, an auth approach, a deployment target, a directory convention that many files will follow. Do not write an ADR for routine, easily-reversed choices — use a `doc_type: decision` note or an ordinary `note` for those.
 
 ## Frontmatter for ADRs
 
-ADRs use the **standard** canonical frontmatter profile with `doc_type: adr`. MADR's own metadata
-maps onto canonical fields; ADR-specific people-roles live under the sanctioned `project`
-namespace (the schema rejects unknown top-level fields, so they cannot sit at the top level).
+ADRs use the **standard** canonical frontmatter profile with `doc_type: adr`. MADR's own metadata maps onto canonical fields; ADR-specific people-roles live under the sanctioned `project` namespace (the schema rejects unknown top-level fields, so they cannot sit at the top level).
 
 ```yaml
 ---
@@ -84,28 +74,27 @@ project:
 
 ### MADR field → canonical field
 
-| MADR field        | Canonical home                          | Notes                                              |
-| ----------------- | --------------------------------------- | -------------------------------------------------- |
-| `status`          | `status` (top level)                    | Mapped — see the status table below.               |
-| `date`            | `updated` (and `created` on first write) | ISO `YYYY-MM-DD`.                                   |
-| `decision-makers` | `project.decision_makers`               | List of people who made the decision.              |
-| `consulted`       | `project.consulted`                     | Two-way input; subject-matter experts.             |
-| `informed`        | `project.informed`                      | One-way; kept up to date.                          |
-| "superseded by X" | `superseded_by` + `status: superseded`  | Use `supersedes` on the replacement ADR.           |
+| MADR field | Canonical home | Notes |
+| --- | --- | --- |
+| `status` | `status` (top level) | Mapped — see the status table below. |
+| `date` | `updated` (and `created` on first write) | ISO `YYYY-MM-DD`. |
+| `decision-makers` | `project.decision_makers` | List of people who made the decision. |
+| `consulted` | `project.consulted` | Two-way input; subject-matter experts. |
+| `informed` | `project.informed` | One-way; kept up to date. |
+| "superseded by X" | `superseded_by` + `status: superseded` | Use `supersedes` on the replacement ADR. |
 
 ### MADR status → canonical `status`
 
-MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MADR-native word may
-also be stated in prose at the top of the ADR body for readers familiar with MADR.
+MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MADR-native word may also be stated in prose at the top of the ADR body for readers familiar with MADR.
 
-| MADR status  | Canonical `status` | Meaning                                            |
-| ------------ | ------------------ | -------------------------------------------------- |
-| (drafting)   | `draft`            | Still being written.                               |
-| `proposed`   | `review`           | Proposed; awaiting a decision.                     |
-| `accepted`   | `active`           | Decision is in force.                              |
-| `rejected`   | `archived`         | Considered and declined; kept for the record.      |
-| `deprecated` | `deprecated`       | Superseded direction; avoid for new work.          |
-| `superseded` | `superseded`       | Replaced by another ADR; set `superseded_by`.      |
+| MADR status  | Canonical `status` | Meaning                                       |
+| ------------ | ------------------ | --------------------------------------------- |
+| (drafting)   | `draft`            | Still being written.                          |
+| `proposed`   | `review`           | Proposed; awaiting a decision.                |
+| `accepted`   | `active`           | Decision is in force.                         |
+| `rejected`   | `archived`         | Considered and declined; kept for the record. |
+| `deprecated` | `deprecated`       | Superseded direction; avoid for new work.     |
+| `superseded` | `superseded`       | Replaced by another ADR; set `superseded_by`. |
 
 ## Body structure (MADR)
 
@@ -119,20 +108,15 @@ also be stated in prose at the top of the ADR body for readers familiar with MAD
 **Optional sections** (include when they add value):
 
 - **Decision Drivers** — qualities, constraints, or forces that weighed on the choice.
-- **Confirmation** — how compliance with the decision is/will be verified (review, test, fitness
-  function).
+- **Confirmation** — how compliance with the decision is/will be verified (review, test, fitness function).
 - **Pros and Cons of the Options** — per-option arguments.
 - **More Information** — evidence, team agreement, revisit conditions, links.
 
-Templates for each verbosity level live in [`templates/`](../templates/):
-[`adr.md`](../templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections,
-with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required
-sections, empty).
+Templates for each verbosity level live in [`templates/`](../templates/): [`adr.md`](../templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
 
 ## ID and filename convention
 
-- **`id`**: `adr-NNNN-short-title` in lowercase kebab-case, e.g. `adr-0001-use-netbox-as-source-of-truth`.
-  `NNNN` is a zero-padded, repo-scoped sequence number.
+- **`id`**: `adr-NNNN-short-title` in lowercase kebab-case, e.g. `adr-0001-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number.
 - **Filename**: matches the `id` — `adr-NNNN-short-title.md`.
 - **`title`**: human form, e.g. `ADR 0001: Use NetBox as source of truth`.
 
@@ -147,9 +131,7 @@ docs/decisions/
 └── adr-0002-segment-iot-onto-its-own-vlan.md
 ```
 
-The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and
-title. (This standards repository documents the convention but does not itself host a
-`docs/decisions/` tree, since it is the source of the standard rather than a consumer of it.)
+The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and title. (This standards repository documents the convention but does not itself host a `docs/decisions/` tree, since it is the source of the standard rather than a consumer of it.)
 
 ## Supersession workflow
 

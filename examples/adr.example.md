@@ -39,8 +39,7 @@ MADR status: **accepted**.
 
 ## Context and Problem Statement
 
-Services need a relational data store with ACID transactions, JSON columns, and full-text search.
-Which engine should be the default for all services that require persistent structured data?
+Services need a relational data store with ACID transactions, JSON columns, and full-text search. Which engine should be the default for all services that require persistent structured data?
 
 ## Decision Drivers
 
@@ -57,9 +56,7 @@ Which engine should be the default for all services that require persistent stru
 
 ## Decision Outcome
 
-Chosen option: **PostgreSQL 16**, because it meets every decision driver — the team has the most
-operational experience with it, its extension ecosystem (`pgvector`, `TimescaleDB`) is the
-strongest, and its JSON/JSONB support is the most mature of the options.
+Chosen option: **PostgreSQL 16**, because it meets every decision driver — the team has the most operational experience with it, its extension ecosystem (`pgvector`, `TimescaleDB`) is the strongest, and its JSON/JSONB support is the most mature of the options.
 
 ### Consequences
 
@@ -71,8 +68,7 @@ strongest, and its JSON/JSONB support is the most mature of the options.
 
 ### Confirmation
 
-New service specs are reviewed against this ADR; a service introducing a different relational
-engine must supersede this ADR or document a scoped exception.
+New service specs are reviewed against this ADR; a service introducing a different relational engine must supersede this ADR or document a scoped exception.
 
 ## Pros and Cons of the Options
 
@@ -95,5 +91,4 @@ engine must supersede this ADR or document a scoped exception.
 
 ## More Information
 
-Revisit if a service emerges whose scale or workload PostgreSQL cannot serve economically. See
-the [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/).
+Revisit if a service emerges whose scale or workload PostgreSQL cannot serve economically. See the [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/).
