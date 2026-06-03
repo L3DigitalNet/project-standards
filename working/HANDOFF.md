@@ -4,6 +4,8 @@
 > [`plans/00-overview.md`](plans/00-overview.md) (the release plan) and
 > [`schema/schema.frontmatter.md`](schema/schema.frontmatter.md) (the converged spec).
 > Repo: `/home/chris/projects/project-standards`. Today is 2026-06-03.
+> **Branch:** all V1.1 release work happens on the `testing` branch (created 2026-06-03);
+> `main` stays stable. Verify with `git switch testing` before starting.
 
 ## Where we are
 
@@ -56,7 +58,7 @@ Two paths to choose from (this is open question Q1):
 ## Key files
 
 | Path | Role |
-|------|------|
+| --- | --- |
 | `working/HANDOFF.md` | this file |
 | `working/plans/00-overview.md` | **the release plan** — 10 steps, sequencing, open questions |
 | `working/schema/schema.frontmatter.md` | the converged spec (titled "PROPOSED V1.1") |
