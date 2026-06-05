@@ -1,0 +1,15 @@
+# Specs And Plans
+
+**Last updated:** 2026-06-05
+
+| Item | Path | Status |
+| --- | --- | --- |
+| Handoff v3 migration design | `docs/superpowers/specs/2026-06-05-handoff-v3-migration-design.md` | approved |
+| Handoff v3 migration plan | `docs/superpowers/plans/2026-06-05-handoff-v3-migration.md` | in progress |
+| Linting/formatting stack (DEC-1…9 trail) | `docs/superpowers/specs/2026-06-04-linting-formatting-stack.md` | implemented (1.3.0) |
+| v1.1.0 planning docs | `docs/superpowers/plans/v1.1.0/` | shipped |
+
+## Storage
+
+- Specs and design artifacts: `docs/superpowers/specs/`
+- Implementation plans: `docs/superpowers/plans/`
