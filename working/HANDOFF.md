@@ -38,12 +38,12 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 - **Reference configs populated:** [`linting-formatting/markdownlint.yaml`](linting-formatting/markdownlint.yaml) + [`linting-formatting/markdownlint.jsonc`](linting-formatting/markdownlint.jsonc) now carry the full annotated rule catalog with the 13 `[CUSTOM]` values applied (verified byte-identical in effect across both formats).
 - **Normalized:** `CHANGELOG.md` MD049 emphasis (`*cannot*`→`_cannot_`); 5 templates' frontmatter (concept/note/research/runbook/spec) → single quotes. The 3 ADR templates were left as-authored (prose untouched).
 
-## Next action — remaining `1.3.0` backlog items #3 (code) + #5 (README)
+## Next action — last `1.3.0` backlog item: #5 (README), then release
 
 **Backlog item #2 (DEC-3 + DEC-7) is DONE** (2026-06-05, uncommitted→see below): `lint-markdown.yml` reusable workflow + `.markdownlint-cli2.jsonc` runner config + `github-actions` Dependabot, with the lint scope settled (**lint everything incl. `working/`**; the 5 pre-existing errors fixed). CHANGELOG `[Unreleased]` section started. Remaining for the `1.3.0` additive release (backlog at the bottom of the decisions doc):
 
 - ✅ **#1 (DEC-1/§3.5) DONE (2026-06-05):** `.markdownlint.json` MD024 → `false` (Δ3, match MADR); "Any"→"Architectural" in `standards/adr.md` (Δ7, verified vs upstream). SPL declined (proseWrap:never); bare-placeholders kept.
-- **#3 (DEC-5):** validator default-off `markdown.adr.require_sections` check + tests + `standards/adr.md` note. ← the only Python/code item (use TDD). **⚠️ Reconcile first:** `standards/adr.md` body-structure lists **Consequences** as a 4th _required_ section, but MADR 4.0 + DEC-5 require only **3** (Context/Problem, Considered Options, Decision Outcome). Fix the standard's prose to match before/with the validator.
+- ✅ **#3 (DEC-5) DONE (2026-06-05):** validator gained default-off `markdown.adr.require_sections` (pure `missing_adr_sections` helper + `doc_type: adr` gate; `FrontmatterConfig`→`ProjectConfig`). 17 new tests, TDD, 87 green; ruff + pyright clean. Reconciled the Consequences-required finding (`standards/adr.md` now lists 3 required, matching MADR 4.0/templates). Enabled in `.project-standards.yml` (dogfood; verified it fires on a broken example).
 - ✅ **#4 (DEC-6b) DONE (2026-06-05):** ADR id → `adr-NNNN-repo-name-title` (repo-name = cross-repo global uniqueness); filename stays `adr-NNNN-title.md` (no repo-name). Updated `standards/adr.md` (ID section + note + tree + frontmatter sample), 4 templates, and the worked example + its 2 inbound `related:` refs. Revised the original DEC-6 (MADR-bare filename) per a new "ids unique across many repos" requirement. No validator change.
 - **#5 (DEC-8):** document `lint-markdown.yml` consumption in `README.md`.
 

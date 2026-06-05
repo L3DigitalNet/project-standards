@@ -131,6 +131,53 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
+# ADR body-structure check (opt-in; see standards/adr.md + DEC-5)
+# ---------------------------------------------------------------------------
+
+# The three sections MADR 4.0 marks REQUIRED. Consequences, Confirmation,
+# Decision Drivers, Pros and Cons, and More Information are optional in MADR and
+# are intentionally NOT demanded here — requiring them would fight MADR's
+# short→large flexibility.
+_ADR_REQUIRED_SECTIONS = (
+    "Context and Problem Statement",
+    "Considered Options",
+    "Decision Outcome",
+)
+
+# A level-2 ATX heading: exactly two `#`, then whitespace, then the title. The
+# `[ \t]+` after `##` excludes `###` (level 3) because the third `#` is not
+# whitespace. Match is case-sensitive — MADR section titles are fixed strings.
+_H2_HEADING_RE = re.compile(r"^##[ \t]+(.+?)[ \t]*$")
+
+# A fenced-code-block delimiter (``` or ~~~, optionally indented / with a
+# language). Headings inside a fence are illustrative (e.g. a template snippet),
+# not the document's own structure, so they must not count as present.
+_CODE_FENCE_RE = re.compile(r"^[ \t]*(?:```|~~~)")
+
+
+def missing_adr_sections(text: str) -> list[str]:
+    """Return the MADR-required `##` sections absent from a document, in order.
+
+    Pure helper for the opt-in ADR body-structure check (DEC-5): scans level-2
+    ATX headings — skipping any inside fenced code blocks — and reports which of
+    the three required MADR 4.0 sections are missing. Returns ``[]`` when all
+    three are present.
+    """
+    present: set[str] = set()
+    in_code_fence = False
+    for line in text.splitlines():
+        if _CODE_FENCE_RE.match(line):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        match = _H2_HEADING_RE.match(line)
+        if match:
+            present.add(match.group(1))
+    return [section for section in _ADR_REQUIRED_SECTIONS if section not in present]
+
+
+# ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
 
@@ -140,8 +187,14 @@ def validate_file(
     validator: Draft202012Validator,
     *,
     require_frontmatter: bool,
+    require_adr_sections: bool = False,
 ) -> list[str]:
-    """Validate a single file; return a list of human-readable error strings."""
+    """Validate a single file; return a list of human-readable error strings.
+
+    When ``require_adr_sections`` is set, documents with ``doc_type: adr`` are
+    additionally checked for the three MADR-required ``##`` sections (DEC-5).
+    Off by default, so existing callers are unaffected.
+    """
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -160,6 +213,10 @@ def validate_file(
     for error in sorted(validator.iter_errors(meta), key=lambda e: list(e.path)):  # pyright: ignore[reportUnknownMemberType]
         field = ".".join(str(p) for p in error.path) or "(root)"
         errors.append(f"{path}: [{field}] {error.message}")
+
+    if require_adr_sections and meta.get("doc_type") == "adr":
+        for section in missing_adr_sections(text):
+            errors.append(f"{path}: missing required ADR section '## {section}'")
     return errors
 
 
@@ -208,12 +265,18 @@ def collect_paths(
 
 
 # ---------------------------------------------------------------------------
-# Config (nested markdown.frontmatter shape)
+# Config (nested markdown.{frontmatter,adr} shape)
 # ---------------------------------------------------------------------------
 
 
-class FrontmatterConfig:
-    """Resolved view of the `markdown.frontmatter` section of the config file."""
+class ProjectConfig:
+    """Resolved view of `.project-standards.yml`.
+
+    Holds the `markdown.frontmatter` settings (schema/include/exclude/required)
+    plus the separate, opt-in `markdown.adr` flags. The two namespaces stay
+    conceptually distinct in the file; this is the validator's merged in-memory
+    view of them.
+    """
 
     def __init__(
         self,
@@ -222,11 +285,13 @@ class FrontmatterConfig:
         include: list[str],
         exclude: list[str],
         required: bool,
+        require_adr_sections: bool,
     ) -> None:
         self.schema = schema
         self.include = include
         self.exclude = exclude
         self.required = required
+        self.require_adr_sections = require_adr_sections
 
 
 def _as_str_list(value: Any) -> list[str]:
@@ -236,12 +301,13 @@ def _as_str_list(value: Any) -> list[str]:
     return []
 
 
-def load_config(path: Path) -> FrontmatterConfig:
-    """Read nested `markdown.frontmatter`; missing keys fall back to defaults."""
+def load_config(path: Path) -> ProjectConfig:
+    """Read nested `markdown.frontmatter` + `markdown.adr`; missing keys default."""
     schema: str | None = None
     include: list[str] = []
     exclude: list[str] = []
     required = True
+    require_adr_sections = False
 
     if path.exists():
         try:
@@ -261,9 +327,17 @@ def load_config(path: Path) -> FrontmatterConfig:
                     include = _as_str_list(fm.get("include"))
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
+                adr = markdown_dict.get("adr")
+                if isinstance(adr, dict):
+                    adr_dict = cast("dict[str, Any]", adr)
+                    require_adr_sections = bool(adr_dict.get("require_sections", False))
 
-    return FrontmatterConfig(
-        schema=schema, include=include, exclude=exclude, required=required
+    return ProjectConfig(
+        schema=schema,
+        include=include,
+        exclude=exclude,
+        required=required,
+        require_adr_sections=require_adr_sections,
     )
 
 
@@ -350,7 +424,12 @@ def main(argv: list[str] | None = None) -> int:
     all_errors: list[str] = []
     for path in paths:
         all_errors.extend(
-            validate_file(path, validator, require_frontmatter=require_frontmatter)
+            validate_file(
+                path,
+                validator,
+                require_frontmatter=require_frontmatter,
+                require_adr_sections=config.require_adr_sections,
+            )
         )
 
     if all_errors:

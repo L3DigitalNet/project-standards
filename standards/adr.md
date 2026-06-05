@@ -98,19 +98,21 @@ MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MAD
 
 ## Body structure (MADR)
 
-**Required sections:**
+**Required sections** — the three MADR 4.0 marks required, each a level-2 (`##`) heading:
 
 1. **Context and Problem Statement** — the situation, forces, and the question being decided.
 2. **Considered Options** — the meaningful options on the table.
 3. **Decision Outcome** — the chosen option and the justification.
-4. **Consequences** — the resulting good/bad/neutral effects.
 
 **Optional sections** (include when they add value):
 
 - **Decision Drivers** — qualities, constraints, or forces that weighed on the choice.
-- **Confirmation** — how compliance with the decision is/will be verified (review, test, fitness function).
+- **Consequences** (`### Consequences`, nested under Decision Outcome) — the resulting good/bad/neutral effects.
+- **Confirmation** (`### Confirmation`, nested under Decision Outcome) — how compliance with the decision is/will be verified (review, test, fitness function).
 - **Pros and Cons of the Options** — per-option arguments.
 - **More Information** — evidence, team agreement, revisit conditions, links.
+
+> **Opt-in section check.** Set `markdown.adr.require_sections: true` in `.project-standards.yml` to have the validator assert that every `doc_type: adr` document contains the three required `##` sections above (exact, case-sensitive, level-2 headings; headings inside code fences don't count). It is **off by default**, and the optional sections are never required — honoring MADR's short→large flexibility. This lives under a separate `markdown.adr` config key from the `markdown.frontmatter` settings.
 
 Templates for each verbosity level live in [`templates/`](../templates/): [`adr.md`](../templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
 

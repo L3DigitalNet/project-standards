@@ -38,6 +38,7 @@ from tools.validate_frontmatter import (
     find_bundled_schema,
     load_config,
     main,
+    missing_adr_sections,
     parse_frontmatter,
     resolve_schema_path,
     validate_file,
@@ -496,6 +497,25 @@ def test_load_config_non_list_include_coerced_to_empty(tmp_path: Path) -> None:
     assert load_config(path).include == []
 
 
+# markdown.adr.require_sections — a SEPARATE config key from markdown.frontmatter.*,
+# default off, so the opt-in ADR body-structure check (DEC-5) is additive: a config
+# that never mentions it (or no config at all) leaves the check disabled.
+def test_load_config_adr_require_sections_default_false(tmp_path: Path) -> None:
+    path = _write_config(tmp_path, include=["docs/*.md"], exclude=[])
+    assert load_config(path).require_adr_sections is False
+
+
+def test_load_config_missing_file_adr_require_sections_false(tmp_path: Path) -> None:
+    assert load_config(tmp_path / "nope.yml").require_adr_sections is False
+
+
+def test_load_config_adr_require_sections_true_is_honoured(tmp_path: Path) -> None:
+    path = tmp_path / ".project-standards.yml"
+    body = {"markdown": {"adr": {"require_sections": True}}}
+    path.write_text(yaml.safe_dump(body), encoding="utf-8")
+    assert load_config(path).require_adr_sections is True
+
+
 # ===========================================================================
 # Unit — validate_file edge cases
 # ===========================================================================
@@ -539,9 +559,149 @@ def test_root_level_error_labelled_root(
     assert any("[(root)]" in e and "required" in e for e in errors)
 
 
+# --- validate_file × the opt-in ADR section check (DEC-5) --------------------
+
+
+def test_validate_file_adr_sections_off_by_default(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # An ADR missing Decision Outcome passes when require_adr_sections is not set:
+    # the check is additive and must not change behaviour for existing callers.
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Considered Options",
+        frontmatter=True,
+    )
+    path = _write(tmp_path, text)
+    assert validate_file(path, validator, require_frontmatter=True) == []
+
+
+def test_validate_file_adr_sections_flags_missing_when_enabled(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Considered Options",
+        frontmatter=True,
+    )
+    path = _write(tmp_path, text)
+    errors = validate_file(
+        path, validator, require_frontmatter=True, require_adr_sections=True
+    )
+    assert any("Decision Outcome" in e for e in errors)
+
+
+def test_validate_file_complete_adr_passes_with_check_enabled(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    text = _adr_text(*_ALL_ADR_SECTIONS, frontmatter=True)
+    path = _write(tmp_path, text)
+    assert (
+        validate_file(
+            path, validator, require_frontmatter=True, require_adr_sections=True
+        )
+        == []
+    )
+
+
+def test_validate_file_adr_check_only_applies_to_adr_doc_type(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # A non-ADR document (doc_type: note) lacking those headings is not an ADR;
+    # the section check must skip it entirely even when enabled.
+    text = _doc(MINIMAL, body="# Note\n\nProse only — no ADR sections here.\n")
+    path = _write(tmp_path, text)
+    assert (
+        validate_file(
+            path, validator, require_frontmatter=True, require_adr_sections=True
+        )
+        == []
+    )
+
+
 # ===========================================================================
-# Integration — the main() CLI exit-code contract (0 / 1 / 2) and flags
+# Unit — missing_adr_sections (DEC-5 ADR body-structure check)
+#
+# A pure helper: given a document's text, return the MADR-required level-2
+# sections that are absent, in canonical order. Only the THREE truly-required
+# MADR 4.0 sections are checked — Context and Problem Statement / Considered
+# Options / Decision Outcome. Consequences, Confirmation, Decision Drivers,
+# Pros and Cons, and More Information are OPTIONAL and must never be demanded.
 # ===========================================================================
+
+_ALL_ADR_SECTIONS = (
+    "## Context and Problem Statement",
+    "## Considered Options",
+    "## Decision Outcome",
+)
+
+
+def _adr_text(*headings: str, frontmatter: bool = False) -> str:
+    """Render an ADR body from the given heading lines (each with stub prose)."""
+    body = "\n\n".join(f"{h}\n\nstub prose." for h in headings) + "\n"
+    if frontmatter:
+        return _doc({**MINIMAL, "doc_type": "adr"}, body=body)
+    return f"# ADR 0001: Title\n\n{body}"
+
+
+def test_missing_adr_sections_none_when_all_present() -> None:
+    assert missing_adr_sections(_adr_text(*_ALL_ADR_SECTIONS)) == []
+
+
+def test_missing_adr_sections_reports_absent_one() -> None:
+    text = _adr_text("## Context and Problem Statement", "## Considered Options")
+    assert missing_adr_sections(text) == ["Decision Outcome"]
+
+
+def test_missing_adr_sections_orders_by_canonical_sequence() -> None:
+    # Two missing -> reported in MADR section order, not document/discovery order.
+    assert missing_adr_sections(_adr_text("## Considered Options")) == [
+        "Context and Problem Statement",
+        "Decision Outcome",
+    ]
+
+
+def test_missing_adr_sections_is_case_sensitive() -> None:
+    # MADR titles are fixed strings; a lower-cased heading does not satisfy them.
+    text = _adr_text(
+        "## context and problem statement",
+        "## Considered Options",
+        "## Decision Outcome",
+    )
+    assert missing_adr_sections(text) == ["Context and Problem Statement"]
+
+
+def test_missing_adr_sections_ignores_level_3_headings() -> None:
+    # A required section must be a level-2 (`##`) heading, not a sub-heading.
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Considered Options",
+        "### Decision Outcome",
+    )
+    assert missing_adr_sections(text) == ["Decision Outcome"]
+
+
+def test_missing_adr_sections_ignores_optional_sections() -> None:
+    # Optional MADR sections present, a required one absent: only the required one
+    # is reported (optional sections are never demanded, never penalised).
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Decision Drivers",
+        "## Considered Options",
+        "## Consequences",
+    )
+    assert missing_adr_sections(text) == ["Decision Outcome"]
+
+
+def test_missing_adr_sections_ignores_headings_in_code_fences() -> None:
+    # A `## Decision Outcome` shown inside a fenced code block (e.g. a template
+    # snippet) is illustrative, not the document's own section.
+    text = (
+        "## Context and Problem Statement\n\nx\n\n"
+        "## Considered Options\n\nx\n\n"
+        "```markdown\n## Decision Outcome\n```\n"
+    )
+    assert missing_adr_sections(text) == ["Decision Outcome"]
 
 
 def test_main_missing_schema_file_returns_2(
@@ -605,6 +765,57 @@ def test_main_no_require_frontmatter_flag_passes_plain_file(
         "--quiet",
     ]
     assert main(args) == 0
+
+
+def _write_adr_config(root: Path, *, require_sections: bool) -> None:
+    cfg: dict[str, Any] = {
+        "markdown": {
+            "frontmatter": {"schema": "markdown-frontmatter", "include": ["adr.md"]},
+            "adr": {"require_sections": require_sections},
+        }
+    }
+    (root / ".project-standards.yml").write_text(
+        yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8"
+    )
+
+
+def test_main_adr_require_sections_fails_incomplete_adr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # require_sections on + an ADR missing Decision Outcome -> exit 1.
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Considered Options",
+        frontmatter=True,
+    )
+    _write(tmp_path, text, name="adr.md")
+    _write_adr_config(tmp_path, require_sections=True)
+    monkeypatch.chdir(tmp_path)
+    assert main(["--config", ".project-standards.yml", "--quiet"]) == 1
+
+
+def test_main_adr_require_sections_off_passes_incomplete_adr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Same incomplete ADR, check disabled -> exit 0 (additive default).
+    text = _adr_text(
+        "## Context and Problem Statement",
+        "## Considered Options",
+        frontmatter=True,
+    )
+    _write(tmp_path, text, name="adr.md")
+    _write_adr_config(tmp_path, require_sections=False)
+    monkeypatch.chdir(tmp_path)
+    assert main(["--config", ".project-standards.yml", "--quiet"]) == 0
+
+
+def test_main_adr_require_sections_passes_complete_adr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, _adr_text(*_ALL_ADR_SECTIONS, frontmatter=True), name="adr.md")
+    _write_adr_config(tmp_path, require_sections=True)
+    monkeypatch.chdir(tmp_path)
+    assert main(["--config", ".project-standards.yml", "--quiet"]) == 0
 
 
 # ===========================================================================
