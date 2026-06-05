@@ -17,7 +17,7 @@
 
 ---
 
-## Current state — `1.2.0` released; formatting layer added (uncommitted)
+## Current state — `1.2.0` released; formatting layer committed (`f0ef89a`, unreleased)
 
 Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main` holds releases, moving tag `v1` tracks the newest). Published line:
 
@@ -31,16 +31,16 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 
 **2026-06-04 planning session (design only).** Scoped the linting/formatting stack + ADR/MADR standard → **8 locked decisions** (DEC-1…DEC-8); see [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md). No `standards/`/`schemas/`/`tools/`/`.github/` changes.
 
-**2026-06-05 session — Stack-B markdownlint config + a new Prettier layer (all UNCOMMITTED on `testing`).** The `.markdownlint.json` review gate is now **cleared**, and interim formatting wiring landed (not yet released; repo still `1.2.0`):
+**2026-06-05 session — Stack-B markdownlint config + a new Prettier layer (committed as `f0ef89a` on `testing`; not yet released, repo still `1.2.0`).** The `.markdownlint.json` review gate is **cleared** and the formatting wiring is now committed:
 
 - **`.markdownlint.json` expanded** from 3 rules to the **13 non-default rules** extracted from the workstation's global VS Code `markdownlint.config`: MD003 atx / MD004 dash / MD048 backtick / MD049 underscore / MD050 asterisk (align to Prettier); MD009/010/013/030/032 disabled (Prettier owns that formatting); MD029 off; MD024 `siblings_only:true`; MD025 `front_matter_title:""`. Repo Markdown lints **0 errors** (markdownlint v0.40.0 via cached `markdownlint-cli2` v0.22.1).
 - **New Prettier formatting layer** (NOT in DEC-1…8 — see Open questions): repo-local [`../.prettierrc.json`](../.prettierrc.json) (`$schema`-pinned; mirrors the workstation Prettier settings) + **Prettier 3.8.3 pinned** as a local dev dependency (`../package.json` `private:true`, `../package-lock.json`, `node_modules/` gitignored). Overrides: `**/*.jsonc → trailingComma:none`, `**/*.md → singleQuote:true` (Prettier formats frontmatter in the repo's single-quote style — no churn on existing files).
 - **Reference configs populated:** [`linting-formatting/markdownlint.yaml`](linting-formatting/markdownlint.yaml) + [`linting-formatting/markdownlint.jsonc`](linting-formatting/markdownlint.jsonc) now carry the full annotated rule catalog with the 13 `[CUSTOM]` values applied (verified byte-identical in effect across both formats).
 - **Normalized:** `CHANGELOG.md` MD049 emphasis (`*cannot*`→`_cannot_`); 5 templates' frontmatter (concept/note/research/runbook/spec) → single quotes. The 3 ADR templates were left as-authored (prose untouched).
 
-## Next action — commit/decide the 2026-06-05 formatting work, then the DEC backlog
+## Next action — DEC-1…DEC-8 backlog for the `1.3.0` additive release
 
-The above is **uncommitted on `testing`**: new `../.prettierrc.json`, `../package.json`, `../package-lock.json`; modified `../.markdownlint.json`, `../CHANGELOG.md`, 5 `../templates/*.md`; populated `linting-formatting/markdownlint.{yaml,jsonc}`. **Commit or revert these first.** Then resolve the two Open questions (proseWrap; committed-Node vs DEC-7) and proceed to the **DEC-1…DEC-8 backlog** for the `1.3.0` additive release (backlog at the bottom of the decisions doc). The previously-blocking `.markdownlint.json` review gate is **resolved** — the config was reviewed and expanded this session.
+The 2026-06-05 formatting work is **committed** (`f0ef89a`; working tree clean, gate green — `validate-frontmatter` ✓ 9). Proceed to the **DEC-1…DEC-8 backlog** for the `1.3.0` additive release (backlog at the bottom of the decisions doc). Two carry-over cleanups, now tracked under _Open questions_, to clear along the way: the `proseWrap: never` template-churn risk and the two committed `*.bak` files. The previously-blocking `.markdownlint.json` review gate stays **resolved**.
 
 ## Locked decisions / standing context (do not relitigate)
 
@@ -49,6 +49,7 @@ The above is **uncommitted on `testing`**: new `../.prettierrc.json`, `../packag
 - **One tag ships four components** (standard, schema, validator, workflow); classify by the previously-passing rule in [`../standards/versioning.md`](../standards/versioning.md).
 - Every managed doc declares `schema_version: '1.1'`.
 - **Frontmatter quote style is single quotes** (2026-06-05) — the repo was mixed (examples single, 5 templates double); Prettier `*.md singleQuote:true` is now the tiebreaker, and the standard already allows either (validator is quote-agnostic). Authored single-quoted.
+- **Prettier ships as a committed dev-dependency** (2026-06-05, `f0ef89a`) — `package.json` + `package-lock.json` pin Prettier 3.8.3; `node_modules/` gitignored. Intentional and **scoped to Prettier only**: DEC-3/DEC-7 still keep the _markdownlint_ runner out of any committed Node project (CI via `markdownlint-cli2-action`). The two stacks are independent, so this does **not** reopen DEC-7. (Resolves the former "committed-Node vs DEC-7" open question.)
 
 ### Linting/formatting + MADR-4 decisions (2026-06-04 — trails in the decisions doc)
 
@@ -90,8 +91,10 @@ Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`lint
 
 ## Open questions
 
-- **proseWrap for `*.md`.** Prettier `*.md` uses `proseWrap: never`; with format-on-save, the 3 ADR templates' hand-wrapped prose (and `working/` scratch docs like this one) will unwrap to single lines on next save. Decide: accept it, set `proseWrap: "preserve"` for `*.md`/templates, or `.prettierignore` the templates and/or `working/`. Left unresolved.
-- **Committed Node project vs DEC-7.** The new Prettier dev-dependency adds a committed `package.json` — DEC-3/DEC-7 deliberately kept _markdownlint_ runner-less (CI via `markdownlint-cli2-action`, no Node project). Confirm Prettier-as-committed-dep is the intended direction and that it doesn't reopen DEC-7 before the `1.3.0` release.
+- **proseWrap for `*.md` (shipped as `never`, risk live).** `../.prettierrc.json` committed with `proseWrap: "never"`; with format-on-save the 3 ADR templates' hand-wrapped prose (and `working/` scratch docs like this one) will unwrap to single lines on next save. Not yet mitigated — decide before it churns a real edit: accept it, set `proseWrap: "preserve"` for `*.md`/templates, or `.prettierignore` the templates and/or `working/`.
+- **Tracked `*.bak` files.** `f0ef89a` committed `linting-formatting/markdownlint.{jsonc,yaml}.bak` (337 + 308 lines) as pre-expansion backup snapshots. Almost certainly unintended in version control — `git rm` them and add `*.bak` to `.gitignore`, unless they're deliberately kept as reference.
+
+> The former "committed-Node vs DEC-7" question is resolved — see _Locked decisions_ (Prettier dev-dep is Prettier-scoped and does not reopen DEC-7).
 
 ## Future work
 
