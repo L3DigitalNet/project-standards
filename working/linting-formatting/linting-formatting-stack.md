@@ -236,7 +236,7 @@ Source read 2026-06-04: changelog + `adr-template.md`, `adr-template-minimal.md`
 
 ## 4. Decisions to make (with the options on the table)
 
-### D1 — ✅ RESOLVED: engine = `markdownlint-cli2` (Node, via `npx`). See **DEC-3** for the full trail.
+### D1 — ✅ RESOLVED: engine = `markdownlint-cli2` (Node, via `npx`) — see **DEC-3** for the full trail
 
 Options as evaluated (kept for the record):
 
@@ -349,7 +349,7 @@ The extension driver is gone (DEC-2). The live tension is **upstream MADR-4 alig
 
 **Trade-off:**
 
-|  | Align to MADR 4 (`NNNN-title.md`) | Keep `adr-` prefix |
+| Dimension | Align to MADR 4 (`NNNN-title.md`) | Keep `adr-` prefix |
 | --- | --- | --- |
 | Upstream familiarity | ✅ matches MADR/tooling | ✗ diverges (Δ6) |
 | Self-identifying in a flat list / grep | ✗ relies on `docs/decisions/` dir for context | ✅ `ls adr-*`, greppable |
@@ -418,7 +418,7 @@ All six original questions are resolved (2026-06-04):
 ### Implementation backlog (decisions made; edits NOT yet applied — still gather/decide mode)
 
 - DEC-1/§3.5: apply 4.0 config-tweaks — `.markdownlint.json` MD024 (Δ3), "Any"→"Architectural" doc text (Δ7), optional SPL/bare-placeholder alignment (Δ5/Δ8).
-- DEC-3 + DEC-7: add `.github/workflows/lint-markdown.yml` using `markdownlint-cli2-action@v23` (self-run + `workflow_call`); add `github-actions` to Dependabot. Resolves the §2 Stack-B gap.
+- ✅ **DONE (2026-06-05)** — DEC-3 + DEC-7: added `.github/workflows/lint-markdown.yml` using `markdownlint-cli2-action@v23` (self-run + `workflow_call`, explicit `globs: '**/*.md'`); added `.markdownlint-cli2.jsonc` (local `gitignore` parity) + `github-actions` Dependabot. Resolves the §2 Stack-B gap. Scope decided: lint **all** tracked Markdown incl. `working/` (5 pre-existing errors fixed).
 - DEC-5: extend validator with default-off `markdown.adr.require_sections` check + tests + CHANGELOG + `standards/adr.md` note.
 - DEC-6: `standards/adr.md` filename/id convention + directory tree + template filename comments.
 - DEC-8: document the opt-in `lint-markdown.yml` consumption in `README.md` alongside the frontmatter workflow.

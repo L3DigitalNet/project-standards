@@ -101,7 +101,7 @@ Confirm the tag resolves and `uv tool install` picks up the matching version; op
 
 ## Sequencing & dependencies
 
-```
+```text
 1 (gate) ─▶ 2 (schema) ─▶ 3 (standard) ─▶ 4 (templates/examples)
                        └▶ 5 (tests)        └▶ 6 (migration, Path B only)
                                                    └▶ 7 (changelog) ─▶ 8 (verify) ─▶ 9 (release) ─▶ 10 (post)

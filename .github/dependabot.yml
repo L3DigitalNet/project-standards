@@ -1,0 +1,10 @@
+version: 2
+
+# Keeps the major-tag action pins current (actions/checkout, astral-sh/setup-uv,
+# DavidAnson/markdownlint-cli2-action). Added with the markdown-lint workflow so
+# `@v23` and friends get PRs when upstream tags move (DEC-7).
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

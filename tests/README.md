@@ -50,7 +50,7 @@ When a bug is fixed, add a test that fails on the old behaviour and cite the cau
 
 ## Layout & naming conventions
 
-```
+```text
 tests/
   __init__.py
   README.md                     <- this file

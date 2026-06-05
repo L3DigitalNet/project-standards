@@ -1,0 +1,13 @@
+{
+	// markdownlint-cli2 runner config for THIS repo (local CLI + the VS Code
+	// markdownlint extension). It is NOT part of the published standard — the
+	// shipped artifact consumers seed from is `.markdownlint.json` (the rule set),
+	// which markdownlint-cli2 auto-merges. This file only controls *which* files a
+	// bare `npx markdownlint-cli2` lints and that it honors `.gitignore`, so a local
+	// run matches CI (which lints a clean checkout with no `.venv/`, caches, etc.).
+	// CI (`.github/workflows/lint-markdown.yml`) passes `globs` to the action
+	// explicitly because the action's own default is the non-recursive
+	// `*.{md,markdown}`.
+	"globs": ["**/*.md"],
+	"gitignore": true
+}

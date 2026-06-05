@@ -38,9 +38,16 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 - **Reference configs populated:** [`linting-formatting/markdownlint.yaml`](linting-formatting/markdownlint.yaml) + [`linting-formatting/markdownlint.jsonc`](linting-formatting/markdownlint.jsonc) now carry the full annotated rule catalog with the 13 `[CUSTOM]` values applied (verified byte-identical in effect across both formats).
 - **Normalized:** `CHANGELOG.md` MD049 emphasis (`*cannot*`→`_cannot_`); 5 templates' frontmatter (concept/note/research/runbook/spec) → single quotes. The 3 ADR templates were left as-authored (prose untouched).
 
-## Next action — DEC-1…DEC-8 backlog for the `1.3.0` additive release
+## Next action — remaining `1.3.0` backlog items #1, #3, #4, #5
 
-The 2026-06-05 formatting work is **committed** (`f0ef89a`). Proceed to the **DEC-1…DEC-8 backlog** for the `1.3.0` additive release (backlog at the bottom of the decisions doc). The two carry-over cleanups are **done** (2026-06-05): proseWrap decided `never` (5 then-nonconformant files pre-formatted), and the `*.bak` files untracked with `*.bak` now gitignored. The previously-blocking `.markdownlint.json` review gate stays **resolved**. **Start backlog item #2 (DEC-7 `lint-markdown.yml`) with a scope decision** — its planned `globs: '**/*.md'` currently fails on 5 pre-existing errors outside the published surface (see _Open questions_).
+**Backlog item #2 (DEC-3 + DEC-7) is DONE** (2026-06-05, uncommitted→see below): `lint-markdown.yml` reusable workflow + `.markdownlint-cli2.jsonc` runner config + `github-actions` Dependabot, with the lint scope settled (**lint everything incl. `working/`**; the 5 pre-existing errors fixed). CHANGELOG `[Unreleased]` section started. Remaining for the `1.3.0` additive release (backlog at the bottom of the decisions doc):
+
+- **#1 (DEC-1/§3.5):** `.markdownlint.json` MD024 (Δ3), "Any"→"Architectural" doc text (Δ7), optional SPL/bare-placeholder alignment (Δ5/Δ8).
+- **#3 (DEC-5):** validator default-off `markdown.adr.require_sections` check + tests + `standards/adr.md` note. ← the only Python/code item (use TDD).
+- **#4 (DEC-6):** `standards/adr.md` filename `NNNN-title.md` / id `adr-NNNN-title` convention + directory tree + template filename comments.
+- **#5 (DEC-8):** document `lint-markdown.yml` consumption in `README.md`.
+
+Then release `1.3.0` per the ritual (rename `[Unreleased]`→`[1.3.0]`, bump `pyproject.toml`, regen `uv.lock`, GPG-signed tag, move `v1`).
 
 ## Locked decisions / standing context (do not relitigate)
 
@@ -51,6 +58,7 @@ The 2026-06-05 formatting work is **committed** (`f0ef89a`). Proceed to the **DE
 - **Frontmatter quote style is single quotes** (2026-06-05) — the repo was mixed (examples single, 5 templates double); Prettier `*.md singleQuote:true` is now the tiebreaker, and the standard already allows either (validator is quote-agnostic). Authored single-quoted.
 - **Prettier ships as a committed dev-dependency** (2026-06-05, `f0ef89a`) — `package.json` + `package-lock.json` pin Prettier 3.8.3; `node_modules/` gitignored. Intentional and **scoped to Prettier only**: DEC-3/DEC-7 still keep the _markdownlint_ runner out of any committed Node project (CI via `markdownlint-cli2-action`). The two stacks are independent, so this does **not** reopen DEC-7. (Resolves the former "committed-Node vs DEC-7" open question.)
 - **`proseWrap: never` for `*.md`, accepted as-is** (2026-06-05) — Prettier collapses prose paragraphs to single physical lines. The 5 then-nonconformant files (3 ADR templates, `tests/README.md`, 1 archived plan) were **pre-formatted** so the churn is captured now, not sprung on a future edit. Published `standards/`/`examples/` were already conformant (zero churn). **Consequence:** do not adopt MADR one-sentence-per-line (Δ5) without first switching this to `preserve` — `never` actively fights SPL.
+- **Markdown-lint covers ALL tracked Markdown incl. `working/`** (2026-06-05) — chosen over excluding scratch. `lint-markdown.yml` lints `**/*.md`; the 5 then-pre-existing errors were fixed (MD040 fence languages in `tests/README.md` + `00-overview.md`; MD026 trailing-period heading + a labeled empty table cell for MD060 in the decisions doc). Local parity comes from `../.markdownlint-cli2.jsonc` (`gitignore: true`, so `.venv/`/caches are skipped). **Consequence:** scratch/planning docs under `working/` must stay markdownlint-clean.
 
 ### Linting/formatting + MADR-4 decisions (2026-06-04 — trails in the decisions doc)
 
@@ -80,7 +88,10 @@ Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`lint
 | [`archive/`](archive/) | frozen per-release planning docs |
 | `standards/markdown-frontmatter.md` · `standards/adoption.md` · `standards/versioning.md` | published standards |
 | `schemas/markdown-frontmatter.schema.json` · `tools/validate_frontmatter.py` · `tests/` | machine contract + validator + tests |
-| `.github/workflows/validate-markdown-frontmatter.yml` | reusable workflow consumers call |
+| `.github/workflows/validate-markdown-frontmatter.yml` | reusable frontmatter (Stack A) workflow consumers call |
+| `.github/workflows/lint-markdown.yml` | **NEW 2026-06-05** — reusable Markdown-body (Stack B) workflow; `markdownlint-cli2-action@v23`, `globs '**/*.md'` |
+| [`../.markdownlint-cli2.jsonc`](../.markdownlint-cli2.jsonc) | **NEW** — local-runner scope (`gitignore:true` + `globs`); rules still in `../.markdownlint.json` |
+| `.github/dependabot.yml` | **NEW** — `github-actions` ecosystem (bumps the action pins) |
 | `CHANGELOG.md` · `pyproject.toml` | changelog + package version (bump at release) |
 
 ## Constraints / release ritual (from `AGENTS.md` + `standards/versioning.md`)
@@ -92,7 +103,7 @@ Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`lint
 
 ## Open questions
 
-- **Markdown-lint CI scope (blocks backlog item #2, DEC-7).** With the pinned engine (`markdownlint-cli2` v0.22.1 / markdownlint v0.40.0), the **published surface is 0 errors** (standards/examples/templates/CHANGELOG/README — 20 files), but there are **5 pre-existing errors outside it**: `tests/README.md` (MD040 — 5 bare ` ``` ` fences) and 3 in `working/` scratch (`archive/v1.1.0/plans/00-overview.md` MD040; `linting-formatting/linting-formatting-stack.md` MD026 + MD060×2). DEC-7's planned `globs: '**/*.md'` would **fail on all 5**. Decide before wiring `lint-markdown.yml`: exclude `working/` (consistent with its existing frontmatter-validation exclusion) **and** fix `tests/README.md` fence languages, vs. a narrower glob. Pre-existing — not introduced by the formatting work; surfaced 2026-06-05.
+_None open._ (The Markdown-lint CI scope question is resolved — see _Locked decisions_: lint **all** tracked Markdown incl. `working/`; scratch docs stay lint-clean.)
 
 ## Future work
 
