@@ -130,6 +130,16 @@ markdown:
 
 ADRs are **managed** documents (they carry full frontmatter — see the ADR Standard), so do **not** exclude `docs/adr/**` or `docs/decisions/**`; let them validate.
 
+To additionally check that each ADR carries its required body sections, add the opt-in `markdown.adr` block (default off, and enforced by the same frontmatter workflow below):
+
+```yaml
+markdown:
+  adr:
+    require_sections: true # every `doc_type: adr` doc must have the 3 MADR-required `##` sections
+```
+
+This asserts `## Context and Problem Statement`, `## Considered Options`, and `## Decision Outcome` are present (exact, level-2 headings; optional MADR sections are never required). See the [ADR Standard](standards/adr.md).
+
 ### 2. Workflow — `.github/workflows/validate-standards.yml`
 
 Calls the reusable workflow from this repo:
@@ -154,6 +164,20 @@ jobs:
 > **Pin both refs.** `@v1` on the `uses:` line pins the **workflow definition**; `standards-ref` pins the **validator + bundled schema** that gets installed. Keep them on the same major (`v1`) so your validation can't drift onto unreleased changes. (`standards-ref` defaults to `v1`, but set it explicitly to make the pin obvious; use a full version like `v1.2.0` for an immutable pin.)
 
 The reusable workflow installs the validator with `uv tool install git+...`, so the consuming repo does not vendor the schema or the Python code — the bundled schema travels with the install.
+
+### 3. Optional — Markdown body linting
+
+The frontmatter workflow validates the YAML _metadata_ block. A **separate, opt-in** reusable workflow lints the Markdown _body_ (heading levels, list style, etc.) with [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2). It is independent so frontmatter-only consumers never inherit a Node toolchain:
+
+```yaml
+jobs:
+  lint-markdown:
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v1
+    with:
+      globs: '**/*.md' # optional; this is the default
+```
+
+Seed your repo's rules by copying this repo's published [`.markdownlint.json`](.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both.
 
 ### Pin to a release tag, not `main`
 

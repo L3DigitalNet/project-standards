@@ -45,7 +45,7 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 - ✅ **#1 (DEC-1/§3.5) DONE (2026-06-05):** `.markdownlint.json` MD024 → `false` (Δ3, match MADR); "Any"→"Architectural" in `standards/adr.md` (Δ7, verified vs upstream). SPL declined (proseWrap:never); bare-placeholders kept.
 - ✅ **#3 (DEC-5) DONE (2026-06-05):** validator gained default-off `markdown.adr.require_sections` (pure `missing_adr_sections` helper + `doc_type: adr` gate; `FrontmatterConfig`→`ProjectConfig`). 17 new tests, TDD, 87 green; ruff + pyright clean. Reconciled the Consequences-required finding (`standards/adr.md` now lists 3 required, matching MADR 4.0/templates). Enabled in `.project-standards.yml` (dogfood; verified it fires on a broken example).
 - ✅ **#4 (DEC-6b) DONE (2026-06-05):** ADR id → `adr-NNNN-repo-name-title` (repo-name = cross-repo global uniqueness); filename stays `adr-NNNN-title.md` (no repo-name). Updated `standards/adr.md` (ID section + note + tree + frontmatter sample), 4 templates, and the worked example + its 2 inbound `related:` refs. Revised the original DEC-6 (MADR-bare filename) per a new "ids unique across many repos" requirement. No validator change.
-- **#5 (DEC-8):** document `lint-markdown.yml` consumption in `README.md`.
+- ✅ **#5 (DEC-8) DONE (2026-06-05):** `README.md` gained a "### 3. Optional — Markdown body linting" subsection (lint-markdown.yml `uses:` + seed-`.markdownlint.json` guidance) + a `markdown.adr.require_sections` config note. **All 5 backlog items complete** → ready for the `1.3.0` release ritual.
 
 Then release `1.3.0` per the ritual (rename `[Unreleased]`→`[1.3.0]`, bump `pyproject.toml`, regen `uv.lock`, GPG-signed tag, move `v1`).
 
