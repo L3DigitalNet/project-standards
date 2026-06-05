@@ -42,10 +42,23 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ line-lengt
 `pyright` 0. Per-release planning is archived under [`archive/`](archive/) (one
 folder per release; start at the version's `README.md`).
 
-## Next action — none pending
+**2026-06-04 planning session (design only — nothing implemented).** Scoped the
+linting/formatting stack and the upcoming **ADR/MADR** standard. Produced **8 locked
+decisions** (DEC-1…DEC-8) with full trails in
+[`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md).
+**No `standards/`, `schemas/`, `tools/`, or `.github/` files were changed.** Repo
+remains at `1.2.0`, gate still green.
 
-`1.2.0` is shipped and verified. No open work item. The only thing on the radar is
-the **`2.0.0`** under _Future work_ — undertake deliberately, not by default.
+## Next action — review `.markdownlint.json`, then implement the DEC backlog
+
+User is reviewing [`../.markdownlint.json`](../.markdownlint.json) before any Stack-B
+work. **Hold all implementation until then.** When cleared, the next body of work is
+the **ADR/MADR-4 standard + Stack-B linting** (a `1.3.0`-shaped *additive* release —
+see _Future work_). The apply-order backlog is the bottom of the decisions doc
+("Implementation backlog"). Two flagged risks: (a) the new lint workflow self-running
+would lint never-linted managed docs → possible red CI, so wire it `workflow_call`-only
+first or fix violations in the same change; (b) the `.markdownlint.json` MD024 tweak
+(Δ3) is part of that review.
 
 ## Locked decisions / standing context (do not relitigate)
 
@@ -63,11 +76,34 @@ the **`2.0.0`** under _Future work_ — undertake deliberately, not by default.
   classification table now states this explicitly).
 - Every managed doc in this repo declares `schema_version: '1.1'`.
 
+### Linting/formatting + MADR-4 decisions (2026-06-04 — trails in the decisions doc)
+
+Eight decisions, settled with primary-source evidence. Do **not** relitigate; if
+revisiting, read the trail + re-eval trigger in
+[`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md).
+
+| # | Decision |
+| --- | --- |
+| DEC-1 | ADR standard targets **MADR 4.0** (repo body/templates already conform; deltas are config-tweaks) |
+| DEC-2 | `vscode-adr-manager` extension = **optional convenience**, not a conformance target |
+| DEC-3 | Stack-B linter = **markdownlint-cli2** (reference engine; reads our published `.markdownlint.json`) |
+| DEC-4 | Frontmatter key-order/quoting/list-style stay **documented convention** (schema = sole gate) |
+| DEC-5 | **Opt-in, default-off** validator check for the 3 required ADR sections (`markdown.adr.require_sections`) |
+| DEC-6 | **Hybrid** ADR naming: filename `NNNN-title.md` (MADR) + id `adr-NNNN-title` → documented filename≠id exception |
+| DEC-7 | CI uses **`markdownlint-cli2-action@v23`**; no committed Node project (refines DEC-3) |
+| DEC-8 | **Separate opt-in** reusable workflow `lint-markdown.yml` (don't fold into the frontmatter workflow) |
+
+Cross-cutting: Stack B (markdownlint) is currently a **config file with no runner** —
+not wired into CI today. The above wires it; default-off / opt-in keeps the release
+**additive (minor)**.
+
 ## Key files
 
 | Path | Role |
 | --- | --- |
 | `working/HANDOFF.md` | this file — the living handoff |
+| [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md) | **active planning doc** — DEC-1…8 trails + implementation backlog |
+| [`../.markdownlint.json`](../.markdownlint.json) | Stack-B config (under user review before wiring) |
 | [`archive/`](archive/) | frozen per-release planning docs (`v1.1.0/`, …) |
 | `standards/markdown-frontmatter.md` | the published standard |
 | `standards/adoption.md` | agent onboarding & compliance procedure (hand to consuming repos) |
@@ -93,9 +129,14 @@ the **`2.0.0`** under _Future work_ — undertake deliberately, not by default.
 
 ## Open questions
 
-- None open.
+- None. All eight 2026-06-04 decisions are settled; the only pending item is the
+  user's review of `.markdownlint.json` (a human gate, not an open design question).
 
 ## Future work
 
+- **`1.3.0` (additive — ADR/MADR-4 + Stack-B linting):** implement DEC-1…DEC-8 per the
+  decisions doc's backlog — MADR-4 doc tweaks, `lint-markdown.yml` + `markdownlint-cli2-action`,
+  opt-in `markdown.adr.require_sections` validator check (+ tests), ADR filename/id convention.
+  All default-off / opt-in / additive → MINOR. Gated on the `.markdownlint.json` review.
 - **`2.0.0` (deliberate, breaking):** enforce repo-root-relative link patterns in the
   schema; migrate in-repo bare-id links; write consumer migration notes; bump to `@v2`.
