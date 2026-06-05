@@ -19,7 +19,7 @@
 
 ## Current state — `1.3.0` feature-complete on `testing` (DEC-1…9), unreleased
 
-Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main` holds releases, moving tag `v1` tracks the newest). `testing` is **18 commits ahead of `main`** — the entire `1.3.0` line, implemented but **not yet released** (release was deliberately out of this session's scope). Published + pending line:
+Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main` holds releases, moving tag `v1` tracks the newest). `testing` carries the **entire `1.3.0` line** ahead of `main` — implemented but **not yet released** (release was deliberately out of this session's scope). For the exact set: `git log main..testing`. Published + pending line:
 
 | Tag | What shipped |
 | --- | --- |
@@ -32,7 +32,7 @@ Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `mai
 
 ### What `1.3.0` delivers (all on `testing`, additive → MINOR)
 
-The 2026-06-04 planning session locked **DEC-1…DEC-8**; the 2026-06-05 session implemented them, revised DEC-6→**DEC-6b**, and added **DEC-9**. Decision trails in [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md); per-commit detail in `git log main..testing` (12 commits this session, on top of 6 prior).
+The 2026-06-04 planning session locked **DEC-1…DEC-8**; the 2026-06-05 session implemented them, revised DEC-6→**DEC-6b**, and added **DEC-9**. Decision trails in [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md); per-commit detail in `git log main..testing`.
 
 - **Stack-B Markdown linting (DEC-3/7/8):** opt-in reusable `lint-markdown.yml` (`markdownlint-cli2-action@v23`) + `.markdownlint-cli2.jsonc` local parity + `github-actions` Dependabot.
 - **MADR 4.0 ADR conventions (DEC-1/6b):** `MD024`→`false`; "Any"→"Architectural" name fix; ADR id `adr-NNNN-repo-name-title` (globally unique) with filename `adr-NNNN-title.md`.
