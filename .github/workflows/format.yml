@@ -1,0 +1,55 @@
+name: Format
+
+# Repo-local dev gate: enforces Prettier formatting on every Prettier-supported
+# file. Distinct from lint-markdown.yml (markdownlint, reusable for consumers) —
+# Prettier is this repo's own formatter (a committed dev dependency, see
+# package.json), NOT part of the published standard, so this workflow is not
+# reusable and installs from the committed lockfile. Prettier honors .gitignore,
+# so .venv/ and caches are skipped without extra config.
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+      - "**/*.json"
+      - "**/*.jsonc"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.code-workspace"
+      - ".prettierrc.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/format.yml"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "**/*.json"
+      - "**/*.jsonc"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.code-workspace"
+      - ".prettierrc.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/format.yml"
+
+jobs:
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install pinned Prettier
+        run: npm ci
+
+      - name: Check formatting
+        run: npx prettier --check .
