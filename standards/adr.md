@@ -6,7 +6,7 @@ description: 'How to write Architecture Decision Records using the MADR format w
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-03'
+updated: '2026-06-05'
 reviewed: null
 owner: ''
 tags:
@@ -34,7 +34,7 @@ license: null
 
 An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
 
-This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Any Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](markdown-frontmatter.md) for metadata. General ADR background is at <https://adr.github.io/>.
+This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](markdown-frontmatter.md) for metadata. General ADR background is at <https://adr.github.io/>.
 
 ## When to write an ADR
 
@@ -142,6 +142,6 @@ When a new ADR replaces an old one, update **both** documents in the same change
 
 ## References
 
-- [MADR — Markdown Any Decision Records](https://adr.github.io/madr/)
+- [MADR — Markdown Architectural Decision Records](https://adr.github.io/madr/)
 - [Architectural Decision Records](https://adr.github.io/)
 - [Markdown Frontmatter Standard](markdown-frontmatter.md)

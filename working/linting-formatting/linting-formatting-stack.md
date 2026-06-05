@@ -141,7 +141,7 @@ Local gate (from `AGENTS.md`): `uv run pytest && uv run ruff check . && uv run p
 These three choices are **frontmatter/ADR-aware**:
 
 - `MD025 front_matter_title: ""` **disables** front-matter-title detection (verified against DavidAnson `doc/md025.md`: _"To disable the use of front matter by this rule, specify `""`"_). With the rule's **default** regex (`^\s*title\s*[:=]`), a doc carrying both a frontmatter `title:` **and** a body `# H1` would be seen as _two_ titles and **fail** MD025 — so setting `""` is load-bearing: it makes the body `# H1` the single recognized title. _(Correction: an earlier draft of this file said the rule makes the frontmatter `title:` "count as the H1" — that's the inverted mechanism. Net effect — managed docs don't trip MD025 — is the same; corrected here from primary source.)_
-- `MD024 siblings_only` is needed by MADR: option names repeat under both _Considered Options_ and _Pros and Cons of the Options_, and "Good, because / Bad, because" patterns recur. Siblings rule lets non-adjacent duplicate headings coexist.
+- `MD024 siblings_only` is needed by MADR: option names repeat under both _Considered Options_ and _Pros and Cons of the Options_, and "Good, because / Bad, because" patterns recur. Siblings rule lets non-adjacent duplicate headings coexist. _(Update 2026-06-05 — Δ3 resolved to `MD024: false` for full upstream parity; `false` is strictly looser than `siblings_only`, so it covers every case this paragraph describes and then some.)_
 - `MD013 false` avoids fighting long prose/table lines (the standards docs have wide tables).
 
 ### What's missing (the gap)
@@ -223,7 +223,7 @@ Source read 2026-06-04: changelog + `adr-template.md`, `adr-template-minimal.md`
 | --- | --- | --- | --- | --- |
 | Δ1 | **Metadata model** | native frontmatter: `status` `date` `decision-makers` `consulted` `informed` | canonical frontmatter + map to `status` enum, `created`/`updated`, `project.{decision_makers,consulted,informed}` | **Intentional divergence — keep.** Documented mapping in `standards/adr.md`. Not a delta to "fix". All 5 native fields are covered by the mapping. |
 | Δ2 | **`status` value** | free MADR vocab, quoted, _no link_ (identifier only) | canonical `status` enum; MADR word optionally in body prose; supersession via `superseded_by` (identifier) | **Conformant in spirit.** 4.0's "no link in status" matches our identifier-only `superseded_by`. Keep. |
-| Δ3 | **markdownlint `MD024`** | `MD024: false` (fully off) | `MD024: { siblings_only: true }` | `config-tweak` / **decide in O1.** Ours is stricter; could flag repeated _sibling_ headings (e.g. "Examples", per-option blocks) that MADR allows. Consider matching `false`, or keep stricter deliberately. |
+| Δ3 | **markdownlint `MD024`** | `MD024: false` (fully off) | ~~`MD024: { siblings_only: true }`~~ → **`MD024: false`** | ✅ **RESOLVED 2026-06-05 — match MADR (`false`).** Chose upstream config-artifact parity over the stricter siblings-only setting. Looser than before, so no previously-passing doc can newly fail → additive. Applied to `../../.markdownlint.json` + both reference configs. |
 | Δ4 | **markdownlint `MD025`** | not set (MADR frontmatter has no `title:`) | `MD025: { front_matter_title: "" }` | **Necessary divergence — keep.** Our frontmatter _does_ carry `title:`; the rule prevents a false "multiple H1". |
 | Δ5 | **One-sentence-per-line** | MADR's stated reason for `MD013: false` | we set `MD013: false` too, but no SPL authoring convention | `config-tweak` / optional. Adopt SPL convention or not — independent of passing. |
 | Δ6 | **Filename** | `NNNN-title.md` (e.g. `0000-use-madr.md`) | `adr-NNNN-short-title.md` | `config-tweak` / **= O4.** Open. |
@@ -417,7 +417,7 @@ All six original questions are resolved (2026-06-04):
 
 ### Implementation backlog (decisions made; edits NOT yet applied — still gather/decide mode)
 
-- DEC-1/§3.5: apply 4.0 config-tweaks — `.markdownlint.json` MD024 (Δ3), "Any"→"Architectural" doc text (Δ7), optional SPL/bare-placeholder alignment (Δ5/Δ8).
+- ✅ **DONE (2026-06-05)** — DEC-1/§3.5 config-tweaks: `.markdownlint.json` MD024 → `false` (Δ3, match MADR); "Any"→"Architectural" in `standards/adr.md` (Δ7, verified vs adr.github.io/madr). SPL (Δ5) **declined** — `proseWrap:never` fights it (see HANDOFF locked decision); bare-placeholders (Δ8) **kept** (ours are cleaner). _Note for #3:_ `standards/adr.md` still lists **Consequences** as a 4th required section — MADR 4.0 / DEC-5 say only 3 are required; reconcile when building the validator check.
 - ✅ **DONE (2026-06-05)** — DEC-3 + DEC-7: added `.github/workflows/lint-markdown.yml` using `markdownlint-cli2-action@v23` (self-run + `workflow_call`, explicit `globs: '**/*.md'`); added `.markdownlint-cli2.jsonc` (local `gitignore` parity) + `github-actions` Dependabot. Resolves the §2 Stack-B gap. Scope decided: lint **all** tracked Markdown incl. `working/` (5 pre-existing errors fixed).
 - DEC-5: extend validator with default-off `markdown.adr.require_sections` check + tests + CHANGELOG + `standards/adr.md` note.
 - DEC-6: `standards/adr.md` filename/id convention + directory tree + template filename comments.

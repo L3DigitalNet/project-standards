@@ -89,10 +89,10 @@
 	"MD023": true,
 
 	// MD024/no-duplicate-heading : Multiple headings with the same content : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md024.md
-	"MD024": {
-		// Only check sibling headings — [CUSTOM] was false
-		"siblings_only": true
-	},
+	// [CUSTOM] disabled to match MADR 4.0, whose template/.markdownlint.yml ships
+	// MD024:false (ADRs repeat option headings across sections). Default is enabled
+	// (checks all duplicate headings); we previously set siblings_only:true.
+	"MD024": false,
 
 	// MD025/single-title/single-h1 : Multiple top-level headings in the same document : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md025.md
 	"MD025": {
