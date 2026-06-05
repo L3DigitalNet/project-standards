@@ -5,7 +5,7 @@
 ## What was done
 
 - **Renamed `## [Unreleased]` → `## [1.1.0] — unreleased`.** Per the user's instruction, the section is version-labelled but **un-dated**; Step 9 swaps `unreleased` → the release date in the same commit as the version bump (satisfies `standards/versioning.md` step 4).
-- **Folded in the two pre-existing `[Unreleased]` entries** (Apache-2.0 `LICENSE`; versioning-standard force-push wording) — they ship *in* 1.1.0, so they belong in this section, not orphaned.
+- **Folded in the two pre-existing `[Unreleased]` entries** (Apache-2.0 `LICENSE`; versioning-standard force-push wording) — they ship _in_ 1.1.0, so they belong in this section, not orphaned.
 - **Added the new V1.1 entries:**
   - _Added_ — `consumer` frontmatter field (headline feature).
   - _Changed_ — `schema_version` enum widened to `1.1`; standard promoted to V1.1 (new sections + trimmed Versioning/Validation); `visibility` description narrowed; link form documented as convention (not enforced until `2.0.0`).

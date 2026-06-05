@@ -29,8 +29,7 @@ project:
 
 ## Context and Problem Statement
 
-{Describe the context and problem statement in two to three sentences, or as a question. Make the
-scope of the decision explicit.}
+{Describe the context and problem statement in two to three sentences, or as a question. Make the scope of the decision explicit.}
 
 ## Considered Options
 
@@ -43,6 +42,7 @@ scope of the decision explicit.}
 Chosen option: "{title of option 1}", because {justification}.
 
 <!-- Optional, but included in most ADRs. Remove if unused. -->
+
 ### Consequences
 
 - Good, because {positive consequence}

@@ -31,11 +31,11 @@ project:
 
 ## Decision Drivers
 
-- 
+-
 
 ## Considered Options
 
-- 
+-
 
 ## Decision Outcome
 

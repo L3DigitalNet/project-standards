@@ -40,7 +40,7 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 
 ## Next action — DEC-1…DEC-8 backlog for the `1.3.0` additive release
 
-The 2026-06-05 formatting work is **committed** (`f0ef89a`; working tree clean, gate green — `validate-frontmatter` ✓ 9). Proceed to the **DEC-1…DEC-8 backlog** for the `1.3.0` additive release (backlog at the bottom of the decisions doc). Two carry-over cleanups, now tracked under _Open questions_, to clear along the way: the `proseWrap: never` template-churn risk and the two committed `*.bak` files. The previously-blocking `.markdownlint.json` review gate stays **resolved**.
+The 2026-06-05 formatting work is **committed** (`f0ef89a`). Proceed to the **DEC-1…DEC-8 backlog** for the `1.3.0` additive release (backlog at the bottom of the decisions doc). The two carry-over cleanups are **done** (2026-06-05): proseWrap decided `never` (5 then-nonconformant files pre-formatted), and the `*.bak` files untracked with `*.bak` now gitignored. The previously-blocking `.markdownlint.json` review gate stays **resolved**. **Start backlog item #2 (DEC-7 `lint-markdown.yml`) with a scope decision** — its planned `globs: '**/*.md'` currently fails on 5 pre-existing errors outside the published surface (see _Open questions_).
 
 ## Locked decisions / standing context (do not relitigate)
 
@@ -50,6 +50,7 @@ The 2026-06-05 formatting work is **committed** (`f0ef89a`; working tree clean, 
 - Every managed doc declares `schema_version: '1.1'`.
 - **Frontmatter quote style is single quotes** (2026-06-05) — the repo was mixed (examples single, 5 templates double); Prettier `*.md singleQuote:true` is now the tiebreaker, and the standard already allows either (validator is quote-agnostic). Authored single-quoted.
 - **Prettier ships as a committed dev-dependency** (2026-06-05, `f0ef89a`) — `package.json` + `package-lock.json` pin Prettier 3.8.3; `node_modules/` gitignored. Intentional and **scoped to Prettier only**: DEC-3/DEC-7 still keep the _markdownlint_ runner out of any committed Node project (CI via `markdownlint-cli2-action`). The two stacks are independent, so this does **not** reopen DEC-7. (Resolves the former "committed-Node vs DEC-7" open question.)
+- **`proseWrap: never` for `*.md`, accepted as-is** (2026-06-05) — Prettier collapses prose paragraphs to single physical lines. The 5 then-nonconformant files (3 ADR templates, `tests/README.md`, 1 archived plan) were **pre-formatted** so the churn is captured now, not sprung on a future edit. Published `standards/`/`examples/` were already conformant (zero churn). **Consequence:** do not adopt MADR one-sentence-per-line (Δ5) without first switching this to `preserve` — `never` actively fights SPL.
 
 ### Linting/formatting + MADR-4 decisions (2026-06-04 — trails in the decisions doc)
 
@@ -91,10 +92,7 @@ Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`lint
 
 ## Open questions
 
-- **proseWrap for `*.md` (shipped as `never`, risk live).** `../.prettierrc.json` committed with `proseWrap: "never"`; with format-on-save the 3 ADR templates' hand-wrapped prose (and `working/` scratch docs like this one) will unwrap to single lines on next save. Not yet mitigated — decide before it churns a real edit: accept it, set `proseWrap: "preserve"` for `*.md`/templates, or `.prettierignore` the templates and/or `working/`.
-- **Tracked `*.bak` files.** `f0ef89a` committed `linting-formatting/markdownlint.{jsonc,yaml}.bak` (337 + 308 lines) as pre-expansion backup snapshots. Almost certainly unintended in version control — `git rm` them and add `*.bak` to `.gitignore`, unless they're deliberately kept as reference.
-
-> The former "committed-Node vs DEC-7" question is resolved — see _Locked decisions_ (Prettier dev-dep is Prettier-scoped and does not reopen DEC-7).
+- **Markdown-lint CI scope (blocks backlog item #2, DEC-7).** With the pinned engine (`markdownlint-cli2` v0.22.1 / markdownlint v0.40.0), the **published surface is 0 errors** (standards/examples/templates/CHANGELOG/README — 20 files), but there are **5 pre-existing errors outside it**: `tests/README.md` (MD040 — 5 bare ` ``` ` fences) and 3 in `working/` scratch (`archive/v1.1.0/plans/00-overview.md` MD040; `linting-formatting/linting-formatting-stack.md` MD026 + MD060×2). DEC-7's planned `globs: '**/*.md'` would **fail on all 5**. Decide before wiring `lint-markdown.yml`: exclude `working/` (consistent with its existing frontmatter-validation exclusion) **and** fix `tests/README.md` fence languages, vs. a narrower glob. Pre-existing — not introduced by the formatting work; surfaced 2026-06-05.
 
 ## Future work
 
