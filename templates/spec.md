@@ -1,21 +1,21 @@
 ---
-schema_version: "1.1"
-id: "replace-with-stable-id"
-title: "Spec: Feature or Change Name"
-description: "One-sentence description of what this specification defines."
-doc_type: "spec"
-status: "draft"
-created: "YYYY-MM-DD"
-updated: "YYYY-MM-DD"
+schema_version: '1.1'
+id: 'replace-with-stable-id'
+title: 'Spec: Feature or Change Name'
+description: 'One-sentence description of what this specification defines.'
+doc_type: 'spec'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
 reviewed: null
-owner: ""
-consumer: "unknown"
+owner: ''
+consumer: 'unknown'
 tags: []
 aliases: []
 related: []
 source: []
-confidence: "unknown"
-visibility: "internal"
+confidence: 'unknown'
+visibility: 'internal'
 license: null
 ---
 
@@ -46,7 +46,7 @@ What need or gap does this address?
 ## Alternatives Considered
 
 | Option | Reason rejected |
-| --- | --- |
+| ------ | --------------- |
 
 ## Open Questions
 

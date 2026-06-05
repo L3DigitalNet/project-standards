@@ -22,5 +22,8 @@
 	"vueIndentScriptAndStyle": false,
 	"requirePragma": false,
 	"insertPragma": false,
-	"overrides": [{ "files": "**/*.jsonc", "options": { "trailingComma": "none" } }]
+	"overrides": [
+		{ "files": "**/*.jsonc", "options": { "trailingComma": "none" } },
+		{ "files": "**/*.md", "options": { "singleQuote": true } }
+	]
 }

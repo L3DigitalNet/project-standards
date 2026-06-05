@@ -1,21 +1,21 @@
 ---
-schema_version: "1.1"
-id: "replace-with-stable-id"
-title: "Concept Name"
-description: "One-sentence explanation of the idea, model, or principle."
-doc_type: "concept"
-status: "draft"
-created: "YYYY-MM-DD"
-updated: "YYYY-MM-DD"
+schema_version: '1.1'
+id: 'replace-with-stable-id'
+title: 'Concept Name'
+description: 'One-sentence explanation of the idea, model, or principle.'
+doc_type: 'concept'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
 reviewed: null
-owner: ""
-consumer: "unknown"
+owner: ''
+consumer: 'unknown'
 tags: []
 aliases: []
 related: []
 source: []
-confidence: "unknown"
-visibility: "internal"
+confidence: 'unknown'
+visibility: 'internal'
 license: null
 ---
 

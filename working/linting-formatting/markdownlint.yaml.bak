@@ -1,8 +1,4 @@
-# markdownlint configuration — documented defaults with this workstation's live
-# customizations applied. The 13 rules marked [CUSTOM] reflect the global VS Code
-# `markdownlint.config` (extracted 2026-06-05); every other rule is left at its
-# documented default value. Disabled rules (false) are turned off because Prettier
-# owns that formatting concern or by explicit preference.
+# Example markdownlint configuration with all properties set to their default value
 
 # Default state for all rules
 default: true
@@ -18,12 +14,12 @@ MD001:
 # MD003/heading-style : Heading style : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md003.md
 MD003:
   # Heading style
-  style: "atx" # [CUSTOM] was "consistent" — align to Prettier (ATX `#` headings)
+  style: "consistent"
 
 # MD004/ul-style : Unordered list style : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md004.md
 MD004:
   # List style
-  style: "dash" # [CUSTOM] was "consistent" — align to Prettier (`-` bullets)
+  style: "consistent"
 
 # MD005/list-indent : Inconsistent indentation for list items at the same level : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md005.md
 MD005: true
@@ -38,10 +34,24 @@ MD007:
   start_indent: 2
 
 # MD009/no-trailing-spaces : Trailing spaces : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md009.md
-MD009: false # [CUSTOM] was enabled (br_spaces:2) — disabled; Prettier controls trailing whitespace
+MD009:
+  # Spaces for line break
+  br_spaces: 2
+  # Include code blocks
+  code_blocks: false
+  # Allow spaces for empty lines in list items
+  list_item_empty_lines: false
+  # Include unnecessary breaks
+  strict: false
 
 # MD010/no-hard-tabs : Hard tabs : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md010.md
-MD010: false # [CUSTOM] was enabled — disabled; Prettier controls hard tabs
+MD010:
+  # Include code blocks
+  code_blocks: true
+  # Fenced code languages to ignore
+  ignore_code_languages: []
+  # Number of spaces for each hard tab
+  spaces_per_tab: 1
 
 # MD011/no-reversed-links : Reversed link syntax : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md011.md
 MD011: true
@@ -52,7 +62,23 @@ MD012:
   maximum: 1
 
 # MD013/line-length : Line length : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md013.md
-MD013: false # [CUSTOM] was enabled (line_length:80) — disabled; Prettier controls line length
+MD013:
+  # Number of characters
+  line_length: 80
+  # Number of characters for headings
+  heading_line_length: 80
+  # Number of characters for code blocks
+  code_block_line_length: 80
+  # Include code blocks
+  code_blocks: true
+  # Include tables
+  tables: true
+  # Include headings
+  headings: true
+  # Strict length checking
+  strict: false
+  # Stern length checking
+  stern: false
 
 # MD014/commands-show-output : Dollar signs used before commands without showing output : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md014.md
 MD014: true
@@ -82,12 +108,12 @@ MD023: true
 # MD024/no-duplicate-heading : Multiple headings with the same content : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md024.md
 MD024:
   # Only check sibling headings
-  siblings_only: true # [CUSTOM] was false
+  siblings_only: false
 
 # MD025/single-title/single-h1 : Multiple top-level headings in the same document : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md025.md
 MD025:
   # RegExp for matching title in front matter
-  front_matter_title: "" # [CUSTOM] was "^\\s*title\\s*[:=]" — disable front-matter title matching
+  front_matter_title: "^\\s*title\\s*[:=]"
   # Heading level
   level: 1
 
@@ -105,10 +131,20 @@ MD027:
 MD028: true
 
 # MD029/ol-prefix : Ordered list item prefix : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md029.md
-MD029: false # [CUSTOM] was enabled (style:one_or_ordered) — disabled; ordered-list prefix style not enforced
+MD029:
+  # List style
+  style: "one_or_ordered"
 
 # MD030/list-marker-space : Spaces after list markers : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md030.md
-MD030: false # [CUSTOM] was enabled — disabled; Prettier controls list-marker spacing
+MD030:
+  # Spaces for single-line unordered list items
+  ul_single: 1
+  # Spaces for single-line ordered list items
+  ol_single: 1
+  # Spaces for multi-line unordered list items
+  ul_multi: 1
+  # Spaces for multi-line ordered list items
+  ol_multi: 1
 
 # MD031/blanks-around-fences : Fenced code blocks should be surrounded by blank lines : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md031.md
 MD031:
@@ -116,7 +152,7 @@ MD031:
   list_items: true
 
 # MD032/blanks-around-lists : Lists should be surrounded by blank lines : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md032.md
-MD032: false # [CUSTOM] was true — disabled; Prettier controls blanks around lists
+MD032: true
 
 # MD033/no-inline-html : Inline HTML : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md033.md
 MD033:
@@ -196,17 +232,17 @@ MD047: true
 # MD048/code-fence-style : Code fence style : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md048.md
 MD048:
   # Code fence style
-  style: "backtick" # [CUSTOM] was "consistent" — align to Prettier (``` fences)
+  style: "consistent"
 
 # MD049/emphasis-style : Emphasis style : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md049.md
 MD049:
   # Emphasis style
-  style: "underscore" # [CUSTOM] was "consistent" — align to Prettier (`_italic_`)
+  style: "consistent"
 
 # MD050/strong-style : Strong style : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md050.md
 MD050:
   # Strong style
-  style: "asterisk" # [CUSTOM] was "consistent" — align to Prettier (`**bold**`)
+  style: "consistent"
 
 # MD051/link-fragments : Link fragments should be valid : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md051.md
 MD051:
