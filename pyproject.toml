@@ -36,6 +36,12 @@ packages = ["tools"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+# Vendored harness/agent-state Python is not this repo's product code and must not
+# be modified locally: the SessionStart hook is byte-identical to its canonical
+# source by contract (validate-layout.sh hash-checks it), and the bug-index
+# regenerator is a verbatim template copy. Lint only first-party code, matching
+# pyright's include scope above.
+extend-exclude = [".claude/hooks", "docs/handoff"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
