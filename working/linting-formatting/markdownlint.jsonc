@@ -1,8 +1,13 @@
-// markdownlint configuration — documented defaults with this workstation's live
-// customizations applied. The 13 rules marked [CUSTOM] reflect the global VS Code
-// `markdownlint.config` (extracted 2026-06-05); every other rule is left at its
-// documented default value. Disabled rules (false) are turned off because Prettier
-// owns that formatting concern or by explicit preference.
+// ANNOTATED TWIN of the published `.markdownlint.json` at the repo root — same 53
+// rules, same values, with explanations. The root config is the one the linter
+// reads; this file documents it. KEEP THE TWO IN SYNC (the 13 [CUSTOM] rules and
+// every default must match the root config and the markdownlint v0.40.0 schema).
+//
+// Every rule is stated explicitly (not just the 13 overrides) so a consumer's
+// linting is deterministic regardless of their own editor/global markdownlint
+// settings — unstated rules would otherwise be shadowed by the consumer's config.
+// The 13 [CUSTOM] rules reflect the global VS Code `markdownlint.config` (extracted
+// 2026-06-05); disabled rules (false) are off because Prettier owns that formatting.
 {
 	// Default state for all rules
 	"default": true,
@@ -189,12 +194,11 @@
 	"MD042": true,
 
 	// MD043/required-headings : Required heading structure : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md043.md
-	"MD043": {
-		// List of headings
-		"headings": [],
-		// Match case of headings
-		"match_case": false
-	},
+	// Enabled but inert. SENTINEL TRAP: the schema's `headings: []` default means
+	// "require exactly zero headings" when stated explicitly — it flags every
+	// heading in the repo. `true` is the correct inert default (verified at runtime),
+	// so do NOT expand this to a {headings:[]} object.
+	"MD043": true,
 
 	// MD044/proper-names : Proper names should have the correct capitalization : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md044.md
 	"MD044": {

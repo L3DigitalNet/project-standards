@@ -179,6 +179,8 @@ jobs:
 
 Seed your repo's rules by copying this repo's published [`.markdownlint.json`](.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both.
 
+The published config states **every** rule explicitly (not just the customised ones), so your linting result is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. Because the explicit values are pinned to a specific markdownlint version, pin the action by major tag (`@v23`) and re-check the config when you bump it. An annotated, commented copy of the same rule set lives at [`working/linting-formatting/markdownlint.jsonc`](working/linting-formatting/markdownlint.jsonc).
+
 ### Pin to a release tag, not `main`
 
 Reference the reusable workflow by **major tag** (`@v1`), not `@main`. Tags are the contract: a repo that passed validation yesterday should not fail today because the standard changed. The major tag is safe to track because any change that could fail a previously-passing repo — a new required field, a stricter rule — ships only as a new major (`@v2`); `@v1` receives just bug fixes and backward-compatible updates. For an immutable pin, use a full version tag (`@v1.0.1`) or a commit SHA. Use `@main` only for this repo's own development or deliberate test repos.

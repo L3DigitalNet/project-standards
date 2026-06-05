@@ -168,11 +168,10 @@ MD041:
 MD042: true
 
 # MD043/required-headings : Required heading structure : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md043.md
-MD043:
-  # List of headings
-  headings: []
-  # Match case of headings
-  match_case: false
+# Enabled but inert. SENTINEL TRAP: the schema's `headings: []` default means
+# "require exactly zero headings" when stated explicitly — it flags every heading.
+# `true` is the correct inert default (verified at runtime); do NOT expand it.
+MD043: true
 
 # MD044/proper-names : Proper names should have the correct capitalization : https://github.com/DavidAnson/markdownlint/blob/v0.40.0/doc/md044.md
 MD044:
