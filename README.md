@@ -179,7 +179,7 @@ jobs:
 
 Seed your repo's rules by copying this repo's published [`.markdownlint.json`](.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both.
 
-The published config states **every** rule explicitly (not just the customised ones), so your linting result is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. Because the explicit values are pinned to a specific markdownlint version, pin the action by major tag (`@v23`) and re-check the config when you bump it. An annotated, commented copy of the same rule set lives at [`working/linting-formatting/markdownlint.jsonc`](working/linting-formatting/markdownlint.jsonc).
+The published config states **every** rule explicitly (not just the customised ones), so your linting result is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. Because the explicit values are pinned to a specific markdownlint version, pin the action by major tag (`@v23`) and re-check the config when you bump it.
 
 ### Pin to a release tag, not `main`
 
