@@ -17,37 +17,39 @@
 
 ---
 
-## Current state — `1.2.0` released; formatting layer committed (`f0ef89a`, unreleased)
+## Current state — `1.3.0` feature-complete on `testing` (DEC-1…9), unreleased
 
-Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main` holds releases, moving tag `v1` tracks the newest). Published line:
+Repo: `/home/chris/projects/project-standards`. **Branch:** `testing` (dev; `main` holds releases, moving tag `v1` tracks the newest). `testing` is **18 commits ahead of `main`** — the entire `1.3.0` line, implemented but **not yet released** (release was deliberately out of this session's scope). Published + pending line:
 
 | Tag | What shipped |
 | --- | --- |
 | `v1.0.x` | initial Markdown Frontmatter + ADR + Versioning standards, validator, reusable workflow |
 | `v1.1.0` | optional `consumer` field; `schema_version` enum widened to accept `1.1` |
-| `v1.2.0` | `standards/adoption.md`; `standards-ref` pinning hardened (workflow default `main`→`v1`); validator no longer crashes on malformed YAML; doc fixes |
+| `v1.2.0` | `standards/adoption.md`; `standards-ref` pinning hardened (workflow default `main`→`v1`); validator crash-safety; doc fixes |
+| `1.3.0` _(pending, on `testing`)_ | opt-in Markdown-lint workflow + ADR section validator + MADR-4 ADR conventions + the full formatting/linting stack — see below |
 
-Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyright` 0. Per-release planning archived under [`archive/`](archive/).
+**Gate green** (verified 2026-06-05): `pytest` **105**, `ruff` clean, `pyright` 0, `validate-frontmatter` ✓ 9, `markdownlint` 0, `prettier --check .` clean.
 
-**2026-06-04 planning session (design only).** Scoped the linting/formatting stack + ADR/MADR standard → **8 locked decisions** (DEC-1…DEC-8); see [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md). No `standards/`/`schemas/`/`tools/`/`.github/` changes.
+### What `1.3.0` delivers (all on `testing`, additive → MINOR)
 
-**2026-06-05 session — Stack-B markdownlint config + a new Prettier layer (committed as `f0ef89a` on `testing`; not yet released, repo still `1.2.0`).** The `.markdownlint.json` review gate is **cleared** and the formatting wiring is now committed:
+The 2026-06-04 planning session locked **DEC-1…DEC-8**; the 2026-06-05 session implemented them, revised DEC-6→**DEC-6b**, and added **DEC-9**. Decision trails in [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md); per-commit detail in `git log main..testing` (12 commits this session, on top of 6 prior).
 
-- **`.markdownlint.json` expanded** from 3 rules to the **13 non-default rules** extracted from the workstation's global VS Code `markdownlint.config`: MD003 atx / MD004 dash / MD048 backtick / MD049 underscore / MD050 asterisk (align to Prettier); MD009/010/013/030/032 disabled (Prettier owns that formatting); MD029 off; MD024 `siblings_only:true`→**`false`** (Δ3, 2026-06-05, match MADR); MD025 `front_matter_title:""`. Repo Markdown lints **0 errors** (markdownlint v0.40.0 via cached `markdownlint-cli2` v0.22.1).
-- **New Prettier formatting layer** (now formalized as **DEC-9** in the decisions doc): repo-local [`../.prettierrc.json`](../.prettierrc.json) (`$schema`-pinned; mirrors the workstation Prettier settings) + **Prettier 3.8.3 pinned** as a local dev dependency (`../package.json` `private:true`, `../package-lock.json`, `node_modules/` gitignored). Overrides: `**/*.jsonc → trailingComma:none`, `**/*.md → singleQuote:true` (Prettier formats frontmatter in the repo's single-quote style — no churn on existing files).
-- **The `linting-formatting/` scratch configs were development scaffolding, all removed 2026-06-05** once the root `../.markdownlint.json` became the single explicit config: the annotated `markdownlint.{yaml,jsonc}` twins and the `markdownlint-config-schema.json` generation source. **To regenerate the config on a markdownlint upgrade,** re-fetch the version's config schema from `https://raw.githubusercontent.com/DavidAnson/markdownlint/vX.Y.Z/schema/markdownlint-config-schema.json` (or the installed `markdownlint` package), derive defaults, re-apply the 13 customisations + `MD043: true`, and confirm `tests/test_markdownlint_config.py` + a 0-error lint.
-- **Normalized:** `CHANGELOG.md` MD049 emphasis (`*cannot*`→`_cannot_`); 5 templates' frontmatter (concept/note/research/runbook/spec) → single quotes. The 3 ADR templates were left as-authored (prose untouched).
+- **Stack-B Markdown linting (DEC-3/7/8):** opt-in reusable `lint-markdown.yml` (`markdownlint-cli2-action@v23`) + `.markdownlint-cli2.jsonc` local parity + `github-actions` Dependabot.
+- **MADR 4.0 ADR conventions (DEC-1/6b):** `MD024`→`false`; "Any"→"Architectural" name fix; ADR id `adr-NNNN-repo-name-title` (globally unique) with filename `adr-NNNN-title.md`.
+- **Opt-in ADR section check (DEC-5):** default-off `markdown.adr.require_sections` in the validator (built TDD, +18 tests); `standards/adr.md` reconciled to 3 required sections; dogfooded in this repo's `.project-standards.yml`.
+- **Formatting stack (DEC-9 + tooling):** Prettier as the repo-local formatter with a `format.yml` CI gate; `.editorconfig` floor; `.markdownlint.json` made **fully explicit (53 rules)** for consumer determinism, guarded by `tests/test_markdownlint_config.py`.
+- **CHANGELOG:** every change accumulated under `[Unreleased]` (rename to `[1.3.0]` at release).
 
-## Next action — last `1.3.0` backlog item: #5 (README), then release
+## Next action — release `1.3.0` when ready (feature-complete, unreleased)
 
-**Backlog item #2 (DEC-3 + DEC-7) is DONE** (2026-06-05, uncommitted→see below): `lint-markdown.yml` reusable workflow + `.markdownlint-cli2.jsonc` runner config + `github-actions` Dependabot, with the lint scope settled (**lint everything incl. `working/`**; the 5 pre-existing errors fixed). CHANGELOG `[Unreleased]` section started. Remaining for the `1.3.0` additive release (backlog at the bottom of the decisions doc):
+Nothing is half-done: all DEC-1…9 work is committed and green on `testing`. The next action is the **`1.3.0` release ritual** (full steps in _Constraints_ below) whenever you choose to ship:
 
-- ✅ **#1 (DEC-1/§3.5) DONE (2026-06-05):** `.markdownlint.json` MD024 → `false` (Δ3, match MADR); "Any"→"Architectural" in `standards/adr.md` (Δ7, verified vs upstream). SPL declined (proseWrap:never); bare-placeholders kept.
-- ✅ **#3 (DEC-5) DONE (2026-06-05):** validator gained default-off `markdown.adr.require_sections` (pure `missing_adr_sections` helper + `doc_type: adr` gate; `FrontmatterConfig`→`ProjectConfig`). 17 new tests, TDD, 87 green; ruff + pyright clean. Reconciled the Consequences-required finding (`standards/adr.md` now lists 3 required, matching MADR 4.0/templates). Enabled in `.project-standards.yml` (dogfood; verified it fires on a broken example).
-- ✅ **#4 (DEC-6b) DONE (2026-06-05):** ADR id → `adr-NNNN-repo-name-title` (repo-name = cross-repo global uniqueness); filename stays `adr-NNNN-title.md` (no repo-name). Updated `standards/adr.md` (ID section + note + tree + frontmatter sample), 4 templates, and the worked example + its 2 inbound `related:` refs. Revised the original DEC-6 (MADR-bare filename) per a new "ids unique across many repos" requirement. No validator change.
-- ✅ **#5 (DEC-8) DONE (2026-06-05):** `README.md` gained a "### 3. Optional — Markdown body linting" subsection (lint-markdown.yml `uses:` + seed-`.markdownlint.json` guidance) + a `markdown.adr.require_sections` config note. **All 5 backlog items complete** → ready for the `1.3.0` release ritual.
+1. Rename CHANGELOG `[Unreleased]` → `[1.3.0] — <date>`.
+2. Bump `pyproject.toml` to `1.3.0`; regen `uv.lock`; refresh the `standards_version` snapshots in `.project-standards.yml` + the README example if desired.
+3. Green gate → fast-forward `main` to `testing` → GPG-signed annotated `v1.3.0` tag → move `v1` (delete-and-re-push, never `--force`) → push `main` + `testing` + tags → verify `uvx … @v1` resolves.
+4. At release, move the active planning doc (`linting-formatting-stack.md`) to `archive/v1.3.0/` and reset this section to the next work.
 
-Then release `1.3.0` per the ritual (rename `[Unreleased]`→`[1.3.0]`, bump `pyproject.toml`, regen `uv.lock`, GPG-signed tag, move `v1`).
+Deferred (not blocking release): **pre-commit hooks** — the one unpicked stack gap (see _Future work_).
 
 ## Locked decisions / standing context (do not relitigate)
 
@@ -83,7 +85,7 @@ Nine decisions, primary-source-settled. Do **not** relitigate; trails in [`linti
 | Path | Role |
 | --- | --- |
 | `working/HANDOFF.md` | this file — the living handoff |
-| [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md) | **active planning doc** — DEC-1…8 trails + implementation backlog |
+| [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md) | **active planning doc** — DEC-1…9 trails (backlog now implemented; archive to `archive/v1.3.0/` at release) |
 | [`../.markdownlint.json`](../.markdownlint.json) · [`../tests/test_markdownlint_config.py`](../tests/test_markdownlint_config.py) | the single full explicit markdownlint config + its invariant guard test |
 | [`../.prettierrc.json`](../.prettierrc.json) | repo Prettier config (`$schema`; `*.jsonc`→`trailingComma:none`, `*.md`→`singleQuote:true`) |
 | `../package.json` · `../package-lock.json` | pins Prettier **3.8.3** dev-only (`node_modules/` gitignored) |
@@ -109,5 +111,6 @@ _None open._ (The Markdown-lint CI scope question is resolved — see _Locked de
 
 ## Future work
 
-- **`1.3.0` (additive — ADR/MADR-4 + Stack-B linting):** implement DEC-1…DEC-8 per the decisions doc's backlog — MADR-4 doc tweaks, `lint-markdown.yml` + `markdownlint-cli2-action`, opt-in `markdown.adr.require_sections` validator check (+ tests), ADR filename/id convention. All default-off / opt-in → MINOR.
+- **`1.3.0` is implemented on `testing`** (see _Current state_) — only the release ritual remains (see _Next action_).
+- **Pre-commit hooks (deferred, optional):** the one unpicked formatting-stack gap — a pre-commit framework running prettier + markdownlint + the validator + the config guard at commit time, to catch issues (and editor corruption) locally before CI.
 - **`2.0.0` (deliberate, breaking):** enforce repo-root-relative link patterns in the schema; migrate in-repo bare-id links; consumer migration notes; bump to `@v2`.
