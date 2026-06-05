@@ -309,7 +309,17 @@ The MADR section-presence + chosen-option checks live only in the extension (edi
 - **Implementation notes (future — not built this session):** new config namespace (body-level, not frontmatter), e.g. `markdown.adr.require_sections: true` (default `false`); scan headings when `doc_type == adr` and flag on; emit per-missing-section errors; add tests + CHANGELOG + `standards/adr.md` note. Keep it under a _separate_ config key from `markdown.frontmatter.*` so the validator's frontmatter remit stays conceptually distinct.
 - **Re-eval trigger:** false-positives on legitimate short ADRs → loosen; or demand for chosen-option validation → consider (c).
 
-#### DEC-6 — O4 resolved: **hybrid filename/id (option b)**
+#### DEC-6 — O4 resolved: **hybrid filename/id (option b)** · ⚠️ **REVISED 2026-06-05 (DEC-6b)**
+
+> **DEC-6b — REVISED 2026-06-05 (supersedes the scheme below).** Driven by a new requirement the user raised mid-implementation: **ADR ids must be unique across the user's many repos.** Final scheme:
+>
+> - **`id`**: `adr-NNNN-repo-name-short-title` — the **`repo-name` segment** is the global-uniqueness mechanism (e.g. `adr-0001-homelab-use-netbox-as-source-of-truth`).
+> - **Filename**: `adr-NNNN-short-title.md` — keeps the `adr-` prefix (reverting DEC-6's MADR-bare `NNNN-` filename), **omits** the repo-name. So filename = id minus the repo-name segment.
+> - **MADR filename divergence is now intentional & accepted** (filename starts with `adr-`, not a digit → not MADR-tool-recognized). Sanctioned by DEC-2 (MADR extension is optional, not a conformance target); the user prefers at-a-glance `adr-` filenames over MADR auto-listing.
+> - **Worked example updated** to demonstrate the repo-name (`adr-0001-homelab-use-postgresql-…`); its two inbound `related:` refs (concept/runbook examples) + the standard's frontmatter sample were renamed to match. Templates show the `repo-name` slot + a save-as comment.
+> - Still no schema/validator change (id pattern already admits the longer form; filename never machine-checked). Still additive → MINOR.
+>
+> The 2026-06-04 reasoning below is retained for the trail; where it says "filename follows MADR / `NNNN-short-title.md`", DEC-6b overrides it.
 
 - **Chosen (you, 2026-06-04):** ADR **filename** follows MADR 4 — `NNNN-short-title.md` (in `docs/decisions/`); ADR **id** keeps the prefix — `adr-NNNN-short-title` — for self- identification in cross-repo `related:` graphs.
 - **Rejected:** (a) full align (loses `adr-` id self-identification); (c) status quo (filename diverges from upstream MADR).
@@ -399,14 +409,14 @@ Remaining work: enumerate the 3.0→4.0 section/metadata deltas and apply them t
 
 All six original questions are resolved (2026-06-04):
 
-| Q      | Resolution                                     | Trail |
-| ------ | ---------------------------------------------- | ----- |
-| **O1** | markdownlint-cli2 (Node, `npx`)                | DEC-3 |
-| **O2** | keep frontmatter style as convention           | DEC-4 |
-| **O3** | minimal opt-in validator section-check         | DEC-5 |
-| **O4** | hybrid filename/id (MADR filename + `adr-` id) | DEC-6 |
-| **O5** | MADR 4.0                                       | DEC-1 |
-| **O6** | extension = optional convenience               | DEC-2 |
+| Q | Resolution | Trail |
+| --- | --- | --- |
+| **O1** | markdownlint-cli2 (Node, `npx`) | DEC-3 |
+| **O2** | keep frontmatter style as convention | DEC-4 |
+| **O3** | minimal opt-in validator section-check | DEC-5 |
+| **O4** | hybrid filename/id; **revised** → `adr-` filename + repo-name in id | DEC-6 / DEC-6b |
+| **O5** | MADR 4.0 | DEC-1 |
+| **O6** | extension = optional convenience | DEC-2 |
 
 ### Sub-decisions — RESOLVED
 
@@ -420,5 +430,5 @@ All six original questions are resolved (2026-06-04):
 - ✅ **DONE (2026-06-05)** — DEC-1/§3.5 config-tweaks: `.markdownlint.json` MD024 → `false` (Δ3, match MADR); "Any"→"Architectural" in `standards/adr.md` (Δ7, verified vs adr.github.io/madr). SPL (Δ5) **declined** — `proseWrap:never` fights it (see HANDOFF locked decision); bare-placeholders (Δ8) **kept** (ours are cleaner). _Note for #3:_ `standards/adr.md` still lists **Consequences** as a 4th required section — MADR 4.0 / DEC-5 say only 3 are required; reconcile when building the validator check.
 - ✅ **DONE (2026-06-05)** — DEC-3 + DEC-7: added `.github/workflows/lint-markdown.yml` using `markdownlint-cli2-action@v23` (self-run + `workflow_call`, explicit `globs: '**/*.md'`); added `.markdownlint-cli2.jsonc` (local `gitignore` parity) + `github-actions` Dependabot. Resolves the §2 Stack-B gap. Scope decided: lint **all** tracked Markdown incl. `working/` (5 pre-existing errors fixed).
 - DEC-5: extend validator with default-off `markdown.adr.require_sections` check + tests + CHANGELOG + `standards/adr.md` note.
-- DEC-6: `standards/adr.md` filename/id convention + directory tree + template filename comments.
+- ✅ **DONE (2026-06-05) — DEC-6b (revised):** ADR `id` → `adr-NNNN-repo-name-short-title` (repo-name = global uniqueness); filename stays `adr-NNNN-short-title.md` (no repo-name). Updated `standards/adr.md` (ID section + note + directory tree + frontmatter sample), all 4 templates (slot + save-as comment), and the worked example + its 2 inbound `related:` refs. No validator change (id pattern admits it; filename never machine-enforced). See DEC-6b banner.
 - DEC-8: document the opt-in `lint-markdown.yml` consumption in `README.md` alongside the frontmatter workflow.

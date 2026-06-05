@@ -47,7 +47,7 @@ ADRs use the **standard** canonical frontmatter profile with `doc_type: adr`. MA
 ```yaml
 ---
 schema_version: '1.1'
-id: 'adr-0001-use-postgresql-for-persistent-storage'
+id: 'adr-0001-homelab-use-postgresql-for-persistent-storage'
 title: 'ADR 0001: Use PostgreSQL for persistent storage'
 description: 'One-sentence summary of the decision.'
 doc_type: 'adr'
@@ -114,11 +114,11 @@ MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MAD
 
 Templates for each verbosity level live in [`templates/`](../templates/): [`adr.md`](../templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
 
-## ID and filename convention
-
-- **`id`**: `adr-NNNN-short-title` in lowercase kebab-case, e.g. `adr-0001-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number.
-- **Filename**: matches the `id` — `adr-NNNN-short-title.md`.
+- **`id`**: `adr-NNNN-repo-name-short-title` in lowercase kebab-case, e.g. `adr-0001-homelab-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number; the **`repo-name` segment makes the id globally unique across every repository**, so an ADR stays unambiguous when referenced from another repo's `related:` list. The `adr-` prefix keeps it self-identifying as an ADR.
+- **Filename**: `adr-NNNN-short-title.md`, e.g. `adr-0001-use-netbox-as-source-of-truth.md`. The filename carries the `adr-` prefix but **omits the `repo-name` segment** — it lives inside its own repo, where the repo is implied, so repeating the repo-name in every filename would be redundant.
 - **`title`**: human form, e.g. `ADR 0001: Use NetBox as source of truth`.
+
+> **ADRs are the one document type where the filename and `id` intentionally differ.** Both carry the `adr-NNNN-` prefix, but the **`id` additionally embeds the `repo-name`** for global uniqueness (it is path-independent by design — see the [Markdown Frontmatter Standard](markdown-frontmatter.md)), while the **filename omits it** to stay short and repo-local. For every other `doc_type`, deriving the filename from the `id` slug remains the norm. (This deliberately diverges from upstream [MADR](https://adr.github.io/madr/) filenames, which start with the bare number; MADR tooling is an optional convenience here, not a conformance target, so at-a-glance `adr-` filenames win.)
 
 ## Directory and index convention
 
@@ -126,9 +126,9 @@ In a consuming repository, ADRs live together under `docs/decisions/`, with a `R
 
 ```text
 docs/decisions/
-├── README.md                                   # doc_type: index — links every ADR
-├── adr-0001-use-netbox-as-source-of-truth.md
-└── adr-0002-segment-iot-onto-its-own-vlan.md
+├── README.md                                       # doc_type: index — links every ADR
+├── adr-0001-use-netbox-as-source-of-truth.md       # id: adr-0001-homelab-use-netbox-as-source-of-truth
+└── adr-0002-segment-iot-onto-its-own-vlan.md       # id: adr-0002-homelab-segment-iot-onto-its-own-vlan
 ```
 
 The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and title. (This standards repository documents the convention but does not itself host a `docs/decisions/` tree, since it is the source of the standard rather than a consumer of it.)

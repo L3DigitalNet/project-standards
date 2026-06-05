@@ -16,7 +16,7 @@ tags:
 aliases:
   - immutable-infra
 related:
-  - 'adr-0001-use-postgresql-for-persistent-storage'
+  - 'adr-0001-homelab-use-postgresql-for-persistent-storage'
 source: []
 confidence: 'high'
 visibility: 'internal'
