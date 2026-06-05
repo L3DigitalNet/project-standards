@@ -132,9 +132,9 @@ Local gate (from `AGENTS.md`): `uv run pytest && uv run ruff check . && uv run p
 
 ```json
 {
-  "MD013": false, // no line-length limit
-  "MD024": { "siblings_only": true }, // allow dup headings if not siblings
-  "MD025": { "front_matter_title": "" } // frontmatter `title:` counts as the H1
+	"MD013": false, // no line-length limit
+	"MD024": { "siblings_only": true }, // allow dup headings if not siblings
+	"MD025": { "front_matter_title": "" } // frontmatter `title:` counts as the H1
 }
 ```
 
