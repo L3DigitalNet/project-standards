@@ -85,7 +85,7 @@ This repo is consumed as a versioned standard: downstream repos pin a `standards
 
 - [ ] **Step 3: Write `docs/handoff/architecture.md`**
 
-`````markdown
+````markdown
 # Architecture
 
 **Last updated:** 2026-06-05
@@ -113,7 +113,7 @@ project-standards
 
 - **Pre-commit hooks** — deferred (decided during the 1.3.0 line).
 - **`2.0.0` repo-root-relative link enforcement** — breaking; future major.
-`````
+````
 
 - [ ] **Step 4: Write `docs/handoff/credentials.md`**
 
@@ -129,7 +129,7 @@ _No credentials referenced._
 
 - [ ] **Step 5: Write `docs/handoff/conventions.md`**
 
-`````markdown
+````markdown
 # Conventions
 
 LLM-targeted pattern library for this repo. Check this file before adding a persistent pattern; add new patterns here before session end.
@@ -202,7 +202,7 @@ uv run pytest && uv run ruff check . && uv run pyright
 **Sources:** pre-v3 `AGENTS.md`.
 
 **Related:** 1, 3.
-`````
+````
 
 - [ ] **Step 6: Write `docs/handoff/specs-plans.md`**
 
