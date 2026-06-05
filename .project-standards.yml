@@ -27,6 +27,8 @@ markdown:
       - ".claude/**"
       - ".agents/**"
       - ".codex/**"
+      # Agent session state (handoff-system-v3) is harness state, not managed docs.
+      - "docs/handoff/**"
 
   # Opt-in ADR body-structure check (separate from markdown.frontmatter above).
   # When true, every `doc_type: adr` document must contain the three MADR-required
