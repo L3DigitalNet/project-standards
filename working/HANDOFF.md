@@ -34,7 +34,7 @@ Gate green: `validate-frontmatter` ✓ 9, `pytest` 70, `ruff` clean @ 88, `pyrig
 **2026-06-05 session — Stack-B markdownlint config + a new Prettier layer (committed as `f0ef89a` on `testing`; not yet released, repo still `1.2.0`).** The `.markdownlint.json` review gate is **cleared** and the formatting wiring is now committed:
 
 - **`.markdownlint.json` expanded** from 3 rules to the **13 non-default rules** extracted from the workstation's global VS Code `markdownlint.config`: MD003 atx / MD004 dash / MD048 backtick / MD049 underscore / MD050 asterisk (align to Prettier); MD009/010/013/030/032 disabled (Prettier owns that formatting); MD029 off; MD024 `siblings_only:true`→**`false`** (Δ3, 2026-06-05, match MADR); MD025 `front_matter_title:""`. Repo Markdown lints **0 errors** (markdownlint v0.40.0 via cached `markdownlint-cli2` v0.22.1).
-- **New Prettier formatting layer** (NOT in DEC-1…8 — see Open questions): repo-local [`../.prettierrc.json`](../.prettierrc.json) (`$schema`-pinned; mirrors the workstation Prettier settings) + **Prettier 3.8.3 pinned** as a local dev dependency (`../package.json` `private:true`, `../package-lock.json`, `node_modules/` gitignored). Overrides: `**/*.jsonc → trailingComma:none`, `**/*.md → singleQuote:true` (Prettier formats frontmatter in the repo's single-quote style — no churn on existing files).
+- **New Prettier formatting layer** (now formalized as **DEC-9** in the decisions doc): repo-local [`../.prettierrc.json`](../.prettierrc.json) (`$schema`-pinned; mirrors the workstation Prettier settings) + **Prettier 3.8.3 pinned** as a local dev dependency (`../package.json` `private:true`, `../package-lock.json`, `node_modules/` gitignored). Overrides: `**/*.jsonc → trailingComma:none`, `**/*.md → singleQuote:true` (Prettier formats frontmatter in the repo's single-quote style — no churn on existing files).
 - **The `linting-formatting/` scratch configs were development scaffolding, all removed 2026-06-05** once the root `../.markdownlint.json` became the single explicit config: the annotated `markdownlint.{yaml,jsonc}` twins and the `markdownlint-config-schema.json` generation source. **To regenerate the config on a markdownlint upgrade,** re-fetch the version's config schema from `https://raw.githubusercontent.com/DavidAnson/markdownlint/vX.Y.Z/schema/markdownlint-config-schema.json` (or the installed `markdownlint` package), derive defaults, re-apply the 13 customisations + `MD043: true`, and confirm `tests/test_markdownlint_config.py` + a 0-error lint.
 - **Normalized:** `CHANGELOG.md` MD049 emphasis (`*cannot*`→`_cannot_`); 5 templates' frontmatter (concept/note/research/runbook/spec) → single quotes. The 3 ADR templates were left as-authored (prose untouched).
 
@@ -64,7 +64,7 @@ Then release `1.3.0` per the ritual (rename `[Unreleased]`→`[1.3.0]`, bump `py
 
 ### Linting/formatting + MADR-4 decisions (2026-06-04 — trails in the decisions doc)
 
-Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md).
+Nine decisions, primary-source-settled. Do **not** relitigate; trails in [`linting-formatting/linting-formatting-stack.md`](linting-formatting/linting-formatting-stack.md).
 
 | # | Decision |
 | --- | --- |
@@ -76,6 +76,7 @@ Eight decisions, primary-source-settled. Do **not** relitigate; trails in [`lint
 | DEC-6 | ADR naming — **revised DEC-6b (2026-06-05):** filename `adr-NNNN-title.md`; id `adr-NNNN-repo-name-title` (repo-name = cross-repo uniqueness) |
 | DEC-7 | CI uses `markdownlint-cli2-action@v23`; **no committed Node project** (refines DEC-3) |
 | DEC-8 | Separate opt-in reusable workflow `lint-markdown.yml` |
+| DEC-9 | Prettier = the repo's **formatter**, repo-local (not shipped); owns whitespace markdownlint defers; `proseWrap: never` |
 
 ## Key files
 

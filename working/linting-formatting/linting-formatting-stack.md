@@ -347,6 +347,22 @@ The MADR section-presence + chosen-option checks live only in the extension (edi
 - **Versioning:** new reusable workflow = additive → minor; it joins the versioned shipped surface (standard + schema + validator + workflow**s**).
 - **Re-eval trigger:** if essentially all consumers adopt both, consider a combined umbrella workflow that calls both — without removing the standalone ones.
 
+#### DEC-9 — Prettier is the repo's **formatter**, repo-local and not shipped (2026-06-05)
+
+Added outside the 2026-06-04 DEC-1…8 scope; formalized here so the formatting layer is trailed like the rest.
+
+- **Chosen:** adopt **Prettier 3.8.3** as the formatter for every Prettier-supported file (Markdown, JSON, JSONC, YAML, …), pinned as a **committed dev dependency** (`../package.json` + `../package-lock.json`, `node_modules/` gitignored) and **enforced in CI** by `../.github/workflows/format.yml` (`prettier --check .` from the lockfile). `../.editorconfig` sits underneath as the editor-agnostic whitespace floor.
+- **Scope — repo-local, NOT part of the published standard.** Consumers seed `../.markdownlint.json` (the rule set); they do **not** inherit `../.prettierrc.json`. This is the deliberate asymmetry: the markdownlint config is a shipped artifact, Prettier is internal tooling. The committed Node dep is **Prettier-only** and does not reopen DEC-3/DEC-7 (the markdownlint runner stays out of any committed Node project; CI uses `markdownlint-cli2-action`).
+- **Division of labor (the load-bearing part — who owns which whitespace):**
+  - **Prettier owns** the formatting it can normalize, so the overlapping markdownlint rules are **disabled** to defer to it: MD009 (trailing spaces), MD010 (hard tabs), MD013 (line length — with `proseWrap: never`), MD030 (list-marker spacing), MD032 (blanks around lists).
+  - **markdownlint owns** content/structure Prettier can't judge (MD024 duplicate headings, MD040 fence language, MD041 first-line H1, …). The **style** rules MD003/MD004/MD048/MD049/MD050 are set to _match Prettier's output_ (atx / dash / backtick / underscore / asterisk) so the two never disagree.
+  - **`.editorconfig` owns** the pre-tool floor: charset, LF, final newline, trim-trailing (except Markdown), and indentation.
+- **Rejected — Prettier as a frontmatter-semantics enforcer (already settled in DEC-4/D2):** Prettier reorders nothing and cannot enforce key order / quoting / list style, so it is **not** the frontmatter gate. Its remit here is body + whitespace formatting only; the schema remains the sole frontmatter gate.
+- **`proseWrap: never` consequence:** Prettier collapses each Markdown paragraph to one physical line. **Do not adopt MADR one-sentence-per-line (Δ5) without first switching `*.md` to `proseWrap: preserve`** — `never` actively fights SPL. (See the proseWrap locked decision in HANDOFF.)
+- **Quote tiebreaker:** `*.md singleQuote: true` makes single quotes the canonical frontmatter quote style; the standard allows either and the validator is quote-agnostic, so this is a formatting convention, not a schema rule.
+- **Versioning:** Prettier is dev tooling, not part of the versioned consumer contract — `.prettierrc.json` changes cannot fail a previously-passing consumer (consumers don't run our Prettier). Out of the standard/schema/validator/workflows versioning surface.
+- **Re-eval triggers:** (a) a Prettier-vs-markdownlint conflict on a rule we cannot disable; (b) adopting SPL (revisit `proseWrap`); (c) demand for a _consumer-facing_ formatting standard — then ship a Prettier config + guidance as a new published artifact (a separate decision), rather than quietly widening this repo-local one.
+
 ### D4 — ADR filename + id convention (O4)
 
 The extension driver is gone (DEC-2). The live tension is **upstream MADR-4 alignment** vs **cross-repo id clarity**. This is **greenfield** — the ADR standard isn't shipped and no consumer has ADRs yet, so there is **no migration cost** either way. Decide now while it's free.
@@ -423,7 +439,7 @@ All six original questions are resolved (2026-06-04):
 - **S1** ✅ → CI uses `markdownlint-cli2-action@v23`; no committed Node project (DEC-7).
 - **S2** ✅ → separate opt-in reusable workflow `lint-markdown.yml` (DEC-8).
 
-**Nothing left open.** All eight decisions (DEC-1…DEC-8) are made and trailed.
+**Nothing left open.** All nine decisions (DEC-1…DEC-9) are made and trailed. (DEC-9 — the Prettier formatter layer — was added 2026-06-05, outside the original eight.)
 
 ### Implementation backlog (decisions made; edits NOT yet applied — still gather/decide mode)
 
