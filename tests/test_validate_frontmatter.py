@@ -33,7 +33,8 @@ import pytest
 import yaml
 from jsonschema import Draft202012Validator
 
-from tools.validate_frontmatter import (
+import project_standards.validate_frontmatter as _vf
+from project_standards.validate_frontmatter import (
     collect_paths,
     find_bundled_schema,
     load_config,
@@ -45,7 +46,7 @@ from tools.validate_frontmatter import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_PATH = _REPO_ROOT / "schemas" / "markdown-frontmatter.schema.json"
+SCHEMA_PATH = Path(_vf.__file__).parent / "schemas" / "markdown-frontmatter.schema.json"
 
 # Canonical valid frontmatter, kept as dicts so individual tests can mutate one field.
 MINIMAL: dict[str, Any] = {
@@ -857,15 +858,14 @@ def test_main_malformed_config_returns_2(
     assert main(["--config", ".project-standards.yml", "--quiet"]) == 2
 
 
-def test_find_bundled_schema_resolves_installed_wheel_layout(
+def test_find_bundled_schema_resolves_from_package_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # In the wheel, the schema is force-included at <package>/schemas/ (pyproject
-    # [tool.hatch.build.targets.wheel.force-include]). Simulate that layout and
-    # confirm find_bundled_schema's installed candidate (module_dir/schemas) wins.
-    from tools import validate_frontmatter as vf
+    # The schema ships inside the package (project_standards/schemas/). Simulate an
+    # installed layout and confirm find_bundled_schema resolves <package>/schemas/.
+    from project_standards import validate_frontmatter as vf
 
-    pkg = tmp_path / "tools"
+    pkg = tmp_path / "project_standards"
     (pkg / "schemas").mkdir(parents=True)
     schema = pkg / "schemas" / "markdown-frontmatter.schema.json"
     schema.write_text("{}", encoding="utf-8")

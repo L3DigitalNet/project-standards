@@ -13,7 +13,8 @@ Usage:
     validate-frontmatter --config .project-standards.yml
 
     # Override the schema explicitly
-    validate-frontmatter --schema schemas/markdown-frontmatter.schema.json examples/*.md
+    validate-frontmatter --schema \
+        src/project_standards/schemas/markdown-frontmatter.schema.json examples/*.md
 
 Schema resolution order: --schema (path) > config markdown.frontmatter.schema
 (bundled name or path) > the bundled "markdown-frontmatter" schema.
@@ -64,19 +65,12 @@ class ConfigError(ValueError):
 def find_bundled_schema(name: str) -> Path:
     """Resolve a bundled schema *name* to its on-disk path.
 
-    Two layouts are supported so the validator works whether it runs from a git
-    checkout of this repo or from a `uv tool install git+...` wheel (where the
-    schema is force-included under the package directory; see pyproject.toml).
+    The schema ships inside the package (``project_standards/schemas/``), so the
+    same relative path resolves whether the validator runs from a source checkout
+    or from a ``uv tool install`` wheel. A missing name returns the canonical
+    (non-existent) path so the caller surfaces a clear read error.
     """
-    filename = f"{name}.schema.json"
-    candidates = [
-        Path(__file__).parent.parent / "schemas" / filename,  # source checkout
-        Path(__file__).parent / "schemas" / filename,  # packaged wheel
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return candidates[0]  # surface a clear read error against the canonical path
+    return Path(__file__).parent / "schemas" / f"{name}.schema.json"
 
 
 def resolve_schema_path(schema_value: str | None) -> Path:
