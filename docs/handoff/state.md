@@ -9,6 +9,7 @@
 - Repo migrated to handoff-system-v3 on 2026-06-05 (this layout).
 - Python Tooling SSOT standard adopted 2026-06-06 (`standards/python-tooling/README.md`); validator moved to `src/project_standards/` with schema bundled inside the package.
 - Standards restructured into per-standard bundles 2026-06-06: `standards/<name>/{README,adopt,templates,examples}` + `meta/versioning.md`, with a `standards/README.md` index; consumer contract unchanged. Spec+plan in `docs/superpowers/`.
+- Consistency review + self-conformance audit 2026-06-06: repo now **fully conforms to all four standards** (frontmatter/ADR/python-tooling/versioning). Fixed AGENTS.md staleness, ADR canonical key order, quoted frontmatter list items, repo-root-relative `related` links.
 
 ## Active incidents
 
