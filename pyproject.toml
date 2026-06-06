@@ -18,7 +18,8 @@ validate-frontmatter = "project_standards.validate_frontmatter:main"
 dev = [
     "pytest>=8.3.0",
     "ruff>=0.9.0",
-    "pyright>=1.1.390",
+    "basedpyright",
+    "types-PyYAML",
 ]
 
 [build-system]
@@ -44,12 +45,12 @@ quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
 
-[tool.pyright]
+[tool.basedpyright]
+include = ["src", "tests"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["src", "tests"]
-venvPath = "."
-venv = ".venv"
+pythonPlatform = "All"
+failOnWarnings = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
