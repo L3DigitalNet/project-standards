@@ -23,7 +23,7 @@ related: []
 
 # Python Tooling SSOT Standard
 
-Status: Source-checked standard 1.6 Owner: Project standards / repository template Last updated: 2026-06-06 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
+Status: Source-checked standard, internal revision 1.6 (an internal revision counter for this component only; the repo versions all standards together under a single release tag — this number is not an independent release version) Owner: Project standards / repository template Last updated: 2026-06-06 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
 
 ---
 
@@ -1220,36 +1220,34 @@ Policy decision: a script project may omit packaging metadata only if it is trul
 
 A project may deviate from this standard only when the exception is documented.
 
-Create or update:
+To adopt this standard, see [`adopt.md`](adopt.md).
+
+Record the exception as a conformant ADR. Create or update a file under `docs/decisions/`, using a zero-padded numeric sequence number for `NNNN`:
 
 ```text
-docs/decisions/adr-XXXX-python-tooling-exception.md
+docs/decisions/adr-NNNN-python-tooling-exception.md
 ```
 
-Minimum content:
+The ADR Standard ([`standards/adr/README.md`](../adr/README.md)) is the authority for the exact ADR shape — `id`, filename, frontmatter, and MADR section structure. Map the exception into MADR's required level-2 sections as follows:
 
 ```markdown
-# ADR-XXXX: Python tooling exception
+# ADR NNNN: Python tooling exception
 
-## Status
+## Context and Problem Statement
 
-Accepted
+What project constraint requires deviating from the standard? (Accepted/in-force status lives in the ADR frontmatter `status` field, per the ADR Standard.)
 
-## Context
+## Considered Options
 
-What project constraint requires deviating from the standard?
+What alternatives were weighed — including conforming to the standard unchanged?
 
-## Decision
+## Decision Outcome
 
-What exception is allowed?
+What exception is allowed, and why this option over the others?
 
-## Consequences
+### Consequences
 
-What does this cost in maintainability, agent reliability, CI complexity, or onboarding?
-
-## Revisit trigger
-
-When should this exception be reviewed?
+What does this cost in maintainability, agent reliability, CI complexity, or onboarding? Note when this exception should be revisited.
 ```
 
 Examples of valid exceptions:
