@@ -5,14 +5,12 @@ on:
     branches: ["main"]
     paths:
       - "**/*.md"
-      - "src/project_standards/schemas/**"
       - "src/**"
       - ".project-standards.yml"
       - "pyproject.toml"
   pull_request:
     paths:
       - "**/*.md"
-      - "src/project_standards/schemas/**"
       - "src/**"
       - ".project-standards.yml"
       - "pyproject.toml"
