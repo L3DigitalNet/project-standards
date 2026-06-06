@@ -25,7 +25,7 @@ CONFIG_PATH = _REPO_ROOT / ".markdownlint.json"
 
 # The 13 deliberate deviations from markdownlint's defaults. Every other rule is
 # stated at its v0.40.0 default for determinism; these are the values that carry
-# intent and must not silently change. Sources: standards/adr.md + the CHANGELOG.
+# intent and must not silently change. Sources: standards/adr/README.md + the CHANGELOG.
 CUSTOMIZATIONS: dict[str, Any] = {
     "MD003": {"style": "atx"},  # align headings to Prettier (ATX)
     "MD004": {"style": "dash"},  # align bullets to Prettier (-)

@@ -2,7 +2,7 @@
 """Validate YAML frontmatter in Markdown files against the project schema.
 
 The validator is the runtime half of the Markdown Frontmatter Standard
-(see standards/markdown-frontmatter.md). It detects a leading YAML frontmatter
+(see standards/markdown-frontmatter/README.md). It detects a leading YAML frontmatter
 block, parses it safely, and validates it against a JSON Schema (Draft 2020-12).
 
 Usage:
@@ -13,7 +13,7 @@ Usage:
     validate-frontmatter --config .project-standards.yml
 
     # Override the schema explicitly
-    validate-frontmatter --schema src/project_standards/schemas/markdown-frontmatter.schema.json examples/*.md
+    validate-frontmatter --schema src/project_standards/schemas/markdown-frontmatter.schema.json standards/markdown-frontmatter/examples/*.md
 
 Schema resolution order: --schema (path) > config markdown.frontmatter.schema
 (bundled name or path) > the bundled "markdown-frontmatter" schema.
@@ -124,7 +124,7 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# ADR body-structure check (opt-in; see standards/adr.md + DEC-5)
+# ADR body-structure check (opt-in; see standards/adr/README.md + DEC-5)
 # ---------------------------------------------------------------------------
 
 # The three sections MADR 4.0 marks REQUIRED. Consequences, Confirmation,

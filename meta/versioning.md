@@ -31,7 +31,7 @@ license: null
 
 This repository ships **four things under one version number**: the **standard** (`standards/`), the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all four together.
 
-This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`markdown-frontmatter.md`](markdown-frontmatter.md)).
+This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md)).
 
 ## What a version promises
 

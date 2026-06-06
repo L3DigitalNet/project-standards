@@ -15,7 +15,7 @@ Organisation (the three layers from the strategy doc):
     ``_coerce_dates``, ``resolve_schema_path``, ``find_bundled_schema``,
     ``load_config``) including their malformed-input fallbacks.
   * "Integration" section — the ``main`` CLI exit-code contract (0/1/2) and flags.
-  * "Contract / dogfood" section — the shipped ``examples/`` and bundled schema.
+  * "Contract / dogfood" section — the shipped ``standards/*/examples/`` and bundled schema.
 
 Exit-code contract for ``validate-frontmatter`` (asserted in the Integration section):
   0 = all matched files valid (or nothing matched); 1 = validation errors;
@@ -816,13 +816,13 @@ def test_find_bundled_schema_resolves_from_package_dir(
 # Contract / dogfood — the shipped artifacts must stay valid for consumers
 # ===========================================================================
 
-EXAMPLE_FILES = sorted((_REPO_ROOT / "examples").glob("*.md"))
+EXAMPLE_FILES = sorted(_REPO_ROOT.glob("standards/*/examples/*.md"))
 
 
 def test_examples_directory_is_not_empty() -> None:
     # Guard the parametrization below: an empty glob would make the dogfood test
     # vacuously pass, hiding a missing examples/ directory.
-    assert EXAMPLE_FILES, "expected worked examples under examples/"
+    assert EXAMPLE_FILES, "expected worked examples under standards/*/examples/"
 
 
 @pytest.mark.parametrize("example", EXAMPLE_FILES, ids=[p.name for p in EXAMPLE_FILES])

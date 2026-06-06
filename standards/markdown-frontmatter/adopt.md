@@ -19,8 +19,8 @@ aliases:
   - 'Adoption Procedure'
   - 'Onboarding Procedure'
 related:
-  - 'standards/markdown-frontmatter.md'
-  - 'standards/versioning.md'
+  - 'standards/markdown-frontmatter/README.md'
+  - 'meta/versioning.md'
   - 'README.md'
 source: []
 confidence: 'high'

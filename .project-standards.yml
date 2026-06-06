@@ -13,11 +13,13 @@ markdown:
     include:
       - "CHANGELOG.md"
       - "standards/**/*.md"
-      - "examples/**/*.md"
+      - "meta/**/*.md"
     exclude:
-      # Templates carry intentional placeholders (YYYY-MM-DD, replace-with-stable-id)
+      # Bundle templates carry intentional placeholders (YYYY-MM-DD, replace-with-stable-id)
       # that do not satisfy the schema's date and id patterns.
-      - "templates/**"
+      - "standards/**/templates/**"
+      # The standards index is a navigation landing page (like the root README), not a managed doc.
+      - "standards/README.md"
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"
@@ -34,6 +36,6 @@ markdown:
   # When true, every `doc_type: adr` document must contain the three MADR-required
   # level-2 sections (Context and Problem Statement / Considered Options /
   # Decision Outcome). Off by default; enabled here to dogfood the check on the
-  # shipped ADR example. See standards/adr.md.
+  # shipped ADR example. See standards/adr/README.md.
   adr:
     require_sections: true

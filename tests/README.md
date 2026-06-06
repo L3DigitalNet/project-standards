@@ -8,7 +8,7 @@ This document defines how `project-standards` is tested. It is the human-facing 
 
 | Goal | What it means in practice |
 | --- | --- |
-| **Protect the contract** | The schema and the shipped `examples/` must always validate. A change that breaks them must break a test first. |
+| **Protect the contract** | The schema and the shipped examples (`standards/*/examples/`) must always validate. A change that breaks them must break a test first. |
 | **Fast & hermetic** | No network, no global state, no real home directory. Everything runs against `tmp_path`. A full run is sub-second. |
 | **Deterministic** | Same input → same result on every supported Python (3.13+). Version-dependent behaviour (e.g. `glob` `**` semantics) is pinned by regression tests. |
 | **Behaviour over implementation** | Prefer asserting observable outputs (return values, exit codes, error strings) so refactors don't churn the suite. Reach into private helpers only when a unit is too awkward to reach through the public surface. |
@@ -39,7 +39,7 @@ Every exit code must have at least one test that produces it.
 
 These guard the _product_, not the code:
 
-- **Shipped `examples/` validate.** Each file under `examples/` is a worked example the standard promises is correct. A parametrized test validates every one against the _real_ bundled schema. If someone adds an example, it is tested automatically.
+- **Shipped examples validate.** Each file under a bundle's `examples/` (`standards/*/examples/`) is a worked example the standard promises is correct. A parametrized test validates every one against the _real_ bundled schema. If someone adds an example, it is tested automatically.
 - **Bundled schemas are well-formed.** Each `src/project_standards/schemas/*.schema.json` must be a valid Draft 2020-12 schema (`check_schema`). This catches a typo in the contract before it ships.
 
 Templates are intentionally **excluded** from dogfood validation — they carry placeholders (`YYYY-MM-DD`, `replace-with-stable-id`) that deliberately fail the schema (see the `exclude` list in [.project-standards.yml](../.project-standards.yml)).

@@ -19,7 +19,7 @@ aliases:
   - frontmatter-standard
 related:
   - 'src/project_standards/schemas/markdown-frontmatter.schema.json'
-  - 'standards/versioning.md'
+  - 'meta/versioning.md'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -34,7 +34,7 @@ This standard defines a small, portable, tool-neutral set of YAML frontmatter fi
 
 A **managed document** is any Markdown file this standard governs — one expected to carry conformant frontmatter and to validate against the schema. Consuming repositories declare which paths are managed, and which are excluded, in `.project-standards.yml`.
 
-The machine-readable contract is [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12). The validator [`src/project_standards/validate_frontmatter.py`](../src/project_standards/validate_frontmatter.py) enforces this schema in CI and locally. Where this document and that schema disagree, **the schema is authoritative**: it is what the validator checks, and this document explains and expands on it.
+The machine-readable contract is [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../../src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12). The validator [`src/project_standards/validate_frontmatter.py`](../../src/project_standards/validate_frontmatter.py) enforces this schema in CI and locally. Where this document and that schema disagree, **the schema is authoritative**: it is what the validator checks, and this document explains and expands on it.
 
 This document specifies **schema version 1.1**, an additive revision that introduces the `consumer` field. Conforming documents set `schema_version: '1.1'` (see [Versioning and compatibility](#versioning-and-compatibility)).
 
@@ -369,8 +369,8 @@ Recommended:
 
 ```yaml
 related:
-  - 'schemas/markdown-frontmatter.schema.json'
-  - 'templates/adr.md'
+  - 'src/project_standards/schemas/markdown-frontmatter.schema.json'
+  - 'standards/adr/templates/adr.md'
 ```
 
 Discouraged:
@@ -414,16 +414,16 @@ Two version numbers are in play, and they are **not** the same:
 - **`schema_version`** (this document) — the version of the **metadata schema**: the field set and controlled vocabularies. It changes only when those change, and carries no patch component. This release moves it from `1.0` to `1.1` by adding the optional `consumer` field. The machine schema's `schema_version` enum lists every value still accepted (`["1.0", "1.1"]`), so existing `1.0` documents stay valid.
 - **The repository release tag** (`vMAJOR.MINOR.PATCH`) — versions all four shipped components together (the standard, the JSON schema, the validator CLI, and the reusable workflow).
 
-How a schema change maps to a release level (additive → minor; a field or controlled value removed, or a pattern tightened → major), the previously-passing rule, tagging, and the consumption model all live in [`standards/versioning.md`](../standards/versioning.md) and are not repeated here.
+How a schema change maps to a release level (additive → minor; a field or controlled value removed, or a pattern tightened → major), the previously-passing rule, tagging, and the consumption model all live in [`meta/versioning.md`](../../meta/versioning.md) and are not repeated here.
 
 ## Validation
 
-Frontmatter is validated by [`src/project_standards/validate_frontmatter.py`](../src/project_standards/validate_frontmatter.py) — installed as the `validate-frontmatter` command — against [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../src/project_standards/schemas/markdown-frontmatter.schema.json), in CI and locally.
+Frontmatter is validated by [`src/project_standards/validate_frontmatter.py`](../../src/project_standards/validate_frontmatter.py) — installed as the `validate-frontmatter` command — against [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../../src/project_standards/schemas/markdown-frontmatter.schema.json), in CI and locally.
 
 - **Run locally:** `uv run validate-frontmatter --config .project-standards.yml`. Run `validate-frontmatter --help` for the full flag list.
 - **Exit codes:** `0` — all matched files valid (or none matched); `1` — one or more documents failed validation (each error, then a summary count, prints to stderr); `2` — configuration or schema error (config or schema missing or invalid).
 
-Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the repository README](../README.md#consuming-the-standards); they are not repeated here.
+Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the repository README](../../README.md#consuming-the-standards); they are not repeated here.
 
 ## Valid frontmatter template
 

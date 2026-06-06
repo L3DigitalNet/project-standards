@@ -19,7 +19,7 @@ aliases:
   - madr-standard
 related:
   - 'markdown-frontmatter-standard'
-  - 'templates/adr.md'
+  - 'standards/adr/templates/adr.md'
 source:
   - 'https://adr.github.io/madr/'
   - 'https://adr.github.io/'
@@ -34,7 +34,7 @@ license: null
 
 An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
 
-This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](markdown-frontmatter.md) for metadata. General ADR background is at <https://adr.github.io/>.
+This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](../markdown-frontmatter/README.md) for metadata. General ADR background is at <https://adr.github.io/>.
 
 ## When to write an ADR
 
@@ -114,13 +114,13 @@ MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MAD
 
 > **Opt-in section check.** Set `markdown.adr.require_sections: true` in `.project-standards.yml` to have the validator assert that every `doc_type: adr` document contains the three required `##` sections above (exact, case-sensitive, level-2 headings; headings inside code fences don't count). It is **off by default**, and the optional sections are never required — honoring MADR's short→large flexibility. This lives under a separate `markdown.adr` config key from the `markdown.frontmatter` settings.
 
-Templates for each verbosity level live in [`templates/`](../templates/): [`adr.md`](../templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
+Templates for each verbosity level live in [`templates/`](templates/): [`adr.md`](templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
 
 - **`id`**: `adr-NNNN-repo-name-short-title` in lowercase kebab-case, e.g. `adr-0001-homelab-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number; the **`repo-name` segment makes the id globally unique across every repository**, so an ADR stays unambiguous when referenced from another repo's `related:` list. The `adr-` prefix keeps it self-identifying as an ADR.
 - **Filename**: `adr-NNNN-short-title.md`, e.g. `adr-0001-use-netbox-as-source-of-truth.md`. The filename carries the `adr-` prefix but **omits the `repo-name` segment** — it lives inside its own repo, where the repo is implied, so repeating the repo-name in every filename would be redundant.
 - **`title`**: human form, e.g. `ADR 0001: Use NetBox as source of truth`.
 
-> **ADRs are the one document type where the filename and `id` intentionally differ.** Both carry the `adr-NNNN-` prefix, but the **`id` additionally embeds the `repo-name`** for global uniqueness (it is path-independent by design — see the [Markdown Frontmatter Standard](markdown-frontmatter.md)), while the **filename omits it** to stay short and repo-local. For every other `doc_type`, deriving the filename from the `id` slug remains the norm. (This deliberately diverges from upstream [MADR](https://adr.github.io/madr/) filenames, which start with the bare number; MADR tooling is an optional convenience here, not a conformance target, so at-a-glance `adr-` filenames win.)
+> **ADRs are the one document type where the filename and `id` intentionally differ.** Both carry the `adr-NNNN-` prefix, but the **`id` additionally embeds the `repo-name`** for global uniqueness (it is path-independent by design — see the [Markdown Frontmatter Standard](../markdown-frontmatter/README.md)), while the **filename omits it** to stay short and repo-local. For every other `doc_type`, deriving the filename from the `id` slug remains the norm. (This deliberately diverges from upstream [MADR](https://adr.github.io/madr/) filenames, which start with the bare number; MADR tooling is an optional convenience here, not a conformance target, so at-a-glance `adr-` filenames win.)
 
 ## Directory and index convention
 
@@ -146,4 +146,4 @@ When a new ADR replaces an old one, update **both** documents in the same change
 
 - [MADR — Markdown Architectural Decision Records](https://adr.github.io/madr/)
 - [Architectural Decision Records](https://adr.github.io/)
-- [Markdown Frontmatter Standard](markdown-frontmatter.md)
+- [Markdown Frontmatter Standard](../markdown-frontmatter/README.md)
