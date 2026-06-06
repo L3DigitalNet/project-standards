@@ -9,25 +9,28 @@ Shared standards, schemas, templates, and validation tooling for documentation a
 
 ```text
 project-standards/
-├── standards/             # human-readable standards (the governing documents)
-├── templates/             # copy-paste frontmatter snippets and document scaffolds
-├── examples/              # validated worked examples
-├── src/project_standards/ # the Python validator + bundled schema
-├── tests/                 # validator tests
-└── .github/               # reusable CI workflows
+├── standards/                 # governing standards — one self-contained bundle per standard
+│   ├── README.md              #   index + bundle anatomy
+│   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/
+│   ├── adr/                   #   standard + adopt + templates/ + examples/
+│   └── python-tooling/        #   standard + adopt (doc-only)
+├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
+├── src/project_standards/     # the Python validator + bundled schema
+├── tests/                     # validator tests
+└── .github/                   # reusable CI workflows
 ```
 
 ## Standards
 
-The standards this repository defines. Each is a human-readable document under [`standards/`](standards/), enforced by the shared validator.
+The standards this repository defines. Each lives in its own bundle under [`standards/`](standards/) — see the [standards index](standards/README.md).
 
 ### Markdown Frontmatter Standard
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter.md`](standards/markdown-frontmatter.md)
+- **Standard:** [`standards/markdown-frontmatter/README.md`](standards/markdown-frontmatter/README.md)
 - **Schema:** [`src/project_standards/schemas/markdown-frontmatter.schema.json`](src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Templates:** [`templates/`](templates/) · **Examples:** [`examples/`](examples/)
+- **Templates:** [`templates/`](standards/markdown-frontmatter/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/adopt.md)
 
 Minimal frontmatter (the eleven required fields):
 
@@ -78,17 +81,24 @@ See the standard for full field definitions and the controlled values for `doc_t
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr.md`](standards/adr.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](examples/adr.example.md).
+- **Standard:** [`standards/adr/README.md`](standards/adr/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](standards/adr/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/adopt.md).
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
+
+### Python Tooling SSOT Standard
+
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, and the VS Code / agent-instruction conventions. Unlike the Markdown standards it is **not** validator-enforced and ships **no reusable workflow** — you adopt it by copying the in-doc scaffolds and running the gate.
+
+- **Standard:** [`standards/python-tooling/README.md`](standards/python-tooling/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/adopt.md)
 
 ## Consuming the standards
 
 A consuming repository adopts the standards by adding **two files** — a config that says _which files to check_, and a workflow that _runs the shared validator in CI_. This is the same regardless of which standards you use.
 
-> **Adopting with an agent?** Hand it [`standards/adoption.md`](standards/adoption.md) — a self-contained, step-by-step onboarding & compliance procedure (config, CI pinning, the full frontmatter rules, a worked example, and a compliance checklist).
+> **Adopting with an agent?** Hand it [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md) — a self-contained, step-by-step onboarding & compliance procedure (config, CI pinning, the full frontmatter rules, a worked example, and a compliance checklist).
 
 ```text
 some-repo/
@@ -137,7 +147,7 @@ markdown:
     require_sections: true # every `doc_type: adr` doc must have the 3 MADR-required `##` sections
 ```
 
-This asserts `## Context and Problem Statement`, `## Considered Options`, and `## Decision Outcome` are present (exact, level-2 headings; optional MADR sections are never required). See the [ADR Standard](standards/adr.md).
+This asserts `## Context and Problem Statement`, `## Considered Options`, and `## Decision Outcome` are present (exact, level-2 headings; optional MADR sections are never required). See the [ADR Standard](standards/adr/README.md).
 
 ### 2. Workflow — `.github/workflows/validate-standards.yml`
 
@@ -202,7 +212,7 @@ Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but 
 - **PATCH / MINOR** → safe to inherit on a moving major pin (`@v1`); a repo that passed yesterday still passes today.
 - **MAJOR** → may newly-fail a previously-passing repo (a new required field, a stricter rule, even a validator bug fix); old `vN.x` tags stay intact, and consumers migrate intentionally.
 
-See [`standards/versioning.md`](standards/versioning.md) for the full classification table, the previously-passing rule, and release requirements.
+See [`meta/versioning.md`](meta/versioning.md) for the full classification table, the previously-passing rule, and release requirements.
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
