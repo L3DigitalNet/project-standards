@@ -18,4 +18,4 @@
 1. Live state is auto-injected by the SessionStart hook; check `git log` + working tree before acting. Do not re-apply committed changes.
 2. Keep this file ≤2048 bytes — route long-lived content to its split file (history → `sessions/`, backlog → `architecture.md`, patterns → `conventions.md`).
 3. Update **Last updated** and the bullets whenever state changes.
-4. Next obvious work: run the release ritual (cut tag, move `v1`, fast-forward `main`). ⚠️ `requires-python` `>=3.11`→`>=3.13` is breaking for CLI consumers, so the release is likely **`2.0.0`**, not `1.3.0` (per `versioning.md`; see `CHANGELOG.md`). See `deployed.md`.
+4. Next obvious work: run the release ritual (cut tag, move `v1`, fast-forward `main`). ⚠️ `requires-python` `>=3.11`→`>=3.13` is breaking for CLI consumers, so the release is **LOCKED as `2.0.0`** (not `1.3.0`) per `versioning.md` (see `CHANGELOG.md` + `deployed.md`). See `deployed.md`.
