@@ -32,7 +32,7 @@ Status: Source-checked standard 1.6 Owner: Project standards / repository templa
 This document separates **source-backed facts** from **project policy decisions**.
 
 - Source-backed facts cite source IDs such as `[S04]`.
-- Every source ID is listed in [Source register](#source-register), with `Last checked: 2026-06-06`.
+- Every source ID is listed in [Source register](#24-source-register), with `Last checked: 2026-06-06`.
 - Policy decisions are explicitly local standards for this project ecosystem. They may be informed by sources, but the final choice is a standard, not a claim that the source mandates it.
 - Version pins in examples are template defaults and must be rechecked when the standard is reviewed.
 
@@ -1402,22 +1402,22 @@ Source basis: these tools are active projects whose documented behavior can chan
 
 | Section | Source IDs used |
 | --- | --- |
-| Purpose/core contract | S04, S08, S11, S13, S15, S16 |
-| Standard stack | S01, S03, S04, S05, S07, S08, S09, S10, S11, S13, S14, S15, S16, S17, S20, S34, S35, N01 |
-| Repository layout | S04, S14, S17, S18, S19 |
-| Python version policy | S01, S03, S04, S20 |
-| `pyproject.toml` | S01, S02, S06, S07, S09, S11, S13, S15 |
-| Dependency policy | S04, S05, S06 |
-| Type policy | S11, S12, S21, S22, S23, S24 |
-| Testing policy | S13, S14 |
-| Coverage policy | S15, S25 |
-| Ruff policy | S08, S09, S10, S26 |
-| Security policy | S16 |
-| Editor and agent integrations | S17, S18, S26, S27, S28, S33, S35, S36, N01 |
-| EditorConfig | S19 |
-| GitHub Actions | S20 |
-| Agent instruction interface | S30, S31, S32, S36 |
-| Project profiles | S01, S02, S04, S08, S13, S21, S23, S29 |
+| Purpose/core contract | [S04], [S08], [S11], [S13], [S15], [S16] |
+| Standard stack | [S01], [S03], [S04], [S05], [S07], [S08], [S09], [S10], [S11], [S13], [S14], [S15], [S16], [S17], [S20], [S34], [S35], [N01] |
+| Repository layout | [S04], [S14], [S17], [S18], [S19] |
+| Python version policy | [S01], [S03], [S04], [S20] |
+| `pyproject.toml` | [S01], [S02], [S06], [S07], [S09], [S11], [S13], [S15] |
+| Dependency policy | [S04], [S05], [S06] |
+| Type policy | [S11], [S12], [S21], [S22], [S23], [S24] |
+| Testing policy | [S13], [S14] |
+| Coverage policy | [S15], [S25] |
+| Ruff policy | [S08], [S09], [S10], [S26] |
+| Security policy | [S16] |
+| Editor and agent integrations | [S17], [S18], [S26], [S27], [S28], [S33], [S35], [S36], [N01] |
+| EditorConfig | [S19] |
+| GitHub Actions | [S20] |
+| Agent instruction interface | [S30], [S31], [S32], [S36] |
+| Project profiles | [S01], [S02], [S04], [S08], [S13], [S21], [S23], [S29] |
 
 ---
 
@@ -1425,42 +1425,42 @@ Source basis: these tools are active projects whose documented behavior can chan
 
 | ID | Source | URL | What it supports | Last checked |
 | --- | --- | --- | --- | --- |
-| S01 | PyPA: Writing your `pyproject.toml` | https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ | `pyproject.toml`, `[build-system]`, `[project]`, `[tool]`, build backend metadata | 2026-06-06 |
-| S02 | PyPA: `pyproject.toml` specification | https://packaging.python.org/en/latest/specifications/pyproject-toml/ | Formal `pyproject.toml` table roles and build-system behavior | 2026-06-06 |
-| S03 | Python Developer Guide: Status of Python versions | https://devguide.python.org/versions/ | Python version lifecycle phases | 2026-06-06 |
-| S04 | uv: Working on projects | https://docs.astral.sh/uv/guides/projects/ | uv project structure, `.python-version`, `.venv`, `uv.lock`, `uv run` | 2026-06-06 |
-| S05 | uv: Locking and syncing | https://docs.astral.sh/uv/concepts/projects/sync/ | Automatic lock/sync behavior for `uv run`; `--locked` | 2026-06-06 |
-| S06 | PyPA: Dependency Groups | https://packaging.python.org/en/latest/specifications/dependency-groups/ | `[dependency-groups]` for development dependencies | 2026-06-06 |
-| S07 | uv: Build backend | https://docs.astral.sh/uv/concepts/build-backend/ | `uv_build`, build backend snippet, limitations for pure-Python code | 2026-06-06 |
-| S08 | Ruff documentation | https://docs.astral.sh/ruff/ | Ruff as Python linter and formatter | 2026-06-06 |
-| S09 | Ruff configuration | https://docs.astral.sh/ruff/configuration/ | Ruff config file support and `pyproject.toml` behavior | 2026-06-06 |
-| S10 | Ruff formatter | https://docs.astral.sh/ruff/formatter/ | Ruff formatter, Black compatibility goal, formatter configuration | 2026-06-06 |
-| S11 | BasedPyright config files | https://docs.basedpyright.com/dev/configuration/config-files/ | `[tool.basedpyright]` support and config behavior | 2026-06-06 |
-| S12 | BasedPyright baseline | https://docs.basedpyright.com/v1.36.1/benefits-over-pyright/baseline/ | Baseline support for adopting stricter checks in existing projects | 2026-06-06 |
-| S13 | pytest documentation / configuration | https://docs.pytest.org/en/stable/ and https://docs.pytest.org/en/stable/reference/customize.html | pytest purpose, `pyproject.toml` config, `[tool.pytest.ini_options]` support since pytest 6.0, and `[tool.pytest]` support since pytest 9.0 | 2026-06-06 |
-| S14 | pytest good integration practices | https://docs.pytest.org/en/stable/explanation/goodpractices.html | `src` layout recommendation | 2026-06-06 |
-| S15 | coverage.py configuration / PyPI docs | https://coverage.readthedocs.io/en/latest/config.html and https://pypi.org/project/coverage/ | coverage.py measures coverage; `pyproject.toml` config support | 2026-06-06 |
-| S16 | pip-audit PyPI documentation | https://pypi.org/project/pip-audit/ | Known-vulnerability scanning and Python Packaging Advisory Database source | 2026-06-06 |
-| S17 | VS Code user/workspace settings | https://code.visualstudio.com/docs/configure/settings | Workspace settings in `.vscode/settings.json` and project-specific behavior | 2026-06-06 |
-| S18 | VS Code tasks | https://code.visualstudio.com/docs/debugtest/tasks | `.vscode/tasks.json` and running external tools from VS Code | 2026-06-06 |
-| S19 | EditorConfig | https://editorconfig.org/ | Cross-editor coding style file and supported properties | 2026-06-06 |
-| S20 | uv: GitHub Actions integration | https://docs.astral.sh/uv/guides/integration/github/ | `astral-sh/setup-uv`, `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-06-06 |
-| S21 | Python docs: `typing` | https://docs.python.org/3/library/typing.html | Type annotations, advanced type-hinting vocabulary, type checkers/IDEs/linters | 2026-06-06 |
-| S22 | Python docs: `dataclasses` | https://docs.python.org/3/library/dataclasses.html | `@dataclass`, `frozen=True`, frozen instance behavior | 2026-06-06 |
-| S23 | Pydantic docs: models | https://pydantic.dev/docs/validation/latest/concepts/models/ | Pydantic model validation and output type/constraint guarantee | 2026-06-06 |
-| S24 | Python docs: `pathlib` | https://docs.python.org/3/library/pathlib.html | `Path` and object-oriented filesystem path handling | 2026-06-06 |
-| S25 | coverage.py report command | https://coverage.readthedocs.io/en/latest/commands/cmd_report.html | Coverage report and missed branch reporting | 2026-06-06 |
-| S26 | Ruff editor features | https://docs.astral.sh/ruff/editors/features/ | Ruff VS Code/editor formatting and code-action features | 2026-06-06 |
-| S27 | VS Code Python testing | https://code.visualstudio.com/docs/python/testing | `python.testing.pytestEnabled`, pytest settings, VS Code Python test discovery | 2026-06-06 |
-| S28 | BasedPyright IDE setup | https://docs.basedpyright.com/latest/installation/ides/ | BasedPyright VS Code extension, language-server setup, `ms-python` interpreter-detection dependency note, and Pylance disable/uninstall guidance | 2026-06-06 |
-| S29 | uv: Creating projects | https://docs.astral.sh/uv/concepts/projects/init/ | `uv init`, packaged project metadata, `[project.scripts]` example | 2026-06-06 |
-| S30 | Claude Code Docs: How Claude remembers your project | https://code.claude.com/docs/en/memory | `CLAUDE.md`, auto memory, startup loading, context-not-enforced behavior, concise instruction guidance | 2026-06-06 |
-| S31 | OpenAI Codex: Custom instructions with `AGENTS.md` | https://developers.openai.com/codex/guides/agents-md | Codex `AGENTS.md` discovery, layering, overrides, fallback filenames, project-doc size behavior | 2026-06-06 |
-| S32 | AGENTS.md open format | https://agents.md/ | AGENTS.md as a predictable agent instruction file for setup, tests, conventions, and project context | 2026-06-06 |
-| S33 | VS Code Python Environments | https://code.visualstudio.com/docs/python/environments | Python Environments extension, environment/package UI, and support for managers including `uv` | 2026-06-06 |
-| S34 | uv: Tools interface and using tools | https://docs.astral.sh/uv/concepts/tools/ and https://docs.astral.sh/uv/guides/tools/ | `uv tool install`, isolated/persistent tool environments, executables on `PATH`, and `uv run` preference for project-aware tools such as pytest | 2026-06-06 |
-| S35 | BasedPyright command-line and language server | https://docs.basedpyright.com/latest/installation/command-line-and-language-server/ | `basedpyright` CLI and `basedpyright-langserver` availability from the Python package | 2026-06-06 |
-| S36 | Claude Code plugins reference | https://code.claude.com/docs/en/plugins-reference | Plugin manifest, `lspServers`, separate `.lsp.json`, skills-directory plugin behavior, reload and disable commands | 2026-06-06 |
+| S01 | PyPA: Writing your `pyproject.toml` | [https://packaging.python.org/en/latest/guides/writing-pyproject-toml/](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/) | `pyproject.toml`, `[build-system]`, `[project]`, `[tool]`, build backend metadata | 2026-06-06 |
+| S02 | PyPA: `pyproject.toml` specification | [https://packaging.python.org/en/latest/specifications/pyproject-toml/](https://packaging.python.org/en/latest/specifications/pyproject-toml/) | Formal `pyproject.toml` table roles and build-system behavior | 2026-06-06 |
+| S03 | Python Developer Guide: Status of Python versions | [https://devguide.python.org/versions/](https://devguide.python.org/versions/) | Python version lifecycle phases | 2026-06-06 |
+| S04 | uv: Working on projects | [https://docs.astral.sh/uv/guides/projects/](https://docs.astral.sh/uv/guides/projects/) | uv project structure, `.python-version`, `.venv`, `uv.lock`, `uv run` | 2026-06-06 |
+| S05 | uv: Locking and syncing | [https://docs.astral.sh/uv/concepts/projects/sync/](https://docs.astral.sh/uv/concepts/projects/sync/) | Automatic lock/sync behavior for `uv run`; `--locked` | 2026-06-06 |
+| S06 | PyPA: Dependency Groups | [https://packaging.python.org/en/latest/specifications/dependency-groups/](https://packaging.python.org/en/latest/specifications/dependency-groups/) | `[dependency-groups]` for development dependencies | 2026-06-06 |
+| S07 | uv: Build backend | [https://docs.astral.sh/uv/concepts/build-backend/](https://docs.astral.sh/uv/concepts/build-backend/) | `uv_build`, build backend snippet, limitations for pure-Python code | 2026-06-06 |
+| S08 | Ruff documentation | [https://docs.astral.sh/ruff/](https://docs.astral.sh/ruff/) | Ruff as Python linter and formatter | 2026-06-06 |
+| S09 | Ruff configuration | [https://docs.astral.sh/ruff/configuration/](https://docs.astral.sh/ruff/configuration/) | Ruff config file support and `pyproject.toml` behavior | 2026-06-06 |
+| S10 | Ruff formatter | [https://docs.astral.sh/ruff/formatter/](https://docs.astral.sh/ruff/formatter/) | Ruff formatter, Black compatibility goal, formatter configuration | 2026-06-06 |
+| S11 | BasedPyright config files | [https://docs.basedpyright.com/dev/configuration/config-files/](https://docs.basedpyright.com/dev/configuration/config-files/) | `[tool.basedpyright]` support and config behavior | 2026-06-06 |
+| S12 | BasedPyright baseline | [https://docs.basedpyright.com/v1.36.1/benefits-over-pyright/baseline/](https://docs.basedpyright.com/v1.36.1/benefits-over-pyright/baseline/) | Baseline support for adopting stricter checks in existing projects | 2026-06-06 |
+| S13 | pytest documentation / configuration | [https://docs.pytest.org/en/stable/](https://docs.pytest.org/en/stable/) and [https://docs.pytest.org/en/stable/reference/customize.html](https://docs.pytest.org/en/stable/reference/customize.html) | pytest purpose, `pyproject.toml` config, `[tool.pytest.ini_options]` support since pytest 6.0, and `[tool.pytest]` support since pytest 9.0 | 2026-06-06 |
+| S14 | pytest good integration practices | [https://docs.pytest.org/en/stable/explanation/goodpractices.html](https://docs.pytest.org/en/stable/explanation/goodpractices.html) | `src` layout recommendation | 2026-06-06 |
+| S15 | coverage.py configuration / PyPI docs | [https://coverage.readthedocs.io/en/latest/config.html](https://coverage.readthedocs.io/en/latest/config.html) and [https://pypi.org/project/coverage/](https://pypi.org/project/coverage/) | coverage.py measures coverage; `pyproject.toml` config support | 2026-06-06 |
+| S16 | pip-audit PyPI documentation | [https://pypi.org/project/pip-audit/](https://pypi.org/project/pip-audit/) | Known-vulnerability scanning and Python Packaging Advisory Database source | 2026-06-06 |
+| S17 | VS Code user/workspace settings | [https://code.visualstudio.com/docs/configure/settings](https://code.visualstudio.com/docs/configure/settings) | Workspace settings in `.vscode/settings.json` and project-specific behavior | 2026-06-06 |
+| S18 | VS Code tasks | [https://code.visualstudio.com/docs/debugtest/tasks](https://code.visualstudio.com/docs/debugtest/tasks) | `.vscode/tasks.json` and running external tools from VS Code | 2026-06-06 |
+| S19 | EditorConfig | [https://editorconfig.org/](https://editorconfig.org/) | Cross-editor coding style file and supported properties | 2026-06-06 |
+| S20 | uv: GitHub Actions integration | [https://docs.astral.sh/uv/guides/integration/github/](https://docs.astral.sh/uv/guides/integration/github/) | `astral-sh/setup-uv`, `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-06-06 |
+| S21 | Python docs: `typing` | [https://docs.python.org/3/library/typing.html](https://docs.python.org/3/library/typing.html) | Type annotations, advanced type-hinting vocabulary, type checkers/IDEs/linters | 2026-06-06 |
+| S22 | Python docs: `dataclasses` | [https://docs.python.org/3/library/dataclasses.html](https://docs.python.org/3/library/dataclasses.html) | `@dataclass`, `frozen=True`, frozen instance behavior | 2026-06-06 |
+| S23 | Pydantic docs: models | [https://pydantic.dev/docs/validation/latest/concepts/models/](https://pydantic.dev/docs/validation/latest/concepts/models/) | Pydantic model validation and output type/constraint guarantee | 2026-06-06 |
+| S24 | Python docs: `pathlib` | [https://docs.python.org/3/library/pathlib.html](https://docs.python.org/3/library/pathlib.html) | `Path` and object-oriented filesystem path handling | 2026-06-06 |
+| S25 | coverage.py report command | [https://coverage.readthedocs.io/en/latest/commands/cmd_report.html](https://coverage.readthedocs.io/en/latest/commands/cmd_report.html) | Coverage report and missed branch reporting | 2026-06-06 |
+| S26 | Ruff editor features | [https://docs.astral.sh/ruff/editors/features/](https://docs.astral.sh/ruff/editors/features/) | Ruff VS Code/editor formatting and code-action features | 2026-06-06 |
+| S27 | VS Code Python testing | [https://code.visualstudio.com/docs/python/testing](https://code.visualstudio.com/docs/python/testing) | `python.testing.pytestEnabled`, pytest settings, VS Code Python test discovery | 2026-06-06 |
+| S28 | BasedPyright IDE setup | [https://docs.basedpyright.com/latest/installation/ides/](https://docs.basedpyright.com/latest/installation/ides/) | BasedPyright VS Code extension, language-server setup, `ms-python` interpreter-detection dependency note, and Pylance disable/uninstall guidance | 2026-06-06 |
+| S29 | uv: Creating projects | [https://docs.astral.sh/uv/concepts/projects/init/](https://docs.astral.sh/uv/concepts/projects/init/) | `uv init`, packaged project metadata, `[project.scripts]` example | 2026-06-06 |
+| S30 | Claude Code Docs: How Claude remembers your project | [https://code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory) | `CLAUDE.md`, auto memory, startup loading, context-not-enforced behavior, concise instruction guidance | 2026-06-06 |
+| S31 | OpenAI Codex: Custom instructions with `AGENTS.md` | [https://developers.openai.com/codex/guides/agents-md](https://developers.openai.com/codex/guides/agents-md) | Codex `AGENTS.md` discovery, layering, overrides, fallback filenames, project-doc size behavior | 2026-06-06 |
+| S32 | AGENTS.md open format | [https://agents.md/](https://agents.md/) | AGENTS.md as a predictable agent instruction file for setup, tests, conventions, and project context | 2026-06-06 |
+| S33 | VS Code Python Environments | [https://code.visualstudio.com/docs/python/environments](https://code.visualstudio.com/docs/python/environments) | Python Environments extension, environment/package UI, and support for managers including `uv` | 2026-06-06 |
+| S34 | uv: Tools interface and using tools | [https://docs.astral.sh/uv/concepts/tools/](https://docs.astral.sh/uv/concepts/tools/) and [https://docs.astral.sh/uv/guides/tools/](https://docs.astral.sh/uv/guides/tools/) | `uv tool install`, isolated/persistent tool environments, executables on `PATH`, and `uv run` preference for project-aware tools such as pytest | 2026-06-06 |
+| S35 | BasedPyright command-line and language server | [https://docs.basedpyright.com/latest/installation/command-line-and-language-server/](https://docs.basedpyright.com/latest/installation/command-line-and-language-server/) | `basedpyright` CLI and `basedpyright-langserver` availability from the Python package | 2026-06-06 |
+| S36 | Claude Code plugins reference | [https://code.claude.com/docs/en/plugins-reference](https://code.claude.com/docs/en/plugins-reference) | Plugin manifest, `lspServers`, separate `.lsp.json`, skills-directory plugin behavior, reload and disable commands | 2026-06-06 |
 | N01 | Workstation application notes | `python-tooling-ssot-workstation-application-notes.md` | Applied sys76 workstation reconciliation findings: project-vs-workstation scope, global/per-project split, install-layer removal risk, global pytest exception, user-site scope boundary, and CLI-agent LSP gap | 2026-06-06 |
 
 ---
@@ -1515,3 +1515,43 @@ Additional update for version 1.6 on 2026-06-06:
 - Added an exception that a pre-existing global pytest may remain when it is load-bearing for existing non-uv workflows.
 - Added a scope boundary that the standard governs the dev-tooling stack, not unrelated Python application/runtime libraries installed on a workstation.
 - Generalized the VS Code language-server rule to editor and CLI-agent integrations, including a Claude Code LSP-only BasedPyright plugin pattern.
+
+<!-- Citation reference-link definitions: every [Sxx]/[N01] marker in the body and in the source coverage map resolves to the Source register (section 24). GFM cannot anchor individual table rows, so all citations jump to the section. -->
+
+[S01]: #24-source-register
+[S02]: #24-source-register
+[S03]: #24-source-register
+[S04]: #24-source-register
+[S05]: #24-source-register
+[S06]: #24-source-register
+[S07]: #24-source-register
+[S08]: #24-source-register
+[S09]: #24-source-register
+[S10]: #24-source-register
+[S11]: #24-source-register
+[S12]: #24-source-register
+[S13]: #24-source-register
+[S14]: #24-source-register
+[S15]: #24-source-register
+[S16]: #24-source-register
+[S17]: #24-source-register
+[S18]: #24-source-register
+[S19]: #24-source-register
+[S20]: #24-source-register
+[S21]: #24-source-register
+[S22]: #24-source-register
+[S23]: #24-source-register
+[S24]: #24-source-register
+[S25]: #24-source-register
+[S26]: #24-source-register
+[S27]: #24-source-register
+[S28]: #24-source-register
+[S29]: #24-source-register
+[S30]: #24-source-register
+[S31]: #24-source-register
+[S32]: #24-source-register
+[S33]: #24-source-register
+[S34]: #24-source-register
+[S35]: #24-source-register
+[S36]: #24-source-register
+[N01]: #24-source-register
