@@ -9,6 +9,7 @@ created: '2026-06-02'
 updated: '2026-06-05'
 reviewed: null
 owner: ''
+consumer: 'mix'
 tags:
   - adr
   - decisions
@@ -18,7 +19,7 @@ aliases:
   - adr-standard
   - madr-standard
 related:
-  - 'markdown-frontmatter-standard'
+  - 'standards/markdown-frontmatter/README.md'
   - 'standards/adr/templates/adr.md'
 source:
   - 'https://adr.github.io/madr/'
@@ -59,12 +60,12 @@ owner: ''
 tags: []
 aliases: []
 related: []
+supersedes: []
+superseded_by: null
 source: []
 confidence: 'unknown'
 visibility: 'internal'
 license: null
-supersedes: []
-superseded_by: null
 project:
   decision_makers: []
   consulted: []
@@ -114,7 +115,7 @@ MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MAD
 
 > **Opt-in section check.** Set `markdown.adr.require_sections: true` in `.project-standards.yml` to have the validator assert that every `doc_type: adr` document contains the three required `##` sections above (exact, case-sensitive, level-2 headings; headings inside code fences don't count). It is **off by default**, and the optional sections are never required — honoring MADR's short→large flexibility. This lives under a separate `markdown.adr` config key from the `markdown.frontmatter` settings.
 
-Templates for each verbosity level live in [`templates/`](templates/): [`adr.md`](templates/adr.md) (full, with explanations), `adr-minimal.md` (required sections, with explanations), `adr-bare.md` (all sections, empty), and `adr-bare-minimal.md` (required sections, empty).
+Templates for each verbosity level live in [`templates/`](templates/): [`adr.md`](templates/adr.md) (full, with explanations), [`adr-minimal.md`](templates/adr-minimal.md) (required sections, with explanations), [`adr-bare.md`](templates/adr-bare.md) (all sections, empty), and [`adr-bare-minimal.md`](templates/adr-bare-minimal.md) (required sections, empty).
 
 - **`id`**: `adr-NNNN-repo-name-short-title` in lowercase kebab-case, e.g. `adr-0001-homelab-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number; the **`repo-name` segment makes the id globally unique across every repository**, so an ADR stays unambiguous when referenced from another repo's `related:` list. The `adr-` prefix keeps it self-identifying as an ADR.
 - **Filename**: `adr-NNNN-short-title.md`, e.g. `adr-0001-use-netbox-as-source-of-truth.md`. The filename carries the `adr-` prefix but **omits the `repo-name` segment** — it lives inside its own repo, where the repo is implied, so repeating the repo-name in every filename would be redundant.

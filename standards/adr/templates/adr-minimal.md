@@ -13,12 +13,12 @@ consumer: 'unknown'
 tags: []
 aliases: []
 related: []
+supersedes: []
+superseded_by: null
 source: []
 confidence: 'unknown'
 visibility: 'internal'
 license: null
-supersedes: []
-superseded_by: null
 project:
   decision_makers: []
   consulted: []

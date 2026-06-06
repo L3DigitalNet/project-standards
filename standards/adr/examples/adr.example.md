@@ -16,14 +16,14 @@ tags:
 aliases:
   - postgres-decision
 related:
-  - 'immutable-infrastructure'
+  - 'docs/concepts/immutable-infrastructure.md'
+supersedes: []
+superseded_by: null
 source:
   - 'https://www.postgresql.org/docs/16/'
 confidence: 'high'
 visibility: 'internal'
 license: null
-supersedes: []
-superseded_by: null
 project:
   decision_makers:
     - chris
