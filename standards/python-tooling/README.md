@@ -11,13 +11,13 @@ reviewed: null
 owner: ''
 consumer: 'agent'
 tags:
-  - python
-  - tooling
-  - uv
-  - ruff
-  - standard
+  - 'python'
+  - 'tooling'
+  - 'uv'
+  - 'ruff'
+  - 'standard'
 aliases:
-  - python-tooling-standard
+  - 'python-tooling-standard'
 related: []
 ---
 

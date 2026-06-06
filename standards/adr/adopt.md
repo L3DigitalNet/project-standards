@@ -11,8 +11,8 @@ reviewed: null
 owner: ''
 consumer: 'agent'
 tags:
-  - adoption
-  - adr
+  - 'adoption'
+  - 'adr'
 aliases: []
 related:
   - 'standards/adr/README.md'

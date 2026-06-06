@@ -11,10 +11,10 @@ reviewed: null
 owner: ''
 consumer: 'mix'
 tags:
-  - adoption
-  - onboarding
-  - compliance
-  - frontmatter
+  - 'adoption'
+  - 'onboarding'
+  - 'compliance'
+  - 'frontmatter'
 aliases:
   - 'Adoption Procedure'
   - 'Onboarding Procedure'

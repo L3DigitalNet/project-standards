@@ -11,9 +11,9 @@ reviewed: null
 owner: ''
 consumer: 'agent'
 tags:
-  - adoption
-  - python
-  - tooling
+  - 'adoption'
+  - 'python'
+  - 'tooling'
 aliases: []
 related:
   - 'standards/python-tooling/README.md'

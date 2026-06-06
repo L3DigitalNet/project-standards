@@ -11,10 +11,10 @@ reviewed: '2026-05-30'
 owner: 'platform-team'
 consumer: 'user'
 tags:
-  - database
-  - storage
+  - 'database'
+  - 'storage'
 aliases:
-  - postgres-decision
+  - 'postgres-decision'
 related:
   - 'docs/concepts/immutable-infrastructure.md'
 supersedes: []
@@ -26,11 +26,11 @@ visibility: 'internal'
 license: null
 project:
   decision_makers:
-    - chris
+    - 'chris'
   consulted:
-    - platform-team
+    - 'platform-team'
   informed:
-    - all-engineering
+    - 'all-engineering'
 ---
 
 # ADR 0001: Use PostgreSQL for persistent storage

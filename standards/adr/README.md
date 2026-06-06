@@ -11,13 +11,13 @@ reviewed: null
 owner: ''
 consumer: 'mix'
 tags:
-  - adr
-  - decisions
-  - madr
-  - standard
+  - 'adr'
+  - 'decisions'
+  - 'madr'
+  - 'standard'
 aliases:
-  - adr-standard
-  - madr-standard
+  - 'adr-standard'
+  - 'madr-standard'
 related:
   - 'standards/markdown-frontmatter/README.md'
   - 'standards/adr/templates/adr.md'

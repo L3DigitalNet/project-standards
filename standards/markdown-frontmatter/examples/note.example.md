@@ -11,9 +11,9 @@ reviewed: null
 owner: ''
 consumer: 'agent'
 tags:
-  - tailscale
-  - networking
-  - gotcha
+  - 'tailscale'
+  - 'networking'
+  - 'gotcha'
 aliases: []
 related:
   - 'docs/concepts/immutable-infrastructure.md'

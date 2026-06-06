@@ -10,10 +10,10 @@ updated: '2026-06-06'
 reviewed: null
 owner: ''
 tags:
-  - changelog
+  - 'changelog'
 aliases: []
 related:
-  - 'markdown-frontmatter-standard'
+  - 'standards/markdown-frontmatter/README.md'
 source: []
 confidence: 'high'
 visibility: 'internal'

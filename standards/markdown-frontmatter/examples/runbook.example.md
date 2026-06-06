@@ -11,10 +11,10 @@ reviewed: '2026-06-02'
 owner: 'platform-team'
 consumer: 'user'
 tags:
-  - netbox
-  - restart
+  - 'netbox'
+  - 'restart'
 aliases:
-  - netbox-restart
+  - 'netbox-restart'
 related:
   - 'docs/decisions/adr-0001-homelab-use-postgresql-for-persistent-storage.md'
 source: []

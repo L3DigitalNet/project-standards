@@ -11,12 +11,12 @@ reviewed: null
 owner: ''
 consumer: 'mix'
 tags:
-  - markdown
-  - metadata
-  - frontmatter
-  - standard
+  - 'markdown'
+  - 'metadata'
+  - 'frontmatter'
+  - 'standard'
 aliases:
-  - frontmatter-standard
+  - 'frontmatter-standard'
 related:
   - 'src/project_standards/schemas/markdown-frontmatter.schema.json'
   - 'meta/versioning.md'

@@ -10,13 +10,13 @@ updated: '2026-06-03'
 reviewed: null
 owner: ''
 tags:
-  - versioning
-  - releases
-  - semver
+  - 'versioning'
+  - 'releases'
+  - 'semver'
 aliases: []
 related:
-  - 'markdown-frontmatter-standard'
-  - 'adr-standard'
+  - 'standards/markdown-frontmatter/README.md'
+  - 'standards/adr/README.md'
 source:
   - 'https://semver.org/spec/v2.0.0.html'
   - 'https://keepachangelog.com/en/1.1.0/'
