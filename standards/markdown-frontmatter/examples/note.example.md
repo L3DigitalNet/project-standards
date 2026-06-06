@@ -16,7 +16,7 @@ tags:
   - gotcha
 aliases: []
 related:
-  - 'immutable-infrastructure'
+  - 'docs/concepts/immutable-infrastructure.md'
 source:
   - 'https://tailscale.com/kb/1018/acls'
 confidence: 'medium'

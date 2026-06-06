@@ -1,3 +1,17 @@
+---
+schema_version: '1.1'
+id: 'replace-with-stable-id'
+title: 'Human Title'
+description: 'One-sentence description of this directory.'
+doc_type: 'index'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
+tags: []
+aliases: []
+related: []
+---
+
 # [REPLACE: Directory name]
 
 [REPLACE: Brief description of the contents of this directory.]
