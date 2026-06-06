@@ -119,6 +119,20 @@ The reusable workflow installs the validator with `uv tool install git+…@<stan
 
 If this repo and its consumers are **private**, enable cross-repository workflow access under the standards repo's GitHub **Settings → Actions**.
 
+### Also — optional Markdown body linting
+
+The workflow above validates the YAML _metadata_ block. A **separate, opt-in** reusable workflow lints the Markdown _body_ (heading levels, list style, etc.) with [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) — independent, so frontmatter-only consumers never inherit a Node toolchain:
+
+```yaml
+jobs:
+  lint-markdown:
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v1
+    with:
+      globs: '**/*.md' # optional; this is the default
+```
+
+Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings; because the explicit values track a markdownlint version, pin the action by major tag (`@v23`) and re-check the config when you bump it.
+
 ## 4. Step 3 — bring documents into compliance
 
 ### 4.1 Which files are managed

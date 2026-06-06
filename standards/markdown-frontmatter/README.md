@@ -423,7 +423,7 @@ Frontmatter is validated by [`src/project_standards/validate_frontmatter.py`](..
 - **Run locally:** `uv run validate-frontmatter --config .project-standards.yml`. Run `validate-frontmatter --help` for the full flag list.
 - **Exit codes:** `0` — all matched files valid (or none matched); `1` — one or more documents failed validation (each error, then a summary count, prints to stderr); `2` — configuration or schema error (config or schema missing or invalid).
 
-Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the repository README](../../README.md#consuming-the-standards); they are not repeated here.
+Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the adoption guide](adopt.md); they are not repeated here.
 
 ## Valid frontmatter template
 
