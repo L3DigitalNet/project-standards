@@ -9,13 +9,12 @@ Shared standards, schemas, templates, and validation tooling for documentation a
 
 ```text
 project-standards/
-├── standards/    # human-readable standards (the governing documents)
-├── schemas/      # machine-readable JSON Schemas
-├── templates/    # copy-paste frontmatter snippets and document scaffolds
-├── examples/     # validated worked examples
-├── tools/        # the Python validator
-├── tests/        # validator tests
-└── .github/      # reusable CI workflows
+├── standards/             # human-readable standards (the governing documents)
+├── templates/             # copy-paste frontmatter snippets and document scaffolds
+├── examples/              # validated worked examples
+├── src/project_standards/ # the Python validator + bundled schema
+├── tests/                 # validator tests
+└── .github/               # reusable CI workflows
 ```
 
 ## Standards
@@ -27,7 +26,7 @@ The standards this repository defines. Each is a human-readable document under [
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
 - **Standard:** [`standards/markdown-frontmatter.md`](standards/markdown-frontmatter.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Schema:** [`src/project_standards/schemas/markdown-frontmatter.schema.json`](src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
 - **Templates:** [`templates/`](templates/) · **Examples:** [`examples/`](examples/)
 
 Minimal frontmatter (the eleven required fields):
@@ -213,9 +212,7 @@ Working on the standards or the validator itself:
 
 ```bash
 uv sync --dev                                                # set up the environment
-uv run pytest                                                # validator tests
-uv run ruff check .                                          # lint
-uv run pyright                                               # type-check
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 uv run validate-frontmatter --config .project-standards.yml  # dogfood the standard
 ```
 

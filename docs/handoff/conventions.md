@@ -10,6 +10,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 2 | Never frontmatter agent-instruction files | Touching `CLAUDE.md`, `AGENTS.md`, `.claude/**` |
 | 3 | Keep the toolchain green | Changing the validator or its tests |
 | 4 | The schema is a versioned contract | Changing the schema or controlled vocabularies |
+| 5 | Python tooling follows the SSOT standard | Adding or changing Python tooling, CI gate, or layout |
 
 ## 1. Dogfood the standards
 
@@ -43,14 +44,14 @@ uv run validate-frontmatter --config .project-standards.yml
 
 ## 3. Keep the toolchain green
 
-**Applies when:** changing the validator (`tools/`) or its tests.
+**Applies when:** changing the validator (`src/project_standards/`) or its tests.
 
-**Rule:** run all three before committing — every one must pass.
+**Rule:** run all six before committing — every one must pass.
 
 **Code:**
 
 ```bash
-uv run pytest && uv run ruff check . && uv run pyright
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
 
 **Why:** `main` must stay releasable; consumers pin to tags.
@@ -61,7 +62,7 @@ uv run pytest && uv run ruff check . && uv run pyright
 
 ## 4. The schema is a versioned contract
 
-**Applies when:** changing `schemas/markdown-frontmatter.schema.json` or the controlled vocabularies.
+**Applies when:** changing `src/project_standards/schemas/markdown-frontmatter.schema.json` or the controlled vocabularies.
 
 **Rule:** update `standards/`, templates, examples, tests, and `CHANGELOG.md` together, then cut a new tag (minor = additive, major = breaking).
 
@@ -70,3 +71,15 @@ uv run pytest && uv run ruff check . && uv run pyright
 **Sources:** pre-v3 `AGENTS.md`.
 
 **Related:** 1, 3.
+
+## 5. Python tooling follows the SSOT standard
+
+**Applies when:** adding or changing Python tooling, the CI gate, package layout, or agent instructions for Python projects.
+
+**Rule:** follow `standards/python-tooling-ssot-standard.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
+
+**Why:** ensures every Python project in this ecosystem is recoverable, repeatable, and self-explaining for agents.
+
+**Sources:** `standards/python-tooling-ssot-standard.md` (adopted 2026-06-06).
+
+**Related:** 3.

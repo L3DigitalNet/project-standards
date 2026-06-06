@@ -19,5 +19,5 @@
 
 - Dogfood the standards: `uv run validate-frontmatter --config .project-standards.yml` must pass before finishing.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
-- Keep the toolchain green: `uv run pytest && uv run ruff check . && uv run pyright`.
+- Keep the toolchain green: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.

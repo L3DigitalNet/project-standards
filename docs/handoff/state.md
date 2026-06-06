@@ -5,8 +5,9 @@
 ## State at a glance
 
 - `1.3.0` is feature-complete on `testing` (DEC-1…9) but **unreleased** — the release ritual was deliberately out of scope. `main` holds releases; the moving `v1` tag tracks the newest. Exact delta: `git log main..testing`.
-- Gate green (verified 2026-06-05): pytest **105**, ruff clean, pyright 0, validate-frontmatter ✓ 9, markdownlint 0, prettier `--check .` clean.
+- Gate green (six-step: ruff format-check, ruff check, basedpyright, coverage run -m pytest, coverage report, pip-audit; verified 2026-06-05 pre-migration). validate-frontmatter ✓, markdownlint 0, prettier `--check .` clean.
 - Repo migrated to handoff-system-v3 on 2026-06-05 (this layout).
+- Python Tooling SSOT standard adopted 2026-06-06 (`standards/python-tooling-ssot-standard.md`); validator moved to `src/project_standards/` with schema bundled inside the package.
 
 ## Active incidents
 

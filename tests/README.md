@@ -54,11 +54,11 @@ When a bug is fixed, add a test that fails on the old behaviour and cite the cau
 tests/
   __init__.py
   README.md                     <- this file
-  test_<module>.py              <- one file per tool module under tools/
+  test_<module>.py              <- one file per tool module under src/project_standards/
   conftest.py                   <- shared fixtures/helpers (add when a 2nd tool needs them)
 ```
 
-- **Mirror `tools/`.** A tool at `tools/foo.py` is tested by `tests/test_foo.py`. This is the documented convention (see [AGENTS.md](../AGENTS.md)) and is wired into `pyproject.toml` (`testpaths = ["tests"]`, pyright `include = ["tools", "tests"]`). Do **not** co-locate tests under `tools/`.
+- **Mirror `src/project_standards/`.** A tool at `src/project_standards/foo.py` is tested by `tests/test_foo.py`. This is the documented convention (see [AGENTS.md](../AGENTS.md)) and is wired into `pyproject.toml` (`testpaths = ["tests"]`, basedpyright `include = ["src", "tests"]`). Do **not** co-locate tests under `src/project_standards/`.
 - **Test names describe the behaviour and the expectation:** `test_invalid_doc_type_fails`, `test_missing_frontmatter_returns_2`. The name should read as a sentence about what the code does.
 - **Group with comment banners**, not test classes, unless a class earns its keep via shared setup. Keep functions flat and independently runnable.
 
@@ -91,12 +91,10 @@ This is the checklist a reviewer applies. It is deliberately about _categories_,
 
 ## Running the tests
 
-The full toolchain triad (all three must pass before committing per [AGENTS.md](../AGENTS.md)):
+The full gate (all six must pass before committing per [AGENTS.md](../AGENTS.md)):
 
 ```bash
-uv run pytest          # behaviour
-uv run ruff check .    # lint + import order
-uv run pyright         # strict static types (tests are type-checked too)
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
 
 `pytest` is configured in `pyproject.toml` (`testpaths`, `addopts = "-ra -q"`). Useful invocations:
@@ -111,23 +109,23 @@ uv run pytest --co -q                 # list collected tests without running
 
 ## Adding tests for a new tool
 
-When you add `tools/<newtool>.py`:
+When you add `src/project_standards/<newtool>.py`:
 
 1. Create `tests/test_<newtool>.py`.
 2. Cover the three layers that apply: unit (pure helpers), integration (`main()` exit codes if it has a CLI), and contract/dogfood (if it reads or emits a shipped artifact).
 3. Document its exit-code contract in a table in the test module docstring.
 4. If shared fixtures emerge (a second tool needs the same helper), move them to `conftest.py` rather than copy-pasting.
-5. Keep the triad green: `uv run pytest && uv run ruff check . && uv run pyright`.
+5. Keep the gate green: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`.
 
 ## CI relationship
 
 There are two enforcement gates with deliberately separate jobs:
 
-- **The developer gate** ([.github/workflows/tests.yml](../.github/workflows/tests.yml)) runs the toolchain triad — `ruff`, `pyright`, `pytest` — on push and PR, across a Python version matrix (3.11 / 3.13 / 3.14). This protects the validator's own logic. The matrix is load-bearing: it brackets the `glob('**')` behaviour change the exclude regression test guards against (see the Regression layer above).
+- **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification gate — `ruff format --check`, `ruff check`, `basedpyright`, `coverage run -m pytest`, `coverage report`, `pip-audit` — on push and PR, on Python 3.13. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
 - **The runtime gate** ([.github/workflows/validate-markdown-frontmatter.yml](../.github/workflows/validate-markdown-frontmatter.yml)) is the _reusable_ workflow consumers call. It runs the validator against managed Markdown — here and in consuming repos. It does **not** run pytest, and must not: downstream repos call it via `workflow_call` and should never inherit this repo's test toolchain.
 
-Run the triad locally before every commit that touches `tools/` or `tests/` — CI is the backstop, not a substitute for the local check:
+Run the gate locally before every commit that touches `src/project_standards/` or `tests/` — CI is the backstop, not a substitute for the local check:
 
 ```bash
-uv run ruff check . && uv run pyright && uv run pytest
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
