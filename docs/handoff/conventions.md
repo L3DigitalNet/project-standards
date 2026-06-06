@@ -76,10 +76,10 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 **Applies when:** adding or changing Python tooling, the CI gate, package layout, or agent instructions for Python projects.
 
-**Rule:** follow `standards/python-tooling-ssot-standard.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
+**Rule:** follow `standards/python-tooling/README.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
 
 **Why:** ensures every Python project in this ecosystem is recoverable, repeatable, and self-explaining for agents.
 
-**Sources:** `standards/python-tooling-ssot-standard.md` (adopted 2026-06-06).
+**Sources:** `standards/python-tooling/README.md` (adopted 2026-06-06).
 
 **Related:** 3.

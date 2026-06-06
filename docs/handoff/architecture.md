@@ -6,9 +6,8 @@
 
 ```text
 project-standards
-├── standards/          -> human-readable governing docs (frontmatter, ADR, versioning, adoption)
-├── templates/          -> copy-paste scaffolds (intentional placeholders; not validated)
-├── examples/           -> validated worked examples (managed; carry frontmatter)
+├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling) + README index
+├── meta/               -> docs about this repo (versioning); not a governed standard
 ├── src/project_standards/ + tests/ -> the Python validator (validate_frontmatter.py) with bundled schema, and its pytest suite
 ├── .github/workflows/  -> reusable workflows consumers call (validate, lint-markdown, format)
 └── docs/handoff/       -> agent session state (this v3 layout)
@@ -18,7 +17,7 @@ project-standards
 
 - Consumers add `.project-standards.yml` + call the reusable workflow; they do not vendor copies. The schema is the contract — changing it is a versioned change.
 - The validator (`src/project_standards/`) reads `.project-standards.yml`, resolves the bundled schema shipped inside the package, and validates the configured include globs.
-- This repo dogfoods its own standards: `standards/`, `examples/`, `CHANGELOG.md` carry canonical frontmatter and must validate.
+- This repo dogfoods its own standards: the bundle `README.md`/`adopt.md`/`examples/` docs, `meta/`, and `CHANGELOG.md` carry canonical frontmatter and must validate (the per-standard `templates/` and the `standards/README.md` index are excluded).
 
 ## Standing backlog
 
