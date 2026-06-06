@@ -113,7 +113,7 @@ jobs:
       standards-ref: 'v1'
 ```
 
-> **⚠️ Pin BOTH refs.** `@v1` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to `main`**, so if you omit it your validation silently floats on the latest unreleased schema. Always set `standards-ref` to the **same major** as the `uses:` pin (`'v1'`). For a fully immutable pin, set both to `v1.2.0`.
+> **⚠️ Pin BOTH refs.** `@v1` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v1`** (a pinned major, _not_ `main`), so an omitted input still gets reproducible validation rather than floating on unreleased changes. Set it explicitly anyway, to the **same ref as your `uses:` pin** (`'v1'`), so the two never drift. For a fully immutable pin, set both to `v1.2.0`.
 
 The reusable workflow installs the validator with `uv tool install git+…@<standards-ref>`; the schema travels inside the wheel, so the consuming repo never vendors schema or Python code.
 
@@ -131,7 +131,7 @@ jobs:
       globs: '**/*.md' # optional; this is the default
 ```
 
-Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings; because the explicit values track a markdownlint version, pin the action by major tag (`@v23`) and re-check the config when you bump it.
+Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. As a consumer your only pin is `lint-markdown.yml@v1`; the underlying `markdownlint-cli2-action@v23` pin (which the explicit config values track) lives **inside** that reusable workflow and is a maintainer concern, not yours.
 
 ## 4. Step 3 — bring documents into compliance
 
