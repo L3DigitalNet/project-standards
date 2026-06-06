@@ -67,7 +67,7 @@ def find_bundled_schema(name: str) -> Path:
     The schema ships inside the package (``project_standards/schemas/``), so the
     same relative path resolves whether the validator runs from a source checkout
     or from a ``uv tool install`` wheel. A missing name returns the canonical
-    (non-existent) path so the caller surfaces a clear read error.
+    on-disk location (which may not exist) so the caller surfaces a clear read error.
     """
     return Path(__file__).parent / "schemas" / f"{name}.schema.json"
 

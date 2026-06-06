@@ -4,8 +4,9 @@ See ``tests/README.md`` for the testing strategy these cases implement.
 
 Organisation (the three layers from the strategy doc):
 
-  * Numbered cases 1-15 — the original spec-mapped schema/config cases. Cases 1-14
-    exercise schema behaviour through ``validate_file``; case 15 covers config
+  * Numbered cases 1-14, plus a workspace fixture — the original spec-mapped
+    schema/config cases. Cases 1-14 exercise schema behaviour through
+    ``validate_file``; the ``# 15.`` marker sits on a fixture covering config
     include/exclude resolution through ``main``.
   * "Schema V1.1" section — the additive 1.1.0 surface (the optional ``consumer``
     enum and the widened ``schema_version`` enum), sitting after the numbered

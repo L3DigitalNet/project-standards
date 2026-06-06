@@ -46,7 +46,7 @@ Templates are intentionally **excluded** from dogfood validation — they carry 
 
 ### 4. Regression — every fixed bug
 
-When a bug is fixed, add a test that fails on the old behaviour and cite the cause in the docstring. These never get deleted. Existing example: `test_exclude_dir_glob_matches_nested_files` pins the `dir/**` exclusion bug where `Path.glob`'s `**` matched files on 3.13+ but only directories on ≤3.12.
+When a bug is fixed, add a test that fails on the old behaviour and cite the cause in the docstring. These never get deleted. Existing example: `test_exclude_dir_glob_matches_nested_files` pins the `dir/**` exclusion bug where `Path.glob`'s `**` matched files on 3.13+ but only directories on ≤3.12 (a historical divergence — the repo now supports 3.13+ only, but the regression test stays as a guard).
 
 ## Layout & naming conventions
 
