@@ -13,8 +13,7 @@ Usage:
     validate-frontmatter --config .project-standards.yml
 
     # Override the schema explicitly
-    validate-frontmatter --schema \
-        src/project_standards/schemas/markdown-frontmatter.schema.json examples/*.md
+    validate-frontmatter --schema src/project_standards/schemas/markdown-frontmatter.schema.json examples/*.md
 
 Schema resolution order: --schema (path) > config markdown.frontmatter.schema
 (bundled name or path) > the bundled "markdown-frontmatter" schema.
@@ -391,9 +390,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    schema_path = (
-        args.schema if args.schema is not None else resolve_schema_path(config.schema)
-    )
+    schema_path = args.schema if args.schema is not None else resolve_schema_path(config.schema)
     try:
         schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:

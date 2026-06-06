@@ -74,9 +74,7 @@ def test_no_rule_carries_the_md043_sentinel(config: dict[str, Any]) -> None:
 
 
 @pytest.mark.parametrize("rule,value", sorted(CUSTOMIZATIONS.items()))
-def test_customization_present_and_correct(
-    config: dict[str, Any], rule: str, value: Any
-) -> None:
+def test_customization_present_and_correct(config: dict[str, Any], rule: str, value: Any) -> None:
     assert config.get(rule) == value
 
 
@@ -84,6 +82,4 @@ def test_config_is_fully_explicit_not_sparse(config: dict[str, Any]) -> None:
     # The whole point of this config is that it's explicit. Guard against an
     # accidental revert to the old 13-override sparse form: v0.40.0 has 53 rules.
     rules = [k for k in config if k.startswith("MD")]
-    assert len(rules) >= 50, (
-        f"expected the full rule set explicitly, found {len(rules)}"
-    )
+    assert len(rules) >= 50, f"expected the full rule set explicitly, found {len(rules)}"
