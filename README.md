@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and validation tooling for documentation across all projects. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them through a small config file plus a reusable CI workflow — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the Markdown standards through a small config file plus a reusable CI workflow, the Python tooling standard by copying its scaffolds — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -96,7 +96,7 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 
 ## Consuming the standards
 
-A consuming repository adopts the standards by adding **two files** — a config that says _which files to check_, and a workflow that _runs the shared validator in CI_. This is the same regardless of which standards you use.
+The **Markdown standards** (Frontmatter and ADR) are adopted by adding **two files** — a config that says _which files to check_, and a workflow that _runs the shared validator in CI_; the steps below cover both. The **Python Tooling SSOT** standard adopts differently — there is no config or workflow: copy its scaffolds and run the gate (see [its adopt guide](standards/python-tooling/adopt.md)).
 
 > **Adopting with an agent?** Hand it [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md) — a self-contained, step-by-step onboarding & compliance procedure (config, CI pinning, the full frontmatter rules, a worked example, and a compliance checklist).
 
