@@ -15,6 +15,7 @@ venv/
 .pyright/
 .ruff_cache/
 .pytest_cache/
+.coverage
 
 # Node (Prettier toolchain)
 node_modules/
