@@ -6,7 +6,7 @@ description: 'A working note on why a Tailscale ACL rule silently failed until t
 doc_type: 'note'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-02'
+updated: '2026-06-06'
 reviewed: null
 owner: ''
 consumer: 'agent'

@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-06'
+updated: '2026-06-07'
 reviewed: null
 owner: ''
 tags:
@@ -18,6 +18,7 @@ related:
   - 'standards/markdown-frontmatter/README.md'
   - 'standards/adr/README.md'
   - 'standards/python-tooling/README.md'
+  - 'standards/markdown-tooling/README.md'
 source:
   - 'https://semver.org/spec/v2.0.0.html'
   - 'https://keepachangelog.com/en/1.1.0/'
@@ -34,7 +35,7 @@ This repository ships **several components under one version number**: four stan
 
 The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling and Markdown Tooling standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All four still ship under the same release tag.
 
-This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md)).
+This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
 ## What a version promises
 
@@ -70,7 +71,7 @@ ADR is a profile over the Frontmatter schema, so each ADR contract version decla
 
 The single release version is the only number a consumer pins. Three **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — none is itself a release number:
 
-- **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md).
+- **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling contract version** — the `1.0` label in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — is a copy-adopted label: not machine-enforced and not a release version.
 - The **Markdown Tooling contract version** — the `1.0` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
 

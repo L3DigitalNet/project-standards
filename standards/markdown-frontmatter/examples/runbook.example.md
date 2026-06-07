@@ -6,7 +6,7 @@ description: 'Procedure to safely reload netbox after editing its configuration.
 doc_type: 'runbook'
 status: 'active'
 created: '2026-03-10'
-updated: '2026-06-02'
+updated: '2026-06-06'
 reviewed: '2026-06-02'
 owner: 'platform-team'
 consumer: 'user'

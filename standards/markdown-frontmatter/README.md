@@ -6,7 +6,7 @@ description: 'Canonical, tool-neutral metadata profile for project Markdown docu
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-03'
+updated: '2026-06-07'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -190,7 +190,7 @@ General conventions. Topic-specific rules live in their own sections; this list 
 - Use `snake_case` field names.
 - Use `doc_type`, not `type`.
 - Keep `updated` separate from `reviewed` (see Field definitions).
-- Prefer stable kebab-case IDs for ordinary documents; prefer prefixed numeric IDs for ADRs, such as `adr-0001-use-netbox-as-source-of-truth`.
+- Prefer stable kebab-case IDs for ordinary documents; prefer prefixed numeric IDs for ADRs, such as `adr-0001-use-netbox-as-source-of-truth`. (The schema's `id` pattern is `^[a-z0-9][a-z0-9._-]*$`, so dots and underscores are also accepted after the first character — kebab-case is the recommended convention, not the full permitted set.)
 - Use optional relationship fields (`supersedes`, `superseded_by`, `depends_on`, `applies_to`) only when needed.
 
 Detailed rules live in dedicated sections: **Scalar value rules** (quoting, dates, nulls, identifier-like numbers), **List rules** (block style, empty lists, uniqueness), **Canonical key order**, **Description field**, **Tags**, **Aliases**, **Links and related documents**, and **Extensions**.
@@ -426,7 +426,7 @@ How a schema change maps to a release level (additive → minor; a field or cont
 Frontmatter is validated by [`src/project_standards/validate_frontmatter.py`](../../src/project_standards/validate_frontmatter.py) — installed as the `validate-frontmatter` command — against [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../../src/project_standards/schemas/markdown-frontmatter.schema.json), in CI and locally.
 
 - **Run locally:** `uv run validate-frontmatter --config .project-standards.yml`. Run `validate-frontmatter --help` for the full flag list.
-- **Exit codes:** `0` — all matched files valid (or none matched); `1` — one or more documents failed validation (each error, then a summary count, prints to stderr); `2` — configuration or schema error (config or schema missing or invalid).
+- **Exit codes:** `0` — all matched files valid (or none matched); `1` — one or more documents failed validation (each error, then a summary count, prints to stderr); `2` — configuration or schema error: a missing or invalid config or schema, an unknown standard version label (`markdown.frontmatter.version`, `markdown.adr.version`, `python_tooling.version`, or `markdown_tooling.version`), or an incompatible configured `frontmatter`↔`adr` version pair.
 
 Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the adoption guide](adopt.md); they are not repeated here.
 

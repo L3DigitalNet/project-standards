@@ -17,8 +17,7 @@ tags:
   - 'prettier'
   - 'markdownlint'
   - 'standard'
-aliases:
-  - 'markdown-tooling-standard'
+aliases: []
 related:
   - 'standards/markdown-frontmatter/README.md'
   - 'meta/versioning.md'

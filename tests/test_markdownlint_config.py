@@ -25,7 +25,7 @@ CONFIG_PATH = _REPO_ROOT / ".markdownlint.json"
 
 # The 13 deliberate deviations from markdownlint's defaults. Every other rule is
 # stated at its v0.40.0 default for determinism; these are the values that carry
-# intent and must not silently change. Sources: standards/adr/README.md + the CHANGELOG.
+# intent and must not silently change. Sources: standards/markdown-tooling/README.md (§7) + the CHANGELOG.
 CUSTOMIZATIONS: dict[str, Any] = {
     "MD003": {"style": "atx"},  # align headings to Prettier (ATX)
     "MD004": {"style": "dash"},  # align bullets to Prettier (-)
@@ -82,4 +82,4 @@ def test_config_is_fully_explicit_not_sparse(config: dict[str, Any]) -> None:
     # The whole point of this config is that it's explicit. Guard against an
     # accidental revert to the old 13-override sparse form: v0.40.0 has 53 rules.
     rules = [k for k in config if k.startswith("MD")]
-    assert len(rules) >= 50, f"expected the full rule set explicitly, found {len(rules)}"
+    assert len(rules) == 53, f"expected the full rule set explicitly, found {len(rules)}"

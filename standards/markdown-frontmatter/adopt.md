@@ -6,7 +6,7 @@ description: 'Step-by-step procedure for an agent to adopt the project-standards
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-03'
-updated: '2026-06-03'
+updated: '2026-06-07'
 reviewed: null
 owner: ''
 consumer: 'mix'

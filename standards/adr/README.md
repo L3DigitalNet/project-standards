@@ -16,7 +16,6 @@ tags:
   - 'madr'
   - 'standard'
 aliases:
-  - 'adr-standard'
   - 'madr-standard'
 related:
   - 'standards/markdown-frontmatter/README.md'

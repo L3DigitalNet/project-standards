@@ -6,10 +6,10 @@ description: 'Standard Python tooling stack, layout, CI gate, and agent instruct
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-06'
+updated: '2026-06-07'
 reviewed: null
 owner: ''
-consumer: 'agent'
+consumer: 'mix'
 tags:
   - 'python'
   - 'tooling'
@@ -19,6 +19,10 @@ tags:
 aliases:
   - 'python-tooling-standard'
 related: []
+source: []
+confidence: 'high'
+visibility: 'internal'
+license: null
 ---
 
 # Python Tooling SSOT Standard
@@ -902,7 +906,7 @@ jobs:
 			- uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 				with:
 					# Pin this to the current reviewed uv version when applying the template.
-					# Example: version: "0.x.y"
+					# Example: version: "0.11.6" (the version this repo currently pins).
 					enable-cache: true
 
 			- name: Sync dependencies
@@ -1480,7 +1484,7 @@ Source basis: these tools are active projects whose documented behavior can chan
 | S34 | uv: Tools interface and using tools | [https://docs.astral.sh/uv/concepts/tools/](https://docs.astral.sh/uv/concepts/tools/) and [https://docs.astral.sh/uv/guides/tools/](https://docs.astral.sh/uv/guides/tools/) | `uv tool install`, isolated/persistent tool environments, executables on `PATH`, and `uv run` preference for project-aware tools such as pytest | 2026-06-06 |
 | S35 | BasedPyright command-line and language server | [https://docs.basedpyright.com/latest/installation/command-line-and-language-server/](https://docs.basedpyright.com/latest/installation/command-line-and-language-server/) | `basedpyright` CLI and `basedpyright-langserver` availability from the Python package | 2026-06-06 |
 | S36 | Claude Code plugins reference | [https://code.claude.com/docs/en/plugins-reference](https://code.claude.com/docs/en/plugins-reference) | Plugin manifest, `lspServers`, separate `.lsp.json`, skills-directory plugin behavior, reload and disable commands | 2026-06-06 |
-| N01 | Workstation application notes | `python-tooling-ssot-workstation-application-notes.md` | Applied sys76 workstation reconciliation findings: project-vs-workstation scope, global/per-project split, install-layer removal risk, global pytest exception, user-site scope boundary, and CLI-agent LSP gap | 2026-06-06 |
+| N01 | Workstation application notes | (internal session notes — not committed to this repo) | Applied sys76 workstation reconciliation findings: project-vs-workstation scope, global/per-project split, install-layer removal risk, global pytest exception, user-site scope boundary, and CLI-agent LSP gap | 2026-06-06 |
 
 ---
 

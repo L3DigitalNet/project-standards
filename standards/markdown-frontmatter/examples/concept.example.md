@@ -6,7 +6,7 @@ description: 'Servers and containers are replaced wholesale on every change rath
 doc_type: 'concept'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-02'
+updated: '2026-06-06'
 reviewed: null
 owner: 'platform-team'
 consumer: 'mix'
