@@ -23,7 +23,7 @@ related: []
 
 # Python Tooling SSOT Standard
 
-Status: Source-checked standard, internal revision 1.6 (an internal revision counter for this component only; the repo versions all standards together under a single release tag — this number is not an independent release version) Owner: Project standards / repository template Last updated: 2026-06-06 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
+Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-06 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
 
 ---
 

@@ -28,6 +28,8 @@ license: null
 
 # Markdown Frontmatter Standard
 
+**Contract version:** `1.1` (declared per document as `schema_version`; selected by consumers via `markdown.frontmatter.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
+
 ## Purpose
 
 This standard defines a small, portable, tool-neutral set of YAML frontmatter fields for project documentation. It is **not** an Obsidian schema, a Hugo/Jekyll/Quarto schema, or a publishing schema. It is an internal project-document metadata standard intended to be portable across GitHub repositories, Markdown tooling, LLM workflows, and future publishing/export systems.

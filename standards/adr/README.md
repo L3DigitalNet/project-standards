@@ -31,6 +31,8 @@ license: null
 
 # Architecture Decision Record (ADR) Standard
 
+**Contract version:** `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
+
 ## Purpose
 
 An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
