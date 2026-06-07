@@ -4,6 +4,8 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
+| Per-standard versioning design | `docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md` | approved (audit r2) |
+| Per-standard versioning plan | `docs/superpowers/plans/2026-06-06-per-standard-versioning.md` | implemented (on `testing`) |
 | Standards bundle restructure design | `docs/superpowers/specs/2026-06-06-standards-bundle-restructure-design.md` | approved |
 | Standards bundle restructure plan | `docs/superpowers/plans/2026-06-06-standards-bundle-restructure.md` | implemented (on `testing`) |
 | Handoff v3 migration design | `docs/superpowers/specs/2026-06-05-handoff-v3-migration-design.md` | approved |
