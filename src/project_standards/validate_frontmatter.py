@@ -279,12 +279,18 @@ class ProjectConfig:
         exclude: list[str],
         required: bool,
         require_adr_sections: bool,
+        frontmatter_version: str | None = None,
+        adr_version: str | None = None,
+        python_tooling_version: str | None = None,
     ) -> None:
         self.schema = schema
         self.include = include
         self.exclude = exclude
         self.required = required
         self.require_adr_sections = require_adr_sections
+        self.frontmatter_version = frontmatter_version
+        self.adr_version = adr_version
+        self.python_tooling_version = python_tooling_version
 
 
 def _as_str_list(value: Any) -> list[str]:
@@ -301,6 +307,9 @@ def load_config(path: Path) -> ProjectConfig:
     exclude: list[str] = []
     required = True
     require_adr_sections = False
+    frontmatter_version: str | None = None
+    adr_version: str | None = None
+    python_tooling_version: str | None = None
 
     if path.exists():
         try:
@@ -320,10 +329,19 @@ def load_config(path: Path) -> ProjectConfig:
                     include = _as_str_list(fm.get("include"))
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
+                    version_val = fm.get("version")
+                    frontmatter_version = str(version_val) if version_val is not None else None
                 adr = markdown_dict.get("adr")
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
                     require_adr_sections = bool(adr_dict.get("require_sections", False))
+                    adr_version_val = adr_dict.get("version")
+                    adr_version = str(adr_version_val) if adr_version_val is not None else None
+            python_tooling = raw_dict.get("python_tooling")
+            if isinstance(python_tooling, dict):
+                pt_dict = cast("dict[str, Any]", python_tooling)
+                pt_version_val = pt_dict.get("version")
+                python_tooling_version = str(pt_version_val) if pt_version_val is not None else None
 
     return ProjectConfig(
         schema=schema,
@@ -331,6 +349,9 @@ def load_config(path: Path) -> ProjectConfig:
         exclude=exclude,
         required=required,
         require_adr_sections=require_adr_sections,
+        frontmatter_version=frontmatter_version,
+        adr_version=adr_version,
+        python_tooling_version=python_tooling_version,
     )
 
 

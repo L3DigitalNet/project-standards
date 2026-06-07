@@ -476,6 +476,35 @@ def test_load_config_full(tmp_path: Path) -> None:
     assert cfg.exclude == ["docs/x.md"]
 
 
+def test_load_config_reads_version_keys(tmp_path: Path) -> None:
+    cfg_path = tmp_path / ".project-standards.yml"
+    cfg_path.write_text(
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    version: '1.1'\n"
+        "  adr:\n"
+        "    version: '1.0'\n"
+        "    require_sections: true\n"
+        "python_tooling:\n"
+        "  version: '1.0'\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(cfg_path)
+    assert cfg.frontmatter_version == "1.1"
+    assert cfg.adr_version == "1.0"
+    assert cfg.python_tooling_version == "1.0"
+    assert cfg.require_adr_sections is True
+
+
+def test_load_config_version_keys_default_none(tmp_path: Path) -> None:
+    cfg_path = tmp_path / ".project-standards.yml"
+    cfg_path.write_text("markdown:\n  frontmatter:\n    required: true\n", encoding="utf-8")
+    cfg = load_config(cfg_path)
+    assert cfg.frontmatter_version is None
+    assert cfg.adr_version is None
+    assert cfg.python_tooling_version is None
+
+
 def test_load_config_required_false_is_honoured(tmp_path: Path) -> None:
     path = tmp_path / ".project-standards.yml"
     body = {"markdown": {"frontmatter": {"required": False}}}
