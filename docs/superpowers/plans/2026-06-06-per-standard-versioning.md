@@ -1031,7 +1031,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Frontmatter banner**
 
-In `standards/markdown-frontmatter/README.md`, immediately under the `# ` title line, add (blank line above and below):
+In `standards/markdown-frontmatter/README.md`, immediately under the H1 (`#`) title line, add (blank line above and below):
 
 ```markdown
 **Contract version:** `1.1` (declared per document as `schema_version`; selected by consumers via `markdown.frontmatter.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
@@ -1039,7 +1039,7 @@ In `standards/markdown-frontmatter/README.md`, immediately under the `# ` title 
 
 - [ ] **Step 2: ADR banner**
 
-In `standards/adr/README.md`, immediately under the `# ` title line, add:
+In `standards/adr/README.md`, immediately under the H1 (`#`) title line, add:
 
 ```markdown
 **Contract version:** `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
