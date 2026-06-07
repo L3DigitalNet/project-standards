@@ -20,6 +20,7 @@ aliases:
 related:
   - 'src/project_standards/schemas/markdown-frontmatter.schema.json'
   - 'meta/versioning.md'
+  - 'standards/markdown-tooling/README.md'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -43,6 +44,8 @@ This document specifies **schema version 1.1**, an additive revision that introd
 ### Files that never carry frontmatter
 
 Agent-instruction files are harness configuration, not managed documents, and must **never** carry frontmatter: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, or `.codex/`. Consuming repositories exclude these in `.project-standards.yml` rather than adding metadata to them. The repo's human-facing root `README.md` is a managed document, but a repository may exclude it if it prefers not to render a frontmatter table on its landing page.
+
+This standard is deliberately tool-neutral about the Markdown _body_. How a document's body and adjacent config files are formatted and linted (Prettier, markdownlint, EditorConfig) is governed by the companion [Markdown Tooling Standard](../markdown-tooling/README.md).
 
 ## Profiles
 
