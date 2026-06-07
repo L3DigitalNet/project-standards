@@ -60,6 +60,7 @@ standards_version: 'v1.2.0'
 
 markdown:
   frontmatter:
+    version: '1.1' # OPTIONAL — pin the Frontmatter contract version; omit to track the tool's default
     # Bundled schema name — resolves to the standard's JSON Schema. Do not change
     # unless you ship a custom schema.
     schema: 'markdown-frontmatter'
@@ -83,6 +84,8 @@ markdown:
       - '.obsidian/**'
       - 'node_modules/**'
 ```
+
+**Selecting a contract version (optional).** `markdown.frontmatter.version` pins which bundled Frontmatter contract validates your documents; omit it to use the tool's current default (today `1.1`, which also accepts legacy `schema_version: '1.0'` documents). A custom `schema:` path owns its own versioning — setting both a custom `schema:` path and `version` is a config error.
 
 **How to choose `include` / `exclude` for this repo:**
 

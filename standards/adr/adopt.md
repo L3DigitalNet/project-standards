@@ -42,10 +42,13 @@ To assert every `doc_type: adr` document has the three MADR-required `##` sectio
 ```yaml
 markdown:
   adr:
+    version: '1.0' # OPTIONAL — pin the ADR contract version; must be compatible with the Frontmatter version
     require_sections: true
 ```
 
 This rides the same frontmatter workflow — no extra job. See [the standard](README.md) for the section list.
+
+**ADR/Frontmatter compatibility.** Each ADR contract version supports specific Frontmatter versions (ADR `1.0` supports Frontmatter `1.1`). If you also pin `markdown.frontmatter.version`, the validator rejects an incompatible pair. Omit `markdown.adr.version` to use the frozen default.
 
 ## 4. Author from a template
 
