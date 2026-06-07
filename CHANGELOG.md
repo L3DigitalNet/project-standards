@@ -28,6 +28,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-06-07
+
+**Migration from `v1`.** This is a major release; adopt it deliberately:
+
+- **Re-pin to `@v2`.** Bump the reusable-workflow pin `validate-markdown-frontmatter.yml@v1` → `@v2` and set `standards-ref: 'v2'` (the workflow now defaults `standards-ref` to `v2`). The opt-in body linter `lint-markdown.yml@v2` becomes available at this tag.
+- **The validator CLI now requires Python 3.14+.** Installing the `project-standards` package via `uv tool install` needs Python 3.14 (`requires-python` `>=3.11` → `>=3.14`).
+- **Copy-adopters, on re-sync only:** the Python Tooling baseline is now 3.14, and the §15 CI template SHA-pins `astral-sh/setup-uv` (the old `@v8` tag no longer resolves).
+- **Doc deep-links moved** into the per-standard bundles (`standards/<name>/…`) and `meta/`. The **validation contract is unchanged** — reusable-workflow names, the `validate-frontmatter` entry point, and the bundled schema path are identical — so a repo that passed on `@v1` keeps passing after re-pinning to `@v2`.
+
 ### Added
 
 - **Python tooling stack adopted from `standards/python-tooling-ssot-standard.md`:** `uv_build` backend, `src/` layout, the validator moved to `src/project_standards/` with the schema bundled inside the package, `basedpyright` (strict), branch coverage (`fail_under = 85`), and `pip-audit`. CI gate consolidated to `check.yml`.

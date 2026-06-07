@@ -34,14 +34,14 @@ on:
         default: ".project-standards.yml"
       standards-ref:
         # The git ref the validator + bundled schema install from. Defaults to the
-        # major tag `v1` (NOT `main`) so a caller that pins `uses: ...@v1` but omits
+        # major tag `v2` (NOT `main`) so a caller that pins `uses: ...@v2` but omits
         # this input still gets pinned, reproducible validation instead of floating
-        # on unreleased changes. Set it to match your `uses:` pin (e.g. `v1`, or a
-        # full version like `v1.2.0` for an immutable pin).
+        # on unreleased changes. Set it to match your `uses:` pin (e.g. `v2`, or a
+        # full version like `v2.0.0` for an immutable pin).
         description: "project-standards git ref to install the validator from (match your uses: @vN pin)."
         required: false
         type: string
-        default: "v1"
+        default: "v2"
 
 jobs:
   validate:
