@@ -24,7 +24,8 @@ Modified — code (the validated `markdown_tooling` label):
 - `src/project_standards/schemas/registry.json` — add the `markdown_tooling` entry.
 - `src/project_standards/registry.py` — parse + expose it; add `is_known_markdown_tooling`.
 - `src/project_standards/validate_frontmatter.py` — read `markdown_tooling.version`; exit 2 on unknown.
-- `tests/test_validate_frontmatter.py` — new tests; update the two direct `Registry(...)` constructions.
+- `tests/test_validate_frontmatter.py` — new tests; fix the two direct `Registry(...)` constructions and the parametrized malformed-registry fixtures.
+- `.project-standards.yml` — select `python_tooling` + `markdown_tooling` contract versions (dogfood every standard the repo defines).
 
 Modified — docs/navigation:
 
@@ -235,11 +236,28 @@ Extend the `return Registry(...)` to pass the new fields:
         markdown_tooling_versions=["1.0"],
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 6: Update the parametrized malformed-registry fixtures**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -q` Expected: PASS (all tests, including the two new ones and the two edited constructions).
+`load_registry` now requires a `markdown_tooling` object and checks it **first**, so every existing payload in `test_load_registry_malformed_raises` (`tests/test_validate_frontmatter.py` ≈ lines 452-484) that targets a _later_ branch (non-string default, `frontmatter.versions`, `adr.versions`, `python_tooling.versions`) would otherwise raise the new missing-object error before reaching its intended branch. Fix every payload **except** the first (the dedicated `{"frontmatter": {}, "adr": {}}` missing-object case, whose `"missing frontmatter/adr/python_tooling"` match is still a substring of the new message): insert a valid `markdown_tooling` object into each. Concretely, in payloads 2 through 8, add this immediately before the payload's closing `}`:
 
-- [ ] **Step 7: Commit**
+```text
+, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}
+```
+
+Then add one new parametrized case (so the `markdown_tooling.versions` branch is itself covered) to the `parametrize` list:
+
+```python
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": {}}}',
+            "markdown_tooling.versions is not a list",
+        ),
+```
+
+- [ ] **Step 7: Run the tests to verify they pass**
+
+Run: `uv run pytest tests/test_validate_frontmatter.py -q` Expected: PASS (all tests, including the two new registry tests, the new malformed case, and the two edited constructions). If any malformed case now fails with the missing-`markdown_tooling` message, a payload was missed in Step 6 — add the object to it.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/project_standards/schemas/registry.json src/project_standards/registry.py tests/test_validate_frontmatter.py
@@ -303,7 +321,7 @@ def test_unknown_markdown_tooling_version_exits_2(
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k markdown_tooling -v` Expected: FAIL — `AttributeError: 'ProjectConfig' object has no attribute 'markdown_tooling_version'` and the unknown-version test exits 0 instead of 2.
+Run: `uv run pytest tests/test_validate_frontmatter.py -k "markdown_tooling and not registry" -v` Expected: 4 selected; FAIL — `AttributeError: 'ProjectConfig' object has no attribute 'markdown_tooling_version'` and the unknown-version test exits 0 instead of 2. (The `and not registry` filter excludes the two Task 1 registry tests, which already pass.)
 
 - [ ] **Step 3: Add the `ProjectConfig` field**
 
@@ -376,7 +394,7 @@ Immediately after the existing `python_tooling.version` guard (the block ending 
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k markdown_tooling -v` Expected: PASS (4 tests).
+Run: `uv run pytest tests/test_validate_frontmatter.py -k "markdown_tooling and not registry" -v` Expected: PASS (4 tests).
 
 - [ ] **Step 7: Commit**
 
@@ -387,15 +405,40 @@ git commit -m "feat(validator): validate markdown_tooling.version (exit 2 on unk
 
 ---
 
-## Task 3: Code gate green (no-version regression + full toolchain)
+## Task 3: Dogfood every standard's contract version + code gate green
 
-**Files:** none expected (verification; fix only if a check fails).
+This repo defines four standards; per the dogfood directive it now **selects** a contract version for every one of them in its own `.project-standards.yml`. Today the file selects only `markdown.frontmatter.version` and `markdown.adr.version`; `python_tooling` was never selected here. This task closes that gap (adding both `python_tooling` and `markdown_tooling`) so the validated-label path runs against this repo on every CI run.
 
-- [ ] **Step 1: Prove a no-`markdown_tooling` config is byte-identical**
+**Files:**
 
-Run: `uv run validate-frontmatter --config .project-standards.yml` Expected: `✓  12 file(s) validated` (unchanged from before this work — this repo's config has no `markdown_tooling` key, so behaviour is identical).
+- Modify: `.project-standards.yml`
 
-- [ ] **Step 2: Run the full Python gate**
+- [ ] **Step 1: Prove a no-`markdown_tooling` config is byte-identical (regression)**
+
+Run: `uv run validate-frontmatter --config .project-standards.yml` Expected: `✓  12 file(s) validated` (unchanged — at this point the config has no `markdown_tooling`/`python_tooling` keys, so behaviour is identical to before this work; the version keys are added in Step 2).
+
+- [ ] **Step 2: Select all four contract versions (dogfood)**
+
+In `.project-standards.yml`, the `markdown.frontmatter.version: "1.1"` and `markdown.adr.version: "1.0"` keys already exist. Add two **top-level** blocks (siblings of `markdown:`, not nested under it — `load_config` reads `python_tooling`/`markdown_tooling` at the document root) at the end of the file:
+
+```yaml
+# Contract-version selections for the copy-adopted standards this repo defines.
+# Both are validated-if-present metadata only (a known version => no output, no
+# behaviour change; an unknown version => exit 2). Selected here to dogfood every
+# standard the repo ships. python_tooling enforcement is the verification gate;
+# markdown_tooling enforcement is the lint-markdown workflow.
+python_tooling:
+  version: '1.0'
+
+markdown_tooling:
+  version: '1.0'
+```
+
+- [ ] **Step 3: Verify the dogfooded config still validates**
+
+Run: `uv run validate-frontmatter --config .project-standards.yml` Expected: `✓  12 file(s) validated` — the same file count (version keys add no managed files), now with both labels validated as known versions on every run. No `python_tooling`/`markdown_tooling` text appears in stdout/stderr.
+
+- [ ] **Step 4: Run the full Python gate**
 
 Run:
 
@@ -405,14 +448,14 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 Expected: all pass; coverage ≥ 85% branch. If `ruff format --check` complains, run `uv run ruff format .` and re-run. If coverage dropped on the new branches, confirm Task 1/2 tests cover the unknown-version and registry-missing paths (they do) and re-run.
 
-- [ ] **Step 3: Commit (only if Step 2 made fixups)**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add -u src/ tests/
-git commit -m "chore: keep gate green after markdown_tooling label"
+git add .project-standards.yml
+git commit -m "chore: dogfood python_tooling + markdown_tooling contract versions"
 ```
 
-If nothing changed, skip this commit.
+If Step 4 also made `src/`/`tests/` fixups, stage and commit those too with a separate `chore: keep gate green` message.
 
 ---
 
@@ -766,16 +809,10 @@ git commit -m "docs(markdown-frontmatter): link to the Markdown Tooling Standard
 
 - [ ] **Step 1: Add the standards-index row**
 
-In `standards/README.md`, change the table body:
+`standards/README.md` has a four-column index table (`| Standard | What it governs | Bundle | Adopt |`) with three body rows (Markdown Frontmatter, ADR, Python Tooling SSOT). Add a fourth body row immediately after the Python Tooling SSOT row — keep it on **one physical line** (shown here in a plain block so it is copied verbatim, one row, four cells):
 
-```markdown
-| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) | | ADR | Architecture Decision Records (MADR on the frontmatter profile) | [adr/](adr/) | [adopt](adr/adopt.md) | | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
-```
-
-to add a fourth row:
-
-```markdown
-| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) | | ADR | Architecture Decision Records (MADR on the frontmatter profile) | [adr/](adr/) | [adopt](adr/adopt.md) | | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) | | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
+```text
+| Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 ```
 
 - [ ] **Step 2: Add the bundle to the root README layout tree**
@@ -816,7 +853,17 @@ After the "Python Tooling SSOT" consuming subsection (ending "…run the verific
 Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v2` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 ```
 
-- [ ] **Step 5: Lint + format (root README is excluded from frontmatter validation)**
+- [ ] **Step 5: Fix the stale "two Markdown standards" prose**
+
+The Consuming intro (`README.md` ≈ line 58) currently reads "The two **Markdown standards** share one mechanism; **Python Tooling** adopts on its own." That undercounts now. Change that sentence to:
+
+```text
+The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling** and **Markdown Tooling** each adopt on their own.
+```
+
+(The existing `### Markdown standards (Frontmatter + ADR)` consuming heading stays — it still names exactly the two that share the validate-frontmatter workflow.)
+
+- [ ] **Step 6: Lint + format (root README is excluded from frontmatter validation)**
 
 Run:
 
@@ -827,7 +874,7 @@ npx prettier --check "README.md" "standards/README.md"
 
 Expected: `0 error(s)` and Prettier clean. (Both files are excluded from `validate-frontmatter` by `.project-standards.yml`, so no frontmatter check applies.)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add README.md standards/README.md
@@ -840,33 +887,49 @@ git commit -m "docs: register Markdown Tooling Standard in the navigation maps"
 
 **Files:**
 
-- Modify: `meta/versioning.md:56-60` (per-standard table), `:81-88` (change-classification table)
+- Modify: `meta/versioning.md` — per-standard table (≈ line 60), change-classification table (≈ line 86), and the stale prose at ≈ lines 33, 35, 70-73.
 
 - [ ] **Step 1: Add the per-standard contract-version row**
 
-In the "Per-standard contract versions" table, after the Python Tooling row, add:
+In the "Per-standard contract versions" table, immediately after the Python Tooling row, add this one physical row (four cells; shown in a plain block so it copies verbatim):
 
-```markdown
+```text
 | Markdown Tooling | `1.0` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
 ```
 
-- [ ] **Step 2: Note Markdown Tooling in the change-classification table**
+- [ ] **Step 2: Relabel the change-classification row to cover both copy-adopted standards**
 
-The existing "Python Tooling standard (copy-adopted)" row and the "Bundled contract set" row already cover the copy-adopted + bundled-version semantics. Update the **Python Tooling standard** row label to cover both copy-adopted standards by changing its first cell:
+In the change-classification table, the row whose first cell is `| **Python Tooling standard** (copy-adopted) |` — change only that first cell to:
 
-```markdown
-| **Python Tooling standard** (copy-adopted) |
-```
-
-to:
-
-```markdown
+```text
 | **Python / Markdown Tooling standards** (copy-adopted) |
 ```
 
-(The cell contents — MAJOR/MINOR/PATCH descriptions of raising a tool floor, adding an optional scaffold/tool, and editorial revisions — apply unchanged to both.)
+(The MAJOR/MINOR/PATCH cell contents apply unchanged to both.)
 
-- [ ] **Step 3: Lint + format + validate (`meta/**` is frontmatter-validated)\*\*
+- [ ] **Step 3: Fix the stale standard-count prose**
+
+The doc still says "three standards" and "two Markdown standards". Make three replacements:
+
+a. In the "ships **several components under one version number**" paragraph, change `three standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), and [Python Tooling SSOT](../standards/python-tooling/README.md) standards —` to:
+
+```text
+four standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), and [Markdown Tooling](../standards/markdown-tooling/README.md) standards —
+```
+
+b. Replace the "enforced automatically / copy-adopted / All three" sentence pair with:
+
+```text
+The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling and Markdown Tooling standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All four still ship under the same release tag.
+```
+
+c. In the "Component-level version markers" section, change `Two **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — neither is itself a release number:` to start with `Three` and `none is itself a release number:`, then add a third bullet after the Python Tooling contract-version bullet:
+
+```text
+- The **Markdown Tooling contract version** — the `1.0` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
+```
+
+- [ ] **Step 4: Lint, format, validate (`meta/` is frontmatter-validated)**
 
 Run:
 
@@ -878,11 +941,11 @@ npx prettier --check "meta/versioning.md"
 
 Expected: all clean.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add meta/versioning.md
-git commit -m "docs(versioning): record the markdown_tooling contract version"
+git commit -m "docs(versioning): record markdown_tooling + refresh standard counts"
 ```
 
 ---
@@ -958,7 +1021,11 @@ After the "Per-standard contract versions." bullet in `## [Unreleased] / ### Add
 
 Also bump the frontmatter `updated:` field from `'2026-06-06'` to `'2026-06-07'`.
 
-- [ ] **Step 2: Validate, lint, format**
+- [ ] **Step 2: Fix the stale `@v1` in the existing Stack B bullet**
+
+The existing `[Unreleased]` "Opt-in Markdown body linting (Stack B)" bullet still references the old major tag twice — in the `uses:` example and in the trailing "Additive — pin" note. That workflow first ships in `2.0.0`, so in **that bullet only**, change both occurrences of `@v1` to `@v2`. Do **not** touch the other `@v1` references in older released sections — they document the frontmatter workflow and `standards-ref`, which genuinely shipped in v1.x.
+
+- [ ] **Step 3: Validate, lint, format**
 
 Run:
 
@@ -970,11 +1037,11 @@ npx prettier --check "CHANGELOG.md"
 
 Expected: all clean (`CHANGELOG.md` is in the validator include).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add CHANGELOG.md
-git commit -m "docs(changelog): record the Markdown Tooling Standard"
+git commit -m "docs(changelog): record the Markdown Tooling Standard; fix stale lint-markdown @v1"
 ```
 
 ---
@@ -989,10 +1056,11 @@ These files are under `docs/handoff/**`, which `.project-standards.yml` excludes
 
 - [ ] **Step 1: Add specs-plans rows**
 
-In `docs/handoff/specs-plans.md`, add two rows to the table:
+In `docs/handoff/specs-plans.md`, add two table rows (each on its **own physical line**, three cells; shown in a plain block so they copy verbatim as two separate rows):
 
-```markdown
-| Markdown Tooling Standard design | `docs/superpowers/specs/2026-06-06-markdown-tooling-standard-design.md` | approved (audit r3) | | Markdown Tooling Standard plan | `docs/superpowers/plans/2026-06-07-markdown-tooling-standard.md` | in progress |
+```text
+| Markdown Tooling Standard design | `docs/superpowers/specs/2026-06-06-markdown-tooling-standard-design.md` | approved (audit r3) |
+| Markdown Tooling Standard plan | `docs/superpowers/plans/2026-06-07-markdown-tooling-standard.md` | in progress |
 ```
 
 Update its `**Last updated:**` line to `2026-06-07`.
@@ -1065,14 +1133,21 @@ Expected: every command passes; `validate-frontmatter` reports `✓  14 file(s) 
 Confirm each:
 
 ```bash
-# Validated label: known passes, unknown exits 2, no-key unchanged
+# Validated label: known passes, unknown exits 2
 printf 'markdown_tooling:\n  version: "1.0"\n' > /tmp/ok.yml && uv run validate-frontmatter --config /tmp/ok.yml; echo "exit=$?"
 printf 'markdown_tooling:\n  version: "9.9"\n' > /tmp/bad.yml && uv run validate-frontmatter --config /tmp/bad.yml; echo "exit=$? (expect 2 + 'unknown markdown_tooling.version')"
-# Release pins: no @v1 left in the markdown-tooling docs or the workflow example
-grep -rn "lint-markdown.yml@v1" standards/markdown-tooling/ .github/workflows/lint-markdown.yml README.md || echo "no stale @v1 — good"
+# Dogfood: this repo selects all four contract versions, and the config still validates
+grep -nE "version:|python_tooling:|markdown_tooling:" .project-standards.yml
+uv run validate-frontmatter --config .project-standards.yml
+# Release pins: FAIL (non-zero) if any stale @v1 lint-markdown ref survives — CHANGELOG included
+if grep -rn "lint-markdown.yml@v1" standards/markdown-tooling/ .github/workflows/lint-markdown.yml README.md CHANGELOG.md; then
+  echo "FAIL: stale lint-markdown @v1 reference(s) above"; false
+else
+  echo "OK: no stale lint-markdown @v1"
+fi
 ```
 
-Expected: `ok.yml` → `exit=0`; `bad.yml` → `exit=2` with the unknown-version message; the grep prints "no stale @v1 — good".
+Expected: `ok.yml` → `exit=0`; `bad.yml` → `exit=2` with the unknown-version message; the grep shows `markdown.frontmatter.version`/`markdown.adr.version`/`python_tooling`/`markdown_tooling` all present and the config validates (`✓  14 file(s) validated`); the stale-pin block prints `OK: no stale lint-markdown @v1` (and would exit non-zero if any were found).
 
 - [ ] **Step 3: Confirm the working tree is clean and review the branch delta**
 
@@ -1090,6 +1165,7 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 
 - README.md (standard) → Task 4; adopt.md → Task 5.
 - registry.json / registry.py / validate_frontmatter.py / tests → Tasks 1–2.
+- `.project-standards.yml` (dogfood: select all four contract versions) → Task 3.
 - meta/versioning.md → Task 8; standards/README.md + root README.md → Task 7; frontmatter cross-link → Task 6.
 - lint-markdown.yml + .vscode/settings.json → Task 9.
 - CHANGELOG.md → Task 10; specs-plans/state/architecture → Task 11.
@@ -1098,3 +1174,12 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 **Placeholder scan:** the two NEW prose docs (Task 4 README, Task 5 adopt) embed every config/snippet verbatim and reference spec §3/§4 for section content; the only non-verbatim work is the source-backed prose + the live source recheck, which is defined, bounded, and gated by validate-frontmatter + markdownlint + Prettier. No "TBD"/"handle errors"/"similar to" placeholders elsewhere.
 
 **Type/name consistency:** `markdown_tooling_default` / `markdown_tooling_versions` / `is_known_markdown_tooling` (registry.py) and `markdown_tooling_version` (ProjectConfig) are used identically across Tasks 1–2 and the tests; the registry key `markdown_tooling`, the config key `markdown_tooling.version`, and the contract version `1.0` match the spec and `registry.json`. The two direct `Registry(...)` test constructions are updated in Task 1, the same task that makes the params required.
+
+**Plan-audit round 1 (2026-06-07) + dogfood directive — folded in:**
+
+- CR-001 (registry blast radius): Task 1 Step 6 now updates the parametrized malformed-registry fixtures and adds a `markdown_tooling.versions` case, so Task 1's own pytest gate stays green.
+- CR-002 (stale `@v1`): Task 10 Step 2 fixes the existing CHANGELOG Stack B bullet; Task 12's stale-pin check now fails on a match and includes `CHANGELOG.md`.
+- CR-003 (stale prose): Task 7 Step 5 fixes the README "two Markdown standards" sentence; Task 8 Step 3 fixes the `meta/versioning.md` "three standards / two Markdown / Two component-level markers" prose.
+- CR-004 (collapsed tables): Task 7/8/11 table snippets are now plain `text` blocks (single physical rows), immune to Prettier reflow.
+- Task 2's test selector is `-k "markdown_tooling and not registry"` so its count (4) is unambiguous.
+- Dogfood directive: Task 3 now selects all four standards' contract versions in `.project-standards.yml` (adding the previously-unselected `python_tooling` and the new `markdown_tooling`); spec §4/§5/§7/§8 updated to match.

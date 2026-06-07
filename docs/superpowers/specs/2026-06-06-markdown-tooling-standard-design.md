@@ -97,7 +97,7 @@ Steps, mirroring `python-tooling/adopt.md`'s shape:
 2. Optionally copy `.prettierrc.json`; pin Prettier via a minimal `package.json` devDep **or** run via `npx prettier@<version>`.
 3. Wire the reusable linter: add a job that calls `lint-markdown.yml@v2` (snippet).
 4. Add the two VS Code recommendations.
-5. Optionally select the contract version in `.project-standards.yml` (`markdown_tooling.version: '1.0'`); state that it is validated-if-present metadata only — it runs no check by itself (the markdownlint workflow is the enforcement).
+5. Select the contract version in `.project-standards.yml` (`markdown_tooling.version: '1.0'`); it is validated-if-present metadata only — it runs no check by itself (the markdownlint workflow is the enforcement). For consumers this step is optional; **this repo selects it to dogfood** (see §7).
 6. Run the check contract (§3 of the standard) to confirm clean.
 7. Need an exception? Record an ADR (→ ADR Standard).
 
@@ -112,7 +112,7 @@ To make `markdown_tooling.version` behave exactly like `python_tooling.version`:
 - **`src/project_standards/validate_frontmatter.py`** — add `markdown_tooling_version` to `ProjectConfig` (mirror `python_tooling_version`, line 293/302), parse it in `load_config`, and add the unknown-version guard returning exit `2` (mirror lines 483-491). Metadata only: validated-if-present, never emitted.
 - **Tests (`tests/`)** — mandatory, not optional: `markdown_tooling.version: '1.0'` validates clean; `'9.9'` exits `2` with an "unknown markdown_tooling.version" message; a config with no `markdown_tooling` key validates byte-identically to current behavior; the registry-shape tests accept the new required object. Mirror `tests/test_validate_frontmatter.py:579` and `:1172` and any registry-shape test.
 
-This repo's own `.project-standards.yml` is **not** required to select `markdown_tooling.version` (mirrors `python_tooling`, which is registered + validated but not selected here). Selection remains a consumer choice.
+**Dogfood directive:** this repo selects a contract version for **every standard it defines** — so its `.project-standards.yml` adds **both** `markdown_tooling.version: '1.0'` and `python_tooling.version: '1.0'`, alongside the existing `markdown.frontmatter.version`/`markdown.adr.version`. Before this work `python_tooling` was registered + validated but **not** selected here; that gap is closed so the repo is a complete worked example and the validated-label code path runs against this repo on every CI run. (For downstream consumers, selecting either copy-adopt label remains optional.)
 
 ### 6. Sources to (re)check during spec→standard authoring
 
@@ -162,6 +162,7 @@ The dated Source register requires a live recheck of current official docs. Anti
 - A `.project-standards.yml` containing `markdown_tooling.version: "1.0"` → exit `0`.
 - `markdown_tooling.version: "9.9"` → exit `2`, stderr contains `unknown markdown_tooling.version`.
 - A config omitting `markdown_tooling` validates identically to pre-change behavior (regression test green).
+- This repo's `.project-standards.yml` selects all four contract versions (`markdown.frontmatter.version` `1.1`, `markdown.adr.version` `1.0`, `python_tooling.version` `1.0`, `markdown_tooling.version` `1.0`) and `validate-frontmatter` passes — dogfooding every standard the repo defines.
 
 #### Formatter / linter scope
 
@@ -194,6 +195,7 @@ The dated Source register requires a live recheck of current official docs. Anti
 - The new standard's contract version starts at `1.0` (registry `markdown_tooling`).
 - Adding a standard + a new bundled contract version is **additive** = a MINOR tool release (`meta/versioning.md` §"two-plane"). But the next release is **already locked to `2.0.0`** (the `requires-python` floor change), so this rides that release — no new release-level decision.
 - `lint-markdown.yml` first appears in `2.0.0`; consumer snippets therefore pin `@v2` (the per-major moving tag the release ritual will create), per `meta/versioning.md` §"Consuming".
+- **Dogfooding:** this repo's `.project-standards.yml` selects all four standards' contract versions (`markdown.frontmatter.version` `1.1`, `markdown.adr.version` `1.0`, `python_tooling.version` `1.0`, `markdown_tooling.version` `1.0`). The two copy-adopt labels (`python_tooling`, `markdown_tooling`) are metadata-only — validated as known versions on every run, emitting nothing and changing no file-validation outcome.
 
 ## Non-goals
 
@@ -209,4 +211,5 @@ None blocking. Resolved across brainstorming + audit rounds 1–2: form (bundle)
 ## Audit trail
 
 - **Round 1 (2026-06-06):** external adversarial spec audit — 3 blocking (SA-001 inert registry key, SA-002 `@v1` unresolvable, SA-003 Prettier scope) + 3 non-blocking (SA-004 root README, SA-005 VS Code dogfood, SA-006 stale provenance). All six verified against the codebase and resolved: SA-001 → full validated label (decision 4, §5); SA-002 → `@v2` + comment fix (decision 8); SA-003 → broaden scope (decision 3); SA-004/005/006 → touchpoints + provenance fix. Acceptance criteria (§8) added per the audit's "missing considerations."
+- **Post-approval directive (2026-06-07):** user directed that this repo dogfood **every** standard it defines. The spec's earlier "do not select `markdown_tooling` in this repo's `.project-standards.yml` (mirror `python_tooling`)" stance is reversed: this repo now selects all four contract versions, and the previously-unselected `python_tooling.version` is added too. Reflected in §4 step 5, §5, §7, and §8.
 - **Round 2 (2026-06-06):** follow-up audit confirmed SA-001/002/004/005/006 resolved; flagged SA-003 **partially** resolved (coverage stated as a closed `md/json/jsonc/yaml` set while the command `prettier .` formats every supported file) and new SA-NEW-001 (the added markdownlint code-action would make markdownlint a fixer, breaking one-formatter-authority). Both resolved here: SA-003 → coverage restated as "all Prettier-supported files" so command and coverage cannot diverge (decision 3, §2/§3, §8 AC); SA-NEW-001 → markdownlint stays diagnostics-only, no fix-on-save code action (§3 item 10, §7, §8 AC, non-goals).
