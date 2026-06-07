@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-03'
+updated: '2026-06-06'
 reviewed: null
 owner: ''
 tags:
@@ -17,6 +17,7 @@ aliases: []
 related:
   - 'standards/markdown-frontmatter/README.md'
   - 'standards/adr/README.md'
+  - 'standards/python-tooling/README.md'
 source:
   - 'https://semver.org/spec/v2.0.0.html'
   - 'https://keepachangelog.com/en/1.1.0/'
@@ -29,7 +30,9 @@ license: null
 
 ## Purpose
 
-This repository ships **four things under one version number**: the **standard** (`standards/`), the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all four together.
+This repository ships **several components under one version number**: three standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), and [Python Tooling SSOT](../standards/python-tooling/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all of them together.
+
+The two Markdown standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling standard is **copy-adopted** — a consumer copies its scaffolds, so it is never inherited automatically and a change to it cannot newly-fail a consumer on its own. All three still ship under the same release tag.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -37,9 +40,18 @@ This document defines what a release number promises, how to classify a change, 
 
 Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) (`MAJOR.MINOR.PATCH`), but the compatibility being versioned is **the consuming repository's validation outcome**, not a code API.
 
-> **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all four shipped components.
+> **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all shipped components.
 
 This reframing is what makes the moving major tag (`@v1`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
+
+## Component-level version markers
+
+The single release version is the only number a consumer pins. Two **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — neither is itself a release number:
+
+- **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md).
+- The **Python Tooling internal revision** — the `internal revision N.M` counter in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — tracks **editorial revisions of that one document**. It is not machine-enforced and is not a release version.
+
+The **ADR standard** carries no version of its own: it is a profile over the frontmatter schema, so it rides `schema_version`, and its only machine-checked rule — the opt-in MADR section check — lives in the validator and is covered by the release version. There are therefore **no per-standard release versions**: every standard ships together under the single repository tag.
 
 ## Change classification
 
@@ -47,9 +59,12 @@ Classify each release by the highest-severity change it contains.
 
 | Component | MAJOR — migrate intentionally | MINOR — safe to inherit on `@vN` | PATCH — no consumer-visible change |
 | --- | --- | --- | --- |
-| **Standard / schema** | New _required_ field; a rule made stricter (tighter enum or pattern); an enum value **removed**; a field removed or renamed | A new _optional_ field; an enum value **added**; a new template, example, or extension namespace | Wording or typo fix in non-normative prose |
+| **Frontmatter / ADR standard + schema** | New _required_ field; a rule made stricter (tighter enum or pattern); an enum value **removed**; a field removed or renamed | A new _optional_ field; an enum value **added**; a new template, example, or extension namespace | Wording or typo fix in non-normative prose |
 | **Validator CLI** | Any change that makes a previously-passing document fail; a flag or command removed or renamed; a default changed so pass/fail differs; a config key removed or renamed; the minimum Python raised | A new opt-in flag or command; a new config option with a backward-compatible default; new output that does not change any pass/fail result | A crash or message-text fix with **no** outcome change; an internal refactor; a dependency bump with no behavior change |
 | **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
+| **Python Tooling standard** (copy-adopted) | Raising the required Python or a tool floor; removing or renaming a scaffold or the gate command; a default change that makes the verification gate newly fail | A new optional scaffold or recommended tool with a backward-compatible default; a new opt-in step | An editorial revision (the internal revision counter); a refreshed tool pin with no behavior change |
+
+Because the Python Tooling standard is **copy-adopted**, a consumer sees its changes only when it deliberately re-syncs the scaffolds — they are never inherited automatically on `@vN`. That row classifies the impact on a consumer that re-syncs; the previously-passing rule below applies to the validator-enforced surface.
 
 ## The previously-passing rule
 
