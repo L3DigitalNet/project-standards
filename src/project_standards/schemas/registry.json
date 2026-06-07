@@ -1,18 +1,8 @@
 {
-  "frontmatter": {
-    "default": "1.1",
-    "versions": {
-      "1.1": "markdown-frontmatter"
-    }
-  },
-  "adr": {
-    "default": "1.0",
-    "versions": {
-      "1.0": { "supports_frontmatter": ["1.1"] }
-    }
-  },
-  "python_tooling": {
-    "default": "1.0",
-    "versions": ["1.0"]
-  }
+	"frontmatter": { "default": "1.1", "versions": { "1.1": "markdown-frontmatter" } },
+	"adr": {
+		"default": "1.0",
+		"versions": { "1.0": { "supports_frontmatter": ["1.1"] } }
+	},
+	"python_tooling": { "default": "1.0", "versions": ["1.0"] }
 }
