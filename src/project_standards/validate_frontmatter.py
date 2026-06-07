@@ -34,6 +34,8 @@ import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
+from project_standards.registry import Registry
+
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
 # that appears anywhere else is intentionally NOT treated as frontmatter, so such
 # files are reported as "no frontmatter found" when frontmatter is required.
@@ -72,17 +74,24 @@ def find_bundled_schema(name: str) -> Path:
     return Path(__file__).parent / "schemas" / f"{name}.schema.json"
 
 
+def _schema_value_is_path(value: str | None) -> bool:
+    """True when a config `schema` value names a filesystem path, not a bundled name.
+
+    A bare token (e.g. "markdown-frontmatter") is a bundled schema name; anything
+    with a path separator or a `.json` suffix is a path the consumer owns.
+    """
+    return value is not None and ("/" in value or "\\" in value or value.endswith(".json"))
+
+
 def resolve_schema_path(schema_value: str | None) -> Path:
     """Resolve a config `schema` value to a path.
 
-    A bare token (e.g. "markdown-frontmatter") is treated as a bundled schema
-    name; anything containing a path separator or ending in `.json` is treated
-    as a filesystem path.
+    A bare token is treated as a bundled schema name; anything containing a path
+    separator or ending in `.json` is treated as a filesystem path.
     """
-    name = schema_value or _DEFAULT_SCHEMA_NAME
-    if "/" in name or "\\" in name or name.endswith(".json"):
-        return Path(name)
-    return find_bundled_schema(name)
+    if _schema_value_is_path(schema_value):
+        return Path(cast("str", schema_value))
+    return find_bundled_schema(schema_value or _DEFAULT_SCHEMA_NAME)
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +300,35 @@ class ProjectConfig:
         self.frontmatter_version = frontmatter_version
         self.adr_version = adr_version
         self.python_tooling_version = python_tooling_version
+
+
+def resolve_effective_schema(
+    args_schema: Path | None, config: ProjectConfig, registry: Registry
+) -> Path:
+    """Pick the schema file, honouring the documented precedence.
+
+    Precedence (first match wins): ``--schema`` path > a custom ``schema:`` path >
+    ``frontmatter.version`` (resolved via the registry to a bundled schema) >
+    ``schema:`` bundled name > the default bundled schema. Version selection
+    applies only to bundled schemas; a custom schema path means the consumer owns
+    versioning, so combining it with ``frontmatter.version`` is rejected rather
+    than silently dropping one. Raises ConfigError (ambiguity) or RegistryError
+    (unknown bundled version).
+    """
+    if args_schema is not None:
+        return args_schema
+    schema_value = config.schema
+    custom_path = _schema_value_is_path(schema_value)
+    if custom_path and config.frontmatter_version is not None:
+        raise ConfigError(
+            "set markdown.frontmatter.schema (a custom path) or "
+            "markdown.frontmatter.version, not both"
+        )
+    if custom_path:
+        return Path(cast("str", schema_value))
+    if config.frontmatter_version is not None:
+        return find_bundled_schema(registry.frontmatter_schema_name(config.frontmatter_version))
+    return resolve_schema_path(schema_value)
 
 
 def _as_str_list(value: Any) -> list[str]:

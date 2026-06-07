@@ -450,6 +450,65 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
 
 
 # ===========================================================================
+# Unit — effective schema resolution (precedence + ambiguity guard)
+# ===========================================================================
+
+from project_standards.validate_frontmatter import (  # noqa: E402
+    ConfigError,
+    resolve_effective_schema,
+)
+
+
+def _cfg(**kw: Any) -> _vf.ProjectConfig:
+    base: dict[str, Any] = {
+        "schema": None,
+        "include": [],
+        "exclude": [],
+        "required": True,
+        "require_adr_sections": False,
+    }
+    base.update(kw)
+    return _vf.ProjectConfig(**base)
+
+
+def test_effective_schema_cli_wins() -> None:
+    reg = load_registry()
+    cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="1.1")
+    assert resolve_effective_schema(Path("/x/custom.json"), cfg, reg) == Path("/x/custom.json")
+
+
+def test_effective_schema_custom_path_bypasses_version() -> None:
+    reg = load_registry()
+    cfg = _cfg(schema="./my/custom.schema.json")
+    assert resolve_effective_schema(None, cfg, reg) == Path("./my/custom.schema.json")
+
+
+def test_effective_schema_custom_path_and_version_is_config_error() -> None:
+    reg = load_registry()
+    cfg = _cfg(schema="./my/custom.schema.json", frontmatter_version="1.1")
+    with pytest.raises(ConfigError, match="not both"):
+        resolve_effective_schema(None, cfg, reg)
+
+
+def test_effective_schema_version_resolves_to_bundled() -> None:
+    reg = load_registry()
+    cfg = _cfg(frontmatter_version="1.1")
+    assert resolve_effective_schema(None, cfg, reg).name == "markdown-frontmatter.schema.json"
+
+
+def test_effective_schema_unknown_version_raises() -> None:
+    reg = load_registry()
+    cfg = _cfg(frontmatter_version="2.0")
+    with pytest.raises(RegistryError, match="unknown frontmatter version"):
+        resolve_effective_schema(None, cfg, reg)
+
+
+def test_effective_schema_bundled_name_default() -> None:
+    reg = load_registry()
+    assert resolve_effective_schema(None, _cfg(), reg).name == "markdown-frontmatter.schema.json"
+
+
+# ===========================================================================
 # Unit — load_config
 #
 # Reads the nested markdown.frontmatter section. Every branch must degrade to safe
