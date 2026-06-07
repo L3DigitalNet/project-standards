@@ -966,6 +966,16 @@ def test_bundled_schema_is_valid_draft2020() -> None:
     Draft202012Validator.check_schema(schema)  # pyright: ignore[reportUnknownMemberType]
 
 
+def test_registry_file_is_bundled_with_package() -> None:
+    # The registry resolves relative to the package, so it ships in the wheel.
+    reg_path = Path(_vf.__file__).parent / "schemas" / "registry.json"
+    assert reg_path.is_file()
+    # Every frontmatter version maps to a schema file that also ships.
+    reg = load_registry()
+    for name in reg.frontmatter_versions.values():
+        assert (Path(_vf.__file__).parent / "schemas" / f"{name}.schema.json").is_file()
+
+
 # ===========================================================================
 # Integration — FM->ADR compatibility gate + python_tooling metadata check
 # ===========================================================================
