@@ -70,7 +70,7 @@ Add to `tests/test_validate_frontmatter.py`, after the schema-resolution unit se
 # Unit — registry (bundled contract-version registry; see registry.py)
 # ===========================================================================
 
-from project_standards.registry import Registry, RegistryError, load_registry  # noqa: E402
+from project_standards.registry import RegistryError, load_registry  # noqa: E402
 
 
 def test_load_registry_real_file() -> None:
@@ -263,7 +263,7 @@ Run: `uv run pytest tests/test_validate_frontmatter.py -k registry -v` Expected:
 
 - [ ] **Step 6: Typecheck + lint the new module**
 
-Run: `uv run basedpyright src/project_standards/registry.py && uv run ruff check src/project_standards/registry.py` Expected: 0 errors, 0 warnings.
+Run: `uv run basedpyright src/project_standards/registry.py && uv run ruff check src/project_standards/registry.py tests/test_validate_frontmatter.py` Expected: 0 errors, 0 warnings (the test import uses only `RegistryError` + `load_registry`, so no F401).
 
 - [ ] **Step 7: Commit**
 
@@ -501,7 +501,7 @@ Run: `uv run pytest tests/test_validate_frontmatter.py -k "effective_schema" -v`
 In `src/project_standards/validate_frontmatter.py`, add a new import near the top (after the existing imports):
 
 ```python
-from project_standards.registry import Registry, RegistryError
+from project_standards.registry import Registry, RegistryError, load_registry
 ```
 
 Replace `resolve_schema_path` (currently lines 75-85) with the helper + the refactored function + the new resolver:
@@ -595,10 +595,12 @@ def _write_versioned_config(root: Path, body: str) -> Path:
     return path
 
 
-def test_main_incompatible_fm_adr_combo_exits_2(
+def test_main_unknown_frontmatter_version_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    # 2.0 is not bundled: schema resolution catches it BEFORE the compat gate, so
+    # the message names the unknown version rather than a misleading compat error.
     _write_versioned_config(
         tmp_path,
         "markdown:\n"
@@ -608,11 +610,38 @@ def test_main_incompatible_fm_adr_combo_exits_2(
         "    version: '1.0'\n"
         "    require_sections: true\n",
     )
-    # frontmatter.version 2.0 is itself unknown to the registry, but the
-    # compatibility gate runs first and reports the actionable combo error.
     rc = main(["--config", ".project-standards.yml"])
     assert rc == 2
-    assert "ADR 1.0 supports Frontmatter" in capsys.readouterr().err
+    assert "unknown frontmatter version" in capsys.readouterr().err
+
+
+def test_compat_gate_flags_known_incompatible_pair() -> None:
+    # Test the gate with a KNOWN incompatible pair via a constructed registry that
+    # bundles a 2.0 contract — no real 2.0 schema file needed. This proves the gate
+    # itself, independent of which versions happen to ship today.
+    from project_standards.registry import Registry
+    from project_standards.validate_frontmatter import frontmatter_adr_incompatibility
+
+    reg = Registry(
+        frontmatter_default="1.1",
+        frontmatter_versions={"1.1": "markdown-frontmatter", "2.0": "markdown-frontmatter-2.0"},
+        adr_default="1.0",
+        adr_supports={"1.0": ["1.1"]},
+        python_tooling_default="1.0",
+        python_tooling_versions=["1.0"],
+    )
+    cfg = _cfg(frontmatter_version="2.0", adr_version="1.0", require_adr_sections=True)
+    msg = frontmatter_adr_incompatibility(cfg, reg)
+    assert msg is not None
+    assert "ADR 1.0 supports Frontmatter ['1.1']" in msg
+    assert "configured frontmatter.version is 2.0" in msg
+
+
+def test_compat_gate_ok_for_defaults() -> None:
+    from project_standards.validate_frontmatter import frontmatter_adr_incompatibility
+
+    reg = load_registry()
+    assert frontmatter_adr_incompatibility(_cfg(require_adr_sections=True), reg) is None
 
 
 def test_main_compatible_combo_validates(
@@ -657,11 +686,41 @@ def test_main_custom_schema_bypasses_compat(
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k "combo or custom_schema_bypasses" -v` Expected: FAIL (compat gate not implemented; the incompatible combo currently fails later for a different reason or passes).
+Run: `uv run pytest tests/test_validate_frontmatter.py -k "unknown_frontmatter_version or compat_gate or compatible_combo or custom_schema_bypasses" -v` Expected: FAIL (gate + reordering not implemented yet).
 
-- [ ] **Step 3: Wire `main`**
+- [ ] **Step 3a: Add the pure compatibility helper**
 
-In `main`, replace the block from `try:` / `config = load_config(args.config)` through the schema-load `try/except` (currently lines 387-398) with:
+Add this function to `src/project_standards/validate_frontmatter.py`, just below `resolve_effective_schema`. It is pure (config + registry in, message-or-None out) so it can be unit-tested with a constructed registry that bundles versions which do not ship today:
+
+```python
+def frontmatter_adr_incompatibility(config: ProjectConfig, registry: Registry) -> str | None:
+    """Return an error message if the configured ADR/Frontmatter pair is incompatible.
+
+    Only meaningful when ADR is in play AND Frontmatter is a *bundled* contract — a
+    custom ``schema:`` path means the consumer owns versioning, so the check is
+    skipped. Assumes a configured ``frontmatter.version`` has already been validated
+    as bundled by ``resolve_effective_schema`` (so this never masks an unknown
+    version as an incompatibility). Returns None when compatible or not applicable;
+    raises RegistryError if the configured ADR version is unknown.
+    """
+    if _schema_value_is_path(config.schema):
+        return None
+    if not (config.require_adr_sections or config.adr_version is not None):
+        return None
+    adr_version = config.adr_version or registry.adr_default
+    effective_fm = config.frontmatter_version or registry.frontmatter_default
+    supported = registry.adr_supported_frontmatter(adr_version)
+    if effective_fm not in supported:
+        return (
+            f"ADR {adr_version} supports Frontmatter {supported}; "
+            f"configured frontmatter.version is {effective_fm}"
+        )
+    return None
+```
+
+- [ ] **Step 3b: Wire `main` (resolve first, then gate)**
+
+In `main`, replace the block from `try:` / `config = load_config(args.config)` through the schema-load `try/except` (currently lines 387-398) with the following. Schema resolution runs **before** the compatibility gate, so an unknown `frontmatter.version` reports "unknown frontmatter version" rather than a misleading compatibility error:
 
 ```python
     try:
@@ -686,31 +745,26 @@ In `main`, replace the block from `try:` / `config = load_config(args.config)` t
         )
         return 2
 
-    # FM->ADR compatibility: only meaningful when ADR is in play AND Frontmatter is
-    # a bundled contract (a custom schema means the consumer owns versioning).
-    using_bundled_fm = args.schema is None and not _schema_value_is_path(config.schema)
-    adr_in_play = config.require_adr_sections or config.adr_version is not None
-    if adr_in_play and using_bundled_fm:
-        adr_version = config.adr_version or registry.adr_default
-        effective_fm = config.frontmatter_version or registry.frontmatter_default
-        try:
-            supported = registry.adr_supported_frontmatter(adr_version)
-        except RegistryError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-        if effective_fm not in supported:
-            print(
-                f"error: ADR {adr_version} supports Frontmatter {supported}; "
-                f"configured frontmatter.version is {effective_fm}",
-                file=sys.stderr,
-            )
-            return 2
-
+    # Resolve first: this validates that a configured frontmatter.version is a known
+    # bundled contract (unknown/typo versions report "unknown frontmatter version"
+    # here, before the compatibility gate, so they are never masked as a combo error).
     try:
         schema_path = resolve_effective_schema(args.schema, config, registry)
     except (ConfigError, RegistryError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    # FM->ADR compatibility (bundled Frontmatter only; --schema bypasses it).
+    if args.schema is None:
+        try:
+            incompatibility = frontmatter_adr_incompatibility(config, registry)
+        except RegistryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if incompatibility is not None:
+            print(f"error: {incompatibility}", file=sys.stderr)
+            return 2
+
     try:
         schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -720,11 +774,11 @@ In `main`, replace the block from `try:` / `config = load_config(args.config)` t
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k "combo or custom_schema_bypasses" -v` Expected: PASS (3 tests).
+Run: `uv run pytest tests/test_validate_frontmatter.py -k "unknown_frontmatter_version or compat_gate or compatible_combo or custom_schema_bypasses" -v` Expected: PASS (5 tests).
 
 - [ ] **Step 5: Full suite + typecheck**
 
-Run: `uv run basedpyright && uv run pytest -q` Expected: 0 type errors; all tests pass.
+Run: `uv run basedpyright && uv run ruff check src tests && uv run pytest -q` Expected: 0 type errors; 0 lint errors; all tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1207,12 +1261,12 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ## Self-review (completed during planning)
 
-- **Spec coverage:** two-plane model → Task 8; registry + multi-version bundle → Task 1; schema/version precedence + custom-schema bypass + both-set error → Task 3; FM→ADR compatibility → Task 4; `python_tooling.version` metadata-only → Tasks 4-5; frozen ADR default → Task 4 (`config.adr_version or registry.adr_default`); legacy `1.0` back-compat → Task 5; version grammar → Task 8; README banners → Task 9; adopt docs → Task 10; CHANGELOG → Task 11; wheel inclusion → Task 6; `standards_version` retained → untouched by design (no task removes it). All spec deliverables map to a task.
+- **Spec coverage:** two-plane model → Task 8; registry + multi-version bundle → Task 1; schema/version precedence + custom-schema bypass + both-set error → Task 3; FM→ADR compatibility (pure `frontmatter_adr_incompatibility` helper, gated after resolution) → Task 4; `python_tooling.version` metadata-only → Tasks 4-5; frozen ADR default → Task 4 (`config.adr_version or registry.adr_default`); legacy `1.0` back-compat → Task 5; version grammar → Task 8; README banners → Task 9; adopt docs → Task 10; CHANGELOG → Task 11; wheel inclusion → Task 6; `standards_version` retained → untouched by design (no task removes it). All spec deliverables map to a task.
 - **Placeholder scan:** every code step shows complete code; no "add validation"/"TBD"/"similar to" placeholders.
-- **Type/name consistency:** `Registry`, `RegistryError`, `load_registry`, `frontmatter_schema_name`, `adr_supported_frontmatter`, `is_known_python_tooling`, `resolve_effective_schema`, `_schema_value_is_path`, and the `ProjectConfig` fields `frontmatter_version`/`adr_version`/`python_tooling_version` are used identically across Tasks 1-7.
+- **Type/name consistency:** `Registry`, `RegistryError`, `load_registry`, `frontmatter_schema_name`, `adr_supported_frontmatter`, `is_known_python_tooling`, `resolve_effective_schema`, `frontmatter_adr_incompatibility`, `_schema_value_is_path`, and the `ProjectConfig` fields `frontmatter_version`/`adr_version`/`python_tooling_version` are used identically across Tasks 1-7.
 
 ## Notes / risks
 
 - **Definition order (Task 3):** `resolve_effective_schema` references `ProjectConfig` (defined lower). Under `from __future__ import annotations` the annotation is lazy, but if basedpyright's strict mode flags use-before-def, move the function to just below the `ProjectConfig` class. Step 5 of Task 3 catches this.
-- **Compat gate ordering (Task 4):** the gate runs before schema load, so an incompatible combo reports the actionable FM→ADR message rather than an unrelated "unknown frontmatter version" from schema resolution. The test `test_main_incompatible_fm_adr_combo_exits_2` pins this ordering.
+- **Resolution-before-compat ordering (Task 4):** schema resolution runs first, so a configured `frontmatter.version` that is not bundled reports "unknown frontmatter version" rather than a misleading compatibility error. The compatibility check is a pure function (`frontmatter_adr_incompatibility`) unit-tested with a constructed registry that bundles a known incompatible `2.0` pair — so the gate is proven without depending on an unbundled version. `test_main_unknown_frontmatter_version_exits_2` pins the ordering; `test_compat_gate_flags_known_incompatible_pair` pins the gate.
 - **Coverage:** new branches in `registry.py` (malformed-registry paths) are covered by Task 1 tests; if `coverage report` flags an uncovered defensive branch, add a targeted malformed-`registry.json` test rather than lowering `fail_under`.
