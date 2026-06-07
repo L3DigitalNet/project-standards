@@ -30,9 +30,9 @@ license: null
 
 ## Purpose
 
-This repository ships **several components under one version number**: three standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), and [Python Tooling SSOT](../standards/python-tooling/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all of them together.
+This repository ships **several components under one version number**: four standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), and [Markdown Tooling](../standards/markdown-tooling/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-The two Markdown standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling standard is **copy-adopted** — a consumer copies its scaffolds, so it is never inherited automatically and a change to it cannot newly-fail a consumer on its own. All three still ship under the same release tag.
+The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling and Markdown Tooling standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All four still ship under the same release tag.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -58,6 +58,7 @@ Each standard carries its own `major.minor` contract version, selected per stand
 | Markdown Frontmatter | `schema_version` (`1.1`) | `markdown.frontmatter.version` (optional; unset = default) | yes — JSON schema |
 | ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
 | Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
+| Markdown Tooling | `1.0` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
 
 **Adding a bundled contract version is a MINOR tool release; removing one is MAJOR** (a consumer pinned to it would newly fail). Within a single standard's line, the previously-passing rule applies: an additive field/value is MINOR, a stricter rule or removed enum value is MAJOR.
 
@@ -67,10 +68,11 @@ ADR is a profile over the Frontmatter schema, so each ADR contract version decla
 
 ## Component-level version markers
 
-The single release version is the only number a consumer pins. Two **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — neither is itself a release number:
+The single release version is the only number a consumer pins. Three **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — none is itself a release number:
 
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling contract version** — the `1.0` label in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — is a copy-adopted label: not machine-enforced and not a release version.
+- The **Markdown Tooling contract version** — the `1.0` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
 
 The **ADR standard** now carries its own ADR contract version (`1.0`) for its body rules and Frontmatter-compatibility; for document _metadata_ it remains a profile over the frontmatter schema, so its docs still declare `schema_version` and its opt-in MADR section check lives in the validator. Each standard's `major.minor` **contract version** (see [Per-standard contract versions](#per-standard-contract-versions)) is distinct from the single **tool release version** on the git tag. There are still no per-standard _release tags_ — every standard ships together under the one repository tag, and a contract version is selected in config, not pinned separately.
 
@@ -83,10 +85,10 @@ Classify each release by the highest-severity change it contains.
 | **Frontmatter / ADR standard + schema** | New _required_ field; a rule made stricter (tighter enum or pattern); an enum value **removed**; a field removed or renamed | A new _optional_ field; an enum value **added**; a new template, example, or extension namespace | Wording or typo fix in non-normative prose |
 | **Validator CLI** | Any change that makes a previously-passing document fail; a flag or command removed or renamed; a default changed so pass/fail differs; a config key removed or renamed; the minimum Python raised | A new opt-in flag or command; a new config option with a backward-compatible default; new output that does not change any pass/fail result | A crash or message-text fix with **no** outcome change; an internal refactor; a dependency bump with no behavior change |
 | **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
-| **Python Tooling standard** (copy-adopted) | Raising the required Python or a tool floor; removing or renaming a scaffold or the gate command; a default change that makes the verification gate newly fail | A new optional scaffold or recommended tool with a backward-compatible default; a new opt-in step | An editorial revision of the standard doc; a refreshed tool pin with no behavior change |
+| **Python / Markdown Tooling standards** (copy-adopted) | Raising the required Python or a tool floor; removing or renaming a scaffold or the gate command; a default change that makes the verification gate newly fail | A new optional scaffold or recommended tool with a backward-compatible default; a new opt-in step | An editorial revision of the standard doc; a refreshed tool pin with no behavior change |
 | **Bundled contract set** | A bundled contract version **removed** (a consumer pinned to it newly fails) | A bundled contract version **added** (selectable; nothing previously-passing changes) | — |
 
-Because the Python Tooling standard is **copy-adopted**, a consumer sees its changes only when it deliberately re-syncs the scaffolds — they are never inherited automatically on `@vN`. That row classifies the impact on a consumer that re-syncs; the previously-passing rule below applies to the validator-enforced surface.
+Because the Python and Markdown Tooling standards are **copy-adopted**, a consumer sees their changes only when it deliberately re-syncs the scaffolds — they are never inherited automatically on `@vN`. That row classifies the impact on a consumer that re-syncs; the previously-passing rule below applies to the validator-enforced surface.
 
 ## The previously-passing rule
 
