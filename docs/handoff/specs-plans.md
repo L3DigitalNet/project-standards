@@ -5,7 +5,7 @@
 | Item | Path | Status |
 | --- | --- | --- |
 | Markdown Tooling Standard design | `docs/superpowers/specs/2026-06-06-markdown-tooling-standard-design.md` | approved (audit r3) |
-| Markdown Tooling Standard plan | `docs/superpowers/plans/2026-06-07-markdown-tooling-standard.md` | in progress |
+| Markdown Tooling Standard plan | `docs/superpowers/plans/2026-06-07-markdown-tooling-standard.md` | implemented (on testing) |
 | Per-standard versioning design | `docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md` | approved (audit r2) |
 | Per-standard versioning plan | `docs/superpowers/plans/2026-06-06-per-standard-versioning.md` | implemented (on `testing`) |
 | Standards bundle restructure design | `docs/superpowers/specs/2026-06-06-standards-bundle-restructure-design.md` | approved |
