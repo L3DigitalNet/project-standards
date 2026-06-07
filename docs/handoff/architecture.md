@@ -1,12 +1,12 @@
 # Architecture
 
-**Last updated:** 2026-06-06
+**Last updated:** 2026-06-07
 
 ## Components
 
 ```text
 project-standards
-├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling) + README index
+├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling) + README index
 ├── meta/               -> docs about this repo (versioning); not a governed standard
 ├── src/project_standards/ + tests/ -> the Python validator (validate_frontmatter.py) with bundled schema, and its pytest suite
 ├── .github/workflows/  -> reusable workflows consumers call (validate, lint-markdown, format)
