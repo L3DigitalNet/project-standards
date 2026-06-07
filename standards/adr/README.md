@@ -6,7 +6,7 @@ description: 'How to write Architecture Decision Records using the MADR format w
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-05'
+updated: '2026-06-07'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -31,13 +31,26 @@ license: null
 
 # Architecture Decision Record (ADR) Standard
 
-**Contract version:** `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
+Status: Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions)) Owner: Project standards / repository template Last updated: 2026-06-07 Last source check: 2026-06-07 Scope: Architecture Decision Records in repositories governed by the Markdown Frontmatter Standard.
+
+---
+
+## Evidence convention
+
+This document separates **source-backed facts** from **project policy decisions**.
+
+- Source-backed facts cite source IDs such as `[S01]`.
+- Every source ID is listed in the [Source register](#source-register), with `Last checked: 2026-06-07`.
+- Policy decisions are explicit local choices for this project ecosystem — informed by sources, but not mandated by them. The ADR-specific ones: the `id` embeds the `repo-name` while the filename omits it; ADRs live under `docs/decisions/`; and the MADR body-section check is opt-in and off by default.
+- MADR is the single external authority for body structure and status vocabulary. Re-verify it against [S01] whenever this standard is reviewed — the upstream spec has shifted before (the 3.x→4.0 rename, and the four-→three required-section change).
+
+---
 
 ## Purpose
 
 An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
 
-This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) as the body format, layered on top of the repository's [Markdown Frontmatter Standard](../markdown-frontmatter/README.md) for metadata. General ADR background is at <https://adr.github.io/>.
+This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) [S01] as the body format, layered on top of the repository's [Markdown Frontmatter Standard](../markdown-frontmatter/README.md) for metadata. General ADR background is at <https://adr.github.io/> [S02].
 
 ## When to write an ADR
 
@@ -88,7 +101,7 @@ project:
 
 ### MADR status → canonical `status`
 
-MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MADR-native word may also be stated in prose at the top of the ADR body for readers familiar with MADR.
+MADR's decision-state vocabulary [S01] maps onto the canonical lifecycle enum. The MADR-native word may also be stated in prose at the top of the ADR body for readers familiar with MADR.
 
 | MADR status  | Canonical `status` | Meaning                                       |
 | ------------ | ------------------ | --------------------------------------------- |
@@ -101,7 +114,7 @@ MADR's decision-state vocabulary maps onto the canonical lifecycle enum. The MAD
 
 ## Body structure (MADR)
 
-**Required sections** — the three MADR 4.0 marks required, each a level-2 (`##`) heading:
+**Required sections** — the three MADR 4.0 marks required [S01], each a level-2 (`##`) heading:
 
 1. **Context and Problem Statement** — the situation, forces, and the question being decided.
 2. **Considered Options** — the meaningful options on the table.
@@ -150,3 +163,25 @@ When a new ADR replaces an old one, update **both** documents in the same change
 - [MADR — Markdown Architectural Decision Records](https://adr.github.io/madr/)
 - [Architectural Decision Records](https://adr.github.io/)
 - [Markdown Frontmatter Standard](../markdown-frontmatter/README.md)
+
+## Source coverage map
+
+| Section                                        | Source IDs used |
+| ---------------------------------------------- | --------------- |
+| Purpose / MADR adoption                        | [S01], [S02]    |
+| Frontmatter for ADRs (field + status mappings) | [S01]           |
+| Body structure (required/optional sections)    | [S01]           |
+
+## Source register
+
+| ID | Source | URL | What it supports | Last checked |
+| --- | --- | --- | --- | --- |
+| S01 | MADR 4.0 — Markdown Architectural Decision Records | [https://adr.github.io/madr/](https://adr.github.io/madr/) | Acronym expansion; required vs optional body sections; decision-status vocabulary; MADR→canonical field mapping | 2026-06-07 |
+| S02 | Architectural Decision Records (ADR) | [https://adr.github.io/](https://adr.github.io/) | General ADR background and rationale | 2026-06-07 |
+
+MADR's latest release is **4.0.0** (2024-09-17), confirmed current on 2026-06-07.
+
+<!-- Citation reference-link definitions: each [Sxx] marker resolves to the Source register. GFM cannot anchor individual table rows, so all citations jump to the section. -->
+
+[S01]: #source-register
+[S02]: #source-register

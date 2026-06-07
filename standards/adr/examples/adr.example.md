@@ -6,8 +6,8 @@ description: 'Records the decision to standardise on PostgreSQL 16 as the primar
 doc_type: 'adr'
 status: 'active'
 created: '2026-01-15'
-updated: '2026-05-30'
-reviewed: '2026-05-30'
+updated: '2026-06-06'
+reviewed: '2026-06-06'
 owner: 'platform-team'
 consumer: 'user'
 tags:
