@@ -205,15 +205,18 @@ Layout rules:
 - Put tests under `tests/`.
 - Use `tests/unit/` and `tests/integration/` when the distinction is useful.
 - Include `py.typed` for typed packages that are intended to expose typed interfaces to downstream users.
-- Do not place importable application modules in the repository root.
-- Do not use ad hoc script sprawl in the root directory.
-- Project automation scripts belong in `scripts/`.
+- Do not place importable **product** modules in the repository root — the package lives under `src/<package_name>/`.
+- The `src/` requirement governs the **importable package/product only**. Python that is _not_ part of the package — repo tooling (e.g. `lint.py`, `format.py`, `scripts/check.py`), automation under `scripts/`, archived or finished-but-staged scripts, and non-product scripts kept elsewhere in a repo (e.g. a configs repo's `global/`) — **MAY live outside `src/`**.
+- Such out-of-`src/` Python is still part of the repo: it is linted and formatted (§11) and SHOULD carry at least basic typing, but it need not be an importable package module and is not held to the strict-typing bar required of `src/` product code (§8).
+- Avoid _ad hoc importable-module_ sprawl in the root; named repo-tooling scripts are fine, but product code belongs under `src/`.
+- Project automation scripts belong in `scripts/` (or another clearly non-product location).
 - `AGENTS.md` and `CLAUDE.md` may be full instruction files or thin pointer files.
 - A pointer file is acceptable when it resolves to an approved session memory, handoff, or project-instructions system.
 - Pointer files must make the canonical instruction source discoverable from a fresh CLI or VS Code agent session.
 - Alternate instruction systems must preserve the verification gate, fix pass, dependency rules, typing rules, testing rules, and VS Code rules defined by this standard.
+- Directories governed by **external programs** — `.claude/`, `.agents/`, `.codex/`, `.vscode/`, `.github/`, `.venv/`, `.continue/`, and the like — are owned by those tools and are **not linted, formatted, or type-checked** by this standard; exclude them from the toolchain (§6, §11).
 
-Policy decision: the layout is optimized for import correctness and agent navigability, not minimum file count. Agent instruction files are treated as discoverable entry points, not necessarily as the only storage location for all instructions.
+Policy decision: the layout is optimized for import correctness and agent navigability, not minimum file count. Agent instruction files are treated as discoverable entry points, not necessarily as the only storage location for all instructions. The stack itself is mandatory for every repo that follows this standard; what is flexible is the **scope** of files the linter, formatter, and type checker run over — never whether the stack is present.
 
 ---
 
@@ -287,6 +290,9 @@ build-backend = "uv_build"
 target-version = "py313"
 line-length = 100
 src = ["src", "tests"]
+# Directories owned by external programs are never linted/formatted by this standard.
+# Extend with vendored/generated/archived paths a project opts out of.
+extend-exclude = [".claude", ".agents", ".codex", ".continue"]
 
 [tool.ruff.lint]
 select = [
@@ -398,6 +404,8 @@ Agent final responses must mention any dependency added or removed.
 ## 8. Type policy
 
 Strict typing is mandatory for new `src/` code.
+
+Scope: strict typing applies to `src/` product code and `tests/` (the default `[tool.basedpyright].include`). Repo tooling and automation scripts that live outside `src/` are linted and formatted (§11) and SHOULD carry at least basic typing, but they are not held to the strict-`src/` bar by default; a project MAY add specific paths to `[tool.basedpyright].include` to type-check them too.
 
 Source basis:
 
@@ -555,6 +563,15 @@ Source basis:
 - Ruff's VS Code extension provides Python code formatting features. [S26]
 
 Agents must not add Black, isort, Flake8, or Pylint unless the project standard is explicitly changed.
+
+### Scope
+
+Ruff lints and formats **all first-party Python in the repository**, including tooling and automation scripts outside `src/` — not just the package. Two categories are out of scope:
+
+- **External-program directories** — `.claude/`, `.agents/`, `.codex/`, `.vscode/`, `.github/`, `.venv/`, `.continue/`, and similar. They are governed by the tools that own them and must not be linted, formatted, or type-checked.
+- **Vendored, generated, or archived code** a project deliberately opts out of, via `[tool.ruff].extend-exclude` (and, for type checking, `[tool.basedpyright].exclude`).
+
+The **stack is non-negotiable**: every project runs the full toolchain (uv, Ruff, BasedPyright, pytest + coverage, pip-audit). What a project may tune is the **scope** those tools cover (`extend-exclude`, `[tool.basedpyright].include`/`exclude`) — never the presence of a tool.
 
 Default commands:
 
