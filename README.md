@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the Markdown standards through a small config file plus a reusable CI workflow, the Python tooling standard by copying its scaffolds — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, and the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds an optional reusable lint workflow) — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -18,6 +18,8 @@ project-standards/
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
 ├── tests/                     # validator tests
+├── scripts/                   # optional helper — check.py runs the verification gate
+├── docs/                      # agent session-handoff state + specs/plans (not consumer-facing)
 └── .github/                   # reusable CI workflows
 ```
 
@@ -45,7 +47,7 @@ Architecture Decision Records capture significant, hard-to-reverse decisions, us
 - **Templates:** [`templates/adr.md`](standards/adr/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
 - **Example:** [`examples/adr.example.md`](standards/adr/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/adopt.md).
 
-ADRs use `doc_type: adr` with kebab IDs like `adr-0001-short-title`. ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
+ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
 ### Python Tooling SSOT Standard
 
@@ -86,6 +88,8 @@ No config or workflow — copy the in-doc scaffolds and run the verification gat
 ### Markdown Tooling
 
 Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v2` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
+
+> **Availability:** `lint-markdown.yml` is new in the upcoming **2.0.0** release — it is not present at `v1`, so its `@v2` pin resolves only once that tag is published. The Frontmatter/ADR `validate-markdown-frontmatter.yml@v1` workflow is available today; after 2.0.0 ships, move both pins to `@v2`.
 
 ### Pin to a release tag, not `main`
 
