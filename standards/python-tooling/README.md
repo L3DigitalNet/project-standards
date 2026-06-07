@@ -23,7 +23,7 @@ related: []
 
 # Python Tooling SSOT Standard
 
-Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-06 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
+Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-07 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
 
 ---
 
@@ -95,7 +95,7 @@ Policy decision: code is not complete until the verification gate passes, unless
 
 | Layer | Standard | Source-backed basis | Policy |
 | --- | --- | --- | --- |
-| Python version | Python 3.13 baseline | Python versions receive maintenance/stable, then security, then end-of-life phases. [S03] | Use `requires-python = ">=3.13"` unless project constraints require otherwise. |
+| Python version | Python 3.14 baseline | Python versions receive maintenance/stable, then security, then end-of-life phases. [S03] | Use `requires-python = ">=3.14"` unless project constraints require otherwise. |
 | Project manager | `uv` | uv projects define dependencies in `pyproject.toml`; uv creates/manages `.python-version`, `.venv`, and `uv.lock` in project workflows. [S04] | uv owns dependency resolution, lockfile, virtual environment, and command execution. |
 | Project config | `pyproject.toml` | PyPA describes `pyproject.toml` as configuration for packaging tools and other tools such as linters and type checkers. [S01] | Keep project/tool config centralized in `pyproject.toml` unless a tool requires otherwise. |
 | Lockfile | `uv.lock` | uv creates `uv.lock` for projects and uses it during project commands. [S04] | Commit `uv.lock` for application/internal projects. |
@@ -225,13 +225,13 @@ Policy decision: the layout is optimized for import correctness and agent naviga
 Default `pyproject.toml`:
 
 ```toml
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 ```
 
 Default `.python-version`:
 
 ```text
-3.13
+3.14
 ```
 
 Source basis:
@@ -248,7 +248,7 @@ Rules:
 - Raise the baseline only after dependency compatibility is verified.
 - For libraries intended for external reuse, supported Python versions may be broader, but the CI matrix must prove support.
 
-Policy decision: Python 3.13 is the default baseline for this standard as of 2026-06-06 because it is modern but less aggressive than making 3.14 the universal baseline.
+Policy decision: Python 3.14 is the default baseline for this standard as of 2026-06-07 — the current stable CPython release. Raising the baseline is a MAJOR-level change for copy-adopting consumers (see [`meta/versioning.md`](../../meta/versioning.md)); projects with dependency or platform constraints may pin a lower `requires-python` per the rules above until their dependencies support 3.14.
 
 ---
 
@@ -269,7 +269,7 @@ name = "example-project"
 version = "0.1.0"
 description = "Short project description."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = []
 
 [dependency-groups]
@@ -287,7 +287,7 @@ requires = ["uv_build>=0.11,<0.12"]
 build-backend = "uv_build"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 src = ["src", "tests"]
 # Directories owned by external programs are never linted/formatted by this standard.
@@ -325,7 +325,7 @@ docstring-code-format = true
 [tool.basedpyright]
 include = ["src", "tests"]
 typeCheckingMode = "strict"
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 pythonPlatform = "All"
 failOnWarnings = true
 
@@ -895,7 +895,11 @@ jobs:
 				with:
 					python-version-file: ".python-version"
 
-			- uses: astral-sh/setup-uv@v8
+			# SHA-pin setup-uv: as of v8.0.0 it publishes NO moving major/minor tag
+			# (no `@v8`/`@v8.0`), so a tag pin no longer resolves. Pin a full-version
+			# commit SHA with the version in a trailing comment (GitHub/Astral hardening
+			# guidance) and let Dependabot bump it. Re-resolve the SHA when adopting.
+			- uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 				with:
 					# Pin this to the current reviewed uv version when applying the template.
 					# Example: version: "0.x.y"
@@ -1459,7 +1463,7 @@ Source basis: these tools are active projects whose documented behavior can chan
 | S17 | VS Code user/workspace settings | [https://code.visualstudio.com/docs/configure/settings](https://code.visualstudio.com/docs/configure/settings) | Workspace settings in `.vscode/settings.json` and project-specific behavior | 2026-06-06 |
 | S18 | VS Code tasks | [https://code.visualstudio.com/docs/debugtest/tasks](https://code.visualstudio.com/docs/debugtest/tasks) | `.vscode/tasks.json` and running external tools from VS Code | 2026-06-06 |
 | S19 | EditorConfig | [https://editorconfig.org/](https://editorconfig.org/) | Cross-editor coding style file and supported properties | 2026-06-06 |
-| S20 | uv: GitHub Actions integration | [https://docs.astral.sh/uv/guides/integration/github/](https://docs.astral.sh/uv/guides/integration/github/) | `astral-sh/setup-uv`, `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-06-06 |
+| S20 | uv: GitHub Actions integration | [https://docs.astral.sh/uv/guides/integration/github/](https://docs.astral.sh/uv/guides/integration/github/) | `astral-sh/setup-uv` (SHA-pinned; no moving major/minor tag since v8.0.0), `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-06-07 |
 | S21 | Python docs: `typing` | [https://docs.python.org/3/library/typing.html](https://docs.python.org/3/library/typing.html) | Type annotations, advanced type-hinting vocabulary, type checkers/IDEs/linters | 2026-06-06 |
 | S22 | Python docs: `dataclasses` | [https://docs.python.org/3/library/dataclasses.html](https://docs.python.org/3/library/dataclasses.html) | `@dataclass`, `frozen=True`, frozen instance behavior | 2026-06-06 |
 | S23 | Pydantic docs: models | [https://pydantic.dev/docs/validation/latest/concepts/models/](https://pydantic.dev/docs/validation/latest/concepts/models/) | Pydantic model validation and output type/constraint guarantee | 2026-06-06 |
@@ -1530,6 +1534,16 @@ Additional update for version 1.6 on 2026-06-06:
 - Added an exception that a pre-existing global pytest may remain when it is load-bearing for existing non-uv workflows.
 - Added a scope boundary that the standard governs the dev-tooling stack, not unrelated Python application/runtime libraries installed on a workstation.
 - Generalized the VS Code language-server rule to editor and CLI-agent integrations, including a Claude Code LSP-only BasedPyright plugin pattern.
+
+Baseline update on 2026-06-07:
+
+- Raised the default Python baseline from 3.13 to 3.14 across the scaffolds: `requires-python = ">=3.14"`, `.python-version` `3.14`, Ruff `target-version = "py314"`, and BasedPyright `pythonVersion = "3.14"`. 3.14 is the current stable CPython release.
+- Per [`meta/versioning.md`](../../meta/versioning.md), raising the required Python is a MAJOR-level change for a copy-adopting consumer that re-syncs; it rides the already-locked `2.0.0` release. The `python_tooling` contract-version label stays `1.0` — it is metadata-only and unenforced, so the validator behaves identically.
+
+Action-pin fix on 2026-06-07:
+
+- §15 `check.yml` template: replaced the unresolvable `astral-sh/setup-uv@v8` with a full-version commit SHA + trailing version comment (`@fac544c…39 # v8.2.0`). As of setup-uv v8.0.0 (March 2026) Astral publishes **no** moving major/minor tag, so `@v8`/`@v8.0` 404 — confirmed against the GitHub refs API on 2026-06-07. A copied template previously red-failed at the install step before any gate ran.
+- Review reminder: when this standard is re-checked, verify every embedded action ref still resolves (a moving tag can be withdrawn, as setup-uv's was). The [S20] uv GitHub Actions guide already shows the SHA-pinned form, so re-reading the cited source catches this class of drift.
 
 <!-- Citation reference-link definitions: every [Sxx]/[N01] marker in the body and in the source coverage map resolves to the Source register (section 24). GFM cannot anchor individual table rows, so all citations jump to the section. -->
 

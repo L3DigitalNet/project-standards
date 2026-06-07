@@ -1,8 +1,10 @@
 version: 2
 
-# Keeps the major-tag action pins current (actions/checkout, astral-sh/setup-uv,
-# DavidAnson/markdownlint-cli2-action). Added with the markdown-lint workflow so
-# `@v23` and friends get PRs when upstream tags move (DEC-7).
+# Keeps action pins current: major-tag pins (actions/checkout, actions/setup-python,
+# DavidAnson/markdownlint-cli2-action) and the SHA pin for astral-sh/setup-uv, which
+# dropped moving major/minor tags at v8.0.0 (Dependabot bumps the SHA + trailing
+# version comment). Added with the markdown-lint workflow so `@v23` and friends get
+# PRs when upstream tags move (DEC-7).
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"

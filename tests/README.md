@@ -10,7 +10,7 @@ This document defines how `project-standards` is tested. It is the human-facing 
 | --- | --- |
 | **Protect the contract** | The schema and the shipped examples (`standards/*/examples/`) must always validate. A change that breaks them must break a test first. |
 | **Fast & hermetic** | No network, no global state, no real home directory. Everything runs against `tmp_path`. A full run is sub-second. |
-| **Deterministic** | Same input → same result on every supported Python (3.13+). Version-dependent behaviour (e.g. `glob` `**` semantics) is pinned by regression tests. |
+| **Deterministic** | Same input → same result on every supported Python (3.14+). Version-dependent behaviour (e.g. `glob` `**` semantics) is pinned by regression tests. |
 | **Behaviour over implementation** | Prefer asserting observable outputs (return values, exit codes, error strings) so refactors don't churn the suite. Reach into private helpers only when a unit is too awkward to reach through the public surface. |
 
 ## The three test layers
@@ -46,7 +46,7 @@ Templates are intentionally **excluded** from dogfood validation — they carry 
 
 ### 4. Regression — every fixed bug
 
-When a bug is fixed, add a test that fails on the old behaviour and cite the cause in the docstring. These never get deleted. Existing example: `test_exclude_dir_glob_matches_nested_files` pins the `dir/**` exclusion bug where `Path.glob`'s `**` matched files on 3.13+ but only directories on ≤3.12 (a historical divergence — the repo now supports 3.13+ only, but the regression test stays as a guard).
+When a bug is fixed, add a test that fails on the old behaviour and cite the cause in the docstring. These never get deleted. Existing example: `test_exclude_dir_glob_matches_nested_files` pins the `dir/**` exclusion bug where `Path.glob`'s `**` matched files on 3.13+ but only directories on ≤3.12 (a historical divergence — the repo now supports 3.14+ only, but the regression test stays as a guard).
 
 ## Layout & naming conventions
 
@@ -121,7 +121,7 @@ When you add `src/project_standards/<newtool>.py`:
 
 There are two enforcement gates with deliberately separate jobs:
 
-- **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification gate — `ruff format --check`, `ruff check`, `basedpyright`, `coverage run -m pytest`, `coverage report`, `pip-audit` — on push and PR, on Python 3.13. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
+- **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification gate — `ruff format --check`, `ruff check`, `basedpyright`, `coverage run -m pytest`, `coverage report`, `pip-audit` — on push and PR, on Python 3.14. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
 - **The runtime gate** ([.github/workflows/validate-markdown-frontmatter.yml](../.github/workflows/validate-markdown-frontmatter.yml)) is the _reusable_ workflow consumers call. It runs the validator against managed Markdown — here and in consuming repos. It does **not** run pytest, and must not: downstream repos call it via `workflow_call` and should never inherit this repo's test toolchain.
 
 Run the gate locally before every commit that touches `src/project_standards/` or `tests/` — CI is the backstop, not a substitute for the local check:
