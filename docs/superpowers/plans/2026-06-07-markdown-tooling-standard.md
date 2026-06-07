@@ -1094,18 +1094,18 @@ Keep the file ≤ 2048 bytes — if it would exceed, trim the oldest at-a-glance
 
 - [ ] **Step 4: Refresh the agent-facing repo-purpose lines**
 
-`AGENTS.md` and `CLAUDE.md` are loaded early in every session and currently undercount the standards. Edit prose only — these files **never** carry frontmatter.
+`AGENTS.md` and `CLAUDE.md` are loaded early in every session and currently undercount **and** mis-describe the standards (both say "enforces the Markdown ones with a Python validator" — but Markdown Tooling is **not** validator-enforced: its body rules are markdownlint/Prettier and only its metadata label is validator-recognized). Edit prose only — these files **never** carry frontmatter. Distinguish the three enforcement mechanisms: validator-enforced (Frontmatter, ADR), copy-adopt + optional `lint-markdown.yml` (Markdown Tooling), copy-adopt scaffolds (Python Tooling).
 
-In `AGENTS.md` (≈ line 11), change the clause `It _defines_ three standards (Markdown Frontmatter, ADR, Python Tooling SSOT)` to:
+In `AGENTS.md` (≈ line 11), replace the entire `This repository is the **single source of truth** … See [README.md](README.md) for the full surface.` paragraph with:
 
 ```text
-It _defines_ four standards (Markdown Frontmatter, ADR, Python Tooling SSOT, Markdown Tooling)
+This repository is the **single source of truth** for reusable standards shared across projects. It _defines_ four standards: **Markdown Frontmatter** and **ADR** (enforced by a Python validator that downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig scaffolds plus an optional reusable `lint-markdown.yml`), and **Python Tooling SSOT** (copy-adopt scaffolds). Other repositories _consume_ them by config + workflow (the validator-enforced ones) or by copying scaffolds (the copy-adopt ones), rather than vendoring copies. See [README.md](README.md) for the full surface.
 ```
 
-In `CLAUDE.md` (≈ line 5), the purpose line is stale (it reads "the Markdown Frontmatter, ADR, and versioning standards"). Replace that whole `**Purpose:**` line with:
+In `CLAUDE.md` (≈ line 5), the purpose line is stale (it reads "the Markdown Frontmatter, ADR, and versioning standards … enforces them with a Python validator"). Replace the whole `**Purpose:**` line with:
 
 ```text
-**Purpose:** single source of truth for reusable standards — defines the Markdown Frontmatter, ADR, Python Tooling SSOT, and Markdown Tooling standards and enforces the Markdown ones with a Python validator that downstream repos consume via a reusable CI workflow.
+**Purpose:** single source of truth for reusable standards — defines four: **Markdown Frontmatter** and **ADR** (enforced by a Python validator downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`), and **Python Tooling SSOT** (copy-adopt scaffolds).
 ```
 
 - [ ] **Step 5: Lint + format**
@@ -1195,7 +1195,7 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 
 **Type/name consistency:** `markdown_tooling_default` / `markdown_tooling_versions` / `is_known_markdown_tooling` (registry.py) and `markdown_tooling_version` (ProjectConfig) are used identically across Tasks 1–2 and the tests; the registry key `markdown_tooling`, the config key `markdown_tooling.version`, and the contract version `1.0` match the spec and `registry.json`. The two direct `Registry(...)` test constructions are updated in Task 1, the same task that makes the params required.
 
-**Plan-audit rounds 1–2 (2026-06-07) + dogfood directive — folded in:**
+**Plan-audit rounds 1–3 (2026-06-07) + dogfood directive — folded in:**
 
 - CR-001 (registry blast radius): Task 1 Step 6 now updates the parametrized malformed-registry fixtures and adds a `markdown_tooling.versions` case, so Task 1's own pytest gate stays green.
 - CR-002 (stale `@v1`): Task 10 Step 2 fixes the existing CHANGELOG Stack B bullet; Task 12's stale-pin check now fails on a match and includes `CHANGELOG.md`.
@@ -1205,3 +1205,4 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 - Dogfood directive: Task 3 now selects all four standards' contract versions in `.project-standards.yml` (adding the previously-unselected `python_tooling` and the new `markdown_tooling`); spec §4/§5/§7/§8 updated to match.
 - CR-NEW-001 (round 2): Task 12's acceptance check no longer uses a bare `/tmp/ok.yml` for the pass case (it would fall back to scanning the whole repo via `collect_paths`); the known-version pass is proven by the dogfooded real config, and the unknown-version exit-2 case keeps its temp config (the guard returns before collection).
 - CR-NEW-002 (round 2): Task 11 Step 4 refreshes the stale repo-purpose lines in `AGENTS.md` ("three standards") and `CLAUDE.md` (which also misnamed the set), prose-only and frontmatter-free.
+- CR-NEW-002 precision (round 3): Task 11 Step 4's replacement wording now distinguishes the three enforcement mechanisms — validator-enforced (Frontmatter, ADR) vs copy-adopt + optional `lint-markdown.yml` (Markdown Tooling) vs copy-adopt scaffolds (Python Tooling) — instead of lumping all "Markdown ones" under the Python validator; it replaces the full stale sentence in both files, not just the count.
