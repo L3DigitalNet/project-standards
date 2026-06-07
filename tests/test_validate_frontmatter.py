@@ -409,6 +409,47 @@ def test_find_bundled_schema_missing_returns_canonical_path() -> None:
 
 
 # ===========================================================================
+# Unit — registry (bundled contract-version registry; see registry.py)
+# ===========================================================================
+
+from project_standards.registry import RegistryError, load_registry  # noqa: E402
+
+
+def test_load_registry_real_file() -> None:
+    reg = load_registry()
+    assert reg.frontmatter_default == "1.1"
+    assert reg.frontmatter_schema_name("1.1") == "markdown-frontmatter"
+    assert reg.adr_default == "1.0"
+    assert reg.adr_supported_frontmatter("1.0") == ["1.1"]
+    assert reg.is_known_python_tooling("1.0") is True
+    assert reg.is_known_python_tooling("9.9") is False
+
+
+def test_registry_unknown_frontmatter_version_raises() -> None:
+    reg = load_registry()
+    with pytest.raises(RegistryError, match="unknown frontmatter version"):
+        reg.frontmatter_schema_name("2.0")
+
+
+def test_registry_unknown_adr_version_raises() -> None:
+    reg = load_registry()
+    with pytest.raises(RegistryError, match="unknown adr version"):
+        reg.adr_supported_frontmatter("2.0")
+
+
+def test_load_registry_missing_file_raises(tmp_path: Path) -> None:
+    with pytest.raises(RegistryError, match="cannot load registry"):
+        load_registry(tmp_path / "nope.json")
+
+
+def test_load_registry_non_object_raises(tmp_path: Path) -> None:
+    bad = tmp_path / "registry.json"
+    bad.write_text("[]", encoding="utf-8")
+    with pytest.raises(RegistryError, match="not a JSON object"):
+        load_registry(bad)
+
+
+# ===========================================================================
 # Unit — load_config
 #
 # Reads the nested markdown.frontmatter section. Every branch must degrade to safe
