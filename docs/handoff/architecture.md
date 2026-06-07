@@ -22,4 +22,4 @@ project-standards
 ## Standing backlog
 
 - **Pre-commit hooks** — deferred (decided during the 1.3.0 line).
-- **`2.0.0` repo-root-relative link enforcement** — breaking; future major.
+- **Repo-root-relative link enforcement** — breaking; future major (deferred past `2.0.0`, which shipped without it).

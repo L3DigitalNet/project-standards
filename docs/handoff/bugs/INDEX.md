@@ -2,4 +2,6 @@
 
 Generated from frontmatter. Regenerate with `python3 docs/handoff/bugs/_regen_index.py`.
 
-_No bugs recorded._
+| # | Date | Title | Services | Status |
+| --- | --- | --- | --- | --- |
+| 001 | 2026-06-07 | astral-sh/setup-uv@v8 tag withdrawn — broke reusable CI | ci, github-actions | fixed |
