@@ -30,6 +30,7 @@ Modified — code (the validated `markdown_tooling` label):
 Modified — docs/navigation:
 
 - `standards/markdown-frontmatter/README.md` — `related:` entry + in-body cross-link.
+- `standards/markdown-frontmatter/adopt.md` — fix stale `lint-markdown.yml@v1` → `@v2` (two refs).
 - `standards/README.md` — index-table row.
 - `README.md` (root) — Standards section + Consuming section.
 - `meta/versioning.md` — per-standard contract-version row + change-classification row.
@@ -751,7 +752,8 @@ git commit -m "docs(markdown-tooling): add adoption runbook"
 
 **Files:**
 
-- Modify: `standards/markdown-frontmatter/README.md:20-22` (frontmatter `related:`) and the "Versioning and compatibility" prose area.
+- Modify: `standards/markdown-frontmatter/README.md:20-22` (frontmatter `related:`) and the "Files that never carry frontmatter" prose area.
+- Modify: `standards/markdown-frontmatter/adopt.md:132,137` (stale `lint-markdown.yml@v1` → `@v2`).
 
 - [ ] **Step 1: Add the `related:` entry**
 
@@ -780,23 +782,32 @@ Immediately after the "Files that never carry frontmatter" subsection (the parag
 This standard is deliberately tool-neutral about the Markdown _body_. How a document's body and adjacent config files are formatted and linted (Prettier, markdownlint, EditorConfig) is governed by the companion [Markdown Tooling Standard](../markdown-tooling/README.md).
 ```
 
-- [ ] **Step 3: Validate, lint, format**
+- [ ] **Step 3: Fix the stale lint-markdown `@v1` in the Frontmatter adopt guide**
+
+`standards/markdown-frontmatter/adopt.md` is a governed consumer-facing doc that still pins the new lint workflow at the wrong major tag (it first ships in `2.0.0`). Change both occurrences of `lint-markdown.yml@v1` to `lint-markdown.yml@v2`:
+
+- ≈ line 132 — the `uses:` line in the `lint-markdown` job snippet.
+- ≈ line 137 — the prose "your only pin is `lint-markdown.yml@v1`".
+
+Leave every `validate-markdown-frontmatter.yml@v1` reference in this file unchanged — that workflow genuinely shipped in v1.x; only the `lint-markdown.yml` pins are wrong.
+
+- [ ] **Step 4: Validate, lint, format**
 
 Run:
 
 ```bash
 uv run validate-frontmatter --config .project-standards.yml
-npx markdownlint-cli2 "standards/markdown-frontmatter/README.md"
-npx prettier --check "standards/markdown-frontmatter/README.md"
+npx markdownlint-cli2 "standards/markdown-frontmatter/README.md" "standards/markdown-frontmatter/adopt.md"
+npx prettier --check "standards/markdown-frontmatter/README.md" "standards/markdown-frontmatter/adopt.md"
 ```
 
 Expected: all clean (`✓  14 file(s) validated`).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add standards/markdown-frontmatter/README.md
-git commit -m "docs(markdown-frontmatter): link to the Markdown Tooling Standard"
+git add standards/markdown-frontmatter/README.md standards/markdown-frontmatter/adopt.md
+git commit -m "docs(markdown-frontmatter): link to Markdown Tooling Standard; fix stale lint-markdown @v1"
 ```
 
 ---
@@ -1159,8 +1170,10 @@ printf 'markdown_tooling:\n  version: "9.9"\n' > /tmp/bad.yml && uv run validate
 # **/*.md in the repo (collect_paths else-branch), so it cannot isolate the label.
 grep -nE "version:|python_tooling:|markdown_tooling:" .project-standards.yml
 uv run validate-frontmatter --config .project-standards.yml
-# Release pins: FAIL (non-zero) if any stale @v1 lint-markdown ref survives — CHANGELOG included
-if grep -rn "lint-markdown.yml@v1" standards/markdown-tooling/ .github/workflows/lint-markdown.yml README.md CHANGELOG.md; then
+# Release pins: FAIL (non-zero) if any stale @v1 lint-markdown ref survives in governed
+# consumer-facing docs — scans ALL of standards/ (incl. markdown-frontmatter/adopt.md),
+# README, CHANGELOG, and the workflow. (Historical docs/superpowers/** trail is left as-is.)
+if grep -rn "lint-markdown.yml@v1" standards README.md CHANGELOG.md .github/workflows/lint-markdown.yml; then
   echo "FAIL: stale lint-markdown @v1 reference(s) above"; false
 else
   echo "OK: no stale lint-markdown @v1"
@@ -1195,7 +1208,7 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 
 **Type/name consistency:** `markdown_tooling_default` / `markdown_tooling_versions` / `is_known_markdown_tooling` (registry.py) and `markdown_tooling_version` (ProjectConfig) are used identically across Tasks 1–2 and the tests; the registry key `markdown_tooling`, the config key `markdown_tooling.version`, and the contract version `1.0` match the spec and `registry.json`. The two direct `Registry(...)` test constructions are updated in Task 1, the same task that makes the params required.
 
-**Plan-audit rounds 1–3 (2026-06-07) + dogfood directive — folded in:**
+**Plan-audit rounds 1–4 (2026-06-07) + dogfood directive — folded in:**
 
 - CR-001 (registry blast radius): Task 1 Step 6 now updates the parametrized malformed-registry fixtures and adds a `markdown_tooling.versions` case, so Task 1's own pytest gate stays green.
 - CR-002 (stale `@v1`): Task 10 Step 2 fixes the existing CHANGELOG Stack B bullet; Task 12's stale-pin check now fails on a match and includes `CHANGELOG.md`.
@@ -1206,3 +1219,4 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 - CR-NEW-001 (round 2): Task 12's acceptance check no longer uses a bare `/tmp/ok.yml` for the pass case (it would fall back to scanning the whole repo via `collect_paths`); the known-version pass is proven by the dogfooded real config, and the unknown-version exit-2 case keeps its temp config (the guard returns before collection).
 - CR-NEW-002 (round 2): Task 11 Step 4 refreshes the stale repo-purpose lines in `AGENTS.md` ("three standards") and `CLAUDE.md` (which also misnamed the set), prose-only and frontmatter-free.
 - CR-NEW-002 precision (round 3): Task 11 Step 4's replacement wording now distinguishes the three enforcement mechanisms — validator-enforced (Frontmatter, ADR) vs copy-adopt + optional `lint-markdown.yml` (Markdown Tooling) vs copy-adopt scaffolds (Python Tooling) — instead of lumping all "Markdown ones" under the Python validator; it replaces the full stale sentence in both files, not just the count.
+- CR-NEW-003 (round 4): Task 6 Step 3 fixes the two stale `lint-markdown.yml@v1` refs in the governed `standards/markdown-frontmatter/adopt.md` (leaving its correct `validate-markdown-frontmatter.yml@v1` refs), and Task 12's stale-pin sweep is widened from `standards/markdown-tooling/` to all of `standards/` so no governed consumer-facing doc can keep a wrong pin. The historical `docs/superpowers/specs/2026-06-04-…` `@v1` decision-trail reference is intentionally left as-is.
