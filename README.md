@@ -13,7 +13,8 @@ project-standards/
 │   ├── README.md              #   index + bundle anatomy
 │   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/
 │   ├── adr/                   #   standard + adopt + templates/ + examples/
-│   └── python-tooling/        #   standard + adopt (doc-only)
+│   ├── python-tooling/        #   standard + adopt (doc-only)
+│   └── markdown-tooling/      #   standard + adopt (doc-only)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
 ├── tests/                     # validator tests
@@ -53,9 +54,16 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 - **Standard:** [`standards/python-tooling/README.md`](standards/python-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/python-tooling/adopt.md)
 
+### Markdown Tooling Standard
+
+The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The tool-specific complement to the tool-neutral Frontmatter standard; markdownlint ships a reusable workflow + seedable rule set, while Prettier is copy-adopt (no workflow).
+
+- **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
+
 ## Consuming the standards
 
-How a repository adopts each standard. The two **Markdown standards** share one mechanism; **Python Tooling** adopts on its own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
+How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling** and **Markdown Tooling** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
@@ -74,6 +82,10 @@ ADR enforcement (managed ADR docs, plus the opt-in MADR section check) rides the
 ### Python Tooling SSOT
 
 No config or workflow — copy the in-doc scaffolds and run the verification gate. See [`standards/python-tooling/adopt.md`](standards/python-tooling/adopt.md).
+
+### Markdown Tooling
+
+Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v2` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 
 ### Pin to a release tag, not `main`
 
