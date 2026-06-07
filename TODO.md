@@ -1,9 +1,4 @@
 # TODO items
 
-Do not delete this file. This is the user's TODO list.
-
-## Python Tooling
-
-## Markdown Frontmatter
-
-## ADR
+- [x] Verify that this repo is in full compliance with all four standards.
+- [x] Update the root README.md if necessary
