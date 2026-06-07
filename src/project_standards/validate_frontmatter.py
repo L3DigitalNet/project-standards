@@ -291,6 +291,7 @@ class ProjectConfig:
         frontmatter_version: str | None = None,
         adr_version: str | None = None,
         python_tooling_version: str | None = None,
+        markdown_tooling_version: str | None = None,
     ) -> None:
         self.schema = schema
         self.include = include
@@ -300,6 +301,7 @@ class ProjectConfig:
         self.frontmatter_version = frontmatter_version
         self.adr_version = adr_version
         self.python_tooling_version = python_tooling_version
+        self.markdown_tooling_version = markdown_tooling_version
 
 
 def resolve_effective_schema(
@@ -373,6 +375,7 @@ def load_config(path: Path) -> ProjectConfig:
     frontmatter_version: str | None = None
     adr_version: str | None = None
     python_tooling_version: str | None = None
+    markdown_tooling_version: str | None = None
 
     if path.exists():
         try:
@@ -405,6 +408,13 @@ def load_config(path: Path) -> ProjectConfig:
                 pt_dict = cast("dict[str, Any]", python_tooling)
                 pt_version_val = pt_dict.get("version")
                 python_tooling_version = str(pt_version_val) if pt_version_val is not None else None
+            markdown_tooling = raw_dict.get("markdown_tooling")
+            if isinstance(markdown_tooling, dict):
+                mt_dict = cast("dict[str, Any]", markdown_tooling)
+                mt_version_val = mt_dict.get("version")
+                markdown_tooling_version = (
+                    str(mt_version_val) if mt_version_val is not None else None
+                )
 
     return ProjectConfig(
         schema=schema,
@@ -415,6 +425,7 @@ def load_config(path: Path) -> ProjectConfig:
         frontmatter_version=frontmatter_version,
         adr_version=adr_version,
         python_tooling_version=python_tooling_version,
+        markdown_tooling_version=markdown_tooling_version,
     )
 
 
@@ -486,6 +497,16 @@ def main(argv: list[str] | None = None) -> int:
     ):
         print(
             f"error: unknown python_tooling.version {config.python_tooling_version!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # markdown_tooling.version is metadata only: validated if present, never emitted.
+    if config.markdown_tooling_version is not None and not registry.is_known_markdown_tooling(
+        config.markdown_tooling_version
+    ):
+        print(
+            f"error: unknown markdown_tooling.version {config.markdown_tooling_version!r}",
             file=sys.stderr,
         )
         return 2

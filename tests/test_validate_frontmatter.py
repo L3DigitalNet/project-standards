@@ -1256,3 +1256,44 @@ def test_load_registry_requires_markdown_tooling(tmp_path: Path) -> None:
     )
     with pytest.raises(RegistryError, match="markdown_tooling"):
         load_registry(bad)
+
+
+def test_load_config_reads_markdown_tooling_version(tmp_path: Path) -> None:
+    cfg_path = tmp_path / ".project-standards.yml"
+    cfg_path.write_text("markdown_tooling:\n  version: '1.0'\n", encoding="utf-8")
+    cfg = load_config(cfg_path)
+    assert cfg.markdown_tooling_version == "1.0"
+
+
+def test_load_config_markdown_tooling_defaults_none(tmp_path: Path) -> None:
+    cfg_path = tmp_path / ".project-standards.yml"
+    cfg_path.write_text("markdown:\n  frontmatter:\n    required: true\n", encoding="utf-8")
+    cfg = load_config(cfg_path)
+    assert cfg.markdown_tooling_version is None
+
+
+def test_known_markdown_tooling_version_is_silent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc(MINIMAL), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n  frontmatter:\n    include: ['doc.md']\nmarkdown_tooling:\n  version: '1.0'\n",
+    )
+    rc = main(["--config", ".project-standards.yml"])
+    out = capsys.readouterr()
+    assert rc == 0
+    assert out.out == "✓  1 file(s) validated\n"
+    assert "markdown_tooling" not in out.out
+    assert "markdown_tooling" not in out.err
+
+
+def test_unknown_markdown_tooling_version_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_versioned_config(tmp_path, "markdown_tooling:\n  version: '9.9'\n")
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    assert "unknown markdown_tooling.version" in capsys.readouterr().err
