@@ -6,6 +6,7 @@ standards_version: "v1.2.0"
 
 markdown:
   frontmatter:
+    version: "1.1"
     # Bundled schema name (resolves to src/project_standards/schemas/markdown-frontmatter.schema.json),
     # or a path to a schema file.
     schema: "markdown-frontmatter"
@@ -38,4 +39,5 @@ markdown:
   # Decision Outcome). Off by default; enabled here to dogfood the check on the
   # shipped ADR example. See standards/adr/README.md.
   adr:
+    version: "1.0"
     require_sections: true
