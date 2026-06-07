@@ -452,34 +452,41 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("payload", "match"),
     [
-        ('{"frontmatter": {}, "adr": {}}', "missing frontmatter/adr/python_tooling"),
         (
-            '{"frontmatter": {"default": 1, "versions": {}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {}, "adr": {}}',
+            "missing frontmatter/adr/python_tooling/markdown_tooling",
+        ),
+        (
+            '{"frontmatter": {"default": 1, "versions": {}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "non-string default",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": []}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {"default": "1.1", "versions": []}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "frontmatter.versions is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": 9}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": 9}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "frontmatter.versions.1.1 is not a string",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": []}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": []}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "adr.versions is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": []}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": []}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "adr.versions.1.0 is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": 5}}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": 5}}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "supports_frontmatter is not a list",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": {}}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": {}}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
             "python_tooling.versions is not a list",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": {}}}',
+            "markdown_tooling.versions is not a list",
         ),
     ],
 )
@@ -1063,6 +1070,8 @@ def test_compat_gate_flags_known_incompatible_pair() -> None:
         adr_supports={"1.0": ["1.1"]},
         python_tooling_default="1.0",
         python_tooling_versions=["1.0"],
+        markdown_tooling_default="1.0",
+        markdown_tooling_versions=["1.0"],
     )
     cfg = _cfg(frontmatter_version="2.0", adr_version="1.0", require_adr_sections=True)
     msg = frontmatter_adr_incompatibility(cfg, reg)
@@ -1195,6 +1204,8 @@ def test_main_incompatible_combo_via_registry_exits_2(
         adr_supports={"1.0": ["1.1"]},
         python_tooling_default="1.0",
         python_tooling_versions=["1.0"],
+        markdown_tooling_default="1.0",
+        markdown_tooling_versions=["1.0"],
     )
     monkeypatch.setattr(_vf, "load_registry", lambda: fake)
     monkeypatch.chdir(tmp_path)
@@ -1226,3 +1237,22 @@ def test_main_registry_load_failure_exits_2(
     rc = main(["--config", ".project-standards.yml"])
     assert rc == 2
     assert "cannot load registry" in capsys.readouterr().err
+
+
+def test_registry_exposes_markdown_tooling() -> None:
+    reg = load_registry()
+    assert reg.markdown_tooling_default == "1.0"
+    assert reg.is_known_markdown_tooling("1.0") is True
+    assert reg.is_known_markdown_tooling("9.9") is False
+
+
+def test_load_registry_requires_markdown_tooling(tmp_path: Path) -> None:
+    bad = tmp_path / "registry.json"
+    bad.write_text(
+        '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+        ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+        ' "python_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+        encoding="utf-8",
+    )
+    with pytest.raises(RegistryError, match="markdown_tooling"):
+        load_registry(bad)

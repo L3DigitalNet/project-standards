@@ -5,9 +5,10 @@ versions* per standard (the two-plane model — see meta/versioning.md and
 docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md). This module
 is the sole reader of registry.json: it maps each bundled Frontmatter contract
 version to its schema name, records which Frontmatter versions each ADR contract
-version supports, and lists the known Python Tooling label versions. It performs
-no document validation itself — callers in validate_frontmatter.py use it to
-resolve schemas by version and to enforce the FM->ADR compatibility contract.
+version supports, and lists the known Python Tooling and Markdown Tooling label
+versions. It performs no document validation itself — callers in
+validate_frontmatter.py use it to resolve schemas by version and to enforce the
+FM->ADR compatibility contract.
 
 Kept separate from validate_frontmatter.py so the registry shape has one owner and
 the validator's schema-validation core stays untouched.
@@ -44,6 +45,8 @@ class Registry:
         adr_supports: dict[str, list[str]],
         python_tooling_default: str,
         python_tooling_versions: list[str],
+        markdown_tooling_default: str,
+        markdown_tooling_versions: list[str],
     ) -> None:
         self.frontmatter_default = frontmatter_default
         self.frontmatter_versions = frontmatter_versions
@@ -51,6 +54,8 @@ class Registry:
         self.adr_supports = adr_supports
         self.python_tooling_default = python_tooling_default
         self.python_tooling_versions = python_tooling_versions
+        self.markdown_tooling_default = markdown_tooling_default
+        self.markdown_tooling_versions = markdown_tooling_versions
 
     def frontmatter_schema_name(self, version: str) -> str:
         """Bundled schema *name* for a Frontmatter contract version."""
@@ -72,6 +77,9 @@ class Registry:
 
     def is_known_python_tooling(self, version: str) -> bool:
         return version in self.python_tooling_versions
+
+    def is_known_markdown_tooling(self, version: str) -> bool:
+        return version in self.markdown_tooling_versions
 
 
 def _require_str_map(obj: Any, where: str) -> dict[str, str]:
@@ -98,19 +106,30 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     fm = data.get("frontmatter")
     adr = data.get("adr")
     pt = data.get("python_tooling")
-    if not isinstance(fm, dict) or not isinstance(adr, dict) or not isinstance(pt, dict):
-        raise RegistryError(f"registry {path} missing frontmatter/adr/python_tooling objects")
+    mt = data.get("markdown_tooling")
+    if (
+        not isinstance(fm, dict)
+        or not isinstance(adr, dict)
+        or not isinstance(pt, dict)
+        or not isinstance(mt, dict)
+    ):
+        raise RegistryError(
+            f"registry {path} missing frontmatter/adr/python_tooling/markdown_tooling objects"
+        )
     fm_d = cast("dict[str, Any]", fm)
     adr_d = cast("dict[str, Any]", adr)
     pt_d = cast("dict[str, Any]", pt)
+    mt_d = cast("dict[str, Any]", mt)
 
     fm_default = fm_d.get("default")
     adr_default = adr_d.get("default")
     pt_default = pt_d.get("default")
+    mt_default = mt_d.get("default")
     if (
         not isinstance(fm_default, str)
         or not isinstance(adr_default, str)
         or not isinstance(pt_default, str)
+        or not isinstance(mt_default, str)
     ):
         raise RegistryError(f"registry {path} has a non-string default")
 
@@ -133,6 +152,11 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         raise RegistryError("registry python_tooling.versions is not a list")
     pt_versions = [str(v) for v in cast("list[Any]", pt_versions_raw)]
 
+    mt_versions_raw = mt_d.get("versions")
+    if not isinstance(mt_versions_raw, list):
+        raise RegistryError("registry markdown_tooling.versions is not a list")
+    mt_versions = [str(v) for v in cast("list[Any]", mt_versions_raw)]
+
     return Registry(
         frontmatter_default=fm_default,
         frontmatter_versions=fm_versions,
@@ -140,4 +164,6 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         adr_supports=adr_supports,
         python_tooling_default=pt_default,
         python_tooling_versions=pt_versions,
+        markdown_tooling_default=mt_default,
+        markdown_tooling_versions=mt_versions,
     )
