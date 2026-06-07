@@ -40,6 +40,7 @@ Modified — config + bookkeeping:
 - `.vscode/settings.json` — `[markdown]` gains `editor.formatOnSave` (Prettier; no markdownlint code action).
 - `CHANGELOG.md` — `[Unreleased] / Added` entry.
 - `docs/handoff/specs-plans.md`, `docs/handoff/state.md`, `docs/handoff/architecture.md` — session bookkeeping.
+- `AGENTS.md`, `CLAUDE.md` — refresh the stale repo-purpose line (prose only; these files never carry frontmatter).
 
 Each task ends in its own commit. Run all commands from the repo root `/home/chris/projects/project-standards`.
 
@@ -1091,22 +1092,38 @@ In `docs/handoff/state.md`, update `**Last updated:**` to `2026-06-07` and add a
 
 Keep the file ≤ 2048 bytes — if it would exceed, trim the oldest at-a-glance bullet into `sessions/`.
 
-- [ ] **Step 4: Lint + format**
+- [ ] **Step 4: Refresh the agent-facing repo-purpose lines**
+
+`AGENTS.md` and `CLAUDE.md` are loaded early in every session and currently undercount the standards. Edit prose only — these files **never** carry frontmatter.
+
+In `AGENTS.md` (≈ line 11), change the clause `It _defines_ three standards (Markdown Frontmatter, ADR, Python Tooling SSOT)` to:
+
+```text
+It _defines_ four standards (Markdown Frontmatter, ADR, Python Tooling SSOT, Markdown Tooling)
+```
+
+In `CLAUDE.md` (≈ line 5), the purpose line is stale (it reads "the Markdown Frontmatter, ADR, and versioning standards"). Replace that whole `**Purpose:**` line with:
+
+```text
+**Purpose:** single source of truth for reusable standards — defines the Markdown Frontmatter, ADR, Python Tooling SSOT, and Markdown Tooling standards and enforces the Markdown ones with a Python validator that downstream repos consume via a reusable CI workflow.
+```
+
+- [ ] **Step 5: Lint + format**
 
 Run:
 
 ```bash
-npx markdownlint-cli2 "docs/handoff/specs-plans.md" "docs/handoff/architecture.md" "docs/handoff/state.md"
-npx prettier --check "docs/handoff/specs-plans.md" "docs/handoff/architecture.md" "docs/handoff/state.md"
+npx markdownlint-cli2 "docs/handoff/specs-plans.md" "docs/handoff/architecture.md" "docs/handoff/state.md" "AGENTS.md" "CLAUDE.md"
+npx prettier --check "docs/handoff/specs-plans.md" "docs/handoff/architecture.md" "docs/handoff/state.md" "AGENTS.md" "CLAUDE.md"
 ```
 
 Expected: clean.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add docs/handoff/specs-plans.md docs/handoff/architecture.md docs/handoff/state.md
-git commit -m "docs(handoff): record the Markdown Tooling Standard"
+git add docs/handoff/specs-plans.md docs/handoff/architecture.md docs/handoff/state.md AGENTS.md CLAUDE.md
+git commit -m "docs(handoff,agents): record the Markdown Tooling Standard"
 ```
 
 ---
@@ -1133,10 +1150,13 @@ Expected: every command passes; `validate-frontmatter` reports `✓  14 file(s) 
 Confirm each:
 
 ```bash
-# Validated label: known passes, unknown exits 2
-printf 'markdown_tooling:\n  version: "1.0"\n' > /tmp/ok.yml && uv run validate-frontmatter --config /tmp/ok.yml; echo "exit=$?"
+# Unknown version exits 2 — reliable, because the guard returns BEFORE file
+# collection (a bare temp config is fine here; it never reaches collect_paths):
 printf 'markdown_tooling:\n  version: "9.9"\n' > /tmp/bad.yml && uv run validate-frontmatter --config /tmp/bad.yml; echo "exit=$? (expect 2 + 'unknown markdown_tooling.version')"
-# Dogfood: this repo selects all four contract versions, and the config still validates
+# Known version passes: proven by the DOGFOODED real config below (it selects
+# markdown_tooling.version: "1.0" and validates clean). Do NOT use a bare temp
+# config for the pass case — with no `include` it falls back to scanning every
+# **/*.md in the repo (collect_paths else-branch), so it cannot isolate the label.
 grep -nE "version:|python_tooling:|markdown_tooling:" .project-standards.yml
 uv run validate-frontmatter --config .project-standards.yml
 # Release pins: FAIL (non-zero) if any stale @v1 lint-markdown ref survives — CHANGELOG included
@@ -1147,7 +1167,7 @@ else
 fi
 ```
 
-Expected: `ok.yml` → `exit=0`; `bad.yml` → `exit=2` with the unknown-version message; the grep shows `markdown.frontmatter.version`/`markdown.adr.version`/`python_tooling`/`markdown_tooling` all present and the config validates (`✓  14 file(s) validated`); the stale-pin block prints `OK: no stale lint-markdown @v1` (and would exit non-zero if any were found).
+Expected: `bad.yml` → `exit=2` with the unknown-version message; the grep shows `markdown.frontmatter.version`/`markdown.adr.version`/`python_tooling`/`markdown_tooling` all present and the real config validates (`✓  14 file(s) validated`, which exercises the known-`markdown_tooling.version` pass path); the stale-pin block prints `OK: no stale lint-markdown @v1` (and exits non-zero if any were found).
 
 - [ ] **Step 3: Confirm the working tree is clean and review the branch delta**
 
@@ -1175,7 +1195,7 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 
 **Type/name consistency:** `markdown_tooling_default` / `markdown_tooling_versions` / `is_known_markdown_tooling` (registry.py) and `markdown_tooling_version` (ProjectConfig) are used identically across Tasks 1–2 and the tests; the registry key `markdown_tooling`, the config key `markdown_tooling.version`, and the contract version `1.0` match the spec and `registry.json`. The two direct `Registry(...)` test constructions are updated in Task 1, the same task that makes the params required.
 
-**Plan-audit round 1 (2026-06-07) + dogfood directive — folded in:**
+**Plan-audit rounds 1–2 (2026-06-07) + dogfood directive — folded in:**
 
 - CR-001 (registry blast radius): Task 1 Step 6 now updates the parametrized malformed-registry fixtures and adds a `markdown_tooling.versions` case, so Task 1's own pytest gate stays green.
 - CR-002 (stale `@v1`): Task 10 Step 2 fixes the existing CHANGELOG Stack B bullet; Task 12's stale-pin check now fails on a match and includes `CHANGELOG.md`.
@@ -1183,3 +1203,5 @@ REQUIRED SUB-SKILL: invoke `superpowers:finishing-a-development-branch` to decid
 - CR-004 (collapsed tables): Task 7/8/11 table snippets are now plain `text` blocks (single physical rows), immune to Prettier reflow.
 - Task 2's test selector is `-k "markdown_tooling and not registry"` so its count (4) is unambiguous.
 - Dogfood directive: Task 3 now selects all four standards' contract versions in `.project-standards.yml` (adding the previously-unselected `python_tooling` and the new `markdown_tooling`); spec §4/§5/§7/§8 updated to match.
+- CR-NEW-001 (round 2): Task 12's acceptance check no longer uses a bare `/tmp/ok.yml` for the pass case (it would fall back to scanning the whole repo via `collect_paths`); the known-version pass is proven by the dogfooded real config, and the unknown-version exit-2 case keeps its temp config (the guard returns before collection).
+- CR-NEW-002 (round 2): Task 11 Step 4 refreshes the stale repo-purpose lines in `AGENTS.md` ("three standards") and `CLAUDE.md` (which also misnamed the set), prose-only and frontmatter-free.
