@@ -44,6 +44,27 @@ Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 This reframing is what makes the moving major tag (`@v1`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
 
+## Version grammar
+
+- **Contract plane (per standard):** `major.minor` — no patch component, matching `schema_version`. Registry keys and config values use this two-part form (`'1.0'`, `'1.1'`, `'2.0'`).
+- **Tool release plane:** full SemVer `MAJOR.MINOR.PATCH` (the git tag / `pyproject.toml` version). "SemVer" in this document refers only to the tool plane.
+
+## Per-standard contract versions
+
+Each standard carries its own `major.minor` contract version, selected per standard in a consumer's `.project-standards.yml`. The tool release bundles a known set of these versions (in `registry.json`); selecting one is a config edit, not a new pin.
+
+| Standard | Version marker | Selected by | Enforced? |
+| --- | --- | --- | --- |
+| Markdown Frontmatter | `schema_version` (`1.1`) | `markdown.frontmatter.version` (optional; unset = default) | yes — JSON schema |
+| ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
+| Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
+
+**Adding a bundled contract version is a MINOR tool release; removing one is MAJOR** (a consumer pinned to it would newly fail). Within a single standard's line, the previously-passing rule applies: an additive field/value is MINOR, a stricter rule or removed enum value is MAJOR.
+
+### FM→ADR compatibility
+
+ADR is a profile over the Frontmatter schema, so each ADR contract version declares the Frontmatter versions it supports (today: ADR `1.0` → Frontmatter `1.1`, which itself accepts `schema_version: '1.0'` documents). The validator rejects an incompatible configured pair (exit 2). "Independent" therefore means independently selected **subject to declared compatibility**, not any combination. A no-version config uses each standard's default and is always compatible. A configured `frontmatter.version` that is not bundled reports "unknown frontmatter version" (caught at schema resolution), not a compatibility error.
+
 ## Component-level version markers
 
 The single release version is the only number a consumer pins. Two **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — neither is itself a release number:
@@ -51,7 +72,7 @@ The single release version is the only number a consumer pins. Two **component-l
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`markdown-frontmatter.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling internal revision** — the `internal revision N.M` counter in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — tracks **editorial revisions of that one document**. It is not machine-enforced and is not a release version.
 
-The **ADR standard** carries no version of its own: it is a profile over the frontmatter schema, so it rides `schema_version`, and its only machine-checked rule — the opt-in MADR section check — lives in the validator and is covered by the release version. There are therefore **no per-standard release versions**: every standard ships together under the single repository tag.
+The **ADR standard** carries no version of its own: it is a profile over the frontmatter schema, so it rides `schema_version`, and its only machine-checked rule — the opt-in MADR section check — lives in the validator and is covered by the release version. Each standard now carries its own `major.minor` **contract version** (see [Per-standard contract versions](#per-standard-contract-versions)); these remain distinct from the single **tool release version** on the git tag. There are still no per-standard _release tags_ — every standard ships together under the one repository tag, and a contract version is selected in config, not pinned separately.
 
 ## Change classification
 
@@ -63,6 +84,7 @@ Classify each release by the highest-severity change it contains.
 | **Validator CLI** | Any change that makes a previously-passing document fail; a flag or command removed or renamed; a default changed so pass/fail differs; a config key removed or renamed; the minimum Python raised | A new opt-in flag or command; a new config option with a backward-compatible default; new output that does not change any pass/fail result | A crash or message-text fix with **no** outcome change; an internal refactor; a dependency bump with no behavior change |
 | **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
 | **Python Tooling standard** (copy-adopted) | Raising the required Python or a tool floor; removing or renaming a scaffold or the gate command; a default change that makes the verification gate newly fail | A new optional scaffold or recommended tool with a backward-compatible default; a new opt-in step | An editorial revision (the internal revision counter); a refreshed tool pin with no behavior change |
+| **Bundled contract set** | A bundled contract version **removed** (a consumer pinned to it newly fails) | A bundled contract version **added** (selectable; nothing previously-passing changes) | — |
 
 Because the Python Tooling standard is **copy-adopted**, a consumer sees its changes only when it deliberately re-syncs the scaffolds — they are never inherited automatically on `@vN`. That row classifies the impact on a consumer that re-syncs; the previously-passing rule below applies to the validator-enforced surface.
 
