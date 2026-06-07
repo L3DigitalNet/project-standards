@@ -964,3 +964,100 @@ def test_bundled_schema_is_valid_draft2020() -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     # Raises SchemaError if the shipped contract is itself malformed.
     Draft202012Validator.check_schema(schema)  # pyright: ignore[reportUnknownMemberType]
+
+
+# ===========================================================================
+# Integration — FM->ADR compatibility gate + python_tooling metadata check
+# ===========================================================================
+
+from project_standards.validate_frontmatter import frontmatter_adr_incompatibility  # noqa: E402
+
+
+def _write_versioned_config(root: Path, body: str) -> Path:
+    path = root / ".project-standards.yml"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_main_unknown_frontmatter_version_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # 2.0 is not bundled: schema resolution catches it BEFORE the compat gate, so
+    # the message names the unknown version rather than a misleading compat error.
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    version: '2.0'\n"
+        "  adr:\n"
+        "    version: '1.0'\n"
+        "    require_sections: true\n",
+    )
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    assert "unknown frontmatter version" in capsys.readouterr().err
+
+
+def test_compat_gate_flags_known_incompatible_pair() -> None:
+    # Test the gate with a KNOWN incompatible pair via a constructed registry that
+    # bundles a 2.0 contract — no real 2.0 schema file needed. This proves the gate
+    # itself, independent of which versions happen to ship today.
+    from project_standards.registry import Registry
+
+    reg = Registry(
+        frontmatter_default="1.1",
+        frontmatter_versions={"1.1": "markdown-frontmatter", "2.0": "markdown-frontmatter-2.0"},
+        adr_default="1.0",
+        adr_supports={"1.0": ["1.1"]},
+        python_tooling_default="1.0",
+        python_tooling_versions=["1.0"],
+    )
+    cfg = _cfg(frontmatter_version="2.0", adr_version="1.0", require_adr_sections=True)
+    msg = frontmatter_adr_incompatibility(cfg, reg)
+    assert msg is not None
+    assert "ADR 1.0 supports Frontmatter ['1.1']" in msg
+    assert "configured frontmatter.version is 2.0" in msg
+
+
+def test_compat_gate_ok_for_defaults() -> None:
+    reg = load_registry()
+    assert frontmatter_adr_incompatibility(_cfg(require_adr_sections=True), reg) is None
+
+
+def test_main_compatible_combo_validates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc(MINIMAL), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    version: '1.1'\n"
+        "    include: ['doc.md']\n"
+        "  adr:\n"
+        "    version: '1.0'\n"
+        "    require_sections: true\n",
+    )
+    assert main(["--config", ".project-standards.yml"]) == 0
+
+
+def test_main_custom_schema_bypasses_compat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # A custom schema + require_sections must not trip the FM->ADR gate.
+    import shutil
+
+    shutil.copy(SCHEMA_PATH, tmp_path / "custom.schema.json")
+    (tmp_path / "doc.md").write_text(_doc(MINIMAL), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    schema: './custom.schema.json'\n"
+        "    include: ['doc.md']\n"
+        "  adr:\n"
+        "    version: '1.0'\n"
+        "    require_sections: true\n",
+    )
+    assert main(["--config", ".project-standards.yml"]) == 0

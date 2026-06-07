@@ -34,7 +34,7 @@ import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
-from project_standards.registry import Registry
+from project_standards.registry import Registry, RegistryError, load_registry
 
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
 # that appears anywhere else is intentionally NOT treated as frontmatter, so such
@@ -331,6 +331,31 @@ def resolve_effective_schema(
     return resolve_schema_path(schema_value)
 
 
+def frontmatter_adr_incompatibility(config: ProjectConfig, registry: Registry) -> str | None:
+    """Return an error message if the configured ADR/Frontmatter pair is incompatible.
+
+    Only meaningful when ADR is in play AND Frontmatter is a *bundled* contract — a
+    custom ``schema:`` path means the consumer owns versioning, so the check is
+    skipped. Assumes a configured ``frontmatter.version`` has already been validated
+    as bundled by ``resolve_effective_schema`` (so this never masks an unknown
+    version as an incompatibility). Returns None when compatible or not applicable;
+    raises RegistryError if the configured ADR version is unknown.
+    """
+    if _schema_value_is_path(config.schema):
+        return None
+    if not (config.require_adr_sections or config.adr_version is not None):
+        return None
+    adr_version = config.adr_version or registry.adr_default
+    effective_fm = config.frontmatter_version or registry.frontmatter_default
+    supported = registry.adr_supported_frontmatter(adr_version)
+    if effective_fm not in supported:
+        return (
+            f"ADR {adr_version} supports Frontmatter {supported}; "
+            f"configured frontmatter.version is {effective_fm}"
+        )
+    return None
+
+
 def _as_str_list(value: Any) -> list[str]:
     """Coerce a config value into a list of strings (anything else -> empty list)."""
     if isinstance(value, list):
@@ -449,7 +474,42 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    schema_path = args.schema if args.schema is not None else resolve_schema_path(config.schema)
+    try:
+        registry = load_registry()
+    except RegistryError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    # python_tooling.version is metadata only: validated if present, never emitted.
+    if config.python_tooling_version is not None and not registry.is_known_python_tooling(
+        config.python_tooling_version
+    ):
+        print(
+            f"error: unknown python_tooling.version {config.python_tooling_version!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Resolve first: this validates that a configured frontmatter.version is a known
+    # bundled contract (unknown/typo versions report "unknown frontmatter version"
+    # here, before the compatibility gate, so they are never masked as a combo error).
+    try:
+        schema_path = resolve_effective_schema(args.schema, config, registry)
+    except (ConfigError, RegistryError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    # FM->ADR compatibility (bundled Frontmatter only; --schema bypasses it).
+    if args.schema is None:
+        try:
+            incompatibility = frontmatter_adr_incompatibility(config, registry)
+        except RegistryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if incompatibility is not None:
+            print(f"error: {incompatibility}", file=sys.stderr)
+            return 2
+
     try:
         schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
