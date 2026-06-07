@@ -1061,3 +1061,68 @@ def test_main_custom_schema_bypasses_compat(
         "    require_sections: true\n",
     )
     assert main(["--config", ".project-standards.yml"]) == 0
+
+
+def test_no_version_config_passes_legacy_1_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc({**MINIMAL, "schema_version": "1.0"}), encoding="utf-8")
+    _write_versioned_config(tmp_path, "markdown:\n  frontmatter:\n    include: ['doc.md']\n")
+    assert main(["--config", ".project-standards.yml"]) == 0
+
+
+def test_no_version_config_passes_legacy_1_0_adr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    adr_meta = {**MINIMAL, "schema_version": "1.0", "doc_type": "adr"}
+    body = (
+        "# ADR\n\n## Context and Problem Statement\nx\n\n"
+        "## Considered Options\nx\n\n## Decision Outcome\nx\n"
+    )
+    (tmp_path / "adr.md").write_text(_doc(adr_meta, body=body), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n  frontmatter:\n    include: ['adr.md']\n  adr:\n    require_sections: true\n",
+    )
+    assert main(["--config", ".project-standards.yml"]) == 0
+
+
+def test_explicit_fm_version_1_1_accepts_1_0_doc(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc({**MINIMAL, "schema_version": "1.0"}), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n  frontmatter:\n    version: '1.1'\n    include: ['doc.md']\n",
+    )
+    assert main(["--config", ".project-standards.yml"]) == 0
+
+
+def test_python_tooling_version_emits_no_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc(MINIMAL), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n  frontmatter:\n    include: ['doc.md']\npython_tooling:\n  version: '1.0'\n",
+    )
+    rc = main(["--config", ".project-standards.yml"])
+    out = capsys.readouterr()
+    assert rc == 0
+    assert out.out == "✓  1 file(s) validated\n"
+    assert "python_tooling" not in out.out
+    assert "python_tooling" not in out.err
+
+
+def test_unknown_python_tooling_version_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_versioned_config(tmp_path, "python_tooling:\n  version: '9.9'\n")
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    assert "unknown python_tooling.version" in capsys.readouterr().err
