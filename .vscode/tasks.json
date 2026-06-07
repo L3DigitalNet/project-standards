@@ -32,6 +32,19 @@
 			"type": "shell",
 			"command": "uv run pip-audit",
 			"problemMatcher": []
+		},
+		{
+			"label": "md-fix",
+			"type": "shell",
+			"command": "npx prettier --write . && npx markdownlint-cli2 --fix \"**/*.md\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "md-check",
+			"type": "shell",
+			"command": "npx prettier --check . && npx markdownlint-cli2 \"**/*.md\"",
+			"group": "test",
+			"problemMatcher": []
 		}
 	]
 }
