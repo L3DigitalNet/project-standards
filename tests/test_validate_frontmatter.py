@@ -449,6 +449,47 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
         load_registry(bad)
 
 
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        ('{"frontmatter": {}, "adr": {}}', "missing frontmatter/adr/python_tooling"),
+        (
+            '{"frontmatter": {"default": 1, "versions": {}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "non-string default",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": []}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "frontmatter.versions is not an object",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": 9}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "frontmatter.versions.1.1 is not a string",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": []}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "adr.versions is not an object",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": []}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "adr.versions.1.0 is not an object",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": 5}}}, "python_tooling": {"default": "1.0", "versions": []}}',
+            "supports_frontmatter is not a list",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": {}}}',
+            "python_tooling.versions is not a list",
+        ),
+    ],
+)
+def test_load_registry_malformed_raises(tmp_path: Path, payload: str, match: str) -> None:
+    bad = tmp_path / "registry.json"
+    bad.write_text(payload, encoding="utf-8")
+    with pytest.raises(RegistryError, match=match):
+        load_registry(bad)
+
+
 # ===========================================================================
 # Unit — effective schema resolution (precedence + ambiguity guard)
 # ===========================================================================
@@ -1136,3 +1177,52 @@ def test_unknown_python_tooling_version_exits_2(
     rc = main(["--config", ".project-standards.yml"])
     assert rc == 2
     assert "unknown python_tooling.version" in capsys.readouterr().err
+
+
+def test_main_incompatible_combo_via_registry_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A KNOWN-but-incompatible pair: a registry that bundles FM 2.0, with ADR 1.0
+    # supporting only FM 1.1. Reaches the main-level compat-gate error branch that
+    # the shipped registry can't (it has no 2.0 yet). monkeypatch load_registry so
+    # resolution accepts 2.0 and the gate then rejects the pair.
+    from project_standards.registry import Registry
+
+    fake = Registry(
+        frontmatter_default="1.1",
+        frontmatter_versions={"1.1": "markdown-frontmatter", "2.0": "markdown-frontmatter"},
+        adr_default="1.0",
+        adr_supports={"1.0": ["1.1"]},
+        python_tooling_default="1.0",
+        python_tooling_versions=["1.0"],
+    )
+    monkeypatch.setattr(_vf, "load_registry", lambda: fake)
+    monkeypatch.chdir(tmp_path)
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    version: '2.0'\n"
+        "  adr:\n"
+        "    version: '1.0'\n"
+        "    require_sections: true\n",
+    )
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "ADR 1.0 supports Frontmatter ['1.1']" in err
+    assert "configured frontmatter.version is 2.0" in err
+
+
+def test_main_registry_load_failure_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def _boom() -> object:
+        raise RegistryError("cannot load registry /nope/registry.json: boom")
+
+    monkeypatch.setattr(_vf, "load_registry", _boom)
+    monkeypatch.chdir(tmp_path)
+    _write_versioned_config(tmp_path, "markdown:\n  frontmatter:\n    required: true\n")
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    assert "cannot load registry" in capsys.readouterr().err
