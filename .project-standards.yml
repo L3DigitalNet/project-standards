@@ -41,3 +41,14 @@ markdown:
   adr:
     version: "1.0"
     require_sections: true
+
+# Contract-version selections for the copy-adopted standards this repo defines.
+# Both are validated-if-present metadata only (a known version => no output, no
+# behaviour change; an unknown version => exit 2). Selected here to dogfood every
+# standard the repo ships. python_tooling enforcement is the verification gate;
+# markdown_tooling enforcement is the lint-markdown workflow.
+python_tooling:
+  version: "1.0"
+
+markdown_tooling:
+  version: "1.0"
