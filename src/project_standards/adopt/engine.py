@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+import tempfile
+from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from project_standards.adopt.errors import ManifestError, UsageError
+from project_standards.adopt.errors import ManifestError, UsageError, WriteError
 from project_standards.adopt.manifest import (
     BUNDLES_DIR,
     Artifact,
@@ -107,3 +109,125 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                 kind=art.kind, source_path=src, dest=art.dest, target=None, standards=(sid,)
             )
     return list(write_actions.values()) + fragment_actions
+
+
+_REF_PLACEHOLDER = "{{ref}}"
+
+
+@dataclass
+class Report:
+    created: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
+    overwritten: list[str] = field(default_factory=list)
+    symlink_skipped: list[str] = field(default_factory=list)
+    # target -> list of fragment snippets (multiple standards may contribute to one target).
+    fragments: dict[str, list[str]] = field(default_factory=dict)
+
+
+def _require_safe_relative(rel: str) -> None:
+    """Reject absolute paths and `..` traversal (exit 2)."""
+    if rel.startswith("/") or Path(rel).is_absolute() or ".." in Path(rel).parts:
+        raise UsageError(f"unsafe path: {rel!r}")
+
+
+def validate_dest(rel: str, dest_root: Path) -> Path:
+    """Absolute destination that does NOT follow a final symlink, contained under dest_root.
+
+    Critically, the leaf is left UNRESOLVED: `Path.resolve()` follows symlinks, which would
+    make `is_symlink()` inspect the link's target instead of the link. Containment is checked
+    lexically with `os.path.normpath` (no filesystem access, no symlink following); `..` and
+    absolute paths are already rejected above.
+    """
+    _require_safe_relative(rel)
+    root = dest_root.resolve()
+    candidate = root / rel  # leaf unresolved -> a symlink leaf stays detectable
+    normalized = Path(os.path.normpath(candidate))
+    if root != normalized and root not in normalized.parents:
+        raise UsageError(f"destination escapes --dest: {rel!r}")
+    return candidate
+
+
+def _has_symlinked_ancestor(abs_dest: Path, root: Path) -> bool:
+    """True if any EXISTING directory between root (exclusive) and the leaf is a symlink.
+
+    A symlinked parent (e.g. `--dest/linkdir -> /elsewhere`) could let a write escape `--dest`
+    even when the leaf itself is not a symlink. `is_symlink()` is False for non-existent paths,
+    so only real symlinked ancestors trip this.
+    """
+    for parent in abs_dest.parents:
+        if parent == root:
+            break
+        if parent.is_symlink():
+            return True
+    return False
+
+
+def _read_bytes(path: Path) -> bytes:
+    """Source read, mapping recoverable I/O failure to WriteError (exit 1)."""
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise WriteError(f"cannot read source {path}: {exc}") from exc
+
+
+def _render(action: Action, ref: str) -> bytes:
+    """Bytes to write for a file/workflow-caller action ({{ref}} substituted for callers)."""
+    data = _read_bytes(action.source_path)
+    if action.kind == "workflow-caller":
+        data = data.replace(_REF_PLACEHOLDER.encode(), ref.encode())
+    return data
+
+
+def _atomic_write(target: Path, data: bytes) -> None:
+    """Write to a temp file in the target's directory, then os.replace into place.
+
+    EVERY filesystem step (mkdir, mkstemp, write, replace) is inside the guard so a
+    recoverable failure surfaces as WriteError (exit 1), never a raw traceback. The
+    temp file is cleaned up on any failure; an existing destination is left intact.
+    """
+    tmp: Path | None = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".adopt-", suffix=".tmp")
+        tmp = Path(tmp_name)
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        # Module-level os.replace (not Path.replace) so the failure-injection test can
+        # monkeypatch this exact atomic-rename call.
+        os.replace(tmp, target)  # noqa: PTH105
+    except OSError as exc:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
+        raise WriteError(f"failed writing {target}: {exc}") from exc
+
+
+def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: bool) -> Report:
+    """Classify and execute each action; accumulate fragments (multiple per target)."""
+    ref = major_ref()
+    report = Report()
+    for action in plan:
+        if action.kind == "fragment":
+            assert action.target is not None
+            _require_safe_relative(action.target)  # target safety even though never written
+            try:
+                snippet = action.source_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise WriteError(f"cannot read fragment {action.source_path}: {exc}") from exc
+            report.fragments.setdefault(action.target, []).append(snippet)
+            continue
+        assert action.dest is not None
+        abs_dest = validate_dest(action.dest, dest_root)
+        if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, dest_root.resolve()):
+            report.symlink_skipped.append(
+                action.dest
+            )  # never write through a symlinked leaf OR parent
+            continue
+        exists = abs_dest.exists()
+        if exists and not force:
+            report.skipped.append(action.dest)
+            continue
+        rendered = _render(action, ref)  # may raise WriteError on unreadable source
+        if not dry_run:
+            _atomic_write(abs_dest, rendered)
+        (report.overwritten if exists else report.created).append(action.dest)
+    return report
