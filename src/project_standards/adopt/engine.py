@@ -231,3 +231,22 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
             _atomic_write(abs_dest, rendered)
         (report.overwritten if exists else report.created).append(action.dest)
     return report
+
+
+def format_report(report: Report) -> str:
+    """Human-readable summary; fragments grouped under per-target headings."""
+    lines: list[str] = []
+    for label, items in (
+        ("Created", report.created),
+        ("Skipped (already present)", report.skipped),
+        ("Overwritten", report.overwritten),
+        ("Skipped (symlink, not written)", report.symlink_skipped),
+    ):
+        if items:
+            lines.append(f"{label}:")
+            lines.extend(f"  {p}" for p in items)
+    for target, snippets in report.fragments.items():
+        lines.append(f"\nAdd these sections to `{target}`:")
+        for snippet in snippets:
+            lines.append(snippet.rstrip("\n"))
+    return "\n".join(lines)
