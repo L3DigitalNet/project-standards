@@ -238,18 +238,31 @@ def check_file(path: Path) -> list[str]:
 def _replace_frontmatter_id(text: str, new_id: str) -> str:
     """Replace the ``id:`` value inside the leading frontmatter block.
 
-    Only modifies the frontmatter; the document body is untouched.
+    Only modifies the id value; all other content — including inline comments on the
+    same line (e.g. ``id: 'old'  # frozen at creation``) — is preserved.
     Returns *text* unchanged if there is no frontmatter block or no ``id:`` line.
+
+    *text* must use LF-only line endings (callers normalise before calling).
     """
     match = re.match(r"^(---[ \t]*\n)(.*?)(\n---[ \t]*(?:\n|$))", text, re.DOTALL)
     if not match:
         return text
     prefix, fm_body, suffix = match.group(1), match.group(2), match.group(3)
     rest = text[match.end() :]
-    # Handles single-quoted ('…'), double-quoted ("…"), and unquoted id values.
+
+    # Three capture groups:
+    #   1. key prefix  (id:[ \t]*)                     — not used in replacement
+    #   2. value       single-/double-quoted or lazy unquoted
+    #   3. trailing    optional whitespace + inline comment
+    # The lazy unquoted form [^\n]*? yields the shortest match, leaving any "  # comment"
+    # suffix to group 3 rather than including it in the value.
+    def _repl(m: re.Match[str]) -> str:
+        return f"id: '{new_id}'" + (m.group(3) or "")
+
     new_fm_body = re.sub(
-        r"^(id:[ \t]*)(?:'[^']*'|\"[^\"]*\"|[^\n]*)",
-        f"id: '{new_id}'",
+        r"^(id:[ \t]*)('(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"|[^\n]*?)"
+        r"([ \t]*(?:#[^\n]*)?)$",
+        _repl,
         fm_body,
         flags=re.MULTILINE,
         count=1,
@@ -275,17 +288,16 @@ def fix_file(path: Path) -> str | None:
         raw = path.read_bytes()
     except OSError:
         return None
-    # Preserve original line endings: read_text() normalises CRLF→LF on all platforms.
-    # Detect before decoding so we can restore the original style after the replacement.
-    has_crlf = b"\r\n" in raw
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
         return None
-    if has_crlf:
-        text = text.replace("\r\n", "\n")
+    # Normalise to LF-only for YAML parsing and _replace_frontmatter_id (which requires LF).
+    # Keep the original decoded string so we can reconstruct the output line-by-line,
+    # preserving each line's individual ending — including files with mixed \r\n / \n.
+    text_lf = text.replace("\r\n", "\n").replace("\r", "\n")
     try:
-        meta: dict[str, Any] | None = parse_frontmatter(text)
+        meta: dict[str, Any] | None = parse_frontmatter(text_lf)
     except FrontmatterParseError:
         return None
     if meta is None:
@@ -310,12 +322,29 @@ def fix_file(path: Path) -> str | None:
     if not slug:
         return None
     new_id = f"{doc_type}-{token}-{slug}"
-    new_text = _replace_frontmatter_id(text, new_id)
-    if new_text == text:
+    new_text_lf = _replace_frontmatter_id(text_lf, new_id)
+    if new_text_lf == text_lf:
         return None
-    if has_crlf:
-        new_text = new_text.replace("\n", "\r\n")
-    path.write_bytes(new_text.encode("utf-8"))
+    # Reconstruct output preserving per-line endings.  Only the id: line differs between
+    # text_lf and new_text_lf; all other lines — whether \r\n, \n, or \r — are kept
+    # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.
+    orig_lines = text.splitlines(keepends=True)
+    new_lines_lf = new_text_lf.splitlines(keepends=True)
+    if len(orig_lines) != len(new_lines_lf):
+        # Unexpected line-count mismatch; fall back to writing the LF-normalised content.
+        path.write_bytes(new_text_lf.encode("utf-8"))
+        return new_id
+    output: list[str] = []
+    for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=False):
+        orig_stripped = orig_line.rstrip("\r\n")
+        new_stripped = new_line_lf.rstrip("\r\n")
+        if orig_stripped == new_stripped:
+            output.append(orig_line)  # unchanged — keep original bytes exactly
+        else:
+            # Content changed: apply new content with the original line ending.
+            orig_ending = orig_line[len(orig_stripped) :]
+            output.append(new_stripped + orig_ending)
+    path.write_bytes("".join(output).encode("utf-8"))
     return new_id
 
 

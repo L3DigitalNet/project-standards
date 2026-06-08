@@ -513,6 +513,14 @@ def test_replace_frontmatter_id_no_frontmatter_unchanged(tmp_path: Path) -> None
     assert _replace_frontmatter_id(text, "note-a3f9zk-new-slug") == text
 
 
+def test_replace_frontmatter_id_preserves_inline_comment(tmp_path: Path) -> None:
+    # An inline comment on the id: line must survive the replacement unchanged.
+    text = "---\nid: 'old-id'  # frozen at creation\ntitle: Test\n---\n# Body\n"
+    result = _replace_frontmatter_id(text, "note-abc123-test")
+    assert "id: 'note-abc123-test'  # frozen at creation" in result
+    assert "old-id" not in result
+
+
 def test_replace_frontmatter_id_body_id_not_replaced(tmp_path: Path) -> None:
     # An `id:` line in the body (after the closing ---) must not be replaced.
     text = "---\nid: 'old-id'\n---\n# Body\nid: 'body-field'\n"
@@ -582,6 +590,34 @@ def test_fix_file_no_title_returns_none(tmp_path: Path) -> None:
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
     assert fix_file(f) is None
+
+
+def test_fix_file_preserves_mixed_line_endings(tmp_path: Path) -> None:
+    # In a file with mixed endings, bare-LF lines must NOT be converted to CRLF.
+    # Each line's original ending is kept byte-exact; only the id: value changes.
+    mixed = (
+        "---\r\n"
+        "schema_version: '1.1'\r\n"
+        "id: 'old-kebab-id'\n"  # bare LF — must stay LF after fix
+        "title: 'Tailscale ACL gotcha'\r\n"
+        "description: 'Test.'\r\n"
+        "doc_type: 'note'\r\n"
+        "status: 'active'\r\n"
+        "created: '2026-06-01'\r\n"
+        "updated: '2026-06-08'\r\n"
+        "tags: []\r\naliases: []\r\nrelated: []\r\n"
+        "---\r\n# Body\r\n"
+    )
+    path = tmp_path / "mixed.md"
+    path.write_bytes(mixed.encode("utf-8"))
+    new_id = fix_file(path)
+    assert new_id is not None
+    written = path.read_bytes()
+    # id: line originally had bare LF — must still have bare LF after fix.
+    assert (f"id: '{new_id}'\n").encode() in written
+    assert (f"id: '{new_id}'\r\n").encode() not in written
+    # Unrelated CRLF lines must remain CRLF (no normalisation side-effects).
+    assert b"schema_version: '1.1'\r\n" in written
 
 
 def test_fix_file_preserves_crlf_line_endings(tmp_path: Path) -> None:
