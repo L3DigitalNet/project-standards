@@ -1,0 +1,14 @@
+# Add the following to your .project-standards.yml.
+#
+# 1. Enable the opt-in ADR body-section check (merge under your existing `markdown:` key):
+markdown:
+  adr:
+    version: '1.0'
+    require_sections: true
+#
+# 2. REQUIRED for validation safety — add this entry to your existing
+#    markdown.frontmatter.exclude list so the ADR template's intentional YYYY-MM-DD
+#    placeholders are NOT validated (the `adopt markdown-frontmatter` starter already has it):
+#
+#        exclude:
+#          - '**/*.template.md'
