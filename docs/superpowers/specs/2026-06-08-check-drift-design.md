@@ -30,7 +30,7 @@ The `adopt` CLI (shipping in `2.1.0`) materializes a standard's artifacts — ma
 
 1. **Provenance lockfile.** `adopt` writes `.project-standards.lock` recording, per adopted artifact, a content hash at adopt time, plus the per-standard contract version and the tool release that wrote it. `check` reads it. (Rejected: stateless content-diff against only the current bundle — cannot distinguish a deliberate customization from being behind.)
 2. **Failure model: staleness fails, edits warn.** `STALE`, `MISSING`, and `UNLOCKED` → exit 1 (CI red). `LOCAL-EDIT` and `ORPHAN` → reported but exit 0. The standards program is **adopt-then-own**: a consumer may customize an adopted file; `check` tells them they have diverged but does not forbid it. (Rejected: strict — any non-CLEAN fails; advisory — exit 0 unless `--strict`.)
-3. **Detect + safe `--update`.** `check` detects; `check --update` re-syncs only `STALE`/`MISSING`/resolvable-`UNLOCKED` artifacts to the current template and re-stamps the lock, **refusing** to overwrite `LOCAL-EDIT`s or present-but-divergent `UNLOCKED`s (those still require `--force`). This keeps the red→green path from contradicting decision 2. (Rejected: detect-only; `--update` + `--force` as the default surface.)
+3. **Detect + safe `--update`.** `check` detects; `check --update` re-syncs `STALE` and `MISSING` artifacts to the current template and re-stamps the lock (incl. `restamp-pending` repair), **refusing** to overwrite `LOCAL-EDIT`s or present-but-divergent `UNLOCKED`s (those require `--force`). This keeps the red→green path from contradicting decision 2. (Rejected: detect-only; `--update` + `--force` as the default surface.)
 4. **Fragments excluded in Phase 1.** Manifests are the source of truth for the artifact set; today they yield two artifact classes — whole-file (`file`/`workflow-caller`, written atomically, hash cleanly) and `fragment` (`python-tooling` → `pyproject.toml`, `adr` → `.project-standards.yml`). `adopt` never writes fragments — it only prints a snippet for the human to paste, with no anchoring markers — so there is no deterministic region for `check` to hash. Fragments are listed as `SKIPPED (unmanaged fragment)`, never failing. "Managed fragments with markers" is a clearly-scoped follow-on. (Rejected: whole-file-hash the target — the consumer owns most of `pyproject.toml`, so it would report `LOCAL-EDIT` permanently.)
 5. **Reconciliation is manifest-driven.** [SA-002] The set of *standards* checked is lock-driven (everything in the lock); the set of *artifacts* within each is the standard's **current manifest**, reconciled against the lock's baselines. This catches upstream-added artifacts and adopt-skipped files, which a purely lock-driven check would silently ignore.
 
@@ -48,9 +48,12 @@ For each **locked standard** S, `check` iterates every whole-file artifact in **
 - `disk_hash` — the file as it is on disk now (or `ABSENT`).
 - `lock_hash` — recorded in `.project-standards.lock`, from either the `[S.artifacts]` table (template-backed baseline) or the `[S.local_edits]` table (a relock-accepted customization), or `NONE` if absent from both.
 
-Decision order:
+Decision order (the symlink guard runs **first**, before any read):
 
 ```text
+dest is a symlinked leaf, or has a symlinked ancestor within --dest:
+                         ──► UNSAFE      (exit 1)   # never follow the link to hash — could read outside --dest
+
 dest in [S.local_edits] (relock-accepted customization):
     disk ABSENT          ──► MISSING     (exit 1)
     disk == tmpl         ──► CLEAN       (exit 0)   # consumer re-synced to the standard; --update promotes to [artifacts]
@@ -60,7 +63,9 @@ else (normal artifact):
     disk ABSENT:
         dest in lock     ──► MISSING     (exit 1)   # was adopted, now gone
         dest not in lock ──► MISSING     (exit 1)   # manifest requires it, never adopted (e.g. new upstream artifact)
-    disk == tmpl         ──► CLEAN       (exit 0)   # matches current standard (lock-stamp reconciled on --update)
+    disk == tmpl:
+        lock_hash == tmpl_hash ──► CLEAN          (exit 0)   # matches current standard, lock agrees
+        else                   ──► CLEAN          (exit 0)   # + restamp-pending flag (lock missing/behind; see below)
     disk != tmpl:
         lock_hash NONE   ──► UNLOCKED    (exit 1)   # present, not current, no baseline → cannot prove it was ever the standard
         disk == lock_hash──► STALE       (exit 1)   # template-backed baseline, untouched, standard moved on
@@ -70,20 +75,23 @@ dest in lock but NOT in S's current manifest:
                          ──► ORPHAN      (exit 0)   # upstream removed/renamed; --update drops the lock entry (leaves the file)
 ```
 
-Why **content hashes** drive state (not version numbers): it catches a template that changed without a contract bump; it treats "consumer manually updated to current" (`disk == tmpl`) as `CLEAN`; and it makes `--update` crash-safe (a file written but lock not yet advanced still reads `CLEAN`, because `disk == tmpl`). The `contract_version` in the lock is used only for the human-readable reason string (`STALE — adopted contract 1.0, bundle 1.1`) and for re-stamping. **Hashes decide; versions narrate.**
+Why **content hashes** drive state (not version numbers): it catches a template that changed without a contract bump, and it treats "consumer manually updated to current" (`disk == tmpl`) as `CLEAN`. The `contract_version` in the lock is the human-readable reason string (`STALE — adopted contract 1.0, bundle 1.1`) and the re-stamp source. **Hashes decide; versions narrate.**
 
-`MISSING` is distinct from an **unreadable** file: absent → `MISSING` (exit 1); read error (permissions) → I/O failure (exit 1) with a clear message, never a traceback.
+**The restamp-pending rule** [SA-003]: a `disk == tmpl` artifact whose lock entry is missing or `!= tmpl_hash` is still `CLEAN` (exit 0) but carries a **`restamp-pending`** flag. This is the residue of a partial `--update` (file written, lock write failed) — left unnamed, it would silently read `CLEAN` now and then mis-classify as `LOCAL-EDIT` after the *next* template change instead of `STALE`. Making it a named flag means: (a) every `check` run shows it (incl. the CI step-summary/annotation, like `LOCAL-EDIT`), so it cannot rot unseen; (b) any lock-writing op (`adopt`, `check --update`, `check --relock`) repairs the entry to `tmpl_hash` + current `contract_version`. `--update` restamps pending entries even when nothing else is stale.
+
+`MISSING` is distinct from an **unreadable** file: absent → `MISSING` (exit 1); read error (permissions) → I/O failure (exit 1) with a clear message, never a traceback. A symlinked destination is never read at all → `UNSAFE` (exit 1).
 
 State → exit-code summary:
 
 | State | Exit | Meaning |
 | --- | --- | --- |
-| CLEAN | 0 | on disk == current template |
+| CLEAN | 0 | on disk == current template (may carry `restamp-pending`) |
 | LOCAL-EDIT | 0 | consumer changed an adopted/accepted file |
 | ORPHAN | 0 | locked artifact no longer in the manifest |
 | STALE | 1 | adopted, untouched, standard advanced |
 | MISSING | 1 | manifest/lock artifact absent on disk |
 | UNLOCKED | 1 | present, differs from current, no baseline to attribute it |
+| UNSAFE | 1 | destination is a symlink (leaf or ancestor) — not hashed |
 
 ## Component 2 — The lockfile (`.project-standards.lock`)
 
@@ -125,8 +133,8 @@ project-standards check --relock STANDARD [STANDARD ...] [--dest DIR] [--quiet]
 - **Which standards are checked:** plain `check` is **lock-driven** — every standard in `.project-standards.lock`, no positional argument. `--relock` (Component 7) has no lock to read, so it takes the adopted standards **positionally**, like `adopt`.
 - `--dest DIR` — consumer repo root (default: cwd), same as `adopt`.
 - (default) — detect and report; exit code = the most severe per-artifact code.
-- `--update` — re-sync `STALE`/`MISSING`/resolvable-`UNLOCKED` artifacts to the current template, re-stamp the lock; **skip** `LOCAL-EDIT` and present-but-divergent `UNLOCKED` (print "use `--force`"); drop `ORPHAN` lock entries.
-- `--force` — only valid **with** `--update`; additionally overwrite `LOCAL-EDIT`s and divergent `UNLOCKED`s.
+- `--update` — bring the repo to green and repair lock provenance. Per state [SA-NEW-001]: `MISSING` → write the template + lock it (no existing file to clobber); `STALE` → overwrite with the template + restamp; `restamp-pending` `CLEAN` → restamp the lock only (no file write); `ORPHAN` → drop the lock entry (leave the file); `UNLOCKED` (present, divergent, no baseline) and `LOCAL-EDIT` → **skip** with "use `--force`"; `UNSAFE` → never written, reported. Restamps pending entries even when nothing else needs syncing.
+- `--force` — only valid **with** `--update`; additionally overwrite `LOCAL-EDIT`s and divergent `UNLOCKED`s with the current template. Never overwrites an `UNSAFE` (symlinked) destination.
 - `--relock` — bootstrap; mutually exclusive with `--update`/`--force` (Component 7).
 - `--json` — machine-readable report (schema below); valid with the default and `--update` modes.
 - `--quiet` — exit code only; suppress the human report.
@@ -149,17 +157,20 @@ project-standards check --relock STANDARD [STANDARD ...] [--dest DIR] [--quiet]
   "standards": [
     {"id": "markdown-tooling", "contract_version": "1.0",
      "artifacts": [
-       {"dest": ".markdownlint.json", "state": "CLEAN", "owners": ["markdown-tooling"]},
-       {"dest": ".editorconfig", "state": "STALE", "owners": ["markdown-tooling", "python-tooling"]}
+       {"dest": ".markdownlint.json", "state": "CLEAN", "restamp_pending": false, "owners": ["markdown-tooling"]},
+       {"dest": ".prettierrc.json", "state": "CLEAN", "restamp_pending": true, "owners": ["markdown-tooling"]},
+       {"dest": ".editorconfig", "state": "STALE", "restamp_pending": false, "owners": ["markdown-tooling", "python-tooling"]}
      ],
      "fragments": [{"target": "pyproject.toml", "state": "SKIPPED"}]}
   ],
-  "summary": {"clean": 12, "stale": 1, "local_edit": 1, "missing": 0,
-              "unlocked": 0, "orphan": 0, "exit_code": 1}
+  "summary": {"clean": 12, "restamp_pending": 1, "stale": 1, "local_edit": 1,
+              "missing": 0, "unlocked": 0, "orphan": 0, "unsafe": 0, "exit_code": 1}
 }
 ```
 
-**Exit codes** (aligned with the existing CLIs, including `adopt`'s `ManifestError`): [SA-006] `0` = all `CLEAN`/`LOCAL-EDIT`/`ORPHAN`; `1` = any `STALE`/`MISSING`/`UNLOCKED` or recoverable I/O failure; `2` = corrupt/missing/unsupported lock, bad invocation, or registry/bundle parity drift; `3` = `ManifestError` (a manifest/template is missing or unresolvable, or the package version can't resolve) — the same exit `3` `adopt` already returns, since `check` reads the same manifests and renders the same templates.
+`restamp_pending` is a flag on a `CLEAN` artifact, not a separate state, so it never changes the exit code; it is counted in `summary` for visibility.
+
+**Exit codes** (aligned with the existing CLIs, including `adopt`'s `ManifestError`): [SA-006] `0` = all `CLEAN`/`LOCAL-EDIT`/`ORPHAN`; `1` = any `STALE`/`MISSING`/`UNLOCKED`/`UNSAFE` or recoverable I/O failure; `2` = corrupt/missing/unsupported lock, bad invocation, or registry/bundle parity drift; `3` = `ManifestError` (a manifest/template is missing or unresolvable, or the package version can't resolve) — the same exit `3` `adopt` already returns, since `check` reads the same manifests and renders the same templates.
 
 ## Component 4 — Module architecture
 
@@ -181,12 +192,14 @@ Every `adopt` / `adopt --force` run merges its written whole-file artifacts into
 
 ## Component 6 — `--update` write-safety & ordering
 
-[SA-003] `apply_update` carries the **same write-boundary guarantees as `adopt`**: `validate_dest` containment, refusal to write through a symlinked leaf or symlinked ancestor, and `_atomic_write` (temp-file + `os.replace`). It never writes outside `--dest`.
+**Read-path symlink safety** [SA-003]: even the read-only default `check` classifies a destination that is a symlinked leaf, or that has a symlinked ancestor within `--dest`, as `UNSAFE` (exit 1) and **never follows the link to hash it** — reusing adopt's `is_symlink` + `_has_symlinked_ancestor` checks (`engine.py:150-162, 220`). This prevents `check` from reading bytes outside `--dest` via a planted symlink.
 
-**Ordering & failure semantics:** update writes each file first (atomically, independently), then writes the lock **last**, in a single `write_lock` call. Consequences:
+**Write-path safety:** `apply_update` carries the **same write-boundary guarantees as `adopt`**: `validate_dest` containment, refusal to write through a symlinked leaf/ancestor, and `_atomic_write` (temp-file + `os.replace`). It never writes outside `--dest`.
 
-- A failure mid-update leaves some files updated (each atomically) and the lock **un-advanced**. The next `check` re-derives state from disk: updated files read `CLEAN` (`disk == tmpl`), not-yet-updated files remain `STALE`. No false green.
-- A failure of the final lock write (after files updated) → exit 1 with a clear message; re-running `check` still reports those files `CLEAN` (hash-driven), and `--update` re-stamps the lock idempotently. The lock never advances ahead of a file that did not actually change.
+**Ordering & failure semantics:** update writes each file first (atomically, independently), then writes the lock **last**, in a single atomic `write_lock`. Consequences:
+
+- A failure mid-update leaves some files updated (each atomically) and the lock **un-advanced**. The next `check` re-derives state from disk: updated files read `CLEAN` with `restamp-pending` set (`disk == tmpl` but `lock_hash` stale), not-yet-updated files remain `STALE`. No false green, and the pending flag is visible on every run.
+- A failure of the final lock write (after files updated) → exit 1 with an explicit "files updated; lock not written — re-run `check --update` to restamp" message. Re-running restamps the pending entries idempotently (it sees `disk == tmpl` and writes `tmpl_hash`). The lock never advances ahead of a file that did not actually change, and the `restamp-pending` flag guarantees the under-stamped condition is surfaced (CI annotation) until repaired — closing the "later template change misreads as `LOCAL-EDIT`" gap.
 - `ORPHAN` lock entries are pruned during the same lock write.
 
 ## Component 7 — Bootstrap (`--relock`) for already-adopted repos
@@ -214,7 +227,7 @@ A new reusable workflow lets consumers run drift detection in CI, mirroring `val
 
   Plain `uvx project-standards check` is rejected — `uvx` resolves to latest/cached unless a source is pinned, which would silently decouple the checker from the consumer's intended release.
 - **Naming**: caller template `drift-check.caller.yml`; reusable workflow `.github/workflows/standards-drift.yml` — named to avoid colliding with the repo's internal `check.yml` gate **and** with the `check.yml` the `python-tooling` bundle ships to consumers. A single, standard-agnostic caller (it runs one lock-driven `check` over the whole repo, so unlike the per-standard validate/lint callers it is not bundle-scoped).
-- **Surfacing `LOCAL-EDIT` on a green run** [SA-009]: because `LOCAL-EDIT`/`ORPHAN` exit 0, the workflow writes a `$GITHUB_STEP_SUMMARY` table and emits `::warning::` annotations for each, so divergence is visible on a passing run rather than buried in logs.
+- **Surfacing non-failing drift on a green run** [SA-009]: because `LOCAL-EDIT`/`ORPHAN`/`restamp-pending` exit 0, the workflow writes a `$GITHUB_STEP_SUMMARY` table and emits `::warning::` annotations for each, so divergence (and a lock that needs restamping) is visible on a passing run rather than buried in logs.
 
 Additive; may land in the same release or immediately after the core command.
 
@@ -223,10 +236,13 @@ Additive; may land in the same release or immediately after the core command.
 [Counts are derived from the manifests at test time, never hardcoded — SA-002 note.]
 
 - Lock round-trip: `write_lock` → `load_lock` → structural equality; serializer key-quoting/escaping; `lockfile_version` accepted/missing/too-new (→ `LockError`).
-- Every state via constructed fixtures: `CLEAN`, `STALE`, `LOCAL-EDIT`, `MISSING`, `UNLOCKED` (manifest artifact absent from lock, present-and-divergent), `ORPHAN` (lock entry absent from manifest), plus the `disk == tmpl, disk != lock` → `CLEAN` edge and the `[local_edits]` → `LOCAL-EDIT`/promote-to-`CLEAN` edges.
+- Every state via constructed fixtures: `CLEAN`, `STALE`, `LOCAL-EDIT`, `MISSING`, `UNLOCKED`, `ORPHAN`, `UNSAFE`, plus the `[local_edits]` → `LOCAL-EDIT`/promote-to-`CLEAN` edges.
+- **Absent-from-lock trio** [SA-NEW-001]: a current-manifest artifact missing from the lock in all three disk states — absent (`MISSING`), present-and-equal-to-template (`CLEAN` + `restamp-pending`), present-and-divergent (`UNLOCKED`) — asserting default state/exit, `--update`, and `--update --force` behavior for each.
+- **Restamp lifecycle** [SA-003]: simulate a `--update` whose file write succeeds but lock write fails → assert exit 1 and `restamp-pending` `CLEAN` on the next `check`; re-run `--update` → assert lock repaired; then bump the template → assert the file is now `STALE` (not `LOCAL-EDIT`). This is the regression test for the closed gap.
+- **Read-path symlink** [SA-003]: a symlinked-leaf and a symlinked-ancestor destination → `UNSAFE` (exit 1), and assert the link target's bytes are never read.
 - `{{ref}}` rendered-hash correctness for a `workflow-caller` artifact (lock hash matches on-disk rendered bytes).
 - Shared-artifact dedup: a shared dest under two standards reported once at the most severe state.
-- `--update`: re-syncs `STALE`/`MISSING`/resolvable-`UNLOCKED` only, skips `LOCAL-EDIT` and divergent `UNLOCKED` without `--force`, prunes `ORPHAN`, re-stamps the lock for changed dests only; `--force` overwrites edits.
+- `--update`: re-syncs `STALE`/`MISSING` and repairs `restamp-pending` only, skips `LOCAL-EDIT` and divergent `UNLOCKED` without `--force`, prunes `ORPHAN`, re-stamps the lock for changed dests only; `--force` overwrites edits.
 - `--update` safety (mirroring `test_adopt_safety.py`): symlinked leaf, symlinked ancestor, file-write failure injection, lock-write failure injection (asserting no false green), partial multi-file update.
 - `--relock`: matching file → `[artifacts]`/`CLEAN`; divergent file → `[local_edits]`/`LOCAL-EDIT` and never `STALE`; absent file → `MISSING`.
 - Fragments excluded: `pyproject.toml` / `.project-standards.yml` always `SKIPPED`.
