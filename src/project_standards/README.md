@@ -20,6 +20,130 @@ Three console scripts are registered by `pyproject.toml`:
 
 ---
 
+## Validators
+
+Two validators enforce the managed-document contract. They share the same config file and the same `collect_paths()` logic, and are both invoked by `project-standards validate`.
+
+### validate-frontmatter
+
+Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `jsonschema`). Entry point: `validate_frontmatter.main(argv)`.
+
+**What it checks:**
+- The file has a frontmatter block (`---…---`) — unless `--no-require-frontmatter` or `required: false` in config.
+- The YAML block is valid and parses without error.
+- Every field matches the JSON Schema (required fields present, types correct, enum values valid, date formats correct, etc.).
+- The `schema_version` matches the configured contract version if `version:` is pinned.
+- For ADR docs (`doc_type: adr`), when `require_sections: true`, enforces the three required `##` headings: `## Context`, `## Decision`, `## Consequences`.
+
+**Key flags:**
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
+| `--config PATH` | `.project-standards.yml` | Config file |
+| `--schema PATH` | bundled schema | Override JSON Schema; skips built-in schema, uses the supplied file |
+| `--glob PATTERN` | — | Additional glob relative to cwd |
+| `--no-require-frontmatter` | — | Do not fail files with no frontmatter block |
+| `--quiet` / `-q` | — | Suppress per-file output; exit code only |
+
+**Custom schema and bundled schema names:**
+`--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `_schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
+
+---
+
+### validate-id
+
+Validates the `id` field of each document against its `doc_type`. Entry point: `validate_id.main(argv)`.
+
+**Files with no frontmatter, or missing `id` / `doc_type` fields, are silently skipped** — those structural errors belong to `validate-frontmatter`.
+
+**Two id formats:**
+
+#### Standard format — all `doc_type` values except `adr`
+
+```
+{doc_type}-{base36token}-{readable-slug}
+```
+
+| Segment | Constraint |
+|---------|------------|
+| `{doc_type}` | Must be a valid `doc_type` enum value AND match the document's own `doc_type` field |
+| `{base36token}` | Exactly 6 characters from `[0-9a-z]` (the base-36 alphabet) |
+| `{readable-slug}` | Non-empty lowercase kebab-case — `[a-z0-9]+(-[a-z0-9]+)*`; no consecutive hyphens; frozen at creation time, NOT re-validated against the current title |
+
+Example: `note-a3f9zk-tailscale-acl-tag-ordering-gotcha`
+
+The readable-slug is generated via `slugify(title)` at creation but is never re-checked against a changed title. This ensures ids are stable even when documents are renamed.
+
+#### ADR format — `doc_type: adr`
+
+```
+adr-{NNNN}-{repo-name}-{short-title}
+```
+
+| Segment | Constraint |
+|---------|------------|
+| `adr-` | Literal prefix |
+| `{NNNN}` | Repo-scoped sequence number, ≥ 4 digits (e.g. `0001`, `0042`, `10000`) |
+| `{repo-name}` | Kebab-case repository name; provides global uniqueness for cross-repo `related:` citations |
+| `{short-title}` | Kebab-case short form of the decision title |
+
+The suffix after `{NNNN}` must contain **at least two** hyphen-separated segments (repo-name + short-title minimum). `adr-0001-repo` (three segments total) is rejected — it is missing the short-title.
+
+Example: `adr-0001-homelab-use-postgresql-for-persistent-storage`
+
+**Key flags:**
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
+| `--config PATH` | `.project-standards.yml` | Config file |
+| `--schema PATH` | — | **Skip id validation entirely** — custom schemas may define different id conventions, so running the bundled rules would produce false positives |
+| `--glob PATTERN` | — | Additional glob relative to cwd |
+| `--quiet` / `-q` | — | Suppress per-file output; exit code only |
+| `--no-require-frontmatter` | — | Accepted but ignored (id validation already skips files with no frontmatter) |
+| `--fix` | — | Rewrite non-compliant ids in place (see below) |
+
+**`--schema` skip logic:**
+When `--schema PATH` is provided on the CLI, OR when `markdown.frontmatter.schema:` in the config file is a path (detected by the `"/" in value or "\\" in value or value.endswith(".json")` check in `validate_id.py`), id validation prints a note and exits 0. A bare bundled name like `markdown-frontmatter` does NOT trigger the skip.
+
+**`--fix` mode:**
+
+Rewrites each non-compliant file's `id:` value in place:
+1. Generates a fresh 6-char base-36 token using `secrets.choice(_BASE36_CHARS)`.
+2. Derives the slug from the document's `title` via `slugify()`.
+3. Constructs `{doc_type}-{token}-{slug}` and replaces the `id:` value.
+
+**ADR docs are skipped** with a targeted warning to stderr — the `{repo-name}` segment cannot be auto-derived from document fields and must be set manually.
+
+**Source preservation:**
+`_replace_frontmatter_id()` replaces only the value part of the `id:` line. Inline comments (`id: 'old-value'  # frozen at creation`) are captured as a trailing group and written back unchanged. `fix_file()` reconstructs the output line-by-line from the original decoded bytes so per-line endings (`\r\n`, `\n`, or bare `\r`) are preserved exactly — a bare-LF line in an otherwise-CRLF file is not converted.
+
+---
+
+### project-standards validate (combined command)
+
+`project-standards validate [FLAGS] [FILE …]` runs both validators in a single pass:
+
+```python
+rc_frontmatter = validate_frontmatter.main(validator_args)
+rc_id = validate_id.main(validator_args)
+return max(rc_frontmatter, rc_id)
+```
+
+All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`) are forwarded unchanged to both validators. The worst exit code is returned so neither validator's errors can be masked by the other's success.
+
+`--schema` causes `validate-id` to skip automatically: a custom schema signals non-standard id conventions, so the bundled base-36 rules would produce false positives for consumers who define their own id format. The same skip applies when `markdown.frontmatter.schema:` in the config file is a path.
+
+`--help` is intercepted before forwarding and prints combined documentation rather than delegating to `validate-frontmatter --help` (which would hide that `validate-id` also runs).
+
+**Dogfood command:**
+```bash
+uv run project-standards validate --config .project-standards.yml
+```
+
+---
+
 ## Module map
 
 ```text
