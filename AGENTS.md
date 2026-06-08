@@ -1,6 +1,6 @@
 # AGENTS.md
 
-**Session state:** read `docs/handoff/state.md`, then this file, then `docs/handoff/conventions.md`.
+**Session state:** injected at startup by the SessionStart hook (don't ritual-read `docs/handoff/state.md`), then this file, then `docs/handoff/conventions.md`.
 
 **Full conventions reference:** [`docs/handoff/conventions.md`](docs/handoff/conventions.md) — LLM-targeted pattern library. Check it before adding persistent patterns.
 
