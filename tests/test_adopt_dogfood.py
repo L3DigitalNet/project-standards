@@ -52,3 +52,24 @@ def test_caller_stubs_valid_and_reference_correct_workflow() -> None:
 def test_generated_workflow_yaml_has_no_tabs() -> None:
     # check.yml (kind=file) ships verbatim; assert it is space-indented.
     assert "\t" not in (_BUNDLES / "python-tooling" / "check.yml").read_text()
+
+
+def test_starter_config_is_generic_consumer_scope(tmp_path: Path) -> None:
+    from project_standards.cli import main
+
+    main(["adopt", "markdown-frontmatter", "--dest", str(tmp_path)])
+    cfg = yaml.safe_load((tmp_path / ".project-standards.yml").read_text())
+    include = cfg["markdown"]["frontmatter"]["include"]
+    exclude = cfg["markdown"]["frontmatter"]["exclude"]
+    assert "README.md" in include and "docs/**/*.md" in include
+    assert not any("standards/**" in p or "meta/**" in p for p in include)
+    assert "**/*.template.md" in exclude  # ADR-template safety
+
+
+def test_agent_stub_is_generic_no_handoff_content(tmp_path: Path) -> None:
+    from project_standards.cli import main
+
+    main(["adopt", "python-tooling", "--dest", str(tmp_path)])
+    agents = (tmp_path / "AGENTS.md").read_text()
+    assert "Python Tooling SSOT" in agents
+    assert "docs/handoff" not in agents and "project-standards" not in agents.lower()
