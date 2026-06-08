@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'immutable-infrastructure'
+id: concept-6pw4rn-immutable-infrastructure
 title: 'Immutable Infrastructure'
 description: 'Servers and containers are replaced wholesale on every change rather than modified in place.'
 doc_type: 'concept'

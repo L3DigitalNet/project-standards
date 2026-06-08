@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'restart-netbox-after-config-change'
+id: runbook-0f943i-restart-netbox-after-config-change
 title: 'Restart netbox after config change'
 description: 'Procedure to safely reload netbox after editing its configuration.'
 doc_type: 'runbook'

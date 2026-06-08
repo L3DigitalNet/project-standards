@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'python-tooling-ssot-standard'
+id: reference-emtvf1-python-tooling-ssot-standard
 title: 'Python Tooling SSOT Standard'
 description: 'Standard Python tooling stack, layout, CI gate, and agent instructions for agent-authored Python projects.'
 doc_type: 'reference'

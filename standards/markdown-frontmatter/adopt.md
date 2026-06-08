@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'standards-adoption-procedure'
+id: runbook-s87fvu-standards-adoption-compliance-procedure
 title: 'Standards Adoption & Compliance Procedure'
 description: 'Step-by-step procedure for an agent to adopt the project-standards Markdown Frontmatter Standard in a consuming repository and bring it into compliance.'
 doc_type: 'runbook'
@@ -224,7 +224,7 @@ publish, project, x_project
 ```yaml
 ---
 schema_version: '1.1'
-id: 'restart-netbox-after-config-change'
+id: 'runbook-0f943i-restart-netbox-after-config-change'
 title: 'Restart netbox after config change'
 description: 'Procedure to safely reload netbox after editing its configuration.'
 doc_type: 'runbook'

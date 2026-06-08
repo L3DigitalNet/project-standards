@@ -1,0 +1,16 @@
+# Design Specs
+
+Design documents and brainstorming outputs for `project-standards`. Each spec captures the problem, options considered, and the chosen approach before implementation begins.
+
+| Date | Spec | Status | What it covers |
+| --- | --- | --- | --- |
+| 2026-06-04 | [Linting / Formatting Stack](2026-06-04-linting-formatting-stack.md) | implemented (v1.3.0) | Research doc pinning the exact linting + formatting stack for frontmatter validation and the upcoming ADR/MADR standard |
+| 2026-06-05 | [Handoff v3 Migration](2026-06-05-handoff-v3-migration-design.md) | approved | Migrate `project-standards` to the handoff-system-v3 `docs/handoff/` session-state layout |
+| 2026-06-06 | [Python Tooling SSOT Adoption](2026-06-06-python-tooling-ssot-adoption-design.md) | approved | Adopt the Python Tooling SSOT Standard in this repo — `uv` build backend, `src/` layout, `basedpyright`, `pip-audit` |
+| 2026-06-06 | [Standards Bundle Restructure](2026-06-06-standards-bundle-restructure-design.md) | approved | Per-standard bundle directories under `src/project_standards/bundles/` replacing the old flat layout |
+| 2026-06-06 | [Per-Standard Versioning](2026-06-06-per-standard-versioning-design.md) | approved | Per-standard contract versions (`frontmatter`, `adr`, `python_tooling`, `markdown_tooling`) in `registry.json` |
+| 2026-06-06 | [Markdown Tooling Standard](2026-06-06-markdown-tooling-standard-design.md) | approved | Define the Markdown Tooling governed standard (markdownlint, Prettier, EditorConfig) as a new adoptable bundle |
+| 2026-06-08 | [Adopt CLI](2026-06-08-adopt-cli-design.md) | approved | The `project-standards adopt \| list` CLI — packaged scaffolder for materializing standard artifacts into target repos |
+| 2026-06-08 | [Check / Drift Detection](2026-06-08-check-drift-design.md) | approved | The `project-standards check` command — detect drift between adopted artifacts and the canonical bundle |
+
+Implementation plans for these specs live in [`../plans/`](../plans/).

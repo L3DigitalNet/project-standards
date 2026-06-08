@@ -72,6 +72,7 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
 
 
 def _cmd_list(as_json: bool) -> int:
+    """List adoptable standards; fail cleanly on registry/bundle drift before emitting output."""
     registry = load_registry()
     _assert_registry_bundle_parity(registry)  # fail cleanly on drift before emitting anything
     entries: list[tuple[str, str | None, Manifest]] = [
@@ -97,6 +98,7 @@ def _cmd_list(as_json: bool) -> int:
 
 
 def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> int:
+    """Materialize *standards* into *dest*; apply registry/bundle parity guard before planning."""
     if not dest.is_dir():
         print(f"error: --dest is not a directory: {dest}", file=sys.stderr)
         return 2
@@ -112,6 +114,12 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for project-standards.
+
+    `validate` is early-dispatched before argparse runs — argparse's REMAINDER cannot
+    capture flags like `--config` that look like top-level options. All other subcommands
+    go through the normal argparse path inside the error boundary below.
+    """
     args_list = list(sys.argv[1:] if argv is None else argv)
 
     # EARLY DISPATCH for `validate`: delegate every trailing arg to both validators BEFORE the

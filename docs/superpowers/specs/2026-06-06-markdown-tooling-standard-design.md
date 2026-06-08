@@ -2,6 +2,33 @@
 
 **Date:** 2026-06-06 **Status:** approved (brainstorming complete; revised after spec audit round 1; awaiting implementation plan) **Author:** session 2026-06-06
 
+## Table of Contents
+
+- [Design: Markdown Tooling Standard](#design-markdown-tooling-standard)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming + audit round 1)](#decisions-locked-during-brainstorming--audit-round-1)
+  - [Background: what already exists (ground truth)](#background-what-already-exists-ground-truth)
+  - [Design](#design)
+    - [1. Bundle layout](#1-bundle-layout)
+    - [2. The spine — formatter + linter + floor, and the published/repo-local asymmetry](#2-the-spine--formatter--linter--floor-and-the-publishedrepo-local-asymmetry)
+    - [3. `README.md` section outline (with content notes)](#3-readmemd-section-outline-with-content-notes)
+    - [4. `adopt.md` (runbook)](#4-adoptmd-runbook)
+    - [5. Contract-version support (the `src/` work — audit SA-001)](#5-contract-version-support-the-src-work--audit-sa-001)
+    - [6. Sources to (re)check during spec→standard authoring](#6-sources-to-recheck-during-specstandard-authoring)
+    - [7. Repo touchpoints (multi-file change list)](#7-repo-touchpoints-multi-file-change-list)
+    - [8. Acceptance criteria](#8-acceptance-criteria)
+      - [Bundle \& docs](#bundle--docs)
+      - [Validated contract label](#validated-contract-label)
+      - [Formatter / linter scope](#formatter--linter-scope)
+      - [Release pins](#release-pins)
+      - [VS Code dogfood](#vs-code-dogfood)
+      - [Source register](#source-register)
+      - [Gate green (repo non-negotiable)](#gate-green-repo-non-negotiable)
+  - [Versioning \& release interplay](#versioning--release-interplay)
+  - [Non-goals](#non-goals)
+  - [Open questions](#open-questions)
+  - [Audit trail](#audit-trail)
+
 ## Problem / Goal
 
 This repo defines a deliberately **tool-neutral** Markdown Frontmatter Standard (`standards/markdown-frontmatter/README.md`, line 35: "not an Obsidian/Hugo/Jekyll/Quarto schema"). It governs the YAML metadata block and says nothing about how the Markdown _body_ — or the JSON/YAML config files that live alongside docs — should be linted or formatted. Yet the repo already runs a complete toolchain for exactly that: Prettier (formatter, repo-wide over `md`/`json`/`jsonc`/`yaml`) + markdownlint-cli2 (Markdown linter) + EditorConfig (floor). That toolchain's design is recorded only as a scratch decision trail (`docs/superpowers/specs/2026-06-04-linting-formatting-stack.md`, DEC-1…9) and as comments inside the config files. There is no **governing reference** a reader or downstream consumer can adopt.

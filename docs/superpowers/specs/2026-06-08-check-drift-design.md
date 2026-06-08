@@ -4,21 +4,23 @@
 
 ## Table of Contents
 
-- [Problem / Goal](#problem--goal)
-- [Decisions (locked during brainstorming; refined by codex-review round 1)](#decisions-locked-during-brainstorming-refined-by-codex-review-round-1)
-- [Invariants — what must NOT change](#invariants--what-must-not-change)
-- [Component 1 — The state machine (with manifest-vs-lock reconciliation)](#component-1--the-state-machine-with-manifest-vs-lock-reconciliation)
-- [Component 2 — The lockfile (`.project-standards.lock`)](#component-2--the-lockfile-project-standardslock)
-- [Component 3 — CLI surface, flags & exit codes](#component-3--cli-surface-flags--exit-codes)
-- [Component 4 — Module architecture](#component-4--module-architecture)
-- [Component 5 — `adopt` writes the lock](#component-5--adopt-writes-the-lock)
-- [Component 6 — `--update` write-safety & ordering](#component-6--update-write-safety--ordering)
-- [Component 7 — Bootstrap (`--relock`) for already-adopted repos](#component-7--bootstrap---relock-for-already-adopted-repos)
-- [Component 8 — CI delivery](#component-8--ci-delivery)
-- [Component 9 — Testing](#component-9--testing)
-- [Acceptance criteria](#acceptance-criteria)
-- [Non-goals](#non-goals)
-- [Versioning impact](#versioning-impact)
+- [Design: `check` — drift detection for adopted standards artifacts](#design-check--drift-detection-for-adopted-standards-artifacts)
+  - [Table of Contents](#table-of-contents)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming; refined by codex-review round 1)](#decisions-locked-during-brainstorming-refined-by-codex-review-round-1)
+  - [Invariants — what must NOT change](#invariants--what-must-not-change)
+  - [Component 1 — The state machine (with manifest-vs-lock reconciliation)](#component-1--the-state-machine-with-manifest-vs-lock-reconciliation)
+  - [Component 2 — The lockfile (`.project-standards.lock`)](#component-2--the-lockfile-project-standardslock)
+  - [Component 3 — CLI surface, flags \& exit codes](#component-3--cli-surface-flags--exit-codes)
+  - [Component 4 — Module architecture](#component-4--module-architecture)
+  - [Component 5 — `adopt` writes the lock](#component-5--adopt-writes-the-lock)
+  - [Component 6 — `--update` write-safety \& ordering](#component-6----update-write-safety--ordering)
+  - [Component 7 — Bootstrap (`--relock`) for already-adopted repos](#component-7--bootstrap---relock-for-already-adopted-repos)
+  - [Component 8 — CI delivery](#component-8--ci-delivery)
+  - [Component 9 — Testing](#component-9--testing)
+  - [Acceptance criteria](#acceptance-criteria)
+  - [Non-goals](#non-goals)
+  - [Versioning impact](#versioning-impact)
 
 ## Problem / Goal
 
@@ -32,7 +34,7 @@ The `adopt` CLI (shipping in `2.1.0`) materializes a standard's artifacts — ma
 2. **Failure model: staleness fails, edits warn.** `STALE`, `MISSING`, and `UNLOCKED` → exit 1 (CI red). `LOCAL-EDIT` and `ORPHAN` → reported but exit 0. The standards program is **adopt-then-own**: a consumer may customize an adopted file; `check` tells them they have diverged but does not forbid it. (Rejected: strict — any non-CLEAN fails; advisory — exit 0 unless `--strict`.)
 3. **Detect + safe `--update`.** `check` detects; `check --update` re-syncs `STALE` and `MISSING` artifacts to the current template and re-stamps the lock (incl. `restamp-pending` repair), **refusing** to overwrite `LOCAL-EDIT`s or present-but-divergent `UNLOCKED`s (those require `--force`). This keeps the red→green path from contradicting decision 2. (Rejected: detect-only; `--update` + `--force` as the default surface.)
 4. **Fragments excluded in Phase 1.** Manifests are the source of truth for the artifact set; today they yield two artifact classes — whole-file (`file`/`workflow-caller`, written atomically, hash cleanly) and `fragment` (`python-tooling` → `pyproject.toml`, `adr` → `.project-standards.yml`). `adopt` never writes fragments — it only prints a snippet for the human to paste, with no anchoring markers — so there is no deterministic region for `check` to hash. Fragments are listed as `SKIPPED (unmanaged fragment)`, never failing. "Managed fragments with markers" is a clearly-scoped follow-on. (Rejected: whole-file-hash the target — the consumer owns most of `pyproject.toml`, so it would report `LOCAL-EDIT` permanently.)
-5. **Reconciliation is manifest-driven.** [SA-002] The set of *standards* checked is lock-driven (everything in the lock); the set of *artifacts* within each is the standard's **current manifest**, reconciled against the lock's baselines. This catches upstream-added artifacts and adopt-skipped files, which a purely lock-driven check would silently ignore.
+5. **Reconciliation is manifest-driven.** [SA-002] The set of _standards_ checked is lock-driven (everything in the lock); the set of _artifacts_ within each is the standard's **current manifest**, reconciled against the lock's baselines. This catches upstream-added artifacts and adopt-skipped files, which a purely lock-driven check would silently ignore.
 
 ## Invariants — what must NOT change
 
@@ -77,21 +79,21 @@ dest in lock but NOT in S's current manifest:
 
 Why **content hashes** drive state (not version numbers): it catches a template that changed without a contract bump, and it treats "consumer manually updated to current" (`disk == tmpl`) as `CLEAN`. The `contract_version` in the lock is the human-readable reason string (`STALE — adopted contract 1.0, bundle 1.1`) and the re-stamp source. **Hashes decide; versions narrate.**
 
-**The restamp-pending rule** [SA-003]: a `disk == tmpl` artifact whose lock entry is missing or `!= tmpl_hash` is still `CLEAN` (exit 0) but carries a **`restamp-pending`** flag. This is the residue of a partial `--update` (file written, lock write failed) — left unnamed, it would silently read `CLEAN` now and then mis-classify as `LOCAL-EDIT` after the *next* template change instead of `STALE`. Making it a named flag means: (a) every `check` run shows it (incl. the CI step-summary/annotation, like `LOCAL-EDIT`), so it cannot rot unseen; (b) any lock-writing op (`adopt`, `check --update`, `check --relock`) repairs the entry to `tmpl_hash` + current `contract_version`. `--update` restamps pending entries even when nothing else is stale.
+**The restamp-pending rule** [SA-003]: a `disk == tmpl` artifact whose lock entry is missing or `!= tmpl_hash` is still `CLEAN` (exit 0) but carries a **`restamp-pending`** flag. This is the residue of a partial `--update` (file written, lock write failed) — left unnamed, it would silently read `CLEAN` now and then mis-classify as `LOCAL-EDIT` after the _next_ template change instead of `STALE`. Making it a named flag means: (a) every `check` run shows it (incl. the CI step-summary/annotation, like `LOCAL-EDIT`), so it cannot rot unseen; (b) any lock-writing op (`adopt`, `check --update`, `check --relock`) repairs the entry to `tmpl_hash` + current `contract_version`. `--update` restamps pending entries even when nothing else is stale.
 
 `MISSING` is distinct from an **unreadable** file: absent → `MISSING` (exit 1); read error (permissions) → I/O failure (exit 1) with a clear message, never a traceback. A symlinked destination is never read at all → `UNSAFE` (exit 1).
 
 State → exit-code summary:
 
-| State | Exit | Meaning |
-| --- | --- | --- |
-| CLEAN | 0 | on disk == current template (may carry `restamp-pending`) |
-| LOCAL-EDIT | 0 | consumer changed an adopted/accepted file |
-| ORPHAN | 0 | locked artifact no longer in the manifest |
-| STALE | 1 | adopted, untouched, standard advanced |
-| MISSING | 1 | manifest/lock artifact absent on disk |
-| UNLOCKED | 1 | present, differs from current, no baseline to attribute it |
-| UNSAFE | 1 | destination is a symlink (leaf or ancestor) — not hashed |
+| State      | Exit | Meaning                                                    |
+| ---------- | ---- | ---------------------------------------------------------- |
+| CLEAN      | 0    | on disk == current template (may carry `restamp-pending`)  |
+| LOCAL-EDIT | 0    | consumer changed an adopted/accepted file                  |
+| ORPHAN     | 0    | locked artifact no longer in the manifest                  |
+| STALE      | 1    | adopted, untouched, standard advanced                      |
+| MISSING    | 1    | manifest/lock artifact absent on disk                      |
+| UNLOCKED   | 1    | present, differs from current, no baseline to attribute it |
+| UNSAFE     | 1    | destination is a symlink (leaf or ancestor) — not hashed   |
 
 ## Component 2 — The lockfile (`.project-standards.lock`)
 
@@ -152,19 +154,46 @@ project-standards check --relock STANDARD [STANDARD ...] [--dest DIR] [--quiet]
 
 ```json
 {
-  "lockfile_version": 1,
-  "tool_version": "2.2.0",
-  "standards": [
-    {"id": "markdown-tooling", "contract_version": "1.0",
-     "artifacts": [
-       {"dest": ".markdownlint.json", "state": "CLEAN", "restamp_pending": false, "owners": ["markdown-tooling"]},
-       {"dest": ".prettierrc.json", "state": "CLEAN", "restamp_pending": true, "owners": ["markdown-tooling"]},
-       {"dest": ".editorconfig", "state": "STALE", "restamp_pending": false, "owners": ["markdown-tooling", "python-tooling"]}
-     ],
-     "fragments": [{"target": "pyproject.toml", "state": "SKIPPED"}]}
-  ],
-  "summary": {"clean": 12, "restamp_pending": 1, "stale": 1, "local_edit": 1,
-              "missing": 0, "unlocked": 0, "orphan": 0, "unsafe": 0, "exit_code": 1}
+	"lockfile_version": 1,
+	"tool_version": "2.2.0",
+	"standards": [
+		{
+			"id": "markdown-tooling",
+			"contract_version": "1.0",
+			"artifacts": [
+				{
+					"dest": ".markdownlint.json",
+					"state": "CLEAN",
+					"restamp_pending": false,
+					"owners": ["markdown-tooling"]
+				},
+				{
+					"dest": ".prettierrc.json",
+					"state": "CLEAN",
+					"restamp_pending": true,
+					"owners": ["markdown-tooling"]
+				},
+				{
+					"dest": ".editorconfig",
+					"state": "STALE",
+					"restamp_pending": false,
+					"owners": ["markdown-tooling", "python-tooling"]
+				}
+			],
+			"fragments": [{ "target": "pyproject.toml", "state": "SKIPPED" }]
+		}
+	],
+	"summary": {
+		"clean": 12,
+		"restamp_pending": 1,
+		"stale": 1,
+		"local_edit": 1,
+		"missing": 0,
+		"unlocked": 0,
+		"orphan": 0,
+		"unsafe": 0,
+		"exit_code": 1
+	}
 }
 ```
 
@@ -204,7 +233,7 @@ Every `adopt` / `adopt --force` run merges its written whole-file artifacts into
 
 ## Component 7 — Bootstrap (`--relock`) for already-adopted repos
 
-Repos adopted under `2.1.0` have no lock. `check` with no lock present exits 2 with guidance (not a traceback): *"no `.project-standards.lock` found; run `project-standards adopt …` or `project-standards check --relock <standard>…` to baseline."*
+Repos adopted under `2.1.0` have no lock. `check` with no lock present exits 2 with guidance (not a traceback): _"no `.project-standards.lock` found; run `project-standards adopt …` or `project-standards check --relock <standard>…` to baseline."_
 
 `check --relock STANDARD...` resolves each named standard's manifest and, per whole-file artifact: [SA-001]
 
@@ -212,7 +241,7 @@ Repos adopted under `2.1.0` have no lock. `check` with no lock present exits 2 w
 - `disk` present but `!= tmpl` → record under `[S.local_edits]` (an **accepted customization** baseline). Such entries report `LOCAL-EDIT` (exit 0) and are **never** classified `STALE`, because their hash was never a template — the separate table is what makes the state machine consistent.
 - `disk ABSENT` → not recorded; surfaces as `MISSING` on the next `check` (the consumer never adopted it).
 
-This delivers the zero-clobber migration honestly: relock writes files for nobody, baselines matching files as clean and customized files as accepted edits, and the documented caveat is that it cannot recover true adoption history — a file the consumer drifted *before* relock is baselined as that consumer's accepted edit, not flagged as upstream staleness.
+This delivers the zero-clobber migration honestly: relock writes files for nobody, baselines matching files as clean and customized files as accepted edits, and the documented caveat is that it cannot recover true adoption history — a file the consumer drifted _before_ relock is baselined as that consumer's accepted edit, not flagged as upstream staleness.
 
 ## Component 8 — CI delivery
 
@@ -221,11 +250,11 @@ A new reusable workflow lets consumers run drift detection in CI, mirroring `val
 - **Ref-pinned execution** [SA-004]: the reusable workflow takes a `standards-ref` input and runs the checker from the **matching git ref**, exactly like the existing validator workflow, so the bundled manifests/templates the checker compares against are the same release the caller pinned:
 
   ```yaml
-  uvx --from "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref || 'v2' }}" \
-      project-standards check
+  uvx --from "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref || 'v2' }}" \ project-standards check
   ```
 
   Plain `uvx project-standards check` is rejected — `uvx` resolves to latest/cached unless a source is pinned, which would silently decouple the checker from the consumer's intended release.
+
 - **Naming**: caller template `drift-check.caller.yml`; reusable workflow `.github/workflows/standards-drift.yml` — named to avoid colliding with the repo's internal `check.yml` gate **and** with the `check.yml` the `python-tooling` bundle ships to consumers. A single, standard-agnostic caller (it runs one lock-driven `check` over the whole repo, so unlike the per-standard validate/lint callers it is not bundle-scoped).
 - **Surfacing non-failing drift on a green run** [SA-009]: because `LOCAL-EDIT`/`ORPHAN`/`restamp-pending` exit 0, the workflow writes a `$GITHUB_STEP_SUMMARY` table and emits `::warning::` annotations for each, so divergence (and a lock that needs restamping) is visible on a passing run rather than buried in logs.
 

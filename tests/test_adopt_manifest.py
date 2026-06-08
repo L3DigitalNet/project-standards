@@ -1,3 +1,9 @@
+"""Tests for adopt manifest loading and available-standards discovery.
+
+Scope: available_standards() and load_manifest() — the TOML parsing and validation
+layer that sits between raw adopt.toml files and the engine's build_plan step.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'markdown-tooling-adoption'
+id: runbook-uw0j7m-adopt-the-markdown-tooling-standard
 title: 'Adopt the Markdown Tooling Standard'
 description: 'How to adopt the Markdown Tooling Standard: seed the markdownlint rule set and EditorConfig, copy the Prettier config, and wire the reusable lint workflow.'
 doc_type: 'runbook'

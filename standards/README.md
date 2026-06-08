@@ -8,6 +8,7 @@ This directory holds the **governing standards** this repository defines. Each s
 | ADR | Architecture Decision Records (MADR on the frontmatter profile) | [adr/](adr/) | [adopt](adr/adopt.md) |
 | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
+| Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | [python-coding/](python-coding/) | — (reference only; no artifacts to materialize) |
 
 ## Bundle anatomy
 
@@ -21,7 +22,7 @@ standards/<standard-id>/
 └── examples/      # OPTIONAL — validated worked examples (real frontmatter; dogfooded)
 ```
 
-A standard may be doc-only (just `README.md` + `adopt.md`) — see [python-tooling/](python-tooling/).
+A standard may be doc-only (just `README.md` + `adopt.md`) — see [python-tooling/](python-tooling/). A standard with no materializeable artifacts and no adoption workflow (currently [python-coding/](python-coding/)) has only a `README.md`.
 
 ## Not a governed standard
 

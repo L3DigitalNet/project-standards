@@ -2,6 +2,27 @@
 
 **Date:** 2026-06-06 **Status:** approved (brainstorming complete; awaiting implementation plan) **Author:** session 2026-06-06
 
+## Table of Contents
+
+- [Design: Per-standard bundle restructure for `project-standards`](#design-per-standard-bundle-restructure-for-project-standards)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
+  - [Invariants — the consumer contract (must NOT change)](#invariants--the-consumer-contract-must-not-change)
+  - [Target layout](#target-layout)
+    - [Bundle anatomy (the scale pattern — documented in `standards/README.md`)](#bundle-anatomy-the-scale-pattern--documented-in-standardsreadmemd)
+  - [Migration map (all moves via `git mv` to preserve history)](#migration-map-all-moves-via-git-mv-to-preserve-history)
+  - [Tooling \& contract updates](#tooling--contract-updates)
+    - [Functional changes (affect behavior)](#functional-changes-affect-behavior)
+    - [Accuracy sweeps (no behavior change; required for a self-consistent standards repo)](#accuracy-sweeps-no-behavior-change-required-for-a-self-consistent-standards-repo)
+  - [Index, `adopt.md`, and `meta/` content](#index-adoptmd-and-meta-content)
+    - [`standards/README.md` (index)](#standardsreadmemd-index)
+    - [`adopt.md` per bundle (deliberately unequal — each matches its real adoption model)](#adoptmd-per-bundle-deliberately-unequal--each-matches-its-real-adoption-model)
+    - [`meta/`](#meta)
+  - [Verification plan](#verification-plan)
+  - [Release framing](#release-framing)
+  - [Non-goals](#non-goals)
+  - [Open implementation details (resolve in the plan, not blocking design)](#open-implementation-details-resolve-in-the-plan-not-blocking-design)
+
 ## Problem / Goal
 
 At the next release (the locked `2.0.0`), this repo governs **three** standards — Markdown Frontmatter, ADR, and Python Tooling SSOT. Today the human-readable surface is organised by _artifact type_, not by _standard_: five files sit flat under `standards/` (the three governing docs plus two meta docs — `versioning.md`, `adoption.md`), while each standard's templates and examples are scattered across flat top-level `templates/` and `examples/` trees. A reader cannot see "everything that belongs to the ADR standard" in one place, and a consumer cannot adopt one standard in isolation without wading through the others.

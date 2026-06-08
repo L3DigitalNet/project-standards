@@ -34,6 +34,8 @@ class Artifact:
 
 @dataclass(frozen=True)
 class Manifest:
+    """A parsed adopt.toml: the standard's id and its ordered artifact list."""
+
     id: str
     artifacts: tuple[Artifact, ...]
 
@@ -52,6 +54,11 @@ def available_standards(bundles_dir: Path = BUNDLES_DIR) -> list[str]:
 
 
 def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest:
+    """Parse and validate adopt.toml for *standard_id*; raise ManifestError on any problem.
+
+    Enforces: [standard].id matches *standard_id*, every artifact has a known kind,
+    exactly one of source/shared is set, and dest/target are present as required by kind.
+    """
     path = bundles_dir / standard_id / "adopt.toml"
     if not path.is_file():
         raise ManifestError(f"no manifest for standard {standard_id!r} at {path}")

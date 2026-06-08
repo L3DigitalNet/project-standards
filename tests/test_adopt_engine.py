@@ -1,3 +1,11 @@
+"""Tests for the adopt engine's pure functions: major_ref, resolve_source, and build_plan.
+
+Scope: unit-level — exercises the engine against the real bundles directory. Companion
+files cover the path-safety / symlink surface (test_adopt_safety.py), full CLI integration
+(test_adopt_cli.py), manifest parsing (test_adopt_manifest.py), dogfood byte-identity
+(test_adopt_dogfood.py), and wheel packaging (test_adopt_packaging.py).
+"""
+
 from __future__ import annotations
 
 import pytest

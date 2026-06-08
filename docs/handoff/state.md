@@ -4,8 +4,8 @@
 
 ## State at a glance
 
-- **`adopt` CLI IMPLEMENTED on `testing` (`2.1.0` target), NOT tagged.** Plan `docs/superpowers/plans/2026-06-08-adopt-cli.md` phases A–E2 committed: `project-standards adopt|list|validate` (engine `src/project_standards/adopt/`, bundles `src/project_standards/bundles/`), 223 tests green, wheel ships bundles, CHANGELOG `[Unreleased]` written. **E3 (release commit + tag `v2.1.0` + move `v2` + `deployed.md`) HELD by user — rolling more items into `2.1.0` first (e.g. `validate-id`); resume only on explicit go + a green tree.**
-- **Gate caveat:** full-repo SSOT gate is red from concurrent in-flight work (untested `validate_id.py` → coverage 82%; 88-col reformats of `registry`/`sync_*`/`validate_frontmatter`). The adopt code itself is fully green (format/lint/type/tests; ~94% coverage excl. `validate_id.py`). Resolve before E3.
+- **`adopt` CLI + `validate-id --fix` IMPLEMENTED on `testing` (`2.1.0` target), NOT tagged.** 296 tests green, coverage 91% (≥85% threshold), basedpyright 0/0/0, ruff clean. **E3 (release commit + tag `v2.1.0` + move `v2` + `deployed.md`) HELD — resume only on explicit user go.**
+- **Gate is GREEN.** All prior gate caveats (coverage 82%, 88-col reformats) resolved. E3 unblocked on toolchain.
 - **`2.0.0` released** 2026-06-07 (`v2.0.0` + moving `v2` on `main`; `v1` frozen at `v1.2.0`). Consumers re-pin `@v1`→`@v2`; **BREAKING** `requires-python` now `>=3.14`. Details in `CHANGELOG.md` + `deployed.md`.
 - Repo on handoff-system-v3. Validator at `src/project_standards/` (schema bundled); standards in per-standard bundles `standards/<name>/…` + `meta/versioning.md`; consumer contract unchanged.
 

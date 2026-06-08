@@ -2,6 +2,27 @@
 
 **Date:** 2026-06-06 **Status:** approved (brainstorming complete; awaiting implementation plan) **Author:** session 2026-06-06
 
+## Table of Contents
+
+- [Design: Adopt the Python Tooling SSOT Standard in `project-standards`](#design-adopt-the-python-tooling-ssot-standard-in-project-standards)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
+  - [The standard contract this adoption must satisfy](#the-standard-contract-this-adoption-must-satisfy)
+  - [Workstreams](#workstreams)
+    - [A. Layout migration → `src/`](#a-layout-migration--src)
+    - [B. `pyproject.toml` rewrite (corrected baseline)](#b-pyprojecttoml-rewrite-corrected-baseline)
+    - [C. Config artifacts](#c-config-artifacts)
+    - [D. CI](#d-ci)
+    - [E. Code \& test changes](#e-code--test-changes)
+    - [F. Dogfood the new standard doc](#f-dogfood-the-new-standard-doc)
+    - [G. Reference sweep (path/schema moves + new gate)](#g-reference-sweep-pathschema-moves--new-gate)
+    - [H. Working-tree cleanup](#h-working-tree-cleanup)
+  - [pytest config note](#pytest-config-note)
+  - [Expected fix-up work (stricter tooling, fixed properly — never silenced)](#expected-fix-up-work-stricter-tooling-fixed-properly--never-silenced)
+  - [Acceptance criteria](#acceptance-criteria)
+  - [Out of scope / non-goals](#out-of-scope--non-goals)
+  - [Risks](#risks)
+
 ## Problem / Goal
 
 `standards/python-tooling-ssot-standard.md` (v1.5) defines the workstation's Python tooling stack: `uv` + `uv_build`, `src/` layout, `ruff`, `basedpyright` (strict), `pytest` + `coverage.py` (branch), `pip-audit`, a `.vscode/` workspace, a `.python-version`, a single `check.yml` CI gate, and `scripts/check.py`. This repo should become the **reference example** of that standard.

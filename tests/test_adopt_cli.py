@@ -1,3 +1,14 @@
+"""Integration tests for the project-standards CLI: adopt, list, and validate subcommands.
+
+Covers the full CLI surface via main():
+- list (plain and --json); registry/bundle parity guard
+- adopt: dest validation, file materialization, shared-artifact dedup, idempotency,
+  fragment reporting, and the ADR template-exclusion guidance
+- validate: early-dispatch architecture (cannot use argparse REMAINDER for flags like
+  --config), --help interception before forwarding, flag pass-through to both validators,
+  exit-code-is-max(rc_frontmatter, rc_id) contract, --schema and config custom-schema bypass
+"""
+
 from __future__ import annotations
 
 import json
@@ -114,10 +125,10 @@ def test_validate_exit_code_is_maximum_of_both(monkeypatch: pytest.MonkeyPatch) 
     cases = [(0, 0, 0), (1, 0, 1), (0, 1, 1), (2, 0, 2), (0, 2, 2), (1, 2, 2)]
     for rc_fm, rc_id, expected in cases:
 
-        def fake_fm(argv: list[str], _r: int = rc_fm) -> int:
+        def fake_fm(_argv: list[str], _r: int = rc_fm) -> int:
             return _r
 
-        def fake_id(argv: list[str], _r: int = rc_id) -> int:
+        def fake_id(_argv: list[str], _r: int = rc_id) -> int:
             return _r
 
         monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
@@ -135,7 +146,7 @@ def test_validate_schema_flag_skips_id_check(
     schema_file = tmp_path / "custom.json"
     schema_file.write_text("{}", encoding="utf-8")
 
-    def fake_fm(argv: list[str]) -> int:
+    def fake_fm(_argv: list[str]) -> int:
         return 0
 
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
@@ -160,7 +171,7 @@ def test_validate_config_custom_schema_skips_id_check(
         encoding="utf-8",
     )
 
-    def fake_fm(argv: list[str]) -> int:
+    def fake_fm(_argv: list[str]) -> int:
         return 0
 
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)

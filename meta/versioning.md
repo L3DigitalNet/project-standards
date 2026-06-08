@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'reference-versioning-standard'
+id: reference-cirycm-versioning-standard
 title: 'Versioning Standard'
 description: 'How releases of this repository are numbered, tagged, and consumed — a consumer-outcome contract over the standard, schema, validator, and workflow.'
 doc_type: 'reference'

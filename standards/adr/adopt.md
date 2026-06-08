@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'adr-standard-adoption'
+id: runbook-5ax5n4-adopt-the-adr-standard
 title: 'Adopt the ADR Standard'
 description: 'How to adopt the ADR Standard in a consuming repository; it rides the frontmatter validator.'
 doc_type: 'runbook'

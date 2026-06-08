@@ -1,3 +1,14 @@
+"""Dogfood tests: bundle source files must stay byte-identical to their repo-root counterparts.
+
+The _DOGFOOD dict maps each bundle artifact that this repo self-adopts to the working-copy
+file it must match exactly. Any drift means the bundle would ship different content from
+what the repo itself runs — caught here rather than on a consumer's adoption run.
+
+Also covers: every manifest artifact resolves to an actual file; workflow-caller stubs
+render to valid YAML with the correct @vN ref; the starter config and AGENTS.md stub
+are scoped for a generic consumer (no project-standards-specific paths or handoff content).
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

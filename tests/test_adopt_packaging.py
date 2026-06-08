@@ -1,3 +1,13 @@
+"""Wheel packaging smoke test: verify bundle artifacts land inside the built wheel.
+
+Shells out to `uv build --wheel` — this is the slowest test in the suite.
+Skip with `-k "not packaging"` when iterating on logic-only changes.
+
+Verifies that the `package_data` globs in pyproject.toml include bundles/, schemas/,
+and registry.json so the adopt engine works identically from a source checkout and
+from a `uv tool install`-ed wheel.
+"""
+
 from __future__ import annotations
 
 import subprocess

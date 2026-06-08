@@ -116,6 +116,13 @@ _REF_PLACEHOLDER = "{{ref}}"
 
 @dataclass
 class Report:
+    """Accumulated outcome of execute_plan: what was written, skipped, or reported.
+
+    Fragment actions are never written to disk — they are collected here so the caller
+    can print guidance. Multiple standards may contribute to the same fragment target,
+    so `fragments` holds a list of snippets per target key rather than a single string.
+    """
+
     created: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     overwritten: list[str] = field(default_factory=list)

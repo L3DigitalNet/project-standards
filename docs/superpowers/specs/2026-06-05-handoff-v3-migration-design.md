@@ -2,6 +2,18 @@
 
 **Date:** 2026-06-05 **Status:** approved (brainstorming complete; awaiting implementation plan) **Author:** session 2026-06-05
 
+## Table of Contents
+
+- [Design: Migrate `project-standards` to handoff-system-v3](#design-migrate-project-standards-to-handoff-system-v3)
+  - [Problem](#problem)
+  - [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
+  - [The v3 contract this migration must satisfy](#the-v3-contract-this-migration-must-satisfy)
+  - [Content relocation map](#content-relocation-map)
+  - [Index-file rewrites](#index-file-rewrites)
+  - [New `docs/handoff/` file contents (authored, not moved)](#new-docshandoff-file-contents-authored-not-moved)
+  - [Validation (acceptance criteria)](#validation-acceptance-criteria)
+  - [Non-goals](#non-goals)
+
 ## Problem
 
 `project-standards` deliberately opted **out** of the workstation v3 handoff system. Three places asserted this self-containment:

@@ -2,6 +2,28 @@
 
 **Date:** 2026-06-06 **Status:** approved (brainstorming complete; awaiting implementation plan) **Author:** session 2026-06-06
 
+## Table of Contents
+
+- [Design: Per-standard versioning for `project-standards`](#design-per-standard-versioning-for-project-standards)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
+  - [The model: two version planes](#the-model-two-version-planes)
+  - [Version grammar](#version-grammar)
+  - [Per-standard contract versions](#per-standard-contract-versions)
+    - [FM→ADR compatibility (machine-checked)](#fmadr-compatibility-machine-checked)
+  - [Validator mechanics (Approach A)](#validator-mechanics-approach-a)
+    - [Multi-version bundle + registry](#multi-version-bundle--registry)
+    - [Config selectors (`.project-standards.yml`)](#config-selectors-project-standardsyml)
+    - [Resolution algorithm](#resolution-algorithm)
+    - [Legacy \& custom-schema compatibility](#legacy--custom-schema-compatibility)
+  - [Release \& classification changes](#release--classification-changes)
+  - [Invariants — consumer contract (must NOT change)](#invariants--consumer-contract-must-not-change)
+  - [Versioning classification of _this_ change](#versioning-classification-of-this-change)
+  - [Scope / non-goals](#scope--non-goals)
+  - [Deliverables checklist](#deliverables-checklist)
+  - [Open questions](#open-questions)
+  - [Audit history](#audit-history)
+
 ## Problem / Goal
 
 This repo governs **three standards** — Markdown Frontmatter, ADR, and Python Tooling SSOT — but ships them under a **single version plane**: one git tag, one Python package (`project-standards`), one reusable workflow. A consumer pins `@v1` and atomically receives all three at one commit.

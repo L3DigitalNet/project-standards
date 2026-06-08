@@ -1,3 +1,15 @@
+"""Tests for adopt-engine path-containment and symlink safety.
+
+Scope: validate_dest, execute_plan's symlink detection, and _atomic_write failure modes.
+Covers the full attack surface the engine defends against:
+  - Absolute and ../-traversal destinations (validate_dest → UsageError)
+  - Symlinked-leaf destinations (skipped even with --force)
+  - Symlinked parent directories that could redirect writes outside --dest
+  - Broken (dangling) symlinks
+  - WriteError mapping for mkstemp failure, unreadable source, and os.replace failure
+  - Fragment target path-safety (UsageError on traversal even though fragments never write)
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -66,7 +78,7 @@ def test_atomic_write_failure_preserves_original(
     target.write_text("original\n")
     plan = [_file_action(tmp_path, "keep.txt")]
 
-    def boom(src: Path, dst: Path) -> None:  # os.replace stand-in that fails post-write
+    def boom(_src: Path, _dst: Path) -> None:  # os.replace stand-in that fails post-write
         raise OSError("disk full")
 
     monkeypatch.setattr(eng.os, "replace", boom)
@@ -113,7 +125,7 @@ def test_execute_maps_mkstemp_failure_to_writeerror(
 ) -> None:
     import project_standards.adopt.engine as eng
 
-    def boom(*a: object, **k: object) -> tuple[int, str]:
+    def boom(*_a: object, **_k: object) -> tuple[int, str]:
         raise OSError("no temp")
 
     monkeypatch.setattr(eng.tempfile, "mkstemp", boom)
@@ -128,7 +140,7 @@ def test_execute_maps_unreadable_source_to_writeerror(
 ) -> None:
     import project_standards.adopt.engine as eng
 
-    def boom(self: Path) -> bytes:
+    def boom(_self: Path) -> bytes:
         raise OSError("unreadable")
 
     monkeypatch.setattr(eng.Path, "read_bytes", boom)

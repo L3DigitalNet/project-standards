@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'python-tooling-adoption'
+id: runbook-b07x48-adopt-the-python-tooling-ssot-standard
 title: 'Adopt the Python Tooling SSOT Standard'
 description: 'How to adopt the Python Tooling SSOT Standard: copy the in-doc scaffolds and run the verification gate; there is no reusable workflow.'
 doc_type: 'runbook'
