@@ -82,17 +82,18 @@ _VALID_DOC_TYPES: frozenset[str] = frozenset(
 # Exactly 6 characters from the base-36 alphabet (digits 0-9 + lowercase letters a-z).
 _BASE36_RE = re.compile(r"^[0-9a-z]{6}$")
 
-# Non-empty lowercase kebab-case: starts and ends with alphanumeric; internal hyphens allowed.
-# The `([a-z0-9-]*[a-z0-9])?` optional group handles single-char slugs ("a") and multi-char
-# slugs that must not end in a hyphen ("some-title"). slugify() already strips trailing
-# hyphens, so a valid derived slug never triggers this guard — only hand-crafted bad ids do.
-_KEBAB_RE = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
+# Non-empty lowercase kebab-case with no consecutive hyphens: each hyphen must be surrounded
+# by at least one alphanumeric on each side (i.e. every segment between hyphens is non-empty).
+# slugify() already guarantees this for derived slugs; this guard catches hand-crafted ids
+# that would produce double hyphens (e.g. "bad--slug").
+_KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 # ADR id: adr-{NNNN}-{repo-name}-{short-title}
-# NNNN is at least 4 zero-padded digits; the repo-name + short-title together form a
-# non-empty kebab-case suffix that must not end in a hyphen (same trailing-hyphen guard
-# as _KEBAB_RE above).
-_ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
+# NNNN is at least 4 zero-padded digits.  The suffix after the sequence number requires at
+# least two hyphen-separated segments (repo-name and short-title); a single-segment suffix
+# like "adr-0001-repo" is rejected.  Consecutive hyphens are impossible because each segment
+# is [a-z0-9]+.
+_ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]+(-[a-z0-9]+)+$")
 
 
 def slugify(text: str) -> str:
@@ -271,9 +272,18 @@ def fix_file(path: Path) -> str | None:
     - or ``title`` slugifies to an empty string.
     """
     try:
-        text = path.read_text(encoding="utf-8")
+        raw = path.read_bytes()
     except OSError:
         return None
+    # Preserve original line endings: read_text() normalises CRLF→LF on all platforms.
+    # Detect before decoding so we can restore the original style after the replacement.
+    has_crlf = b"\r\n" in raw
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    if has_crlf:
+        text = text.replace("\r\n", "\n")
     try:
         meta: dict[str, Any] | None = parse_frontmatter(text)
     except FrontmatterParseError:
@@ -303,7 +313,9 @@ def fix_file(path: Path) -> str | None:
     new_text = _replace_frontmatter_id(text, new_id)
     if new_text == text:
         return None
-    path.write_text(new_text, encoding="utf-8")
+    if has_crlf:
+        new_text = new_text.replace("\n", "\r\n")
+    path.write_bytes(new_text.encode("utf-8"))
     return new_id
 
 
@@ -312,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="validate-id",
         description=(
-            "Validate that frontmatter id fields follow [doc_type]-[base36-6]-[title-slug]."
+            "Validate that frontmatter id fields follow [doc_type]-[base36-6]-[readable-slug]."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

@@ -121,6 +121,14 @@ def test_adr_id_empty_suffix_after_number_fails() -> None:
     assert errors
 
 
+def test_adr_id_only_repo_name_no_short_title_fails() -> None:
+    # Three segments total (adr, NNNN, repo) but missing the required short-title segment.
+    # "adr-0001-repo" looks plausible but is incomplete — the contract is
+    # adr-{NNNN}-{repo-name}-{short-title} so at least 4 segments are required.
+    errors = validate_id("adr-0001-repo", "adr")
+    assert errors
+
+
 def test_adr_id_uppercase_in_suffix_fails() -> None:
     errors = validate_id("adr-0001-Repo-Title", "adr")
     assert errors
@@ -247,6 +255,19 @@ def test_validate_id_readable_slug_with_internal_hyphens_passes() -> None:
     # Multi-word slugs with hyphens are valid (this is the expected normal form).
     errors = validate_id("runbook-a3f9zk-standards-adoption-compliance-procedure", "runbook")
     assert errors == []
+
+
+def test_validate_id_readable_slug_double_hyphen_fails() -> None:
+    # Consecutive hyphens in the readable-slug are not valid kebab-case.
+    # slugify() never produces them, but hand-crafted ids can.
+    errors = validate_id("note-a3f9zk-bad--slug", "note")
+    assert any("kebab-case" in e for e in errors)
+
+
+def test_adr_id_double_hyphen_in_suffix_fails() -> None:
+    # Consecutive hyphens in the repo-name/short-title suffix violate the kebab contract.
+    errors = validate_id("adr-0001-repo--title", "adr")
+    assert errors
 
 
 # ---------------------------------------------------------------------------
@@ -561,6 +582,33 @@ def test_fix_file_no_title_returns_none(tmp_path: Path) -> None:
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
     assert fix_file(f) is None
+
+
+def test_fix_file_preserves_crlf_line_endings(tmp_path: Path) -> None:
+    # fix_file must not normalise CRLF → LF when writing back.  On all platforms,
+    # read_text() translates \r\n to \n; the function must detect the original style
+    # and restore it in the output.
+    crlf = (
+        "---\r\n"
+        "schema_version: '1.1'\r\n"
+        "id: 'old-kebab-id'\r\n"
+        "title: 'Tailscale ACL gotcha'\r\n"
+        "description: 'Test.'\r\n"
+        "doc_type: 'note'\r\n"
+        "status: 'active'\r\n"
+        "created: '2026-06-01'\r\n"
+        "updated: '2026-06-08'\r\n"
+        "tags: []\r\naliases: []\r\nrelated: []\r\n"
+        "---\r\n# Body\r\n"
+    )
+    path = tmp_path / "crlf.md"
+    path.write_bytes(crlf.encode("utf-8"))
+    new_id = fix_file(path)
+    assert new_id is not None
+    written = path.read_bytes()
+    assert b"\r\n" in written, "CRLF line endings must be preserved after fix"
+    assert b"\r\n---\r\n" in written, "frontmatter delimiters must retain CRLF"
+    assert b"id: '" + new_id.encode() + b"'" in written
 
 
 # ---------------------------------------------------------------------------
