@@ -16,7 +16,6 @@
 | Standards bundle restructure plan | `docs/superpowers/plans/2026-06-06-standards-bundle-restructure.md` | released (`v2.0.0`) |
 | Python Tooling SSOT adoption design | `docs/superpowers/specs/2026-06-06-python-tooling-ssot-adoption-design.md` | approved |
 | Python Tooling SSOT adoption plan | `docs/superpowers/plans/2026-06-06-python-tooling-ssot-adoption.md` | released (`v2.0.0`) |
-| `check` (drift detection) design | `docs/superpowers/specs/2026-06-08-check-drift-design.md` | approved (codex r1); awaiting plan |
 | Handoff v3 migration design | `docs/superpowers/specs/2026-06-05-handoff-v3-migration-design.md` | approved |
 | Handoff v3 migration plan | `docs/superpowers/plans/2026-06-05-handoff-v3-migration.md` | in progress |
 | Linting/formatting stack (DEC-1…9 trail) | `docs/superpowers/specs/2026-06-04-linting-formatting-stack.md` | implemented (1.3.0) |

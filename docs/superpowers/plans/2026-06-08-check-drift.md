@@ -10,11 +10,12 @@
 
 **Conventions to honor:** dataclasses + `from __future__ import annotations` like `manifest.py`; errors carry `exit_code` like `errors.py`; tests use `tmp_path`/`monkeypatch` and assert at byte level like `tests/test_adopt_safety.py`; **never `git add .`** — add by explicit path; keep the SSOT gate green after every task.
 
-**Gate-fit notes (the repo runs ruff + basedpyright in strict mode — honor these or the gate goes red):**
+**Gate-fit notes (the repo runs ruff + basedpyright strict, `failOnWarnings = true` — honor these or the gate goes red):**
 
-1. **Hoist imports.** Where an "append" step shows `import`/`from … import …` lines, **merge them into the top-of-file import block** — ruff `E402` forbids module-level imports below code. The ONLY exceptions are the deliberate _inside-function_ imports used to break the `engine ↔ lock` cycle (e.g. `sha256_bytes` inside `execute_plan`, `merge_and_write` inside `_cmd_adopt`); those stay where shown.
-2. **Fully type test signatures.** Every test param needs an annotation and `-> None`, matching `tests/test_adopt_safety.py`: `capsys: pytest.CaptureFixture[str]`, `monkeypatch: pytest.MonkeyPatch`, `tmp_path: Path`. Bare `capsys` will fail basedpyright.
-3. **`load_lock` returns `Lock | None`.** Call sites that pass its result straight into `compute_states` need a narrowing `assert … is not None` (as the tests show) or a `# type: ignore[arg-type]`; don't leave the union unhandled.
+1. **All imports at module top.** Every `import` in the code below belongs in the file's top import block — ruff `E402` forbids module-level imports below code. The ONLY exceptions are the deliberate _inside-function_ imports that break the `engine ↔ lock` cycle (`sha256_bytes` inside `execute_plan`; `merge_and_write`/`lock` imports inside `_cmd_adopt`). When a later task "adds" a function to an existing file, its imports were already placed at the top by the task that created the file — re-check the top block, don't append.
+2. **Fully type every test signature.** `tmp_path: Path`, `monkeypatch: pytest.MonkeyPatch`, `capsys: pytest.CaptureFixture[str]`, helper returns annotated, `-> None` on every test. Bare params fail basedpyright (`import pytest` in each test module).
+3. **`load_lock` returns `Lock | None`.** Narrow with `assert … is not None` (as the tests show) before passing to `compute_states`; never leave the union unhandled.
+4. **No unused names.** Ruff `F841`/`F401` fail the gate — every local and import must be used.
 
 ---
 
@@ -26,16 +27,30 @@
 | `src/project_standards/registry.py` | Modify | add `Registry.default_contract(standard_id)` |
 | `src/project_standards/adopt/lock.py` | Create | lock dataclasses, `sha256_bytes`, `load_lock`, `write_lock`, `merge_and_write`, TOML serializer |
 | `src/project_standards/adopt/engine.py` | Modify | accumulate `Report.hashes`; expose `atomic_write` |
-| `src/project_standards/adopt/check.py` | Create | `ArtifactState`, `compute_states`, `apply_update`, `relock`, `format_check_report`, `states_to_json` |
+| `src/project_standards/adopt/check.py` | Create | state dataclasses, `compute_states`, `apply_update`, `relock`, report/JSON/CI-annotation helpers |
 | `src/project_standards/cli.py` | Modify | `adopt` stamps the lock; new `check` subcommand + flag validation |
-| `.github/workflows/standards-drift.yml` | Create | reusable ref-pinned drift workflow |
+| `.github/workflows/standards-drift.yml` | Create | reusable ref-pinned + Python-pinned drift workflow |
 | `src/project_standards/bundles/_shared/drift-check.caller.yml` | Create | consumer caller template |
-| `tests/test_lock.py` | Create | lock round-trip, versioning, merge |
-| `tests/test_check.py` | Create | every state via fixtures |
-| `tests/test_check_cli.py` | Create | CLI surface, exit codes, JSON, flag matrix |
-| `tests/test_check_safety.py` | Create | symlink read-path, update write-safety, restamp lifecycle |
-| `tests/test_adopt_writes_lock.py` | Create | adopt stamps lock; dry-run does not |
-| `CHANGELOG.md`, `docs/handoff/*` | Modify | changelog + handoff updates |
+| `tests/test_lock.py`, `tests/test_check.py`, `tests/test_check_cli.py`, `tests/test_check_safety.py`, `tests/test_adopt_writes_lock.py`, `tests/test_registry.py` | Create | full coverage |
+| `CHANGELOG.md`, `docs/handoff/*`, `standards/*/adopt.md` | Modify | changelog + handoff + adopt-doc updates (all four standards) |
+
+---
+
+## Task 0: Preflight — confirm it is safe to start (no code)
+
+[CR-001] This plan must NOT begin until the repo is in a safe baseline. At authoring time the tree is dirty with unrelated in-flight `validate_id`/formatting work, `2.1.0` (adopt) is **held/untagged**, and the full-repo SSOT gate is red from that concurrent work. Building `check` on top would entangle unreleased features and make gate results ambiguous.
+
+- [ ] **Step 1: Confirm the hold is lifted.** Ask the user whether `check` (2.2.0) implementation is cleared to start. `check` targets **2.2.0, after 2.1.0 ships** — do not proceed on assumption.
+- [ ] **Step 2: Establish a clean, owned baseline.** Run `git status --short` and `git log --oneline -8`. The working tree must be clean, or every dirty/untracked path must be explicitly owned by the user and unrelated to this plan. Resolve or stash unrelated in-flight work first.
+- [ ] **Step 3: Record the baseline gate.** Run the full SSOT gate and record its status BEFORE any change:
+  ```bash
+  uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
+    && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
+  ```
+  It must be green at the start. If red, fix the cause (or get the user's explicit acknowledgement) before Task 1 — otherwise "keep the gate green after every task" is unverifiable.
+- [ ] **Step 4: Branch check.** Confirm you are on `testing` (the repo's development branch). Do not start on `main`.
+
+> Only proceed to Task 1 once Steps 1–4 pass. This task produces no commit.
 
 ---
 
@@ -59,14 +74,9 @@ def test_lockerror_is_adopterror_exit_2() -> None:
     assert LockError().exit_code == 2
 ```
 
-- [ ] **Step 2: Run it, verify it fails**
+- [ ] **Step 2: Run it, verify it fails** — `uv run pytest tests/test_lock.py -v` → FAIL (`ImportError: cannot import name 'LockError'`).
 
-Run: `uv run pytest tests/test_lock.py::test_lockerror_is_adopterror_exit_2 -v`
-Expected: FAIL — `ImportError: cannot import name 'LockError'`.
-
-- [ ] **Step 3: Implement**
-
-Append to `src/project_standards/adopt/errors.py`:
+- [ ] **Step 3: Implement** — append to `src/project_standards/adopt/errors.py`:
 
 ```python
 class LockError(AdoptError):
@@ -76,9 +86,7 @@ class LockError(AdoptError):
     exit_code = 2
 ```
 
-- [ ] **Step 4: Run it, verify it passes**
-
-Run: `uv run pytest tests/test_lock.py -v` → PASS.
+- [ ] **Step 4: Run it, verify it passes** — `uv run pytest tests/test_lock.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -91,12 +99,12 @@ git commit -m "feat(check): add LockError (exit 2)"
 
 ## Task 2: `Registry.default_contract`
 
-The lock records a per-standard `contract_version` (the `major.minor` registry plane). One accessor, reused by both `adopt`'s lock stamping and `check --relock`.
+The lock records a per-standard `contract_version` (the `major.minor` registry plane). One accessor, reused by `adopt`'s lock stamping, `check`'s narration, and `--relock`.
 
 **Files:**
 - Modify: `src/project_standards/registry.py`
-- Modify: `src/project_standards/cli.py:26-33` (route the existing private helper through it — DRY)
-- Test: `tests/test_registry.py` (create if absent)
+- Modify: `src/project_standards/cli.py` (route the existing private helper through it — DRY)
+- Test: `tests/test_registry.py`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -116,13 +124,9 @@ def test_default_contract_maps_hyphenated_ids() -> None:
     assert reg.default_contract("not-a-standard") is None
 ```
 
-- [ ] **Step 2: Run it, verify it fails**
+- [ ] **Step 2: Run it, verify it fails** — `uv run pytest tests/test_registry.py -v` → FAIL (`AttributeError`).
 
-Run: `uv run pytest tests/test_registry.py -v` → FAIL (`AttributeError: ... 'default_contract'`).
-
-- [ ] **Step 3: Implement**
-
-Add this method to the `Registry` class in `src/project_standards/registry.py` (after `is_known_markdown_tooling`):
+- [ ] **Step 3: Implement** — add to the `Registry` class in `registry.py` (after `is_known_markdown_tooling`):
 
 ```python
     def default_contract(self, standard_id: str) -> str | None:
@@ -135,7 +139,7 @@ Add this method to the `Registry` class in `src/project_standards/registry.py` (
         }.get(standard_id)
 ```
 
-Then collapse `cli.py`'s private `_contract_version` to delegate (keeps one source of truth):
+Collapse `cli.py`'s private `_contract_version` to delegate:
 
 ```python
 def _contract_version(registry: Registry, standard_id: str) -> str | None:
@@ -143,9 +147,7 @@ def _contract_version(registry: Registry, standard_id: str) -> str | None:
     return registry.default_contract(standard_id)
 ```
 
-- [ ] **Step 4: Run it, verify it passes**
-
-Run: `uv run pytest tests/test_registry.py tests/test_adopt_cli.py -v` → PASS (the CLI `list` tests still pass through the delegated helper).
+- [ ] **Step 4: Run it, verify it passes** — `uv run pytest tests/test_registry.py tests/test_adopt_cli.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -159,26 +161,25 @@ git commit -m "feat(check): Registry.default_contract accessor (DRY contract loo
 ## Task 3: `lock.py` — hashing + dataclasses + write/read round-trip
 
 **Files:**
-- Create: `src/project_standards/adopt/lock.py`
 - Modify: `src/project_standards/adopt/engine.py` (expose `atomic_write`)
+- Create: `src/project_standards/adopt/lock.py`
 - Test: `tests/test_lock.py`
 
 - [ ] **Step 1: Expose the atomic writer for reuse**
 
-In `src/project_standards/adopt/engine.py`, rename the private `_atomic_write` to a public `atomic_write` and keep a private alias so existing call sites and tests are untouched:
+In `engine.py`, rename the private `_atomic_write` to public `atomic_write`, keeping a back-compat alias so existing callers/tests are untouched:
 
 ```python
 def atomic_write(target: Path, data: bytes) -> None:
     """Write to a temp file in the target's directory, then os.replace into place.
-    ... (unchanged body) ...
+    ... (existing body of _atomic_write, verbatim) ...
     """
-    # (existing body of _atomic_write, verbatim)
 
 
 _atomic_write = atomic_write  # back-compat alias for existing internal callers
 ```
 
-- [ ] **Step 2: Write the failing round-trip test**
+- [ ] **Step 2: Write the failing round-trip tests**
 
 ```python
 # tests/test_lock.py (append)
@@ -215,17 +216,14 @@ def test_write_then_load_roundtrip(tmp_path: Path) -> None:
         },
     )
     write_lock(lock, tmp_path)
-    loaded = load_lock(tmp_path)
-    assert loaded == lock
+    assert load_lock(tmp_path) == lock
 
 
 def test_load_missing_returns_none(tmp_path: Path) -> None:
     assert load_lock(tmp_path) is None
 ```
 
-- [ ] **Step 3: Run it, verify it fails**
-
-Run: `uv run pytest tests/test_lock.py -v` → FAIL (no module `lock`).
+- [ ] **Step 3: Run, verify fail** — `uv run pytest tests/test_lock.py -v` → FAIL (no module `lock`).
 
 - [ ] **Step 4: Implement `lock.py`**
 
@@ -274,12 +272,6 @@ class Lock:
     standards: dict[str, StandardLock] = field(default_factory=dict)
 
 
-def _toml_key(dest: str) -> str:
-    """A TOML quoted key for a destination path (escapes backslash and double-quote)."""
-    escaped = dest.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
-
-
 def _toml_str(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -298,11 +290,11 @@ def write_lock(lock: Lock, dest_root: Path) -> None:
         if sl.artifacts:
             lines.append(f"\n[{sid}.artifacts]\n")
             for dest in sorted(sl.artifacts):
-                lines.append(f"{_toml_key(dest)} = {_toml_str(sl.artifacts[dest])}\n")
+                lines.append(f"{_toml_str(dest)} = {_toml_str(sl.artifacts[dest])}\n")
         if sl.local_edits:
             lines.append(f"\n[{sid}.local_edits]\n")
             for dest in sorted(sl.local_edits):
-                lines.append(f"{_toml_key(dest)} = {_toml_str(sl.local_edits[dest])}\n")
+                lines.append(f"{_toml_str(dest)} = {_toml_str(sl.local_edits[dest])}\n")
     atomic_write(dest_root / LOCKFILE_NAME, "".join(lines).encode("utf-8"))
 
 
@@ -356,26 +348,49 @@ def load_lock(dest_root: Path) -> Lock | None:
             local_edits=_str_map(table.get("local_edits", {}), f"{key}.local_edits"),
         )
     return Lock(lockfile_version=version, tool_version=tool_version, standards=standards)
+
+
+def merge_and_write(
+    dest_root: Path,
+    tool_version: str,
+    standard_id: str,
+    contract_version: str,
+    artifacts: dict[str, str],
+) -> None:
+    """Merge one standard's freshly-written artifacts into the lock, preserving others.
+
+    The standard's `[artifacts]` table is REPLACED (a re-adopt is authoritative for what
+    it just wrote); other standards and this standard's `[local_edits]` are untouched.
+    """
+    lock = load_lock(dest_root) or Lock(
+        lockfile_version=SUPPORTED_LOCKFILE_VERSION, tool_version=tool_version
+    )
+    lock.tool_version = tool_version
+    existing = lock.standards.get(standard_id)
+    local_edits = existing.local_edits if existing is not None else {}
+    lock.standards[standard_id] = StandardLock(
+        contract_version=contract_version, artifacts=dict(artifacts), local_edits=local_edits
+    )
+    write_lock(lock, dest_root)
 ```
 
-- [ ] **Step 5: Run it, verify it passes**
+> The `_toml_str` helper double-quotes and escapes both values AND destination keys; a quoted TOML key is valid for paths containing dots/slashes.
 
-Run: `uv run pytest tests/test_lock.py -v` → PASS. Then `uv run pytest -q` to confirm the `atomic_write` rename broke nothing.
+- [ ] **Step 5: Run, verify pass** — `uv run pytest tests/test_lock.py -v` → PASS. Then `uv run pytest -q` (confirm the `atomic_write` rename broke nothing) and `uv run ruff check . && uv run basedpyright`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/project_standards/adopt/lock.py src/project_standards/adopt/engine.py tests/test_lock.py
-git commit -m "feat(check): lockfile dataclasses, sha256, write/load round-trip"
+git commit -m "feat(check): lockfile dataclasses, sha256, write/load + merge_and_write"
 ```
 
 ---
 
-## Task 4: `lock.py` — `lockfile_version` guard + `merge_and_write`
+## Task 4: `lock.py` — version guard + merge tests
 
 **Files:**
-- Modify: `src/project_standards/adopt/lock.py`
-- Test: `tests/test_lock.py`
+- Test only: `tests/test_lock.py`
 
 - [ ] **Step 1: Write failing tests**
 
@@ -407,7 +422,6 @@ def test_merge_preserves_other_standards(tmp_path: Path) -> None:
     lock = load_lock(tmp_path)
     assert lock is not None
     assert set(lock.standards) == {"markdown-tooling", "adr"}
-    # Re-adopting one standard replaces only its artifacts, leaves the other intact.
     merge_and_write(tmp_path, "2.2.0", "markdown-tooling", "1.0", {".prettierrc.json": "sha256:cc"})
     lock = load_lock(tmp_path)
     assert lock is not None
@@ -415,50 +429,13 @@ def test_merge_preserves_other_standards(tmp_path: Path) -> None:
     assert "docs/decisions/adr.template.md" in lock.standards["adr"].artifacts
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify** — `uv run pytest tests/test_lock.py -v` → PASS (the guard + merge are already implemented in Task 3; this task locks the behavior with tests).
 
-Run: `uv run pytest tests/test_lock.py -v` → FAIL (`merge_and_write` undefined; version guard test may already pass from Task 3).
-
-- [ ] **Step 3: Implement `merge_and_write`**
-
-Append to `src/project_standards/adopt/lock.py`:
-
-```python
-def merge_and_write(
-    dest_root: Path,
-    tool_version: str,
-    standard_id: str,
-    contract_version: str,
-    artifacts: dict[str, str],
-) -> None:
-    """Merge one standard's freshly-written artifacts into the lock, preserving others.
-
-    The standard's `[artifacts]` table is REPLACED (a re-adopt is authoritative for what
-    it just wrote); other standards and this standard's `[local_edits]` are untouched.
-    """
-    lock = load_lock(dest_root) or Lock(
-        lockfile_version=SUPPORTED_LOCKFILE_VERSION, tool_version=tool_version
-    )
-    lock.tool_version = tool_version
-    existing = lock.standards.get(standard_id)
-    local_edits = existing.local_edits if existing is not None else {}
-    lock.standards[standard_id] = StandardLock(
-        contract_version=contract_version,
-        artifacts=dict(artifacts),
-        local_edits=local_edits,
-    )
-    write_lock(lock, dest_root)
-```
-
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_lock.py -v` → PASS.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/project_standards/adopt/lock.py tests/test_lock.py
-git commit -m "feat(check): merge_and_write + lockfile_version guard"
+git add tests/test_lock.py
+git commit -m "test(check): lockfile_version guard + merge preservation"
 ```
 
 ---
@@ -468,7 +445,7 @@ git commit -m "feat(check): merge_and_write + lockfile_version guard"
 `adopt` must record the sha256 of the **rendered** bytes it writes, so the lock matches on-disk content (incl. `{{ref}}` substitution).
 
 **Files:**
-- Modify: `src/project_standards/adopt/engine.py` (`Report` dataclass + `execute_plan`)
+- Modify: `src/project_standards/adopt/engine.py`
 - Test: `tests/test_adopt_writes_lock.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -486,32 +463,20 @@ from project_standards.adopt.lock import sha256_bytes
 def test_report_hashes_match_disk(tmp_path: Path) -> None:
     plan = build_plan(["markdown-tooling"])
     report = execute_plan(plan, tmp_path, force=False, dry_run=False)
-    # Every written whole-file artifact has a hash equal to its on-disk bytes.
     assert report.hashes
     for dest, digest in report.hashes.items():
         assert digest == sha256_bytes((tmp_path / dest).read_bytes())
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify fail** — FAIL (`Report` has no `hashes`).
 
-Run: `uv run pytest tests/test_adopt_writes_lock.py -v` → FAIL (`Report` has no `hashes`).
-
-- [ ] **Step 3: Implement**
-
-In `engine.py`, add the field to `Report`:
+- [ ] **Step 3: Implement** — add the field to `Report`:
 
 ```python
-@dataclass
-class Report:
-    created: list[str] = field(default_factory=list)
-    skipped: list[str] = field(default_factory=list)
-    overwritten: list[str] = field(default_factory=list)
-    symlink_skipped: list[str] = field(default_factory=list)
-    fragments: dict[str, list[str]] = field(default_factory=dict)
     hashes: dict[str, str] = field(default_factory=dict)  # dest -> sha256 of rendered bytes
 ```
 
-In `execute_plan`, in the write branch (where `rendered = _render(action, ref)` is computed), record the hash for any artifact whose bytes were rendered — both created and overwritten, and even in dry-run (so the hash reflects what *would* be written). Insert directly after the `rendered = _render(...)` line:
+In `execute_plan`, right after `rendered = _render(action, ref)`, record the hash (lazy import breaks the `engine ↔ lock` cycle):
 
 ```python
         rendered = _render(action, ref)  # may raise WriteError on unreadable source
@@ -522,11 +487,7 @@ In `execute_plan`, in the write branch (where `rendered = _render(action, ref)` 
             atomic_write(abs_dest, rendered)
 ```
 
-> Import `sha256_bytes` lazily inside the function to avoid a module-level import cycle (`lock` imports `engine.atomic_write`).
-
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_adopt_writes_lock.py -v` → PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_adopt_writes_lock.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -568,13 +529,9 @@ def test_adopt_dry_run_writes_no_lock(tmp_path: Path) -> None:
     assert load_lock(tmp_path) is None
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify fail** — FAIL (no lock written).
 
-Run: `uv run pytest tests/test_adopt_writes_lock.py -v` → FAIL (no lock written).
-
-- [ ] **Step 3: Implement**
-
-In `cli.py`, extend `_cmd_adopt`. After `report = execute_plan(...)`, before printing, stamp the lock for each requested standard when not a dry run:
+- [ ] **Step 3: Implement** — extend `_cmd_adopt`. After `report = execute_plan(...)`, before printing, stamp the lock per requested standard when not a dry run:
 
 ```python
 def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> int:
@@ -582,7 +539,7 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
         print(f"error: --dest is not a directory: {dest}", file=sys.stderr)
         return 2
     registry = load_registry()
-    _assert_registry_bundle_parity(registry)  # same drift guard as `list`
+    _assert_registry_bundle_parity(registry)
     plan = build_plan(standards)
     report = execute_plan(plan, dest, force=force, dry_run=dry_run)
 
@@ -592,7 +549,6 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
         from project_standards.adopt.lock import merge_and_write
 
         tool_version = version("project-standards")
-        # Group written dests by the standard(s) that contributed them.
         for sid in dict.fromkeys(standards):  # de-dup, preserve order
             contract = _contract_version(registry, sid)
             if contract is None:
@@ -613,11 +569,9 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
     return 0
 ```
 
-> Note: a skipped (already-present) artifact is **not** in `report.hashes`, so it is not stamped — by design, it surfaces as `UNLOCKED`/`CLEAN` at check time (spec Component 5).
+> A skipped (already-present) artifact is **not** in `report.hashes`, so it is not stamped — by design it surfaces as `UNLOCKED`/`CLEAN` at check time (spec Component 5).
 
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_adopt_writes_lock.py tests/test_adopt_cli.py -v` → PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_adopt_writes_lock.py tests/test_adopt_cli.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -628,13 +582,15 @@ git commit -m "feat(check): adopt stamps .project-standards.lock (dry-run does n
 
 ---
 
-## Task 7: `check.py` — `ArtifactState` + core state machine (CLEAN/STALE/LOCAL-EDIT/MISSING)
+## Task 7: `check.py` — data model + `compute_states` core (CLEAN/STALE/LOCAL-EDIT/MISSING)
+
+[CR-005] The data model is **grouped by standard** from the start, so the public JSON contract matches the spec (`standards[].artifacts[]` + `standards[].fragments[]`) and fragments surface as `SKIPPED`.
 
 **Files:**
 - Create: `src/project_standards/adopt/check.py`
 - Test: `tests/test_check.py`
 
-- [ ] **Step 1: Write failing tests** (drive the four core states off a real adopt)
+- [ ] **Step 1: Write failing tests**
 
 ```python
 # tests/test_check.py
@@ -642,7 +598,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from project_standards.adopt.check import compute_states
+from project_standards.adopt.check import StandardStates, compute_states
 from project_standards.adopt.lock import load_lock
 from project_standards.cli import main
 from project_standards.registry import load_registry
@@ -652,12 +608,18 @@ def _adopt(tmp_path: Path, standard: str = "markdown-tooling") -> None:
     assert main(["adopt", standard, "--dest", str(tmp_path)]) == 0
 
 
-def _state_for(tmp_path: Path, dest: str) -> str:
+def _groups(tmp_path: Path) -> list[StandardStates]:
     lock = load_lock(tmp_path)
     assert lock is not None
-    states = compute_states(lock, tmp_path, load_registry())
-    by_dest = {s.dest: s.state for s in states}
-    return by_dest[dest]
+    return compute_states(lock, tmp_path, load_registry())
+
+
+def _state_for(tmp_path: Path, dest: str) -> str:
+    for g in _groups(tmp_path):
+        for a in g.artifacts:
+            if a.dest == dest:
+                return a.state
+    raise AssertionError(f"{dest} not found")
 
 
 def test_clean_after_adopt(tmp_path: Path) -> None:
@@ -677,28 +639,29 @@ def test_missing_when_adopted_file_deleted(tmp_path: Path) -> None:
     assert _state_for(tmp_path, ".markdownlint.json") == "MISSING"
 
 
-def test_stale_when_lock_hash_is_old(tmp_path: Path) -> None:
-    # Simulate an older adoption: file untouched, but lock records a different (old) hash
-    # while the current template differs from disk.
+def test_stale_when_untouched_but_template_moved(tmp_path: Path) -> None:
     _adopt(tmp_path)
+    from project_standards.adopt.lock import sha256_bytes, write_lock
+
     (tmp_path / ".markdownlint.json").write_text("OLD TEMPLATE\n", encoding="utf-8")
     lock = load_lock(tmp_path)
     assert lock is not None
-    from project_standards.adopt.lock import sha256_bytes, write_lock
-
-    # lock_hash == disk_hash (untouched since this "old" adoption); disk != current template.
     lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = sha256_bytes(
         b"OLD TEMPLATE\n"
-    )
+    )  # lock_hash == disk_hash (untouched), disk != current template
     write_lock(lock, tmp_path)
     assert _state_for(tmp_path, ".markdownlint.json") == "STALE"
+
+
+def test_fragments_are_skipped(tmp_path: Path) -> None:
+    _adopt(tmp_path, "python-tooling")
+    targets = {f.target: f.state for g in _groups(tmp_path) for f in g.fragments}
+    assert targets.get("pyproject.toml") == "SKIPPED"
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify fail** — FAIL (no module `check`).
 
-Run: `uv run pytest tests/test_check.py -v` → FAIL (no module `check`).
-
-- [ ] **Step 3: Implement the core of `check.py`**
+- [ ] **Step 3: Implement the core of `check.py`** (all imports at top — Gate-fit note 1)
 
 ```python
 # src/project_standards/adopt/check.py
@@ -711,19 +674,28 @@ path-safety so `check` and `adopt` can never disagree about what an artifact is.
 
 from __future__ import annotations
 
+import json
+import os
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from project_standards.adopt.engine import (
-    Action,
     _has_symlinked_ancestor,
     _render,
+    atomic_write,
     build_plan,
     major_ref,
     validate_dest,
 )
 from project_standards.adopt.errors import WriteError
-from project_standards.adopt.lock import Lock, sha256_bytes
+from project_standards.adopt.lock import (
+    Lock,
+    StandardLock,
+    load_lock,
+    sha256_bytes,
+    write_lock,
+)
 from project_standards.registry import Registry
 
 
@@ -731,13 +703,22 @@ from project_standards.registry import Registry
 class ArtifactState:
     dest: str
     state: str  # CLEAN | STALE | LOCAL-EDIT | MISSING | UNLOCKED | ORPHAN | UNSAFE
-    owners: list[str] = field(default_factory=list)
     restamp_pending: bool = False
+    owners: list[str] = field(default_factory=list)
 
 
-def _whole_file_actions(standard_id: str) -> list[Action]:
-    """The standard's file/workflow-caller actions (fragments excluded)."""
-    return [a for a in build_plan([standard_id]) if a.kind != "fragment"]
+@dataclass
+class FragmentState:
+    target: str
+    state: str = "SKIPPED"
+
+
+@dataclass
+class StandardStates:
+    id: str
+    contract_version: str
+    artifacts: list[ArtifactState]
+    fragments: list[FragmentState]
 
 
 def _disk_hash(abs_dest: Path) -> str | None:
@@ -750,41 +731,11 @@ def _disk_hash(abs_dest: Path) -> str | None:
         raise WriteError(f"cannot read {abs_dest}: {exc}") from exc
 
 
-def compute_states(lock: Lock, dest_root: Path, registry: Registry) -> list[ArtifactState]:
-    """Reconciled per-artifact drift states for every standard in the lock."""
-    ref = major_ref()
-    root = dest_root.resolve()
-    by_dest: dict[str, ArtifactState] = {}
-
-    for sid, sl in lock.standards.items():
-        manifest_dests: set[str] = set()
-        for action in _whole_file_actions(sid):
-            assert action.dest is not None
-            dest = action.dest
-            manifest_dests.add(dest)
-            abs_dest = validate_dest(dest, dest_root)
-            tmpl_hash = sha256_bytes(_render(action, ref))
-            state = _classify(abs_dest, root, dest, tmpl_hash, sl)
-            _merge_state(by_dest, sid, state)
-
-        # Reconcile: lock entries no longer in the manifest are ORPHANs.
-        locked = set(sl.artifacts) | set(sl.local_edits)
-        for dest in locked - manifest_dests:
-            _merge_state(by_dest, sid, ArtifactState(dest=dest, state="ORPHAN"))
-
-    return [by_dest[d] for d in sorted(by_dest)]
-
-
-def _classify(
-    abs_dest: Path, root: Path, dest: str, tmpl_hash: str, sl: "object"
-) -> ArtifactState:
-    # Filled in across Tasks 7-9; Task 7 implements the normal-artifact core.
-    from project_standards.adopt.lock import StandardLock
-
-    assert isinstance(sl, StandardLock)
+def _classify(abs_dest: Path, root: Path, dest: str, tmpl_hash: str, sl: StandardLock) -> ArtifactState:
+    # Task 8 replaces this with the full version (symlink guard + local_edits). Task 7 ships
+    # the normal-artifact core so the four base-state tests pass.
     lock_hash = sl.artifacts.get(dest)
     disk_hash = _disk_hash(abs_dest)
-
     if disk_hash is None:
         return ArtifactState(dest=dest, state="MISSING")
     if disk_hash == tmpl_hash:
@@ -796,37 +747,52 @@ def _classify(
     return ArtifactState(dest=dest, state="LOCAL-EDIT")
 
 
-# Severity for cross-owner dedup of shared artifacts (higher = wins the report slot).
-_SEVERITY = {
-    "CLEAN": 0, "ORPHAN": 1, "LOCAL-EDIT": 2,
-    "UNLOCKED": 3, "STALE": 3, "MISSING": 4, "UNSAFE": 5,
-}
+def _attach_owners(groups: list[StandardStates]) -> None:
+    owners: dict[str, list[str]] = {}
+    for g in groups:
+        for a in g.artifacts:
+            owners.setdefault(a.dest, []).append(g.id)
+    for g in groups:
+        for a in g.artifacts:
+            a.owners = owners[a.dest]
 
 
-def _merge_state(by_dest: dict[str, ArtifactState], sid: str, st: ArtifactState) -> None:
-    """Record *st* under its dest, keeping the most severe across owners and unioning owners."""
-    existing = by_dest.get(st.dest)
-    if existing is None:
-        st.owners = [sid]
-        by_dest[st.dest] = st
-        return
-    if sid not in existing.owners:
-        existing.owners.append(sid)
-    if _SEVERITY[st.state] > _SEVERITY[existing.state]:
-        st.owners = existing.owners
-        by_dest[st.dest] = st
-    existing.restamp_pending = existing.restamp_pending or st.restamp_pending
+def compute_states(lock: Lock, dest_root: Path, registry: Registry) -> list[StandardStates]:
+    """Reconciled per-standard drift states for every standard in the lock."""
+    ref = major_ref()
+    root = dest_root.resolve()
+    groups: list[StandardStates] = []
+    for sid, sl in lock.standards.items():
+        artifacts: list[ArtifactState] = []
+        fragments: list[FragmentState] = []
+        manifest_dests: set[str] = set()
+        for action in build_plan([sid]):
+            if action.kind == "fragment":
+                assert action.target is not None
+                fragments.append(FragmentState(target=action.target))
+                continue
+            assert action.dest is not None
+            manifest_dests.add(action.dest)
+            abs_dest = validate_dest(action.dest, dest_root)
+            tmpl_hash = sha256_bytes(_render(action, ref))
+            artifacts.append(_classify(abs_dest, root, action.dest, tmpl_hash, sl))
+        for dest in sorted((set(sl.artifacts) | set(sl.local_edits)) - manifest_dests):
+            artifacts.append(ArtifactState(dest=dest, state="ORPHAN"))
+        contract = registry.default_contract(sid) or sl.contract_version
+        groups.append(
+            StandardStates(id=sid, contract_version=contract, artifacts=artifacts, fragments=fragments)
+        )
+    _attach_owners(groups)
+    return groups
 ```
 
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_check.py -v` → PASS (the four core states).
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/adopt/check.py tests/test_check.py
-git commit -m "feat(check): ArtifactState + core state machine (CLEAN/STALE/LOCAL-EDIT/MISSING)"
+git commit -m "feat(check): grouped data model + core state machine"
 ```
 
 ---
@@ -843,11 +809,10 @@ git commit -m "feat(check): ArtifactState + core state machine (CLEAN/STALE/LOCA
 # tests/test_check.py (append)
 def test_unlocked_when_present_divergent_and_no_baseline(tmp_path: Path) -> None:
     _adopt(tmp_path)
-    # Drop the lock entry, then diverge the file from the template.
-    lock = load_lock(tmp_path)
-    assert lock is not None
     from project_standards.adopt.lock import write_lock
 
+    lock = load_lock(tmp_path)
+    assert lock is not None
     del lock.standards["markdown-tooling"].artifacts[".markdownlint.json"]
     write_lock(lock, tmp_path)
     (tmp_path / ".markdownlint.json").write_text("DIVERGED\n", encoding="utf-8")
@@ -856,23 +821,22 @@ def test_unlocked_when_present_divergent_and_no_baseline(tmp_path: Path) -> None
 
 def test_restamp_pending_when_disk_matches_template_but_lock_behind(tmp_path: Path) -> None:
     _adopt(tmp_path)
-    lock = load_lock(tmp_path)
-    assert lock is not None
     from project_standards.adopt.lock import write_lock
 
+    lock = load_lock(tmp_path)
+    assert lock is not None
     lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = "sha256:stale"
     write_lock(lock, tmp_path)
-    states = compute_states(load_lock(tmp_path), tmp_path, load_registry())  # type: ignore[arg-type]
-    st = next(s for s in states if s.dest == ".markdownlint.json")
+    st = next(a for g in _groups(tmp_path) for a in g.artifacts if a.dest == ".markdownlint.json")
     assert st.state == "CLEAN" and st.restamp_pending is True
 
 
 def test_local_edits_table_reports_local_edit_not_stale(tmp_path: Path) -> None:
     _adopt(tmp_path)
-    lock = load_lock(tmp_path)
-    assert lock is not None
     from project_standards.adopt.lock import sha256_bytes, write_lock
 
+    lock = load_lock(tmp_path)
+    assert lock is not None
     sl = lock.standards["markdown-tooling"]
     (tmp_path / ".markdownlint.json").write_text("CUSTOM\n", encoding="utf-8")
     del sl.artifacts[".markdownlint.json"]
@@ -904,26 +868,20 @@ def test_symlinked_dest_is_unsafe_and_not_read(tmp_path: Path) -> None:
     md = tmp_path / ".markdownlint.json"
     md.unlink()
     md.symlink_to(target)  # planted symlink at an adopted dest
-    states = compute_states(load_lock(tmp_path), tmp_path, load_registry())  # type: ignore[arg-type]
-    st = next(s for s in states if s.dest == ".markdownlint.json")
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    groups = compute_states(lock, tmp_path, load_registry())
+    st = next(a for g in groups for a in g.artifacts if a.dest == ".markdownlint.json")
     assert st.state == "UNSAFE"
-    assert target.read_text() == "SECRET\n"  # never written/followed for content
+    assert target.read_text() == "SECRET\n"  # never followed for content
 ```
 
-- [ ] **Step 2: Run, verify fail**
+- [ ] **Step 2: Run, verify fail** — FAIL (symlink + local_edits not handled).
 
-Run: `uv run pytest tests/test_check.py tests/test_check_safety.py -v` → FAIL (symlink + local_edits not yet handled).
-
-- [ ] **Step 3: Implement — extend `_classify`**
-
-Replace `_classify` in `check.py` with the full version (symlink guard first, then local_edits, then the normal core):
+- [ ] **Step 3: Implement — replace `_classify` with the full version**
 
 ```python
-def _classify(abs_dest: Path, root: Path, dest: str, tmpl_hash: str, sl: "object") -> ArtifactState:
-    from project_standards.adopt.lock import StandardLock
-
-    assert isinstance(sl, StandardLock)
-
+def _classify(abs_dest: Path, root: Path, dest: str, tmpl_hash: str, sl: StandardLock) -> ArtifactState:
     # Symlink guard FIRST — never follow a link to hash (could read outside --dest).
     if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, root):
         return ArtifactState(dest=dest, state="UNSAFE")
@@ -950,9 +908,7 @@ def _classify(abs_dest: Path, root: Path, dest: str, tmpl_hash: str, sl: "object
     return ArtifactState(dest=dest, state="LOCAL-EDIT")
 ```
 
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_check.py tests/test_check_safety.py -v` → PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check.py tests/test_check_safety.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -963,7 +919,9 @@ git commit -m "feat(check): UNLOCKED, local_edits, UNSAFE, restamp-pending"
 
 ---
 
-## Task 9: `check.py` — report, JSON, exit-code aggregation
+## Task 9: `check.py` — report, grouped JSON, exit code, CI annotations
+
+[CR-005] JSON emits the spec's `standards[]` shape with `contract_version`, `owners`, and `fragments`. [CR-006] `emit_ci_annotations` surfaces non-failing drift on a green CI run.
 
 **Files:**
 - Modify: `src/project_standards/adopt/check.py`
@@ -973,103 +931,167 @@ git commit -m "feat(check): UNLOCKED, local_edits, UNSAFE, restamp-pending"
 
 ```python
 # tests/test_check.py (append)
-from project_standards.adopt.check import exit_code_for, format_check_report, states_to_json
-
-
-def test_exit_code_fails_on_stale_passes_on_clean() -> None:
-    from project_standards.adopt.check import ArtifactState
-
-    assert exit_code_for([ArtifactState(".x", "CLEAN")]) == 0
-    assert exit_code_for([ArtifactState(".x", "LOCAL-EDIT")]) == 0
-    assert exit_code_for([ArtifactState(".x", "ORPHAN")]) == 0
-    assert exit_code_for([ArtifactState(".x", "STALE")]) == 1
-    assert exit_code_for([ArtifactState(".x", "MISSING")]) == 1
-    assert exit_code_for([ArtifactState(".x", "UNLOCKED")]) == 1
-    assert exit_code_for([ArtifactState(".x", "UNSAFE")]) == 1
-
-
-def test_json_has_summary_and_exit_code() -> None:
-    from project_standards.adopt.check import ArtifactState
-
-    payload = states_to_json(
-        [ArtifactState(".markdownlint.json", "STALE", owners=["markdown-tooling"])],
-        tool_version="2.2.0",
-    )
-    assert payload["summary"]["stale"] == 1
-    assert payload["summary"]["exit_code"] == 1
-    assert payload["lockfile_version"] == 1
-```
-
-- [ ] **Step 2: Run, verify fail** → `uv run pytest tests/test_check.py -v` FAIL (undefined names).
-
-- [ ] **Step 3: Implement**
-
-Append to `check.py`:
-
-```python
 import json
 
+import pytest
+
+from project_standards.adopt.check import (
+    ArtifactState,
+    FragmentState,
+    StandardStates,
+    emit_ci_annotations,
+    exit_code_for,
+    states_to_json,
+)
+
+
+def _grp(*arts: ArtifactState, frags: list[FragmentState] | None = None) -> list[StandardStates]:
+    return [StandardStates("markdown-tooling", "1.0", list(arts), frags or [])]
+
+
+def test_exit_code_by_state() -> None:
+    assert exit_code_for(_grp(ArtifactState(".x", "CLEAN"))) == 0
+    assert exit_code_for(_grp(ArtifactState(".x", "LOCAL-EDIT"))) == 0
+    assert exit_code_for(_grp(ArtifactState(".x", "ORPHAN"))) == 0
+    for bad in ("STALE", "MISSING", "UNLOCKED", "UNSAFE"):
+        assert exit_code_for(_grp(ArtifactState(".x", bad))) == 1
+
+
+def test_json_matches_spec_grouping() -> None:
+    groups = _grp(
+        ArtifactState(".editorconfig", "STALE", owners=["markdown-tooling", "python-tooling"]),
+        frags=[FragmentState("pyproject.toml")],
+    )
+    payload = states_to_json(groups, tool_version="2.2.0")
+    assert payload["lockfile_version"] == 1
+    std = payload["standards"][0]
+    assert std["id"] == "markdown-tooling" and std["contract_version"] == "1.0"
+    assert std["artifacts"][0]["owners"] == ["markdown-tooling", "python-tooling"]
+    assert std["fragments"][0] == {"target": "pyproject.toml", "state": "SKIPPED"}
+    assert payload["summary"]["stale"] == 1 and payload["summary"]["exit_code"] == 1
+
+
+def test_ci_annotations_emitted_for_local_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    emit_ci_annotations(_grp(ArtifactState(".editorconfig", "LOCAL-EDIT")))
+    assert "::warning" in capsys.readouterr().out
+    assert ".editorconfig" in summary.read_text(encoding="utf-8")
+```
+
+- [ ] **Step 2: Run, verify fail** — FAIL (undefined names).
+
+- [ ] **Step 3: Implement** — append to `check.py`:
+
+```python
 _FAILING = frozenset({"STALE", "MISSING", "UNLOCKED", "UNSAFE"})
+_SEVERITY = {
+    "CLEAN": 0, "ORPHAN": 1, "LOCAL-EDIT": 2,
+    "UNLOCKED": 3, "STALE": 3, "MISSING": 4, "UNSAFE": 5,
+}
 
 
-def exit_code_for(states: list[ArtifactState]) -> int:
-    return 1 if any(s.state in _FAILING for s in states) else 0
+def iter_artifacts(groups: list[StandardStates]) -> Iterator[ArtifactState]:
+    for g in groups:
+        yield from g.artifacts
 
 
-def format_check_report(states: list[ArtifactState]) -> str:
+def exit_code_for(groups: list[StandardStates]) -> int:
+    return 1 if any(a.state in _FAILING for a in iter_artifacts(groups)) else 0
+
+
+def _dedup_by_dest(groups: list[StandardStates]) -> list[ArtifactState]:
+    best: dict[str, ArtifactState] = {}
+    for a in iter_artifacts(groups):
+        cur = best.get(a.dest)
+        if cur is None or _SEVERITY[a.state] > _SEVERITY[cur.state]:
+            best[a.dest] = a
+    return [best[d] for d in sorted(best)]
+
+
+def format_check_report(groups: list[StandardStates]) -> str:
     glyph = {
         "CLEAN": "✓", "STALE": "✗", "MISSING": "✗", "UNLOCKED": "✗",
         "UNSAFE": "✗", "LOCAL-EDIT": "⚠", "ORPHAN": "⚠",
     }
     lines: list[str] = []
-    for s in states:
-        note = " (restamp-pending)" if s.restamp_pending else ""
-        lines.append(f"  {glyph.get(s.state, '?')} {s.dest:<40} {s.state}{note}")
-    failing = sum(1 for s in states if s.state in _FAILING)
-    lines.append(
-        f"\n{'✗' if failing else '✓'}  {failing} failing of {len(states)} checked artifact(s)"
-    )
+    for a in _dedup_by_dest(groups):
+        note = " (restamp-pending)" if a.restamp_pending else ""
+        lines.append(f"  {glyph.get(a.state, '?')} {a.dest:<40} {a.state}{note}")
+    for target in sorted({f.target for g in groups for f in g.fragments}):
+        lines.append(f"  — {target:<40} SKIPPED (unmanaged fragment)")
+    failing = sum(1 for a in _dedup_by_dest(groups) if a.state in _FAILING)
+    lines.append(f"\n{'✗' if failing else '✓'}  {failing} failing artifact(s)")
     return "\n".join(lines)
 
 
-def states_to_json(states: list[ArtifactState], *, tool_version: str) -> dict[str, object]:
+def states_to_json(groups: list[StandardStates], *, tool_version: str) -> dict[str, object]:
     counts = {
         k: 0 for k in
         ("clean", "restamp_pending", "stale", "local_edit", "missing", "unlocked", "orphan", "unsafe")
     }
-    for s in states:
-        counts[s.state.lower().replace("-", "_")] += 1
-        if s.restamp_pending:
+    for a in iter_artifacts(groups):
+        counts[a.state.lower().replace("-", "_")] += 1
+        if a.restamp_pending:
             counts["restamp_pending"] += 1
-    counts["exit_code"] = exit_code_for(states)
+    counts["exit_code"] = exit_code_for(groups)
     return {
         "lockfile_version": 1,
         "tool_version": tool_version,
-        "artifacts": [
-            {"dest": s.dest, "state": s.state, "restamp_pending": s.restamp_pending,
-             "owners": s.owners}
-            for s in states
+        "standards": [
+            {
+                "id": g.id,
+                "contract_version": g.contract_version,
+                "artifacts": [
+                    {"dest": a.dest, "state": a.state,
+                     "restamp_pending": a.restamp_pending, "owners": a.owners}
+                    for a in g.artifacts
+                ],
+                "fragments": [{"target": f.target, "state": f.state} for f in g.fragments],
+            }
+            for g in groups
         ],
         "summary": counts,
     }
 
 
-def states_to_json_str(states: list[ArtifactState], *, tool_version: str) -> str:
-    return json.dumps(states_to_json(states, tool_version=tool_version), indent=2)
+def states_to_json_str(groups: list[StandardStates], *, tool_version: str) -> str:
+    return json.dumps(states_to_json(groups, tool_version=tool_version), indent=2)
+
+
+def emit_ci_annotations(groups: list[StandardStates]) -> None:
+    """On GitHub Actions, surface non-failing drift as ::warning:: + a step-summary table."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    rows: list[tuple[str, str]] = []
+    for a in _dedup_by_dest(groups):
+        if a.state in ("LOCAL-EDIT", "ORPHAN") or a.restamp_pending:
+            label = a.state + (" (restamp-pending)" if a.restamp_pending else "")
+            print(f"::warning file={a.dest}::{a.dest}: {label}")
+            rows.append((a.dest, label))
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path and rows:
+        with open(summary_path, "a", encoding="utf-8") as fh:
+            fh.write("\n### Standards drift (non-failing)\n\n| Artifact | State |\n| --- | --- |\n")
+            for dest, label in rows:
+                fh.write(f"| `{dest}` | {label} |\n")
 ```
 
-- [ ] **Step 4: Run, verify pass** → `uv run pytest tests/test_check.py -v` PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/adopt/check.py tests/test_check.py
-git commit -m "feat(check): report, JSON, exit-code aggregation"
+git commit -m "feat(check): grouped JSON, dedup report, exit code, CI annotations"
 ```
 
 ---
 
-## Task 10: `cli.py` — `check` subcommand (detect mode) + flag matrix
+## Task 10: `cli.py` — `check` subcommand + flag matrix
 
 **Files:**
 - Modify: `src/project_standards/cli.py`
@@ -1084,6 +1106,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from project_standards.cli import main
 
 
@@ -1091,28 +1115,28 @@ def _adopt(tmp_path: Path) -> None:
     assert main(["adopt", "markdown-tooling", "--dest", str(tmp_path)]) == 0
 
 
-def test_check_clean_exits_0(tmp_path: Path, capsys) -> None:
+def test_check_clean_exits_0(tmp_path: Path) -> None:
     _adopt(tmp_path)
     assert main(["check", "--dest", str(tmp_path)]) == 0
 
 
-def test_check_stale_exits_1(tmp_path: Path) -> None:
+def test_check_missing_exits_1(tmp_path: Path) -> None:
     _adopt(tmp_path)
-    (tmp_path / ".markdownlint.json").unlink()  # MISSING -> exit 1
+    (tmp_path / ".markdownlint.json").unlink()
     assert main(["check", "--dest", str(tmp_path)]) == 1
 
 
-def test_check_without_lock_exits_2(tmp_path: Path, capsys) -> None:
-    rc = main(["check", "--dest", str(tmp_path)])
-    assert rc == 2
+def test_check_without_lock_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["check", "--dest", str(tmp_path)]) == 2
     assert "no .project-standards.lock" in capsys.readouterr().err
 
 
-def test_check_json_shape(tmp_path: Path, capsys) -> None:
+def test_check_json_shape(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     _adopt(tmp_path)
     assert main(["check", "--dest", str(tmp_path), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["summary"]["exit_code"] == 0
+    assert payload["standards"][0]["id"] == "markdown-tooling"
 
 
 def test_force_without_update_is_exit_2(tmp_path: Path) -> None:
@@ -1124,16 +1148,16 @@ def test_relock_with_update_is_exit_2(tmp_path: Path) -> None:
     assert main(["check", "--dest", str(tmp_path), "--relock", "markdown-tooling", "--update"]) == 2
 ```
 
-- [ ] **Step 2: Run, verify fail** → `uv run pytest tests/test_check_cli.py -v` FAIL (no `check` subcommand).
+- [ ] **Step 2: Run, verify fail** — FAIL (no `check` subcommand).
 
-- [ ] **Step 3: Implement**
-
-Add a `_cmd_check` to `cli.py` and register the subparser. First the handler:
+- [ ] **Step 3: Implement** — add `_cmd_check` and register the subparser. Handler:
 
 ```python
 def _cmd_check(
     dest: Path, *, update: bool, force: bool, relock: list[str] | None, as_json: bool, quiet: bool
 ) -> int:
+    from importlib.metadata import version
+
     from project_standards.adopt import check as check_mod
     from project_standards.adopt.lock import load_lock
 
@@ -1145,7 +1169,7 @@ def _cmd_check(
     _assert_registry_bundle_parity(registry)
 
     if relock is not None:
-        check_mod.relock(relock, dest, registry)  # Task 12
+        check_mod.relock(relock, dest, registry)
         if not quiet:
             print(f"relocked: {', '.join(relock)}")
         return 0
@@ -1159,21 +1183,19 @@ def _cmd_check(
         )
         return 2
 
-    states = check_mod.compute_states(lock, dest, registry)
-
+    groups = check_mod.compute_states(lock, dest, registry)
     if update:
-        states = check_mod.apply_update(states, lock, dest, registry, force=force)  # Task 11
+        groups = check_mod.apply_update(groups, lock, dest, registry, force=force)
+    check_mod.emit_ci_annotations(groups)
 
     if as_json:
-        from importlib.metadata import version
-
-        print(check_mod.states_to_json_str(states, tool_version=version("project-standards")))
+        print(check_mod.states_to_json_str(groups, tool_version=version("project-standards")))
     elif not quiet:
-        print(check_mod.format_check_report(states))
-    return check_mod.exit_code_for(states)
+        print(check_mod.format_check_report(groups))
+    return check_mod.exit_code_for(groups)
 ```
 
-Then in `main`, register the subparser and validate flags (insert the subparser registration alongside `p_list`, and the dispatch in the try-block):
+Register the subparser (next to `p_list`) and validate flags inside `main`'s existing `try:` block:
 
 ```python
     p_check = sub.add_parser("check", help="detect drift in adopted standard artifacts")
@@ -1184,8 +1206,6 @@ Then in `main`, register the subparser and validate flags (insert the subparser 
     p_check.add_argument("--json", action="store_true", dest="as_json")
     p_check.add_argument("--quiet", action="store_true")
 ```
-
-Flag-matrix validation + dispatch inside the existing `try:` block in `main`:
 
 ```python
         if args.command == "list":
@@ -1202,11 +1222,9 @@ Flag-matrix validation + dispatch inside the existing `try:` block in `main`:
         return _cmd_adopt(args.standards, args.dest, args.force, args.dry_run)
 ```
 
-(Import `UsageError` at the top: `from project_standards.adopt.errors import AdoptError, UsageError`.)
+Add `UsageError` to the top import: `from project_standards.adopt.errors import AdoptError, UsageError`.
 
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_check_cli.py -v`. The `--relock`/`--update` tests that reach `relock`/`apply_update` will fail until Tasks 11–12; mark those two as expected-after-later-tasks, or stub `relock`/`apply_update` to `raise NotImplementedError` now and assert exit 2 only for the pure flag-matrix cases. The flag-matrix + detect + no-lock + json tests must PASS.
+- [ ] **Step 4: Run, verify pass** — the flag-matrix, detect, no-lock, and JSON tests PASS. The two tests reaching `relock`/`apply_update` come online in Tasks 11–12; until then stub `apply_update`/`relock` in `check.py` with `raise NotImplementedError` so the flag-matrix tests (which never reach them) pass cleanly.
 
 - [ ] **Step 5: Commit**
 
@@ -1217,45 +1235,59 @@ git commit -m "feat(check): check subcommand (detect mode) + flag-matrix validat
 
 ---
 
-## Task 11: `check.py` — `apply_update` (safe re-sync) + write-safety tests
+## Task 11: `check.py` — `apply_update` (single atomic lock write, edit promotion)
+
+[CR-004] Files first, then **one** in-memory lock rebuild + a single `write_lock`. [CR-003] A local edit that now matches the template (incl. after `--force`) is **promoted** out of `[local_edits]` into `[artifacts]`, so a future template change reports `STALE`, not `LOCAL-EDIT`.
 
 **Files:**
 - Modify: `src/project_standards/adopt/check.py`
 - Test: `tests/test_check_safety.py`
 
-- [ ] **Step 1: Write failing tests** (STALE→synced, LOCAL-EDIT skipped, restamp lifecycle)
+- [ ] **Step 1: Write failing tests**
 
 ```python
 # tests/test_check_safety.py (append)
-from project_standards.adopt.check import apply_update, compute_states
+import pytest
+
+from project_standards.adopt import check as check_mod
 from project_standards.registry import load_registry
 
 
-def _states(tmp_path: Path):
-    return compute_states(load_lock(tmp_path), tmp_path, load_registry())  # type: ignore[arg-type]
-
-
-def test_update_resyncs_stale_only(tmp_path: Path) -> None:
+def test_update_resyncs_stale_skips_edit(tmp_path: Path) -> None:
     _adopt(tmp_path)
-    # Make .markdownlint.json STALE: disk==lock(old), disk!=template.
     from project_standards.adopt.lock import sha256_bytes, write_lock
 
-    (tmp_path / ".markdownlint.json").write_text("OLD\n", encoding="utf-8")
-    # And LOCAL-EDIT .prettierrc.json: disk != lock, disk != template.
-    (tmp_path / ".prettierrc.json").write_text("MINE\n", encoding="utf-8")
+    (tmp_path / ".markdownlint.json").write_text("OLD\n", encoding="utf-8")  # will be STALE
+    (tmp_path / ".prettierrc.json").write_text("MINE\n", encoding="utf-8")  # LOCAL-EDIT
     lock = load_lock(tmp_path)
     assert lock is not None
     lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = sha256_bytes(b"OLD\n")
     write_lock(lock, tmp_path)
 
     assert main(["check", "--dest", str(tmp_path), "--update"]) == 0
-    # STALE file re-synced to the current template (no longer "OLD"); edit untouched.
-    assert (tmp_path / ".markdownlint.json").read_text() != "OLD\n"
-    assert (tmp_path / ".prettierrc.json").read_text() == "MINE\n"
-    # After update, only the edit remains as a warning (exit 0).
-    states = {s.dest: s.state for s in _states(tmp_path)}
-    assert states[".markdownlint.json"] == "CLEAN"
-    assert states[".prettierrc.json"] == "LOCAL-EDIT"
+    assert (tmp_path / ".markdownlint.json").read_text() != "OLD\n"  # re-synced
+    assert (tmp_path / ".prettierrc.json").read_text() == "MINE\n"  # edit untouched
+
+
+def test_force_promotes_local_edit_into_artifacts(tmp_path: Path) -> None:
+    # A relock-accepted local edit, force-synced, must move from local_edits to artifacts
+    # so a later template bump reports STALE (regression for CR-003).
+    _adopt(tmp_path)
+    from project_standards.adopt.lock import sha256_bytes, write_lock
+
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    sl = lock.standards["markdown-tooling"]
+    (tmp_path / ".editorconfig").write_text("# custom\n", encoding="utf-8")
+    sl.artifacts.pop(".editorconfig", None)
+    sl.local_edits[".editorconfig"] = sha256_bytes(b"# custom\n")
+    write_lock(lock, tmp_path)
+
+    assert main(["check", "--dest", str(tmp_path), "--update", "--force"]) == 0
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    sl = lock.standards["markdown-tooling"]
+    assert ".editorconfig" in sl.artifacts and ".editorconfig" not in sl.local_edits
 
 
 def test_update_restamps_pending_without_file_write(tmp_path: Path) -> None:
@@ -1267,97 +1299,140 @@ def test_update_restamps_pending_without_file_write(tmp_path: Path) -> None:
     lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = "sha256:stale"
     write_lock(lock, tmp_path)
     assert main(["check", "--dest", str(tmp_path), "--update"]) == 0
-    # Lock repaired: a fresh check shows no restamp-pending.
-    assert not any(s.restamp_pending for s in _states(tmp_path))
+    groups = check_mod.compute_states(load_lock(tmp_path), tmp_path, load_registry())  # type: ignore[arg-type]
+    assert not any(a.restamp_pending for g in groups for a in g.artifacts)
+
+
+def test_update_lock_write_failure_is_recoverable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _adopt(tmp_path)
+    from project_standards.adopt.errors import WriteError
+    from project_standards.adopt.lock import sha256_bytes, write_lock
+
+    (tmp_path / ".markdownlint.json").write_text("OLD\n", encoding="utf-8")
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = sha256_bytes(b"OLD\n")
+    write_lock(lock, tmp_path)
+
+    def boom(_lock: object, _root: Path) -> None:
+        raise WriteError("disk full")
+
+    monkeypatch.setattr(check_mod, "write_lock", boom)
+    assert main(["check", "--dest", str(tmp_path), "--update"]) == 1  # WriteError -> exit 1
+    assert (tmp_path / ".markdownlint.json").read_text() != "OLD\n"  # file WAS updated
+    monkeypatch.undo()
+    assert main(["check", "--dest", str(tmp_path), "--update"]) == 0  # rerun repairs the lock
 ```
 
-- [ ] **Step 2: Run, verify fail** → FAIL (`apply_update` undefined / NotImplementedError).
+- [ ] **Step 2: Run, verify fail** — FAIL (`apply_update` is the NotImplementedError stub).
 
-- [ ] **Step 3: Implement `apply_update`**
-
-Append to `check.py`:
+- [ ] **Step 3: Implement `apply_update`** (replace the Task-10 stub)
 
 ```python
-from project_standards.adopt.engine import atomic_write
-from project_standards.adopt.lock import StandardLock, merge_and_write
-
-
 def apply_update(
-    states: list[ArtifactState],
+    groups: list[StandardStates],
     lock: Lock,
     dest_root: Path,
     registry: Registry,
     *,
     force: bool,
-) -> list[ArtifactState]:
-    """Re-sync STALE/MISSING (and restamp-pending) to the current template; write files
-    first, then the lock. LOCAL-EDIT / divergent UNLOCKED skipped unless *force*. Returns
-    freshly recomputed states."""
+) -> list[StandardStates]:
+    """Re-sync STALE/MISSING (and, with force, LOCAL-EDIT/divergent-UNLOCKED) to the current
+    template; then rebuild the WHOLE lock in memory and write it ONCE (files first, lock last).
+    A local edit that ends up matching the template is promoted into [artifacts]."""
     ref = major_ref()
-    # Map dest -> rendered template bytes, once, for the standards in the lock.
-    rendered: dict[str, bytes] = {}
-    action_owner: dict[str, str] = {}
-    for sid in lock.standards:
-        for action in _whole_file_actions(sid):
-            assert action.dest is not None
-            rendered.setdefault(action.dest, _render(action, ref))
-            action_owner.setdefault(action.dest, sid)
-
+    root = dest_root.resolve()
     sync_states = {"STALE", "MISSING"}
     force_states = {"LOCAL-EDIT", "UNLOCKED"}
-    for s in states:
-        if s.state == "UNSAFE":
-            continue  # never write a symlinked dest
-        write_it = s.state in sync_states or (force and s.state in force_states)
-        if write_it and s.dest in rendered:
-            abs_dest = validate_dest(s.dest, dest_root)
-            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, dest_root.resolve()):
-                continue
-            atomic_write(abs_dest, rendered[s.dest])
 
-    # Re-stamp the lock from the post-write disk state, per standard. ORPHAN entries are
-    # dropped (rebuilt from the manifest); local_edits are preserved unless force re-synced them.
-    for sid, sl in lock.standards.items():
-        new_artifacts: dict[str, str] = {}
-        for action in _whole_file_actions(sid):
-            assert action.dest is not None
-            abs_dest = validate_dest(action.dest, dest_root)
-            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, dest_root.resolve()):
+    # dest -> rendered template bytes (once).
+    rendered: dict[str, bytes] = {}
+    for sid in lock.standards:
+        for action in build_plan([sid]):
+            if action.kind == "fragment" or action.dest is None:
                 continue
-            if abs_dest.exists() and action.dest not in sl.local_edits:
-                dh = _disk_hash(abs_dest)
-                if dh is not None and dh == sha256_bytes(_render(action, ref)):
-                    new_artifacts[action.dest] = dh
-                elif action.dest in sl.artifacts:
-                    new_artifacts[action.dest] = sl.artifacts[action.dest]
+            rendered.setdefault(action.dest, _render(action, ref))
+
+    # 1. Write files (most-severe state per dest decides eligibility).
+    best: dict[str, str] = {}
+    for a in iter_artifacts(groups):
+        if best.get(a.dest) is None or _SEVERITY[a.state] > _SEVERITY[best[a.dest]]:
+            best[a.dest] = a.state
+    for dest, state in best.items():
+        if state == "UNSAFE" or dest not in rendered:
+            continue
+        if state in sync_states or (force and state in force_states):
+            abs_dest = validate_dest(dest, dest_root)
+            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, root):
+                continue
+            atomic_write(abs_dest, rendered[dest])
+
+    # 2. Rebuild the whole lock from post-write disk state; ORPHANs drop out (manifest-driven).
+    new_standards: dict[str, StandardLock] = {}
+    for sid, sl in lock.standards.items():
+        artifacts: dict[str, str] = {}
+        local_edits: dict[str, str] = {}
+        for action in build_plan([sid]):
+            if action.kind == "fragment" or action.dest is None:
+                continue
+            dest = action.dest
+            abs_dest = validate_dest(dest, dest_root)
+            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, root):
+                if dest in sl.local_edits:
+                    local_edits[dest] = sl.local_edits[dest]
+                elif dest in sl.artifacts:
+                    artifacts[dest] = sl.artifacts[dest]
+                continue
+            disk_hash = _disk_hash(abs_dest)
+            if disk_hash is None:
+                continue  # absent -> not locked (MISSING next check)
+            tmpl_hash = sha256_bytes(_render(action, ref))
+            if disk_hash == tmpl_hash:
+                artifacts[dest] = disk_hash  # matches template -> promote/keep as baseline
+            elif dest in sl.local_edits:
+                local_edits[dest] = disk_hash  # still a customization
+            elif dest in sl.artifacts:
+                artifacts[dest] = sl.artifacts[dest]  # keep prior baseline (STALE/edited)
+            # else: present-divergent with no baseline -> leave unlocked (UNLOCKED next check)
         contract = registry.default_contract(sid) or sl.contract_version
-        merge_and_write(dest_root, lock.tool_version, sid, contract, new_artifacts)
+        new_standards[sid] = StandardLock(
+            contract_version=contract, artifacts=artifacts, local_edits=local_edits
+        )
+
+    new_lock = Lock(
+        lockfile_version=lock.lockfile_version, tool_version=lock.tool_version, standards=new_standards
+    )
+    try:
+        write_lock(new_lock, dest_root)
+    except WriteError as exc:
+        raise WriteError(
+            f"files updated but lock not written: {exc}; re-run "
+            "`project-standards check --update` to restamp"
+        ) from exc
 
     fresh = load_lock(dest_root)
     assert fresh is not None
     return compute_states(fresh, dest_root, registry)
 ```
 
-> Ordering note (spec Component 6): files are written first, then `merge_and_write` rewrites the lock per standard. Because state is hash-driven, a crash before the lock write leaves updated files reading `CLEAN`+`restamp-pending`, never a false green.
-
-- [ ] **Step 4: Run, verify pass**
-
-Run: `uv run pytest tests/test_check_safety.py tests/test_check_cli.py -v` → PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check_safety.py tests/test_check_cli.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/adopt/check.py tests/test_check_safety.py
-git commit -m "feat(check): apply_update — safe re-sync, restamp, lock-last ordering"
+git commit -m "feat(check): apply_update — single atomic lock write, edit promotion, recovery"
 ```
 
 ---
 
-## Task 12: `check.py` — `relock` bootstrap + lifecycle test
+## Task 12: `check.py` — `relock` bootstrap
 
 **Files:**
-- Modify: `src/project_standards/adopt/check.py`
-- Test: `tests/test_check_cli.py`, `tests/test_check_safety.py`
+- Modify: `src/project_standards/adopt/check.py` (replace the `relock` stub)
+- Test: `tests/test_check_cli.py`
 
 - [ ] **Step 1: Write failing tests**
 
@@ -1367,56 +1442,50 @@ def test_relock_matching_file_is_clean(tmp_path: Path) -> None:
     _adopt(tmp_path)
     (tmp_path / ".project-standards.lock").unlink()  # simulate a pre-lock adopter
     assert main(["check", "--dest", str(tmp_path), "--relock", "markdown-tooling"]) == 0
-    # All adopted files matched the template, so check is now green.
-    assert main(["check", "--dest", str(tmp_path)]) == 0
+    assert main(["check", "--dest", str(tmp_path)]) == 0  # all matched -> green
 
 
-def test_relock_divergent_file_is_local_edit_never_stale(tmp_path: Path) -> None:
+def test_relock_divergent_file_is_local_edit_not_stale(tmp_path: Path) -> None:
     _adopt(tmp_path)
     (tmp_path / ".project-standards.lock").unlink()
     (tmp_path / ".editorconfig").write_text("# customized\n", encoding="utf-8")
     assert main(["check", "--dest", str(tmp_path), "--relock", "markdown-tooling"]) == 0
-    # Divergent file recorded as an accepted edit (warn, exit 0) — not STALE.
-    assert main(["check", "--dest", str(tmp_path)]) == 0
+    assert main(["check", "--dest", str(tmp_path)]) == 0  # accepted edit -> warn, exit 0
 ```
 
-- [ ] **Step 2: Run, verify fail** → FAIL (`relock` undefined).
+- [ ] **Step 2: Run, verify fail** — FAIL (`relock` stub raises NotImplementedError).
 
-- [ ] **Step 3: Implement `relock`**
-
-Append to `check.py`:
+- [ ] **Step 3: Implement `relock`** (replace the stub)
 
 ```python
-from project_standards.adopt.lock import Lock as _Lock
-from project_standards.adopt.lock import SUPPORTED_LOCKFILE_VERSION, load_lock, write_lock
-
-
 def relock(standards: list[str], dest_root: Path, registry: Registry) -> None:
     """Baseline an already-adopted repo: matching files -> [artifacts], divergent -> [local_edits]."""
     from importlib.metadata import version
 
     ref = major_ref()
-    lock = load_lock(dest_root) or _Lock(
-        lockfile_version=SUPPORTED_LOCKFILE_VERSION, tool_version=version("project-standards")
+    root = dest_root.resolve()
+    lock = load_lock(dest_root) or Lock(
+        lockfile_version=1, tool_version=version("project-standards")
     )
     for sid in dict.fromkeys(standards):
+        contract = registry.default_contract(sid)
+        if contract is None:
+            continue
         artifacts: dict[str, str] = {}
         local_edits: dict[str, str] = {}
-        for action in _whole_file_actions(sid):
-            assert action.dest is not None
+        for action in build_plan([sid]):
+            if action.kind == "fragment" or action.dest is None:
+                continue
             abs_dest = validate_dest(action.dest, dest_root)
-            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, dest_root.resolve()):
+            if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, root):
                 continue
             disk_hash = _disk_hash(abs_dest)
             if disk_hash is None:
-                continue  # absent -> surfaces as MISSING on next check
+                continue  # absent -> MISSING on next check
             if disk_hash == sha256_bytes(_render(action, ref)):
                 artifacts[action.dest] = disk_hash
             else:
                 local_edits[action.dest] = disk_hash
-        contract = registry.default_contract(sid)
-        if contract is None:
-            continue
         lock.standards[sid] = StandardLock(
             contract_version=contract, artifacts=artifacts, local_edits=local_edits
         )
@@ -1424,53 +1493,50 @@ def relock(standards: list[str], dest_root: Path, registry: Registry) -> None:
     write_lock(lock, dest_root)
 ```
 
-- [ ] **Step 4: Run, verify pass**
+> Replace the Task-10 `raise NotImplementedError` stubs for both `apply_update` (Task 11) and `relock` (here) — confirm no stub remains (`rg "NotImplementedError" src/project_standards/adopt/check.py` returns nothing).
 
-Run: `uv run pytest tests/test_check_cli.py tests/test_check_safety.py -v` → PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check_cli.py tests/test_check_safety.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/project_standards/adopt/check.py tests/test_check_cli.py tests/test_check_safety.py
+git add src/project_standards/adopt/check.py tests/test_check_cli.py
 git commit -m "feat(check): --relock bootstrap (matching->artifacts, divergent->local_edits)"
 ```
 
 ---
 
-## Task 13: CI delivery — reusable drift workflow + caller template
+## Task 13: CI delivery — ref-pinned + Python-pinned reusable workflow
+
+[CR-008] The workflow pins Python `3.14` so the checker (which requires `>=3.14`) does not depend on the runner default.
 
 **Files:**
 - Create: `.github/workflows/standards-drift.yml`
 - Create: `src/project_standards/bundles/_shared/drift-check.caller.yml`
-- Test: `tests/test_check_cli.py` (presence + ref-pin assertions; no GitHub runtime)
+- Test: `tests/test_check_cli.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # tests/test_check_cli.py (append)
-from pathlib import Path as _Path
-
-
-def test_drift_workflow_is_ref_pinned() -> None:
-    wf = _Path(".github/workflows/standards-drift.yml").read_text(encoding="utf-8")
-    assert "workflow_call" in wf
-    assert "standards-ref" in wf
-    assert "uvx --from" in wf and "project-standards@" in wf
+def test_drift_workflow_is_ref_and_python_pinned() -> None:
+    wf = Path(".github/workflows/standards-drift.yml").read_text(encoding="utf-8")
+    assert "workflow_call" in wf and "standards-ref" in wf
+    assert "uvx" in wf and "project-standards@" in wf
+    assert "--python 3.14" in wf  # CR-008
     assert "project-standards check" in wf
 
 
 def test_caller_template_uses_matching_major() -> None:
-    caller = _Path(
+    caller = Path(
         "src/project_standards/bundles/_shared/drift-check.caller.yml"
     ).read_text(encoding="utf-8")
     assert "standards-drift.yml@" in caller
 ```
 
-- [ ] **Step 2: Run, verify fail** → FAIL (files absent).
+- [ ] **Step 2: Run, verify fail** — FAIL (files absent).
 
-- [ ] **Step 3: Implement the reusable workflow**
-
-`.github/workflows/standards-drift.yml`:
+- [ ] **Step 3: Implement** — `.github/workflows/standards-drift.yml`:
 
 ```yaml
 name: Standards Drift
@@ -1484,6 +1550,9 @@ on:
         required: false
         default: "v2"
 
+permissions:
+  contents: read
+
 jobs:
   drift:
     runs-on: ubuntu-latest
@@ -1494,9 +1563,11 @@ jobs:
         with:
           version: "0.11.6"
 
+      # check itself emits ::warning:: + step-summary for non-failing drift (GITHUB_ACTIONS).
       - name: Check standards drift
         run: |
-          uvx --from "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref || 'v2' }}" \
+          uvx --python 3.14 \
+            --from "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref || 'v2' }}" \
             project-standards check
 ```
 
@@ -1518,71 +1589,70 @@ jobs:
       standards-ref: v2
 ```
 
-> `LOCAL-EDIT`/`ORPHAN`/`restamp-pending` warning annotations (spec SA-009) are emitted by `check` itself when it detects a CI environment, or can be added as a follow-up `$GITHUB_STEP_SUMMARY` step; the exit-0 contract means they never fail the job. Keep the Phase-1 workflow minimal; annotations may land in a follow-up commit.
-
-- [ ] **Step 4: Run, verify pass** → `uv run pytest tests/test_check_cli.py -v` PASS.
+- [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check_cli.py -v` → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/standards-drift.yml src/project_standards/bundles/_shared/drift-check.caller.yml tests/test_check_cli.py
-git commit -m "feat(check): ref-pinned reusable drift workflow + caller template"
+git commit -m "feat(check): ref-pinned + python-pinned reusable drift workflow + caller"
 ```
 
 ---
 
-## Task 14: Full gate, packaging check, docs, changelog
+## Task 14: Full gate, packaging, docs, changelog
+
+[CR-007] Docs touch **all four** standards' adopt docs + the handoff pointer table, not just two.
 
 **Files:**
-- Modify: `CHANGELOG.md`, `docs/handoff/deployed.md`, `docs/handoff/architecture.md`, `docs/handoff/state.md`
-- Possibly modify: `tests/test_adopt_packaging.py` (assert `lock.py`/`check.py` + the new workflow ship in the wheel)
-- Modify: relevant `standards/*/adopt.md` (mention the lock + `check`/`--relock`)
+- Modify: `CHANGELOG.md`, `docs/handoff/{architecture,deployed,state,specs-plans}.md`
+- Modify: `standards/markdown-frontmatter/adopt.md`, `standards/adr/adopt.md`, `standards/python-tooling/adopt.md`, `standards/markdown-tooling/adopt.md`
+- Modify: `tests/test_adopt_packaging.py` (assert `lock.py`/`check.py` + the caller template ship in the wheel)
 
-- [ ] **Step 1: Run the full SSOT gate**
+- [ ] **Step 1: Full SSOT gate**
 
-Run:
 ```bash
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
-Expected: all green; coverage for `check.py`/`lock.py` ≥ ~94% (add targeted tests for any uncovered branch — e.g. `_disk_hash` OSError path via monkeypatch, corrupt-lock at CLI exit 2).
+Expected: green; `check.py`/`lock.py` coverage ≥ ~94%. Add targeted tests for any uncovered branch (e.g. `_disk_hash` OSError via monkeypatch; corrupt lock at the CLI boundary → exit 2; `ManifestError` → exit 3 with a broken-source fixture).
 
-- [ ] **Step 2: Dogfood frontmatter**
+- [ ] **Step 2: Dogfood frontmatter** — `uv run validate-frontmatter --config .project-standards.yml` → PASS.
 
-Run: `uv run validate-frontmatter --config .project-standards.yml` → PASS.
+- [ ] **Step 3: Packaging** — extend `tests/test_adopt_packaging.py` to assert `adopt/lock.py`, `adopt/check.py`, and `bundles/_shared/drift-check.caller.yml` are in the built wheel; run `uv build` + the packaging test.
 
-- [ ] **Step 3: Packaging check**
-
-If `tests/test_adopt_packaging.py` enumerates bundled files, extend it to assert `adopt/lock.py`, `adopt/check.py`, and `bundles/_shared/drift-check.caller.yml` are present in the built wheel. Run: `uv build` and the packaging test.
-
-- [ ] **Step 4: Write the CHANGELOG entry** under `## [Unreleased]` (carries the existing held `2.1.0` adopt content; add a `check` subsection):
+- [ ] **Step 4: CHANGELOG** — under `## [Unreleased]`, add a `check` subsection:
 
 ```markdown
 ### Added
-- `project-standards check` — drift detection for adopted standard artifacts, backed by a
-  new `.project-standards.lock` provenance file that `adopt` now writes. States: CLEAN,
-  STALE, LOCAL-EDIT, MISSING, UNLOCKED, ORPHAN, UNSAFE (STALE/MISSING/UNLOCKED/UNSAFE fail CI;
-  LOCAL-EDIT/ORPHAN warn). `check --update` safely re-syncs stale-and-unedited artifacts;
-  `check --relock <standard>…` baselines an already-adopted repo with zero file writes.
-- Reusable `standards-drift.yml` workflow (ref-pinned) + `_shared/drift-check.caller.yml`.
+- `project-standards check` — drift detection for adopted standard artifacts, backed by a new
+  `.project-standards.lock` provenance file that `adopt` now writes. States CLEAN/STALE/
+  LOCAL-EDIT/MISSING/UNLOCKED/ORPHAN/UNSAFE (STALE/MISSING/UNLOCKED/UNSAFE fail CI; LOCAL-EDIT/
+  ORPHAN warn; CLEAN may flag restamp-pending). `check --update` safely re-syncs stale-and-
+  unedited artifacts (single atomic lock write; promotes resolved edits); `check --relock
+  <standard>…` baselines an already-adopted repo with zero file writes.
+- Reusable `standards-drift.yml` workflow (ref- + Python-pinned) + `_shared/drift-check.caller.yml`;
+  non-failing drift surfaces via `::warning::` + step summary on GitHub Actions.
 ```
 
-- [ ] **Step 5: Update handoff docs** — `architecture.md` (note `check`/`lock.py` in the component list; move "drift command" off the backlog), `deployed.md` (reserve the `2.2.0` row as "implemented, not tagged"), `state.md` (current state). Keep `state.md` ≤ 2048 bytes.
+- [ ] **Step 5: Handoff + adopt docs** — `architecture.md` (add `check`/`lock.py` to the component list; move the drift command off the standing backlog), `deployed.md` (reserve a `2.2.0` row, "implemented, not tagged"), `state.md` (current state, keep ≤ 2048 bytes), `specs-plans.md` (flip the plan row to "implemented on testing"). Add a short "Adopted-artifact drift" paragraph to **each** of the four `standards/*/adopt.md` files pointing to `check`/`--relock`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add CHANGELOG.md docs/handoff/architecture.md docs/handoff/deployed.md docs/handoff/state.md \
-  standards/markdown-tooling/adopt.md standards/python-tooling/adopt.md tests/test_adopt_packaging.py
-git commit -m "docs(check): changelog + handoff + adopt-doc updates for drift detection"
+  docs/handoff/specs-plans.md standards/markdown-frontmatter/adopt.md standards/adr/adopt.md \
+  standards/python-tooling/adopt.md standards/markdown-tooling/adopt.md tests/test_adopt_packaging.py
+git commit -m "docs(check): changelog + handoff + all-standards adopt-doc updates for drift detection"
 ```
 
-> **Release (held, out of plan scope):** the `2.2.0` version bump in `pyproject.toml` + `uv.lock`, the signed `v2.2.0` tag, moving `v2`, and the `deployed.md` flip happen only after `2.1.0` (adopt) ships and on explicit user go — mirroring the held E3 step for adopt. Do **not** cut the release as part of this plan.
+> **Release (held, out of plan scope):** the `2.2.0` bump in `pyproject.toml` + `uv.lock`, the signed `v2.2.0` tag, moving `v2`, and the `deployed.md` flip happen only after `2.1.0` (adopt) ships and on explicit user go — mirroring the held E3 step for adopt. Do **not** cut the release as part of this plan.
 
 ---
 
 ## Self-Review (run before handoff)
 
-1. **Spec coverage:** every spec component maps to a task — state machine (7–9), lockfile (3–4), adopt-writes-lock (5–6), `--update` safety (11), `--relock` (12), CI (13), exit codes/JSON/flags (9–10), testing (every task is TDD), versioning (14). ✓
-2. **Placeholder scan:** `_classify`'s Task-7 stub is explicitly replaced in Task 8 (not a lingering placeholder); CI annotations are explicitly deferred with rationale, not hand-waved. No "TODO/TBD". ✓
-3. **Type consistency:** `ArtifactState(dest, state, owners, restamp_pending)`, `compute_states(lock, dest_root, registry)`, `apply_update(states, lock, dest_root, registry, *, force)`, `relock(standards, dest_root, registry)`, `merge_and_write(dest_root, tool_version, standard_id, contract_version, artifacts)` — names/signatures are consistent across tasks 7–12 and the CLI calls in task 10. ✓
+1. **Spec coverage:** state machine (7–8), lockfile + versioning (3–4), adopt-writes-lock (5–6), grouped JSON/report/exit/CI annotations (9), CLI + flag matrix (10), `--update` safety + edit promotion + single lock write + recovery (11), `--relock` (12), CI ref/Python pin (13), preflight (0), docs/gate/packaging (14). ✓
+2. **Placeholder scan:** Task 7's `_classify` is explicitly replaced in Task 8; Task 10's `apply_update`/`relock` stubs are explicitly replaced in Tasks 11–12 with a `rg` check. No "TODO/TBD". ✓
+3. **Type consistency:** `ArtifactState(dest, state, restamp_pending, owners)`, `FragmentState(target, state)`, `StandardStates(id, contract_version, artifacts, fragments)`; `compute_states(lock, dest_root, registry) -> list[StandardStates]`; `apply_update(groups, lock, dest_root, registry, *, force)`; `relock(standards, dest_root, registry)`; `emit_ci_annotations(groups)`; `states_to_json_str(groups, *, tool_version)`; `exit_code_for(groups)` — names/signatures consistent across Tasks 7–13 and the CLI calls in Task 10. ✓
+4. **Gate-fit:** imports hoisted (note 1), test params typed (note 2), `load_lock` narrowed (note 3), no unused names — `action_owner` removed; single `write_lock` in `apply_update` (CR-004); edit promotion (CR-003). ✓
