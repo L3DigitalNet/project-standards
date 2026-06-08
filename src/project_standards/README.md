@@ -4,6 +4,26 @@ This is the Python package that ships the validator, adopt engine, bundled schem
 
 ---
 
+## Table of Contents
+
+- [`project_standards` — source layout](#project_standards--source-layout)
+  - [Table of Contents](#table-of-contents)
+  - [CLI surface](#cli-surface)
+  - [Validators](#validators)
+    - [validate-frontmatter](#validate-frontmatter)
+    - [validate-id](#validate-id)
+      - [Standard format — all `doc_type` values except `adr`](#standard-format--all-doc_type-values-except-adr)
+      - [ADR format — `doc_type: adr`](#adr-format--doc_type-adr)
+    - [project-standards validate (combined command)](#project-standards-validate-combined-command)
+  - [Module map](#module-map)
+  - [Adopt engine](#adopt-engine)
+    - [Artifact kinds](#artifact-kinds)
+    - [Ownership and deduplication](#ownership-and-deduplication)
+  - [Contract-version registry (`registry.json`)](#contract-version-registry-registryjson)
+  - [Exit codes](#exit-codes)
+  - [Configuration file (`.project-standards.yml`)](#configuration-file-project-standardsyml)
+  - [Adding a new standard](#adding-a-new-standard)
+
 ## CLI surface
 
 Three console scripts are registered by `pyproject.toml`:
@@ -29,6 +49,7 @@ Two validators enforce the managed-document contract. They share the same config
 Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `jsonschema`). Entry point: `validate_frontmatter.main(argv)`.
 
 **What it checks:**
+
 - The file has a frontmatter block (`---…---`) — unless `--no-require-frontmatter` or `required: false` in config.
 - The YAML block is valid and parses without error.
 - Every field matches the JSON Schema (required fields present, types correct, enum values valid, date formats correct, etc.).
@@ -38,7 +59,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 **Key flags:**
 
 | Flag | Default | Effect |
-|------|---------|--------|
+| --- | --- | --- |
 | `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
 | `--config PATH` | `.project-standards.yml` | Config file |
 | `--schema PATH` | bundled schema | Override JSON Schema; skips built-in schema, uses the supplied file |
@@ -46,8 +67,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 | `--no-require-frontmatter` | — | Do not fail files with no frontmatter block |
 | `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 
-**Custom schema and bundled schema names:**
-`--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `_schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
+**Custom schema and bundled schema names:** `--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `_schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
 
 ---
 
@@ -66,7 +86,7 @@ Validates the `id` field of each document against its `doc_type`. Entry point: `
 ```
 
 | Segment | Constraint |
-|---------|------------|
+| --- | --- |
 | `{doc_type}` | Must be a valid `doc_type` enum value AND match the document's own `doc_type` field |
 | `{base36token}` | Exactly 6 characters from `[0-9a-z]` (the base-36 alphabet) |
 | `{readable-slug}` | Non-empty lowercase kebab-case — `[a-z0-9]+(-[a-z0-9]+)*`; no consecutive hyphens; frozen at creation time, NOT re-validated against the current title |
@@ -82,7 +102,7 @@ adr-{NNNN}-{repo-name}-{short-title}
 ```
 
 | Segment | Constraint |
-|---------|------------|
+| --- | --- |
 | `adr-` | Literal prefix |
 | `{NNNN}` | Repo-scoped sequence number, ≥ 4 digits (e.g. `0001`, `0042`, `10000`) |
 | `{repo-name}` | Kebab-case repository name; provides global uniqueness for cross-repo `related:` citations |
@@ -95,7 +115,7 @@ Example: `adr-0001-homelab-use-postgresql-for-persistent-storage`
 **Key flags:**
 
 | Flag | Default | Effect |
-|------|---------|--------|
+| --- | --- | --- |
 | `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
 | `--config PATH` | `.project-standards.yml` | Config file |
 | `--schema PATH` | — | **Skip id validation entirely** — custom schemas may define different id conventions, so running the bundled rules would produce false positives |
@@ -104,20 +124,19 @@ Example: `adr-0001-homelab-use-postgresql-for-persistent-storage`
 | `--no-require-frontmatter` | — | Accepted but ignored (id validation already skips files with no frontmatter) |
 | `--fix` | — | Rewrite non-compliant ids in place (see below) |
 
-**`--schema` skip logic:**
-When `--schema PATH` is provided on the CLI, OR when `markdown.frontmatter.schema:` in the config file is a path (detected by the `"/" in value or "\\" in value or value.endswith(".json")` check in `validate_id.py`), id validation prints a note and exits 0. A bare bundled name like `markdown-frontmatter` does NOT trigger the skip.
+**`--schema` skip logic:** When `--schema PATH` is provided on the CLI, OR when `markdown.frontmatter.schema:` in the config file is a path (detected by the `"/" in value or "\\" in value or value.endswith(".json")` check in `validate_id.py`), id validation prints a note and exits 0. A bare bundled name like `markdown-frontmatter` does NOT trigger the skip.
 
 **`--fix` mode:**
 
 Rewrites each non-compliant file's `id:` value in place:
+
 1. Generates a fresh 6-char base-36 token using `secrets.choice(_BASE36_CHARS)`.
 2. Derives the slug from the document's `title` via `slugify()`.
 3. Constructs `{doc_type}-{token}-{slug}` and replaces the `id:` value.
 
 **ADR docs are skipped** with a targeted warning to stderr — the `{repo-name}` segment cannot be auto-derived from document fields and must be set manually.
 
-**Source preservation:**
-`_replace_frontmatter_id()` replaces only the value part of the `id:` line. Inline comments (`id: 'old-value'  # frozen at creation`) are captured as a trailing group and written back unchanged. `fix_file()` reconstructs the output line-by-line from the original decoded bytes so per-line endings (`\r\n`, `\n`, or bare `\r`) are preserved exactly — a bare-LF line in an otherwise-CRLF file is not converted.
+**Source preservation:** `_replace_frontmatter_id()` replaces only the value part of the `id:` line. Inline comments (`id: 'old-value'  # frozen at creation`) are captured as a trailing group and written back unchanged. `fix_file()` reconstructs the output line-by-line from the original decoded bytes so per-line endings (`\r\n`, `\n`, or bare `\r`) are preserved exactly — a bare-LF line in an otherwise-CRLF file is not converted.
 
 ---
 
@@ -138,6 +157,7 @@ All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quie
 `--help` is intercepted before forwarding and prints combined documentation rather than delegating to `validate-frontmatter --help` (which would hide that `validate-id` also runs).
 
 **Dogfood command:**
+
 ```bash
 uv run project-standards validate --config .project-standards.yml
 ```
