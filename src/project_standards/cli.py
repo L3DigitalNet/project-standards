@@ -50,7 +50,9 @@ def _assert_registry_bundle_parity(registry: Registry) -> None:
     registry-known standard with no bundle (silently un-adoptable). Either way -> clean exit 2.
     """
     bundles = set(available_standards())
-    registry_ids = {s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None}
+    registry_ids = {
+        s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None
+    }
     if bundles != registry_ids:
         raise RegistryError(
             f"registry/bundle drift — registry-only: {sorted(registry_ids - bundles)}, "
@@ -74,9 +76,12 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
 def _cmd_list(as_json: bool) -> int:
     """List adoptable standards; fail cleanly on registry/bundle drift before emitting output."""
     registry = load_registry()
-    _assert_registry_bundle_parity(registry)  # fail cleanly on drift before emitting anything
+    _assert_registry_bundle_parity(
+        registry
+    )  # fail cleanly on drift before emitting anything
     entries: list[tuple[str, str | None, Manifest]] = [
-        (sid, _contract_version(registry, sid), load_manifest(sid)) for sid in available_standards()
+        (sid, _contract_version(registry, sid), load_manifest(sid))
+        for sid in available_standards()
     ]
     if as_json:
         payload = [
@@ -147,24 +152,32 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 formatter_class=argparse.RawDescriptionHelpFormatter,
             )
-            _p.add_argument("files", nargs="*", metavar="FILE", help="Markdown files to validate.")
+            _p.add_argument(
+                "files", nargs="*", metavar="FILE", help="Markdown files to validate."
+            )
             _p.add_argument(
                 "--config",
                 metavar="PATH",
                 help="Project config file (default: .project-standards.yml).",
             )
             _p.add_argument(
-                "--schema", metavar="PATH", help="Custom schema; also skips id-format validation."
+                "--schema",
+                metavar="PATH",
+                help="Custom schema; also skips id-format validation.",
             )
             _p.add_argument(
-                "--glob", metavar="PATTERN", help="Additional glob pattern relative to cwd."
+                "--glob",
+                metavar="PATTERN",
+                help="Additional glob pattern relative to cwd.",
             )
             _p.add_argument(
                 "--no-require-frontmatter",
                 action="store_true",
                 help="Do not fail files that have no frontmatter block.",
             )
-            _p.add_argument("--quiet", "-q", action="store_true", help="Suppress per-file output.")
+            _p.add_argument(
+                "--quiet", "-q", action="store_true", help="Suppress per-file output."
+            )
             _p.print_help()
             return 0
         rc_frontmatter = validate_frontmatter.main(validator_args)

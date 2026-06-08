@@ -31,6 +31,35 @@ license: null
 
 **Contract version:** `1.1` (declared per document as `schema_version`; selected by consumers via `markdown.frontmatter.version`). See [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions).
 
+## Table of Contents
+
+- [Markdown Frontmatter Standard](#markdown-frontmatter-standard)
+  - [Table of Contents](#table-of-contents)
+  - [Purpose](#purpose)
+    - [Files that never carry frontmatter](#files-that-never-carry-frontmatter)
+  - [Profiles](#profiles)
+    - [Minimal frontmatter](#minimal-frontmatter)
+    - [Standard frontmatter](#standard-frontmatter)
+  - [Field definitions](#field-definitions)
+  - [Controlled values](#controlled-values)
+    - [`doc_type`](#doc_type)
+    - [`status`](#status)
+    - [`confidence`](#confidence)
+    - [`visibility`](#visibility)
+    - [`consumer`](#consumer)
+  - [Formatting rules](#formatting-rules)
+  - [Scalar value rules](#scalar-value-rules)
+  - [List rules](#list-rules)
+  - [Canonical key order](#canonical-key-order)
+  - [Description field](#description-field)
+  - [Tags](#tags)
+  - [Aliases](#aliases)
+  - [Links and related documents](#links-and-related-documents)
+  - [Extensions](#extensions)
+  - [Versioning and compatibility](#versioning-and-compatibility)
+  - [Validation](#validation)
+  - [Valid frontmatter template](#valid-frontmatter-template)
+
 ## Purpose
 
 This standard defines a small, portable, tool-neutral set of YAML frontmatter fields for project documentation. It is **not** an Obsidian schema, a Hugo/Jekyll/Quarto schema, or a publishing schema. It is an internal project-document metadata standard intended to be portable across GitHub repositories, Markdown tooling, LLM workflows, and future publishing/export systems.

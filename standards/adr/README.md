@@ -36,6 +36,23 @@ Status: Source-checked standard, contract version `1.0` (supports Frontmatter `1
 
 ---
 
+## Table of Contents
+
+- [Architecture Decision Record (ADR) Standard](#architecture-decision-record-adr-standard)
+  - [Table of Contents](#table-of-contents)
+  - [Evidence convention](#evidence-convention)
+  - [Purpose](#purpose)
+  - [When to write an ADR](#when-to-write-an-adr)
+  - [Frontmatter for ADRs](#frontmatter-for-adrs)
+    - [MADR field → canonical field](#madr-field--canonical-field)
+    - [MADR status → canonical `status`](#madr-status--canonical-status)
+  - [Body structure (MADR)](#body-structure-madr)
+  - [Directory and index convention](#directory-and-index-convention)
+  - [Supersession workflow](#supersession-workflow)
+  - [References](#references)
+  - [Source coverage map](#source-coverage-map)
+  - [Source register](#source-register)
+
 ## Evidence convention
 
 This document separates **source-backed facts** from **project policy decisions**.

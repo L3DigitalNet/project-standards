@@ -33,6 +33,30 @@ Status: Source-checked standard, contract version 1.0 (a copy-adopted label; sel
 
 ---
 
+## Table of Contents
+
+- [Markdown Tooling Standard](#markdown-tooling-standard)
+  - [Table of Contents](#table-of-contents)
+  - [1. Evidence convention](#1-evidence-convention)
+  - [2. Purpose \& scope](#2-purpose--scope)
+  - [3. Core contract](#3-core-contract)
+  - [4. Standard stack](#4-standard-stack)
+  - [5. Published vs repo-local artifacts](#5-published-vs-repo-local-artifacts)
+  - [6. Formatter — Prettier](#6-formatter--prettier)
+  - [7. Linter — markdownlint](#7-linter--markdownlint)
+    - [The MD043 sentinel trap](#the-md043-sentinel-trap)
+  - [8. Frontmatter coupling](#8-frontmatter-coupling)
+  - [9. `.editorconfig`](#9-editorconfig)
+  - [10. VS Code standard](#10-vs-code-standard)
+    - [One-formatter-authority rule](#one-formatter-authority-rule)
+  - [11. CI reusable workflow](#11-ci-reusable-workflow)
+  - [12. Agent instruction block](#12-agent-instruction-block)
+  - [13. Non-default tools](#13-non-default-tools)
+  - [14. Exceptions process](#14-exceptions-process)
+  - [15. Update process / review cadence](#15-update-process--review-cadence)
+  - [16. Source coverage map](#16-source-coverage-map)
+  - [17. Source register](#17-source-register)
+
 ## 1. Evidence convention
 
 This document separates **source-backed facts** from **project policy decisions**.

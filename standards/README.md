@@ -10,6 +10,13 @@ This directory holds the **governing standards** this repository defines. Each s
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | [python-coding/](python-coding/) | — (reference only; no artifacts to materialize) |
 
+## Table of Contents
+
+- [Standards](#standards)
+  - [Table of Contents](#table-of-contents)
+  - [Bundle anatomy](#bundle-anatomy)
+  - [Not a governed standard](#not-a-governed-standard)
+
 ## Bundle anatomy
 
 Every standard follows the same shape, so adding a new one is mechanical:
