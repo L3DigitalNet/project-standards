@@ -74,21 +74,141 @@ def test_adopt_unknown_standard_exits_2(capsys: pytest.CaptureFixture[str]) -> N
     assert "unknown standard" in capsys.readouterr().err
 
 
+def test_validate_help_shows_both_validators(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["validate", "--help"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "validate-id" in out
+    assert "validate-frontmatter" in out
+
+
 def test_validate_subcommand_delegates_flags(monkeypatch: pytest.MonkeyPatch) -> None:
-    # `project-standards validate --config X --quiet` must forward ALL flags to the validator
-    # (regression guard for the argparse REMAINDER trap — must not exit 2 before delegating).
+    # Both validators must receive the same argv — regression guard for the argparse
+    # REMAINDER trap that previously caused exit 2 before delegating.
     import project_standards.cli as cli
 
-    captured: list[list[str]] = []
+    captured_fm: list[list[str]] = []
+    captured_id: list[list[str]] = []
 
-    def fake_validate(argv: list[str]) -> int:
-        captured.append(argv)
+    def fake_fm(argv: list[str]) -> int:
+        captured_fm.append(list(argv))
         return 0
 
-    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_validate)
+    def fake_id(argv: list[str]) -> int:
+        captured_id.append(list(argv))
+        return 0
+
+    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+    monkeypatch.setattr(cli.validate_id, "main", fake_id)
     rc = main(["validate", "--config", ".project-standards.yml", "--quiet"])
     assert rc == 0
-    assert captured == [["--config", ".project-standards.yml", "--quiet"]]
+    assert captured_fm == [["--config", ".project-standards.yml", "--quiet"]]
+    assert captured_id == [["--config", ".project-standards.yml", "--quiet"]]
+
+
+def test_validate_exit_code_is_maximum_of_both(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Combined command returns max(rc_frontmatter, rc_id) — neither validator's failure
+    # is silently masked by the other's success.
+    import project_standards.cli as cli
+
+    cases = [(0, 0, 0), (1, 0, 1), (0, 1, 1), (2, 0, 2), (0, 2, 2), (1, 2, 2)]
+    for rc_fm, rc_id, expected in cases:
+
+        def fake_fm(argv: list[str], _r: int = rc_fm) -> int:
+            return _r
+
+        def fake_id(argv: list[str], _r: int = rc_id) -> int:
+            return _r
+
+        monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+        monkeypatch.setattr(cli.validate_id, "main", fake_id)
+        assert main(["validate"]) == expected, f"max({rc_fm}, {rc_id}) should be {expected}"
+
+
+def test_validate_schema_flag_skips_id_check(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # --schema signals non-standard id conventions; validate-id must exit 0 so the
+    # combined command doesn't produce false positives for custom-schema consumers.
+    import project_standards.cli as cli
+
+    schema_file = tmp_path / "custom.json"
+    schema_file.write_text("{}", encoding="utf-8")
+
+    def fake_fm(argv: list[str]) -> int:
+        return 0
+
+    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+    # validate_id.main runs for real — verifies it returns 0 when --schema is provided
+    rc = main(["validate", "--schema", str(schema_file), "--quiet"])
+    assert rc == 0
+
+
+def test_validate_config_custom_schema_skips_id_check(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # A config-level custom schema (markdown.frontmatter.schema: ./path) must also cause
+    # validate-id to skip — the reusable workflow invokes `validate-id --config ...`,
+    # so consumers with a config-based custom schema must not get false positives.
+    import project_standards.cli as cli
+
+    custom_schema = tmp_path / "custom.json"
+    custom_schema.write_text("{}", encoding="utf-8")
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        f"markdown:\n  frontmatter:\n    schema: '{custom_schema}'\n",
+        encoding="utf-8",
+    )
+
+    def fake_fm(argv: list[str]) -> int:
+        return 0
+
+    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+    # validate_id.main runs for real — verifies it returns 0 for config-based custom schema
+    rc = main(["validate", "--config", str(cfg), "--quiet"])
+    assert rc == 0
+
+
+def test_validate_glob_forwarded_to_both_validators(monkeypatch: pytest.MonkeyPatch) -> None:
+    import project_standards.cli as cli
+
+    captured_fm: list[list[str]] = []
+    captured_id: list[list[str]] = []
+
+    def fake_fm(argv: list[str]) -> int:
+        captured_fm.append(list(argv))
+        return 0
+
+    def fake_id(argv: list[str]) -> int:
+        captured_id.append(list(argv))
+        return 0
+
+    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+    monkeypatch.setattr(cli.validate_id, "main", fake_id)
+    main(["validate", "--glob", "standards/**/*.md"])
+    assert "--glob" in captured_fm[0] and "standards/**/*.md" in captured_fm[0]
+    assert "--glob" in captured_id[0] and "standards/**/*.md" in captured_id[0]
+
+
+def test_validate_no_require_frontmatter_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
+    import project_standards.cli as cli
+
+    captured_fm: list[list[str]] = []
+    captured_id: list[list[str]] = []
+
+    def fake_fm(argv: list[str]) -> int:
+        captured_fm.append(list(argv))
+        return 0
+
+    def fake_id(argv: list[str]) -> int:
+        captured_id.append(list(argv))
+        return 0
+
+    monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
+    monkeypatch.setattr(cli.validate_id, "main", fake_id)
+    main(["validate", "--no-require-frontmatter"])
+    assert "--no-require-frontmatter" in captured_fm[0]
+    assert "--no-require-frontmatter" in captured_id[0]
 
 
 def test_adopt_dest_not_a_directory_exits_2(tmp_path: Path) -> None:

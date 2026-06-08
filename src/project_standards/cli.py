@@ -1,7 +1,8 @@
 """Unified `project-standards` CLI: adopt | list | validate.
 
-`validate` delegates to the existing validator (one implementation, two entry points —
-the standalone `validate-frontmatter` console script is kept as a back-compat alias).
+`validate` runs both `validate-frontmatter` (schema) and `validate-id` (id format) so
+consumers get the full contract check from a single command.  The standalone
+`validate-frontmatter` console script is kept as a back-compat alias.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from project_standards import validate_frontmatter
+from project_standards import validate_frontmatter, validate_id
 from project_standards.adopt.engine import build_plan, execute_plan, format_report
 from project_standards.adopt.errors import AdoptError
 from project_standards.adopt.manifest import (
@@ -113,20 +114,61 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
 def main(argv: list[str] | None = None) -> int:
     args_list = list(sys.argv[1:] if argv is None else argv)
 
-    # EARLY DISPATCH for `validate`: delegate every trailing arg to the validator BEFORE the
+    # EARLY DISPATCH for `validate`: delegate every trailing arg to both validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects
     # `validate --config x` as an unrecognized top-level option before REMAINDER can capture it.
-    # Early dispatch lets `project-standards validate --config .project-standards.yml` pass through
-    # untouched (the validator owns its own flags).
+    # Both validators accept the same --config / --quiet / FILE flags, so we pass args through
+    # unchanged. We return the worst exit code (2 > 1 > 0) so a schema error or id violation
+    # is never masked by the other tool's success.
     if args_list and args_list[0] == "validate":
-        return validate_frontmatter.main(args_list[1:])
+        validator_args = args_list[1:]
+        # Intercept --help before forwarding — otherwise validate_frontmatter.main(["--help"])
+        # calls sys.exit(0), which hides that validate-id also runs.
+        if "--help" in validator_args or "-h" in validator_args:
+            _p = argparse.ArgumentParser(
+                prog="project-standards validate",
+                description=(
+                    "Run validate-frontmatter (schema) and validate-id (id format).\n"
+                    "Both validators run; the worst exit code is returned.\n\n"
+                    "All flags are forwarded to both validators. --schema and\n"
+                    "--no-require-frontmatter are frontmatter-only; --schema also causes\n"
+                    "validate-id to skip (custom schemas may use different id conventions).\n\n"
+                    "For the full flag set of each validator:\n"
+                    "  validate-frontmatter --help\n"
+                    "  validate-id --help"
+                ),
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+            )
+            _p.add_argument("files", nargs="*", metavar="FILE", help="Markdown files to validate.")
+            _p.add_argument(
+                "--config",
+                metavar="PATH",
+                help="Project config file (default: .project-standards.yml).",
+            )
+            _p.add_argument(
+                "--schema", metavar="PATH", help="Custom schema; also skips id-format validation."
+            )
+            _p.add_argument(
+                "--glob", metavar="PATTERN", help="Additional glob pattern relative to cwd."
+            )
+            _p.add_argument(
+                "--no-require-frontmatter",
+                action="store_true",
+                help="Do not fail files that have no frontmatter block.",
+            )
+            _p.add_argument("--quiet", "-q", action="store_true", help="Suppress per-file output.")
+            _p.print_help()
+            return 0
+        rc_frontmatter = validate_frontmatter.main(validator_args)
+        rc_id = validate_id.main(validator_args)
+        return max(rc_frontmatter, rc_id)
 
     parser = argparse.ArgumentParser(prog="project-standards")
     sub = parser.add_subparsers(dest="command", required=True)
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
     sub.add_parser(
         "validate",
-        help="validate Markdown frontmatter (delegates to validate-frontmatter)",
+        help="validate frontmatter schema + id format (runs validate-frontmatter and validate-id)",
     )
 
     p_adopt = sub.add_parser("adopt", help="materialize a standard's artifacts")
