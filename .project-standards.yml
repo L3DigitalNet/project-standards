@@ -21,6 +21,9 @@ markdown:
       - "standards/**/templates/**"
       # The standards index is a navigation landing page (like the root README), not a managed doc.
       - "standards/README.md"
+      # python-coding is an in-development standard, not yet released for adoption (excluded from
+      # `adopt`); its README is a draft, not a managed doc, so it is not frontmatter-validated yet.
+      - "standards/python-coding/**"
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"
