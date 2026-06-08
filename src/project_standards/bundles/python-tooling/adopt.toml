@@ -1,0 +1,48 @@
+[standard]
+id = "python-tooling"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "pyproject.python-tooling.toml"
+target = "pyproject.toml"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "python-version"
+dest = ".python-version"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "check.yml"
+dest = ".github/workflows/check.yml"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "check.py"
+dest = "scripts/check.py"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "AGENTS.md"
+dest = "AGENTS.md"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "CLAUDE.md"
+dest = "CLAUDE.md"
+
+[[artifact]]
+kind = "file"
+shared = "_shared/editorconfig"
+dest = ".editorconfig"
+
+[[artifact]]
+kind = "file"
+shared = "_shared/vscode-extensions.json"
+dest = ".vscode/extensions.json"
