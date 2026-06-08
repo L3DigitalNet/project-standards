@@ -103,8 +103,12 @@ def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> 
 
 def main() -> None:
     root = _repo_root()
-    standards_path = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"
-    settings_path = Path(sys.argv[2]) if len(sys.argv) > 2 else root / ".vscode" / "settings.json"
+    standards_path = (
+        Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"
+    )
+    settings_path = (
+        Path(sys.argv[2]) if len(sys.argv) > 2 else root / ".vscode" / "settings.json"
+    )
 
     if not standards_path.is_file():
         sys.exit(f"error: {standards_path} not found")

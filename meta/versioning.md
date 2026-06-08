@@ -1,14 +1,15 @@
 ---
 schema_version: '1.1'
-id: 'versioning-standard'
+id: 'reference-versioning-standard'
 title: 'Versioning Standard'
 description: 'How releases of this repository are numbered, tagged, and consumed — a consumer-outcome contract over the standard, schema, validator, and workflow.'
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-07'
+updated: '2026-06-08'
 reviewed: null
 owner: ''
+consumer: 'mix'
 tags:
   - 'versioning'
   - 'releases'

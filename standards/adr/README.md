@@ -6,7 +6,7 @@ description: 'How to write Architecture Decision Records using the MADR format w
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-07'
+updated: '2026-06-08'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -19,7 +19,9 @@ aliases:
   - 'madr-standard'
 related:
   - 'standards/markdown-frontmatter/README.md'
+  - 'standards/adr/adopt.md'
   - 'standards/adr/templates/adr.md'
+  - 'standards/adr/examples/adr.example.md'
 source:
   - 'https://adr.github.io/madr/'
   - 'https://adr.github.io/'

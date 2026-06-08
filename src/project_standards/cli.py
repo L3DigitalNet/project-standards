@@ -14,7 +14,12 @@ from pathlib import Path
 from project_standards import validate_frontmatter
 from project_standards.adopt.engine import build_plan, execute_plan, format_report
 from project_standards.adopt.errors import AdoptError
-from project_standards.adopt.manifest import Artifact, Manifest, available_standards, load_manifest
+from project_standards.adopt.manifest import (
+    Artifact,
+    Manifest,
+    available_standards,
+    load_manifest,
+)
 from project_standards.registry import Registry, RegistryError, load_registry
 
 
@@ -29,7 +34,12 @@ def _contract_version(registry: Registry, standard_id: str) -> str | None:
 
 
 # The registry's version-tracked standards (hyphenated ids), the single source for drift checks.
-_REGISTRY_STANDARD_IDS = ("markdown-frontmatter", "adr", "python-tooling", "markdown-tooling")
+_REGISTRY_STANDARD_IDS = (
+    "markdown-frontmatter",
+    "adr",
+    "python-tooling",
+    "markdown-tooling",
+)
 
 
 def _assert_registry_bundle_parity(registry: Registry) -> None:
@@ -39,7 +49,9 @@ def _assert_registry_bundle_parity(registry: Registry) -> None:
     registry-known standard with no bundle (silently un-adoptable). Either way -> clean exit 2.
     """
     bundles = set(available_standards())
-    registry_ids = {s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None}
+    registry_ids = {
+        s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None
+    }
     if bundles != registry_ids:
         raise RegistryError(
             f"registry/bundle drift — registry-only: {sorted(registry_ids - bundles)}, "
@@ -62,9 +74,12 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
 
 def _cmd_list(as_json: bool) -> int:
     registry = load_registry()
-    _assert_registry_bundle_parity(registry)  # fail cleanly on drift before emitting anything
+    _assert_registry_bundle_parity(
+        registry
+    )  # fail cleanly on drift before emitting anything
     entries: list[tuple[str, str | None, Manifest]] = [
-        (sid, _contract_version(registry, sid), load_manifest(sid)) for sid in available_standards()
+        (sid, _contract_version(registry, sid), load_manifest(sid))
+        for sid in available_standards()
     ]
     if as_json:
         payload = [
@@ -115,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
     sub.add_parser(
-        "validate", help="validate Markdown frontmatter (delegates to validate-frontmatter)"
+        "validate",
+        help="validate Markdown frontmatter (delegates to validate-frontmatter)",
     )
 
     p_adopt = sub.add_parser("adopt", help="materialize a standard's artifacts")
