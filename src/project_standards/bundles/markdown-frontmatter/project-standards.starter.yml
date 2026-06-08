@@ -1,0 +1,25 @@
+standards_version: 'v2'
+
+markdown:
+  frontmatter:
+    version: '1.1'
+    schema: 'markdown-frontmatter'
+    required: true
+    include:
+      - 'README.md'
+      - 'docs/**/*.md'
+    exclude:
+      # Intentional placeholders / template files (e.g. the ADR template):
+      - '**/*.template.md'
+      # Non-managed docs:
+      - 'CHANGELOG.md'
+      - 'LICENSE.md'
+      # Agent-instruction files are harness config, never managed docs:
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - '.claude/**'
+      - '.agents/**'
+      - '.codex/**'
+      - '.github/**'
+      # Tooling / generated content:
+      - 'node_modules/**'

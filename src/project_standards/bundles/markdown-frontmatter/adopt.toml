@@ -1,0 +1,14 @@
+[standard]
+id = "markdown-frontmatter"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "project-standards.starter.yml"
+dest = ".project-standards.yml"
+
+[[artifact]]
+kind = "workflow-caller"
+owner = true
+source = "validate-markdown-frontmatter.caller.yml"
+dest = ".github/workflows/validate-markdown-frontmatter.yml"
