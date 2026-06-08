@@ -1,0 +1,30 @@
+[standard]
+id = "markdown-tooling"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "markdownlint.json"
+dest = ".markdownlint.json"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "prettierrc.json"
+dest = ".prettierrc.json"
+
+[[artifact]]
+kind = "file"
+shared = "_shared/editorconfig"
+dest = ".editorconfig"
+
+[[artifact]]
+kind = "file"
+shared = "_shared/vscode-extensions.json"
+dest = ".vscode/extensions.json"
+
+[[artifact]]
+kind = "workflow-caller"
+owner = true
+source = "lint-markdown.caller.yml"
+dest = ".github/workflows/lint-markdown.yml"
