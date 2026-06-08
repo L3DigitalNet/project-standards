@@ -4,7 +4,8 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| `adopt` CLI design | `docs/superpowers/specs/2026-06-08-adopt-cli-design.md` | approved (awaiting plan) |
+| `adopt` CLI design | `docs/superpowers/specs/2026-06-08-adopt-cli-design.md` | approved (codex r6) |
+| `adopt` CLI plan | `docs/superpowers/plans/2026-06-08-adopt-cli.md` | awaiting plan review |
 | Markdown Tooling Standard design | `docs/superpowers/specs/2026-06-06-markdown-tooling-standard-design.md` | approved (audit r3) |
 | Markdown Tooling Standard plan | `docs/superpowers/plans/2026-06-07-markdown-tooling-standard.md` | released (`v2.0.0`) |
 | Per-standard versioning design | `docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md` | approved (audit r2) |
