@@ -367,7 +367,10 @@ def merge_and_write(
     )
     lock.tool_version = tool_version
     existing = lock.standards.get(standard_id)
-    local_edits = existing.local_edits if existing is not None else {}
+    # Drop any newly-written dest from local_edits — a (re)adopt of an artifact supersedes a prior
+    # relock-accepted edit, so it must not linger in [local_edits] (would mask a future STALE). [CR-003]
+    prior_edits = existing.local_edits if existing is not None else {}
+    local_edits = {k: v for k, v in prior_edits.items() if k not in artifacts}
     lock.standards[standard_id] = StandardLock(
         contract_version=contract_version, artifacts=dict(artifacts), local_edits=local_edits
     )
@@ -527,6 +530,26 @@ def test_adopt_creates_lock(tmp_path: Path) -> None:
 def test_adopt_dry_run_writes_no_lock(tmp_path: Path) -> None:
     assert main(["adopt", "markdown-tooling", "--dest", str(tmp_path), "--dry-run"]) == 0
     assert load_lock(tmp_path) is None
+
+
+def test_adopt_force_prunes_stale_local_edit(tmp_path: Path) -> None:
+    # A re-adopt that rewrites an artifact must drop that dest from [local_edits], so a future
+    # template change reports STALE, not LOCAL-EDIT (merge_and_write pruning — CR-003).
+    from project_standards.adopt.lock import sha256_bytes, write_lock
+
+    assert main(["adopt", "markdown-tooling", "--dest", str(tmp_path)]) == 0
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    sl = lock.standards["markdown-tooling"]
+    sl.artifacts.pop(".markdownlint.json", None)
+    sl.local_edits[".markdownlint.json"] = sha256_bytes(b"whatever\n")
+    write_lock(lock, tmp_path)
+
+    assert main(["adopt", "markdown-tooling", "--dest", str(tmp_path), "--force"]) == 0
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    sl = lock.standards["markdown-tooling"]
+    assert ".markdownlint.json" in sl.artifacts and ".markdownlint.json" not in sl.local_edits
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (no lock written).
@@ -980,6 +1003,39 @@ def test_ci_annotations_emitted_for_local_edit(
     emit_ci_annotations(_grp(ArtifactState(".editorconfig", "LOCAL-EDIT")))
     assert "::warning" in capsys.readouterr().out
     assert ".editorconfig" in summary.read_text(encoding="utf-8")
+
+
+def test_ci_annotations_cover_orphan_and_restamp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))
+    emit_ci_annotations(
+        _grp(ArtifactState(".a", "ORPHAN"), ArtifactState(".b", "CLEAN", restamp_pending=True))
+    )
+    out = capsys.readouterr().out
+    assert ".a" in out and ".b" in out and "restamp-pending" in out
+
+
+def test_json_full_snapshot() -> None:
+    groups = _grp(ArtifactState(".x", "CLEAN", owners=["markdown-tooling"]))
+    assert states_to_json(groups, tool_version="2.2.0") == {
+        "lockfile_version": 1,
+        "tool_version": "2.2.0",
+        "standards": [
+            {
+                "id": "markdown-tooling",
+                "contract_version": "1.0",
+                "artifacts": [
+                    {"dest": ".x", "state": "CLEAN", "restamp_pending": False,
+                     "owners": ["markdown-tooling"]}
+                ],
+                "fragments": [],
+            }
+        ],
+        "summary": {"clean": 1, "restamp_pending": 0, "stale": 0, "local_edit": 0,
+                    "missing": 0, "unlocked": 0, "orphan": 0, "unsafe": 0, "exit_code": 0},
+    }
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (undefined names).
@@ -1074,7 +1130,7 @@ def emit_ci_annotations(groups: list[StandardStates]) -> None:
             rows.append((a.dest, label))
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path and rows:
-        with open(summary_path, "a", encoding="utf-8") as fh:
+        with Path(summary_path).open("a", encoding="utf-8") as fh:  # Path.open — ruff PTH123 [CR-002]
             fh.write("\n### Standards drift (non-failing)\n\n| Artifact | State |\n| --- | --- |\n")
             for dest, label in rows:
                 fh.write(f"| `{dest}` | {label} |\n")
@@ -1146,6 +1202,10 @@ def test_force_without_update_is_exit_2(tmp_path: Path) -> None:
 
 def test_relock_with_update_is_exit_2(tmp_path: Path) -> None:
     assert main(["check", "--dest", str(tmp_path), "--relock", "markdown-tooling", "--update"]) == 2
+
+
+def test_relock_without_standards_is_exit_2(tmp_path: Path) -> None:
+    assert main(["check", "--dest", str(tmp_path), "--relock"]) == 2  # [CR-NEW-003]
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (no `check` subcommand).
@@ -1202,7 +1262,7 @@ Register the subparser (next to `p_list`) and validate flags inside `main`'s exi
     p_check.add_argument("--dest", type=Path, default=Path.cwd())
     p_check.add_argument("--update", action="store_true")
     p_check.add_argument("--force", action="store_true")
-    p_check.add_argument("--relock", nargs="+", metavar="STANDARD", default=None)
+    p_check.add_argument("--relock", nargs="*", metavar="STANDARD", default=None)  # "*": empty -> our UsageError
     p_check.add_argument("--json", action="store_true", dest="as_json")
     p_check.add_argument("--quiet", action="store_true")
 ```
@@ -1215,6 +1275,8 @@ Register the subparser (next to `p_list`) and validate flags inside `main`'s exi
                 raise UsageError("--force is only valid with --update")
             if args.relock is not None and (args.update or args.force):
                 raise UsageError("--relock cannot be combined with --update/--force")
+            if args.relock is not None and not args.relock:
+                raise UsageError("--relock requires at least one STANDARD")  # [CR-NEW-003]
             return _cmd_check(
                 args.dest, update=args.update, force=args.force, relock=args.relock,
                 as_json=args.as_json, quiet=args.quiet,
@@ -1299,7 +1361,9 @@ def test_update_restamps_pending_without_file_write(tmp_path: Path) -> None:
     lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = "sha256:stale"
     write_lock(lock, tmp_path)
     assert main(["check", "--dest", str(tmp_path), "--update"]) == 0
-    groups = check_mod.compute_states(load_lock(tmp_path), tmp_path, load_registry())  # type: ignore[arg-type]
+    repaired = load_lock(tmp_path)
+    assert repaired is not None
+    groups = check_mod.compute_states(repaired, tmp_path, load_registry())
     assert not any(a.restamp_pending for g in groups for a in g.artifacts)
 
 
@@ -1324,6 +1388,27 @@ def test_update_lock_write_failure_is_recoverable(
     assert (tmp_path / ".markdownlint.json").read_text() != "OLD\n"  # file WAS updated
     monkeypatch.undo()
     assert main(["check", "--dest", str(tmp_path), "--update"]) == 0  # rerun repairs the lock
+
+
+def test_update_shared_artifact_protects_local_edit(tmp_path: Path) -> None:
+    # .editorconfig is shared by markdown-tooling + python-tooling. With one owner STALE and the
+    # other holding an accepted local edit, plain --update must NOT overwrite it (CR-NEW-002); the
+    # STALE owner keeps it red (exit 1) until --force resolves the conflict.
+    assert main(["adopt", "markdown-tooling", "python-tooling", "--dest", str(tmp_path)]) == 0
+    from project_standards.adopt.lock import sha256_bytes, write_lock
+
+    (tmp_path / ".editorconfig").write_text("# custom\n", encoding="utf-8")
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    lock.standards["markdown-tooling"].artifacts[".editorconfig"] = sha256_bytes(b"# custom\n")  # STALE
+    lock.standards["python-tooling"].artifacts.pop(".editorconfig", None)
+    lock.standards["python-tooling"].local_edits[".editorconfig"] = sha256_bytes(b"# custom\n")  # edit
+    write_lock(lock, tmp_path)
+
+    assert main(["check", "--dest", str(tmp_path), "--update"]) == 1  # protected, still STALE
+    assert (tmp_path / ".editorconfig").read_text() == "# custom\n"  # NOT clobbered
+    assert main(["check", "--dest", str(tmp_path), "--update", "--force"]) == 0  # force resolves
+    assert (tmp_path / ".editorconfig").read_text() != "# custom\n"
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (`apply_update` is the NotImplementedError stub).
@@ -1355,15 +1440,20 @@ def apply_update(
                 continue
             rendered.setdefault(action.dest, _render(action, ref))
 
-    # 1. Write files (most-severe state per dest decides eligibility).
-    best: dict[str, str] = {}
+    # 1. Write files. Aggregate per dest PROTECTIVELY across owners (shared artifacts like
+    # .editorconfig): a dest is written only if no owner marks it UNSAFE, and ANY owner's
+    # LOCAL-EDIT/UNLOCKED blocks the write unless --force — so one standard's STALE can never
+    # clobber another standard's accepted edit on the same path. [CR-NEW-002]
+    dest_states: dict[str, set[str]] = {}
     for a in iter_artifacts(groups):
-        if best.get(a.dest) is None or _SEVERITY[a.state] > _SEVERITY[best[a.dest]]:
-            best[a.dest] = a.state
-    for dest, state in best.items():
-        if state == "UNSAFE" or dest not in rendered:
+        dest_states.setdefault(a.dest, set()).add(a.state)
+    for dest, states_set in dest_states.items():
+        if "UNSAFE" in states_set or dest not in rendered:
             continue
-        if state in sync_states or (force and state in force_states):
+        protected = bool(states_set & force_states)  # any LOCAL-EDIT / UNLOCKED owner
+        if protected and not force:
+            continue
+        if (states_set & sync_states) or (force and protected):
             abs_dest = validate_dest(dest, dest_root)
             if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, root):
                 continue
@@ -1451,16 +1541,33 @@ def test_relock_divergent_file_is_local_edit_not_stale(tmp_path: Path) -> None:
     (tmp_path / ".editorconfig").write_text("# customized\n", encoding="utf-8")
     assert main(["check", "--dest", str(tmp_path), "--relock", "markdown-tooling"]) == 0
     assert main(["check", "--dest", str(tmp_path)]) == 0  # accepted edit -> warn, exit 0
+
+
+def test_relock_unknown_standard_is_exit_2_writes_no_lock(tmp_path: Path) -> None:
+    from project_standards.adopt.lock import load_lock
+
+    assert main(["check", "--dest", str(tmp_path), "--relock", "not-a-standard"]) == 2  # [CR-NEW-001]
+    assert load_lock(tmp_path) is None  # no lock written on a typo
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (`relock` stub raises NotImplementedError).
 
 - [ ] **Step 3: Implement `relock`** (replace the stub)
 
+Add `UsageError` to `check.py`'s top errors import (`from project_standards.adopt.errors import UsageError, WriteError`), then:
+
 ```python
 def relock(standards: list[str], dest_root: Path, registry: Registry) -> None:
     """Baseline an already-adopted repo: matching files -> [artifacts], divergent -> [local_edits]."""
     from importlib.metadata import version
+
+    from project_standards.adopt.manifest import available_standards
+
+    # Validate ALL ids before writing anything — a typo must exit 2, not produce a no-op lock
+    # that a later check reads as falsely green. [CR-NEW-001]
+    unknown = [s for s in standards if s not in available_standards()]
+    if unknown:
+        raise UsageError(f"unknown standard(s): {', '.join(sorted(unknown))}")
 
     ref = major_ref()
     root = dest_root.resolve()
