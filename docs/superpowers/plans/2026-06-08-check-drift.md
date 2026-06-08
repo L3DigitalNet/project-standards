@@ -964,6 +964,7 @@ from project_standards.adopt.check import (
     StandardStates,
     emit_ci_annotations,
     exit_code_for,
+    format_check_report,
     states_to_json,
 )
 
@@ -1017,6 +1018,22 @@ def test_ci_annotations_cover_orphan_and_restamp(
     assert ".a" in out and ".b" in out and "restamp-pending" in out
 
 
+def test_dedup_preserves_restamp_pending_across_owners() -> None:
+    # Shared artifact: one owner CLEAN, the other CLEAN+restamp_pending. The flag must survive
+    # the report/CI dedup (CR-NEW-006).
+    groups = [
+        StandardStates(
+            "markdown-tooling", "1.0",
+            [ArtifactState(".editorconfig", "CLEAN", False, ["markdown-tooling"])], [],
+        ),
+        StandardStates(
+            "python-tooling", "1.0",
+            [ArtifactState(".editorconfig", "CLEAN", True, ["python-tooling"])], [],
+        ),
+    ]
+    assert "restamp-pending" in format_check_report(groups)
+
+
 def test_json_full_snapshot() -> None:
     groups = _grp(ArtifactState(".x", "CLEAN", owners=["markdown-tooling"]))
     assert states_to_json(groups, tool_version="2.2.0") == {
@@ -1060,11 +1077,20 @@ def exit_code_for(groups: list[StandardStates]) -> int:
 
 
 def _dedup_by_dest(groups: list[StandardStates]) -> list[ArtifactState]:
+    """Collapse a shared artifact to one entry per dest: MAX severity, OR'd restamp_pending,
+    unioned owners — so a restamp-pending flag set by any owner stays visible. [CR-NEW-006]"""
     best: dict[str, ArtifactState] = {}
     for a in iter_artifacts(groups):
         cur = best.get(a.dest)
-        if cur is None or _SEVERITY[a.state] > _SEVERITY[cur.state]:
-            best[a.dest] = a
+        if cur is None:
+            best[a.dest] = ArtifactState(a.dest, a.state, a.restamp_pending, list(a.owners))
+            continue
+        if _SEVERITY[a.state] > _SEVERITY[cur.state]:
+            cur.state = a.state
+        cur.restamp_pending = cur.restamp_pending or a.restamp_pending
+        for owner in a.owners:
+            if owner not in cur.owners:
+                cur.owners.append(owner)
     return [best[d] for d in sorted(best)]
 
 
@@ -1409,6 +1435,24 @@ def test_update_shared_artifact_protects_local_edit(tmp_path: Path) -> None:
     assert (tmp_path / ".editorconfig").read_text() == "# custom\n"  # NOT clobbered
     assert main(["check", "--dest", str(tmp_path), "--update", "--force"]) == 0  # force resolves
     assert (tmp_path / ".editorconfig").read_text() != "# custom\n"
+
+
+def test_update_refreshes_tool_version(tmp_path: Path) -> None:
+    # A lock rewritten by --update must claim THIS release wrote it, not an old one (CR-NEW-005).
+    from importlib.metadata import version
+
+    from project_standards.adopt.lock import write_lock
+
+    _adopt(tmp_path)
+    lock = load_lock(tmp_path)
+    assert lock is not None
+    lock.tool_version = "0.0.1-old"
+    lock.standards["markdown-tooling"].artifacts[".markdownlint.json"] = "sha256:stale"  # restamp-pending
+    write_lock(lock, tmp_path)
+    assert main(["check", "--dest", str(tmp_path), "--update"]) == 0
+    refreshed = load_lock(tmp_path)
+    assert refreshed is not None
+    assert refreshed.tool_version == version("project-standards")
 ```
 
 - [ ] **Step 2: Run, verify fail** — FAIL (`apply_update` is the NotImplementedError stub).
@@ -1491,8 +1535,12 @@ def apply_update(
             contract_version=contract, artifacts=artifacts, local_edits=local_edits
         )
 
+    from importlib.metadata import version
+
     new_lock = Lock(
-        lockfile_version=lock.lockfile_version, tool_version=lock.tool_version, standards=new_standards
+        lockfile_version=lock.lockfile_version,
+        tool_version=version("project-standards"),  # this release wrote it, not the prior one [CR-NEW-005]
+        standards=new_standards,
     )
     try:
         write_lock(new_lock, dest_root)
@@ -1695,6 +1743,8 @@ jobs:
     with:
       standards-ref: v2
 ```
+
+> **Delivery model (Phase 1 = manual copy) [CR-NEW-004].** The drift caller is intentionally **not** a `workflow-caller` adopt artifact in any `adopt.toml` this release — it is repo-wide (lock-driven), not standard-scoped like the per-standard validate/lint callers, and wiring it in would touch a bundle manifest + registry parity. So `adopt` does **not** install it and `check` does **not** track it as a locked artifact. Instead it ships in the wheel and each standard's `adopt.md` (Task 14) tells the consumer to copy `drift-check.caller.yml` → `.github/workflows/standards-drift.yml`. Promoting it to a managed `workflow-caller` artifact (so `adopt` installs it and `check` covers it) is a documented follow-on, not in this plan's scope.
 
 - [ ] **Step 4: Run, verify pass** — `uv run pytest tests/test_check_cli.py -v` → PASS.
 
