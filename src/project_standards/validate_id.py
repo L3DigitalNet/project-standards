@@ -79,14 +79,17 @@ _VALID_DOC_TYPES: frozenset[str] = frozenset(
 # Exactly 6 characters from the base-36 alphabet (digits 0-9 + lowercase letters a-z).
 _BASE36_RE = re.compile(r"^[0-9a-z]{6}$")
 
-# Non-empty lowercase kebab-case: starts with alphanumeric, rest is alphanumeric or hyphens.
-_KEBAB_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+# Non-empty lowercase kebab-case: starts and ends with alphanumeric; internal hyphens allowed.
+# The `([a-z0-9-]*[a-z0-9])?` optional group handles single-char slugs ("a") and multi-char
+# slugs that must not end in a hyphen ("some-title"). slugify() already strips trailing
+# hyphens, so a valid derived slug never triggers this guard — only hand-crafted bad ids do.
+_KEBAB_RE = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
 # ADR id: adr-{NNNN}-{repo-name}-{short-title}
 # NNNN is at least 4 zero-padded digits; the repo-name + short-title together form a
-# non-empty kebab-case suffix. No minimum length is imposed on the suffix — the repo-name
-# and short-title boundary is semantic, not structurally detectable by regex.
-_ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9][a-z0-9-]*$")
+# non-empty kebab-case suffix that must not end in a hyphen (same trailing-hyphen guard
+# as _KEBAB_RE above).
+_ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
 
 def slugify(text: str) -> str:

@@ -73,9 +73,7 @@ class Registry:
             return self.adr_supports[version]
         except KeyError as exc:
             known = ", ".join(sorted(self.adr_supports))
-            raise RegistryError(
-                f"unknown adr version {version!r}; bundled: {known}"
-            ) from exc
+            raise RegistryError(f"unknown adr version {version!r}; bundled: {known}") from exc
 
     def is_known_python_tooling(self, version: str) -> bool:
         return version in self.python_tooling_versions
@@ -146,9 +144,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
             raise RegistryError(f"registry adr.versions.{key} is not an object")
         supports = cast("dict[str, Any]", value).get("supports_frontmatter")
         if not isinstance(supports, list):
-            raise RegistryError(
-                f"registry adr.versions.{key}.supports_frontmatter is not a list"
-            )
+            raise RegistryError(f"registry adr.versions.{key}.supports_frontmatter is not a list")
         adr_supports[str(key)] = [str(v) for v in cast("list[Any]", supports)]
 
     pt_versions_raw = pt_d.get("versions")

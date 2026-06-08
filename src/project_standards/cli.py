@@ -49,9 +49,7 @@ def _assert_registry_bundle_parity(registry: Registry) -> None:
     registry-known standard with no bundle (silently un-adoptable). Either way -> clean exit 2.
     """
     bundles = set(available_standards())
-    registry_ids = {
-        s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None
-    }
+    registry_ids = {s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None}
     if bundles != registry_ids:
         raise RegistryError(
             f"registry/bundle drift — registry-only: {sorted(registry_ids - bundles)}, "
@@ -74,12 +72,9 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
 
 def _cmd_list(as_json: bool) -> int:
     registry = load_registry()
-    _assert_registry_bundle_parity(
-        registry
-    )  # fail cleanly on drift before emitting anything
+    _assert_registry_bundle_parity(registry)  # fail cleanly on drift before emitting anything
     entries: list[tuple[str, str | None, Manifest]] = [
-        (sid, _contract_version(registry, sid), load_manifest(sid))
-        for sid in available_standards()
+        (sid, _contract_version(registry, sid), load_manifest(sid)) for sid in available_standards()
     ]
     if as_json:
         payload = [
