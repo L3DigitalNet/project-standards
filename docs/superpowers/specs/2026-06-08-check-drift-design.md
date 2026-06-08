@@ -1,6 +1,6 @@
 # Design: `check` — drift detection for adopted standards artifacts
 
-**Date:** 2026-06-08 **Status:** approved (brainstorming complete; refined by codex-review round 1; awaiting plan) **Author:** session 2026-06-08
+**Date:** 2026-06-08 **Status:** approved (brainstorming complete; refined by codex-review round 3; plan ready at `2026-06-08-check-drift.md`) **Author:** session 2026-06-08
 
 ## Table of Contents
 
