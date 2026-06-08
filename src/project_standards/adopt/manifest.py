@@ -14,7 +14,8 @@ from typing import Any, cast
 from project_standards.adopt.errors import ManifestError
 
 # bundles/ sits beside this package's schemas/ — one level up from adopt/.
-_BUNDLES_DIR = Path(__file__).resolve().parent.parent / "bundles"
+# Public because the engine imports it as the shared default for `bundles_dir`.
+BUNDLES_DIR = Path(__file__).resolve().parent.parent / "bundles"
 
 _KNOWN_KINDS = frozenset({"file", "workflow-caller", "fragment"})
 
@@ -37,7 +38,7 @@ class Manifest:
     artifacts: tuple[Artifact, ...]
 
 
-def available_standards(bundles_dir: Path = _BUNDLES_DIR) -> list[str]:
+def available_standards(bundles_dir: Path = BUNDLES_DIR) -> list[str]:
     """Sorted ids of bundles that ship an adopt.toml (excludes `_shared`)."""
     if not bundles_dir.is_dir():
         raise ManifestError(f"bundles directory missing: {bundles_dir}")
@@ -50,7 +51,7 @@ def available_standards(bundles_dir: Path = _BUNDLES_DIR) -> list[str]:
     return out
 
 
-def load_manifest(standard_id: str, bundles_dir: Path = _BUNDLES_DIR) -> Manifest:
+def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest:
     path = bundles_dir / standard_id / "adopt.toml"
     if not path.is_file():
         raise ManifestError(f"no manifest for standard {standard_id!r} at {path}")
