@@ -28,6 +28,17 @@ license: null
 
 The **linter** half ships a reusable workflow and a seedable rule set; the **formatter** half (Prettier) is copy-adopt with no workflow. The contract version is a validated label, not a body gate.
 
+## Quick adoption (CLI)
+
+As of `v2`, the packaged CLI materializes every artifact below in one command:
+
+```bash
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+  project-standards adopt markdown-tooling
+```
+
+This drops `.markdownlint.json`, `.prettierrc.json`, the shared `.editorconfig` and `.vscode/extensions.json`, and the `lint-markdown.yml` workflow caller (pinned to the current released major). Existing files are skipped unless you pass `--force`. The manual steps below remain the reference for what each artifact is and how to wire it by hand.
+
 ## Steps
 
 1. **Seed the rule set + floor.** Copy `.markdownlint.json` (the markdownlint rule set) and `.editorconfig` from this repo.

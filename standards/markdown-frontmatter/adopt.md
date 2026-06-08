@@ -33,6 +33,8 @@ license: null
 > **You are an agent adopting this standard in another ("consuming") repository.** Follow this procedure end to end. It is self-contained: everything you need to make the changes is here. Where you want the authoritative source, the links in [§8](#8-authoritative-references-pinned) point at the pinned release.
 >
 > **Target release:** `project-standards` **v1.2.0** — pin the moving major tag **`@v1`** (it receives only backward-compatible updates; see [§7](#7-versioning--staying-in-compliance)). **Owner repo:** `github.com/L3DigitalNet/project-standards`.
+>
+> **Quick path (v2+).** On the `@v2` line, the packaged CLI scaffolds this in one step — `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' project-standards adopt markdown-frontmatter` writes a starter `.project-standards.yml` (only when absent) and the validator workflow caller, both pinned to the current major. The detailed procedure below is the manual reference and remains the source of truth for the frontmatter rules.
 
 ## 0. What you are doing — definition of done
 

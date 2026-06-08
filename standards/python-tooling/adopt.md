@@ -27,6 +27,17 @@ license: null
 
 Unlike the Markdown standards, this one is **not** enforced by the shared validator and ships **no reusable workflow**. Adoption is copy-the-scaffolds plus run-the-gate. The scaffolds live inline in [the standard](README.md).
 
+## Quick adoption (CLI)
+
+As of `v2`, the packaged CLI materializes the scaffolds in one command:
+
+```bash
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+  project-standards adopt python-tooling
+```
+
+This writes `.python-version`, `.github/workflows/check.yml`, `scripts/check.py`, the agent entry points (`AGENTS.md`/`CLAUDE.md`), and the shared `.editorconfig` and `.vscode/extensions.json`. The `pyproject.toml` sections are **reported, not written** (the CLI never edits an existing config in place) — copy the printed block into your `pyproject.toml`. Existing files are skipped unless you pass `--force`. Then run the verification gate (below). The manual steps remain the reference for what each scaffold is.
+
 ## Steps
 
 1. **Copy the scaffolds** from [the standard](README.md): the `pyproject.toml` baseline (§6), `.python-version`, `.editorconfig` (§14), `.vscode/` config (§13), `.github/workflows/check.yml` (§15), the agent entry points (§16–17), and optionally `scripts/check.py` (§18).

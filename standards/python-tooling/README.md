@@ -6,7 +6,7 @@ description: 'Standard Python tooling stack, layout, CI gate, and agent instruct
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-07'
+updated: '2026-06-08'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -18,7 +18,9 @@ tags:
   - 'standard'
 aliases:
   - 'python-tooling-standard'
-related: []
+related:
+  - 'meta/versioning.md'
+  - 'standards/python-coding/README.md'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -838,7 +840,7 @@ Policy decision: the standard is not VS Code-specific. The invariant is one sema
 
 ## 14. `.editorconfig`
 
-Use this file in every repository.
+Use this file in every repository. It is the **shared superset** `.editorconfig` that `project-standards adopt` materializes — the same file the Markdown Tooling standard adopts — so a repo that adopts both standards gets one reconciled floor instead of two divergent copies.
 
 Source basis:
 
@@ -853,12 +855,18 @@ charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+indent_style = tab
+indent_size = 2
 
 [*.py]
 indent_style = space
 indent_size = 4
 
-[*.{toml,yml,yaml,json,md}]
+[*.toml]
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml}]
 indent_style = space
 indent_size = 2
 
@@ -866,7 +874,7 @@ indent_size = 2
 trim_trailing_whitespace = false
 ```
 
-Policy decision: Markdown trailing whitespace is not trimmed by default because Markdown sometimes uses trailing spaces intentionally for hard line breaks.
+Policy decision: the global `indent_style = tab` makes JSON/JSONC and Markdown tab-indented to match Prettier (which emits tabs), while the language toolchains pin their own indentation — Python and TOML use 4 spaces (PEP 8 / ruff), and YAML uses 2 spaces because the YAML spec forbids tabs in indentation. This **reconciles** the previously documented "spaces for `*.{toml,yml,yaml,json,md}`" rule with the Markdown Tooling floor so the two standards share a single `.editorconfig`; because Python Tooling is copy-adopt (never inherited automatically), the change to JSON/Markdown indentation cannot newly-fail an existing consumer. Markdown trailing whitespace is not trimmed because Markdown uses trailing spaces intentionally for hard line breaks.
 
 ---
 

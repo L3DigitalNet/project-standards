@@ -6,16 +6,18 @@ description: 'How to adopt the ADR Standard in a consuming repository; it rides 
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-06'
+updated: '2026-06-08'
 reviewed: null
 owner: ''
 consumer: 'agent'
 tags:
   - 'adoption'
   - 'adr'
+  - 'runbook'
 aliases: []
 related:
   - 'standards/adr/README.md'
+  - 'standards/adr/examples/adr.example.md'
   - 'standards/markdown-frontmatter/adopt.md'
 source: []
 confidence: 'high'
@@ -26,6 +28,17 @@ license: null
 # Adopt the ADR Standard
 
 ADRs are **managed Markdown documents**: they carry full frontmatter and are validated by the same tooling as every other doc. There is **no separate ADR workflow**.
+
+## Quick adoption (CLI)
+
+As of `v2`, the packaged CLI drops the ADR template and reports the config knobs in one command:
+
+```bash
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+  project-standards adopt adr
+```
+
+This writes the ADR template to `docs/decisions/adr.template.md` (a `*.template.md` path your validation excludes, so its placeholder frontmatter never fails) and **reports** the `.project-standards.yml` additions — the `markdown.adr` block (§3) and the required `**/*.template.md` exclusion — for you to merge by hand (the CLI never edits an existing config in place). Adopt the Frontmatter Standard first (§1); the manual steps below remain the reference.
 
 ## 1. Adopt the Frontmatter Standard first
 
