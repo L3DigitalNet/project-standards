@@ -12,6 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
+project-standards = "project_standards.cli:main"
 validate-frontmatter = "project_standards.validate_frontmatter:main"
 sync-vscode-colors = "project_standards.sync_vscode_colors:main"
 sync-standards-include = "project_standards.sync_standards_include:main"
