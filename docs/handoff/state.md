@@ -1,6 +1,6 @@
 # State
 
-**Last updated:** 2026-06-08
+**Last updated:** 2026-06-09
 
 ## State at a glance
 
@@ -11,7 +11,7 @@
 
 ## Active incidents
 
-- None.
+- **prettier/`format.yml` CI red** (codex-reviews + bundles; no `.prettierignore`) — deferred; markdownlint CI now green. Detail → `architecture.md`.
 
 ## Session instructions
 

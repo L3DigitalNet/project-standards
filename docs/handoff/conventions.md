@@ -12,6 +12,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 4 | The schema is a versioned contract | Changing the schema or controlled vocabularies |
 | 5 | Python tooling follows the SSOT standard | Adding or changing Python tooling, CI gate, or layout |
 | 6 | Standards live in per-standard bundles | Adding/moving a standard, template, or example |
+| 7 | Style gates exclude generated/template content | Wiring or debugging markdownlint / Prettier / frontmatter gates |
 
 ## 1. Dogfood the standards
 
@@ -96,3 +97,25 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 **Sources:** `standards/README.md`; `docs/superpowers/specs/2026-06-06-standards-bundle-restructure-design.md`.
 
 **Related:** 1, 5.
+
+## 7. Style gates exclude generated/template content
+
+**Applies when:** wiring or debugging a repo-wide style gate — markdownlint (`lint-markdown.yml`), Prettier (`format.yml`), or frontmatter validation (`validate-markdown-frontmatter.yml`).
+
+**Rule:** machine-generated or template Markdown is **excluded** from style gates, not reformatted. Draw the exclusion boundary once and mirror it across gates:
+
+- `.project-standards.yml` excludes `docs/handoff/**` from frontmatter validation.
+- `.markdownlint-cli2.jsonc` `ignores` excludes `docs/codex-reviews/**` + `docs/handoff/**` (config `ignores` apply in both the local bare run and the CI `markdownlint-cli2-action` run, which passes globs explicitly — verify both).
+- Prettier needs a matching `.prettierignore` (not yet added — `format.yml` is latently red on `codex-reviews` + `src/project_standards/bundles/*`; see `architecture.md` backlog).
+
+**Why:** codex review transcripts and v3 handoff state regenerate constantly, and the bundles ship with intentional placeholders. Style-linting them is churn that keeps CI permanently red on content no human authored to a style bar.
+
+**Gotchas (when a doc IS in scope and a rule fights Prettier):**
+
+- markdownlint **MD031** (blanks around fences) conflicts with Prettier on **list-nested** fences — Prettier keeps them tight because it owns blank-line placement (cf. the existing MD032 exclusion). Scope-disable MD031 around the block, or disable it globally as Prettier-owned (a rule-set/contract change: `.markdownlint.json` + `tests/test_markdownlint_config.py` + standard doc + CHANGELOG).
+- markdownlint **MD051** (link fragments) anchor algorithm diverges from GitHub's on **emoji** headings — scope-disable on the affected link; it resolves on GitHub. Keep MD051 enabled (it catches real stale TOC links).
+- Inline disables in lists survive Prettier only if the directive stays adjacent to its target — verify with a `prettier --write` + markdownlint pass after adding them.
+
+**Sources:** 2026-06-09 session (markdownlint scoping + authored-doc cleanup, `ec2b517`).
+
+**Related:** 1, 2, 5.
