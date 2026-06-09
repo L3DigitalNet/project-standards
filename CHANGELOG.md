@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: log-atsd8b-changelog
+id: 'log-atsd8b-changelog'
 title: 'Changelog'
 description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'

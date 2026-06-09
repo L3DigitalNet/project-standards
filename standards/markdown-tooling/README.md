@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: reference-2gswci-markdown-tooling-standard
+id: 'reference-2gswci-markdown-tooling-standard'
 title: 'Markdown Tooling Standard'
 description: 'Recommended linting/formatting tools and settings for Markdown and adjacent structured-text files: markdownlint, Prettier, and EditorConfig.'
 doc_type: 'reference'

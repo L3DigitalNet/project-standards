@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: runbook-s87fvu-standards-adoption-compliance-procedure
+id: 'runbook-s87fvu-standards-adoption-compliance-procedure'
 title: 'Standards Adoption & Compliance Procedure'
 description: 'Step-by-step procedure for an agent to adopt the project-standards Markdown Frontmatter Standard in a consuming repository and bring it into compliance.'
 doc_type: 'runbook'

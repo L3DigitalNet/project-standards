@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: reference-ove1rr-markdown-frontmatter-standard
+id: 'reference-ove1rr-markdown-frontmatter-standard'
 title: 'Markdown Frontmatter Standard'
 description: 'Canonical, tool-neutral metadata profile for project Markdown documents.'
 doc_type: 'reference'

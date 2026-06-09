@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: reference-ed2nmw-architecture-decision-record-adr-standard
+id: 'reference-ed2nmw-architecture-decision-record-adr-standard'
 title: 'Architecture Decision Record (ADR) Standard'
 description: 'How to write Architecture Decision Records using the MADR format with canonical frontmatter.'
 doc_type: 'reference'

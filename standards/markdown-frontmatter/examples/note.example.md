@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: note-13qo1q-tailscale-acl-tag-ordering-gotcha
+id: 'note-13qo1q-tailscale-acl-tag-ordering-gotcha'
 title: 'Tailscale ACL tag ordering gotcha'
 description: 'A working note on why a Tailscale ACL rule silently failed until tag order was fixed.'
 doc_type: 'note'
