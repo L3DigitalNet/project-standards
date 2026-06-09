@@ -106,7 +106,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 - `.project-standards.yml` excludes `docs/handoff/**` from frontmatter validation.
 - `.markdownlint-cli2.jsonc` `ignores` excludes `docs/codex-reviews/**` + `docs/handoff/**` (config `ignores` apply in both the local bare run and the CI `markdownlint-cli2-action` run, which passes globs explicitly — verify both).
-- Prettier needs a matching `.prettierignore` (not yet added — `format.yml` is latently red on `codex-reviews` + `src/project_standards/bundles/*`; see `architecture.md` backlog).
+- Prettier honors `.prettierignore`, which mirrors the markdownlint `ignores` (`docs/codex-reviews/`, `docs/handoff/`) — added 2026-06-09 (`281afe4`); `format.yml` is green (authored docs are formatted, generated transcripts ignored).
 
 **Why:** codex review transcripts and v3 handoff state regenerate constantly, and the bundles ship with intentional placeholders. Style-linting them is churn that keeps CI permanently red on content no human authored to a style bar.
 
@@ -119,3 +119,13 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 **Sources:** 2026-06-09 session (markdownlint scoping + authored-doc cleanup, `ec2b517`).
 
 **Related:** 1, 2, 5.
+
+## 8. `except A, B:` is ruff-canonical — NOT a Python-2 bug
+
+`ruff format` 0.15 rewrites a parenthesized multi-exception clause `except (A, B):` to the bare-tuple form `except A, B:` (verified empirically — it strips the parens as redundant on Python ≥3.14). Both are identical Python-3 tuple-catches — NOT the removed Py2 `except Exc, name` binding (confirmed via AST: `handler.name is None`). So `except OSError, FrontmatterParseError:` in `validate_references.py`/`validate_id.py` and `except KeyError, TypeError:` in `sync_vscode_colors.py` are **intentional and gate-canonical**: parenthesizing them fails `ruff format --check` and is auto-reverted.
+
+**Why:** reviewers (codex, manual) repeatedly mis-flag the comma form as a Python-2 syntax bug and try to "fix" it; the fix never sticks because ruff owns the style. Do not re-flag or re-fix it.
+
+**Sources:** 2026-06-09 round-3 release-readiness review.
+
+**Related:** 3.
