@@ -269,3 +269,31 @@ def test_schema_version_injected_when_missing():
     src = _doc().replace("schema_version: '1.1'\n", "")
     new, _, _ = format_text(src, path=None)
     assert "schema_version: '1.1'" in new
+
+
+def test_doc_type_filled_from_readme_path_when_missing():
+    src = _doc().replace("doc_type: 'note'\n", "")  # no doc_type
+    new, _, _ = format_text(src, path=Path("README.md"))
+    assert "doc_type: 'index'" in new
+
+
+def test_doc_type_research_under_docs_research_when_invalid():
+    src = _doc().replace("doc_type: 'note'\n", "doc_type: 'bogus'\n")
+    new, _, _ = format_text(src, path=Path("docs/research/x.md"))
+    assert "doc_type: 'research'" in new
+
+
+def test_valid_doc_type_never_overridden_by_path():
+    src = _doc().replace("doc_type: 'note'\n", "doc_type: 'reference'\n")
+    new, _, _ = format_text(src, path=Path("README.md"))
+    assert "doc_type: 'reference'" in new   # SA-001: valid value preserved
+    assert "doc_type: 'index'" not in new
+
+
+def test_denylisted_paths_are_refused():
+    from project_standards.format_frontmatter import is_denylisted
+    assert is_denylisted(Path("CLAUDE.md"))
+    assert is_denylisted(Path("sub/AGENTS.md"))
+    assert is_denylisted(Path(".claude/settings.md"))
+    assert is_denylisted(Path("x/.codex/y.md"))
+    assert not is_denylisted(Path("docs/note.md"))

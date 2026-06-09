@@ -388,12 +388,55 @@ def inject_defaults(entries: list[Entry]) -> None:
             entries.append(_new_empty_list_entry(key, eol))
 
 
+_NEVER_NAMES = {"CLAUDE.md", "AGENTS.md", "GEMINI.md"}
+_NEVER_DIRS = {".claude", ".agents", ".codex"}
+
+
+def is_denylisted(path: Path) -> bool:
+    """Files that must NEVER carry frontmatter (harness config). Overrides include
+    and scaffold, independent of config — defense-in-depth over consumer exclude."""
+    if path.name in _NEVER_NAMES:
+        return True
+    return any(part in _NEVER_DIRS for part in path.parts)
+
+
+def _infer_doc_type(path: Path) -> str | None:
+    """The standard's path rules. None = no rule applies."""
+    posix = path.as_posix()
+    if "docs/research/" in posix or posix.startswith("docs/research/"):
+        return "research"
+    if path.name in ("README.md", "index.md"):
+        return "index"
+    return None
+
+
+def infer_doc_type(entries: list[Entry], path: Path | None) -> None:
+    """Fill/correct-only (SA-001): set doc_type from the path rule ONLY when the
+    current value is missing or not a valid enum value. A valid value is kept."""
+    if path is None:
+        return
+    inferred = _infer_doc_type(path)
+    if inferred is None:
+        return
+    eol = _line_ending(entries[0].lines[-1]) if entries and entries[0].lines else "\n"
+    for entry in entries:
+        if entry.key == "doc_type":
+            current = entry.lines[-1].split(":", 1)[1].strip().strip("'\"")
+            if current in VALID_DOC_TYPES:
+                return  # valid -> never override
+            entry.lines = [f"doc_type: {_emit_single_quoted(inferred)}{eol}"]
+            return
+    entries.append(_new_scalar_entry("doc_type", inferred, eol))
+
+
 def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     """Format the frontmatter block of `text`. Returns (new_text, changed, warnings).
 
     `path` informs path-based transforms (added in later tasks); None disables them
     (stdin mode). This skeleton only round-trips, so output == input for now."""
     warnings: list[str] = []
+    if path is not None and is_denylisted(path):
+        return text, False, ["refused (denylisted): never add frontmatter to this file"]
     match = _FM_RE.match(text)
     if match is None:
         return text, False, warnings
@@ -404,6 +447,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")
         return text, False, warnings
     rename_type(entries, warnings)
+    infer_doc_type(entries, path)
     inject_defaults(entries)
     normalize_lists(entries)
     requote(entries)
