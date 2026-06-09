@@ -1308,9 +1308,7 @@ def test_references_enabled_defaults_false(tmp_path: Path) -> None:
 
 def test_references_enabled_true(tmp_path: Path) -> None:
     cfg = tmp_path / ".project-standards.yml"
-    cfg.write_text(
-        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n"
-    )
+    cfg.write_text("markdown:\n  frontmatter:\n    references:\n      enabled: true\n")
     assert load_config(cfg).references_enabled is True
 
 

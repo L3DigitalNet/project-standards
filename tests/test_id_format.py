@@ -7,7 +7,10 @@ def test_slugify_basic():
 
 
 def test_slugify_strips_accents_and_punctuation():
-    assert slugify("Standards Adoption & Compliance Procedure") == "standards-adoption-compliance-procedure"
+    assert (
+        slugify("Standards Adoption & Compliance Procedure")
+        == "standards-adoption-compliance-procedure"
+    )
     assert slugify("café déjà") == "cafe-deja"
 
 
