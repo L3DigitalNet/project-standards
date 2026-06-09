@@ -398,7 +398,9 @@ def rename_type(entries: list[Entry], warnings: list[str]) -> None:
     for entry in entries:
         if entry.key == "type":
             entry.key = "doc_type"
-            entry.lines = [re.sub(r"\btype:", "doc_type:", ln, count=1) for ln in entry.lines]
+            lead = _leading_run(entry)
+            # Rewrite ONLY the key line, not a leading `# type: ...` comment (codex P3).
+            entry.lines[lead] = re.sub(r"\btype:", "doc_type:", entry.lines[lead], count=1)
             return
 
 
@@ -454,10 +456,16 @@ def infer_doc_type(entries: list[Entry], path: Path | None) -> None:
     eol = _line_ending(entries[0].lines[-1]) if entries and entries[0].lines else "\n"
     for entry in entries:
         if entry.key == "doc_type":
-            current = entry.lines[-1].split(":", 1)[1].strip().strip("'\"")
+            lead = _leading_run(entry)
+            key_line = entry.lines[lead]
+            rest = key_line.rstrip("\r\n").split(":", 1)[1] if ":" in key_line else ""
+            # Strip any inline comment before validating, else a valid commented value
+            # like `doc_type: 'reference'  # note` reads as invalid and is wrongly
+            # overwritten by the path rule (codex P2; SA-001 says keep a valid value).
+            current = _split_value_comment(rest)[0].strip().strip("'\"")
             if current in VALID_DOC_TYPES:
-                return  # valid -> never override
-            entry.lines = [f"doc_type: {_emit_single_quoted(inferred)}{eol}"]
+                return  # valid (even with an inline comment) -> never override
+            entry.lines = [*entry.lines[:lead], f"doc_type: {_emit_single_quoted(inferred)}{eol}"]
             return
     entries.append(_new_scalar_entry("doc_type", inferred, eol))
 
@@ -608,9 +616,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.stdin:
         text = sys.stdin.read()
-        new, _changed, _warn = format_text(text, path=None, bump_updated=args.bump_updated)
+        new, _changed, warnings = format_text(text, path=None, bump_updated=args.bump_updated)
         sys.stdout.write(new)
-        return 0
+        # Mirror file mode: a refused (duplicate-key) block must fail, not silently
+        # exit 0 — stdin editor/CI integrations rely on the exit code (codex P2).
+        unparseable = False
+        for w in warnings:
+            print(f"<stdin>: {w}", file=sys.stderr)
+            if "duplicate top-level key" in w:
+                unparseable = True
+        return 1 if unparseable else 0
 
     paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
     write = args.write  # default is check-mode

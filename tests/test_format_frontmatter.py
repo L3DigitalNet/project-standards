@@ -881,3 +881,32 @@ def test_block_list_item_comment_is_preserved() -> None:
     new, _changed, _warnings = format_text(src, path=None)
     assert "# why a" in new
     assert "- 'a'" in new and "- 'b'" in new
+
+
+def test_valid_commented_doc_type_not_overridden_by_path() -> None:
+    # SA-001: a VALID doc_type carrying an inline comment must be parsed correctly and
+    # kept, not misread as invalid and overwritten by the path rule (codex round-2 P2).
+    src = _doc().replace("doc_type: 'note'\n", "doc_type: 'reference'  # intentional\n")
+    new, _changed, _warnings = format_text(src, path=Path("README.md"))
+    assert "doc_type: 'reference'" in new
+    assert "# intentional" in new
+    assert "doc_type: 'index'" not in new
+
+
+def test_rename_type_preserves_leading_comment() -> None:
+    # type->doc_type rename must rewrite only the key line, not a leading
+    # `# type: ...` comment (codex round-2 P3).
+    src = _doc().replace("doc_type: 'note'\n", "# type: legacy alias\ntype: 'note'\n")
+    new, _changed, _warnings = format_text(src, path=None)
+    assert "doc_type: 'note'" in new
+    assert "# type: legacy alias" in new
+    assert "# doc_type: legacy alias" not in new
+
+
+def test_stdin_fails_on_duplicate_keys() -> None:
+    # stdin mode must mirror file mode: duplicate top-level keys -> non-zero exit
+    # (codex round-2 P2 — it previously discarded warnings and always exited 0).
+    dup = _doc().replace("tags: []\n", "tags: []\ntags: ['x']\n")
+    r = _run(["--stdin"], input=dup)
+    assert r.returncode == 1
+    assert "duplicate" in (r.stdout + r.stderr).lower()
