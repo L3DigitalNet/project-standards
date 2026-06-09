@@ -1297,3 +1297,17 @@ def test_unknown_markdown_tooling_version_exits_2(
     rc = main(["--config", ".project-standards.yml"])
     assert rc == 2
     assert "unknown markdown_tooling.version" in capsys.readouterr().err
+
+
+def test_references_enabled_defaults_false(tmp_path: Path) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    assert load_config(cfg).references_enabled is False
+
+
+def test_references_enabled_true(tmp_path: Path) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n"
+    )
+    assert load_config(cfg).references_enabled is True

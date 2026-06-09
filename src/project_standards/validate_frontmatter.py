@@ -292,6 +292,7 @@ class ProjectConfig:
         adr_version: str | None = None,
         python_tooling_version: str | None = None,
         markdown_tooling_version: str | None = None,
+        references_enabled: bool = False,
     ) -> None:
         self.schema = schema
         self.include = include
@@ -302,6 +303,7 @@ class ProjectConfig:
         self.adr_version = adr_version
         self.python_tooling_version = python_tooling_version
         self.markdown_tooling_version = markdown_tooling_version
+        self.references_enabled = references_enabled
 
 
 def resolve_effective_schema(
@@ -376,6 +378,7 @@ def load_config(path: Path) -> ProjectConfig:
     adr_version: str | None = None
     python_tooling_version: str | None = None
     markdown_tooling_version: str | None = None
+    references_enabled = False
 
     if path.exists():
         try:
@@ -397,6 +400,12 @@ def load_config(path: Path) -> ProjectConfig:
                     required = bool(fm.get("required", True))
                     version_val = fm.get("version")
                     frontmatter_version = str(version_val) if version_val is not None else None
+                    references = fm.get("references")
+                    references_enabled = (
+                        bool(references.get("enabled", False))
+                        if isinstance(references, dict)
+                        else False
+                    )
                 adr = markdown_dict.get("adr")
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
@@ -426,6 +435,7 @@ def load_config(path: Path) -> ProjectConfig:
         adr_version=adr_version,
         python_tooling_version=python_tooling_version,
         markdown_tooling_version=markdown_tooling_version,
+        references_enabled=references_enabled,
     )
 
 
