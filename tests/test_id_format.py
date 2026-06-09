@@ -1,5 +1,6 @@
 import re
-from project_standards.id_format import slugify, random_token
+
+from project_standards.id_format import random_token, slugify
 
 
 def test_slugify_basic():
