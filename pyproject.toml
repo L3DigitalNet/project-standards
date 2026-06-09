@@ -18,6 +18,7 @@ validate-id = "project_standards.validate_id:main"
 sync-vscode-colors = "project_standards.sync_vscode_colors:main"
 sync-standards-include = "project_standards.sync_standards_include:main"
 format-frontmatter = "project_standards.format_frontmatter:main"
+validate-references = "project_standards.validate_references:main"
 
 [dependency-groups]
 dev = [
