@@ -195,7 +195,7 @@ def _requote_scalar_line(line: str, key: str) -> str:
     `null`/`~`, empty values, and flow lists are left untouched."""
     m = re.match(
         r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":)(?P<sep>[ \t]*)"
-        r"(?P<rest>.*)(?P<eol>\r?\n?)$",
+        r"(?P<rest>[^\r\n]*)(?P<eol>\r?\n?)$",
         line,
     )
     if m is None:

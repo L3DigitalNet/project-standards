@@ -297,3 +297,40 @@ def test_denylisted_paths_are_refused():
     assert is_denylisted(Path(".claude/settings.md"))
     assert is_denylisted(Path("x/.codex/y.md"))
     assert not is_denylisted(Path("docs/note.md"))
+
+
+def test_extension_object_nested_bytes_preserved():
+    src = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "project:\n"
+        "  team: 'platform'\n"
+        "  nested:\n"
+        "    deep: 1\n"
+        "---\n"
+    )
+    new, changed, warnings = format_text(src, path=None)
+    assert "project:\n  team: 'platform'\n  nested:\n    deep: 1\n" in new
+    assert changed is False
+    assert warnings == []
+
+
+def test_crlf_line_endings_preserved():
+    src = _doc().replace("\n", "\r\n")
+    src = src.replace("title: X\r\n", "title: X\r\n") if "title: X" in src else src
+    # Force one change (unquoted) and assert CRLF survives on unchanged lines.
+    src = src.replace("title: 'X'\r\n", "title: X\r\n")
+    new, changed, _ = format_text(src, path=None)
+    assert "\r\n" in new
+    assert "\n\n" not in new.replace("\r\n", "")  # no stray bare LFs introduced
+    assert "title: 'X'\r\n" in new
