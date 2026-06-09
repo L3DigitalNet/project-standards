@@ -1,10 +1,19 @@
+import io
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from project_standards.format_frontmatter import format_text
+from project_standards.format_frontmatter import (
+    Entry,
+    _leading_run,  # pyright: ignore[reportPrivateUsage]
+    _split_value_comment,  # pyright: ignore[reportPrivateUsage]
+    _today_iso,  # pyright: ignore[reportPrivateUsage]
+    format_text,
+    main,
+    tokenize,
+)
 
 CLEAN = (
     "---\n"
@@ -431,3 +440,417 @@ def test_format_is_idempotent(src: str) -> None:
     twice, changed2, _ = format_text(once, path=Path("docs/x.md"))
     assert twice == once
     assert changed2 is False
+
+
+# ---------------------------------------------------------------------------
+# In-process unit tests for tokenize() / _split_value_comment / _leading_run
+# ---------------------------------------------------------------------------
+
+
+def test_tokenize_blank_and_comment_lines_become_pending() -> None:
+    # Covers lines 97-100 (blank/comment append to pending) and 126-127
+    # (pending flushed as a trailing key=None Entry at end).
+    body = "# top comment\n\ntitle: 'X'\n# tail\n"
+    entries, reason = tokenize(body)
+    assert reason is None
+    # first entry should carry the leading comment and blank
+    assert entries[0].key == "title"
+    assert any("# top comment" in ln for ln in entries[0].lines)
+    # trailing comment entry
+    last = entries[-1]
+    assert last.key is None
+    assert any("# tail" in ln for ln in last.lines)
+
+
+def test_tokenize_unrecognized_line_returns_reason() -> None:
+    # Covers line 103 — a line at column 0 that doesn't match key: syntax
+    # (e.g. a bare list item `- x` or a number-prefixed key)
+    body = "- orphan-list-item\n"
+    entries, reason = tokenize(body)
+    assert entries == []
+    assert reason is not None and "unrecognized" in reason
+
+
+def test_tokenize_unsupported_yaml_constructs() -> None:
+    # Covers line 107 — anchor, alias, block scalar
+    for bad_val in ("&anchor value", "*alias", "<< merge", "| block"):
+        body = f"title: {bad_val}\n"
+        entries, reason = tokenize(body)
+        assert entries == [], f"expected empty for {bad_val!r}"
+        assert reason is not None and "unsupported" in reason, f"bad reason for {bad_val!r}"
+
+
+def test_tokenize_blank_line_breaks_continuation() -> None:
+    # Covers line 119 — blank line inside a nested entry ends continuation
+    body = "tags:\n  - 'a'\n\ntitle: 'X'\n"
+    entries, reason = tokenize(body)
+    assert reason is None
+    tag_entry = next(e for e in entries if e.key == "tags")
+    # blank line is NOT included in the tag entry's lines (it ends it)
+    assert not any(ln.strip() == "" for ln in tag_entry.lines)
+
+
+def test_split_value_comment_single_quoted_with_escaped_quote() -> None:
+    # Covers lines 154-155 — escaped '' inside single-quoted scalar
+    val, comment = _split_value_comment(" 'it''s here'  # note")
+    assert val.strip() == "'it''s here'"
+    assert "# note" in comment
+
+
+def test_split_value_comment_double_quoted_with_escape() -> None:
+    # Covers lines 158-159 — backslash escape inside double-quoted scalar
+    val, comment = _split_value_comment(' "foo\\"bar"  # cmt')
+    assert val.strip().startswith('"')
+    assert "# cmt" in comment
+
+
+def test_split_value_comment_unterminated_single_quote() -> None:
+    # Covers line 163 — unterminated quote: whole rest returned as value
+    val, comment = _split_value_comment(" 'unterminated")
+    assert comment == ""
+    assert "unterminated" in val
+
+
+def test_split_value_comment_flow_list_with_inner_double_quote() -> None:
+    # Covers lines 173-174 and 177-178 — quote tracking inside flow list
+    val, comment = _split_value_comment(' ["foo\\"bar", \'baz\']  # keep')
+    assert val.strip().startswith("[")
+    assert "]" in val
+    assert "# keep" in comment
+
+
+def test_split_value_comment_flow_list_inner_single_quote_double_escape() -> None:
+    # Covers line 175-176 — '' escape inside single-quoted flow list item
+    val, comment = _split_value_comment(" ['it''s']")
+    assert val.strip() == "['it''s']"
+    assert comment == ""
+
+
+def test_split_value_comment_unbalanced_brackets() -> None:
+    # Covers line 191 — unbalanced brackets: no comment extracted
+    _val, comment = _split_value_comment(" [open but no close")
+    assert comment == ""
+
+
+def test_leading_run_counts_only_prefix_blanks_and_comments() -> None:
+    # Covers lines 256-262 — _leading_run returns count of leading blank/comment lines
+    entry = Entry(key="tags", lines=["# comment\n", "\n", "tags:\n", "  - 'a'\n"])
+    assert _leading_run(entry) == 2
+
+
+def test_normalize_lists_yaml_error_is_skipped() -> None:
+    # Covers lines 276-277 — yaml.YAMLError during load → continue (no crash)
+    # Build an entry whose lines produce invalid YAML when joined
+    entry = Entry(key="tags", lines=["tags: [\n", "  broken yaml\n"])
+    from project_standards.format_frontmatter import normalize_lists
+
+    normalize_lists([entry])  # must not raise
+    # lines unchanged (skipped)
+    assert entry.lines[0] == "tags: [\n"
+
+
+def test_normalize_lists_non_dict_load_skipped() -> None:
+    # Covers line 279 — loaded is not a dict (e.g. a bare scalar)
+    # Build an entry that loads as something other than a dict when joined
+    entry = Entry(key="tags", lines=["tags: just-a-scalar\n"])
+    from project_standards.format_frontmatter import normalize_lists
+
+    normalize_lists([entry])
+    # The key is not a list-type in the loaded dict sense, so it should be skipped
+    assert "just-a-scalar" in entry.lines[0]
+
+
+def test_normalize_lists_scalar_where_list_expected_is_left() -> None:
+    # Covers line 282 — value is a scalar (not list/None/empty) -> left for validator
+    entry = Entry(key="tags", lines=["tags: not-a-list\n"])
+    from project_standards.format_frontmatter import normalize_lists
+
+    normalize_lists([entry])
+    assert "not-a-list" in entry.lines[0]
+
+
+def test_reorder_trailing_comment_entry_stays_last() -> None:
+    # Covers line 330 — trailing comment-only Entry (key=None) sort key
+    from project_standards.format_frontmatter import reorder
+
+    e_title = Entry(key="title", lines=["title: 'X'\n"])
+    e_tail = Entry(key=None, lines=["# trailing\n"])
+    warnings: list[str] = []
+    result = reorder([e_tail, e_title], warnings)
+    assert result[-1].key is None
+
+
+def test_today_iso_returns_valid_date() -> None:
+    # Covers line 444 — _today_iso() returns today's ISO date string
+    import datetime as _dt
+
+    result = _today_iso()
+    parsed = _dt.date.fromisoformat(result)
+    assert parsed == _dt.date.today()
+
+
+def test_scaffold_no_path_is_noop() -> None:
+    # Covers line 485 — scaffold=True but path=None -> returns text unchanged
+    body = "# Title\n\nContent.\n"
+    new, changed, _ = format_text(body, path=None, scaffold=True)
+    assert new == body
+    assert changed is False
+
+
+def test_bump_updated_sets_new_date() -> None:
+    # Covers lines 512-519 — bump_updated rewrites updated: when block changes
+    src = _doc(title="X").replace("title: 'X'", "title: X")  # unquoted -> will change
+    new, changed, _ = format_text(src, path=None, bump_updated=True, today="2099-01-01")
+    assert changed is True
+    assert "updated: '2099-01-01'" in new
+
+
+def test_bump_updated_noop_when_already_formatted() -> None:
+    # bump_updated only fires when the block actually changes; clean input -> no change
+    new, changed, _ = format_text(CLEAN, path=None, bump_updated=True, today="2099-01-01")
+    assert changed is False
+    assert "updated: '2099-01-01'" not in new
+
+
+# ---------------------------------------------------------------------------
+# In-process main() tests — CLI coverage
+# ---------------------------------------------------------------------------
+
+
+def _cfg(tmp_path: Path, *, include: str = "['**/*.md']", extra: str = "") -> Path:
+    """Write a minimal .project-standards.yml and return its path."""
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(f"markdown:\n  frontmatter:\n    include: {include}\n{extra}")
+    return cfg
+
+
+def test_main_check_exits_1_when_file_would_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    assert rc == 1
+
+
+def test_main_check_exits_0_when_already_clean(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "clean.md"
+    f.write_text(CLEAN)
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    assert rc == 0
+
+
+def test_main_write_rewrites_in_place(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--config", str(cfg), str(f)])
+    assert rc == 0
+    assert "title: 'X'" in f.read_text()
+
+
+def test_main_write_preserves_file_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Exercises _atomic_write: set a non-default mode, assert it survives the rewrite
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    f.chmod(0o644)
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--config", str(cfg), str(f)])
+    assert rc == 0
+    mode = f.stat().st_mode & 0o777
+    assert mode == 0o644
+
+
+def test_main_write_preserves_executable_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A non-default mode (0o755) must survive the atomic rewrite
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    f.chmod(0o755)
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--config", str(cfg), str(f)])
+    assert rc == 0
+    assert (f.stat().st_mode & 0o777) == 0o755
+
+
+def test_main_stdin_round_trips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    src = _doc(title="X").replace("title: 'X'", "title: X")
+    monkeypatch.setattr("sys.stdin", io.StringIO(src))
+    cfg = _cfg(tmp_path)
+    rc = main(["--stdin", "--config", str(cfg)])
+    assert rc == 0
+    out, _ = capsys.readouterr()
+    assert "title: 'X'" in out
+
+
+def test_main_stdin_with_file_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.stdin", io.StringIO("---\ntitle: 'X'\n---\n"))
+    with pytest.raises(SystemExit) as exc:
+        main(["--stdin", "x.md"])
+    assert exc.value.code == 2
+
+
+def test_main_stdin_with_glob_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.stdin", io.StringIO("---\ntitle: 'X'\n---\n"))
+    with pytest.raises(SystemExit) as exc:
+        main(["--stdin", "--glob", "*.md"])
+    assert exc.value.code == 2
+
+
+def test_main_stdin_with_write_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.stdin", io.StringIO("---\ntitle: 'X'\n---\n"))
+    with pytest.raises(SystemExit) as exc:
+        main(["--stdin", "--write"])
+    assert exc.value.code == 2
+
+
+def test_main_custom_schema_via_config_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(
+        tmp_path,
+        extra="",
+    )
+    # Write config with a custom schema path
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    schema: 'custom/my.json'\n    include: ['**/*.md']\n"
+    )
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "custom schema" in (out + err).lower()
+
+
+def test_main_custom_schema_via_flag_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    # Pass a --schema flag pointing to a non-existent custom path
+    rc = main(["--check", "--config", str(cfg), "--schema", "custom/x.json", str(f)])
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "custom schema" in (out + err).lower()
+
+
+def test_main_malformed_config_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    # Invalid YAML: tab character at start of line where not allowed
+    cfg.write_text("markdown:\n\t frontmatter: bad\n")
+    rc = main(["--check", "--config", str(cfg)])
+    assert rc == 2
+    _out, err = capsys.readouterr()
+    assert "error" in err.lower()
+
+
+def test_main_denylisted_file_is_skipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    # CLAUDE.md with a frontmatter block that would be changed if processed
+    f = tmp_path / "CLAUDE.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    # Pass the denylist file explicitly as a positional arg
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    # denylisted -> skipped -> no change detected -> 0
+    assert rc == 0
+
+
+def test_main_duplicate_key_warning_sets_exit_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # Frontmatter with a duplicate key: tokenize returns reason "duplicate top-level key"
+    src = CLEAN.replace("tags: []\n", "tags: []\ntags: ['x']\n")
+    f = tmp_path / "dup.md"
+    f.write_text(src)
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    _out, err = capsys.readouterr()
+    assert "duplicate" in err.lower()
+    # unparseable flag set -> returns 1 regardless of any_change
+    assert rc == 1
+
+
+def test_main_bump_updated_with_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    # File with unquoted title so it will change; existing updated date in the past
+    f = tmp_path / "d.md"
+    old_content = _doc(title="X").replace("title: 'X'", "title: X")
+    # Replace the updated date with an obviously old value
+    old_content = old_content.replace("updated: '2026-06-08'", "updated: '2020-01-01'")
+    f.write_text(old_content)
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--bump-updated", "--config", str(cfg), str(f)])
+    assert rc == 0
+    new_content = f.read_text()
+    # updated: must have changed from the old placeholder
+    assert "updated: '2020-01-01'" not in new_content
+    assert "updated:" in new_content
+
+
+def test_main_write_scaffold_on_no_frontmatter_docs_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # A .md file under docs/ with no frontmatter: --write triggers scaffold
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    f = docs / "guide.md"
+    f.write_text("# Guide Title\n\nSome content.\n")
+    cfg = _cfg(tmp_path, include="['docs/**/*.md']")
+    rc = main(["--write", "--config", str(cfg), str(f)])
+    assert rc == 0
+    content = f.read_text()
+    assert content.startswith("---\n")
+    assert "title: 'Guide Title'" in content
+    assert "doc_type: 'note'" in content
+
+
+def test_main_write_quiet_suppresses_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--quiet", "--config", str(cfg), str(f)])
+    assert rc == 0
+    out, _ = capsys.readouterr()
+    assert out == ""
+
+
+def test_main_check_quiet_suppresses_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--quiet", "--config", str(cfg), str(f)])
+    assert rc == 1
+    out, _ = capsys.readouterr()
+    assert out == ""
