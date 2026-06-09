@@ -12,7 +12,12 @@ import json
 import sys
 from pathlib import Path
 
-from project_standards import validate_frontmatter, validate_id, validate_references
+from project_standards import (
+    format_frontmatter,
+    validate_frontmatter,
+    validate_id,
+    validate_references,
+)
 from project_standards.adopt.engine import build_plan, execute_plan, format_report
 from project_standards.adopt.errors import AdoptError
 from project_standards.adopt.manifest import (
@@ -41,6 +46,21 @@ _REGISTRY_STANDARD_IDS = (
     "python-tooling",
     "markdown-tooling",
 )
+
+
+def _extract_config_path(args: list[str]) -> Path:
+    """Pull the --config value out of a forwarded argv (default .project-standards.yml)."""
+    for i, a in enumerate(args):
+        if a == "--config" and i + 1 < len(args):
+            return Path(args[i + 1])
+        if a.startswith("--config="):
+            return Path(a.split("=", 1)[1])
+    return Path(".project-standards.yml")
+
+
+def _has_schema_flag(args: list[str]) -> bool:
+    """True if a forwarded argv passes --schema (custom-schema mode) — CR-001."""
+    return any(a == "--schema" or a.startswith("--schema=") for a in args)
 
 
 def _assert_registry_bundle_parity(registry: Registry) -> None:
@@ -176,6 +196,33 @@ def main(argv: list[str] | None = None) -> int:
         rc_refs = validate_references.main(validator_args)
         return max(rc_frontmatter, rc_id, rc_refs)
 
+    if args_list and args_list[0] == "fix":
+        fix_args = args_list[1:]
+        if "--help" in fix_args or "-h" in fix_args:
+            print("usage: project-standards fix [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]\n"
+                  "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
+                  "Skips entirely under a custom schema.")
+            return 0
+        # Custom-schema preflight (CR-001): fix is bundled-only, like format/validate-id.
+        try:
+            fix_cfg = validate_frontmatter.load_config(_extract_config_path(fix_args))
+        except validate_frontmatter.ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if _has_schema_flag(fix_args) or validate_frontmatter.schema_value_is_path(fix_cfg.schema):
+            print("note: custom schema in use; skipping fix", file=sys.stderr)
+            return 0
+        rc_format = format_frontmatter.main(["--write", *fix_args])
+        rc_idfix = validate_id.main(["--fix", *fix_args])
+        # Final postcondition = the SAME contract as `project-standards validate`,
+        # references included, so a "successful" fix cannot hide a reference error (CR-001).
+        rc_check = max(
+            validate_frontmatter.main(fix_args),
+            validate_id.main(fix_args),
+            validate_references.main(fix_args),
+        )
+        return max(rc_format, rc_idfix, rc_check)
+
     parser = argparse.ArgumentParser(prog="project-standards")
     sub = parser.add_subparsers(dest="command", required=True)
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
@@ -183,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         "validate",
         help="validate frontmatter schema + id format (runs validate-frontmatter and validate-id)",
     )
+    sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
 
     p_adopt = sub.add_parser("adopt", help="materialize a standard's artifacts")
     p_adopt.add_argument("standards", nargs="+", metavar="STANDARD")
