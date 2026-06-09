@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-08'
+updated: '2026-06-09'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -29,18 +29,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-06-09
+
 > **Note for release planning:** The reusable-workflow change below (`validate-id` now runs in CI) can fail consumers that passed under `@v2`, which classifies as **MAJOR** per `meta/versioning.md §3`. Decide the version number before cutting the release tag.
 
 ### Added
 
+- **`format-frontmatter` command** — reformats YAML frontmatter to canonical style (`--write` to rewrite in place, `--check` to report-only). Applies canonical key ordering, single-quote-wraps all string values, renames the deny-listed `type` alias to `doc_type`, renders empty arrays as `[]` and non-empty arrays in block style, and preserves the document body unchanged. Skips files under a custom schema.
+- **`validate-references` command** — opt-in cross-file checker (`markdown.frontmatter.references.enabled: true`). Enforces id uniqueness, referential integrity (paths in `related`/`depends_on`/`supersedes`/`superseded_by` must exist), supersede reciprocity, date ordering (`created` ≤ `updated`), and ADR sequence continuity (off by default). Self-gates: exits 0 immediately when not enabled, so adding it to CI is a no-op until the repo opts in.
+- **`project-standards fix` subcommand** — three-phase pipeline: format frontmatter (`--write`), regenerate non-compliant ids (`--fix`), then re-run the full `validate` contract (schema + id + references) as a postcondition. Skips entirely under a custom schema (CR-001). Postcondition failure (e.g. duplicate-id reference error) surfaces as a non-zero exit even after successful write phases.
+- **`project-standards validate` also runs `validate-references`.** The combined `validate` command now invokes all three validators — `validate-frontmatter`, `validate-id`, and `validate-references` — returning the worst exit code. `validate-references` is a no-op when `references.enabled` is false, so existing repos without the opt-in are unaffected.
 - **`validate-id` command** — validates that `id` fields conform to the project-standards format. Two formats are enforced: `{doc_type}-{6-char base36 token}-{readable-slug}` for all standard doc types (e.g. `note-a3f9zk-tailscale-acl-gotcha`); `adr-{NNNN}-{repo-name}-{short-title}` for ADRs. The readable-slug is validated as well-formed kebab-case but is **not** matched against the current `title` — ids are frozen at creation time and must remain stable after a document is renamed. Files with no frontmatter, or missing/invalid `id`/`doc_type`, are silently skipped (those gaps are caught by `validate-frontmatter`). When a custom schema is in use — either via the `--schema` CLI flag or `markdown.frontmatter.schema` pointing to a file path in the config — id validation is skipped entirely (custom schemas may define different id conventions).
-- **`project-standards validate` runs both validators.** The `validate` subcommand now invokes `validate-frontmatter` and `validate-id` in sequence, returning the worst exit code. All `validate-frontmatter` flags (`--schema`, `--glob`, `--no-require-frontmatter`) are forwarded correctly; `--glob` also restricts which files `validate-id` checks so both validators always operate on the same file set.
 - **`project-standards` CLI with an `adopt <standard>...` subcommand** that materializes a chosen standard's canonical artifacts into a consumer repo (plus `list` and a back-compat `validate` subcommand). Adopting any subset — including all four standards together — is supported; runs are idempotent (skip-if-exists, `--force` to overwrite regular files only), path-safe (never writes through a symlink or outside `--dest`), and use atomic writes (a failed `--force` never truncates the original). `fragment` artifacts (the `pyproject.toml` and `.project-standards.yml` sections) are **reported for manual merge, never written**. The existing `validate-frontmatter` console script is retained as a back-compat alias.
 - **Per-standard `adopt.toml` manifests and bundled templates** under `src/project_standards/bundles/`, resolved at runtime by the same `Path(__file__)`-relative, wheel-safe lookup the bundled schema/registry already use. A generic engine reads each manifest, so adding a standard is data, not code.
+- **`.pre-commit-hooks.yaml`** — consumers can use this repo as a pre-commit source (`repo: https://github.com/L3DigitalNet/project-standards`). Six hooks: `format-frontmatter-fix`, `format-frontmatter-check`, `validate-id-fix`, `validate-id-check`, `validate-frontmatter`, and `validate-references` (whole-repo, `pass_filenames: false`).
 
 ### Changed
 
-- **BREAKING (reusable workflow): `validate-markdown-frontmatter.yml` now also runs `validate-id`.** Consumers whose managed documents carry old-style kebab ids (e.g. `restart-netbox-after-config-change`) will begin failing once they re-pin to the new release tag. Per `meta/versioning.md §3`, any stricter validator or workflow behavior that can fail a previously-passing consumer requires a **major** version bump. Consumers on a custom (non-bundled) `markdown.frontmatter.schema` are unaffected — `validate-id` skips automatically.
+- **`validate-markdown-frontmatter.yml` now also runs `validate-id` and `validate-references`.** `validate-references` is a self-gated no-op unless the calling repo enables it, so there is no breakage for repos that have not opted in. Consumers whose managed documents carry old-style kebab ids (e.g. `restart-netbox-after-config-change`) will begin failing the `validate-id` step once they re-pin to the new release tag. Per `meta/versioning.md §3`, any stricter validator or workflow behavior that can fail a previously-passing consumer requires a **major** version bump. Consumers on a custom (non-bundled) `markdown.frontmatter.schema` are unaffected — `validate-id` skips automatically.
 - **Copy-adopt scaffolds relocated** out of README/`adopt.md` prose into packaged bundles (documentation reorganization; non-breaking — consumers pin git tags and reusable-workflow filenames, not template paths). Each standard's `adopt.md` now references `project-standards adopt <id>`.
 - **Python Tooling `.editorconfig` JSON/Markdown indentation reconciled** to the shared superset floor (global `indent_style = tab`; `[*.py]`/`[*.toml]` 4 spaces; YAML 2 spaces). A clarifying change to a copy-adopt standard — copy-adopt standards are never inherited automatically, so it cannot newly-fail an existing consumer.
 

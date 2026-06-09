@@ -58,6 +58,7 @@ license: null
   - [Extensions](#extensions)
   - [Versioning and compatibility](#versioning-and-compatibility)
   - [Validation](#validation)
+    - [Cross-file reference validation (opt-in)](#cross-file-reference-validation-opt-in)
   - [Valid frontmatter template](#valid-frontmatter-template)
 
 ## Purpose
@@ -455,8 +456,30 @@ How a schema change maps to a release level (additive → minor; a field or cont
 
 Frontmatter is validated by [`src/project_standards/validate_frontmatter.py`](../../src/project_standards/validate_frontmatter.py) — installed as the `validate-frontmatter` command — against [`src/project_standards/schemas/markdown-frontmatter.schema.json`](../../src/project_standards/schemas/markdown-frontmatter.schema.json), in CI and locally.
 
-- **Run locally (full check):** `uv run project-standards validate --config .project-standards.yml` — runs both the schema validator (`validate-frontmatter`) and the id-format validator (`validate-id`) in one command. To run either standalone: `uv run validate-frontmatter …` or `uv run validate-id …`. Run `validate-frontmatter --help` / `validate-id --help` for the full flag lists.
+- **Run locally (full check):** `uv run project-standards validate --config .project-standards.yml` — runs the schema validator (`validate-frontmatter`), the id-format validator (`validate-id`), and the cross-file reference validator (`validate-references`) in one command. To run any standalone: `uv run validate-frontmatter …`, `uv run validate-id …`, or `uv run validate-references …`. Run `validate-frontmatter --help` / `validate-id --help` / `validate-references --help` for the full flag lists.
+- **Auto-fix and re-validate:** `uv run project-standards fix --config .project-standards.yml` — formats frontmatter (applies transforms, re-quotes, reorders keys), regenerates non-compliant ids, then re-runs the full `validate` contract. Skips entirely under a custom schema. Run this when adopting the standard on an existing codebase to reduce manual fixups.
 - **Exit codes:** `0` — all matched files valid (or none matched); `1` — one or more documents failed validation (each error, then a summary count, prints to stderr); `2` — configuration or schema error: a missing or invalid config or schema, an unknown standard version label (`markdown.frontmatter.version`, `markdown.adr.version`, `python_tooling.version`, or `markdown_tooling.version`), or an incompatible configured `frontmatter`↔`adr` version pair.
+
+### Cross-file reference validation (opt-in)
+
+`validate-references` is **disabled by default** and must be opted in per-repo via `.project-standards.yml`:
+
+```yaml
+markdown:
+  frontmatter:
+    references:
+      enabled: true
+```
+
+When enabled, it checks:
+
+- **`id` uniqueness** — no two managed documents share the same `id` value.
+- **Referential integrity** — every path in `related`, `depends_on`, `supersedes`, and `superseded_by` exists as a file at that repo-root-relative path.
+- **Supersede reciprocity** — when document A lists B in `supersedes`, B must list A in `superseded_by`, and vice versa.
+- **Date ordering** — `created` ≤ `updated`.
+- **ADR sequence** — no gaps in the `adr-NNNN` sequence (configurable; off by default).
+
+`validate-references` is a repo-wide pass. It self-gates on `references_enabled`, so adding it to CI is a no-op until the repo opts in: `project-standards validate` always invokes it, but it exits 0 immediately when not enabled.
 
 Configuration (`.project-standards.yml`), the reusable CI workflow, and how consuming repositories pin a release tag are documented in [the adoption guide](adopt.md); they are not repeated here.
 

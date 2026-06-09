@@ -199,9 +199,11 @@ def main(argv: list[str] | None = None) -> int:
     if args_list and args_list[0] == "fix":
         fix_args = args_list[1:]
         if "--help" in fix_args or "-h" in fix_args:
-            print("usage: project-standards fix [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]\n"
-                  "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
-                  "Skips entirely under a custom schema.")
+            print(
+                "usage: project-standards fix [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]\n"
+                "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
+                "Skips entirely under a custom schema."
+            )
             return 0
         # Custom-schema preflight (CR-001): fix is bundled-only, like format/validate-id.
         try:

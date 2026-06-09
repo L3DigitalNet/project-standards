@@ -85,6 +85,8 @@ markdown:
       # Tooling / generated content you do not want validated:
       - '.obsidian/**'
       - 'node_modules/**'
+    references:
+      enabled: false  # Set to true to enable cross-file checks (id uniqueness, referential integrity, etc.)
 ```
 
 **Selecting a contract version (optional).** `markdown.frontmatter.version` pins which bundled Frontmatter contract validates your documents; omit it to use the tool's current default (today `1.1`, which also accepts legacy `schema_version: '1.0'` documents). A custom `schema:` path owns its own versioning — setting both a custom `schema:` path and `version` is a config error.
@@ -267,11 +269,15 @@ project:
 Run the released validator directly — no checkout required:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v1' \
-  validate-frontmatter --config .project-standards.yml
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+  project-standards validate --config .project-standards.yml
 ```
 
-**Exit codes:** `0` = all matched files valid (or none matched); `1` = one or more documents failed (each error then a summary prints to stderr); `2` = configuration or schema error (config/schema missing or invalid). Useful flags: `--glob PATTERN` to add files, positional `FILE` args to check specific files, `--quiet` to suppress success output, `--no-require-frontmatter` to not fail files lacking a block. Run `validate-frontmatter --help` for the full list.
+This runs all three validators — schema (`validate-frontmatter`), id format (`validate-id`), and cross-file references (`validate-references`, no-op unless `references.enabled: true`) — in a single pass.
+
+**Auto-fix mode:** run `project-standards fix` (same flags) to format frontmatter, regenerate non-compliant ids, and then re-validate. This reduces the manual fixup burden when adopting the standard on an existing codebase. Skips entirely under a custom schema.
+
+**Exit codes:** `0` = all matched files valid (or none matched); `1` = one or more documents failed (each error then a summary prints to stderr); `2` = configuration or schema error (config/schema missing or invalid). Useful flags: `--glob PATTERN` to add files, positional `FILE` args to check specific files, `--quiet` to suppress success output, `--no-require-frontmatter` to not fail files lacking a block.
 
 Compliance is reached when this exits `0`.
 
@@ -282,7 +288,7 @@ Compliance is reached when this exits `0`.
 - [ ] Every managed Markdown file has a conformant frontmatter block (required fields present, controlled values valid, strings/dates quoted, no unknown top-level keys, canonical key order).
 - [ ] No agent-instruction file (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) carries frontmatter, and all are excluded.
 - [ ] Links in frontmatter use repo-root-relative paths (convention).
-- [ ] `validate-frontmatter --config .project-standards.yml` exits `0` locally.
+- [ ] `project-standards validate --config .project-standards.yml` exits `0` locally.
 - [ ] CI runs the workflow on PRs and `main`.
 
 ## 7. Versioning & staying in compliance

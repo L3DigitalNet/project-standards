@@ -16,8 +16,12 @@ def test_hook_entries_map_to_console_scripts():
     hooks = yaml.safe_load((REPO / ".pre-commit-hooks.yaml").read_text())
     scripts = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["scripts"]
     ids = {h["id"] for h in hooks}
-    assert {"format-frontmatter-fix", "format-frontmatter-check",
-            "validate-frontmatter", "validate-references"} <= ids
+    assert {
+        "format-frontmatter-fix",
+        "format-frontmatter-check",
+        "validate-frontmatter",
+        "validate-references",
+    } <= ids
     for h in hooks:
         # entry's first token is the console-script name
         assert h["entry"].split()[0] in scripts

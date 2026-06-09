@@ -9,12 +9,15 @@ This is the Python package that ships the validator, adopt engine, bundled schem
 - [`project_standards` — source layout](#project_standards--source-layout)
   - [Table of Contents](#table-of-contents)
   - [CLI surface](#cli-surface)
-  - [Validators](#validators)
+  - [Validators and formatters](#validators-and-formatters)
     - [validate-frontmatter](#validate-frontmatter)
     - [validate-id](#validate-id)
       - [Standard format — all `doc_type` values except `adr`](#standard-format--all-doc_type-values-except-adr)
       - [ADR format — `doc_type: adr`](#adr-format--doc_type-adr)
+    - [validate-references](#validate-references)
+    - [format-frontmatter](#format-frontmatter)
     - [project-standards validate (combined command)](#project-standards-validate-combined-command)
+    - [project-standards fix (combined fix command)](#project-standards-fix-combined-fix-command)
   - [Module map](#module-map)
   - [Adopt engine](#adopt-engine)
     - [Artifact kinds](#artifact-kinds)
@@ -26,23 +29,28 @@ This is the Python package that ships the validator, adopt engine, bundled schem
 
 ## CLI surface
 
-Three console scripts are registered by `pyproject.toml`:
+Console scripts registered by `pyproject.toml`:
 
 | Command | Module | Purpose |
 | --- | --- | --- |
 | `project-standards adopt STANDARD …` | `cli.py` | Materialize a standard's files into a target repo |
 | `project-standards list [--json]` | `cli.py` | List adoptable standards and their artifacts |
-| `project-standards validate [FLAGS] [FILE …]` | `cli.py` | Run both validators (schema + id) in one pass |
+| `project-standards validate [FLAGS] [FILE …]` | `cli.py` | Run all three validators (schema + id + references) in one pass |
+| `project-standards fix [FLAGS] [FILE …]` | `cli.py` | Format frontmatter, fix ids, then re-validate (bundled schema only) |
 | `validate-frontmatter [FLAGS] [FILE …]` | `validate_frontmatter.py` | Validate YAML frontmatter against the JSON Schema |
 | `validate-id [FLAGS] [FILE …]` | `validate_id.py` | Validate `id` field format per `doc_type` |
+| `validate-references [FLAGS]` | `validate_references.py` | Cross-file checks (id uniqueness, referential integrity, etc.) |
+| `format-frontmatter [FLAGS] [FILE …]` | `format_frontmatter.py` | Reformat frontmatter (canonical key order, quoting, transforms) |
 
-`project-standards validate` is an early-dispatch alias that forwards its full argv to both `validate_frontmatter.main()` and `validate_id.main()` and returns the worst exit code so neither validator's errors can be masked by the other's success.
+`project-standards validate` is an early-dispatch command that forwards its full argv to `validate_frontmatter.main()`, `validate_id.main()`, and `validate_references.main()` and returns the worst exit code so no validator's errors are masked by another's success. `validate-references` self-gates on `references_enabled` — it exits 0 immediately unless the repo has opted in via `.project-standards.yml`.
+
+`project-standards fix` is an early-dispatch command that runs `format_frontmatter.main(["--write", …])`, then `validate_id.main(["--fix", …])`, and finally the full `validate` contract (schema + id + references). It skips entirely when a custom schema is in use (flag `--schema` or `markdown.frontmatter.schema:` pointing to a file path).
 
 ---
 
-## Validators
+## Validators and formatters
 
-Two validators enforce the managed-document contract. They share the same config file and the same `collect_paths()` logic, and are both invoked by `project-standards validate`.
+Three validators and one formatter enforce and repair the managed-document contract. They share the same config file and the same `collect_paths()` logic, and are all invoked by `project-standards validate` / `project-standards fix`.
 
 ### validate-frontmatter
 
@@ -140,21 +148,60 @@ Rewrites each non-compliant file's `id:` value in place:
 
 ---
 
+### validate-references
+
+Cross-file checks that JSON Schema cannot express. Entry point: `validate_references.main(argv)`. **Disabled by default** — opt in via `markdown.frontmatter.references.enabled: true` in `.project-standards.yml`.
+
+**What it checks:**
+
+- `id` uniqueness — no two documents share the same `id`.
+- Referential integrity — every path in `related`, `depends_on`, `supersedes`, and `superseded_by` exists at that repo-root-relative location.
+- Supersede reciprocity — `supersedes` ↔ `superseded_by` links are symmetric.
+- Date ordering — `created` ≤ `updated`.
+- ADR sequence gaps (opt-in per config).
+
+It is a repo-wide pass (no per-file mode). When `references_enabled` is false, `main()` returns 0 immediately — invoking it is always safe.
+
+---
+
+### format-frontmatter
+
+Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(argv)`. Two modes:
+
+| Flag | Effect |
+| --- | --- |
+| `--write` | Rewrite files in place |
+| `--check` | Check only; exit 1 if any file would change |
+
+**Transforms applied:**
+
+- Reorder keys to canonical order.
+- Quote all string values with single quotes.
+- Rename `type` → `doc_type` (deny-listed alias).
+- Render empty arrays as `[]`; non-empty arrays in block style.
+- Remove `null` values for optional fields (or keep per schema rules).
+- Preserve the document body unchanged.
+
+Works only with the bundled schema. Skips files under a custom schema.
+
+---
+
 ### project-standards validate (combined command)
 
-`project-standards validate [FLAGS] [FILE …]` runs both validators in a single pass:
+`project-standards validate [FLAGS] [FILE …]` runs all three validators in a single pass:
 
 ```python
 rc_frontmatter = validate_frontmatter.main(validator_args)
 rc_id = validate_id.main(validator_args)
-return max(rc_frontmatter, rc_id)
+rc_refs = validate_references.main(validator_args)
+return max(rc_frontmatter, rc_id, rc_refs)
 ```
 
-All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`) are forwarded unchanged to both validators. The worst exit code is returned so neither validator's errors can be masked by the other's success.
+All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`) are forwarded unchanged to all validators. The worst exit code is returned so no validator's errors can be masked by another's success.
 
-`--schema` causes `validate-id` to skip automatically: a custom schema signals non-standard id conventions, so the bundled base-36 rules would produce false positives for consumers who define their own id format. The same skip applies when `markdown.frontmatter.schema:` in the config file is a path.
+`--schema` causes `validate-id` to skip automatically (custom schemas may use different id conventions). `validate-references` self-gates on `references_enabled`.
 
-`--help` is intercepted before forwarding and prints combined documentation rather than delegating to `validate-frontmatter --help` (which would hide that `validate-id` also runs).
+`--help` is intercepted before forwarding and prints combined documentation.
 
 **Dogfood command:**
 
@@ -164,13 +211,29 @@ uv run project-standards validate --config .project-standards.yml
 
 ---
 
+### project-standards fix (combined fix command)
+
+`project-standards fix [FLAGS] [FILE …]` is a three-phase pipeline:
+
+1. `format_frontmatter.main(["--write", …])` — reformat frontmatter in place.
+2. `validate_id.main(["--fix", …])` — regenerate non-compliant ids in place.
+3. Full `validate` contract — schema + id + references — as a postcondition.
+
+Returns the worst exit code across all three phases. If the final validate fails (e.g. a duplicate-id reference error), the exit code is non-zero even though the write phases succeeded.
+
+**Custom-schema skip (CR-001):** when `--schema` is passed, or `markdown.frontmatter.schema:` in the config is a path, `fix` prints a note and exits 0 without touching any files — bundled transforms are semantically undefined for non-standard schemas.
+
+---
+
 ## Module map
 
 ```text
 src/project_standards/
-├── cli.py                        # Unified CLI: adopt | list | validate dispatch
+├── cli.py                        # Unified CLI: adopt | list | validate | fix dispatch
 ├── validate_frontmatter.py       # Schema validator (Draft 2020-12 via jsonschema)
 ├── validate_id.py                # id-format validator (base-36 and ADR formats)
+├── validate_references.py        # Cross-file reference checker (opt-in)
+├── format_frontmatter.py         # Frontmatter formatter (--write / --check)
 ├── registry.py                   # Contract-version registry (reads registry.json)
 ├── sync_standards_include.py     # Internal maintenance: sync include lists
 ├── sync_vscode_colors.py         # Internal maintenance: VS Code colour tokens
