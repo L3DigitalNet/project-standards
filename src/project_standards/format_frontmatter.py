@@ -544,9 +544,12 @@ def format_text(
     if bump_updated and changed:
         stamp = today or _today_iso()
         for entry in entries:
-            if entry.key == "updated" and len(entry.lines) == 1:
-                eol = _line_ending(entry.lines[0])
-                entry.lines = [f"updated: {_emit_single_quoted(stamp)}{eol}"]
+            if entry.key == "updated":
+                lead = _leading_run(entry)
+                if len(entry.lines) != lead + 1:
+                    continue
+                eol = _line_ending(entry.lines[lead])
+                entry.lines[lead] = f"updated: {_emit_single_quoted(stamp)}{eol}"
         new_body = serialize(entries)
         new_text = open_fence + new_body + close_fence + rest
         changed = new_text != text
@@ -635,7 +638,7 @@ def main(argv: list[str] | None = None) -> int:
         if is_denylisted(path):
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            text = path.read_text(encoding="utf-8-sig")
         except OSError as exc:
             print(f"{path}: cannot read: {exc}", file=sys.stderr)
             unparseable = True

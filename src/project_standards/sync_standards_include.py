@@ -45,7 +45,7 @@ def _repo_root() -> Path:
 
 def read_path_colors(settings_path: Path) -> list[dict[str, str]]:
     """Return all folder-color.pathColors entries from *settings_path*."""
-    original = settings_path.read_text()
+    original = settings_path.read_text(encoding="utf-8")
     clean = re.sub(r"(?m)^\s*//[^\n]*\n?", "", original)
     data = cast(dict[str, Any], json.loads(clean))
     raw = data.get("folder-color.pathColors", [])
@@ -78,7 +78,7 @@ def update_include_list(standards_path: Path, new_patterns: list[str]) -> None:
     keys, comments, and the rest of the file are untouched.  Raises SystemExit if the
     include block cannot be located.
     """
-    content = standards_path.read_text()
+    content = standards_path.read_text(encoding="utf-8")
     new_items = "".join(f'      - "{p}"\n' for p in new_patterns)
     # Match the include: header and all immediately-following 6-space-indented lines.
     updated = re.sub(
@@ -91,7 +91,7 @@ def update_include_list(standards_path: Path, new_patterns: list[str]) -> None:
             f"error: could not locate 'include:' block in {standards_path}"
             " — only block-style YAML is supported"
         )
-    standards_path.write_text(updated)
+    standards_path.write_text(updated, encoding="utf-8")
 
 
 def main() -> None:

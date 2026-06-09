@@ -706,6 +706,8 @@ Workspace settings must not define personal preferences:
 
 Policy decision: extension recommendations are intentionally limited to project behavior, syntax/config assistance, and quality gate integration.
 
+Note: when adopting both Python Tooling and Markdown Tooling standards together, the `adopt`-delivered `.vscode/extensions.json` is the shared superset (9 extensions — the 7 above plus `esbenp.prettier-vscode` and `DavidAnson.vscode-markdownlint` from the Markdown Tooling standard). A python-tooling-only adopter will see the two Markdown extensions included; they are safe to keep and do not affect Python tooling behavior.
+
 ### Python language-server policy
 
 The standard Python language server is **BasedPyright**.
@@ -916,6 +918,8 @@ jobs:
 				with:
 					# Pin this to the current reviewed uv version when applying the template.
 					# Example: version: "0.11.6" (the version this repo currently pins).
+					# Note: the CLI-delivered bundle (adopt python-tooling) ships an explicit
+					# version: pin in check.yml; add your own version: line when adopting manually.
 					enable-cache: true
 
 			- name: Sync dependencies

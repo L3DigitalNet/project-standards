@@ -43,7 +43,7 @@ def build_index(paths: list[Path]) -> Index:
     index = Index()
     for path in paths:
         try:
-            meta = parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
         except OSError, FrontmatterParseError:
             continue
         if not isinstance(meta, dict):

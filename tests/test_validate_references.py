@@ -400,3 +400,24 @@ def test_main_success_prints_summary(
     assert rc == 0
     captured = capsys.readouterr()
     assert "references valid" in captured.out
+
+
+def test_build_index_tolerates_utf8_bom(tmp_path: Path) -> None:
+    # Regression: build_index previously used encoding="utf-8", which misreads a BOM as
+    # content. The BOM prefix (\xef\xbb\xbf) prepends to the first bytes, so the
+    # frontmatter fence starts at byte 3 rather than byte 0 — the regex never matches and
+    # the file is treated as having no frontmatter, silently dropping it from the index.
+    # With fix E (encoding="utf-8-sig") the BOM is stripped and the file is indexed normally.
+    bom_file = tmp_path / "bom.md"
+    body = (
+        "---\n"
+        "id: 'note-bomtest-x'\n"
+        "doc_type: 'note'\n"
+        "created: '2026-01-01'\n"
+        "updated: '2026-01-02'\n"
+        "---\n# Title\n"
+    )
+    bom_file.write_bytes(b"\xef\xbb\xbf" + body.encode("utf-8"))
+    index = build_index([bom_file])
+    assert len(index.docs) == 1, "BOM-prefixed doc must be indexed, not silently dropped"
+    assert "note-bomtest-x" in index.ids

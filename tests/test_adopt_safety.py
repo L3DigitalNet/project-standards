@@ -184,6 +184,28 @@ def test_symlinked_parent_dir_not_written_through(tmp_path: Path) -> None:
     assert not (outside / "f.txt").exists()  # nothing written outside --dest
 
 
+def test_atomic_write_new_file_is_group_other_readable(tmp_path: Path) -> None:
+    # Regression: _atomic_write previously used mkstemp's default 0600, leaving new adopted
+    # files owner-only. With fix C the mode must be umask-respecting (like a normal file
+    # creation), so at minimum the group and other readable bits that the umask permits must
+    # be set (fix C from round-3 review).
+    plan = [_file_action(tmp_path, "new_file.txt")]
+    r = execute_plan(plan, tmp_path, force=False, dry_run=False)
+    assert r.created == ["new_file.txt"]
+    mode = (tmp_path / "new_file.txt").stat().st_mode & 0o777
+    # Under a typical umask (0o022) the result is 0o644. The important invariant is that
+    # the file is NOT stuck at 0o600 (owner-only). At minimum, world-read or group-read must
+    # be present unless the umask strips all public bits (umask 0o177 or stricter).
+    import os
+
+    mask = os.umask(0)
+    os.umask(mask)
+    expected = 0o666 & ~mask
+    assert mode == expected or expected == 0, (
+        f"Expected mode {oct(expected)}, got {oct(mode)} — adopted file must not be 0600"
+    )
+
+
 def test_unsafe_fragment_target_rejected(tmp_path: Path) -> None:
     from project_standards.adopt.engine import Action, execute_plan
     from project_standards.adopt.errors import UsageError

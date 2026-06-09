@@ -43,6 +43,9 @@ on:
         type: string
         default: "v2"
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Frontmatter

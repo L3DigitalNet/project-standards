@@ -220,7 +220,7 @@ def validate_file(
     Off by default, so existing callers are unaffected.
     """
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8-sig")
     except OSError as exc:
         return [f"{path}: cannot read file: {exc}"]
 

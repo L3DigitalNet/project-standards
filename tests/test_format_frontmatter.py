@@ -613,6 +613,34 @@ def test_bump_updated_noop_when_already_formatted() -> None:
     assert "updated: '2099-01-01'" not in new
 
 
+def test_bump_updated_with_leading_comment_on_updated_field() -> None:
+    # Regression: bump_updated previously guarded `len(entry.lines) == 1`, skipping an
+    # `updated:` entry that has a leading comment (len > 1). It must rewrite the date
+    # AND preserve the comment intact (fix A from round-3 review).
+    src = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: X\n"  # unquoted -> will trigger a change
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "# last reviewed date\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+    )
+    new, changed, _ = format_text(src, path=None, bump_updated=True, today="2026-06-09")
+    assert changed is True
+    # The comment must survive
+    assert "# last reviewed date" in new
+    # The date must be updated
+    assert "updated: '2026-06-09'" in new
+
+
 # ---------------------------------------------------------------------------
 # In-process main() tests — CLI coverage
 # ---------------------------------------------------------------------------

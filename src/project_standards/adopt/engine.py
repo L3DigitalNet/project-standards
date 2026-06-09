@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
+import stat
 import tempfile
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
@@ -194,13 +196,30 @@ def _atomic_write(target: Path, data: bytes) -> None:
 
     EVERY filesystem step (mkdir, mkstemp, write, replace) is inside the guard so a
     recoverable failure surfaces as WriteError (exit 1), never a raw traceback. The
-    temp file is cleaned up on any failure; an existing destination is left intact.
+    temp file is cleaned up on any failure (including KeyboardInterrupt / generator-
+    throw — uses BaseException, not just OSError); an existing destination is left intact.
+
+    Mode: if overwriting an existing file, copy its permissions. For a new file, use
+    a umask-respecting 0o666 (same behaviour as open()), avoiding the mkstemp default
+    of 0600 which would leave adopted files owner-only.
     """
     tmp: Path | None = None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".adopt-", suffix=".tmp")
         tmp = Path(tmp_name)
+        # Set permissions BEFORE writing data so the file never exists world-readable
+        # with content, but also never stays at 0600 after the write.
+        if target.exists():
+            # Preserve the existing file's mode (copy-on-overwrite).
+            with contextlib.suppress(OSError):
+                tmp.chmod(target.stat().st_mode & 0o777)
+        else:
+            # New file: apply umask so the result behaves like a normal file creation.
+            mask = os.umask(0)
+            os.umask(mask)
+            with contextlib.suppress(OSError):
+                tmp.chmod(stat.S_IMODE(0o666 & ~mask))
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
         # Module-level os.replace (not Path.replace) so the failure-injection test can
@@ -210,6 +229,10 @@ def _atomic_write(target: Path, data: bytes) -> None:
         if tmp is not None:
             tmp.unlink(missing_ok=True)
         raise WriteError(f"failed writing {target}: {exc}") from exc
+    except BaseException:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
+        raise
 
 
 def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: bool) -> Report:

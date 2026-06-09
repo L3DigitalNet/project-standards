@@ -180,7 +180,7 @@ def check_file(path: Path) -> list[str]:
     frontmatter schema validator rather than duplicated here.
     """
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8-sig")
     except OSError as exc:
         return [f"{path}: cannot read: {exc}"]
 
@@ -415,7 +415,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 # fix_file returns None for ADR files; distinguish for a clearer message.
                 try:
-                    meta = parse_frontmatter(path.read_text(encoding="utf-8"))
+                    meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
                     if isinstance(meta, dict) and meta.get("doc_type") == "adr":
                         adr_skipped.append(path)
                         continue

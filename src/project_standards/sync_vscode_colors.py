@@ -40,7 +40,7 @@ def _repo_root() -> Path:
 
 def read_include_patterns(standards_path: Path) -> list[str]:
     """Return the markdown.frontmatter.include list from *standards_path*."""
-    raw = yaml.safe_load(standards_path.read_text())
+    raw = yaml.safe_load(standards_path.read_text(encoding="utf-8"))
     data = cast(dict[str, Any], raw) if isinstance(raw, dict) else {}
     try:
         patterns = data["markdown"]["frontmatter"]["include"]
@@ -72,7 +72,7 @@ def patterns_to_path_colors(patterns: list[str], prefix: str) -> list[dict[str, 
 
 def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> None:
     """Replace folder-color.pathColors in *settings_path*, preserving JSONC comments."""
-    original = settings_path.read_text()
+    original = settings_path.read_text(encoding="utf-8")
 
     # Preserve leading // comment lines that appear immediately after the opening '{'
     # so they survive the json.dumps round-trip (JSONC is not valid JSON).
@@ -98,7 +98,7 @@ def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> 
             + serialized[first_nl + 1 :]
         )
 
-    settings_path.write_text(serialized + "\n")
+    settings_path.write_text(serialized + "\n", encoding="utf-8")
 
 
 def main() -> None:
