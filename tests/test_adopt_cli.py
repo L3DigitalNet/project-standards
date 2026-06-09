@@ -228,6 +228,14 @@ def test_adopt_dest_not_a_directory_exits_2(tmp_path: Path) -> None:
     assert rc == 2
 
 
+def test_adopt_dry_run_nonexistent_dest_returns_0(tmp_path: Path) -> None:
+    """--dry-run skips the dest-exists check; no files are written."""
+    nonexistent = tmp_path / "does-not-exist"
+    rc = main(["adopt", "markdown-tooling", "--dest", str(nonexistent), "--dry-run"])
+    assert rc == 0
+    assert not nonexistent.exists()  # nothing was created
+
+
 def test_adopt_markdown_tooling_creates_files(tmp_path: Path) -> None:
     rc = main(["adopt", "markdown-tooling", "--dest", str(tmp_path)])
     assert rc == 0

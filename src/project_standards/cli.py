@@ -120,7 +120,8 @@ def _cmd_list(as_json: bool) -> int:
 
 def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> int:
     """Materialize *standards* into *dest*; apply registry/bundle parity guard before planning."""
-    if not dest.is_dir():
+    if not dry_run and not dest.is_dir():
+        # Dry run writes nothing, so a non-existent dest is fine — skip this guard.
         print(f"error: --dest is not a directory: {dest}", file=sys.stderr)
         return 2
     _assert_registry_bundle_parity(load_registry())  # same drift guard as `list`
@@ -237,11 +238,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
 
-    p_adopt = sub.add_parser("adopt", help="materialize a standard's artifacts")
-    p_adopt.add_argument("standards", nargs="+", metavar="STANDARD")
-    p_adopt.add_argument("--dest", type=Path, default=Path.cwd())
-    p_adopt.add_argument("--force", action="store_true")
-    p_adopt.add_argument("--dry-run", action="store_true")
+    p_adopt = sub.add_parser(
+        "adopt",
+        help="materialize a standard's artifacts into a destination directory",
+    )
+    p_adopt.add_argument(
+        "standards",
+        nargs="+",
+        metavar="STANDARD",
+        help="standard(s) to adopt (e.g. markdown-frontmatter, python-tooling)",
+    )
+    p_adopt.add_argument(
+        "--dest",
+        type=Path,
+        default=Path.cwd(),
+        metavar="DIR",
+        help="destination directory to write artifacts into (default: current directory)",
+    )
+    p_adopt.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite existing files that would otherwise be skipped",
+    )
+    p_adopt.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="show what would be written without making any changes",
+    )
 
     p_list = sub.add_parser("list", help="list adoptable standards and their artifacts")
     p_list.add_argument("--json", action="store_true")

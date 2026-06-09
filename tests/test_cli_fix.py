@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+from project_standards.cli import main as cli_main
 
 
 def _ps(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -145,3 +151,104 @@ def test_validate_fails_on_duplicate_keys(tmp_path: Path) -> None:
     )
     r = _ps(["validate", "--config", str(cfg)], tmp_path)
     assert r.returncode == 1  # CR-002: duplicate key -> parse error -> validate fails
+
+
+# ---------------------------------------------------------------------------
+# In-process tests for the `fix` subcommand (cli.py lines 202-229)
+# These exercise the fix block in-process so coverage registers the branches.
+# ---------------------------------------------------------------------------
+
+
+def test_fix_help_in_process(capsys: pytest.CaptureFixture[str]) -> None:
+    """fix --help prints usage and returns 0."""
+    rc = cli_main(["fix", "--help"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "usage" in (captured.out + captured.err).lower()
+
+
+def test_fix_bad_config_in_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """fix with a malformed --config (bad YAML) → returns 2."""
+    monkeypatch.chdir(tmp_path)
+    bad_cfg = tmp_path / "bad.yml"
+    bad_cfg.write_text("{\nnot: valid: yaml: [\n")
+    rc = cli_main(["fix", "--config", str(bad_cfg)])
+    assert rc == 2
+
+
+def test_fix_schema_flag_skips_in_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """fix with a forwarded --schema flag → skips, returns 0, no writes."""
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    before = "---\ntitle: X\n---\n# B\n"
+    doc = tmp_path / "a.md"
+    doc.write_text(before)
+    rc = cli_main(["fix", "--schema", "custom.json", "--config", str(cfg)])
+    assert rc == 0
+    assert doc.read_text() == before  # no writes
+
+
+def test_fix_config_schema_path_skips_in_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """fix when config has a custom schema path → skips, returns 0, no writes."""
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    schema: 'custom/x.json'\n    include: ['*.md']\n"
+    )
+    before = "---\ntitle: X\n---\n# B\n"
+    doc = tmp_path / "a.md"
+    doc.write_text(before)
+    rc = cli_main(["fix", "--config", str(cfg)])
+    assert rc == 0
+    assert doc.read_text() == before  # no writes
+
+
+def test_fix_type_and_bad_id_in_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """fix on a doc with type: + bad id → formats + fixes id, returns 0.
+
+    A follow-up in-process validate also returns 0 (postcondition clean).
+    """
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    (tmp_path / "a.md").write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'wrong'\n"
+        "title: 'Hello World'\n"
+        "description: 'd'\n"
+        "type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-01-01'\n"
+        "updated: '2026-01-02'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n# B\n"
+    )
+    rc = cli_main(["fix", "--config", str(cfg)])
+    assert rc == 0
+    text = (tmp_path / "a.md").read_text()
+    assert "doc_type: 'note'" in text
+    assert "id: 'note-" in text  # id regenerated from doc_type+title
+    # postcondition: in-process validate is also clean
+    rc_val = cli_main(["validate", "--config", str(cfg)])
+    assert rc_val == 0
+
+
+def test_fix_fails_on_reference_error_in_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """fix where final validate fails (references enabled + duplicate id) → returns 1."""
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    (tmp_path / "a.md").write_text(_full("a"))
+    (tmp_path / "b.md").write_text(_full("b"))  # same id as a -> duplicate
+    rc = cli_main(["fix", "--config", str(cfg)])
+    assert rc == 1  # CR-001: final validate (incl. references) catches the dup id

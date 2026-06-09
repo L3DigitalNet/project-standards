@@ -174,7 +174,17 @@ def check_adr_sequence(index: Index) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="validate-references", description=__doc__)
+    _base_desc = __doc__ or ""
+    parser = argparse.ArgumentParser(
+        prog="validate-references",
+        description=(
+            _base_desc
+            + "\n\nNote: FILE and --glob do not scope the cross-file checks — the pass is always"
+            " whole-repo (FILE/--glob are forwarded by `project-standards validate` but ignored"
+            " here; the full configured set is always indexed)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
     parser.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
     parser.add_argument("--schema", type=Path, default=None)
