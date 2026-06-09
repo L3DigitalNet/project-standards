@@ -1,6 +1,6 @@
 # Design: Frontmatter validation + autocorrection suite
 
-**Date:** 2026-06-08 **Status:** draft (brainstorming complete; codex spec-review rounds 1–2 applied — SA-001…008, SA-NEW-001…003) **Author:** session 2026-06-08
+**Date:** 2026-06-08 **Status:** approved (brainstorming complete; codex spec-review converged round 3 — SA-001…008, SA-NEW-001…003 resolved) **Author:** session 2026-06-08
 
 ## Table of Contents
 
@@ -163,7 +163,7 @@ Collect the included set (via `collect_paths`), parse each file's frontmatter, a
 | Date ordering | **error** | `created ≤ updated`; `reviewed ≥ created` when `reviewed` is present and non-null |
 | ADR sequence | **error** | duplicate `NNNN` among `doc_type: adr` docs in this repo |
 
-**Reference resolution (codex SA-NEW-003).** A reference value resolves if it is either: (a) a **repo-root-relative path including the file extension** (the standard's recommended link form) that exists on disk — absolute paths and `../`-escaping paths are treated as unresolvable, and any `#section` anchor is stripped before the existence check but the standard discourages anchors; or (b) an **exact** match against a known `id` in the repo index (no fuzzy/prefix matching). **Null and empty values are ignored** — `superseded_by: null` (as in `standards/adr/examples/adr.example.md`) and empty arrays are not dangling references. Bare filenames and bare ids that are not in the index resolve via (b) only; if neither (a) nor (b) holds, it is a single dangling **warning**.
+**Reference resolution (codex SA-NEW-003).** A reference value resolves if it is either: (a) a **repo-root-relative path including the file extension** (the standard's recommended link form) that exists on disk — absolute paths and `../`-escaping paths are treated as unresolvable, and a value carrying a `#section` anchor does **not** resolve as a path (the standard uses document-level links, not `#` links — `standards/markdown-frontmatter/README.md:395-401`); or (b) an **exact** match against a known `id` in the repo index (no fuzzy/prefix matching). **Null and empty values are ignored** — `superseded_by: null` (as in `standards/adr/examples/adr.example.md`) and empty arrays are not dangling references. Bare filenames and bare ids that are not in the index resolve via (b) only; if neither (a) nor (b) holds, it is a single dangling **warning**.
 
 Exit codes: **0** = no errors (warnings allowed), **1** = ≥1 error, **2** = config error. Warnings print to stderr and never affect the exit code.
 

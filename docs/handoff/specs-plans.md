@@ -4,7 +4,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| Frontmatter suite (format/references/fix) design | `docs/superpowers/specs/2026-06-08-frontmatter-suite-design.md` | draft (brainstorming complete; awaiting user + codex spec-review) |
+| Frontmatter suite (format/references/fix) design | `docs/superpowers/specs/2026-06-08-frontmatter-suite-design.md` | approved (codex spec-review converged r3) |
 | `check` drift design | `docs/superpowers/specs/2026-06-08-check-drift-design.md` | approved (codex spec-review converged r3) |
 | `check` drift plan | `docs/superpowers/plans/2026-06-08-check-drift.md` | written; implementation HELD until 2.1.0 ships (targets 2.2.0) |
 | `adopt` CLI design | `docs/superpowers/specs/2026-06-08-adopt-cli-design.md` | approved (codex r6) |
