@@ -195,7 +195,11 @@ def main(argv: list[str] | None = None) -> int:
             print("note: custom schema in use; skipping reference validation")
         return 0
 
-    paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    # validate-references is a REPO-WIDE invariant pass (duplicate ids / ADR numbers,
+    # cross-file references), so the index MUST cover the full configured set even when
+    # the caller scopes to specific FILE / --glob (project-standards validate forwards
+    # them) — otherwise a duplicate in an unselected doc is silently missed (codex P2).
+    paths = collect_paths([], None, config.include, config.exclude)
     index = build_index(paths)
     errors: list[str] = []
     warnings: list[str] = []

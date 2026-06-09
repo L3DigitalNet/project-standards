@@ -855,3 +855,29 @@ def test_main_check_quiet_suppresses_output(
     assert rc == 1
     out, _ = capsys.readouterr()
     assert out == ""
+
+
+def test_malformed_double_quoted_scalar_does_not_crash() -> None:
+    # An invalid double-quoted YAML escape must NOT crash the formatter (codex P3) —
+    # it can't safely re-quote, so it leaves the line for the validator to reject.
+    src = _doc(title='"bad \\q"')
+    new, _changed, _warnings = format_text(src, path=None)
+    assert 'title: "bad \\q"' in new  # line preserved, no traceback
+
+
+def test_scalar_with_leading_comment_is_requoted() -> None:
+    # A leading comment bundles into the key's entry; requote must still quote the
+    # scalar (codex P2) rather than skip the whole entry as a multi-line value.
+    src = _doc(title="X").replace("title: X", "# keep this note\ntitle: X")
+    new, _changed, _warnings = format_text(src, path=None)
+    assert "# keep this note" in new
+    assert "title: 'X'" in new
+
+
+def test_block_list_item_comment_is_preserved() -> None:
+    # Re-rendering a block list would drop per-item comments (codex P2); a comment-
+    # bearing list is left untouched so the authored note survives.
+    src = _doc(tags_line="tags:\n  - 'a'  # why a\n  - 'b'")
+    new, _changed, _warnings = format_text(src, path=None)
+    assert "# why a" in new
+    assert "- 'a'" in new and "- 'b'" in new

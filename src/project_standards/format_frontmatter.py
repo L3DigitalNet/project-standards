@@ -218,7 +218,10 @@ def _requote_scalar_line(line: str, key: str) -> str:
     if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
         return line  # already single-quoted -> idempotent
     if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
-        decoded = yaml.safe_load(raw)  # explicit quotes -> intended string, no type guess
+        try:
+            decoded = yaml.safe_load(raw)  # explicit quotes -> intended string, no type guess
+        except yaml.YAMLError:
+            return line  # malformed double-quoted scalar -> leave for the validator, never crash
         text_value = decoded if isinstance(decoded, str) else raw
     else:
         text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
@@ -263,6 +266,20 @@ def _leading_run(entry: Entry) -> int:
     return n
 
 
+def _block_list_has_item_comment(item_lines: list[str]) -> bool:
+    """True if any block-list item line carries a real inline comment (e.g. `- 'a'  # why`).
+    Re-rendering the list from parsed values would silently drop such a comment (codex P2),
+    so the formatter leaves a comment-bearing list untouched rather than destroy the note."""
+    for ln in item_lines:
+        stripped = ln.lstrip(" \t").rstrip("\r\n")
+        if not stripped.startswith("-"):
+            continue
+        after_dash = stripped[1:].lstrip(" \t")
+        if _split_value_comment(after_dash)[1].lstrip(" \t").startswith("#"):
+            return True
+    return False
+
+
 def normalize_lists(entries: list[Entry]) -> None:
     """In place: render each list-typed field as canonical block style (single-quoted
     items, duplicates removed first-wins); an empty/absent value becomes `key: []`.
@@ -281,6 +298,8 @@ def normalize_lists(entries: list[Entry]) -> None:
         value: Any = cast(Any, loaded)[entry.key]  # BaseLoader dict values are untyped
         if not (value is None or value == "" or isinstance(value, list)):
             continue  # a scalar where a list belongs -> leave for the validator
+        if _block_list_has_item_comment(entry.lines[lead + 1 :]):
+            continue  # preserve authored per-item comments; do not re-render (codex P2)
         key_line = entry.lines[lead]
         eol = _line_ending(entry.lines[-1])
         # Indent by slice (NOT re.match(...).group(0), which basedpyright-strict flags — CR-NEW-002).
@@ -309,12 +328,17 @@ def normalize_lists(entries: list[Entry]) -> None:
 
 
 def requote(entries: list[Entry]) -> None:
-    """In place: single-quote the scalar value on each single-line scalar entry.
-    Multi-line entries (lists, nested mappings) are left for their own transforms."""
+    """In place: single-quote the scalar value on each scalar entry — including one
+    preceded by leading comment/blank lines, which bundle into the same entry (a bare
+    `len(entry.lines) != 1` guard would wrongly skip such a commented key — codex P2).
+    Multi-line VALUES (block lists, nested mappings) are left for their own transforms."""
     for entry in entries:
-        if entry.key is None or len(entry.lines) != 1:
+        if entry.key is None:
             continue
-        entry.lines[0] = _requote_scalar_line(entry.lines[0], entry.key)
+        lead = _leading_run(entry)
+        if len(entry.lines) != lead + 1:
+            continue  # the value spans multiple lines (block list / nested mapping)
+        entry.lines[lead] = _requote_scalar_line(entry.lines[lead], entry.key)
 
 
 _ORDER_INDEX = {key: i for i, key in enumerate(CANONICAL_ORDER)}

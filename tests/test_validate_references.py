@@ -253,6 +253,33 @@ def _run_refs(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_references_index_is_repo_wide_under_scoped_invocation(tmp_path: Path) -> None:
+    # validate-references is a REPO-WIDE invariant pass: invoking it scoped to one file
+    # (as `project-standards validate FILE` forwards) must STILL catch a duplicate id in
+    # another managed doc (codex P2 — a scoped index silently misses it).
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    r = _run_refs(["a.md", "--config", str(cfg)], tmp_path)  # scoped to a.md only
+    assert r.returncode == 1  # repo-wide index still sees b.md's duplicate id
+    assert "note-aaaaaa-x" in r.stderr
+
+
 def test_disabled_by_default_exits_0(tmp_path: Path) -> None:
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
