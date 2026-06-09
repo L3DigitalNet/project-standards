@@ -51,3 +51,48 @@ def test_duplicate_top_level_key_is_refused():
     assert new == src
     assert changed is False
     assert any("duplicate" in w for w in warnings)
+
+
+def test_reorder_to_canonical_order():
+    src = (
+        "---\n"
+        "title: 'X'\n"
+        "schema_version: '1.1'\n"
+        "doc_type: 'note'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "description: 'A doc.'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+    )
+    new, changed, _ = format_text(src, path=None)
+    keys = [ln.split(":")[0] for ln in new.splitlines() if ln and not ln.startswith("-")]
+    assert keys[:4] == ["schema_version", "id", "title", "description"]
+    assert changed is True
+
+
+def test_unknown_key_sorts_after_known_keys():
+    src = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "custom_thing: 'x'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+    )
+    new, _, warnings = format_text(src, path=None)
+    lines = [ln for ln in new.splitlines() if ":" in ln]
+    assert lines.index("custom_thing: 'x'") > lines.index("related: []")
+    assert any("custom_thing" in w for w in warnings)

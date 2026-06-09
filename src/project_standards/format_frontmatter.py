@@ -97,9 +97,43 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
     return entries, None
 
 
+_ORDER_INDEX = {key: i for i, key in enumerate(CANONICAL_ORDER)}
+
+
+def reorder(entries: list[Entry], warnings: list[str]) -> list[Entry]:
+    """Stable sort entries into CANONICAL_ORDER. Unknown keys keep their relative
+    order after all known keys; a trailing comment-only entry (key=None) stays last.
+    Unknown keys also emit a warn-only message (never deleted)."""
+    def sort_key(item: tuple[int, Entry]) -> tuple[int, int]:
+        idx, entry = item
+        if entry.key is None:
+            return (len(CANONICAL_ORDER) + 1, idx)  # trailing comments last
+        if entry.key in _ORDER_INDEX:
+            return (_ORDER_INDEX[entry.key], 0)
+        warnings.append(f"unknown frontmatter key '{entry.key}' (kept; not in schema)")
+        return (len(CANONICAL_ORDER), idx)
+
+    return [e for _, e in sorted(enumerate(entries), key=sort_key)]
+
+
 def serialize(entries: list[Entry]) -> str:
-    """Concatenate entries' source lines verbatim (round-trip with no transforms)."""
-    return "".join(line for entry in entries for line in entry.lines)
+    """Concatenate entries' source lines verbatim.
+
+    The regex design absorbs the final `\\n` of the body into `close_fence`, so
+    the very last physical line of `body` arrives without a trailing newline.  When
+    reordering moves that entry to a non-tail position, we must ensure it still
+    ends with a newline so the following entry starts on a new line.  If the entry
+    stays last, we leave it unchanged to preserve byte-identity on round-trips."""
+    parts: list[str] = []
+    for i, entry in enumerate(entries):
+        is_last = i == len(entries) - 1
+        for j, line in enumerate(entry.lines):
+            is_last_line = j == len(entry.lines) - 1
+            if is_last_line and not is_last and line and not line.endswith(("\n", "\r\n")):
+                parts.append(line + "\n")
+            else:
+                parts.append(line)
+    return "".join(parts)
 
 
 def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
@@ -117,6 +151,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     if reason is not None:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")
         return text, False, warnings
+    entries = reorder(entries, warnings)
     new_body = serialize(entries)
     new_text = open_fence + new_body + close_fence + rest
     changed = new_text != text
