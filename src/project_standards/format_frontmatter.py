@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
 # Leading frontmatter block; groups: open fence, body (between fences), close fence.
 _FM_RE = re.compile(r"\A(---[ \t]*\r?\n)(.*?)(\r?\n---[ \t]*(?:\r?\n|$))", re.DOTALL)
 # A top-level (column 0) mapping key line: `key:` optionally followed by a value.
@@ -97,6 +99,115 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
     return entries, None
 
 
+def _emit_single_quoted(value: str) -> str:
+    """YAML single-quoted scalar: wrap in quotes, double internal single-quotes."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+_NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
+
+
+def _split_value_comment(rest: str) -> tuple[str, str]:
+    """Split the text after `key:` into (raw_value, comment). A YAML inline comment
+    begins only at whitespace + '#' (CR-NEW-003); a bare '#' (e.g. `C# guide`,
+    `http://x/#frag`), a '#' inside a quoted scalar, or a '#' inside a quoted flow-list
+    item (e.g. `['Issue #123']` — CR-NEW-005) is literal. `comment` keeps its leading
+    whitespace (e.g. '  # note') so it round-trips, or is ''."""
+    stripped = rest.lstrip(" \t")
+    lead = rest[: len(rest) - len(stripped)]
+    if stripped[:1] in ("'", '"'):
+        quote = stripped[0]
+        i = 1
+        while i < len(stripped):
+            ch = stripped[i]
+            if quote == "'" and ch == "'":
+                if stripped[i : i + 2] == "''":  # escaped single quote
+                    i += 2
+                    continue
+                return lead + stripped[: i + 1], stripped[i + 1 :]
+            if quote == '"' and ch == "\\":
+                i += 2
+                continue
+            if quote == '"' and ch == '"':
+                return lead + stripped[: i + 1], stripped[i + 1 :]
+            i += 1
+        return rest, ""  # unterminated quote -> treat whole as value (left as-is upstream)
+    if stripped[:1] == "[":  # flow list: scan to the matching ], honoring quotes
+        depth = 0
+        in_quote = ""
+        i = 0
+        while i < len(stripped):
+            ch = stripped[i]
+            if in_quote:
+                if in_quote == "'" and ch == "'":
+                    if stripped[i : i + 2] == "''":
+                        i += 2
+                        continue
+                    in_quote = ""
+                elif in_quote == '"' and ch == "\\":
+                    i += 2
+                    continue
+                elif in_quote == '"' and ch == '"':
+                    in_quote = ""
+            elif ch in ("'", '"'):
+                in_quote = ch
+            elif ch == "[":
+                depth += 1
+            elif ch == "]":
+                depth -= 1
+                if depth == 0:
+                    tail = stripped[i + 1 :]
+                    return lead + stripped[: i + 1], (tail if re.match(r"\s+#", tail) else "")
+            i += 1
+        return rest, ""  # unbalanced brackets -> no comment
+    m = re.search(r"(\s+#.*)$", rest)  # plain scalar: comment = whitespace then '#' to end
+    if m:
+        return rest[: m.start()], rest[m.start() :]
+    return rest, ""
+
+
+def _requote_scalar_line(line: str, key: str) -> str:
+    """Re-quote the scalar value on a `key: value` line WITHOUT resolving its YAML type
+    (CR-NEW-001): the author's literal text is single-quoted, so `on`/`off`/`1.1`/a date
+    keep their exact characters. Indentation, an inline `# comment` (split at a real
+    whitespace-`#` boundary — CR-NEW-003), and the line ending are preserved; explicit
+    `null`/`~`, empty values, and flow lists are left untouched."""
+    m = re.match(
+        r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":)(?P<sep>[ \t]*)"
+        r"(?P<rest>.*)(?P<eol>\r?\n?)$",
+        line,
+    )
+    if m is None:
+        return line
+    value_raw, comment = _split_value_comment(m.group("rest"))
+    raw = value_raw.strip()
+    if raw == "" or raw.startswith("["):
+        return line  # empty or flow list -> handled by normalize_lists
+    if raw in _NULL_TOKENS:
+        return line  # explicit null stays null
+    if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
+        return line  # already single-quoted -> idempotent
+    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+        decoded = yaml.safe_load(raw)  # explicit quotes -> intended string, no type guess
+        text_value = decoded if isinstance(decoded, str) else raw
+    else:
+        text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
+    sep = m.group("sep") or " "
+    return (
+        m.group("indent") + m.group("key") + sep + _emit_single_quoted(text_value)
+        + comment + m.group("eol")
+    )
+
+
+def requote(entries: list[Entry]) -> None:
+    """In place: single-quote the scalar value on each single-line scalar entry.
+    Multi-line entries (lists, nested mappings) are left for their own transforms."""
+    for entry in entries:
+        if entry.key is None or len(entry.lines) != 1:
+            continue
+        entry.lines[0] = _requote_scalar_line(entry.lines[0], entry.key)
+
+
 _ORDER_INDEX = {key: i for i, key in enumerate(CANONICAL_ORDER)}
 
 
@@ -151,6 +262,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     if reason is not None:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")
         return text, False, warnings
+    requote(entries)
     entries = reorder(entries, warnings)
     new_body = serialize(entries)
     new_text = open_fence + new_body + close_fence + rest

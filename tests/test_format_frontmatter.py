@@ -96,3 +96,88 @@ def test_unknown_key_sorts_after_known_keys():
     lines = [ln for ln in new.splitlines() if ":" in ln]
     assert lines.index("custom_thing: 'x'") > lines.index("related: []")
     assert any("custom_thing" in w for w in warnings)
+
+
+def _doc(*, title: str = "X", extra: str = "", tags_line: str = "tags: []") -> str:
+    # tags_line lets a test vary the tags entry WITHOUT appending a second `tags:`
+    # (which would create a duplicate key the formatter now refuses — CR-002).
+    return (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        f"title: {title}\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        f"{tags_line}\n"
+        "aliases: []\n"
+        "related: []\n"
+        f"{extra}"
+        "---\n"
+    )
+
+
+def test_unquoted_scalars_get_single_quoted():
+    src = (
+        "---\n"
+        "schema_version: 1.1\n"          # identifier-like number -> '1.1'
+        "id: 'note-a3f9zk-x'\n"
+        "title: X\n"                       # bare string -> 'X'
+        "description: A doc.\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: 2026-06-08\n"            # unquoted date -> '2026-06-08'
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+    )
+    new, changed, _ = format_text(src, path=None)
+    assert "schema_version: '1.1'" in new
+    assert "title: 'X'" in new
+    assert "created: '2026-06-08'" in new
+    assert "doc_type: 'note'" in new
+    assert changed is True
+
+
+def test_null_license_stays_null():
+    src = _doc(extra="license: null\n")  # helper defined below
+    new, _, _ = format_text(src, path=None)
+    assert "license: null" in new
+    assert "license: 'null'" not in new
+
+
+def test_double_quoted_becomes_single_quoted():
+    src = _doc(title='"Hello"')
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'Hello'" in new
+
+
+@pytest.mark.parametrize("token", ["on", "off", "Yes", "No"])
+def test_boolean_like_scalar_kept_as_string(token: str) -> None:
+    # `title: on` must become `title: 'on'`, NOT 'true' (CR-NEW-001).
+    src = _doc(title=token)
+    new, _, _ = format_text(src, path=None)
+    assert f"title: '{token}'" in new
+
+
+def test_hash_in_plain_scalar_is_not_a_comment():
+    # `C#` has no whitespace before '#', so it is scalar content, not a comment (CR-NEW-003).
+    src = _doc(title="C# guide")
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'C# guide'" in new
+
+
+def test_url_fragment_preserved():
+    src = _doc(title="http://example.com/p#frag")
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'http://example.com/p#frag'" in new
+
+
+def test_real_inline_comment_preserved_on_scalar():
+    src = _doc(title="X  # keep me")  # whitespace + '#' IS a real comment
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'X'  # keep me" in new
