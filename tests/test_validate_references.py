@@ -1,4 +1,8 @@
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 from project_standards.validate_references import (
     build_index,
@@ -222,3 +226,134 @@ def test_duplicate_adr_number_is_error(tmp_path: Path) -> None:
     )
     errors = check_adr_sequence(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
     assert any("0001" in e for e in errors)
+
+
+def _run_refs(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-m", "project_standards.validate_references", *args],
+        capture_output=True,
+        text=True,
+        cwd=cwd,
+    )
+
+
+def test_disabled_by_default_exits_0(tmp_path: Path) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-02-01'",
+        updated="'2026-01-01'",
+    )  # bad dates, but disabled
+    r = _run_refs(["--config", str(cfg)], tmp_path)
+    assert r.returncode == 0
+
+
+def test_forwarded_schema_flag_skips_not_errors(tmp_path: Path) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    r = _run_refs(["--schema", "custom.json", "--quiet", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 0
+
+
+def test_no_require_frontmatter_is_accepted(tmp_path: Path) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    r = _run_refs(["--no-require-frontmatter", "--quiet", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 0
+
+
+# In-process main() tests for coverage of the CLI paths not reached by subprocess.
+
+
+def test_main_disabled_returns_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    assert main(["--config", str(cfg)]) == 0
+
+
+def test_main_enabled_duplicate_id_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg)])
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "note-aaaaaa-x" in captured.err
+
+
+def test_main_custom_schema_skips(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--schema", "custom.json", "--config", str(cfg)])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "custom schema" in captured.out
+
+
+def test_main_config_error_returns_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(": invalid: yaml: [\n")
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    assert main(["--config", str(cfg)]) == 2
+
+
+def test_main_success_prints_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg)])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "references valid" in captured.out
