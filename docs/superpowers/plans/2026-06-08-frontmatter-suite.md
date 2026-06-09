@@ -244,6 +244,77 @@ git commit -m "refactor(validate_frontmatter): make schema_value_is_path public"
 
 > **Note for all later tasks:** new modules import `schema_value_is_path` (public), never the underscore name.
 
+### Task 0.5: Reject duplicate top-level keys in `parse_frontmatter`
+
+> PyYAML's `safe_load` silently keeps the *last* of duplicate mapping keys, so the whole suite could report clean while a file's frontmatter visibly conflicts (codex CR-002). Make `parse_frontmatter` reject duplicates so `validate-frontmatter` (and thus `project-standards validate`/`fix`) errors on them. **Invariant note:** duplicate mapping keys are invalid YAML 1.1; this can only fire on already-broken documents, so it surfaces a latent bug rather than breaking a valid consumer setup — a justified, narrow exception to "no new failures." The formatter's tokenizer also refuses such blocks (A1) as defense-in-depth.
+
+**Files:**
+- Modify: `src/project_standards/validate_frontmatter.py` (`parse_frontmatter` at lines 123-134)
+- Test: `tests/test_validate_frontmatter.py` (append)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+import pytest
+from project_standards.validate_frontmatter import parse_frontmatter, FrontmatterParseError
+
+
+def test_duplicate_top_level_key_rejected():
+    with pytest.raises(FrontmatterParseError):
+        parse_frontmatter("---\ntags: []\ntags: ['x']\n---\n# body\n")
+
+
+def test_unique_keys_still_parse():
+    meta = parse_frontmatter("---\nid: 'x'\ntags: []\n---\n# body\n")
+    assert meta == {"id": "x", "tags": []}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/test_validate_frontmatter.py -k duplicate_top_level_key -v`
+Expected: FAIL — `safe_load` silently collapses, no error raised
+
+- [ ] **Step 3: Implement a unique-key loader**
+
+In `src/project_standards/validate_frontmatter.py`, add near the parsing section:
+
+```python
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate mapping keys (PyYAML otherwise keeps the
+    last silently). Frontmatter with a duplicate key is a bug, not a valid doc."""
+
+
+def _construct_no_duplicates(loader: _UniqueKeyLoader, node: yaml.MappingNode) -> dict[str, Any]:
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=True)
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(
+                None, None, f"duplicate key {key!r}", key_node.start_mark
+            )
+        mapping[key] = loader.construct_object(value_node, deep=True)
+    return mapping
+
+
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_no_duplicates
+)
+```
+
+In `parse_frontmatter`, replace `yaml.safe_load(match.group(1))` with `yaml.load(match.group(1), Loader=_UniqueKeyLoader)`. The `ConstructorError` is a `yaml.YAMLError`, so the existing `except yaml.YAMLError` already converts it to `FrontmatterParseError`.
+
+- [ ] **Step 4: Run tests (new + existing regression guard)**
+
+Run: `uv run pytest tests/test_validate_frontmatter.py -q`
+Expected: PASS — the new tests pass and no existing fixture regresses (if one does, it had a real duplicate key)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/project_standards/validate_frontmatter.py tests/test_validate_frontmatter.py
+git commit -m "feat(validate): reject duplicate top-level frontmatter keys"
+```
+
 ---
 
 ## Phase A — `format-frontmatter`
@@ -261,6 +332,10 @@ git commit -m "refactor(validate_frontmatter): make schema_value_is_path public"
 
 ```python
 # tests/test_format_frontmatter.py
+from pathlib import Path
+
+import pytest
+
 from project_standards.format_frontmatter import format_text
 
 CLEAN = (
@@ -614,6 +689,14 @@ def test_double_quoted_becomes_single_quoted():
     src = _doc(title='"Hello"')
     new, _, _ = format_text(src, path=None)
     assert "title: 'Hello'" in new
+
+
+@pytest.mark.parametrize("token", ["on", "off", "Yes", "No"])
+def test_boolean_like_scalar_kept_as_string(token):
+    # `title: on` must become `title: 'on'`, NOT 'true' (CR-NEW-001).
+    src = _doc(title=token)
+    new, _, _ = format_text(src, path=None)
+    assert f"title: '{token}'" in new
 ```
 
 Add this helper near the top of the test file (used by several tests):
@@ -658,10 +741,15 @@ def _emit_single_quoted(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+_NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
+
+
 def _requote_scalar_line(line: str, key: str) -> str:
-    """Re-quote the scalar value on a `key: value` line, preserving indentation,
-    an inline `# comment`, and the line ending. Strings -> single-quoted; explicit
-    `null`/`~` and empty value left as-is; flow lists handled by list transform."""
+    """Re-quote the scalar value on a `key: value` line WITHOUT resolving its YAML type
+    (CR-NEW-001): the author's literal text is single-quoted, so `on`/`off`/`1.1`/a date
+    keep their exact characters (`safe_load('on')` would become `True` -> `'true'`).
+    Indentation, an inline `# comment`, and the line ending are preserved; explicit
+    `null`/`~`, empty values, and flow lists are left untouched."""
     m = re.match(
         r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":[ \t]*)"
         r"(?P<value>'(?:[^']|'')*'|\"(?:[^\"\\]|\\.)*\"|[^\n#]*?)"
@@ -671,17 +759,19 @@ def _requote_scalar_line(line: str, key: str) -> str:
     if m is None:
         return line
     raw = m.group("value").strip()
-    if raw == "" or raw == "[]":
-        return line  # empty or already-empty-flow-list: leave to list transform
-    try:
-        loaded = yaml.safe_load(raw)
-    except yaml.YAMLError:
-        return line
-    if loaded is None:  # explicit null stays null
-        return line
-    if isinstance(loaded, list):  # flow list handled elsewhere
-        return line
-    text_value = str(loaded) if not isinstance(loaded, bool) else ("true" if loaded else "false")
+    if raw == "" or raw.startswith("["):
+        return line  # empty or flow list -> handled by normalize_lists
+    if raw in _NULL_TOKENS:
+        return line  # explicit null stays null
+    if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
+        return line  # already single-quoted -> idempotent
+    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+        # Explicitly double-quoted: the quotes are intentional, so safe_load yields the
+        # intended string (no implicit type guess). Convert to single-quoted.
+        decoded = yaml.safe_load(raw)
+        text_value = decoded if isinstance(decoded, str) else raw
+    else:
+        text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
     return (
         m.group("indent") + m.group("key") + _emit_single_quoted(text_value)
         + m.group("trail") + m.group("eol")
@@ -737,6 +827,14 @@ def test_empty_block_list_becomes_flow_empty():
     src = _doc(tags_line="tags:")  # key with no value and no items -> tags: []
     new, _, _ = format_text(src, path=None)
     assert "tags: []" in new
+
+
+def test_boolean_like_list_items_kept_as_strings():
+    # list items must not be coerced (BaseLoader); [on, off, yes, no] stay strings (CR-NEW-001).
+    src = _doc(tags_line="tags: [on, off, yes, no]")
+    new, _, _ = format_text(src, path=None)
+    assert "- 'on'" in new and "- 'off'" in new and "- 'yes'" in new and "- 'no'" in new
+    assert "True" not in new and "False" not in new
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -757,45 +855,59 @@ def _line_ending(line: str) -> str:
     return "\n"
 
 
+# The array-typed fields in the schema; only these are list-normalized.
+_LIST_FIELDS = ("tags", "aliases", "related", "supersedes", "depends_on", "applies_to", "source")
+
+
+def _leading_run(entry: Entry) -> int:
+    """Count of leading comment/blank lines before the entry's `key:` line."""
+    n = 0
+    for ln in entry.lines:
+        stripped = ln.rstrip("\r\n").lstrip(" \t")
+        if stripped == "" or stripped.startswith("#"):
+            n += 1
+        else:
+            break
+    return n
+
+
 def normalize_lists(entries: list[Entry]) -> None:
-    """In place: render every list-valued entry as canonical block style with
-    single-quoted items and duplicates removed (first occurrence wins); an empty
-    list becomes the flow form `key: []`. Non-list entries are untouched."""
+    """In place: render each list-typed field as canonical block style (single-quoted
+    items, duplicates removed first-wins); an empty/absent value becomes `key: []`.
+    Values are read with yaml.BaseLoader so list items are NEVER type-coerced — e.g.
+    `[on, off]` stays the strings 'on'/'off', not booleans (CR-NEW-001)."""
     for entry in entries:
-        if entry.key is None:
+        if entry.key not in _LIST_FIELDS:
             continue
-        joined = "".join(entry.lines)
-        # Strip a leading comment/blank run so yaml sees just `key: ...`.
-        body_lines = [ln for ln in entry.lines if _TOP_KEY_RE.match(ln.rstrip("\r\n"))
-                      or ln[:1] in (" ", "\t")]
+        lead = _leading_run(entry)
         try:
-            loaded = yaml.safe_load("".join(body_lines))
+            loaded = yaml.load("".join(entry.lines[lead:]), Loader=yaml.BaseLoader)
         except yaml.YAMLError:
             continue
         if not isinstance(loaded, dict) or entry.key not in loaded:
             continue
         value = loaded[entry.key]
-        if not isinstance(value, list):
-            continue
+        if not (value is None or value == "" or isinstance(value, list)):
+            continue  # a scalar where a list belongs -> leave for the validator
+        key_line = entry.lines[lead]
         eol = _line_ending(entry.lines[-1])
-        leading = [ln for ln in entry.lines if not _TOP_KEY_RE.match(ln.rstrip("\r\n"))
-                   and ln[:1] not in (" ", "\t")]
-        indent = re.match(r"[ \t]*", entry.lines[len(leading)]).group(0)
-        # Preserve an inline comment on the list KEY line (e.g. `tags:  # canonical`).
-        key_src = entry.lines[len(leading)].rstrip("\r\n")
-        after_colon = key_src.split(":", 1)[1] if ":" in key_src else ""
-        inline_comment = after_colon if after_colon.strip().startswith("#") else ""
-        if not value:
-            entry.lines = [*leading, f"{indent}{entry.key}: []{inline_comment}{eol}"]
-            continue
+        # Indent by slice (NOT re.match(...).group(0), which basedpyright-strict flags — CR-NEW-002).
+        indent = key_line[: len(key_line) - len(key_line.lstrip(" \t"))]
+        after_colon = key_line.rstrip("\r\n").split(":", 1)[1] if ":" in key_line else ""
+        inline = after_colon if after_colon.strip().startswith("#") else ""
+        leading = entry.lines[:lead]
+        items: list[str] = value if isinstance(value, list) else []
         seen: list[str] = []
-        for item in value:
-            s = str(item)
+        for item in items:
+            s = item if isinstance(item, str) else str(item)
             if s not in seen:
                 seen.append(s)
-        rendered = [f"{indent}{entry.key}:{inline_comment}{eol}"]
-        rendered += [f"{indent}  - {_emit_single_quoted(s)}{eol}" for s in seen]
-        entry.lines = [*leading, *rendered]
+        if not seen:
+            entry.lines = [*leading, f"{indent}{entry.key}: []{inline}{eol}"]
+        else:
+            rendered = [f"{indent}{entry.key}:{inline}{eol}"]
+            rendered += [f"{indent}  - {_emit_single_quoted(s)}{eol}" for s in seen]
+            entry.lines = [*leading, *rendered]
 ```
 
 In `format_text`, call `normalize_lists(entries)` **before** `requote(entries)`:
@@ -947,9 +1059,6 @@ git commit -m "feat(format): type->doc_type rename, inject schema_version + arra
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from pathlib import Path
-
-
 def test_doc_type_filled_from_readme_path_when_missing():
     src = _doc().replace("doc_type: 'note'\n", "")  # no doc_type
     new, _, _ = format_text(src, path=Path("README.md"))
@@ -1216,8 +1325,6 @@ git commit -m "feat(format): scaffold schema-valid block into no-frontmatter fil
 ```python
 import subprocess, sys
 
-import pytest
-
 
 def _run(args, **kw):
     return subprocess.run([sys.executable, "-m", "project_standards.format_frontmatter", *args],
@@ -1359,6 +1466,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         for w in warnings:
             print(f"{path}: {w}", file=sys.stderr)
+            # A duplicate-key block is refused (not rewritten) AND must fail the gate (CR-002).
+            if "duplicate top-level key" in w:
+                unparseable = True
         if changed:
             any_change = True
             if write:
@@ -1398,8 +1508,6 @@ git commit -m "feat(format): CLI (--check/--write/--stdin), custom-schema skip, 
 - [ ] **Step 1: Write the failing/guard test**
 
 ```python
-import pytest
-
 CASES = [
     _doc(title="X").replace("title: 'X'", "title: X"),
     _doc(tags_line="tags: ['b','a','b']"),
@@ -2105,6 +2213,28 @@ def test_fix_skips_under_custom_schema(tmp_path):
     r = _ps(["fix", "--config", str(cfg)], tmp_path)
     assert r.returncode == 0
     assert (tmp_path / "a.md").read_text() == before  # CR-001: no writes under custom schema
+
+
+def test_fix_skips_with_schema_flag(tmp_path):
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    before = "---\ntitle: X\n---\n# B\n"
+    (tmp_path / "a.md").write_text(before)
+    r = _ps(["fix", "--schema", "custom.json", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 0
+    assert (tmp_path / "a.md").read_text() == before  # CR-001: forwarded --schema -> skip
+
+
+def test_validate_fails_on_duplicate_keys(tmp_path):
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    (tmp_path / "a.md").write_text(
+        "---\nschema_version: '1.1'\nid: 'note-aaaaaa-x'\ntitle: 'A'\n"
+        "description: 'd'\ndoc_type: 'note'\nstatus: 'draft'\ncreated: '2026-01-01'\n"
+        "updated: '2026-01-02'\ntags: []\ntags: ['dup']\naliases: []\nrelated: []\n---\n# B\n"
+    )
+    r = _ps(["validate", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 1  # CR-002: duplicate key -> parse error -> validate fails
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2128,6 +2258,11 @@ def _extract_config_path(args: list[str]) -> Path:
         if a.startswith("--config="):
             return Path(a.split("=", 1)[1])
     return Path(".project-standards.yml")
+
+
+def _has_schema_flag(args: list[str]) -> bool:
+    """True if a forwarded argv passes --schema (custom-schema mode) — CR-001."""
+    return any(a == "--schema" or a.startswith("--schema=") for a in args)
 ```
 
 ```python
@@ -2144,7 +2279,7 @@ def _extract_config_path(args: list[str]) -> Path:
         except validate_frontmatter.ConfigError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        if validate_frontmatter.schema_value_is_path(fix_cfg.schema):
+        if _has_schema_flag(fix_args) or validate_frontmatter.schema_value_is_path(fix_cfg.schema):
             print("note: custom schema in use; skipping fix", file=sys.stderr)
             return 0
         rc_format = format_frontmatter.main(["--write", *fix_args])
@@ -2372,3 +2507,5 @@ git commit -m "docs: document frontmatter formatter, references, and fix for 2.1
 **Type consistency:** `format_text(text, *, path, scaffold=False, today=None, bump_updated=False) -> (str, bool, list[str])` is consistent A1→A10 and C2. `Entry(key, lines)`, `Index(docs, by_id, ids)`, `Doc(path, meta)` are used consistently. Check names: `build_index`, `check_id_uniqueness`, `check_dates`, `check_references`, `check_reciprocity`, `check_adr_sequence` — all referenced consistently in B and C. `is_denylisted`, `_infer_doc_type`, `_emit_single_quoted`, `_line_ending` consistent across A tasks. The custom-schema predicate is the **public** `schema_value_is_path` (Task 0.4) everywhere.
 
 **Codex plan-review round 1 applied (CR-001…006):** CR-001 — `fix` final postcondition now calls all three validators (incl. references) + a custom-schema preflight (C2). CR-002 — tokenizer refuses duplicate top-level keys (A1) and the `_doc` fixtures no longer create duplicate `tags:`. CR-003 — `schema_value_is_path` made public (Task 0.4) so no private import / `# pyright: ignore` in production. CR-004 — `check_reciprocity` checks both directions. CR-005 — `--stdin` mutual exclusions enforced (exit 2). CR-006 — pre-commit smoke runs via `uvx`. Plus: atomic write preserves mode bits; list-key inline comments preserved.
+
+**Codex plan-review round 2 applied (CR-NEW-001/002, CR-001/002 fully):** CR-NEW-001 — the formatter no longer round-trips values through PyYAML's type resolver; scalars quote raw text and lists load via `yaml.BaseLoader`, so `on`/`off`/`yes`/`no`/`1.1` keep their literal characters (tests added for scalars and list items). CR-NEW-002 — `normalize_lists` derives indent by string slice, not `re.match(...).group(0)`, avoiding the strict-basedpyright optional-match deref. CR-001 (full) — `fix` now also skips on a forwarded `--schema` flag. CR-002 (full) — new Task 0.5 makes `parse_frontmatter` reject duplicate keys (so `validate`/`fix` error), the formatter also fails the gate on them, with CLI tests proving duplicates cannot pass.
