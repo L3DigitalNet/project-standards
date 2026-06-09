@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from project_standards import validate_frontmatter, validate_id
+from project_standards import validate_frontmatter, validate_id, validate_references
 from project_standards.adopt.engine import build_plan, execute_plan, format_report
 from project_standards.adopt.errors import AdoptError
 from project_standards.adopt.manifest import (
@@ -173,7 +173,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         rc_frontmatter = validate_frontmatter.main(validator_args)
         rc_id = validate_id.main(validator_args)
-        return max(rc_frontmatter, rc_id)
+        rc_refs = validate_references.main(validator_args)
+        return max(rc_frontmatter, rc_id, rc_refs)
 
     parser = argparse.ArgumentParser(prog="project-standards")
     sub = parser.add_subparsers(dest="command", required=True)
