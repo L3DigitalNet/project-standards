@@ -10,6 +10,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
 
@@ -24,10 +25,30 @@ VALID_DOC_TYPES: frozenset[str] = frozenset(
 )
 
 CANONICAL_ORDER: tuple[str, ...] = (
-    "schema_version", "id", "title", "description", "doc_type", "status",
-    "created", "updated", "reviewed", "owner", "consumer", "tags", "aliases",
-    "related", "supersedes", "superseded_by", "depends_on", "applies_to",
-    "source", "confidence", "visibility", "license", "publish", "project",
+    "schema_version",
+    "id",
+    "title",
+    "description",
+    "doc_type",
+    "status",
+    "created",
+    "updated",
+    "reviewed",
+    "owner",
+    "consumer",
+    "tags",
+    "aliases",
+    "related",
+    "supersedes",
+    "superseded_by",
+    "depends_on",
+    "applies_to",
+    "source",
+    "confidence",
+    "visibility",
+    "license",
+    "publish",
+    "project",
     "x_project",
 )
 
@@ -59,7 +80,7 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
     lines = _split_keepends(body)
     entries: list[Entry] = []
     pending: list[str] = []  # leading comment/blank lines for the next key
-    seen: set[str] = set()   # duplicate top-level keys are unsafe to reorder (CR-002)
+    seen: set[str] = set()  # duplicate top-level keys are unsafe to reorder (CR-002)
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -194,8 +215,12 @@ def _requote_scalar_line(line: str, key: str) -> str:
         text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
     sep = m.group("sep") or " "
     return (
-        m.group("indent") + m.group("key") + sep + _emit_single_quoted(text_value)
-        + comment + m.group("eol")
+        m.group("indent")
+        + m.group("key")
+        + sep
+        + _emit_single_quoted(text_value)
+        + comment
+        + m.group("eol")
     )
 
 
@@ -244,7 +269,7 @@ def normalize_lists(entries: list[Entry]) -> None:
             continue
         if not isinstance(loaded, dict) or entry.key not in loaded:
             continue
-        value = loaded[entry.key]
+        value: Any = cast(Any, loaded)[entry.key]  # BaseLoader dict values are untyped
         if not (value is None or value == "" or isinstance(value, list)):
             continue  # a scalar where a list belongs -> leave for the validator
         key_line = entry.lines[lead]
@@ -252,14 +277,16 @@ def normalize_lists(entries: list[Entry]) -> None:
         # Indent by slice (NOT re.match(...).group(0), which basedpyright-strict flags — CR-NEW-002).
         indent = key_line[: len(key_line) - len(key_line.lstrip(" \t"))]
         after_colon = key_line.rstrip("\r\n").split(":", 1)[1] if ":" in key_line else ""
-        inline = _split_value_comment(after_colon)[1]  # comment after [], [a], or bare key (CR-NEW-004)
+        inline = _split_value_comment(after_colon)[
+            1
+        ]  # comment after [], [a], or bare key (CR-NEW-004)
         leading = entry.lines[:lead]
-        items: list[str] = value if isinstance(value, list) else []
+        raw_items: list[Any] = cast(list[Any], value) if isinstance(value, list) else []
+        items: list[str] = [str(x) for x in raw_items]
         seen: list[str] = []
         for item in items:
-            s = item if isinstance(item, str) else str(item)
-            if s not in seen:
-                seen.append(s)
+            if item not in seen:
+                seen.append(item)
         # item_eol: block-list items always need a real newline; fall back to '\n'
         # when the key line has no trailing newline (last entry in body — the regex
         # design absorbs that newline into close_fence).
@@ -288,6 +315,7 @@ def reorder(entries: list[Entry], warnings: list[str]) -> list[Entry]:
     """Stable sort entries into CANONICAL_ORDER. Unknown keys keep their relative
     order after all known keys; a trailing comment-only entry (key=None) stays last.
     Unknown keys also emit a warn-only message (never deleted)."""
+
     def sort_key(item: tuple[int, Entry]) -> tuple[int, int]:
         idx, entry = item
         if entry.key is None:
@@ -370,7 +398,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     if match is None:
         return text, False, warnings
     open_fence, body, close_fence = match.group(1), match.group(2), match.group(3)
-    rest = text[match.end():]
+    rest = text[match.end() :]
     entries, reason = tokenize(body)
     if reason is not None:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")

@@ -24,21 +24,21 @@ CLEAN = (
 
 def test_clean_input_is_byte_identical():
     # format_text returns (new_text, changed, warnings). Already-canonical -> no change.
-    new, changed, warnings = format_text(CLEAN, path=None)
+    new, changed, _warnings = format_text(CLEAN, path=None)
     assert new == CLEAN
     assert changed is False
 
 
 def test_no_frontmatter_is_noop():
     body = "# Just a body\n\nNo frontmatter here.\n"
-    new, changed, warnings = format_text(body, path=None)
+    new, changed, _warnings = format_text(body, path=None)
     assert new == body
     assert changed is False
 
 
 def test_comment_block_preserved_on_roundtrip():
     src = CLEAN.replace("id: 'note-a3f9zk-x'\n", "id: 'note-a3f9zk-x'  # frozen at creation\n")
-    new, changed, warnings = format_text(src, path=None)
+    new, changed, _warnings = format_text(src, path=None)
     assert "# frozen at creation" in new
     assert changed is False
 
@@ -122,13 +122,13 @@ def _doc(*, title: str = "X", extra: str = "", tags_line: str = "tags: []") -> s
 def test_unquoted_scalars_get_single_quoted():
     src = (
         "---\n"
-        "schema_version: 1.1\n"          # identifier-like number -> '1.1'
+        "schema_version: 1.1\n"  # identifier-like number -> '1.1'
         "id: 'note-a3f9zk-x'\n"
-        "title: X\n"                       # bare string -> 'X'
+        "title: X\n"  # bare string -> 'X'
         "description: A doc.\n"
         "doc_type: note\n"
         "status: draft\n"
-        "created: 2026-06-08\n"            # unquoted date -> '2026-06-08'
+        "created: 2026-06-08\n"  # unquoted date -> '2026-06-08'
         "updated: '2026-06-08'\n"
         "tags: []\n"
         "aliases: []\n"
