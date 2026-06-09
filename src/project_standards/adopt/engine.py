@@ -22,15 +22,11 @@ def major_ref() -> str:
     try:
         full = version("project-standards")
     except PackageNotFoundError as exc:  # pragma: no cover - exercised via monkeypatch
-        raise ManifestError(
-            "cannot resolve project-standards version for @vN ref"
-        ) from exc
+        raise ManifestError("cannot resolve project-standards version for @vN ref") from exc
     return "v" + full.split(".")[0]
 
 
-def resolve_source(
-    artifact: Artifact, standard_id: str, bundles_dir: Path = BUNDLES_DIR
-) -> Path:
+def resolve_source(artifact: Artifact, standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Path:
     """Absolute path to an artifact's source, validated to live inside `bundles/`.
 
     Absolute or `..`-traversing source/shared, or a path that escapes the bundle tree,
@@ -61,9 +57,7 @@ class Action:
     standards: tuple[str, ...]  # contributing standard ids (for reporting)
 
 
-def build_plan(
-    standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR
-) -> list[Action]:
+def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> list[Action]:
     """Flatten requested standards into one deduplicated, source-resolved action list.
 
     Unknown id or two *owned* artifacts targeting one dest -> UsageError (exit 2).
@@ -78,9 +72,7 @@ def build_plan(
     # would write the same dest from DIFFERENT sources is an authoring bug. The same
     # source (a shared file referenced by two standards) dedupes to one action.
     write_actions: dict[str, Action] = {}  # dest -> Action (file / workflow-caller)
-    fragment_actions: list[
-        Action
-    ] = []  # fragments are reported; multiple per target allowed
+    fragment_actions: list[Action] = []  # fragments are reported; multiple per target allowed
     for sid in standard_ids:
         manifest = load_manifest(sid, bundles_dir)
         for art in manifest.artifacts:
@@ -207,9 +199,7 @@ def _atomic_write(target: Path, data: bytes) -> None:
     tmp: Path | None = None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(
-            dir=target.parent, prefix=".adopt-", suffix=".tmp"
-        )
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".adopt-", suffix=".tmp")
         tmp = Path(tmp_name)
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
@@ -222,31 +212,23 @@ def _atomic_write(target: Path, data: bytes) -> None:
         raise WriteError(f"failed writing {target}: {exc}") from exc
 
 
-def execute_plan(
-    plan: list[Action], dest_root: Path, *, force: bool, dry_run: bool
-) -> Report:
+def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: bool) -> Report:
     """Classify and execute each action; accumulate fragments (multiple per target)."""
     ref = major_ref()
     report = Report()
     for action in plan:
         if action.kind == "fragment":
             assert action.target is not None
-            _require_safe_relative(
-                action.target
-            )  # target safety even though never written
+            _require_safe_relative(action.target)  # target safety even though never written
             try:
                 snippet = action.source_path.read_text(encoding="utf-8")
             except OSError as exc:
-                raise WriteError(
-                    f"cannot read fragment {action.source_path}: {exc}"
-                ) from exc
+                raise WriteError(f"cannot read fragment {action.source_path}: {exc}") from exc
             report.fragments.setdefault(action.target, []).append(snippet)
             continue
         assert action.dest is not None
         abs_dest = validate_dest(action.dest, dest_root)
-        if abs_dest.is_symlink() or _has_symlinked_ancestor(
-            abs_dest, dest_root.resolve()
-        ):
+        if abs_dest.is_symlink() or _has_symlinked_ancestor(abs_dest, dest_root.resolve()):
             report.symlink_skipped.append(
                 action.dest
             )  # never write through a symlinked leaf OR parent
