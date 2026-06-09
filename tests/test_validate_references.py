@@ -40,6 +40,22 @@ def test_duplicate_id_is_error(tmp_path: Path) -> None:
     assert "note-aaaaaa-x" in errors[0]
 
 
+def test_build_index_skips_unreadable_unparseable_and_non_dict(tmp_path: Path) -> None:
+    # build_index must tolerate (skip) three classes of bad input rather than raising:
+    #   - FrontmatterParseError (duplicate top-level key, rejected since Phase 0 Task 0.5)
+    #   - a non-existent path (read_text -> FileNotFoundError, an OSError)
+    #   - frontmatter that parses to a non-mapping (a YAML list, not a dict)
+    # This pins the two except branches and the `not isinstance(meta, dict)` guard.
+    dup = tmp_path / "dup.md"
+    dup.write_text("---\ntags: []\ntags: ['x']\n---\n# B\n")
+    list_fm = tmp_path / "list.md"
+    list_fm.write_text("---\n- a\n- b\n---\n# B\n")
+    missing = tmp_path / "missing.md"  # never created -> OSError on read
+    index = build_index([dup, list_fm, missing])
+    assert index.docs == []
+    assert index.ids == set()
+
+
 def test_unique_ids_no_error(tmp_path: Path) -> None:
     _write(
         tmp_path / "a.md",
