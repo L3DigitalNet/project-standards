@@ -27,6 +27,7 @@
 		"**/.mypy_cache": true,
 		"**/.coverage": true
 	},
+	"folder-color.useGlobalSettings": false,
 	"folder-color.pathColors": [
 		{
 			"filePath": "project-standards/CHANGELOG.md",
