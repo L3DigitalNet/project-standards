@@ -78,6 +78,10 @@ jobs:
         if: github.repository == 'L3DigitalNet/project-standards'
         run: uv run validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
 
+      - name: Validate references (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
       # Running in a consuming repo: install the validator (and its bundled schema)
       # from the standards repo as a tool, then validate the caller's files.
       - name: Install validator (consuming repo)
@@ -93,3 +97,7 @@ jobs:
       - name: Validate id format (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'
         run: validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Validate references (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
