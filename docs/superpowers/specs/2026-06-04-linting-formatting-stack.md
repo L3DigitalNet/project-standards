@@ -35,6 +35,8 @@
       - [DEC-4 — O2 resolved: keep all three as documented **convention** (option c)](#dec-4--o2-resolved-keep-all-three-as-documented-convention-option-c)
     - [D3 — ADR body-structure enforcement: CI or editor-only?](#d3--adr-body-structure-enforcement-ci-or-editor-only)
       - [DEC-5 — O3 resolved: **minimal opt-in validator section-check (option b)**](#dec-5--o3-resolved-minimal-opt-in-validator-section-check-option-b)
+        <!-- markdownlint anchor algo diverges from GitHub's on the ⚠️ emoji heading; the fragment resolves on GitHub. -->
+        <!-- markdownlint-disable-next-line MD051 -->
       - [DEC-6 — O4 resolved: **hybrid filename/id (option b)** · ⚠️ **REVISED 2026-06-05 (DEC-6b)**](#dec-6--o4-resolved-hybrid-filenameid-option-b---revised-2026-06-05-dec-6b)
       - [DEC-7 — S1 resolved: CI uses **`markdownlint-cli2-action@v23`** (refines DEC-3)](#dec-7--s1-resolved-ci-uses-markdownlint-cli2-actionv23-refines-dec-3)
       - [DEC-8 — S2 resolved: **separate opt-in reusable workflow** `lint-markdown.yml`](#dec-8--s2-resolved-separate-opt-in-reusable-workflow-lint-markdownyml)

@@ -9,6 +9,7 @@
 **Tech Stack:** Python ≥3.14, `argparse`, `PyYAML` (already a dep, parse-only), `jsonschema` (already a dep), `pytest`/`coverage`/`ruff`/`basedpyright` toolchain.
 
 **Toolchain gate (run after every phase):**
+
 ```bash
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
@@ -19,7 +20,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
 ## File structure
 
 | File | Responsibility | Phase |
-|---|---|---|
+| --- | --- | --- |
 | `src/project_standards/id_format.py` | **Create** — shared `slugify()` + `random_token()` (extracted from `validate_id`) | 0 |
 | `src/project_standards/validate_id.py` | **Modify** — import `slugify`/token-gen from `id_format` (remove local copies) | 0 |
 | `src/project_standards/validate_frontmatter.py` | **Modify** — `ProjectConfig`/`load_config` gain `references_enabled` | 0 |
@@ -40,6 +41,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
 ### Task 0.1: Extract `id_format.py` (shared slugify + token generator)
 
 **Files:**
+
 - Create: `src/project_standards/id_format.py`
 - Test: `tests/test_id_format.py`
 
@@ -75,8 +77,7 @@ def test_random_token_varies():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_id_format.py -v`
-Expected: FAIL — `ModuleNotFoundError: project_standards.id_format`
+Run: `uv run pytest tests/test_id_format.py -v` Expected: FAIL — `ModuleNotFoundError: project_standards.id_format`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -112,8 +113,7 @@ def random_token(length: int = 6) -> str:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_id_format.py -v`
-Expected: PASS (5 passed)
+Run: `uv run pytest tests/test_id_format.py -v` Expected: PASS (5 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -125,12 +125,12 @@ git commit -m "feat(id_format): extract shared slugify + token generator"
 ### Task 0.2: Point `validate_id` at the shared helpers (no behavior change)
 
 **Files:**
+
 - Modify: `src/project_standards/validate_id.py` (the `slugify` def at lines 99-120; the `_BASE36_CHARS` constant at line 72; the token generation at line 322)
 
 - [ ] **Step 1: Run the existing suite to capture the green baseline**
 
-Run: `uv run pytest tests/test_validate_id.py -q`
-Expected: PASS (existing tests green — this is the regression guard)
+Run: `uv run pytest tests/test_validate_id.py -q` Expected: PASS (existing tests green — this is the regression guard)
 
 - [ ] **Step 2: Replace the local copies with imports**
 
@@ -150,8 +150,7 @@ Remove the now-unused `secrets`, `string`, and `unicodedata` imports if nothing 
 
 - [ ] **Step 3: Run the suite to verify no behavior change**
 
-Run: `uv run pytest tests/test_validate_id.py -q && uv run ruff check src/project_standards/validate_id.py`
-Expected: PASS, ruff clean (no unused imports)
+Run: `uv run pytest tests/test_validate_id.py -q && uv run ruff check src/project_standards/validate_id.py` Expected: PASS, ruff clean (no unused imports)
 
 - [ ] **Step 4: Commit**
 
@@ -163,6 +162,7 @@ git commit -m "refactor(validate_id): use shared id_format helpers"
 ### Task 0.3: Config gains `markdown.frontmatter.references.enabled`
 
 **Files:**
+
 - Modify: `src/project_standards/validate_frontmatter.py` (`ProjectConfig.__init__` lines 285-306; `load_config` frontmatter block lines 397-407)
 - Test: `tests/test_validate_frontmatter.py` (append)
 
@@ -189,8 +189,7 @@ def test_references_enabled_true(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k references -v`
-Expected: FAIL — `AttributeError: 'ProjectConfig' object has no attribute 'references_enabled'`
+Run: `uv run pytest tests/test_validate_frontmatter.py -k references -v` Expected: FAIL — `AttributeError: 'ProjectConfig' object has no attribute 'references_enabled'`
 
 - [ ] **Step 3: Implement**
 
@@ -209,8 +208,7 @@ Initialise `references_enabled = False` near the other defaults at the top of `l
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k references -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_validate_frontmatter.py -k references -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -224,6 +222,7 @@ git commit -m "feat(config): add markdown.frontmatter.references.enabled"
 > The new `format_frontmatter` and `validate_references` modules need the custom-schema predicate. Importing the private `_schema_value_is_path` into production code fails this repo's `strict` + `failOnWarnings` basedpyright (`reportPrivateUsage`), and adding `# pyright: ignore` in production is undesirable (codex CR-003). Promote it to a public name.
 
 **Files:**
+
 - Modify: `src/project_standards/validate_frontmatter.py` (def at line 77; callers at lines 94, 325, 352)
 
 - [ ] **Step 1: Rename and update internal callers**
@@ -232,8 +231,7 @@ In `src/project_standards/validate_frontmatter.py`, rename `def _schema_value_is
 
 - [ ] **Step 2: Run the existing suite (regression guard)**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -q && uv run basedpyright src/project_standards/validate_frontmatter.py`
-Expected: PASS; basedpyright clean.
+Run: `uv run pytest tests/test_validate_frontmatter.py -q && uv run basedpyright src/project_standards/validate_frontmatter.py` Expected: PASS; basedpyright clean.
 
 - [ ] **Step 3: Commit**
 
@@ -246,9 +244,10 @@ git commit -m "refactor(validate_frontmatter): make schema_value_is_path public"
 
 ### Task 0.5: Reject duplicate top-level keys in `parse_frontmatter`
 
-> PyYAML's `safe_load` silently keeps the *last* of duplicate mapping keys, so the whole suite could report clean while a file's frontmatter visibly conflicts (codex CR-002). Make `parse_frontmatter` reject duplicates so `validate-frontmatter` (and thus `project-standards validate`/`fix`) errors on them. **Invariant note:** duplicate mapping keys are invalid YAML 1.1; this can only fire on already-broken documents, so it surfaces a latent bug rather than breaking a valid consumer setup — a justified, narrow exception to "no new failures." The formatter's tokenizer also refuses such blocks (A1) as defense-in-depth.
+> PyYAML's `safe_load` silently keeps the _last_ of duplicate mapping keys, so the whole suite could report clean while a file's frontmatter visibly conflicts (codex CR-002). Make `parse_frontmatter` reject duplicates so `validate-frontmatter` (and thus `project-standards validate`/`fix`) errors on them. **Invariant note:** duplicate mapping keys are invalid YAML 1.1; this can only fire on already-broken documents, so it surfaces a latent bug rather than breaking a valid consumer setup — a justified, narrow exception to "no new failures." The formatter's tokenizer also refuses such blocks (A1) as defense-in-depth.
 
 **Files:**
+
 - Modify: `src/project_standards/validate_frontmatter.py` (`parse_frontmatter` at lines 123-134)
 - Test: `tests/test_validate_frontmatter.py` (append)
 
@@ -271,8 +270,7 @@ def test_unique_keys_still_parse():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -k duplicate_top_level_key -v`
-Expected: FAIL — `safe_load` silently collapses, no error raised
+Run: `uv run pytest tests/test_validate_frontmatter.py -k duplicate_top_level_key -v` Expected: FAIL — `safe_load` silently collapses, no error raised
 
 - [ ] **Step 3: Implement a unique-key loader**
 
@@ -305,8 +303,7 @@ In `parse_frontmatter`, replace `yaml.safe_load(match.group(1))` with `yaml.load
 
 - [ ] **Step 4: Run tests (new + existing regression guard)**
 
-Run: `uv run pytest tests/test_validate_frontmatter.py -q`
-Expected: PASS — the new tests pass and no existing fixture regresses (if one does, it had a real duplicate key)
+Run: `uv run pytest tests/test_validate_frontmatter.py -q` Expected: PASS — the new tests pass and no existing fixture regresses (if one does, it had a real duplicate key)
 
 - [ ] **Step 5: Commit**
 
@@ -324,6 +321,7 @@ git commit -m "feat(validate): reject duplicate top-level frontmatter keys"
 ### Task A1: Block tokenizer + byte-identical round-trip skeleton
 
 **Files:**
+
 - Create: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py`
 - Modify: `pyproject.toml` (add the console script)
@@ -389,8 +387,7 @@ def test_duplicate_top_level_key_is_refused():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -v`
-Expected: FAIL — `ModuleNotFoundError: project_standards.format_frontmatter`
+Run: `uv run pytest tests/test_format_frontmatter.py -v` Expected: FAIL — `ModuleNotFoundError: project_standards.format_frontmatter`
 
 - [ ] **Step 3: Write the skeleton implementation**
 
@@ -523,8 +520,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -v`
-Expected: PASS (3 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -v` Expected: PASS (3 passed)
 
 - [ ] **Step 5: Add the console script entry point**
 
@@ -546,6 +542,7 @@ git commit -m "feat(format): block tokenizer + byte-identical round-trip skeleto
 ### Task A2: Canonical key reorder
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py` (add `reorder`, call it in `format_text`)
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -599,8 +596,7 @@ def test_unknown_key_sorts_after_known_keys():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "reorder or unknown_key" -v`
-Expected: FAIL — keys not reordered / no warning emitted
+Run: `uv run pytest tests/test_format_frontmatter.py -k "reorder or unknown_key" -v` Expected: FAIL — keys not reordered / no warning emitted
 
 - [ ] **Step 3: Implement**
 
@@ -635,8 +631,7 @@ In `format_text`, replace `new_body = serialize(entries)` with:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "reorder or unknown_key" -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "reorder or unknown_key" -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -648,6 +643,7 @@ git commit -m "feat(format): canonical key reorder (unknown keys warn, kept last
 ### Task A3: Quote normalization for scalar values
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -744,8 +740,7 @@ def _doc(*, title="X", extra="", tags_line="tags: []"):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "quoted or null_license" -v`
-Expected: FAIL — values not requoted
+Run: `uv run pytest tests/test_format_frontmatter.py -k "quoted or null_license" -v` Expected: FAIL — values not requoted
 
 - [ ] **Step 3: Implement**
 
@@ -873,8 +868,7 @@ In `format_text`, call `requote(entries)` **before** `reorder(...)`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "quoted or null_license" -v`
-Expected: PASS (3 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "quoted or null_license" -v` Expected: PASS (3 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -886,6 +880,7 @@ git commit -m "feat(format): single-quote scalar values (null/lists preserved)"
 ### Task A4: List normalization (block style, `[]`, dedupe)
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -943,8 +938,7 @@ def test_real_comment_after_quoted_list_item_preserved():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "flow_list or empty_block" -v`
-Expected: FAIL
+Run: `uv run pytest tests/test_format_frontmatter.py -k "flow_list or empty_block" -v` Expected: FAIL
 
 - [ ] **Step 3: Implement**
 
@@ -1024,8 +1018,7 @@ In `format_text`, call `normalize_lists(entries)` **before** `requote(entries)`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "flow_list or empty_block" -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "flow_list or empty_block" -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1037,6 +1030,7 @@ git commit -m "feat(format): normalize lists to block style, dedupe, empty -> []
 ### Task A5: `type`→`doc_type` rename + inject missing required arrays + `schema_version`
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -1084,8 +1078,7 @@ def test_schema_version_injected_when_missing():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "type_renamed or both_type or required_arrays or schema_version_injected" -v`
-Expected: FAIL
+Run: `uv run pytest tests/test_format_frontmatter.py -k "type_renamed or both_type or required_arrays or schema_version_injected" -v` Expected: FAIL
 
 - [ ] **Step 3: Implement**
 
@@ -1144,8 +1137,7 @@ In `format_text`, call these **before** `normalize_lists` (so injected lists get
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "type_renamed or both_type or required_arrays or schema_version_injected" -v`
-Expected: PASS (4 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "type_renamed or both_type or required_arrays or schema_version_injected" -v` Expected: PASS (4 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1157,6 +1149,7 @@ git commit -m "feat(format): type->doc_type rename, inject schema_version + arra
 ### Task A6: Path-based `doc_type` inference (fill/correct-only) + denylist
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -1193,8 +1186,7 @@ def test_denylisted_paths_are_refused():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "doc_type_filled or research_under or never_overridden or denylisted" -v`
-Expected: FAIL
+Run: `uv run pytest tests/test_format_frontmatter.py -k "doc_type_filled or research_under or never_overridden or denylisted" -v` Expected: FAIL
 
 - [ ] **Step 3: Implement**
 
@@ -1244,8 +1236,7 @@ In `format_text`, call `infer_doc_type(entries, path)` **after** `rename_type` a
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "doc_type_filled or research_under or never_overridden or denylisted" -v`
-Expected: PASS (4 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "doc_type_filled or research_under or never_overridden or denylisted" -v` Expected: PASS (4 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1257,6 +1248,7 @@ git commit -m "feat(format): fill/correct-only doc_type inference + denylist"
 ### Task A7: Extension-object opacity + CRLF preservation
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py` (no new transform — verify the entry model already preserves them)
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -1302,8 +1294,7 @@ def test_crlf_line_endings_preserved():
 
 - [ ] **Step 2: Run test to verify it (likely) fails, then diagnose**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "extension_object or crlf" -v`
-Expected: the extension test should PASS already (entries carry nested lines opaquely); the CRLF test may FAIL if `requote`/`normalize` lost the `\r`. If so, fix `_line_ending`/regex `eol` capture to retain `\r\n`.
+Run: `uv run pytest tests/test_format_frontmatter.py -k "extension_object or crlf" -v` Expected: the extension test should PASS already (entries carry nested lines opaquely); the CRLF test may FAIL if `requote`/`normalize` lost the `\r`. If so, fix `_line_ending`/regex `eol` capture to retain `\r\n`.
 
 - [ ] **Step 3: Fix any CRLF regressions**
 
@@ -1311,8 +1302,7 @@ Ensure `_requote_scalar_line`'s `eol` group captures `\r?\n?` and is re-emitted 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "extension_object or crlf" -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k "extension_object or crlf" -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1324,6 +1314,7 @@ git commit -m "test(format): extension-object opacity + CRLF preservation"
 ### Task A8: Scaffold a block into a no-frontmatter file
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 
@@ -1355,8 +1346,7 @@ def test_scaffold_uses_path_doc_type_rule():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k scaffold -v`
-Expected: FAIL — `format_text() got an unexpected keyword argument 'scaffold'`
+Run: `uv run pytest tests/test_format_frontmatter.py -k scaffold -v` Expected: FAIL — `format_text() got an unexpected keyword argument 'scaffold'`
 
 - [ ] **Step 3: Implement**
 
@@ -1407,8 +1397,7 @@ Add a `_today_iso()` helper that returns `datetime.date.today().isoformat()` (im
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k scaffold -v`
-Expected: PASS (3 passed)
+Run: `uv run pytest tests/test_format_frontmatter.py -k scaffold -v` Expected: PASS (3 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1420,6 +1409,7 @@ git commit -m "feat(format): scaffold schema-valid block into no-frontmatter fil
 ### Task A9: CLI (`main`), `--check`/`--write`/`--stdin`, custom-schema skip, atomic write
 
 **Files:**
+
 - Modify: `src/project_standards/format_frontmatter.py`
 - Test: `tests/test_format_frontmatter.py` (append)
 - Modify: `pyproject.toml` (ensure console script present from A1)
@@ -1479,8 +1469,7 @@ def test_stdin_conflicts_exit_2(conflict):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k "check_exits or write_formats or stdin_mode or custom_schema_skips" -v`
-Expected: FAIL — no `main`/`__main__`
+Run: `uv run pytest tests/test_format_frontmatter.py -k "check_exits or write_formats or stdin_mode or custom_schema_skips" -v` Expected: FAIL — no `main`/`__main__`
 
 - [ ] **Step 3: Implement the CLI**
 
@@ -1594,8 +1583,7 @@ Ensure the `[project.scripts]` entry from A1 is present, then `uv sync` to regis
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv sync && uv run pytest tests/test_format_frontmatter.py -k "check_exits or write_formats or stdin_mode or custom_schema_skips" -v`
-Expected: PASS (4 passed)
+Run: `uv sync && uv run pytest tests/test_format_frontmatter.py -k "check_exits or write_formats or stdin_mode or custom_schema_skips" -v` Expected: PASS (4 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1607,6 +1595,7 @@ git commit -m "feat(format): CLI (--check/--write/--stdin), custom-schema skip, 
 ### Task A10: Idempotence property test + dogfood check
 
 **Files:**
+
 - Test: `tests/test_format_frontmatter.py` (append)
 
 - [ ] **Step 1: Write the failing/guard test**
@@ -1630,18 +1619,15 @@ def test_format_is_idempotent(src):
 
 - [ ] **Step 2: Run test**
 
-Run: `uv run pytest tests/test_format_frontmatter.py -k idempotent -v`
-Expected: PASS (4 passed) — fix any transform that is not stable until it does
+Run: `uv run pytest tests/test_format_frontmatter.py -k idempotent -v` Expected: PASS (4 passed) — fix any transform that is not stable until it does
 
 - [ ] **Step 3: Dogfood the repo**
 
-Run: `uv run format-frontmatter --check --config .project-standards.yml`
-Expected: exit 0 (the repo's managed docs are already canonical). If any file would reformat, inspect — a true cleanup is fine to apply with `--write`; a wrongful change is a transform bug to fix.
+Run: `uv run format-frontmatter --check --config .project-standards.yml` Expected: exit 0 (the repo's managed docs are already canonical). If any file would reformat, inspect — a true cleanup is fine to apply with `--write`; a wrongful change is a transform bug to fix.
 
 - [ ] **Step 4: Run the full toolchain gate**
 
-Run the gate command from the top of this plan.
-Expected: all green; coverage ≥ 91%.
+Run the gate command from the top of this plan. Expected: all green; coverage ≥ 91%.
 
 - [ ] **Step 5: Commit**
 
@@ -1657,6 +1643,7 @@ git commit -m "test(format): idempotence property + dogfood clean"
 ### Task B1: Repo index + id-uniqueness check + CLI skeleton
 
 **Files:**
+
 - Create: `src/project_standards/validate_references.py`
 - Test: `tests/test_validate_references.py`
 - Modify: `pyproject.toml` (`validate-references` console script)
@@ -1692,8 +1679,7 @@ def test_unique_ids_no_error(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_references.py -v`
-Expected: FAIL — module missing
+Run: `uv run pytest tests/test_validate_references.py -v` Expected: FAIL — module missing
 
 - [ ] **Step 3: Implement the index + first check + CLI**
 
@@ -1809,8 +1795,7 @@ Add `validate-references = "project_standards.validate_references:main"` to `[pr
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_validate_references.py -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_validate_references.py -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1822,6 +1807,7 @@ git commit -m "feat(references): repo index + id-uniqueness check + CLI skeleton
 ### Task B2: Date ordering check (`created ≤ updated`, `reviewed ≥ created`)
 
 **Files:**
+
 - Modify: `src/project_standards/validate_references.py`
 - Test: `tests/test_validate_references.py` (append)
 
@@ -1853,8 +1839,7 @@ def test_valid_dates_no_error(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_references.py -k dates -v`
-Expected: FAIL — `check_dates` missing
+Run: `uv run pytest tests/test_validate_references.py -k dates -v` Expected: FAIL — `check_dates` missing
 
 - [ ] **Step 3: Implement**
 
@@ -1876,8 +1861,7 @@ def check_dates(index: Index) -> list[str]:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_validate_references.py -k dates -v`
-Expected: PASS (3 passed)
+Run: `uv run pytest tests/test_validate_references.py -k dates -v` Expected: PASS (3 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1889,6 +1873,7 @@ git commit -m "feat(references): date-ordering check (created<=updated, reviewed
 ### Task B3: Referential integrity (warning) + null/anchor/path rules
 
 **Files:**
+
 - Modify: `src/project_standards/validate_references.py`
 - Test: `tests/test_validate_references.py` (append)
 
@@ -1940,8 +1925,7 @@ def test_anchor_and_absolute_paths_do_not_resolve(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_references.py -k "reference or null_superseded or anchor" -v`
-Expected: FAIL — `check_references` missing
+Run: `uv run pytest tests/test_validate_references.py -k "reference or null_superseded or anchor" -v` Expected: FAIL — `check_references` missing
 
 - [ ] **Step 3: Implement**
 
@@ -1982,8 +1966,7 @@ Wire in `main`: `warnings += check_references(index, Path.cwd())` (cwd is the re
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_validate_references.py -k "reference or null_superseded or anchor" -v`
-Expected: PASS (5 passed)
+Run: `uv run pytest tests/test_validate_references.py -k "reference or null_superseded or anchor" -v` Expected: PASS (5 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1995,6 +1978,7 @@ git commit -m "feat(references): referential-integrity warnings (paths/ids, null
 ### Task B4: Supersede reciprocity (warning) + ADR sequence (error)
 
 **Files:**
+
 - Modify: `src/project_standards/validate_references.py`
 - Test: `tests/test_validate_references.py` (append)
 
@@ -2034,8 +2018,7 @@ def test_duplicate_adr_number_is_error(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_validate_references.py -k "reciprocity or adr_number" -v`
-Expected: FAIL
+Run: `uv run pytest tests/test_validate_references.py -k "reciprocity or adr_number" -v` Expected: FAIL
 
 - [ ] **Step 3: Implement**
 
@@ -2100,8 +2083,7 @@ Wire both in `main`: `warnings += check_reciprocity(index)` and `errors += check
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_validate_references.py -k "reciprocity or adr_number" -v`
-Expected: PASS (2 passed)
+Run: `uv run pytest tests/test_validate_references.py -k "reciprocity or adr_number" -v` Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit + dogfood**
 
@@ -2116,6 +2098,7 @@ git commit -m "feat(references): supersede reciprocity (warn) + ADR sequence (er
 ### Task B5: Compatibility flags + opt-in gate tests
 
 **Files:**
+
 - Test: `tests/test_validate_references.py` (append)
 
 - [ ] **Step 1: Write the test**
@@ -2154,8 +2137,7 @@ def test_no_require_frontmatter_is_accepted(tmp_path):
 
 - [ ] **Step 2: Run test**
 
-Run: `uv run pytest tests/test_validate_references.py -k "disabled_by_default or forwarded_schema or no_require" -v`
-Expected: PASS (3 passed) — these exercise the flags already added in B1; fix the parser if any flag errors
+Run: `uv run pytest tests/test_validate_references.py -k "disabled_by_default or forwarded_schema or no_require" -v` Expected: PASS (3 passed) — these exercise the flags already added in B1; fix the parser if any flag errors
 
 - [ ] **Step 3: Toolchain gate**
 
@@ -2175,6 +2157,7 @@ git commit -m "test(references): opt-in gate + forwarded-flag compatibility"
 ### Task C1: `project-standards validate` also runs references
 
 **Files:**
+
 - Modify: `src/project_standards/cli.py` (the `validate` early-dispatch at lines 136-185)
 - Test: `tests/test_cli_fix.py` (create)
 
@@ -2212,8 +2195,7 @@ def test_validate_runs_references_when_enabled(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_cli_fix.py -k validate_runs_references -v`
-Expected: FAIL — references not run by `validate`
+Run: `uv run pytest tests/test_cli_fix.py -k validate_runs_references -v` Expected: FAIL — references not run by `validate`
 
 - [ ] **Step 3: Implement**
 
@@ -2234,8 +2216,7 @@ In the `validate` early-dispatch (after computing `rc_frontmatter` and `rc_id`),
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_cli_fix.py -k validate_runs_references -v`
-Expected: PASS
+Run: `uv run pytest tests/test_cli_fix.py -k validate_runs_references -v` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -2247,6 +2228,7 @@ git commit -m "feat(cli): validate also runs validate-references (self-gated)"
 ### Task C2: `project-standards fix` subcommand (format → id-fix → final validate)
 
 **Files:**
+
 - Modify: `src/project_standards/cli.py`
 - Test: `tests/test_cli_fix.py` (append)
 
@@ -2343,8 +2325,7 @@ def test_validate_fails_on_duplicate_keys(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_cli_fix.py -k fix_leaves_validate_clean -v`
-Expected: FAIL — `fix` is not a subcommand
+Run: `uv run pytest tests/test_cli_fix.py -k fix_leaves_validate_clean -v` Expected: FAIL — `fix` is not a subcommand
 
 - [ ] **Step 3: Implement**
 
@@ -2406,8 +2387,7 @@ Register a `fix` subparser (for `--help` advertising) alongside the `validate` o
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_cli_fix.py -k fix_leaves_validate_clean -v`
-Expected: PASS
+Run: `uv run pytest tests/test_cli_fix.py -k fix_leaves_validate_clean -v` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -2419,6 +2399,7 @@ git commit -m "feat(cli): project-standards fix (format -> id-fix -> final valid
 ### Task C3: Reusable workflow runs `validate-references`
 
 **Files:**
+
 - Modify: `.github/workflows/validate-markdown-frontmatter.yml`
 - Test: `tests/test_precommit_hooks.py` (create — also used by C4)
 
@@ -2439,33 +2420,31 @@ def test_workflow_invokes_validate_references():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_precommit_hooks.py -k workflow -v`
-Expected: FAIL — workflow has no references step
+Run: `uv run pytest tests/test_precommit_hooks.py -k workflow -v` Expected: FAIL — workflow has no references step
 
 - [ ] **Step 3: Implement**
 
 In `.github/workflows/validate-markdown-frontmatter.yml`, mirror the existing `validate-id` steps with a `validate-references` step for both branches (the `github.repository == 'L3DigitalNet/project-standards'` `uv run` branch and the consumer `uvx`/installed branch). Example (internal branch):
 
 ```yaml
-      - name: Validate references
-        if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv run validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+- name: Validate references
+  if: github.repository == 'L3DigitalNet/project-standards'
+  run: uv run validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
 ```
 
 And the consumer branch:
 
 ```yaml
-      - name: Validate references
-        if: github.repository != 'L3DigitalNet/project-standards'
-        run: validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+- name: Validate references
+  if: github.repository != 'L3DigitalNet/project-standards'
+  run: validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
 ```
 
 (`validate-references` self-gates on `references.enabled`, so it is a no-op exit 0 unless the consumer opted in.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_precommit_hooks.py -k workflow -v`
-Expected: PASS
+Run: `uv run pytest tests/test_precommit_hooks.py -k workflow -v` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -2477,6 +2456,7 @@ git commit -m "feat(ci): reusable workflow runs validate-references (self-gated)
 ### Task C4: `.pre-commit-hooks.yaml`
 
 **Files:**
+
 - Create: `.pre-commit-hooks.yaml`
 - Test: `tests/test_precommit_hooks.py` (append)
 
@@ -2505,8 +2485,7 @@ def test_references_hook_runs_whole_repo():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v`
-Expected: FAIL — file missing
+Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v` Expected: FAIL — file missing
 
 - [ ] **Step 3: Implement**
 
@@ -2554,13 +2533,14 @@ Expected: FAIL — file missing
 
 - [ ] **Step 4: Run tests + validate the manifest (works on the untracked file)**
 
-Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v`
-Expected: PASS
+Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v` Expected: PASS
 
 `validate-manifest` reads the explicit local path, so it works before the file is tracked. `pre-commit` is not a repo dependency, so `uvx` runs it without declaring one:
+
 ```bash
 uvx pre-commit validate-manifest .pre-commit-hooks.yaml
 ```
+
 Expected: manifest valid.
 
 - [ ] **Step 5: Commit (so `try-repo` can see the manifest)**
@@ -2573,14 +2553,17 @@ git commit -m "feat(pre-commit): ship .pre-commit-hooks.yaml (fix + check ids)"
 - [ ] **Step 6: Smoke-test the hook via `try-repo` (AFTER the commit)**
 
 `try-repo` clones the repo's **tracked** state, so a newly created untracked manifest would be invisible — it must run after Step 5's commit (CR-006):
+
 ```bash
 uvx pre-commit try-repo . format-frontmatter-check --all-files
 ```
+
 Expected: the check hook installs (against Python 3.14 per `language_version`) and runs.
 
 ### Task C5: Documentation + final gate
 
 **Files:**
+
 - Modify: `standards/markdown-frontmatter/README.md`, `standards/markdown-frontmatter/adopt.md`, `src/project_standards/README.md`, `CHANGELOG.md`
 
 - [ ] **Step 1: Update the standard docs**
@@ -2590,12 +2573,14 @@ Document `format-frontmatter` (modes, transforms, denylist, scaffold), `validate
 - [ ] **Step 2: Dogfood + full gate**
 
 Run:
+
 ```bash
 uv run format-frontmatter --check --config .project-standards.yml
 uv run project-standards validate --config .project-standards.yml
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
+
 Expected: all green; coverage ≥ 91%; `format-frontmatter --check` clean on the repo.
 
 - [ ] **Step 3: Commit**
@@ -2613,7 +2598,7 @@ git commit -m "docs: document frontmatter formatter, references, and fix for 2.1
 
 **Spec coverage:** A (tokenizer A1, reorder A2, quoting A3, lists A4, rename/inject A5, inference+denylist A6, extension/CRLF A7, scaffold A8, CLI+custom-schema+atomic A9, idempotence+dogfood A10) ✓ · B (id-uniqueness B1, dates B2, references B3, reciprocity+ADR B4, flags/opt-in B5) ✓ · C (validate-extension C1, fix C2, workflow C3, pre-commit C4, docs C5) ✓ · Decisions 1–14 + SA-001…008 + SA-NEW-001…003 each map to a task. Phase 0 resolves the shared-`slugify` open question.
 
-**Placeholder scan:** no TBD/TODO-as-instruction; the only literal `TODO:` is the scaffold placeholder *string* (intended output). Every code step shows real code; every command shows expected result.
+**Placeholder scan:** no TBD/TODO-as-instruction; the only literal `TODO:` is the scaffold placeholder _string_ (intended output). Every code step shows real code; every command shows expected result.
 
 **Type consistency:** `format_text(text, *, path, scaffold=False, today=None, bump_updated=False) -> (str, bool, list[str])` is consistent A1→A10 and C2. `Entry(key, lines)`, `Index(docs, by_id, ids)`, `Doc(path, meta)` are used consistently. Check names: `build_index`, `check_id_uniqueness`, `check_dates`, `check_references`, `check_reciprocity`, `check_adr_sequence` — all referenced consistently in B and C. `is_denylisted`, `_infer_doc_type`, `_emit_single_quoted`, `_line_ending` consistent across A tasks. The custom-schema predicate is the **public** `schema_value_is_path` (Task 0.4) everywhere.
 

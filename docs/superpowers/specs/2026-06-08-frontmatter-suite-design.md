@@ -4,27 +4,28 @@
 
 ## Table of Contents
 
-- [Problem / Goal](#problem--goal)
-- [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
-- [Invariants — the consumer contract (must NOT change)](#invariants--the-consumer-contract-must-not-change)
-- [Sub-project A — `format-frontmatter` (autoformatter)](#sub-project-a--format-frontmatter-autoformatter)
-  - [A.1 CLI surface](#a1-cli-surface)
-  - [A.2 Transform pipeline (deterministic, idempotent)](#a2-transform-pipeline-deterministic-idempotent)
-  - [A.3 Serializer — line-based reconstruction](#a3-serializer--line-based-reconstruction)
-  - [A.4 Hardcoded refusal set (denylist)](#a4-hardcoded-refusal-set-denylist)
-  - [A.5 Scaffold mode (part of default `--write`)](#a5-scaffold-mode-part-of-default---write)
-  - [A.6 Fail-safe for unsupported YAML](#a6-fail-safe-for-unsupported-yaml)
-  - [A.7 Testing](#a7-testing)
-- [Sub-project B — `validate-references` (semantic validators)](#sub-project-b--validate-references-semantic-validators)
-  - [B.1 CLI surface + config](#b1-cli-surface--config)
-  - [B.2 Repo index](#b2-repo-index)
-  - [B.3 Checks](#b3-checks)
-  - [B.4 Testing](#b4-testing)
-- [Sub-project C — ergonomics](#sub-project-c--ergonomics)
-- [Acceptance criteria](#acceptance-criteria)
-- [Non-goals](#non-goals)
-- [Versioning impact](#versioning-impact)
-- [Open implementation questions (for the plan, not blockers)](#open-implementation-questions-for-the-plan-not-blockers)
+- [Design: Frontmatter validation + autocorrection suite](#design-frontmatter-validation--autocorrection-suite)
+  - [Table of Contents](#table-of-contents)
+  - [Problem / Goal](#problem--goal)
+  - [Decisions (locked during brainstorming)](#decisions-locked-during-brainstorming)
+  - [Invariants — the consumer contract (must NOT change)](#invariants--the-consumer-contract-must-not-change)
+  - [Sub-project A — `format-frontmatter` (autoformatter)](#sub-project-a--format-frontmatter-autoformatter)
+    - [A.1 CLI surface](#a1-cli-surface)
+    - [A.2 Transform pipeline (deterministic, idempotent)](#a2-transform-pipeline-deterministic-idempotent)
+    - [A.3 Serializer — line-based reconstruction](#a3-serializer--line-based-reconstruction)
+    - [A.4 Hardcoded refusal set (denylist)](#a4-hardcoded-refusal-set-denylist)
+    - [A.5 Scaffold mode (part of default `--write`)](#a5-scaffold-mode-part-of-default---write)
+    - [A.6 Fail-safe for unsupported YAML](#a6-fail-safe-for-unsupported-yaml)
+    - [A.7 Testing](#a7-testing)
+  - [Sub-project B — `validate-references` (semantic validators)](#sub-project-b--validate-references-semantic-validators)
+    - [B.1 CLI surface + config](#b1-cli-surface--config)
+    - [B.2 Repo index](#b2-repo-index)
+    - [B.3 Checks](#b3-checks)
+    - [B.4 Testing](#b4-testing)
+  - [Sub-project C — ergonomics](#sub-project-c--ergonomics)
+  - [Acceptance criteria](#acceptance-criteria)
+  - [Non-goals](#non-goals)
+  - [Open implementation questions (for the plan, not blockers)](#open-implementation-questions-for-the-plan-not-blockers)
 
 ## Problem / Goal
 
@@ -50,11 +51,11 @@ A and B are independent; C wraps A. Build order A → B → C; all three ship in
 5. **`doc_type` inference is fill/correct-only and ID-safe** — apply the standard's path rules (`README.md`/`index.md` → `index`; under `docs/research/` → `research`) **only when `doc_type` is missing or not a valid enum value**, and when scaffolding a new block. A valid explicit `doc_type` is **never** overridden. (Reversed from the round-0 "override even valid" rule: overriding a valid `doc_type` while the formatter leaves `id` untouched would create an `id`/`doc_type` mismatch that `validate-id` rejects — this repo's `standards/*/README.md` are validly `doc_type: 'reference'` with `reference-…` ids. See codex SA-001.)
 6. **`updated:` is not bumped by default.** Auto-bump to today is available only via an explicit `--bump-updated` flag. A cosmetic reformat must not claim the document's content was updated.
 7. **Scaffold-empty is part of the default `--write`**: an included, non-denylisted file with no frontmatter block gets a fabricated block in the same pass.
-8. **A carries a hardcoded refusal set** (basenames `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`; any path under `.claude/`, `.agents/`, `.codex/`) that overrides include/scaffold **unconditionally**, independent of config. Config decides *what is formatted*; the denylist guarantees *what can never be touched* even when a consumer's `exclude` is misconfigured.
+8. **A carries a hardcoded refusal set** (basenames `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`; any path under `.claude/`, `.agents/`, `.codex/`) that overrides include/scaffold **unconditionally**, independent of config. Config decides _what is formatted_; the denylist guarantees _what can never be touched_ even when a consumer's `exclude` is misconfigured.
 9. **`schema_version` is injected only when missing** (= the bundled contract version); an existing value is never changed (a version change is a contract migration, not formatting).
 10. **Unknown top-level keys are warn-only**, never auto-deleted (the formatter cannot know the author's intent; the schema's `additionalProperties:false` already errors on them).
 11. **B is a new module** `src/project_standards/validate_references.py` + console script `validate-references`, a repo-wide pass. It is **opt-in via config** (`markdown.frontmatter.references.enabled`, default `false`) so a minor-version upgrade never newly-fails an existing consumer's CI.
-12. **B dangling references are a warning, not an error** (exit 0). A reference resolves if it is an existing file path **or** a known `id` in the repo index; neither → warning. Rationale: ADR ids and `related:` legitimately cite *other repos'* ids, which are not locally resolvable.
+12. **B dangling references are a warning, not an error** (exit 0). A reference resolves if it is an existing file path **or** a known `id` in the repo index; neither → warning. Rationale: ADR ids and `related:` legitimately cite _other repos'_ ids, which are not locally resolvable.
 13. **B checks and levels:** `id` uniqueness (**error**), referential integrity (**warning** on dangling), supersede reciprocity (**warning**), date ordering `created ≤ updated` and `reviewed ≥ created` (**error**), duplicate ADR `NNNN` sequence in one repo (**error**).
 14. **C:** `project-standards fix` = `format-frontmatter --write` **first** (normalizes `type`→`doc_type` and fills missing `doc_type`), **then** `validate-id --fix` (id now derivable from a valid `doc_type`), **then a final `project-standards validate`** that fails if any id/schema check still fails — proving the fix postcondition (codex SA-002). `project-standards validate` is extended to also run `validate-references` (self-gates on config), **and the reusable consumer workflow runs it too** (codex SA-003). `format-frontmatter` gains `--stdin`. A root `.pre-commit-hooks.yaml` ships **both** a mutating and a check-only hook id per tool. `format-frontmatter`/`fix` **skip when a custom schema is configured**, mirroring `validate-id` (codex SA-008).
 
@@ -117,7 +118,7 @@ For an included, non-denylisted file with **no** frontmatter block, fabricate a 
 - `created` = `updated` = today (date source injectable for tests).
 - `tags` = `aliases` = `related` = `[]`.
 
-Scaffold gets the file ~90% of the way. Because the `TODO:` placeholder is schema-valid (the schema only requires a non-empty `description`; the standard's stricter description rules are documented conventions, not machine-enforced — codex SA-006), `--write` **reports every scaffolded file distinctly** (`scaffolded: <path> — fill in title/description`) rather than implying completeness. Scaffolded blocks are deliberate *starting points*, not finished documents; the distinct report is the author's signal to fill them in.
+Scaffold gets the file ~90% of the way. Because the `TODO:` placeholder is schema-valid (the schema only requires a non-empty `description`; the standard's stricter description rules are documented conventions, not machine-enforced — codex SA-006), `--write` **reports every scaffolded file distinctly** (`scaffolded: <path> — fill in title/description`) rather than implying completeness. Scaffolded blocks are deliberate _starting points_, not finished documents; the distinct report is the author's signal to fill them in.
 
 ### A.6 Fail-safe for unsupported YAML
 
@@ -136,7 +137,7 @@ validate-references [FILE ...] [--config PATH] [--schema PATH] [--glob PATTERN]
                     [--no-require-frontmatter] [--quiet]
 ```
 
-**Flag compatibility (codex SA-NEW-001):** `validate-references` accepts the *full* flag set that `project-standards validate` forwards to its validators — `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`, and `FILE` — so extending `validate` to call it never argparse-errors a previously-valid invocation like `project-standards validate --schema custom.json --quiet`. Under a custom schema (`--schema` or a config custom-schema path) it **skips with a note and exits 0**, mirroring `validate-id` (the reference/id/ADR checks assume the bundled id conventions). `--no-require-frontmatter` is a compat no-op — references already skip files lacking frontmatter.
+**Flag compatibility (codex SA-NEW-001):** `validate-references` accepts the _full_ flag set that `project-standards validate` forwards to its validators — `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`, and `FILE` — so extending `validate` to call it never argparse-errors a previously-valid invocation like `project-standards validate --schema custom.json --quiet`. Under a custom schema (`--schema` or a config custom-schema path) it **skips with a note and exits 0**, mirroring `validate-id` (the reference/id/ADR checks assume the bundled id conventions). `--no-require-frontmatter` is a compat no-op — references already skip files lacking frontmatter.
 
 New module `validate_references.py` (keeps `validate_frontmatter.py` from bloating). Opt-in config, added to `load_config`:
 
@@ -144,7 +145,7 @@ New module `validate_references.py` (keeps `validate_frontmatter.py` from bloati
 markdown:
   frontmatter:
     references:
-      enabled: true   # default false
+      enabled: true # default false
 ```
 
 When disabled, the tool runs no checks and exits 0 (so the unified `validate` can always call it).
@@ -177,7 +178,7 @@ Exit codes: **0** = no errors (warnings allowed), **1** = ≥1 error, **2** = co
 - **Extend `project-standards validate`**: after `validate-frontmatter` + `validate-id`, also call `validate_references.main(…)`, which self-gates on config (no config read needed in `cli.py`). Fold into the existing `max()` exit. `validate` is the single read-only gate; `fix` is the single writer.
 - **Reusable consumer workflow** (`.github/workflows/validate-markdown-frontmatter.yml`): add a `validate-references` step (gated on config) so a consumer who sets `references.enabled: true` actually gets CI coverage — today the workflow runs `validate-frontmatter` + `validate-id` as separate steps and would silently skip references (codex SA-003). A test asserts the workflow invokes the reference validator.
 - **`--stdin`** on `format-frontmatter` (A.1) for editor format-on-save.
-- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Each hook sets `language: python`, `types: [markdown]`, and the right `--write`/`--check`/`--fix` args. Per-file hooks (format / `validate-frontmatter` / `validate-id`) take the staged filenames; the **`validate-references` hook sets `pass_filenames: false`** because its cross-file checks (id uniqueness, ADR sequence) need the whole repo, not a staged subset. The package must be `pip install .`-able with matching console scripts (`format-frontmatter`, `validate-references` added to `[project.scripts]`); consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned `rev`. Per official pre-commit docs, a Python hook repo must be installable and expose an executable matching each `entry` (codex SA-007). Because the package is `requires-python >= 3.14`, pre-commit (which installs Python hooks with `pip install .` against the *system* Python by default) needs Python 3.14 available: each hook sets `language_version: python3.14` and the manifest/docs state the 3.14 prerequisite, and the `try-repo` smoke runs in a 3.14 environment (codex SA-NEW-002).
+- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Each hook sets `language: python`, `types: [markdown]`, and the right `--write`/`--check`/`--fix` args. Per-file hooks (format / `validate-frontmatter` / `validate-id`) take the staged filenames; the **`validate-references` hook sets `pass_filenames: false`** because its cross-file checks (id uniqueness, ADR sequence) need the whole repo, not a staged subset. The package must be `pip install .`-able with matching console scripts (`format-frontmatter`, `validate-references` added to `[project.scripts]`); consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned `rev`. Per official pre-commit docs, a Python hook repo must be installable and expose an executable matching each `entry` (codex SA-007). Because the package is `requires-python >= 3.14`, pre-commit (which installs Python hooks with `pip install .` against the _system_ Python by default) needs Python 3.14 available: each hook sets `language_version: python3.14` and the manifest/docs state the 3.14 prerequisite, and the `try-repo` smoke runs in a 3.14 environment (codex SA-NEW-002).
 
 Testing: `fix` dispatch (format→id-fix→final-validate, worst exit, final pass clean on `type:`+invalid-id / missing-arrays+invalid-id / path-inferred-`doc_type` fixtures); `validate` runs references when enabled; a reusable-workflow test asserts the `validate-references` invocation; `.pre-commit-hooks.yaml` passes `pre-commit validate-manifest`, every `entry` resolves to a real `[project.scripts]` console script, and `pre-commit try-repo . format-frontmatter-check --all-files` runs the hook successfully.
 

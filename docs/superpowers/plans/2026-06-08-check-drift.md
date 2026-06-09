@@ -43,10 +43,13 @@
 - [ ] **Step 1: Confirm the hold is lifted.** Ask the user whether `check` (2.2.0) implementation is cleared to start. `check` targets **2.2.0, after 2.1.0 ships** — do not proceed on assumption.
 - [ ] **Step 2: Establish a clean, owned baseline.** Run `git status --short` and `git log --oneline -8`. The working tree must be clean, or every dirty/untracked path must be explicitly owned by the user and unrelated to this plan. Resolve or stash unrelated in-flight work first.
 - [ ] **Step 3: Record the baseline gate.** Run the full SSOT gate and record its status BEFORE any change:
+  <!-- Prettier owns blank-line placement around fences and keeps list-nested fences tight (cf. the MD032 exclusion). -->
+  <!-- markdownlint-disable MD031 -->
   ```bash
   uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
     && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
   ```
+  <!-- markdownlint-enable MD031 -->
   It must be green at the start. If red, fix the cause (or get the user's explicit acknowledgement) before Task 1 — otherwise "keep the gate green after every task" is unverifiable.
 - [ ] **Step 4: Branch check.** Confirm you are on `testing` (the repo's development branch). Do not start on `main`.
 
@@ -57,6 +60,7 @@
 ## Task 1: `LockError` (exit 2)
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/errors.py`
 - Test: `tests/test_lock.py`
 
@@ -102,6 +106,7 @@ git commit -m "feat(check): add LockError (exit 2)"
 The lock records a per-standard `contract_version` (the `major.minor` registry plane). One accessor, reused by `adopt`'s lock stamping, `check`'s narration, and `--relock`.
 
 **Files:**
+
 - Modify: `src/project_standards/registry.py`
 - Modify: `src/project_standards/cli.py` (route the existing private helper through it — DRY)
 - Test: `tests/test_registry.py`
@@ -161,6 +166,7 @@ git commit -m "feat(check): Registry.default_contract accessor (DRY contract loo
 ## Task 3: `lock.py` — hashing + dataclasses + write/read round-trip
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/engine.py` (expose `atomic_write`)
 - Create: `src/project_standards/adopt/lock.py`
 - Test: `tests/test_lock.py`
@@ -393,6 +399,7 @@ git commit -m "feat(check): lockfile dataclasses, sha256, write/load + merge_and
 ## Task 4: `lock.py` — version guard + merge tests
 
 **Files:**
+
 - Test only: `tests/test_lock.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -448,6 +455,7 @@ git commit -m "test(check): lockfile_version guard + merge preservation"
 `adopt` must record the sha256 of the **rendered** bytes it writes, so the lock matches on-disk content (incl. `{{ref}}` substitution).
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/engine.py`
 - Test: `tests/test_adopt_writes_lock.py`
 
@@ -504,6 +512,7 @@ git commit -m "feat(check): execute_plan records rendered-byte hashes"
 ## Task 6: `cli.py` — `adopt` stamps the lock
 
 **Files:**
+
 - Modify: `src/project_standards/cli.py` (`_cmd_adopt`)
 - Test: `tests/test_adopt_writes_lock.py`
 
@@ -610,6 +619,7 @@ git commit -m "feat(check): adopt stamps .project-standards.lock (dry-run does n
 [CR-005] The data model is **grouped by standard** from the start, so the public JSON contract matches the spec (`standards[].artifacts[]` + `standards[].fragments[]`) and fragments surface as `SKIPPED`.
 
 **Files:**
+
 - Create: `src/project_standards/adopt/check.py`
 - Test: `tests/test_check.py`
 
@@ -823,6 +833,7 @@ git commit -m "feat(check): grouped data model + core state machine"
 ## Task 8: `check.py` — `UNLOCKED`, `local_edits`, `UNSAFE`, restamp-pending edges
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/check.py` (`_classify`)
 - Test: `tests/test_check.py`, `tests/test_check_safety.py`
 
@@ -947,6 +958,7 @@ git commit -m "feat(check): UNLOCKED, local_edits, UNSAFE, restamp-pending"
 [CR-005] JSON emits the spec's `standards[]` shape with `contract_version`, `owners`, and `fragments`. [CR-006] `emit_ci_annotations` surfaces non-failing drift on a green CI run.
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/check.py`
 - Test: `tests/test_check.py`
 
@@ -1176,6 +1188,7 @@ git commit -m "feat(check): grouped JSON, dedup report, exit code, CI annotation
 ## Task 10: `cli.py` — `check` subcommand + flag matrix
 
 **Files:**
+
 - Modify: `src/project_standards/cli.py`
 - Test: `tests/test_check_cli.py`
 
@@ -1328,6 +1341,7 @@ git commit -m "feat(check): check subcommand (detect mode) + flag-matrix validat
 [CR-004] Files first, then **one** in-memory lock rebuild + a single `write_lock`. [CR-003] A local edit that now matches the template (incl. after `--force`) is **promoted** out of `[local_edits]` into `[artifacts]`, so a future template change reports `STALE`, not `LOCAL-EDIT`.
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/check.py`
 - Test: `tests/test_check_safety.py`
 
@@ -1569,6 +1583,7 @@ git commit -m "feat(check): apply_update — single atomic lock write, edit prom
 ## Task 12: `check.py` — `relock` bootstrap
 
 **Files:**
+
 - Modify: `src/project_standards/adopt/check.py` (replace the `relock` stub)
 - Test: `tests/test_check_cli.py`
 
@@ -1666,6 +1681,7 @@ git commit -m "feat(check): --relock bootstrap (matching->artifacts, divergent->
 [CR-008] The workflow pins Python `3.14` so the checker (which requires `>=3.14`) does not depend on the runner default.
 
 **Files:**
+
 - Create: `.github/workflows/standards-drift.yml`
 - Create: `src/project_standards/bundles/_shared/drift-check.caller.yml`
 - Test: `tests/test_check_cli.py`
@@ -1700,10 +1716,10 @@ on:
   workflow_call:
     inputs:
       standards-ref:
-        description: "Git ref of project-standards to run check from (e.g. v2)."
+        description: 'Git ref of project-standards to run check from (e.g. v2).'
         type: string
         required: false
-        default: "v2"
+        default: 'v2'
 
 permissions:
   contents: read
@@ -1716,7 +1732,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          version: "0.11.6"
+          version: '0.11.6'
 
       # check itself emits ::warning:: + step-summary for non-failing drift (GITHUB_ACTIONS).
       - name: Check standards drift
@@ -1735,7 +1751,7 @@ name: Standards Drift
 on:
   pull_request:
   push:
-    branches: ["main"]
+    branches: ['main']
 
 jobs:
   drift:
@@ -1762,6 +1778,7 @@ git commit -m "feat(check): ref-pinned + python-pinned reusable drift workflow +
 [CR-007] Docs touch **all four** standards' adopt docs + the handoff pointer table, not just two.
 
 **Files:**
+
 - Modify: `CHANGELOG.md`, `docs/handoff/{architecture,deployed,state,specs-plans}.md`
 - Modify: `standards/markdown-frontmatter/adopt.md`, `standards/adr/adopt.md`, `standards/python-tooling/adopt.md`, `standards/markdown-tooling/adopt.md`
 - Modify: `tests/test_adopt_packaging.py` (assert `lock.py`/`check.py` + the caller template ship in the wheel)
@@ -1772,6 +1789,7 @@ git commit -m "feat(check): ref-pinned + python-pinned reusable drift workflow +
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
+
 Expected: green; `check.py`/`lock.py` coverage ≥ ~94%. Add targeted tests for any uncovered branch (e.g. `_disk_hash` OSError via monkeypatch; corrupt lock at the CLI boundary → exit 2; `ManifestError` → exit 3 with a broken-source fixture).
 
 - [ ] **Step 2: Dogfood frontmatter** — `uv run validate-frontmatter --config .project-standards.yml` → PASS.
@@ -1782,14 +1800,9 @@ Expected: green; `check.py`/`lock.py` coverage ≥ ~94%. Add targeted tests for 
 
 ```markdown
 ### Added
-- `project-standards check` — drift detection for adopted standard artifacts, backed by a new
-  `.project-standards.lock` provenance file that `adopt` now writes. States CLEAN/STALE/
-  LOCAL-EDIT/MISSING/UNLOCKED/ORPHAN/UNSAFE (STALE/MISSING/UNLOCKED/UNSAFE fail CI; LOCAL-EDIT/
-  ORPHAN warn; CLEAN may flag restamp-pending). `check --update` safely re-syncs stale-and-
-  unedited artifacts (single atomic lock write; promotes resolved edits); `check --relock
-  <standard>…` baselines an already-adopted repo with zero file writes.
-- Reusable `standards-drift.yml` workflow (ref- + Python-pinned) + `_shared/drift-check.caller.yml`;
-  non-failing drift surfaces via `::warning::` + step summary on GitHub Actions.
+
+- `project-standards check` — drift detection for adopted standard artifacts, backed by a new `.project-standards.lock` provenance file that `adopt` now writes. States CLEAN/STALE/ LOCAL-EDIT/MISSING/UNLOCKED/ORPHAN/UNSAFE (STALE/MISSING/UNLOCKED/UNSAFE fail CI; LOCAL-EDIT/ ORPHAN warn; CLEAN may flag restamp-pending). `check --update` safely re-syncs stale-and- unedited artifacts (single atomic lock write; promotes resolved edits); `check --relock <standard>…` baselines an already-adopted repo with zero file writes.
+- Reusable `standards-drift.yml` workflow (ref- + Python-pinned) + `_shared/drift-check.caller.yml`; non-failing drift surfaces via `::warning::` + step summary on GitHub Actions.
 ```
 
 - [ ] **Step 5: Handoff + adopt docs** — `architecture.md` (add `check`/`lock.py` to the component list; move the drift command off the standing backlog), `deployed.md` (reserve a `2.2.0` row, "implemented, not tagged"), `state.md` (current state, keep ≤ 2048 bytes), `specs-plans.md` (flip the plan row to "implemented on testing"). Add a short "Adopted-artifact drift" paragraph to **each** of the four `standards/*/adopt.md` files pointing to `check`/`--relock`.
