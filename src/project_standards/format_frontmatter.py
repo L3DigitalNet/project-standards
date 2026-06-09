@@ -1,8 +1,9 @@
 """Autoformatter for managed Markdown frontmatter (the write-side companion to
 validate-frontmatter). Tokenizes the leading YAML block into per-key entries,
 applies deterministic transforms, and re-emits the block preserving comments and
-per-line endings (same technique as validate_id --fix). Never touches `id` and
-never edits the document body."""
+per-line endings (same technique as validate_id --fix). Never changes the `id`
+value (it may re-quote it like any scalar, but the value is validate_id's domain)
+and never edits the document body."""
 
 from __future__ import annotations
 

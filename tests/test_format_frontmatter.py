@@ -550,14 +550,15 @@ def test_normalize_lists_yaml_error_is_skipped() -> None:
 
 
 def test_normalize_lists_non_dict_load_skipped() -> None:
-    # Covers line 279 — loaded is not a dict (e.g. a bare scalar)
-    # Build an entry that loads as something other than a dict when joined
-    entry = Entry(key="tags", lines=["tags: just-a-scalar\n"])
+    # The joined entry lines parse as a YAML list, not a mapping -> `not isinstance(
+    # loaded, dict)` is True and the entry is left untouched. Defensive guard: tokenize
+    # only ever builds `key:` entries, so this cannot arise in production; assert it via
+    # a direct Entry construction so the guard's contract is locked.
+    entry = Entry(key="tags", lines=["- list-item\n"])
     from project_standards.format_frontmatter import normalize_lists
 
     normalize_lists([entry])
-    # The key is not a list-type in the loaded dict sense, so it should be skipped
-    assert "just-a-scalar" in entry.lines[0]
+    assert entry.lines == ["- list-item\n"]  # unchanged (non-dict load skipped)
 
 
 def test_normalize_lists_scalar_where_list_expected_is_left() -> None:
