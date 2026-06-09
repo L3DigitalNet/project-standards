@@ -181,9 +181,7 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
     elif id_type != doc_type:
         # The prefix must exactly match the document's own doc_type — catching cases
         # where a document's type was changed after the id was authored.
-        errors.append(
-            f"prefix '{id_type}' does not match the document's doc_type '{doc_type}'"
-        )
+        errors.append(f"prefix '{id_type}' does not match the document's doc_type '{doc_type}'")
 
     # --- Segment 2: base-36 token ---
     if not _BASE36_RE.match(id_base36):
@@ -405,9 +403,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     # Accepted for compatibility when project-standards validate forwards its full argv.
     # Has no effect here: id validation already silently skips files without frontmatter.
-    parser.add_argument(
-        "--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS
-    )
+    parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
 
     args = parser.parse_args(argv)
 

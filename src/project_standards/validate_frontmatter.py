@@ -80,9 +80,7 @@ def _schema_value_is_path(value: str | None) -> bool:
     A bare token (e.g. "markdown-frontmatter") is a bundled schema name; anything
     with a path separator or a `.json` suffix is a path the consumer owns.
     """
-    return value is not None and (
-        "/" in value or "\\" in value or value.endswith(".json")
-    )
+    return value is not None and ("/" in value or "\\" in value or value.endswith(".json"))
 
 
 def resolve_schema_path(schema_value: str | None) -> Path:
@@ -331,15 +329,11 @@ def resolve_effective_schema(
     if custom_path:
         return Path(cast("str", schema_value))
     if config.frontmatter_version is not None:
-        return find_bundled_schema(
-            registry.frontmatter_schema_name(config.frontmatter_version)
-        )
+        return find_bundled_schema(registry.frontmatter_schema_name(config.frontmatter_version))
     return resolve_schema_path(schema_value)
 
 
-def frontmatter_adr_incompatibility(
-    config: ProjectConfig, registry: Registry
-) -> str | None:
+def frontmatter_adr_incompatibility(config: ProjectConfig, registry: Registry) -> str | None:
     """Return an error message if the configured ADR/Frontmatter pair is incompatible.
 
     Only meaningful when ADR is in play AND Frontmatter is a *bundled* contract — a
@@ -402,24 +396,18 @@ def load_config(path: Path) -> ProjectConfig:
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
                     version_val = fm.get("version")
-                    frontmatter_version = (
-                        str(version_val) if version_val is not None else None
-                    )
+                    frontmatter_version = str(version_val) if version_val is not None else None
                 adr = markdown_dict.get("adr")
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
                     require_adr_sections = bool(adr_dict.get("require_sections", False))
                     adr_version_val = adr_dict.get("version")
-                    adr_version = (
-                        str(adr_version_val) if adr_version_val is not None else None
-                    )
+                    adr_version = str(adr_version_val) if adr_version_val is not None else None
             python_tooling = raw_dict.get("python_tooling")
             if isinstance(python_tooling, dict):
                 pt_dict = cast("dict[str, Any]", python_tooling)
                 pt_version_val = pt_dict.get("version")
-                python_tooling_version = (
-                    str(pt_version_val) if pt_version_val is not None else None
-                )
+                python_tooling_version = str(pt_version_val) if pt_version_val is not None else None
             markdown_tooling = raw_dict.get("markdown_tooling")
             if isinstance(markdown_tooling, dict):
                 mt_dict = cast("dict[str, Any]", markdown_tooling)
@@ -504,9 +492,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # python_tooling.version is metadata only: validated if present, never emitted.
-    if (
-        config.python_tooling_version is not None
-        and not registry.is_known_python_tooling(config.python_tooling_version)
+    if config.python_tooling_version is not None and not registry.is_known_python_tooling(
+        config.python_tooling_version
     ):
         print(
             f"error: unknown python_tooling.version {config.python_tooling_version!r}",
@@ -515,9 +502,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # markdown_tooling.version is metadata only: validated if present, never emitted.
-    if (
-        config.markdown_tooling_version is not None
-        and not registry.is_known_markdown_tooling(config.markdown_tooling_version)
+    if config.markdown_tooling_version is not None and not registry.is_known_markdown_tooling(
+        config.markdown_tooling_version
     ):
         print(
             f"error: unknown markdown_tooling.version {config.markdown_tooling_version!r}",
