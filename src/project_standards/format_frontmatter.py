@@ -199,6 +199,79 @@ def _requote_scalar_line(line: str, key: str) -> str:
     )
 
 
+def _line_ending(line: str) -> str:
+    """Return the line ending of `line`, or '' if the line has no trailing newline.
+
+    The regex design absorbs the final newline of the frontmatter body into the
+    close-fence group, so the very last physical line of `body` arrives without a
+    trailing newline.  Returning '' here lets callers preserve that absent newline
+    on the key line; item lines in a block list always use '\n'."""
+    if line.endswith("\r\n"):
+        return "\r\n"
+    if line.endswith("\n"):
+        return "\n"
+    return ""
+
+
+# The array-typed fields in the schema; only these are list-normalized.
+_LIST_FIELDS = ("tags", "aliases", "related", "supersedes", "depends_on", "applies_to", "source")
+
+
+def _leading_run(entry: Entry) -> int:
+    """Count of leading comment/blank lines before the entry's `key:` line."""
+    n = 0
+    for ln in entry.lines:
+        stripped = ln.rstrip("\r\n").lstrip(" \t")
+        if stripped == "" or stripped.startswith("#"):
+            n += 1
+        else:
+            break
+    return n
+
+
+def normalize_lists(entries: list[Entry]) -> None:
+    """In place: render each list-typed field as canonical block style (single-quoted
+    items, duplicates removed first-wins); an empty/absent value becomes `key: []`.
+    Values are read with yaml.BaseLoader so list items are NEVER type-coerced — e.g.
+    `[on, off]` stays the strings 'on'/'off', not booleans (CR-NEW-001)."""
+    for entry in entries:
+        if entry.key not in _LIST_FIELDS:
+            continue
+        lead = _leading_run(entry)
+        try:
+            loaded = yaml.load("".join(entry.lines[lead:]), Loader=yaml.BaseLoader)  # pyright: ignore[reportUnknownMemberType]
+        except yaml.YAMLError:
+            continue
+        if not isinstance(loaded, dict) or entry.key not in loaded:
+            continue
+        value = loaded[entry.key]
+        if not (value is None or value == "" or isinstance(value, list)):
+            continue  # a scalar where a list belongs -> leave for the validator
+        key_line = entry.lines[lead]
+        eol = _line_ending(entry.lines[-1])
+        # Indent by slice (NOT re.match(...).group(0), which basedpyright-strict flags — CR-NEW-002).
+        indent = key_line[: len(key_line) - len(key_line.lstrip(" \t"))]
+        after_colon = key_line.rstrip("\r\n").split(":", 1)[1] if ":" in key_line else ""
+        inline = _split_value_comment(after_colon)[1]  # comment after [], [a], or bare key (CR-NEW-004)
+        leading = entry.lines[:lead]
+        items: list[str] = value if isinstance(value, list) else []
+        seen: list[str] = []
+        for item in items:
+            s = item if isinstance(item, str) else str(item)
+            if s not in seen:
+                seen.append(s)
+        # item_eol: block-list items always need a real newline; fall back to '\n'
+        # when the key line has no trailing newline (last entry in body — the regex
+        # design absorbs that newline into close_fence).
+        item_eol = eol or "\n"
+        if not seen:
+            entry.lines = [*leading, f"{indent}{entry.key}: []{inline}{eol}"]
+        else:
+            rendered = [f"{indent}{entry.key}:{inline}{item_eol}"]
+            rendered += [f"{indent}  - {_emit_single_quoted(s)}{item_eol}" for s in seen]
+            entry.lines = [*leading, *rendered]
+
+
 def requote(entries: list[Entry]) -> None:
     """In place: single-quote the scalar value on each single-line scalar entry.
     Multi-line entries (lists, nested mappings) are left for their own transforms."""
@@ -262,6 +335,7 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     if reason is not None:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")
         return text, False, warnings
+    normalize_lists(entries)
     requote(entries)
     entries = reorder(entries, warnings)
     new_body = serialize(entries)

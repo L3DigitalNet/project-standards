@@ -181,3 +181,52 @@ def test_real_inline_comment_preserved_on_scalar():
     src = _doc(title="X  # keep me")  # whitespace + '#' IS a real comment
     new, _, _ = format_text(src, path=None)
     assert "title: 'X'  # keep me" in new
+
+
+def test_flow_list_becomes_block_and_dedupes():
+    src = _doc(tags_line="tags: ['a', 'b', 'a']")
+    new, changed, _ = format_text(src, path=None)
+    assert "tags:\n  - 'a'\n  - 'b'\n" in new
+    assert new.count("- 'a'") == 1
+    assert changed is True
+
+
+def test_empty_block_list_becomes_flow_empty():
+    src = _doc(tags_line="tags:")  # key with no value and no items -> tags: []
+    new, _, _ = format_text(src, path=None)
+    assert "tags: []" in new
+
+
+def test_boolean_like_list_items_kept_as_strings():
+    # list items must not be coerced (BaseLoader); [on, off, yes, no] stay strings (CR-NEW-001).
+    src = _doc(tags_line="tags: [on, off, yes, no]")
+    new, _, _ = format_text(src, path=None)
+    assert "- 'on'" in new and "- 'off'" in new and "- 'yes'" in new and "- 'no'" in new
+    assert "True" not in new and "False" not in new
+
+
+def test_inline_comment_preserved_on_flow_list():
+    src = _doc(tags_line="tags: [a, b]  # keep")  # CR-NEW-004
+    new, _, _ = format_text(src, path=None)
+    assert "tags:  # keep" in new  # comment moves to the block key line
+    assert "- 'a'" in new and "- 'b'" in new
+
+
+def test_inline_comment_preserved_on_empty_list():
+    src = _doc(tags_line="tags: []  # keep")  # CR-NEW-004
+    new, _, _ = format_text(src, path=None)
+    assert "tags: []  # keep" in new
+
+
+def test_hash_inside_quoted_list_item_not_a_comment():
+    src = _doc(extra="source: ['Issue #123']\n")  # CR-NEW-005: '#' inside quote is literal
+    new, _, _ = format_text(src, path=Path("docs/x.md"))
+    assert "- 'Issue #123'" in new  # whole item preserved, '#' kept
+    assert "source: []" not in new  # not emptied / mis-split
+
+
+def test_real_comment_after_quoted_list_item_preserved():
+    src = _doc(extra="source: ['Issue #123']  # keep\n")  # CR-NEW-005
+    new, _, _ = format_text(src, path=Path("docs/x.md"))
+    assert "- 'Issue #123'" in new
+    assert "source:  # keep" in new
