@@ -219,6 +219,31 @@ git add src/project_standards/validate_frontmatter.py tests/test_validate_frontm
 git commit -m "feat(config): add markdown.frontmatter.references.enabled"
 ```
 
+### Task 0.4: Make `schema_value_is_path` public (strict-basedpyright safe)
+
+> The new `format_frontmatter` and `validate_references` modules need the custom-schema predicate. Importing the private `_schema_value_is_path` into production code fails this repo's `strict` + `failOnWarnings` basedpyright (`reportPrivateUsage`), and adding `# pyright: ignore` in production is undesirable (codex CR-003). Promote it to a public name.
+
+**Files:**
+- Modify: `src/project_standards/validate_frontmatter.py` (def at line 77; callers at lines 94, 325, 352)
+
+- [ ] **Step 1: Rename and update internal callers**
+
+In `src/project_standards/validate_frontmatter.py`, rename `def _schema_value_is_path(` → `def schema_value_is_path(` and update the three internal call sites (in `resolve_schema_path`, `resolve_effective_schema`, `frontmatter_adr_incompatibility`) to the public name. No behavior change.
+
+- [ ] **Step 2: Run the existing suite (regression guard)**
+
+Run: `uv run pytest tests/test_validate_frontmatter.py -q && uv run basedpyright src/project_standards/validate_frontmatter.py`
+Expected: PASS; basedpyright clean.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/project_standards/validate_frontmatter.py
+git commit -m "refactor(validate_frontmatter): make schema_value_is_path public"
+```
+
+> **Note for all later tasks:** new modules import `schema_value_is_path` (public), never the underscore name.
+
 ---
 
 ## Phase A — `format-frontmatter`
@@ -275,6 +300,16 @@ def test_comment_block_preserved_on_roundtrip():
     new, changed, warnings = format_text(src, path=None)
     assert "# frozen at creation" in new
     assert changed is False
+
+
+def test_duplicate_top_level_key_is_refused():
+    # PyYAML silently keeps the last duplicate; the formatter must NOT rewrite such a
+    # block (it would erase the human-visible conflict). It skips with a warning. (CR-002)
+    src = CLEAN.replace("tags: []\n", "tags: []\ntags: ['x']\n")
+    new, changed, warnings = format_text(src, path=None)
+    assert new == src
+    assert changed is False
+    assert any("duplicate" in w for w in warnings)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -345,6 +380,7 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
     lines = _split_keepends(body)
     entries: list[Entry] = []
     pending: list[str] = []  # leading comment/blank lines for the next key
+    seen: set[str] = set()   # duplicate top-level keys are unsafe to reorder (CR-002)
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -357,10 +393,14 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
         m = _TOP_KEY_RE.match(content)
         if not m:
             return [], f"unrecognized top-level line: {content!r}"
+        key = m.group(1)
         value = m.group(2).lstrip()
         if value[:1] in ("&", "*") or value.startswith("<<") or value[:1] in ("|", ">"):
-            return [], f"unsupported YAML construct on key {m.group(1)!r}"
-        entry = Entry(key=m.group(1), lines=[*pending, line])
+            return [], f"unsupported YAML construct on key {key!r}"
+        if key in seen:
+            return [], f"duplicate top-level key {key!r} (refusing to rewrite)"
+        seen.add(key)
+        entry = Entry(key=key, lines=[*pending, line])
         pending = []
         i += 1
         # Gather indented continuation lines (block list items / nested mapping).
@@ -579,7 +619,9 @@ def test_double_quoted_becomes_single_quoted():
 Add this helper near the top of the test file (used by several tests):
 
 ```python
-def _doc(*, title="X", extra=""):
+def _doc(*, title="X", extra="", tags_line="tags: []"):
+    # tags_line lets a test vary the tags entry WITHOUT appending a second `tags:`
+    # (which would create a duplicate key the formatter now refuses — CR-002).
     return (
         "---\n"
         "schema_version: '1.1'\n"
@@ -590,7 +632,7 @@ def _doc(*, title="X", extra=""):
         "status: 'draft'\n"
         "created: '2026-06-08'\n"
         "updated: '2026-06-08'\n"
-        "tags: []\n"
+        f"{tags_line}\n"
         "aliases: []\n"
         "related: []\n"
         f"{extra}"
@@ -684,7 +726,7 @@ git commit -m "feat(format): single-quote scalar values (null/lists preserved)"
 
 ```python
 def test_flow_list_becomes_block_and_dedupes():
-    src = _doc(extra="tags: ['a', 'b', 'a']\n")
+    src = _doc(tags_line="tags: ['a', 'b', 'a']")
     new, changed, _ = format_text(src, path=None)
     assert "tags:\n  - 'a'\n  - 'b'\n" in new
     assert new.count("- 'a'") == 1
@@ -692,7 +734,7 @@ def test_flow_list_becomes_block_and_dedupes():
 
 
 def test_empty_block_list_becomes_flow_empty():
-    src = _doc(extra="tags:\n")  # key with no value and no items -> tags: []
+    src = _doc(tags_line="tags:")  # key with no value and no items -> tags: []
     new, _, _ = format_text(src, path=None)
     assert "tags: []" in new
 ```
@@ -739,15 +781,19 @@ def normalize_lists(entries: list[Entry]) -> None:
         leading = [ln for ln in entry.lines if not _TOP_KEY_RE.match(ln.rstrip("\r\n"))
                    and ln[:1] not in (" ", "\t")]
         indent = re.match(r"[ \t]*", entry.lines[len(leading)]).group(0)
+        # Preserve an inline comment on the list KEY line (e.g. `tags:  # canonical`).
+        key_src = entry.lines[len(leading)].rstrip("\r\n")
+        after_colon = key_src.split(":", 1)[1] if ":" in key_src else ""
+        inline_comment = after_colon if after_colon.strip().startswith("#") else ""
         if not value:
-            entry.lines = [*leading, f"{indent}{entry.key}: []{eol}"]
+            entry.lines = [*leading, f"{indent}{entry.key}: []{inline_comment}{eol}"]
             continue
         seen: list[str] = []
         for item in value:
             s = str(item)
             if s not in seen:
                 seen.append(s)
-        rendered = [f"{indent}{entry.key}:{eol}"]
+        rendered = [f"{indent}{entry.key}:{inline_comment}{eol}"]
         rendered += [f"{indent}  - {_emit_single_quoted(s)}{eol}" for s in seen]
         entry.lines = [*leading, *rendered]
 ```
@@ -1170,6 +1216,8 @@ git commit -m "feat(format): scaffold schema-valid block into no-frontmatter fil
 ```python
 import subprocess, sys
 
+import pytest
+
 
 def _run(args, **kw):
     return subprocess.run([sys.executable, "-m", "project_standards.format_frontmatter", *args],
@@ -1209,6 +1257,13 @@ def test_custom_schema_skips(tmp_path):
     r = _run(["--check", "--config", str(cfg), str(f)], cwd=tmp_path)
     assert r.returncode == 0
     assert "custom schema" in (r.stdout + r.stderr).lower()
+
+
+@pytest.mark.parametrize("conflict", [["x.md"], ["--glob", "*.md"], ["--write"]])
+def test_stdin_conflicts_exit_2(conflict):
+    r = _run(["--stdin", *conflict], input="---\ntitle: 'X'\n---\n")
+    assert r.returncode == 2
+    assert "stdin" in (r.stdout + r.stderr).lower()
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1225,17 +1280,23 @@ import sys
 import tempfile
 
 from project_standards.validate_frontmatter import (
-    ConfigError, collect_paths, load_config, _schema_value_is_path,
+    ConfigError, collect_paths, load_config, schema_value_is_path,
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
 
 
 def _atomic_write(path: Path, data: str) -> None:
+    """Write atomically AND preserve the original file's permission bits (codex
+    missing-consideration): mkstemp creates 0600, so copy the source mode first."""
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
             fh.write(data)
+        try:
+            os.chmod(tmp, path.stat().st_mode & 0o777)
+        except OSError:
+            pass
         os.replace(tmp, path)
     except BaseException:
         os.unlink(tmp)
@@ -1258,13 +1319,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", "-q", action="store_true")
     args = parser.parse_args(argv)
 
+    # SA-spec: --stdin reads one document and writes stdout; it is incompatible with a
+    # file set or in-place write. Enforce it (parser.error exits 2) — CR-005.
+    if args.stdin and (args.files or args.glob or args.write):
+        parser.error("--stdin cannot be combined with FILE, --glob, or --write")
+
     try:
         config = load_config(args.config)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    if args.schema is not None or _schema_value_is_path(config.schema):
+    if args.schema is not None or schema_value_is_path(config.schema):
         if not args.quiet:
             print("note: custom schema in use; skipping frontmatter formatting")
         return 0
@@ -1336,7 +1402,7 @@ import pytest
 
 CASES = [
     _doc(title="X").replace("title: 'X'", "title: X"),
-    _doc(extra="tags: ['b','a','b']\n"),
+    _doc(tags_line="tags: ['b','a','b']"),
     _doc().replace("schema_version: '1.1'\n", ""),
     _doc().replace("doc_type: 'note'\n", "type: 'note'\n"),
 ]
@@ -1435,7 +1501,7 @@ from typing import Any
 
 from project_standards.validate_frontmatter import (
     ConfigError, FrontmatterParseError, collect_paths, load_config,
-    parse_frontmatter, _schema_value_is_path,
+    parse_frontmatter, schema_value_is_path,
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
@@ -1499,7 +1565,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if not config.references_enabled:
         return 0  # opt-in: disabled -> no checks
-    if args.schema is not None or _schema_value_is_path(config.schema):
+    if args.schema is not None or schema_value_is_path(config.schema):
         if not args.quiet:
             print("note: custom schema in use; skipping reference validation")
         return 0
@@ -1735,6 +1801,16 @@ def test_missing_supersede_reciprocity_warns(tmp_path):
     assert any("reciprocal" in w or "supersedes" in w for w in warnings)
 
 
+def test_reverse_supersede_reciprocity_warns(tmp_path):
+    # B.supersedes A but A lacks superseded_by -> the OTHER direction (CR-004).
+    _write(tmp_path / "a.md", id="'note-aaaaaa-x'", doc_type="'note'",
+           created="'2026-01-01'", updated="'2026-01-02'")  # no superseded_by back
+    _write(tmp_path / "b.md", id="'note-bbbbbb-y'", doc_type="'note'",
+           created="'2026-01-01'", updated="'2026-01-02'", supersedes="['note-aaaaaa-x']")
+    warnings = check_reciprocity(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert any("superseded_by" in w for w in warnings)
+
+
 def test_duplicate_adr_number_is_error(tmp_path):
     _write(tmp_path / "a.md", id="'adr-0001-repo-one'", doc_type="'adr'",
            created="'2026-01-01'", updated="'2026-01-02'")
@@ -1766,9 +1842,14 @@ def _as_list(val: Any) -> list[str]:
 
 
 def check_reciprocity(index: Index) -> list[str]:
+    """Both directions of the supersede invariant (CR-004): A.superseded_by=B requires
+    B.supersedes=A, AND A.supersedes=B requires B.superseded_by=A. Only checked when
+    the counterpart doc is local (cross-repo ids can't be inspected)."""
     warnings: list[str] = []
     supersedes_map = {d.meta.get("id"): set(_as_list(d.meta.get("supersedes")))
                       for d in index.docs if isinstance(d.meta.get("id"), str)}
+    superseded_by_map = {d.meta.get("id"): set(_as_list(d.meta.get("superseded_by")))
+                         for d in index.docs if isinstance(d.meta.get("id"), str)}
     for doc in index.docs:
         a_id = doc.meta.get("id")
         for b_id in _as_list(doc.meta.get("superseded_by")):
@@ -1776,6 +1857,12 @@ def check_reciprocity(index: Index) -> list[str]:
                 warnings.append(
                     f"[warning] {doc.path}: '{a_id}' is superseded_by '{b_id}', "
                     f"but '{b_id}' does not list it in supersedes"
+                )
+        for b_id in _as_list(doc.meta.get("supersedes")):
+            if b_id in superseded_by_map and a_id not in superseded_by_map[b_id]:
+                warnings.append(
+                    f"[warning] {doc.path}: '{a_id}' supersedes '{b_id}', "
+                    f"but '{b_id}' does not list it in superseded_by"
                 )
     return warnings
 
@@ -1980,6 +2067,44 @@ def test_fix_leaves_validate_clean_for_type_and_bad_id(tmp_path):
     assert "id: 'note-" in text  # id regenerated from doc_type+title
     # postcondition: a follow-up validate is clean
     assert _ps(["validate", "--config", str(cfg)], tmp_path).returncode == 0
+
+
+def _full(did="a", doc_id="note-aaaaaa-x"):
+    return (
+        "---\n"
+        "schema_version: '1.1'\n"
+        f"id: '{doc_id}'\n"
+        f"title: '{did}'\n"
+        "description: 'd'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-01-01'\n"
+        "updated: '2026-01-02'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n# B\n"
+    )
+
+
+def test_fix_fails_on_reference_error_when_enabled(tmp_path):
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n")
+    # Both docs are schema-valid and id-valid, but share an id -> ONLY a reference error.
+    (tmp_path / "a.md").write_text(_full("a"))
+    (tmp_path / "b.md").write_text(_full("b"))  # same id -> duplicate
+    r = _ps(["fix", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 1  # CR-001: final validate (incl. references) catches the dup id
+
+
+def test_fix_skips_under_custom_schema(tmp_path):
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    schema: 'custom/my.json'\n    include: ['*.md']\n")
+    before = "---\ntitle: X\n---\n# B\n"
+    (tmp_path / "a.md").write_text(before)
+    r = _ps(["fix", "--config", str(cfg)], tmp_path)
+    assert r.returncode == 0
+    assert (tmp_path / "a.md").read_text() == before  # CR-001: no writes under custom schema
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1989,19 +2114,48 @@ Expected: FAIL — `fix` is not a subcommand
 
 - [ ] **Step 3: Implement**
 
-In `cli.py`, add `format_frontmatter` to imports and an early-dispatch for `fix` mirroring `validate` (place it right after the `validate` block, before the argparse parser is built):
+In `cli.py`, add `format_frontmatter` to imports (alongside `validate_references` from C1), add a small `--config` extractor, and add an early-dispatch for `fix` mirroring `validate` (place it right after the `validate` block, before the argparse parser is built):
+
+```python
+from pathlib import Path  # if not already imported
+
+
+def _extract_config_path(args: list[str]) -> Path:
+    """Pull the --config value out of a forwarded argv (default .project-standards.yml)."""
+    for i, a in enumerate(args):
+        if a == "--config" and i + 1 < len(args):
+            return Path(args[i + 1])
+        if a.startswith("--config="):
+            return Path(a.split("=", 1)[1])
+    return Path(".project-standards.yml")
+```
 
 ```python
     if args_list and args_list[0] == "fix":
         fix_args = args_list[1:]
         if "--help" in fix_args or "-h" in fix_args:
             print("usage: project-standards fix [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]\n"
-                  "Format frontmatter (--write), fix ids, then re-validate. Skips under a custom schema.")
+                  "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
+                  "Skips entirely under a custom schema.")
+            return 0
+        # Custom-schema preflight (CR-001): fix is bundled-only, like format/validate-id.
+        try:
+            fix_cfg = validate_frontmatter.load_config(_extract_config_path(fix_args))
+        except validate_frontmatter.ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if validate_frontmatter.schema_value_is_path(fix_cfg.schema):
+            print("note: custom schema in use; skipping fix", file=sys.stderr)
             return 0
         rc_format = format_frontmatter.main(["--write", *fix_args])
         rc_idfix = validate_id.main(["--fix", *fix_args])
-        # Final read-only postcondition: prove nothing invalid survived.
-        rc_check = max(validate_frontmatter.main(fix_args), validate_id.main(fix_args))
+        # Final postcondition = the SAME contract as `project-standards validate`,
+        # references included, so a "successful" fix cannot hide a reference error (CR-001).
+        rc_check = max(
+            validate_frontmatter.main(fix_args),
+            validate_id.main(fix_args),
+            validate_references.main(fix_args),
+        )
         return max(rc_format, rc_idfix, rc_check)
 ```
 
@@ -2164,12 +2318,12 @@ Expected: FAIL — file missing
 Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v`
 Expected: PASS
 
-If `pre-commit` is available, also run (manual smoke, not in CI gate):
+Smoke-test the manifest reproducibly via `uvx` — `pre-commit` is not a repo dependency, so `uvx` runs it without declaring one (CR-006):
 ```bash
-pre-commit validate-manifest .pre-commit-hooks.yaml
-pre-commit try-repo . format-frontmatter-check --all-files
+uvx pre-commit validate-manifest .pre-commit-hooks.yaml
+uvx pre-commit try-repo . format-frontmatter-check --all-files
 ```
-Expected: manifest valid; the check hook runs (Python 3.14 env).
+Expected: manifest valid; the check hook installs (against Python 3.14 per `language_version`) and runs.
 
 - [ ] **Step 5: Commit**
 
@@ -2215,4 +2369,6 @@ git commit -m "docs: document frontmatter formatter, references, and fix for 2.1
 
 **Placeholder scan:** no TBD/TODO-as-instruction; the only literal `TODO:` is the scaffold placeholder *string* (intended output). Every code step shows real code; every command shows expected result.
 
-**Type consistency:** `format_text(text, *, path, scaffold=False, today=None, bump_updated=False) -> (str, bool, list[str])` is consistent A1→A10 and C2. `Entry(key, lines)`, `Index(docs, by_id, ids)`, `Doc(path, meta)` are used consistently. Check names: `build_index`, `check_id_uniqueness`, `check_dates`, `check_references`, `check_reciprocity`, `check_adr_sequence` — all referenced consistently in B and C. `is_denylisted`, `_infer_doc_type`, `_emit_single_quoted`, `_line_ending` consistent across A tasks.
+**Type consistency:** `format_text(text, *, path, scaffold=False, today=None, bump_updated=False) -> (str, bool, list[str])` is consistent A1→A10 and C2. `Entry(key, lines)`, `Index(docs, by_id, ids)`, `Doc(path, meta)` are used consistently. Check names: `build_index`, `check_id_uniqueness`, `check_dates`, `check_references`, `check_reciprocity`, `check_adr_sequence` — all referenced consistently in B and C. `is_denylisted`, `_infer_doc_type`, `_emit_single_quoted`, `_line_ending` consistent across A tasks. The custom-schema predicate is the **public** `schema_value_is_path` (Task 0.4) everywhere.
+
+**Codex plan-review round 1 applied (CR-001…006):** CR-001 — `fix` final postcondition now calls all three validators (incl. references) + a custom-schema preflight (C2). CR-002 — tokenizer refuses duplicate top-level keys (A1) and the `_doc` fixtures no longer create duplicate `tags:`. CR-003 — `schema_value_is_path` made public (Task 0.4) so no private import / `# pyright: ignore` in production. CR-004 — `check_reciprocity` checks both directions. CR-005 — `--stdin` mutual exclusions enforced (exit 2). CR-006 — pre-commit smoke runs via `uvx`. Plus: atomic write preserves mode bits; list-key inline comments preserved.
