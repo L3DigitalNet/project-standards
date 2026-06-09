@@ -2,8 +2,10 @@ from pathlib import Path
 
 from project_standards.validate_references import (
     build_index,
+    check_adr_sequence,
     check_dates,
     check_id_uniqueness,
+    check_reciprocity,
     check_references,
 )
 
@@ -160,3 +162,63 @@ def test_anchor_and_absolute_paths_do_not_resolve(tmp_path: Path) -> None:
     )
     warnings = check_references(build_index([tmp_path / "a.md"]), tmp_path)
     assert len(warnings) == 2
+
+
+def test_missing_supersede_reciprocity_warns(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        superseded_by="'note-bbbbbb-y'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'note-bbbbbb-y'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )  # no supersedes back
+    warnings = check_reciprocity(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert any("reciprocal" in w or "supersedes" in w for w in warnings)
+
+
+def test_reverse_supersede_reciprocity_warns(tmp_path: Path) -> None:
+    # B.supersedes A but A lacks superseded_by -> the OTHER direction (CR-004).
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )  # no superseded_by back
+    _write(
+        tmp_path / "b.md",
+        id="'note-bbbbbb-y'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        supersedes="['note-aaaaaa-x']",
+    )
+    warnings = check_reciprocity(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert any("superseded_by" in w for w in warnings)
+
+
+def test_duplicate_adr_number_is_error(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "a.md",
+        id="'adr-0001-repo-one'",
+        doc_type="'adr'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'adr-0001-repo-two'",
+        doc_type="'adr'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    errors = check_adr_sequence(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert any("0001" in e for e in errors)
