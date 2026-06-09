@@ -31,10 +31,10 @@ ADRs are **managed Markdown documents**: they carry full frontmatter and are val
 
 ## Quick adoption (CLI)
 
-As of `v2`, the packaged CLI drops the ADR template and reports the config knobs in one command:
+As of `v3`, the packaged CLI drops the ADR template and reports the config knobs in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   project-standards adopt adr
 ```
 

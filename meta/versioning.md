@@ -60,7 +60,7 @@ Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 > **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all shipped components.
 
-This reframing is what makes the moving major tag (`@v1`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
+This reframing is what makes the moving major tag (`@v3`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
 
 ## Version grammar
 
@@ -139,7 +139,7 @@ Every release MUST:
 Pin the reusable workflow and the CLI by **major tag** to receive non-breaking fixes automatically:
 
 ```yaml
-uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
+uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v3
 ```
 
 - **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule guarantees these updates never newly-fail a passing repo.

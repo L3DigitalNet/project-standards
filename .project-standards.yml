@@ -2,7 +2,7 @@
 # Consumed by src/project_standards/validate_frontmatter.py and the CI workflow.
 # This is also the canonical example of the downstream config shape.
 
-standards_version: "v2.0.0"
+standards_version: "v3.0.0"
 
 markdown:
   frontmatter:

@@ -30,10 +30,10 @@ The **linter** half ships a reusable workflow and a seedable rule set; the **for
 
 ## Quick adoption (CLI)
 
-As of `v2`, the packaged CLI materializes every artifact below in one command:
+As of `v3`, the packaged CLI materializes every artifact below in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   project-standards adopt markdown-tooling
 ```
 
@@ -50,7 +50,7 @@ This drops `.markdownlint.json`, `.prettierrc.json`, the shared `.editorconfig` 
    ```yaml
    jobs:
      lint-markdown:
-       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v2
+       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
        with:
          globs: '**/*.md'
    ```

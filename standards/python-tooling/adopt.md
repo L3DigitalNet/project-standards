@@ -29,10 +29,10 @@ Unlike the Markdown standards, this one is **not** enforced by the shared valida
 
 ## Quick adoption (CLI)
 
-As of `v2`, the packaged CLI materializes the scaffolds in one command:
+As of `v3`, the packaged CLI materializes the scaffolds in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   project-standards adopt python-tooling
 ```
 

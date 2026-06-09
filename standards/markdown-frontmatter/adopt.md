@@ -120,7 +120,7 @@ jobs:
       standards-ref: 'v3'
 ```
 
-> **⚠️ Pin BOTH refs.** `@v3` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v2`** (a pinned major, _not_ `main`), so set it explicitly to the **same ref as your `uses:` pin** (`'v3'`), so the two never drift. For a fully immutable pin, set both to `v3.0.0`.
+> **⚠️ Pin BOTH refs.** `@v3` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v3`** (a pinned major, _not_ `main`), so set it explicitly to the **same ref as your `uses:` pin** (`'v3'`), so the two never drift. For a fully immutable pin, set both to `v3.0.0`.
 
 `validate-markdown-frontmatter.yml` runs **three** validators: schema (`validate-frontmatter`), id format (`validate-id`), and cross-file references (`validate-references`). `validate-references` is a no-op unless `references.enabled: true` in your config.
 
@@ -137,12 +137,12 @@ The workflow above validates the YAML _metadata_ block. A **separate, opt-in** r
 ```yaml
 jobs:
   lint-markdown:
-    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v2
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
     with:
       globs: '**/*.md' # optional; this is the default
 ```
 
-Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. As a consumer your only pin is `lint-markdown.yml@v2`; the underlying `markdownlint-cli2-action@v23` pin (which the explicit config values track) lives **inside** that reusable workflow and is a maintainer concern, not yours.
+Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. As a consumer your only pin is `lint-markdown.yml@v3`; the underlying `markdownlint-cli2-action@v23` pin (which the explicit config values track) lives **inside** that reusable workflow and is a maintainer concern, not yours.
 
 ### Also — pre-commit integration
 

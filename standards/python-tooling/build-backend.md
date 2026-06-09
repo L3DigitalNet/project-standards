@@ -130,9 +130,9 @@ The `name = module:function` grammar is load-bearing: the wrapper imports the mo
 This repo is configured exactly as above: `name = "project-standards"`, `build-backend = "uv_build"`, and five `[project.scripts]` entries. The twist is distribution: **there is no PyPI package.** Per [`deployed.md`](../../docs/handoff/deployed.md), a "release" is a signed git tag, and the wheel is built _on the consumer's machine_ from that ref:
 
 ```bash
-# uv clones project-standards at tag v2, sees [build-system], runs uv_build in a
+# uv clones project-standards at tag v3, sees [build-system], runs uv_build in a
 # throwaway env, installs the wheel, runs the generated wrapper, then discards it:
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   validate-frontmatter --config .project-standards.yml
 ```
 

@@ -140,7 +140,7 @@ The two halves of this standard ship asymmetrically (DEC-9).
 | Artifact | Role | Shipped to consumers? |
 | --- | --- | --- |
 | `.markdownlint.json` | The markdownlint **rule set** | ✅ Yes — the seedable artifact a consumer copies. |
-| `.github/workflows/lint-markdown.yml` | Reusable markdownlint **workflow** (`@v2`) | ✅ Yes — callable via `workflow_call`. |
+| `.github/workflows/lint-markdown.yml` | Reusable markdownlint **workflow** (`@v3`) | ✅ Yes — callable via `workflow_call`. |
 | `.prettierrc.json` | Prettier **config** | ❌ Copy-adopt only — no reusable workflow. |
 | `.github/workflows/format.yml` | This repo's **repo-local** Prettier CI | ❌ Not reusable; dogfood only. |
 | `.markdownlint-cli2.jsonc` | **Repo-local** runner config (`globs`, `gitignore`) | ❌ Never shipped — controls which files a bare local run lints. |
@@ -301,17 +301,17 @@ The linter half ships as a reusable workflow, `.github/workflows/lint-markdown.y
 - `globs` — newline-delimited glob(s) of Markdown to lint (default `**/*.md`). Passed explicitly because the action's own default glob is the non-recursive `*.{md,markdown}` [S06].
 - `config` — path to a base config file; empty means no `--config` flag is passed, so the underlying `markdownlint-cli2` auto-discovers config from the caller's repo (its own `.markdownlint.json` / `.markdownlint-cli2.jsonc`) [S03].
 
-Consumer opt-in (pin `@v2`):
+Consumer opt-in (pin `@v3`):
 
 ```yaml
 jobs:
   lint-markdown:
-    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v2
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
     with:
       globs: '**/*.md'
 ```
 
-Pin `@v2`, **not** `@v1`: this workflow first ships in the locked `2.0.0` release, so the per-major moving tag a consumer references is `@v2` (see `meta/versioning.md` §"Consuming"). No `uses:` ref should point at a tag that predates the workflow.
+Pin `@v3` (the current major), **not** `@v1`: this workflow first ships in the locked `2.0.0` release, so no `uses:` ref should point at a tag that predates the workflow (see `meta/versioning.md` §"Consuming").
 
 The linter is deliberately separate from the frontmatter-validation workflow (DEC-8): a frontmatter-only consumer never inherits a Node/markdownlint toolchain. And Prettier ships **no** reusable workflow (DEC-9) — a consumer wanting Prettier CI wires their own job.
 
