@@ -11,7 +11,7 @@
 
 ## Active incidents
 
-- **prettier/`format.yml` CI red** (codex-reviews + bundles; no `.prettierignore`) — deferred; markdownlint CI green. Detail → `architecture.md`.
+- _None._ prettier/`format.yml` greened 2026-06-09 (`.prettierignore` for codex-reviews/handoff + formatted two authored docs); markdownlint + prettier CI both green.
 
 ## Session instructions
 
