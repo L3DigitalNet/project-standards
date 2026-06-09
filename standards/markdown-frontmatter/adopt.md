@@ -6,7 +6,7 @@ description: 'Step-by-step procedure for an agent to adopt the project-standards
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-03'
-updated: '2026-06-07'
+updated: '2026-06-09'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -32,16 +32,16 @@ license: null
 
 > **You are an agent adopting this standard in another ("consuming") repository.** Follow this procedure end to end. It is self-contained: everything you need to make the changes is here. Where you want the authoritative source, the links in [§8](#8-authoritative-references-pinned) point at the pinned release.
 >
-> **Target release:** `project-standards` **v1.2.0** — pin the moving major tag **`@v1`** (it receives only backward-compatible updates; see [§7](#7-versioning--staying-in-compliance)). **Owner repo:** `github.com/L3DigitalNet/project-standards`.
+> **Target release:** `project-standards` **v3.0.0** — pin the moving major tag **`@v3`** (it receives only backward-compatible updates; see [§7](#7-versioning--staying-in-compliance)). **Owner repo:** `github.com/L3DigitalNet/project-standards`.
 >
-> **Quick path (v2+).** On the `@v2` line, the packaged CLI scaffolds this in one step — `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' project-standards adopt markdown-frontmatter` writes a starter `.project-standards.yml` (only when absent) and the validator workflow caller, both pinned to the current major. The detailed procedure below is the manual reference and remains the source of truth for the frontmatter rules.
+> **Quick path (v3+).** On the `@v3` line, the packaged CLI scaffolds this in one step — `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' project-standards adopt markdown-frontmatter` writes a starter `.project-standards.yml` (only when absent) and the validator workflow caller, both pinned to the current major. The detailed procedure below is the manual reference and remains the source of truth for the frontmatter rules.
 
 ## 0. What you are doing — definition of done
 
 A repository is **compliant** when:
 
 1. It has a `.project-standards.yml` config declaring which Markdown files are managed.
-2. It has a CI workflow that calls the reusable validator, pinned to `@v1` **for both the workflow and the validator/schema**.
+2. It has a CI workflow that calls the reusable validator, pinned to `@v3` **for both the workflow and the validator/schema**.
 3. Every **managed** Markdown file carries conformant frontmatter (this section's rules), and every **excluded** file (templates, agent-instruction files) carries none.
 4. `validate-frontmatter --config .project-standards.yml` exits `0` locally and in CI.
 
@@ -58,7 +58,7 @@ Do not modify any file under `.claude/`, `.agents/`, `.codex/`, or the repo's `C
 Create `.project-standards.yml` at the repo root. It declares the schema, whether frontmatter is required, and which paths are validated (`include`) vs skipped (`exclude`).
 
 ```yaml
-standards_version: 'v1.2.0'
+standards_version: 'v3'
 
 markdown:
   frontmatter:
@@ -114,13 +114,17 @@ on:
 
 jobs:
   validate:
-    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v1
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v3
     with:
       config-path: '.project-standards.yml'
-      standards-ref: 'v1'
+      standards-ref: 'v3'
 ```
 
-> **⚠️ Pin BOTH refs.** `@v1` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v1`** (a pinned major, _not_ `main`), so an omitted input still gets reproducible validation rather than floating on unreleased changes. Set it explicitly anyway, to the **same ref as your `uses:` pin** (`'v1'`), so the two never drift. For a fully immutable pin, set both to `v1.2.0`.
+> **⚠️ Pin BOTH refs.** `@v3` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v2`** (a pinned major, _not_ `main`), so set it explicitly to the **same ref as your `uses:` pin** (`'v3'`), so the two never drift. For a fully immutable pin, set both to `v3.0.0`.
+
+`validate-markdown-frontmatter.yml` runs **three** validators: schema (`validate-frontmatter`), id format (`validate-id`), and cross-file references (`validate-references`). `validate-references` is a no-op unless `references.enabled: true` in your config.
+
+> **⚠️ Migration warning when re-pinning to `@v3`:** re-pinning starts running `validate-id` (repos with old-style kebab ids such as `restart-netbox-after-config-change` will newly fail) and `validate-references` (safe no-op unless `references.enabled: true`). Review your managed documents' `id` fields before bumping.
 
 The reusable workflow installs the validator with `uv tool install git+…@<standards-ref>`; the schema travels inside the wheel, so the consuming repo never vendors schema or Python code.
 
@@ -139,6 +143,24 @@ jobs:
 ```
 
 Seed your repo's rules by copying this repo's published [`.markdownlint.json`](../../.markdownlint.json) (the workflow auto-discovers it; the action carries its own Node runtime, so no committed Node project is needed). The two workflows are adopted independently — run either, or both. The published config states **every** rule explicitly, so linting is deterministic and isn't shadowed by a contributor's personal editor/global markdownlint settings. As a consumer your only pin is `lint-markdown.yml@v2`; the underlying `markdownlint-cli2-action@v23` pin (which the explicit config values track) lives **inside** that reusable workflow and is a maintainer concern, not yours.
+
+### Also — pre-commit integration
+
+The standards repo ships six pre-commit hooks that consumers can run locally as a faster feedback loop before CI. Add the following stanza to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/L3DigitalNet/project-standards
+    rev: v3 # pin to the same major as your CI workflow
+    hooks:
+      - id: format-frontmatter-fix # auto-formats frontmatter (writes)
+      # - id: format-frontmatter-check # read-only alternative
+      - id: validate-id-check
+      - id: validate-frontmatter
+      - id: validate-references # no-op until references.enabled: true
+```
+
+`validate-references` runs over the whole repo (`pass_filenames: false`) and is a no-op until you set `references.enabled: true` in your `.project-standards.yml`. All hooks require **Python 3.14+** to be available to pre-commit (matching the `requires-python` of the package).
 
 ## 4. Step 3 — bring documents into compliance
 
@@ -269,7 +291,7 @@ project:
 Run the released validator directly — no checkout required:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v2' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   project-standards validate --config .project-standards.yml
 ```
 
@@ -284,7 +306,7 @@ Compliance is reached when this exits `0`.
 ## 6. Compliance checklist
 
 - [ ] `.project-standards.yml` exists at the repo root with `schema: 'markdown-frontmatter'`, `required: true`, and accurate `include`/`exclude`.
-- [ ] `.github/workflows/validate-standards.yml` calls the reusable workflow with **both** `@v1` (on `uses:`) and `standards-ref: 'v1'`.
+- [ ] `.github/workflows/validate-standards.yml` calls the reusable workflow with **both** `@v3` (on `uses:`) and `standards-ref: 'v3'`.
 - [ ] Every managed Markdown file has a conformant frontmatter block (required fields present, controlled values valid, strings/dates quoted, no unknown top-level keys, canonical key order).
 - [ ] No agent-instruction file (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) carries frontmatter, and all are excluded.
 - [ ] Links in frontmatter use repo-root-relative paths (convention).
@@ -293,18 +315,18 @@ Compliance is reached when this exits `0`.
 
 ## 7. Versioning & staying in compliance
 
-- **Pin the major tag `@v1`** (both the `uses:` ref and `standards-ref`). Within a major, a repo that passed validation yesterday will still pass today — additive fields and opt-in features only.
-- **A major bump (`@v2`) is intentional work.** It may introduce a new required field or a stricter rule that newly-fails a previously-passing repo (for v1.x, the planned `2.0.0` will enforce repo-root-relative link paths). Read the changelog migration notes, bump both pins from `@v1` to `@v2`, and re-run validation before merging.
-- For byte-for-byte reproducibility, pin both refs to a full version (`v1.2.0`) or a commit SHA instead of the moving major tag.
+- **Pin the major tag `@v3`** (both the `uses:` ref and `standards-ref`). Within a major, a repo that passed validation yesterday will still pass today — additive fields and opt-in features only.
+- **A major bump (`@v4`) is intentional work.** It may introduce a new required field or a stricter rule that newly-fails a previously-passing repo. Read the changelog migration notes, bump both pins from `@v3` to `@v4`, and re-run validation before merging.
+- For byte-for-byte reproducibility, pin both refs to a full version (`v3.0.0`) or a commit SHA instead of the moving major tag.
 
 ## 8. Authoritative references (pinned)
 
-The governing documents at the current release (replace `v1` with `v1.2.0` for an immutable read):
+The governing documents at the current release (replace `v3` with `v3.0.0` for an immutable read):
 
-- **The standard** — [`standards/markdown-frontmatter.md@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/standards/markdown-frontmatter.md)
-- **The JSON Schema** (authoritative contract) — [`schemas/markdown-frontmatter.schema.json@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/schemas/markdown-frontmatter.schema.json)
-- **Versioning Standard** — [`standards/versioning.md@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/standards/versioning.md)
-- **ADR Standard** (if adopting ADRs) — [`standards/adr.md@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/standards/adr.md)
-- **Consumption overview** — [`README.md@v1`](https://github.com/L3DigitalNet/project-standards/blob/v1/README.md#consuming-the-standards)
+- **The standard** — [`standards/markdown-frontmatter/README.md@v3`](https://github.com/L3DigitalNet/project-standards/blob/v3/standards/markdown-frontmatter/README.md)
+- **The JSON Schema** (authoritative contract) — [`src/project_standards/schemas/markdown-frontmatter.schema.json@v3`](https://github.com/L3DigitalNet/project-standards/blob/v3/src/project_standards/schemas/markdown-frontmatter.schema.json)
+- **Versioning Standard** — [`meta/versioning.md@v3`](https://github.com/L3DigitalNet/project-standards/blob/v3/meta/versioning.md)
+- **ADR Standard** (if adopting ADRs) — [`standards/adr/README.md@v3`](https://github.com/L3DigitalNet/project-standards/blob/v3/standards/adr/README.md)
+- **Consumption overview** — [`README.md@v3`](https://github.com/L3DigitalNet/project-standards/blob/v3/README.md#consuming-the-standards)
 
 Where this procedure and the JSON Schema disagree, **the schema is authoritative**.

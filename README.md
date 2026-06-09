@@ -100,6 +100,8 @@ ADR enforcement (managed ADR docs, plus the opt-in MADR section check) rides the
 - **Full runbook** (config, workflow, pinning, local validation, body-linting, compliance checklist): [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md)
 - **ADR specifics:** [`standards/adr/adopt.md`](standards/adr/adopt.md)
 
+For local tooling, use `project-standards fix` (formats frontmatter and regenerates ids in one pass), the standalone `format-frontmatter` command, or the pre-commit hooks (`.pre-commit-hooks.yaml`) — see [`src/project_standards/README.md`](src/project_standards/README.md) for the full CLI reference.
+
 ### Python Tooling SSOT
 
 No config or workflow — copy the in-doc scaffolds and run the verification gate. See [`standards/python-tooling/adopt.md`](standards/python-tooling/adopt.md).
@@ -108,7 +110,7 @@ No config or workflow — copy the in-doc scaffolds and run the verification gat
 
 Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v2` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 
-> **Availability:** `lint-markdown.yml` is new in the upcoming **2.0.0** release — it is not present at `v1`, so its `@v2` pin resolves only once that tag is published. The Frontmatter/ADR `validate-markdown-frontmatter.yml@v1` workflow is available today; after 2.0.0 ships, move both pins to `@v2`.
+> **Availability:** `lint-markdown.yml` is available since `@v2`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
 
 ### Pin to a release tag, not `main`
 
@@ -132,7 +134,7 @@ Working on the standards or the validator itself:
 ```bash
 uv sync --dev                                                # set up the environment
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
-uv run project-standards validate --config .project-standards.yml  # dogfood schema + id format
+uv run project-standards validate --config .project-standards.yml  # dogfood: schema, id, and references
 ```
 
 ## License

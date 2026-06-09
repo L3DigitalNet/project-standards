@@ -166,12 +166,18 @@ It is a repo-wide pass (no per-file mode). When `references_enabled` is false, `
 
 ### format-frontmatter
 
-Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(argv)`. Two modes:
+Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(argv)`. `--write` also scaffolds a minimal schema-valid frontmatter block into a managed file that has none.
 
-| Flag      | Effect                                      |
-| --------- | ------------------------------------------- |
-| `--write` | Rewrite files in place                      |
-| `--check` | Check only; exit 1 if any file would change |
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `FILE …` | (from config) | Files to format; if omitted, uses `include`/`exclude` from config |
+| `--write` | — | Rewrite files in place (also scaffolds missing frontmatter blocks) |
+| `--check` | — | Check only; exit 1 if any file would change |
+| `--stdin` | — | Read one document from stdin, write formatted result to stdout; incompatible with `FILE`, `--glob`, and `--write` |
+| `--bump-updated` | — | Set `updated:` to today when the frontmatter block changes |
+| `--config PATH` | `.project-standards.yml` | Config file |
+| `--glob PATTERN` | — | Additional glob relative to cwd |
+| `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 
 **Transforms applied:**
 

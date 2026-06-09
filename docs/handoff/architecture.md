@@ -22,6 +22,4 @@ project-standards
 
 ## Standing backlog
 
-- **Pre-commit hooks** — deferred (decided during the 1.3.0 line).
 - **Repo-root-relative link enforcement** — breaking; future major (deferred past `2.0.0`, which shipped without it).
-- **prettier/`format.yml` gate latently red** — `npx prettier --check .` fails on `docs/codex-reviews/**` (13, regenerated transcripts) + `src/project_standards/bundles/*` (5, shipped scaffolds with intentional placeholders); there is no `.prettierignore`. Recommended fix: add `.prettierignore` mirroring the `.markdownlint-cli2.jsonc` `ignores` (`codex-reviews`, `handoff`), then decide whether to prettier-format the bundle scaffolds or ignore them too. Deferred 2026-06-09 (user). markdownlint's counterpart was scoped + greened the same day (see conventions §7).
