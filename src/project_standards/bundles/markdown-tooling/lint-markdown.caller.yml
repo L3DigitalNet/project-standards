@@ -10,4 +10,4 @@ jobs:
   lint-markdown:
     uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@{{ref}}
     with:
-      globs: '**/*.md'
+      globs: "**/*.md"

@@ -30,6 +30,22 @@ license: null
 
 # Versioning Standard
 
+## Table of Contents
+
+- [Versioning Standard](#versioning-standard)
+  - [Table of Contents](#table-of-contents)
+  - [Purpose](#purpose)
+  - [What a version promises](#what-a-version-promises)
+  - [Version grammar](#version-grammar)
+  - [Per-standard contract versions](#per-standard-contract-versions)
+    - [FM→ADR compatibility](#fmadr-compatibility)
+  - [Component-level version markers](#component-level-version-markers)
+  - [Change classification](#change-classification)
+  - [The previously-passing rule](#the-previously-passing-rule)
+  - [Release requirements](#release-requirements)
+  - [Consuming repositories](#consuming-repositories)
+  - [Pre-1.0 releases](#pre-10-releases)
+
 ## Purpose
 
 This repository ships **several components under one version number**: four standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), and [Markdown Tooling](../standards/markdown-tooling/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all of them together.

@@ -2,6 +2,37 @@
 
 Working notes — captured 2026-06-08. Scratch/advisory; not a managed standard doc.
 
+## Table of Contents
+
+- [Invoking migrated Python tools across many standards-adopting repos](#invoking-migrated-python-tools-across-many-standards-adopting-repos)
+  - [Table of Contents](#table-of-contents)
+  - [The question](#the-question)
+  - [The constraint that creates the question](#the-constraint-that-creates-the-question)
+  - [The three local invocation options](#the-three-local-invocation-options)
+    - [Option 1 — Unified CLI (`python -m tools <subcommand>`)](#option-1--unified-cli-python--m-tools-subcommand)
+    - [Option 2 — Per-module (`python -m tools.lint`)](#option-2--per-module-python--m-toolslint)
+    - [Option 3 — Add a build backend (true `[project.scripts]`)](#option-3--add-a-build-backend-true-projectscripts)
+    - [Local-options summary](#local-options-summary)
+  - [The reframe: this is a distribution problem, not an invocation problem](#the-reframe-this-is-a-distribution-problem-not-an-invocation-problem)
+    - [`project-standards` already IS the "build once" package](#project-standards-already-is-the-build-once-package)
+    - [Two different "tools" got conflated](#two-different-tools-got-conflated)
+  - [Distribution models (build once → consume 20×)](#distribution-models-build-once--consume-20)
+    - [A. Ephemeral `uvx` — no install, nothing in the consumer's deps](#a-ephemeral-uvx--no-install-nothing-in-the-consumers-deps)
+    - [B. Pinned dev dependency — reproducible, lockfile-tracked](#b-pinned-dev-dependency--reproducible-lockfile-tracked)
+    - [C. Reusable CI workflow — the consumer doesn't even name the tool](#c-reusable-ci-workflow--the-consumer-doesnt-even-name-the-tool)
+    - [Why this kills the "build 20 times" problem](#why-this-kills-the-build-20-times-problem)
+  - [Decision procedure for the repo you're actually in](#decision-procedure-for-the-repo-youre-actually-in)
+    - [Recommendation](#recommendation)
+    - [The one question that decides the shape](#the-one-question-that-decides-the-shape)
+  - [Appendix — How a build backend actually ships the tooling (Option 3, end-to-end)](#appendix--how-a-build-backend-actually-ships-the-tooling-option-3-end-to-end)
+    - [1. The PEP 517 split: who builds, who calls the builder](#1-the-pep-517-split-who-builds-who-calls-the-builder)
+    - [2. What `uv_build` does with this repo's `src/` layout](#2-what-uv_build-does-with-this-repos-src-layout)
+    - [3. The wheel's secret: `entry_points.txt` and the install-time wrapper](#3-the-wheels-secret-entry_pointstxt-and-the-install-time-wrapper)
+    - [4. The twist: this repo ships a git tag, not a wheel](#4-the-twist-this-repo-ships-a-git-tag-not-a-wheel)
+    - [5. What turns a tag into a contract — the release ritual](#5-what-turns-a-tag-into-a-contract--the-release-ritual)
+    - [6. The other build path — the `.pyz` zipapp, and why it's a constrained cousin](#6-the-other-build-path--the-pyz-zipapp-and-why-its-a-constrained-cousin)
+    - [7. The whole pipeline in one pass](#7-the-whole-pipeline-in-one-pass)
+
 ## The question
 
 We are converting per-repo bash scripts to Python in a repo that consumes the `project-standards` Python Tooling SSOT. `pyproject.toml` there deliberately has **no `[build-system]`** (non-packaged meta-repo), with `pythonpath=src`. So: how should the migrated tools be invoked?

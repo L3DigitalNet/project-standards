@@ -3,7 +3,7 @@
 # 1. Enable the opt-in ADR body-section check (merge under your existing `markdown:` key):
 markdown:
   adr:
-    version: '1.0'
+    version: "1.0"
     require_sections: true
 #
 # 2. REQUIRED for validation safety — add this entry to your existing
