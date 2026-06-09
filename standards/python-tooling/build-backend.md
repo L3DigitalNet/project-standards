@@ -38,6 +38,17 @@ The [Python Tooling SSOT Standard](README.md) names `uv_build` as the default bu
 
 Scope boundary: this document owns the **mechanism** (source tree → wheel → installed command). It does **not** define what a release number promises or how a tag is cut — that contract is owned by [`meta/versioning.md`](../../meta/versioning.md), which this document links to rather than restating.
 
+## Table of Contents
+
+- [Build Backend Mechanics](#build-backend-mechanics)
+  - [Table of Contents](#table-of-contents)
+  - [1. Building is a two-party protocol (PEP 517 / 518)](#1-building-is-a-two-party-protocol-pep-517--518)
+  - [2. What `uv_build` does with a `src/` layout](#2-what-uv_build-does-with-a-src-layout)
+  - [3. Two artifacts: wheel and sdist](#3-two-artifacts-wheel-and-sdist)
+  - [4. The mechanism that creates a command: `entry_points.txt` → wrapper](#4-the-mechanism-that-creates-a-command-entry_pointstxt--wrapper)
+  - [5. Worked example — how this repository ships its CLIs](#5-worked-example--how-this-repository-ships-its-clis)
+  - [6. The zipapp fallback (no backend, deliberately constrained)](#6-the-zipapp-fallback-no-backend-deliberately-constrained)
+
 ## 1. Building is a two-party protocol (PEP 517 / 518)
 
 Packaging is split into two roles that agree on a standard interface, so neither needs to know the other's internals:
