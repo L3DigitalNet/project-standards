@@ -361,6 +361,7 @@ Notes:
 - `fail_under = 85` is a default threshold, not a universal measure of quality.
 - Branch coverage is required as a project policy because LLM-authored tests often cover happy paths while missing decision behavior.
 - Project-specific packages may add more Ruff rules, but must not weaken the baseline without a documented exception.
+- How the `[build-system]` / `uv_build` backend turns this `src/` layout into installable console scripts — the wheel build, `entry_points.txt`, and the generated `bin/` wrapper — is walked through end-to-end in [`build-backend.md`](build-backend.md).
 
 ---
 

@@ -81,7 +81,7 @@ Validates the `id` field of each document against its `doc_type`. Entry point: `
 
 #### Standard format — all `doc_type` values except `adr`
 
-```
+```text
 {doc_type}-{base36token}-{readable-slug}
 ```
 
@@ -97,7 +97,7 @@ The readable-slug is generated via `slugify(title)` at creation but is never re-
 
 #### ADR format — `doc_type: adr`
 
-```
+```text
 adr-{NNNN}-{repo-name}-{short-title}
 ```
 
