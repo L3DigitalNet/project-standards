@@ -99,6 +99,28 @@ def resolve_schema_path(schema_value: str | None) -> Path:
 # ---------------------------------------------------------------------------
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate mapping keys (PyYAML otherwise keeps the
+    last silently). Frontmatter with a duplicate key is a bug, not a valid doc."""
+
+
+def _construct_no_duplicates(loader: _UniqueKeyLoader, node: yaml.MappingNode) -> dict[str, Any]:
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = cast(Any, loader.construct_object(key_node, deep=True))  # pyright: ignore[reportUnknownMemberType]
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(
+                None, None, f"duplicate key {key!r}", key_node.start_mark
+            )
+        mapping[key] = loader.construct_object(value_node, deep=True)  # pyright: ignore[reportUnknownMemberType]
+    return mapping
+
+
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_no_duplicates
+)
+
+
 def _coerce_dates(obj: Any) -> Any:
     """Recursively convert datetime.date/datetime to ISO strings.
 
@@ -124,7 +146,7 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
     if not match:
         return None
     try:
-        loaded = yaml.safe_load(match.group(1))
+        loaded = yaml.load(match.group(1), Loader=_UniqueKeyLoader)
     except yaml.YAMLError as exc:
         raise FrontmatterParseError(str(exc)) from exc
     if not isinstance(loaded, dict):

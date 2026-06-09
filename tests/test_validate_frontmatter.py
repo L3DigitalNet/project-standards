@@ -36,6 +36,7 @@ from jsonschema import Draft202012Validator
 
 import project_standards.validate_frontmatter as _vf
 from project_standards.validate_frontmatter import (
+    FrontmatterParseError,
     collect_paths,
     find_bundled_schema,
     load_config,
@@ -1311,3 +1312,13 @@ def test_references_enabled_true(tmp_path: Path) -> None:
         "markdown:\n  frontmatter:\n    references:\n      enabled: true\n"
     )
     assert load_config(cfg).references_enabled is True
+
+
+def test_duplicate_top_level_key_rejected() -> None:
+    with pytest.raises(FrontmatterParseError):
+        parse_frontmatter("---\ntags: []\ntags: ['x']\n---\n# body\n")
+
+
+def test_unique_keys_still_parse() -> None:
+    meta = parse_frontmatter("---\nid: 'x'\ntags: []\n---\n# body\n")
+    assert meta == {"id": "x", "tags": []}
