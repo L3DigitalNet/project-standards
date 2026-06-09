@@ -6,11 +6,14 @@ never edits the document body."""
 
 from __future__ import annotations
 
+import datetime
 import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
+
+from project_standards.id_format import random_token, slugify
 
 import yaml
 
@@ -429,16 +432,59 @@ def infer_doc_type(entries: list[Entry], path: Path | None) -> None:
     entries.append(_new_scalar_entry("doc_type", inferred, eol))
 
 
-def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
+_H1_RE = re.compile(r"^#[ \t]+(.+?)[ \t]*$", re.MULTILINE)
+
+
+def _today_iso() -> str:
+    return datetime.date.today().isoformat()
+
+
+def _build_scaffold(body_text: str, path: Path, today: str) -> str:
+    h1 = _H1_RE.search(body_text)
+    title = h1.group(1) if h1 else path.stem.replace("-", " ").replace("_", " ").title()
+    doc_type = _infer_doc_type(path) or "note"
+    slug = slugify(title) or slugify(path.stem) or "untitled"
+    new_id = f"{doc_type}-{random_token()}-{slug}"
+    return (
+        "---\n"
+        f"schema_version: {_emit_single_quoted(BUNDLED_SCHEMA_VERSION)}\n"
+        f"id: {_emit_single_quoted(new_id)}\n"
+        f"title: {_emit_single_quoted(title)}\n"
+        "description: 'TODO: one-sentence description.'\n"
+        f"doc_type: {_emit_single_quoted(doc_type)}\n"
+        "status: 'draft'\n"
+        f"created: {_emit_single_quoted(today)}\n"
+        f"updated: {_emit_single_quoted(today)}\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+    )
+
+
+def format_text(
+    text: str,
+    *,
+    path: Path | None,
+    scaffold: bool = False,
+    today: str | None = None,
+    bump_updated: bool = False,
+) -> tuple[str, bool, list[str]]:
     """Format the frontmatter block of `text`. Returns (new_text, changed, warnings).
 
-    `path` informs path-based transforms (added in later tasks); None disables them
-    (stdin mode). This skeleton only round-trips, so output == input for now."""
+    `path` informs path-based transforms; None disables them (stdin mode). The
+    `scaffold` flag inserts a schema-valid block into files with no frontmatter.
+    `bump_updated` rewrites the `updated` field when the block changes."""
     warnings: list[str] = []
     if path is not None and is_denylisted(path):
         return text, False, ["refused (denylisted): never add frontmatter to this file"]
     match = _FM_RE.match(text)
     if match is None:
+        if scaffold and path is not None and not is_denylisted(path):
+            stamp = today or _today_iso()
+            return _build_scaffold(text, path, stamp) + text, True, [
+                f"scaffolded: {path} — fill in title/description"
+            ]
         return text, False, warnings
     open_fence, body, close_fence = match.group(1), match.group(2), match.group(3)
     rest = text[match.end() :]
@@ -455,4 +501,13 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     new_body = serialize(entries)
     new_text = open_fence + new_body + close_fence + rest
     changed = new_text != text
+    if bump_updated and changed:
+        stamp = today or _today_iso()
+        for entry in entries:
+            if entry.key == "updated" and len(entry.lines) == 1:
+                eol = _line_ending(entry.lines[0])
+                entry.lines = [f"updated: {_emit_single_quoted(stamp)}{eol}"]
+        new_body = serialize(entries)
+        new_text = open_fence + new_body + close_fence + rest
+        changed = new_text != text
     return new_text, changed, warnings

@@ -330,7 +330,30 @@ def test_crlf_line_endings_preserved():
     src = src.replace("title: X\r\n", "title: X\r\n") if "title: X" in src else src
     # Force one change (unquoted) and assert CRLF survives on unchanged lines.
     src = src.replace("title: 'X'\r\n", "title: X\r\n")
-    new, changed, _ = format_text(src, path=None)
+    new, _changed, _ = format_text(src, path=None)
     assert "\r\n" in new
     assert "\n\n" not in new.replace("\r\n", "")  # no stray bare LFs introduced
     assert "title: 'X'\r\n" in new
+
+
+def test_scaffold_injects_schema_valid_block():
+    body = "# Real Title\n\nSome content.\n"
+    new, changed, _ = format_text(body, path=Path("docs/guide.md"), scaffold=True, today="2026-06-08")
+    assert new.startswith("---\n")
+    assert "title: 'Real Title'" in new
+    assert "doc_type: 'note'" in new          # no path rule -> note
+    assert "created: '2026-06-08'" in new and "updated: '2026-06-08'" in new
+    assert "description: 'TODO:" in new        # placeholder, schema-valid
+    assert "# Real Title" in new               # body preserved
+    assert changed is True
+
+
+def test_scaffold_disabled_leaves_body_untouched():
+    body = "# Title\n\nContent.\n"
+    new, changed, _ = format_text(body, path=Path("docs/guide.md"), scaffold=False)
+    assert new == body and changed is False
+
+
+def test_scaffold_uses_path_doc_type_rule():
+    new, _, _ = format_text("# R\n", path=Path("README.md"), scaffold=True, today="2026-06-08")
+    assert "doc_type: 'index'" in new
