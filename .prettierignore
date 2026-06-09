@@ -1,0 +1,13 @@
+# Prettier ignore — mirrors the `ignores` in .markdownlint-cli2.jsonc.
+#
+# These paths are machine-generated transcripts or v3 handoff session state, not
+# authored prose held to the formatter's bar — the same boundary
+# .project-standards.yml draws for frontmatter validation (it excludes
+# docs/handoff/**). Formatting them is churn, not quality, and would keep the
+# Format CI gate permanently red on content no human wrote to a style.
+#
+# Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
+# ignored — they stay gated, same as markdownlint. Prettier already honors
+# .gitignore, so .venv/ and caches need no entry here.
+docs/codex-reviews/
+docs/handoff/

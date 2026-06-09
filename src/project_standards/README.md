@@ -168,9 +168,9 @@ It is a repo-wide pass (no per-file mode). When `references_enabled` is false, `
 
 Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(argv)`. Two modes:
 
-| Flag | Effect |
-| --- | --- |
-| `--write` | Rewrite files in place |
+| Flag      | Effect                                      |
+| --------- | ------------------------------------------- |
+| `--write` | Rewrite files in place                      |
 | `--check` | Check only; exit 1 if any file would change |
 
 **Transforms applied:**

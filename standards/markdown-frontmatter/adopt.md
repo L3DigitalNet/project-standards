@@ -86,7 +86,7 @@ markdown:
       - '.obsidian/**'
       - 'node_modules/**'
     references:
-      enabled: false  # Set to true to enable cross-file checks (id uniqueness, referential integrity, etc.)
+      enabled: false # Set to true to enable cross-file checks (id uniqueness, referential integrity, etc.)
 ```
 
 **Selecting a contract version (optional).** `markdown.frontmatter.version` pins which bundled Frontmatter contract validates your documents; omit it to use the tool's current default (today `1.1`, which also accepts legacy `schema_version: '1.0'` documents). A custom `schema:` path owns its own versioning — setting both a custom `schema:` path and `version` is a config error.
