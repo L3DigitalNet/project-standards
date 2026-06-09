@@ -474,10 +474,10 @@ markdown:
 When enabled, it checks:
 
 - **`id` uniqueness** — no two managed documents share the same `id` value.
-- **Referential integrity** — every path in `related`, `depends_on`, `supersedes`, and `superseded_by` exists as a file at that repo-root-relative path.
+- **Referential integrity** — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path.
 - **Supersede reciprocity** — when document A lists B in `supersedes`, B must list A in `superseded_by`, and vice versa.
 - **Date ordering** — `created` ≤ `updated`.
-- **ADR sequence** — no gaps in the `adr-NNNN` sequence (configurable; off by default).
+- **ADR sequence** — no two ADRs share the same `adr-NNNN` number.
 
 `validate-references` is a repo-wide pass. It self-gates on `references_enabled`, so adding it to CI is a no-op until the repo opts in: `project-standards validate` always invokes it, but it exits 0 immediately when not enabled.
 

@@ -62,7 +62,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 - The YAML block is valid and parses without error.
 - Every field matches the JSON Schema (required fields present, types correct, enum values valid, date formats correct, etc.).
 - The `schema_version` matches the configured contract version if `version:` is pinned.
-- For ADR docs (`doc_type: adr`), when `require_sections: true`, enforces the three required `##` headings: `## Context`, `## Decision`, `## Consequences`.
+- For ADR docs (`doc_type: adr`), when `require_sections: true`, enforces the three required `##` headings: `## Context and Problem Statement`, `## Considered Options`, `## Decision Outcome` (MADR 4.0).
 
 **Key flags:**
 
@@ -155,10 +155,10 @@ Cross-file checks that JSON Schema cannot express. Entry point: `validate_refere
 **What it checks:**
 
 - `id` uniqueness — no two documents share the same `id`.
-- Referential integrity — every path in `related`, `depends_on`, `supersedes`, and `superseded_by` exists at that repo-root-relative location.
-- Supersede reciprocity — `supersedes` ↔ `superseded_by` links are symmetric.
-- Date ordering — `created` ≤ `updated`.
-- ADR sequence gaps (opt-in per config).
+- Referential integrity (warning) — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path.
+- Supersede reciprocity (warning) — `supersedes` ↔ `superseded_by` links are symmetric (both directions checked).
+- Date ordering (error) — `created` ≤ `updated`, and `reviewed` ≥ `created` when present.
+- ADR sequence (error) — no two ADRs share the same `adr-NNNN` number.
 
 It is a repo-wide pass (no per-file mode). When `references_enabled` is false, `main()` returns 0 immediately — invoking it is always safe.
 
@@ -179,7 +179,7 @@ Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(
 - Quote all string values with single quotes.
 - Rename `type` → `doc_type` (deny-listed alias).
 - Render empty arrays as `[]`; non-empty arrays in block style.
-- Remove `null` values for optional fields (or keep per schema rules).
+- Preserve explicit `null` values (never stripped).
 - Preserve the document body unchanged.
 
 Works only with the bundled schema. Skips files under a custom schema.

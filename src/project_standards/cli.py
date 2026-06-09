@@ -1,7 +1,8 @@
 """Unified `project-standards` CLI: adopt | list | validate.
 
-`validate` runs both `validate-frontmatter` (schema) and `validate-id` (id format) so
-consumers get the full contract check from a single command.  The standalone
+`validate` runs `validate-frontmatter` (schema), `validate-id` (id format), and
+`validate-references` (cross-file, opt-in) so consumers get the full contract check
+from a single command.  The standalone
 `validate-frontmatter` console script is kept as a back-compat alias.
 """
 
@@ -142,12 +143,12 @@ def main(argv: list[str] | None = None) -> int:
     """
     args_list = list(sys.argv[1:] if argv is None else argv)
 
-    # EARLY DISPATCH for `validate`: delegate every trailing arg to both validators BEFORE the
+    # EARLY DISPATCH for `validate`: delegate every trailing arg to all three validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects
     # `validate --config x` as an unrecognized top-level option before REMAINDER can capture it.
-    # Both validators accept the same --config / --quiet / FILE flags, so we pass args through
-    # unchanged. We return the worst exit code (2 > 1 > 0) so a schema error or id violation
-    # is never masked by the other tool's success.
+    # All three validators accept the same --config / --quiet / FILE flags, so we pass args through
+    # unchanged. We return the worst exit code (2 > 1 > 0) so a schema error, id violation, or
+    # reference error is never masked by another tool's success.
     if args_list and args_list[0] == "validate":
         validator_args = args_list[1:]
         # Intercept --help before forwarding — otherwise validate_frontmatter.main(["--help"])
@@ -156,14 +157,16 @@ def main(argv: list[str] | None = None) -> int:
             _p = argparse.ArgumentParser(
                 prog="project-standards validate",
                 description=(
-                    "Run validate-frontmatter (schema) and validate-id (id format).\n"
-                    "Both validators run; the worst exit code is returned.\n\n"
-                    "All flags are forwarded to both validators. --schema and\n"
+                    "Run validate-frontmatter (schema), validate-id (id format), and\n"
+                    "validate-references (cross-file, opt-in). All run; the worst exit\n"
+                    "code is returned.\n\n"
+                    "All flags are forwarded to every validator. --schema and\n"
                     "--no-require-frontmatter are frontmatter-only; --schema also causes\n"
                     "validate-id to skip (custom schemas may use different id conventions).\n\n"
                     "For the full flag set of each validator:\n"
                     "  validate-frontmatter --help\n"
-                    "  validate-id --help"
+                    "  validate-id --help\n"
+                    "  validate-references --help"
                 ),
                 formatter_class=argparse.RawDescriptionHelpFormatter,
             )
@@ -230,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
     sub.add_parser(
         "validate",
-        help="validate frontmatter schema + id format (runs validate-frontmatter and validate-id)",
+        help="validate schema + id + references (validate-frontmatter, validate-id, validate-references)",
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
 
