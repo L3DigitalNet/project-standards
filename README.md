@@ -5,6 +5,25 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
 
+## Table of Contents
+
+- [Project Standards](#project-standards)
+  - [Table of Contents](#table-of-contents)
+  - [Repository layout](#repository-layout)
+  - [Standards](#standards)
+    - [Markdown Frontmatter Standard](#markdown-frontmatter-standard)
+    - [ADR Standard](#adr-standard)
+    - [Python Tooling SSOT Standard](#python-tooling-ssot-standard)
+    - [Markdown Tooling Standard](#markdown-tooling-standard)
+  - [Consuming the standards](#consuming-the-standards)
+    - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
+    - [Python Tooling SSOT](#python-tooling-ssot)
+    - [Markdown Tooling](#markdown-tooling)
+    - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
+  - [Versioning](#versioning)
+  - [Developing this repository](#developing-this-repository)
+  - [License](#license)
+
 ## Repository layout
 
 ```text

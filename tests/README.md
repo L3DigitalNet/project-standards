@@ -4,6 +4,25 @@ This document defines how `project-standards` is tested. It is the human-facing 
 
 `project-standards` is **standards-as-a-product**: it ships a JSON Schema and a validator that _other_ repositories consume by pinning to a release tag. A broken release breaks every downstream consumer's CI. The test suite exists to make that impossible — `main` must stay releasable at all times (see [AGENTS.md](../AGENTS.md)).
 
+## Table of Contents
+
+- [Testing Strategy](#testing-strategy)
+  - [Table of Contents](#table-of-contents)
+  - [Goals](#goals)
+  - [The test layers](#the-test-layers)
+    - [1. Unit — pure functions](#1-unit--pure-functions)
+    - [2. Security invariants — path safety](#2-security-invariants--path-safety)
+    - [3. Integration — the CLI contract](#3-integration--the-cli-contract)
+    - [4. Contract / dogfood — shipped artifacts](#4-contract--dogfood--shipped-artifacts)
+    - [5. Packaging — the shipped wheel](#5-packaging--the-shipped-wheel)
+    - [6. Regression — every fixed bug](#6-regression--every-fixed-bug)
+  - [Layout \& naming conventions](#layout--naming-conventions)
+  - [Fixtures \& helpers](#fixtures--helpers)
+  - [What must be tested (coverage policy)](#what-must-be-tested-coverage-policy)
+  - [Running the tests](#running-the-tests)
+  - [Adding tests for a new tool](#adding-tests-for-a-new-tool)
+  - [CI relationship](#ci-relationship)
+
 ## Goals
 
 | Goal | What it means in practice |
