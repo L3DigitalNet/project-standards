@@ -13,6 +13,7 @@ markdown:
     required: true
     include:
       - "CHANGELOG.md"
+      - "UPGRADING.md"
       - "standards/**/*.md"
       - "meta/**/*.md"
     exclude:

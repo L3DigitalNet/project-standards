@@ -114,7 +114,7 @@ Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt in
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v1`), never `@main`: a repo that passed validation yesterday must not fail today because the standard changed. Breaking changes ship only as a new major (`@v2`); `@v1` receives bug fixes and backward-compatible updates. For an immutable pin, use a full version (`@v1.2.0`) or a commit SHA. The adopt guides explain the full rationale.
+Reference reusable workflows by **major tag** (`@v1`), never `@main`: a repo that passed validation yesterday must not fail today because the standard changed. Breaking changes ship only as a new major (`@v2`); `@v1` receives bug fixes and backward-compatible updates. For an immutable pin, use a full version (`@v1.2.0`) or a commit SHA. The adopt guides explain the full rationale, and [`UPGRADING.md`](UPGRADING.md) is the step-by-step runbook for moving an existing repo across a major (e.g. `@v2` → `@v3`).
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
