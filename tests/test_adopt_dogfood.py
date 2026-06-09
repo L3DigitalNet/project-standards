@@ -56,8 +56,15 @@ def test_caller_stubs_valid_and_reference_correct_workflow() -> None:
         rendered = raw.replace("{{ref}}", ref)
         assert "\t" not in rendered  # no tab indentation
         doc = yaml.safe_load(rendered)
-        uses = doc["jobs"][next(iter(doc["jobs"]))]["uses"]
+        job = doc["jobs"][next(iter(doc["jobs"]))]
+        uses = job["uses"]
         assert workflow in uses and uses.endswith(f"@{ref}")
+        # "Pin BOTH refs": a caller that also passes standards-ref must keep it
+        # equal to the uses: ref, or the installed validator + bundled schema
+        # would come from a different major than the workflow definition. Guards
+        # against a future bump that moves uses: but leaves standards-ref behind.
+        if "standards-ref" in job.get("with", {}):
+            assert job["with"]["standards-ref"] == ref
 
 
 def test_generated_workflow_yaml_has_no_tabs() -> None:
