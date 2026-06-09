@@ -74,7 +74,7 @@ def find_bundled_schema(name: str) -> Path:
     return Path(__file__).parent / "schemas" / f"{name}.schema.json"
 
 
-def _schema_value_is_path(value: str | None) -> bool:
+def schema_value_is_path(value: str | None) -> bool:
     """True when a config `schema` value names a filesystem path, not a bundled name.
 
     A bare token (e.g. "markdown-frontmatter") is a bundled schema name; anything
@@ -89,7 +89,7 @@ def resolve_schema_path(schema_value: str | None) -> Path:
     A bare token is treated as a bundled schema name; anything containing a path
     separator or ending in `.json` is treated as a filesystem path.
     """
-    if _schema_value_is_path(schema_value):
+    if schema_value_is_path(schema_value):
         return Path(cast("str", schema_value))
     return find_bundled_schema(schema_value or _DEFAULT_SCHEMA_NAME)
 
@@ -322,7 +322,7 @@ def resolve_effective_schema(
     if args_schema is not None:
         return args_schema
     schema_value = config.schema
-    custom_path = _schema_value_is_path(schema_value)
+    custom_path = schema_value_is_path(schema_value)
     if custom_path and config.frontmatter_version is not None:
         raise ConfigError(
             "set markdown.frontmatter.schema (a custom path) or "
@@ -345,7 +345,7 @@ def frontmatter_adr_incompatibility(config: ProjectConfig, registry: Registry) -
     version as an incompatibility). Returns None when compatible or not applicable;
     raises RegistryError if the configured ADR version is unknown.
     """
-    if _schema_value_is_path(config.schema):
+    if schema_value_is_path(config.schema):
         return None
     if not (config.require_adr_sections or config.adr_version is not None):
         return None
@@ -401,11 +401,11 @@ def load_config(path: Path) -> ProjectConfig:
                     version_val = fm.get("version")
                     frontmatter_version = str(version_val) if version_val is not None else None
                     references = fm.get("references")
-                    references_enabled = (
-                        bool(references.get("enabled", False))
-                        if isinstance(references, dict)
-                        else False
-                    )
+                    if isinstance(references, dict):
+                        references_dict = cast("dict[str, Any]", references)
+                        references_enabled = bool(references_dict.get("enabled", False))
+                    else:
+                        references_enabled = False
                 adr = markdown_dict.get("adr")
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
