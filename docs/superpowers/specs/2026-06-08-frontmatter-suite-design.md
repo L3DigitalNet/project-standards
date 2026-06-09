@@ -1,6 +1,6 @@
 # Design: Frontmatter validation + autocorrection suite
 
-**Date:** 2026-06-08 **Status:** draft (brainstorming complete; awaiting user + codex spec-review) **Author:** session 2026-06-08
+**Date:** 2026-06-08 **Status:** draft (brainstorming complete; codex spec-review round 1 applied — SA-001…SA-008) **Author:** session 2026-06-08
 
 ## Table of Contents
 
@@ -47,7 +47,7 @@ A and B are independent; C wraps A. Build order A → B → C; all three ship in
 2. **Serializer = surgical / line-based**, extending the `validate-id --fix` technique (`validate_id.py:333-349`). **No new runtime dependency** (no `ruamel.yaml`). Inline comments and per-line endings are preserved.
 3. **A is a new module** `src/project_standards/format_frontmatter.py` + console script `format-frontmatter`, a sibling to `validate-frontmatter`/`validate-id`. It **does not touch `id`** — that stays `validate-id`'s responsibility (single responsibility); C's `project-standards fix` orchestrates both.
 4. **A modes:** `--check` (default) and `--write`, mutually exclusive. The formatter is **idempotent** (`format∘format == format`), enforced by a property test.
-5. **`doc_type` inference enforces the standard's path rules unconditionally** — `README.md`/`index.md` → `index`, anything under `docs/research/` → `research` — **overriding even a valid explicit value**.
+5. **`doc_type` inference is fill/correct-only and ID-safe** — apply the standard's path rules (`README.md`/`index.md` → `index`; under `docs/research/` → `research`) **only when `doc_type` is missing or not a valid enum value**, and when scaffolding a new block. A valid explicit `doc_type` is **never** overridden. (Reversed from the round-0 "override even valid" rule: overriding a valid `doc_type` while the formatter leaves `id` untouched would create an `id`/`doc_type` mismatch that `validate-id` rejects — this repo's `standards/*/README.md` are validly `doc_type: 'reference'` with `reference-…` ids. See codex SA-001.)
 6. **`updated:` is not bumped by default.** Auto-bump to today is available only via an explicit `--bump-updated` flag. A cosmetic reformat must not claim the document's content was updated.
 7. **Scaffold-empty is part of the default `--write`**: an included, non-denylisted file with no frontmatter block gets a fabricated block in the same pass.
 8. **A carries a hardcoded refusal set** (basenames `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`; any path under `.claude/`, `.agents/`, `.codex/`) that overrides include/scaffold **unconditionally**, independent of config. Config decides *what is formatted*; the denylist guarantees *what can never be touched* even when a consumer's `exclude` is misconfigured.
@@ -56,7 +56,7 @@ A and B are independent; C wraps A. Build order A → B → C; all three ship in
 11. **B is a new module** `src/project_standards/validate_references.py` + console script `validate-references`, a repo-wide pass. It is **opt-in via config** (`markdown.frontmatter.references.enabled`, default `false`) so a minor-version upgrade never newly-fails an existing consumer's CI.
 12. **B dangling references are a warning, not an error** (exit 0). A reference resolves if it is an existing file path **or** a known `id` in the repo index; neither → warning. Rationale: ADR ids and `related:` legitimately cite *other repos'* ids, which are not locally resolvable.
 13. **B checks and levels:** `id` uniqueness (**error**), referential integrity (**warning** on dangling), supersede reciprocity (**warning**), date ordering `created ≤ updated` and `reviewed ≥ created` (**error**), duplicate ADR `NNNN` sequence in one repo (**error**).
-14. **C:** `project-standards fix` = `validate-id --fix` then `format-frontmatter --write` (format last; idempotence makes order safe). `project-standards validate` is extended to also run `validate-references` (which self-gates on config). `format-frontmatter` gains `--stdin`. A root `.pre-commit-hooks.yaml` ships **both** a mutating and a check-only hook id per tool, so the consumer picks.
+14. **C:** `project-standards fix` = `format-frontmatter --write` **first** (normalizes `type`→`doc_type` and fills missing `doc_type`), **then** `validate-id --fix` (id now derivable from a valid `doc_type`), **then a final `project-standards validate`** that fails if any id/schema check still fails — proving the fix postcondition (codex SA-002). `project-standards validate` is extended to also run `validate-references` (self-gates on config), **and the reusable consumer workflow runs it too** (codex SA-003). `format-frontmatter` gains `--stdin`. A root `.pre-commit-hooks.yaml` ships **both** a mutating and a check-only hook id per tool. `format-frontmatter`/`fix` **skip when a custom schema is configured**, mirroring `validate-id` (codex SA-008).
 
 ## Invariants — the consumer contract (must NOT change)
 
@@ -78,14 +78,16 @@ format-frontmatter [FILE ...] [--config PATH] [--glob PATTERN]
 - Reuses `collect_paths` (`validate_frontmatter.py:232`), `load_config`, and `parse_frontmatter` — so include/exclude, `--glob`, and the `CLAUDE.md`/`.claude/**` config exclusions behave identically to the validator.
 - **`--check`** (default): report files that would change; **exit 1** if any would change or any is unparseable, else **0**.
 - **`--write`**: apply changes in place using A.3; **exit 0** when all writable files succeed (even if changed), **1** if any file is unparseable/unwritable, **2** config error.
-- **`--stdin`**: read one document from stdin, emit the formatted document to stdout, exit 0 (1 if unparseable). Path-dependent transforms are **disabled** in stdin mode: no path means no `doc_type` path-inference, no scaffolding, and the denylist cannot apply — stdin formats an **existing** block only and emits no-frontmatter input unchanged.
+- **`--stdin`**: read one document from stdin, emit the formatted document to stdout, exit 0 (1 if unparseable). Mutually exclusive with `FILE`/`--glob`/`--write`. Path-dependent transforms are **disabled** in stdin mode: no path means no `doc_type` path-inference, no scaffolding, and the denylist cannot apply — stdin formats an **existing** block only and emits no-frontmatter input unchanged.
+- **Custom schema:** when `markdown.frontmatter.schema` is a custom path (or `--schema` is passed), `format-frontmatter` **skips with a note and exits 0** — the canonical-order, `schema_version`, and `doc_type` transforms assume the bundled contract, and a consumer-owned schema may define different conventions. Mirrors `validate-id`'s existing custom-schema skip (codex SA-008).
+- **Warnings never make `--check` "dirty":** unknown-key warnings and unsupported-YAML **skips** (A.6) print to stderr but exit 0 on their own; only a would-change file or an unparseable block makes `--check` exit 1.
 
 ### A.2 Transform pipeline (deterministic, idempotent)
 
 Applied in this fixed order to the parsed mapping + raw source lines:
 
 1. **Key rename** `type:` → `doc_type:` — only when `doc_type` is absent; if both are present, warn and leave both (don't clobber).
-2. **`doc_type` path inference** (Decision 5) — override even a valid value: `README.md`/`index.md` → `index`; under `docs/research/` → `research`.
+2. **`doc_type` path inference** (Decision 5) — **fill/correct only**: apply `README.md`/`index.md` → `index` and `docs/research/**` → `research` **only when `doc_type` is missing or not a valid enum value**. A valid value is left untouched, so the formatter never creates an `id`/`doc_type` mismatch without touching `id`.
 3. **Inject `schema_version`** if missing (= bundled contract version from config/registry); never change an existing value.
 4. **Inject missing required arrays** `tags`/`aliases`/`related` → `[]`.
 5. **Quote normalization** — single-quote every scalar string, including dates and identifier-like numbers (`schema_version: '1.1'`).
@@ -95,7 +97,7 @@ Applied in this fixed order to the parsed mapping + raw source lines:
 
 ### A.3 Serializer — line-based reconstruction
 
-The block is tokenized into **entries**, one per top-level key, each owning its source line(s): the key line (with any inline comment), plus the indented continuation lines of a block list. A run of leading comment/blank lines attaches to the **following** key entry, so reordering moves a key's comment banner with it. Entries are re-emitted in canonical order, each contributing its (possibly re-quoted) source line(s) with **original per-line endings preserved**, exactly as `validate_id.py:333-349` does. The document body after the closing `---` is copied byte-for-byte.
+The block is tokenized into **entries**, one per top-level key, each owning its source line(s): the key line (with any inline comment), plus **all following more-indented continuation lines** — whether a block list **or a nested mapping** (`publish`/`project`/`x_project` extension objects). A run of leading comment/blank lines attaches to the **following** key entry, so reordering moves a key's comment banner with it. Entries are re-emitted in canonical order, each contributing its source line(s) with **original per-line endings preserved**, exactly as `validate_id.py:333-349` does. For an extension object the top-level key is repositioned but its **nested content is preserved byte-for-byte** (no re-quoting inside the block), so the sanctioned `project:`/`publish:`/`x_project:` mappings in shipped examples format cleanly (codex SA-004); only top-level scalar values are re-quoted. The document body after the closing `---` is copied byte-for-byte. `--write` is **atomic** — the formatter writes a temp file and `os.replace`s it over the original, so an interrupted run never truncates a document.
 
 ### A.4 Hardcoded refusal set (denylist)
 
@@ -113,11 +115,11 @@ For an included, non-denylisted file with **no** frontmatter block, fabricate a 
 - `created` = `updated` = today (date source injectable for tests).
 - `tags` = `aliases` = `related` = `[]`.
 
-Scaffold gets the file ~90% of the way; `validate-frontmatter` closes the gap (the `TODO:` description is the visible reminder).
+Scaffold gets the file ~90% of the way. Because the `TODO:` placeholder is schema-valid (the schema only requires a non-empty `description`; the standard's stricter description rules are documented conventions, not machine-enforced — codex SA-006), `--write` **reports every scaffolded file distinctly** (`scaffolded: <path> — fill in title/description`) rather than implying completeness. Scaffolded blocks are deliberate *starting points*, not finished documents; the distinct report is the author's signal to fill them in.
 
 ### A.6 Fail-safe for unsupported YAML
 
-Supported value shapes cover the entire standard surface: single-line scalars, empty flow list `[]`, and block lists. If a block contains a construct the line tokenizer cannot confidently classify (nested mappings, anchors/aliases, merge keys, multi-line `|`/`>` block scalars), the formatter **skips that file with a warning** rather than risk corrupting it — correctness over coverage. (The standard's 25 fields are all scalars or string-lists, so this is a guard, not a common path.)
+Supported value shapes cover the entire standard surface: single-line scalars, empty flow list `[]`, block lists, and the sanctioned extension **mappings** (`publish`/`project`/`x_project`), handled as opaque blocks per A.3. If a block still contains a construct the line tokenizer cannot safely classify — anchors/aliases (`&`/`*`), merge keys (`<<`), or a multi-line `|`/`>` block scalar on a field the formatter would otherwise re-quote — it **skips that file with a warning** (exit 0 in `--check`; a skip is not a "would-change") rather than risk corrupting it. Correctness over coverage; these constructs appear in neither the standard's fields nor the shipped examples.
 
 ### A.7 Testing
 
@@ -144,14 +146,14 @@ When disabled, the tool runs no checks and exits 0 (so the unified `validate` ca
 
 ### B.2 Repo index
 
-Collect the included set (via `collect_paths`), parse each file's frontmatter, and build: `id → [paths]`, the set of all known ids, and per-doc `{created, updated, reviewed, related, depends_on, applies_to, supersedes, superseded_by, doc_type, id, path}`.
+Collect the included set (via `collect_paths`), parse each file's frontmatter, and build: `id → [paths]`, the set of all known ids, and per-doc `{created, updated, reviewed, related, depends_on, supersedes, superseded_by, doc_type, id, path}`. (`applies_to` is deliberately absent — it is free-form scope, not references; see B.3.)
 
 ### B.3 Checks
 
 | Check | Level | Rule |
 | --- | --- | --- |
 | `id` uniqueness | **error** | any `id` mapped to ≥2 files |
-| Referential integrity | **warning** | each value in `related`/`depends_on`/`applies_to`/`supersedes`/`superseded_by` resolves to an existing file path **or** a known `id`; else warn |
+| Referential integrity | **warning** | each value in `related`/`depends_on`/`supersedes`/`superseded_by` resolves to an existing file path **or** a known `id`; else warn. `applies_to` is **excluded** — the standard defines it as free-form scope identifiers (services, components, environments), not document links (`standards/markdown-frontmatter/README.md:397`; codex SA-005) |
 | Supersede reciprocity | **warning** | if A `superseded_by` B and B is local, B should `supersedes` A (and vice-versa) |
 | Date ordering | **error** | `created ≤ updated`; `reviewed ≥ created` when `reviewed` is present and non-null |
 | ADR sequence | **error** | duplicate `NNNN` among `doc_type: adr` docs in this repo |
@@ -164,19 +166,20 @@ Exit codes: **0** = no errors (warnings allowed), **1** = ≥1 error, **2** = co
 
 ## Sub-project C — ergonomics
 
-- **`project-standards fix`** (new subcommand, early-dispatched like `validate` so `--config` is forwarded): runs `validate_id.main(['--fix', …])` then `format_frontmatter.main(['--write', …])`, returns the worst exit code. Mirrors the existing `validate` read path.
+- **`project-standards fix`** (new subcommand, early-dispatched like `validate` so `--config` is forwarded): runs `format_frontmatter.main(['--write', …])` **first** (normalizes `type`→`doc_type`, fills missing `doc_type`), **then** `validate_id.main(['--fix', …])` (id now derivable from a valid `doc_type`), **then a final read-only `validate`** (`validate-frontmatter` + `validate-id`); returns the worst exit code and **fails if the final pass is non-clean**. Format-first + final-validate proves no invalid id can survive a "successful" fix (codex SA-002). Skips entirely under a custom schema (SA-008).
 - **Extend `project-standards validate`**: after `validate-frontmatter` + `validate-id`, also call `validate_references.main(…)`, which self-gates on config (no config read needed in `cli.py`). Fold into the existing `max()` exit. `validate` is the single read-only gate; `fix` is the single writer.
+- **Reusable consumer workflow** (`.github/workflows/validate-markdown-frontmatter.yml`): add a `validate-references` step (gated on config) so a consumer who sets `references.enabled: true` actually gets CI coverage — today the workflow runs `validate-frontmatter` + `validate-id` as separate steps and would silently skip references (codex SA-003). A test asserts the workflow invokes the reference validator.
 - **`--stdin`** on `format-frontmatter` (A.1) for editor format-on-save.
-- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned tag and wire whichever ids they want. New console scripts (`format-frontmatter`, `validate-references`) are added to `[project.scripts]`.
+- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Each hook sets `language: python`, `types: [markdown]`, and the right `--write`/`--check`/`--fix` args. Per-file hooks (format / `validate-frontmatter` / `validate-id`) take the staged filenames; the **`validate-references` hook sets `pass_filenames: false`** because its cross-file checks (id uniqueness, ADR sequence) need the whole repo, not a staged subset. The package must be `pip install .`-able with matching console scripts (`format-frontmatter`, `validate-references` added to `[project.scripts]`); consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned `rev`. Per official pre-commit docs, a Python hook repo must be installable and expose an executable matching each `entry` (codex SA-007).
 
-Testing: `fix` dispatch (both run, worst exit); `validate` runs references when enabled; a test that parses `.pre-commit-hooks.yaml` and asserts every `entry` resolves to a real `[project.scripts]` console script.
+Testing: `fix` dispatch (format→id-fix→final-validate, worst exit, final pass clean on `type:`+invalid-id / missing-arrays+invalid-id / path-inferred-`doc_type` fixtures); `validate` runs references when enabled; a reusable-workflow test asserts the `validate-references` invocation; `.pre-commit-hooks.yaml` passes `pre-commit validate-manifest`, every `entry` resolves to a real `[project.scripts]` console script, and `pre-commit try-repo . format-frontmatter-check --all-files` runs the hook successfully.
 
 ## Acceptance criteria
 
 - New console scripts `format-frontmatter` and `validate-references` are registered and runnable.
-- `format-frontmatter` is idempotent; preserves comments + per-line endings; enforces the denylist; scaffolds schema-valid blocks; skips unsupported YAML safely; `--stdin` round-trips.
-- `validate-references` is opt-in; implements all five checks with the specified levels and exit codes; dangling = warning.
-- `project-standards fix` and the extended `validate` work; `.pre-commit-hooks.yaml` is valid and every entry maps to a real console script.
+- `format-frontmatter` is idempotent; preserves comments + per-line endings; **preserves `publish`/`project`/`x_project` nested bytes while reordering** (examples with `project:` format clean); enforces the denylist; scaffolds schema-valid blocks and **reports them distinctly**; skips genuinely-unsupported YAML (anchors/merge/block-scalars) safely; `--stdin` round-trips; **skips when a custom schema is configured**.
+- `validate-references` is opt-in; implements all checks with the specified levels and exit codes; dangling = warning; `applies_to` raises no dangling warning.
+- `project-standards fix` runs format→id-fix→final-validate and **leaves `project-standards validate` clean** for `type:`+invalid-id, missing-arrays+invalid-id, and path-inferred-`doc_type` fixtures. The extended `validate` runs `validate-references` when enabled; the **reusable workflow runs it too** (asserted by test). `.pre-commit-hooks.yaml` passes `pre-commit validate-manifest`, every `entry` maps to a real console script, and a `try-repo` smoke runs.
 - **No new runtime dependency.** Full toolchain green: `ruff format --check`, `ruff check`, `basedpyright` 0/0/0, `pytest`, `coverage` ≥ the repo's current bar (~91%), `pip-audit`.
 - **Dogfood:** the repo's `standards/**` + `meta/**` still pass `validate-frontmatter`; `format-frontmatter --check` on the repo is clean; `references.enabled: true` on this repo passes.
 - Docs updated: `standards/markdown-frontmatter/README.md` + `adopt.md` (formatter, references, `fix`, pre-commit), `src/project_standards/README.md`, `CHANGELOG.md`; `deployed.md` + `state.md` on release.
@@ -185,6 +188,8 @@ Testing: `fix` dispatch (both run, worst exit); `validate` runs references when 
 
 - No `ruamel.yaml` or any new runtime dependency.
 - No reformatting of the document **body** — only the frontmatter block.
+- No editing of **nested extension-object content** — `publish`/`project`/`x_project` blocks are repositioned as opaque units, never rewritten internally.
+- No overriding a **valid** `doc_type` (inference is fill/correct-only — see Decision 5).
 - No auto-fix for unknown-key removal, `id` uniqueness, references, or dates (B is check-only).
 - No future-date validation.
 - No configurable path-inference rules (only the standard's fixed `index`/`research` rules).
@@ -193,7 +198,7 @@ Testing: `fix` dispatch (both run, worst exit); `validate` runs references when 
 
 ## Open implementation questions (for the plan, not blockers)
 
-- Exact comment-attachment rule (leading blank/comment lines → following key) — validate against real fixtures including the `id: '…'  # frozen` precedent.
+- Exact comment-attachment rule (leading blank/comment lines → following key) and exact more-indented-continuation capture for nested extension objects — validate against real fixtures including the `id: '…'  # frozen` precedent and the shipped `project:` examples.
 - Where to extract the shared `slugify` + base36-token generator so both `validate_id` and `format_frontmatter` use one copy (likely a small `id_format.py`); `cli.py` already imports both modules.
-- Minimum `pre-commit` version / `language` settings for the hooks file.
-- Confirm the coverage target the release must hold.
+- Minimum `pre-commit` version to pin in docs; final `types`/`pass_filenames` tuning confirmed via `try-repo`.
+- Confirm the coverage target the release must hold (current bar ~91%).
