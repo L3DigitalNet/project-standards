@@ -33,6 +33,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 > **Note for release planning:** This release is **3.0.0 / MAJOR**. Two independent changes each individually require a major bump per the **"The previously-passing rule"** section and the **Validator CLI** + **Reusable workflow** rows of the Change-classification table in `meta/versioning.md`: (1) `validate-id` now runs in the reusable CI workflow, so consumers with old-style kebab ids will newly fail on re-pin; (2) `parse_frontmatter` now rejects duplicate top-level YAML keys, which can fail a previously-passing document that happened to contain them.
 
+**Migration from `v2`.** This is a major release; adopt it deliberately:
+
+- **Re-pin both refs to `@v3`.** Bump the reusable-workflow pin `validate-markdown-frontmatter.yml@v2` → `@v3` **and** set `standards-ref: 'v3'` — match it to your `uses:` pin so the workflow definition and the installed validator never drift.
+- **Audit `id` fields before re-pinning — CI now runs `validate-id` on every managed document.** Ids in the old recommended kebab style (e.g. `restart-netbox-after-config-change`) now fail with `[id] prefix '…' is not a valid doc_type`. Run `validate-id --fix --config .project-standards.yml` to auto-regenerate non-ADR ids as `{doc_type}-{base36}-{slug}`; ADR ids are not auto-fixed — update them by hand to `adr-{NNNN}-{repo-name}-{short-title}`. Repos on a custom `markdown.frontmatter.schema` path are exempt (`validate-id` skips automatically).
+- **Remove any duplicate top-level frontmatter keys.** The YAML parser now rejects them (previously the last value silently won); symptom: `invalid YAML frontmatter: duplicate key '…'`. Fix: delete the duplicate.
+- **`validate-references` stays off until you opt in.** Re-pinning does not enable the cross-file checks; add `markdown.frontmatter.references.enabled: true` to `.project-standards.yml` only when ready. Omitting it produces no new failures.
+
 ### Added
 
 - **`format-frontmatter` command** — reformats YAML frontmatter to canonical style (`--write` to rewrite in place, `--check` to report-only). Applies canonical key ordering, single-quote-wraps all string values, renames the deny-listed `type` alias to `doc_type`, renders empty arrays as `[]` and non-empty arrays in block style, and preserves the document body unchanged. Skips files under a custom schema.
