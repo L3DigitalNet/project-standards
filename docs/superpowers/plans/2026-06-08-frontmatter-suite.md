@@ -697,6 +697,25 @@ def test_boolean_like_scalar_kept_as_string(token):
     src = _doc(title=token)
     new, _, _ = format_text(src, path=None)
     assert f"title: '{token}'" in new
+
+
+def test_hash_in_plain_scalar_is_not_a_comment():
+    # `C#` has no whitespace before '#', so it is scalar content, not a comment (CR-NEW-003).
+    src = _doc(title="C# guide")
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'C# guide'" in new
+
+
+def test_url_fragment_preserved():
+    src = _doc(title="http://example.com/p#frag")
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'http://example.com/p#frag'" in new
+
+
+def test_real_inline_comment_preserved_on_scalar():
+    src = _doc(title="X  # keep me")  # whitespace + '#' IS a real comment
+    new, _, _ = format_text(src, path=None)
+    assert "title: 'X'  # keep me" in new
 ```
 
 Add this helper near the top of the test file (used by several tests):
@@ -744,21 +763,49 @@ def _emit_single_quoted(value: str) -> str:
 _NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
 
 
+def _split_value_comment(rest: str) -> tuple[str, str]:
+    """Split the text after `key:` into (raw_value, comment). A YAML inline comment
+    begins only at whitespace + '#' (CR-NEW-003) — a bare '#' (e.g. `C# guide`,
+    `http://x/#frag`) or a '#' inside a quoted scalar is literal content. `comment`
+    keeps its leading whitespace (e.g. '  # note') so it round-trips, or is ''."""
+    if rest[:1] in ("'", '"'):
+        quote = rest[0]
+        i = 1
+        while i < len(rest):
+            ch = rest[i]
+            if quote == "'" and ch == "'":
+                if rest[i : i + 2] == "''":  # escaped single quote
+                    i += 2
+                    continue
+                return rest[: i + 1], rest[i + 1 :]
+            if quote == '"' and ch == "\\":
+                i += 2
+                continue
+            if quote == '"' and ch == '"':
+                return rest[: i + 1], rest[i + 1 :]
+            i += 1
+        return rest, ""  # unterminated quote -> treat whole as value (left as-is upstream)
+    m = re.search(r"(\s+#.*)$", rest)  # comment = whitespace then '#' to end
+    if m:
+        return rest[: m.start()], rest[m.start() :]
+    return rest, ""
+
+
 def _requote_scalar_line(line: str, key: str) -> str:
     """Re-quote the scalar value on a `key: value` line WITHOUT resolving its YAML type
     (CR-NEW-001): the author's literal text is single-quoted, so `on`/`off`/`1.1`/a date
-    keep their exact characters (`safe_load('on')` would become `True` -> `'true'`).
-    Indentation, an inline `# comment`, and the line ending are preserved; explicit
+    keep their exact characters. Indentation, an inline `# comment` (split at a real
+    whitespace-`#` boundary — CR-NEW-003), and the line ending are preserved; explicit
     `null`/`~`, empty values, and flow lists are left untouched."""
     m = re.match(
-        r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":[ \t]*)"
-        r"(?P<value>'(?:[^']|'')*'|\"(?:[^\"\\]|\\.)*\"|[^\n#]*?)"
-        r"(?P<trail>[ \t]*(?:#[^\n]*)?)(?P<eol>\r?\n?)$",
+        r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":)(?P<sep>[ \t]*)"
+        r"(?P<rest>.*)(?P<eol>\r?\n?)$",
         line,
     )
     if m is None:
         return line
-    raw = m.group("value").strip()
+    value_raw, comment = _split_value_comment(m.group("rest"))
+    raw = value_raw.strip()
     if raw == "" or raw.startswith("["):
         return line  # empty or flow list -> handled by normalize_lists
     if raw in _NULL_TOKENS:
@@ -766,15 +813,14 @@ def _requote_scalar_line(line: str, key: str) -> str:
     if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
         return line  # already single-quoted -> idempotent
     if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
-        # Explicitly double-quoted: the quotes are intentional, so safe_load yields the
-        # intended string (no implicit type guess). Convert to single-quoted.
-        decoded = yaml.safe_load(raw)
+        decoded = yaml.safe_load(raw)  # explicit quotes -> intended string, no type guess
         text_value = decoded if isinstance(decoded, str) else raw
     else:
         text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
+    sep = m.group("sep") or " "
     return (
-        m.group("indent") + m.group("key") + _emit_single_quoted(text_value)
-        + m.group("trail") + m.group("eol")
+        m.group("indent") + m.group("key") + sep + _emit_single_quoted(text_value)
+        + comment + m.group("eol")
     )
 
 
@@ -835,6 +881,19 @@ def test_boolean_like_list_items_kept_as_strings():
     new, _, _ = format_text(src, path=None)
     assert "- 'on'" in new and "- 'off'" in new and "- 'yes'" in new and "- 'no'" in new
     assert "True" not in new and "False" not in new
+
+
+def test_inline_comment_preserved_on_flow_list():
+    src = _doc(tags_line="tags: [a, b]  # keep")  # CR-NEW-004
+    new, _, _ = format_text(src, path=None)
+    assert "tags:  # keep" in new  # comment moves to the block key line
+    assert "- 'a'" in new and "- 'b'" in new
+
+
+def test_inline_comment_preserved_on_empty_list():
+    src = _doc(tags_line="tags: []  # keep")  # CR-NEW-004
+    new, _, _ = format_text(src, path=None)
+    assert "tags: []  # keep" in new
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -894,7 +953,7 @@ def normalize_lists(entries: list[Entry]) -> None:
         # Indent by slice (NOT re.match(...).group(0), which basedpyright-strict flags — CR-NEW-002).
         indent = key_line[: len(key_line) - len(key_line.lstrip(" \t"))]
         after_colon = key_line.rstrip("\r\n").split(":", 1)[1] if ":" in key_line else ""
-        inline = after_colon if after_colon.strip().startswith("#") else ""
+        inline = _split_value_comment(after_colon)[1]  # comment after [], [a], or bare key (CR-NEW-004)
         leading = entry.lines[:lead]
         items: list[str] = value if isinstance(value, list) else []
         seen: list[str] = []
@@ -2448,24 +2507,31 @@ Expected: FAIL — file missing
   pass_filenames: false
 ```
 
-- [ ] **Step 4: Run test to verify it passes, then smoke-test the manifest**
+- [ ] **Step 4: Run tests + validate the manifest (works on the untracked file)**
 
 Run: `uv run pytest tests/test_precommit_hooks.py -k "hook_entries or whole_repo" -v`
 Expected: PASS
 
-Smoke-test the manifest reproducibly via `uvx` — `pre-commit` is not a repo dependency, so `uvx` runs it without declaring one (CR-006):
+`validate-manifest` reads the explicit local path, so it works before the file is tracked. `pre-commit` is not a repo dependency, so `uvx` runs it without declaring one:
 ```bash
 uvx pre-commit validate-manifest .pre-commit-hooks.yaml
-uvx pre-commit try-repo . format-frontmatter-check --all-files
 ```
-Expected: manifest valid; the check hook installs (against Python 3.14 per `language_version`) and runs.
+Expected: manifest valid.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit (so `try-repo` can see the manifest)**
 
 ```bash
 git add .pre-commit-hooks.yaml tests/test_precommit_hooks.py
 git commit -m "feat(pre-commit): ship .pre-commit-hooks.yaml (fix + check ids)"
 ```
+
+- [ ] **Step 6: Smoke-test the hook via `try-repo` (AFTER the commit)**
+
+`try-repo` clones the repo's **tracked** state, so a newly created untracked manifest would be invisible — it must run after Step 5's commit (CR-006):
+```bash
+uvx pre-commit try-repo . format-frontmatter-check --all-files
+```
+Expected: the check hook installs (against Python 3.14 per `language_version`) and runs.
 
 ### Task C5: Documentation + final gate
 
@@ -2509,3 +2575,5 @@ git commit -m "docs: document frontmatter formatter, references, and fix for 2.1
 **Codex plan-review round 1 applied (CR-001…006):** CR-001 — `fix` final postcondition now calls all three validators (incl. references) + a custom-schema preflight (C2). CR-002 — tokenizer refuses duplicate top-level keys (A1) and the `_doc` fixtures no longer create duplicate `tags:`. CR-003 — `schema_value_is_path` made public (Task 0.4) so no private import / `# pyright: ignore` in production. CR-004 — `check_reciprocity` checks both directions. CR-005 — `--stdin` mutual exclusions enforced (exit 2). CR-006 — pre-commit smoke runs via `uvx`. Plus: atomic write preserves mode bits; list-key inline comments preserved.
 
 **Codex plan-review round 2 applied (CR-NEW-001/002, CR-001/002 fully):** CR-NEW-001 — the formatter no longer round-trips values through PyYAML's type resolver; scalars quote raw text and lists load via `yaml.BaseLoader`, so `on`/`off`/`yes`/`no`/`1.1` keep their literal characters (tests added for scalars and list items). CR-NEW-002 — `normalize_lists` derives indent by string slice, not `re.match(...).group(0)`, avoiding the strict-basedpyright optional-match deref. CR-001 (full) — `fix` now also skips on a forwarded `--schema` flag. CR-002 (full) — new Task 0.5 makes `parse_frontmatter` reject duplicate keys (so `validate`/`fix` error), the formatter also fails the gate on them, with CLI tests proving duplicates cannot pass.
+
+**Codex plan-review round 3 applied (CR-NEW-003/004, CR-006 full):** CR-NEW-003 — scalar requoting now splits the inline comment only at a real whitespace-`#` boundary via `_split_value_comment`, so `C# guide` and `http://x/#frag` are preserved (tests added). CR-NEW-004 — `normalize_lists` reuses the same splitter, so comments on `tags: [] # keep` / `tags: [a] # keep` survive (tests added). CR-006 (full) — `try-repo` runs after the manifest is committed (it clones tracked state); `validate-manifest` stays pre-commit.
