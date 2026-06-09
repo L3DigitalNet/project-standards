@@ -67,7 +67,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 | `--no-require-frontmatter` | — | Do not fail files with no frontmatter block |
 | `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 
-**Custom schema and bundled schema names:** `--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `_schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
+**Custom schema and bundled schema names:** `--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
 
 ---
 

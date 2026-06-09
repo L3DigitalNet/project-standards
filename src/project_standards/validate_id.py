@@ -388,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
     # via the --schema CLI flag or via a config-level path.  A bare token like
     # "markdown-frontmatter" is a bundled schema name; anything containing a path
     # separator or ending in ".json" is consumer-owned and may define different id
-    # conventions.  Mirrors the _schema_value_is_path check in validate_frontmatter.
+    # conventions.  Mirrors the schema_value_is_path check in validate_frontmatter.
     config_schema = config.schema
     config_has_custom_schema = config_schema is not None and (
         "/" in config_schema or "\\" in config_schema or config_schema.endswith(".json")
