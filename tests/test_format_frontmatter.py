@@ -216,6 +216,36 @@ def test_boolean_like_list_items_kept_as_strings():
     assert "True" not in new and "False" not in new
 
 
+def test_block_list_as_last_field_no_trailing_blank_line() -> None:
+    # When a non-empty block list is the LAST frontmatter field, the formatter must not
+    # insert a blank line before the closing fence (item_eol would force '\n' on the last
+    # item whose newline the close fence already owns). Byte-identical + idempotent.
+    src = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related:\n"
+        "  - 'CHANGELOG.md'\n"
+        "  - 'meta/versioning.md'\n"
+        "---\n"
+        "# Body\n"
+    )
+    new, changed, _warnings = format_text(src, path=None)
+    assert "'meta/versioning.md'\n---\n" in new  # last item then close fence, no blank
+    assert "\n\n---\n" not in new  # no blank line before the closing fence
+    assert changed is False  # already canonical -> byte-identical
+    twice, changed2, _ = format_text(new, path=None)
+    assert twice == new and changed2 is False  # idempotent
+
+
 def test_inline_comment_preserved_on_flow_list():
     src = _doc(tags_line="tags: [a, b]  # keep")  # CR-NEW-004
     new, _, _ = format_text(src, path=None)

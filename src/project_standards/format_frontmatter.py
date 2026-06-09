@@ -323,7 +323,12 @@ def normalize_lists(entries: list[Entry]) -> None:
             entry.lines = [*leading, f"{indent}{entry.key}: []{inline}{eol}"]
         else:
             rendered = [f"{indent}{entry.key}:{inline}{item_eol}"]
-            rendered += [f"{indent}  - {_emit_single_quoted(s)}{item_eol}" for s in seen]
+            for idx, s in enumerate(seen):
+                # The LAST item carries the entry's own ending (`eol` is '' when this list
+                # is the last frontmatter field — the close fence already owns that newline,
+                # so forcing item_eol here would insert a spurious blank line before `---`).
+                this_eol = eol if idx == len(seen) - 1 else item_eol
+                rendered.append(f"{indent}  - {_emit_single_quoted(s)}{this_eol}")
             entry.lines = [*leading, *rendered]
 
 
