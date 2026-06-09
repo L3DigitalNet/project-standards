@@ -1,6 +1,6 @@
 # Design: Frontmatter validation + autocorrection suite
 
-**Date:** 2026-06-08 **Status:** draft (brainstorming complete; codex spec-review round 1 applied — SA-001…SA-008) **Author:** session 2026-06-08
+**Date:** 2026-06-08 **Status:** draft (brainstorming complete; codex spec-review rounds 1–2 applied — SA-001…008, SA-NEW-001…003) **Author:** session 2026-06-08
 
 ## Table of Contents
 
@@ -71,11 +71,13 @@ A and B are independent; C wraps A. Build order A → B → C; all three ship in
 ### A.1 CLI surface
 
 ```text
-format-frontmatter [FILE ...] [--config PATH] [--glob PATTERN]
-                   [--check | --write] [--bump-updated] [--stdin] [--quiet]
+format-frontmatter [FILE ...] [--config PATH] [--schema PATH] [--glob PATTERN]
+                   [--check | --write] [--bump-updated] [--stdin]
+                   [--no-require-frontmatter] [--quiet]
 ```
 
 - Reuses `collect_paths` (`validate_frontmatter.py:232`), `load_config`, and `parse_frontmatter` — so include/exclude, `--glob`, and the `CLAUDE.md`/`.claude/**` config exclusions behave identically to the validator.
+- **Flag compatibility:** accepts the same flag set as `validate-frontmatter`/`validate-id` — `--config`, `--schema`, `--glob`, `--no-require-frontmatter` (compat no-op; the formatter already skips no-frontmatter files unless scaffolding), `--quiet` — so `project-standards fix`/`validate` can forward their full argv unchanged without argparse errors (codex SA-008, SA-NEW-001).
 - **`--check`** (default): report files that would change; **exit 1** if any would change or any is unparseable, else **0**.
 - **`--write`**: apply changes in place using A.3; **exit 0** when all writable files succeed (even if changed), **1** if any file is unparseable/unwritable, **2** config error.
 - **`--stdin`**: read one document from stdin, emit the formatted document to stdout, exit 0 (1 if unparseable). Mutually exclusive with `FILE`/`--glob`/`--write`. Path-dependent transforms are **disabled** in stdin mode: no path means no `doc_type` path-inference, no scaffolding, and the denylist cannot apply — stdin formats an **existing** block only and emits no-frontmatter input unchanged.
@@ -130,8 +132,11 @@ Supported value shapes cover the entire standard surface: single-line scalars, e
 ### B.1 CLI surface + config
 
 ```text
-validate-references [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]
+validate-references [FILE ...] [--config PATH] [--schema PATH] [--glob PATTERN]
+                    [--no-require-frontmatter] [--quiet]
 ```
+
+**Flag compatibility (codex SA-NEW-001):** `validate-references` accepts the *full* flag set that `project-standards validate` forwards to its validators — `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`, and `FILE` — so extending `validate` to call it never argparse-errors a previously-valid invocation like `project-standards validate --schema custom.json --quiet`. Under a custom schema (`--schema` or a config custom-schema path) it **skips with a note and exits 0**, mirroring `validate-id` (the reference/id/ADR checks assume the bundled id conventions). `--no-require-frontmatter` is a compat no-op — references already skip files lacking frontmatter.
 
 New module `validate_references.py` (keeps `validate_frontmatter.py` from bloating). Opt-in config, added to `load_config`:
 
@@ -158,6 +163,8 @@ Collect the included set (via `collect_paths`), parse each file's frontmatter, a
 | Date ordering | **error** | `created ≤ updated`; `reviewed ≥ created` when `reviewed` is present and non-null |
 | ADR sequence | **error** | duplicate `NNNN` among `doc_type: adr` docs in this repo |
 
+**Reference resolution (codex SA-NEW-003).** A reference value resolves if it is either: (a) a **repo-root-relative path including the file extension** (the standard's recommended link form) that exists on disk — absolute paths and `../`-escaping paths are treated as unresolvable, and any `#section` anchor is stripped before the existence check but the standard discourages anchors; or (b) an **exact** match against a known `id` in the repo index (no fuzzy/prefix matching). **Null and empty values are ignored** — `superseded_by: null` (as in `standards/adr/examples/adr.example.md`) and empty arrays are not dangling references. Bare filenames and bare ids that are not in the index resolve via (b) only; if neither (a) nor (b) holds, it is a single dangling **warning**.
+
 Exit codes: **0** = no errors (warnings allowed), **1** = ≥1 error, **2** = config error. Warnings print to stderr and never affect the exit code.
 
 ### B.4 Testing
@@ -170,7 +177,7 @@ Exit codes: **0** = no errors (warnings allowed), **1** = ≥1 error, **2** = co
 - **Extend `project-standards validate`**: after `validate-frontmatter` + `validate-id`, also call `validate_references.main(…)`, which self-gates on config (no config read needed in `cli.py`). Fold into the existing `max()` exit. `validate` is the single read-only gate; `fix` is the single writer.
 - **Reusable consumer workflow** (`.github/workflows/validate-markdown-frontmatter.yml`): add a `validate-references` step (gated on config) so a consumer who sets `references.enabled: true` actually gets CI coverage — today the workflow runs `validate-frontmatter` + `validate-id` as separate steps and would silently skip references (codex SA-003). A test asserts the workflow invokes the reference validator.
 - **`--stdin`** on `format-frontmatter` (A.1) for editor format-on-save.
-- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Each hook sets `language: python`, `types: [markdown]`, and the right `--write`/`--check`/`--fix` args. Per-file hooks (format / `validate-frontmatter` / `validate-id`) take the staged filenames; the **`validate-references` hook sets `pass_filenames: false`** because its cross-file checks (id uniqueness, ADR sequence) need the whole repo, not a staged subset. The package must be `pip install .`-able with matching console scripts (`format-frontmatter`, `validate-references` added to `[project.scripts]`); consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned `rev`. Per official pre-commit docs, a Python hook repo must be installable and expose an executable matching each `entry` (codex SA-007).
+- **Root `.pre-commit-hooks.yaml`** exposing, per tool, a mutating and a check-only id: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, `validate-references`. Each hook sets `language: python`, `types: [markdown]`, and the right `--write`/`--check`/`--fix` args. Per-file hooks (format / `validate-frontmatter` / `validate-id`) take the staged filenames; the **`validate-references` hook sets `pass_filenames: false`** because its cross-file checks (id uniqueness, ADR sequence) need the whole repo, not a staged subset. The package must be `pip install .`-able with matching console scripts (`format-frontmatter`, `validate-references` added to `[project.scripts]`); consumers reference `repo: https://github.com/L3DigitalNet/project-standards` + a pinned `rev`. Per official pre-commit docs, a Python hook repo must be installable and expose an executable matching each `entry` (codex SA-007). Because the package is `requires-python >= 3.14`, pre-commit (which installs Python hooks with `pip install .` against the *system* Python by default) needs Python 3.14 available: each hook sets `language_version: python3.14` and the manifest/docs state the 3.14 prerequisite, and the `try-repo` smoke runs in a 3.14 environment (codex SA-NEW-002).
 
 Testing: `fix` dispatch (format→id-fix→final-validate, worst exit, final pass clean on `type:`+invalid-id / missing-arrays+invalid-id / path-inferred-`doc_type` fixtures); `validate` runs references when enabled; a reusable-workflow test asserts the `validate-references` invocation; `.pre-commit-hooks.yaml` passes `pre-commit validate-manifest`, every `entry` resolves to a real `[project.scripts]` console script, and `pre-commit try-repo . format-frontmatter-check --all-files` runs the hook successfully.
 
@@ -178,7 +185,7 @@ Testing: `fix` dispatch (format→id-fix→final-validate, worst exit, final pas
 
 - New console scripts `format-frontmatter` and `validate-references` are registered and runnable.
 - `format-frontmatter` is idempotent; preserves comments + per-line endings; **preserves `publish`/`project`/`x_project` nested bytes while reordering** (examples with `project:` format clean); enforces the denylist; scaffolds schema-valid blocks and **reports them distinctly**; skips genuinely-unsupported YAML (anchors/merge/block-scalars) safely; `--stdin` round-trips; **skips when a custom schema is configured**.
-- `validate-references` is opt-in; implements all checks with the specified levels and exit codes; dangling = warning; `applies_to` raises no dangling warning.
+- `validate-references` is opt-in; implements all checks with the specified levels and exit codes; dangling = warning; `applies_to` raises no dangling warning; `superseded_by: null` is not flagged; repo-root-relative paths and exact ids resolve, absolute paths/anchors do not. It accepts the forwarded `--schema`/`--no-require-frontmatter`/`--glob` flags (skip-with-note under a custom schema), so `project-standards validate --schema custom.json --quiet` and `--no-require-frontmatter --quiet` still succeed with `references.enabled: true`.
 - `project-standards fix` runs format→id-fix→final-validate and **leaves `project-standards validate` clean** for `type:`+invalid-id, missing-arrays+invalid-id, and path-inferred-`doc_type` fixtures. The extended `validate` runs `validate-references` when enabled; the **reusable workflow runs it too** (asserted by test). `.pre-commit-hooks.yaml` passes `pre-commit validate-manifest`, every `entry` maps to a real console script, and a `try-repo` smoke runs.
 - **No new runtime dependency.** Full toolchain green: `ruff format --check`, `ruff check`, `basedpyright` 0/0/0, `pytest`, `coverage` ≥ the repo's current bar (~91%), `pip-audit`.
 - **Dogfood:** the repo's `standards/**` + `meta/**` still pass `validate-frontmatter`; `format-frontmatter --check` on the repo is clean; `references.enabled: true` on this repo passes.
