@@ -4,7 +4,7 @@
 
 ## State at a glance
 
-- **Full `2.1.0` payload IMPLEMENTED + GREEN on `testing`, NOT tagged.** adopt CLI + hardened `validate-id` + the frontmatter suite (`format-frontmatter`, `validate-references` opt-in, `project-standards fix`, `.pre-commit-hooks.yaml`, `validate` now runs all three validators). 423 tests, 92% cov, basedpyright 0/0/0, ruff clean, pip-audit clean; `format-frontmatter --check` + `project-standards validate`/`fix` clean on the repo. **E3 (release commit + tag `v2.1.0` + move `v2` + `deployed.md`) HELD — explicit user go only.**
+- **Full `2.1.0` payload IMPLEMENTED + GREEN on `testing`, NOT tagged.** adopt CLI + hardened `validate-id` + the frontmatter suite (`format-frontmatter`, `validate-references` opt-in, `project-standards fix`, `.pre-commit-hooks.yaml`, `validate` now runs all three validators). 430 tests, 91% cov, basedpyright 0/0/0, ruff clean, pip-audit clean; dogfood clean. **Codex code-reviewed** — 7 real P2/P3 defects fixed over 2 passes (`bc0db73`, `83e58e4`); accepted converged (no Critical/High ever; pass 3 unrunnable — Codex's own basedpyright integration hangs/floods on this repo, not a code issue). **E3 (release commit + tag `v2.1.0` + move `v2` + `deployed.md`) HELD — explicit user go only.**
 - **Task 0.5 RESOLVED (user-confirmed):** `parse_frontmatter` rejects duplicate top-level keys — `validate`/`fix` + consumer CI now error on them (contract-strictness bump, in CHANGELOG 2.1.0).
 - **Release version still OPEN:** `validate-id`-runs-in-CI may be MAJOR per `meta/versioning.md §3`; pick the number at E3. `2.0.0` released 2026-06-07. `main` holds releases.
 - Repo on handoff-system-v3. Validator at `src/project_standards/`; standards in `standards/<name>/…` + `meta/versioning.md`.
