@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -286,12 +288,13 @@ def test_doc_type_research_under_docs_research_when_invalid():
 def test_valid_doc_type_never_overridden_by_path():
     src = _doc().replace("doc_type: 'note'\n", "doc_type: 'reference'\n")
     new, _, _ = format_text(src, path=Path("README.md"))
-    assert "doc_type: 'reference'" in new   # SA-001: valid value preserved
+    assert "doc_type: 'reference'" in new  # SA-001: valid value preserved
     assert "doc_type: 'index'" not in new
 
 
 def test_denylisted_paths_are_refused():
     from project_standards.format_frontmatter import is_denylisted
+
     assert is_denylisted(Path("CLAUDE.md"))
     assert is_denylisted(Path("sub/AGENTS.md"))
     assert is_denylisted(Path(".claude/settings.md"))
@@ -338,13 +341,15 @@ def test_crlf_line_endings_preserved():
 
 def test_scaffold_injects_schema_valid_block():
     body = "# Real Title\n\nSome content.\n"
-    new, changed, _ = format_text(body, path=Path("docs/guide.md"), scaffold=True, today="2026-06-08")
+    new, changed, _ = format_text(
+        body, path=Path("docs/guide.md"), scaffold=True, today="2026-06-08"
+    )
     assert new.startswith("---\n")
     assert "title: 'Real Title'" in new
-    assert "doc_type: 'note'" in new          # no path rule -> note
+    assert "doc_type: 'note'" in new  # no path rule -> note
     assert "created: '2026-06-08'" in new and "updated: '2026-06-08'" in new
-    assert "description: 'TODO:" in new        # placeholder, schema-valid
-    assert "# Real Title" in new               # body preserved
+    assert "description: 'TODO:" in new  # placeholder, schema-valid
+    assert "# Real Title" in new  # body preserved
     assert changed is True
 
 
@@ -359,14 +364,12 @@ def test_scaffold_uses_path_doc_type_rule():
     assert "doc_type: 'index'" in new
 
 
-import subprocess
-import sys
-
-
 def _run(args: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "project_standards.format_frontmatter", *args],
-        capture_output=True, text=True, **kw  # type: ignore[call-overload]
+        capture_output=True,
+        text=True,
+        **kw,  # type: ignore[call-overload]
     )
 
 
@@ -399,7 +402,9 @@ def test_custom_schema_skips(tmp_path: Path) -> None:
     f = tmp_path / "d.md"
     f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
     cfg = tmp_path / ".project-standards.yml"
-    cfg.write_text("markdown:\n  frontmatter:\n    schema: 'custom/my.json'\n    include: ['*.md']\n")
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    schema: 'custom/my.json'\n    include: ['*.md']\n"
+    )
     r = _run(["--check", "--config", str(cfg), str(f)], cwd=tmp_path)
     assert r.returncode == 0
     assert "custom schema" in (r.stdout + r.stderr).lower()
@@ -410,3 +415,19 @@ def test_stdin_conflicts_exit_2(conflict: list[str]) -> None:
     r = _run(["--stdin", *conflict], input="---\ntitle: 'X'\n---\n")
     assert r.returncode == 2
     assert "stdin" in (r.stdout + r.stderr).lower()
+
+
+CASES = [
+    _doc(title="X").replace("title: 'X'", "title: X"),
+    _doc(tags_line="tags: ['b','a','b']"),
+    _doc().replace("schema_version: '1.1'\n", ""),
+    _doc().replace("doc_type: 'note'\n", "type: 'note'\n"),
+]
+
+
+@pytest.mark.parametrize("src", CASES)
+def test_format_is_idempotent(src: str) -> None:
+    once, _, _ = format_text(src, path=Path("docs/x.md"))
+    twice, changed2, _ = format_text(once, path=Path("docs/x.md"))
+    assert twice == once
+    assert changed2 is False

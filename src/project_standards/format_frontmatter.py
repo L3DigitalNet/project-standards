@@ -7,6 +7,7 @@ never edits the document body."""
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime
 import json
 import os
@@ -17,9 +18,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-from project_standards.id_format import random_token, slugify
-
 import yaml
+
+from project_standards.id_format import random_token, slugify
 
 # Leading frontmatter block; groups: open fence, body (between fences), close fence.
 _FM_RE = re.compile(r"\A(---[ \t]*\r?\n)(.*?)(\r?\n---[ \t]*(?:\r?\n|$))", re.DOTALL)
@@ -486,9 +487,11 @@ def format_text(
     if match is None:
         if scaffold and path is not None and not is_denylisted(path):
             stamp = today or _today_iso()
-            return _build_scaffold(text, path, stamp) + text, True, [
-                f"scaffolded: {path} — fill in title/description"
-            ]
+            return (
+                _build_scaffold(text, path, stamp) + text,
+                True,
+                [f"scaffolded: {path} — fill in title/description"],
+            )
         return text, False, warnings
     open_fence, body, close_fence = match.group(1), match.group(2), match.group(3)
     rest = text[match.end() :]
@@ -531,16 +534,15 @@ def _atomic_write(path: Path, data: str) -> None:
     """Write atomically AND preserve the original file's permission bits (codex
     missing-consideration): mkstemp creates 0600, so copy the source mode first."""
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    tmp_path = Path(tmp)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
             fh.write(data)
-        try:
-            os.chmod(tmp, path.stat().st_mode & 0o777)
-        except OSError:
-            pass
-        os.replace(tmp, path)
+        with contextlib.suppress(OSError):
+            tmp_path.chmod(path.stat().st_mode & 0o777)
+        tmp_path.replace(path)
     except BaseException:
-        os.unlink(tmp)
+        tmp_path.unlink()
         raise
 
 
