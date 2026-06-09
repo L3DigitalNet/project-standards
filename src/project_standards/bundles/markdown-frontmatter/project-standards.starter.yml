@@ -23,3 +23,7 @@ markdown:
       - ".github/**"
       # Tooling / generated content:
       - "node_modules/**"
+    # Optional: cross-file checks (id uniqueness, referential integrity, date ordering, ADR-number
+    # uniqueness). No-op unless enabled.
+    # references:
+    #   enabled: true
