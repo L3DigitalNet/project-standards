@@ -51,13 +51,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import secrets
-import string
 import sys
-import unicodedata
 from pathlib import Path
 from typing import Any
 
+from project_standards.id_format import random_token, slugify
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
@@ -67,9 +65,6 @@ from project_standards.validate_frontmatter import (
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
-
-# Characters used to generate the 6-character base-36 token (digits + lowercase letters).
-_BASE36_CHARS = string.digits + string.ascii_lowercase
 
 # Load the doc_type enum directly from the bundled schema so this list never drifts.
 # No valid doc_type contains a hyphen, which makes split('-', 2) safe: the first segment
@@ -94,30 +89,6 @@ _KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # like "adr-0001-repo" is rejected.  Consecutive hyphens are impossible because each segment
 # is [a-z0-9]+.
 _ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]+(-[a-z0-9]+)+$")
-
-
-def slugify(text: str) -> str:
-    """Convert *text* to a lowercase kebab-case slug.
-
-    Normalises Unicode to ASCII, lowercases, then collapses any run of
-    non-alphanumeric characters to a single hyphen. This is the canonical transform
-    for deriving the title-slug portion of a document ``id``.
-
-    Examples::
-
-        slugify("Tailscale ACL tag ordering gotcha")
-        # → "tailscale-acl-tag-ordering-gotcha"
-
-        slugify("Standards Adoption & Compliance Procedure")
-        # → "standards-adoption-compliance-procedure"
-    """
-    # Strip accent marks (e.g. é → e) before lowercasing.
-    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    text = text.lower()
-    # Collapse any run of non-alphanumeric characters (spaces, punctuation, symbols)
-    # to a single hyphen, then strip leading/trailing hyphens.
-    text = re.sub(r"[^a-z0-9]+", "-", text)
-    return text.strip("-")
 
 
 def _validate_adr_id(doc_id: str) -> list[str]:
@@ -317,7 +288,7 @@ def fix_file(path: Path) -> str | None:
         return None
     if not isinstance(title, str) or not title.strip():
         return None
-    token = "".join(secrets.choice(_BASE36_CHARS) for _ in range(6))
+    token = random_token()
     slug = slugify(title)
     if not slug:
         return None
