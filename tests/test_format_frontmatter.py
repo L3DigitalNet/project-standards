@@ -230,3 +230,42 @@ def test_real_comment_after_quoted_list_item_preserved():
     new, _, _ = format_text(src, path=Path("docs/x.md"))
     assert "- 'Issue #123'" in new
     assert "source:  # keep" in new
+
+
+def test_type_renamed_to_doc_type_when_absent():
+    src = _doc().replace("doc_type: 'note'\n", "type: 'note'\n")
+    new, changed, _ = format_text(src, path=None)
+    assert "doc_type: 'note'" in new
+    assert "\ntype:" not in new
+    assert changed is True
+
+
+def test_both_type_and_doc_type_present_warns_keeps_both():
+    src = _doc(extra="type: 'x'\n")
+    new, _, warnings = format_text(src, path=None)
+    assert "doc_type: 'note'" in new
+    assert any("type" in w.lower() for w in warnings)
+
+
+def test_missing_required_arrays_injected():
+    src = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "---\n"
+    )
+    new, changed, _ = format_text(src, path=None)
+    assert "tags: []" in new and "aliases: []" in new and "related: []" in new
+    assert changed is True
+
+
+def test_schema_version_injected_when_missing():
+    src = _doc().replace("schema_version: '1.1'\n", "")
+    new, _, _ = format_text(src, path=None)
+    assert "schema_version: '1.1'" in new

@@ -320,6 +320,46 @@ def serialize(entries: list[Entry]) -> str:
     return "".join(parts)
 
 
+BUNDLED_SCHEMA_VERSION = "1.1"  # matches registry frontmatter_default; see Task A9 note
+REQUIRED_ARRAYS = ("tags", "aliases", "related")
+
+
+def _keys(entries: list[Entry]) -> set[str]:
+    return {e.key for e in entries if e.key is not None}
+
+
+def rename_type(entries: list[Entry], warnings: list[str]) -> None:
+    present = _keys(entries)
+    if "doc_type" in present:
+        if "type" in present:
+            warnings.append("both 'type' and 'doc_type' present; kept 'doc_type', left 'type'")
+        return
+    for entry in entries:
+        if entry.key == "type":
+            entry.key = "doc_type"
+            entry.lines = [re.sub(r"\btype:", "doc_type:", ln, count=1) for ln in entry.lines]
+            return
+
+
+def _new_scalar_entry(key: str, value: str, eol: str) -> Entry:
+    return Entry(key=key, lines=[f"{key}: {_emit_single_quoted(value)}{eol}"])
+
+
+def _new_empty_list_entry(key: str, eol: str) -> Entry:
+    return Entry(key=key, lines=[f"{key}: []{eol}"])
+
+
+def inject_defaults(entries: list[Entry]) -> None:
+    """Add schema_version and any missing required arrays. Reorder (A2) places them."""
+    eol = _line_ending(entries[0].lines[-1]) if entries and entries[0].lines else "\n"
+    present = _keys(entries)
+    if "schema_version" not in present:
+        entries.append(_new_scalar_entry("schema_version", BUNDLED_SCHEMA_VERSION, eol))
+    for key in REQUIRED_ARRAYS:
+        if key not in present:
+            entries.append(_new_empty_list_entry(key, eol))
+
+
 def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     """Format the frontmatter block of `text`. Returns (new_text, changed, warnings).
 
@@ -335,6 +375,8 @@ def format_text(text: str, *, path: Path | None) -> tuple[str, bool, list[str]]:
     if reason is not None:
         warnings.append(f"skipped (unsupported frontmatter): {reason}")
         return text, False, warnings
+    rename_type(entries, warnings)
+    inject_defaults(entries)
     normalize_lists(entries)
     requote(entries)
     entries = reorder(entries, warnings)
