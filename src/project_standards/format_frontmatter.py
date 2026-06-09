@@ -6,9 +6,13 @@ never edits the document body."""
 
 from __future__ import annotations
 
+import argparse
 import datetime
 import json
+import os
 import re
+import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -511,3 +515,109 @@ def format_text(
         new_text = open_fence + new_body + close_fence + rest
         changed = new_text != text
     return new_text, changed, warnings
+
+
+from project_standards.validate_frontmatter import (  # noqa: E402
+    ConfigError,
+    collect_paths,
+    load_config,
+    schema_value_is_path,
+)
+
+_DEFAULT_CONFIG = Path(".project-standards.yml")
+
+
+def _atomic_write(path: Path, data: str) -> None:
+    """Write atomically AND preserve the original file's permission bits (codex
+    missing-consideration): mkstemp creates 0600, so copy the source mode first."""
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            fh.write(data)
+        try:
+            os.chmod(tmp, path.stat().st_mode & 0o777)
+        except OSError:
+            pass
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="format-frontmatter",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
+    parser.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+    parser.add_argument("--schema", type=Path, default=None)
+    parser.add_argument("--glob", metavar="PATTERN")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--write", action="store_true")
+    parser.add_argument("--bump-updated", action="store_true")
+    parser.add_argument("--stdin", action="store_true")
+    parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--quiet", "-q", action="store_true")
+    args = parser.parse_args(argv)
+
+    # SA-spec: --stdin reads one document and writes stdout; it is incompatible with a
+    # file set or in-place write. Enforce it (parser.error exits 2) — CR-005.
+    if args.stdin and (args.files or args.glob or args.write):
+        parser.error("--stdin cannot be combined with FILE, --glob, or --write")
+
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if args.schema is not None or schema_value_is_path(config.schema):
+        if not args.quiet:
+            print("note: custom schema in use; skipping frontmatter formatting")
+        return 0
+
+    if args.stdin:
+        text = sys.stdin.read()
+        new, _changed, _warn = format_text(text, path=None, bump_updated=args.bump_updated)
+        sys.stdout.write(new)
+        return 0
+
+    paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    write = args.write  # default is check-mode
+    any_change = False
+    unparseable = False
+    for path in paths:
+        if is_denylisted(path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"{path}: cannot read: {exc}", file=sys.stderr)
+            unparseable = True
+            continue
+        new, changed, warnings = format_text(
+            text, path=path, scaffold=write, bump_updated=args.bump_updated
+        )
+        for w in warnings:
+            print(f"{path}: {w}", file=sys.stderr)
+            # A duplicate-key block is refused (not rewritten) AND must fail the gate (CR-002).
+            if "duplicate top-level key" in w:
+                unparseable = True
+        if changed:
+            any_change = True
+            if write:
+                _atomic_write(path, new)
+                if not args.quiet:
+                    print(f"formatted: {path}")
+            elif not args.quiet:
+                print(f"would reformat: {path}")
+    if write:
+        return 1 if unparseable else 0
+    return 1 if (any_change or unparseable) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

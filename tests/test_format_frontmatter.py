@@ -357,3 +357,56 @@ def test_scaffold_disabled_leaves_body_untouched():
 def test_scaffold_uses_path_doc_type_rule():
     new, _, _ = format_text("# R\n", path=Path("README.md"), scaffold=True, today="2026-06-08")
     assert "doc_type: 'index'" in new
+
+
+import subprocess
+import sys
+
+
+def _run(args: list[str], **kw: object) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-m", "project_standards.format_frontmatter", *args],
+        capture_output=True, text=True, **kw  # type: ignore[call-overload]
+    )
+
+
+def test_check_exits_1_when_would_change(tmp_path: Path) -> None:
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    r = _run(["--check", "--config", str(cfg), str(f)], cwd=tmp_path)
+    assert r.returncode == 1
+
+
+def test_write_formats_in_place_atomically(tmp_path: Path) -> None:
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    r = _run(["--write", "--config", str(cfg), str(f)], cwd=tmp_path)
+    assert r.returncode == 0
+    assert "title: 'X'" in f.read_text()
+
+
+def test_stdin_mode_round_trips() -> None:
+    r = _run(["--stdin"], input=_doc(title="X").replace("title: 'X'", "title: X"))
+    assert r.returncode == 0
+    assert "title: 'X'" in r.stdout
+
+
+def test_custom_schema_skips(tmp_path: Path) -> None:
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    schema: 'custom/my.json'\n    include: ['*.md']\n")
+    r = _run(["--check", "--config", str(cfg), str(f)], cwd=tmp_path)
+    assert r.returncode == 0
+    assert "custom schema" in (r.stdout + r.stderr).lower()
+
+
+@pytest.mark.parametrize("conflict", [["x.md"], ["--glob", "*.md"], ["--write"]])
+def test_stdin_conflicts_exit_2(conflict: list[str]) -> None:
+    r = _run(["--stdin", *conflict], input="---\ntitle: 'X'\n---\n")
+    assert r.returncode == 2
+    assert "stdin" in (r.stdout + r.stderr).lower()
