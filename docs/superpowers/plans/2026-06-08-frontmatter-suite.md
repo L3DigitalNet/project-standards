@@ -765,27 +765,58 @@ _NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
 
 def _split_value_comment(rest: str) -> tuple[str, str]:
     """Split the text after `key:` into (raw_value, comment). A YAML inline comment
-    begins only at whitespace + '#' (CR-NEW-003) — a bare '#' (e.g. `C# guide`,
-    `http://x/#frag`) or a '#' inside a quoted scalar is literal content. `comment`
-    keeps its leading whitespace (e.g. '  # note') so it round-trips, or is ''."""
-    if rest[:1] in ("'", '"'):
-        quote = rest[0]
+    begins only at whitespace + '#' (CR-NEW-003); a bare '#' (e.g. `C# guide`,
+    `http://x/#frag`), a '#' inside a quoted scalar, or a '#' inside a quoted flow-list
+    item (e.g. `['Issue #123']` — CR-NEW-005) is literal. `comment` keeps its leading
+    whitespace (e.g. '  # note') so it round-trips, or is ''."""
+    stripped = rest.lstrip(" \t")
+    lead = rest[: len(rest) - len(stripped)]
+    if stripped[:1] in ("'", '"'):
+        quote = stripped[0]
         i = 1
-        while i < len(rest):
-            ch = rest[i]
+        while i < len(stripped):
+            ch = stripped[i]
             if quote == "'" and ch == "'":
-                if rest[i : i + 2] == "''":  # escaped single quote
+                if stripped[i : i + 2] == "''":  # escaped single quote
                     i += 2
                     continue
-                return rest[: i + 1], rest[i + 1 :]
+                return lead + stripped[: i + 1], stripped[i + 1 :]
             if quote == '"' and ch == "\\":
                 i += 2
                 continue
             if quote == '"' and ch == '"':
-                return rest[: i + 1], rest[i + 1 :]
+                return lead + stripped[: i + 1], stripped[i + 1 :]
             i += 1
         return rest, ""  # unterminated quote -> treat whole as value (left as-is upstream)
-    m = re.search(r"(\s+#.*)$", rest)  # comment = whitespace then '#' to end
+    if stripped[:1] == "[":  # flow list: scan to the matching ], honoring quotes
+        depth = 0
+        in_quote = ""
+        i = 0
+        while i < len(stripped):
+            ch = stripped[i]
+            if in_quote:
+                if in_quote == "'" and ch == "'":
+                    if stripped[i : i + 2] == "''":
+                        i += 2
+                        continue
+                    in_quote = ""
+                elif in_quote == '"' and ch == "\\":
+                    i += 2
+                    continue
+                elif in_quote == '"' and ch == '"':
+                    in_quote = ""
+            elif ch in ("'", '"'):
+                in_quote = ch
+            elif ch == "[":
+                depth += 1
+            elif ch == "]":
+                depth -= 1
+                if depth == 0:
+                    tail = stripped[i + 1 :]
+                    return lead + stripped[: i + 1], (tail if re.match(r"\s+#", tail) else "")
+            i += 1
+        return rest, ""  # unbalanced brackets -> no comment
+    m = re.search(r"(\s+#.*)$", rest)  # plain scalar: comment = whitespace then '#' to end
     if m:
         return rest[: m.start()], rest[m.start() :]
     return rest, ""
@@ -894,6 +925,20 @@ def test_inline_comment_preserved_on_empty_list():
     src = _doc(tags_line="tags: []  # keep")  # CR-NEW-004
     new, _, _ = format_text(src, path=None)
     assert "tags: []  # keep" in new
+
+
+def test_hash_inside_quoted_list_item_not_a_comment():
+    src = _doc(extra="source: ['Issue #123']\n")  # CR-NEW-005: '#' inside quote is literal
+    new, _, _ = format_text(src, path=Path("docs/x.md"))
+    assert "- 'Issue #123'" in new  # whole item preserved, '#' kept
+    assert "source: []" not in new  # not emptied / mis-split
+
+
+def test_real_comment_after_quoted_list_item_preserved():
+    src = _doc(extra="source: ['Issue #123']  # keep\n")  # CR-NEW-005
+    new, _, _ = format_text(src, path=Path("docs/x.md"))
+    assert "- 'Issue #123'" in new
+    assert "source:  # keep" in new
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2577,3 +2622,5 @@ git commit -m "docs: document frontmatter formatter, references, and fix for 2.1
 **Codex plan-review round 2 applied (CR-NEW-001/002, CR-001/002 fully):** CR-NEW-001 — the formatter no longer round-trips values through PyYAML's type resolver; scalars quote raw text and lists load via `yaml.BaseLoader`, so `on`/`off`/`yes`/`no`/`1.1` keep their literal characters (tests added for scalars and list items). CR-NEW-002 — `normalize_lists` derives indent by string slice, not `re.match(...).group(0)`, avoiding the strict-basedpyright optional-match deref. CR-001 (full) — `fix` now also skips on a forwarded `--schema` flag. CR-002 (full) — new Task 0.5 makes `parse_frontmatter` reject duplicate keys (so `validate`/`fix` error), the formatter also fails the gate on them, with CLI tests proving duplicates cannot pass.
 
 **Codex plan-review round 3 applied (CR-NEW-003/004, CR-006 full):** CR-NEW-003 — scalar requoting now splits the inline comment only at a real whitespace-`#` boundary via `_split_value_comment`, so `C# guide` and `http://x/#frag` are preserved (tests added). CR-NEW-004 — `normalize_lists` reuses the same splitter, so comments on `tags: [] # keep` / `tags: [a] # keep` survive (tests added). CR-006 (full) — `try-repo` runs after the manifest is committed (it clones tracked state); `validate-manifest` stays pre-commit.
+
+**Codex plan-review round 4 — converged (verdict: needs minor):** 10/10 prior issues resolved, 0 regressions. Applied the one residual non-blocking fix: CR-NEW-005 — `_split_value_comment` is now bracket/quote-aware so a `#` inside a quoted flow-list item (`source: ['Issue #123']`) is not misread as a comment (tests added). No blocking findings remain across four plan-review rounds.
