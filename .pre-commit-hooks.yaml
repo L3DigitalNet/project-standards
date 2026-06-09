@@ -1,0 +1,39 @@
+# .pre-commit-hooks.yaml — consumers reference this repo + a pinned rev.
+# Per-file hooks take staged markdown; validate-references needs the whole repo.
+- id: format-frontmatter-fix
+  name: format frontmatter (write)
+  entry: format-frontmatter --write
+  language: python
+  language_version: python3.14
+  types: [markdown]
+- id: format-frontmatter-check
+  name: format frontmatter (check)
+  entry: format-frontmatter --check
+  language: python
+  language_version: python3.14
+  types: [markdown]
+- id: validate-id-fix
+  name: validate id (fix)
+  entry: validate-id --fix
+  language: python
+  language_version: python3.14
+  types: [markdown]
+- id: validate-id-check
+  name: validate id (check)
+  entry: validate-id
+  language: python
+  language_version: python3.14
+  types: [markdown]
+- id: validate-frontmatter
+  name: validate frontmatter schema
+  entry: validate-frontmatter
+  language: python
+  language_version: python3.14
+  types: [markdown]
+- id: validate-references
+  name: validate cross-file references
+  entry: validate-references
+  language: python
+  language_version: python3.14
+  types: [markdown]
+  pass_filenames: false
