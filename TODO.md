@@ -16,6 +16,8 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 ## User Tracked Tasks
 
+- [ ] **NEXT SESSION — Execute the v3.0.0 release (the actual cut to `main`).** Everything is staged, reviewed (6 readiness rounds), and green on `staging`. On your go, do the all-at-once `main` push: fast-forward `main`→`staging`; create the **signed annotated tag `v3.0.0`**; create the moving `v3` tag; **freeze `v2`** (stop moving it); publish the GitHub release; flip `deployed.md` rows from staged→published on `main`. The full ordered step list is under **"Cut the `3.0.0` release"** in Repo & Agent Tracked Tasks below.
+
 ## Repo & Agent Tracked Tasks
 
 - [x] **Implement the frontmatter suite** — DONE 2026-06-09 on `testing` (Phases 0→A→B→C, subagent-driven, two-stage review + gate per phase). Ships `format-frontmatter`, `validate-references` (opt-in), `project-standards fix`, `validate` also runs references, `.pre-commit-hooks.yaml`. 423 tests, 92% cov, basedpyright 0/0/0, ruff clean, pip-audit clean; dogfood `format-frontmatter --check` + `project-standards validate`/`fix` clean on the repo.
@@ -36,5 +38,5 @@ This document is the user's visible task list alongside the v3 handoff system. U
     - [ ] GitHub release; flip `deployed.md` staged→published.
   - **Optional polish (behavior-neutral; for the review passes — NOT blocking the release):**
     - [ ] Schema `$id` floats on `main` — leave as-is (identity URI, not a fetch/validation pin; schema byte-stable across the major, so a new `$id` would wrongly re-identify an identical schema). Revisit only as a deliberate de-float to a stable schema-version path, never a moving git tag.
-    - [ ] Filename prose: `adopt.md` §2/§6 tell humans to create `validate-standards.yml` while the `adopt` CLI scaffolds `validate-markdown-frontmatter.yml` — cosmetic (works under any name); align the prose or add a one-line note.
+    - [x] Filename mismatch RESOLVED 2026-06-09 (round 6, user-chosen "CLI → prose"): `adopt.toml` `dest` now `.github/workflows/validate-standards.yml`, matching README §Consuming + `adopt.md` §3/§6. The delivered caller (`validate-standards.yml`) is now distinct from the reusable it calls (`validate-markdown-frontmatter.yml@v3`); old name no longer scaffolded; gate green.
 - [x] **Green the prettier/`format.yml` CI gate** — DONE 2026-06-09 (`281afe4`). Real failures were 13 `docs/codex-reviews/**` transcripts + 2 authored docs (`src/project_standards/README.md`, `standards/markdown-frontmatter/adopt.md`) — NOT the bundle scaffolds the earlier note guessed. Added `.prettierignore` (codex-reviews, handoff) + prettier-formatted the 2 authored docs; `prettier --check .` clean; format-frontmatter + markdownlint stay green.
