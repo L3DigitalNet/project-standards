@@ -379,11 +379,13 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
     new_lines_lf = new_text_lf.splitlines(keepends=True)
     bom_prefix = "﻿" if had_bom else ""
     if len(orig_lines) != len(new_lines_lf):
-        # Unexpected line-count mismatch; fall back to writing the LF-normalised content.
-        path.write_bytes((bom_prefix + new_text_lf).encode("utf-8"))
-        return new_id
+        # A line-count change means the rewrite did something beyond the
+        # single-line id swap. The old fallback wrote the LF-normalised text,
+        # which would mass-rewrite a CRLF file's endings behind the user's back —
+        # refuse to fix instead (the violation stays reported).
+        return None
     output: list[str] = []
-    for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=False):
+    for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=True):
         orig_stripped = orig_line.rstrip("\r\n")
         new_stripped = new_line_lf.rstrip("\r\n")
         if orig_stripped == new_stripped:
