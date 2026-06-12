@@ -264,6 +264,8 @@ def _no_frontmatter_reason(text: str) -> str:
     """
     if _FRONTMATTER_RE.match(text):
         return "frontmatter block is not a YAML mapping"
+    # This probe is _FRONTMATTER_RE's opening fence with no closing fence; the two
+    # must stay in sync or an unterminated block gets misreported as absent.
     if re.match(r"\A---[ \t]*\r?\n", text):
         return "frontmatter block is not terminated by ---"
     return "no frontmatter found at top of file"
@@ -414,7 +416,7 @@ def collect_paths(
         candidate = path if path.is_absolute() else cwd / path
         try:
             return candidate.resolve().relative_to(cwd).as_posix()
-        except (OSError, ValueError):
+        except OSError, ValueError:
             return path.as_posix()  # outside the repo root — match the raw form
 
     def is_excluded(path: Path) -> bool:

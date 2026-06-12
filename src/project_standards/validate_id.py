@@ -109,6 +109,7 @@ def _load_doc_types(schema_path: Path) -> frozenset[str]:
         )
     return doc_types
 
+
 # Exactly 6 characters from the base-36 alphabet (digits 0-9 + lowercase letters a-z).
 _BASE36_RE = re.compile(r"^[0-9a-z]{6}$")
 
@@ -123,6 +124,9 @@ _KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # least two hyphen-separated segments (repo-name and short-title); a single-segment suffix
 # like "adr-0001-repo" is rejected.  Consecutive hyphens are impossible because each segment
 # is [a-z0-9]+.
+# Also imported by validate_references, which uses "matches this grammar but isn't
+# local" to recognise cross-repo ADR citations — keep the two views of the grammar
+# in this one regex.
 _ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]+(-[a-z0-9]+)+$")
 
 
@@ -204,16 +208,16 @@ def validate_id(
             # would point the author at a length problem that does not exist.
             detail = "contains characters outside [0-9a-z]"
         errors.append(
-            f"base-36 segment '{id_base36}' must be exactly 6 characters "
-            f"from [0-9a-z] ({detail})"
+            f"base-36 segment '{id_base36}' must be exactly 6 characters from [0-9a-z] ({detail})"
         )
 
     # --- Segment 3: readable slug ---
     if not id_readable_slug:
         errors.append("readable-slug segment (after the base-36 token) is empty")
     elif not _KEBAB_RE.match(id_readable_slug):
-        # Describe the enforced rule (_KEBAB_RE) in words; the previously quoted
-        # pattern [a-z0-9][a-z0-9-]* was looser than what the code rejects.
+        # The message describes _KEBAB_RE in words rather than quoting a regex:
+        # a quoted pattern that drifts looser than the enforced one (e.g.
+        # [a-z0-9][a-z0-9-]*, which accepts bad--slug) misleads the author.
         errors.append(
             f"readable-slug '{id_readable_slug}' must be lowercase kebab-case "
             f"(alphanumeric runs separated by single hyphens; no leading, trailing, "
@@ -426,16 +430,16 @@ def fix_file(
     # continuation) would leave the continuation orphaned — invalid YAML written
     # to disk under a 'fixed:' banner. Refuse to write anything the parser cannot
     # round-trip to the new id; the file degrades to a reported violation instead.
-    _UNSAFE_LAYOUT = FixResult(
+    unsafe_layout = FixResult(
         skip_reason="id value layout cannot be rewritten automatically "
         "(multi-line or unusual quoting) — edit the id manually"
     )
     try:
         new_meta = parse_frontmatter(new_text_lf)
     except FrontmatterParseError:
-        return _UNSAFE_LAYOUT
+        return unsafe_layout
     if not isinstance(new_meta, dict) or new_meta.get("id") != new_id:
-        return _UNSAFE_LAYOUT
+        return unsafe_layout
     # Reconstruct output preserving per-line endings.  Only the id: line differs between
     # text_lf and new_text_lf; all other lines — whether \r\n, \n, or \r — are kept
     # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.
@@ -444,9 +448,10 @@ def fix_file(
     bom_prefix = "﻿" if had_bom else ""
     if len(orig_lines) != len(new_lines_lf):
         # A line-count change means the rewrite did something beyond the
-        # single-line id swap. The old fallback wrote the LF-normalised text,
-        # which would mass-rewrite a CRLF file's endings behind the user's back —
-        # refuse to fix instead (the violation stays reported).
+        # single-line id swap. Falling back to writing the LF-normalised text
+        # would mass-rewrite a CRLF file's endings behind the user's back —
+        # refusing keeps the preserve-endings contract (the violation stays
+        # reported).
         return FixResult(
             skip_reason="rewrite would alter the file beyond the id line — edit the id manually"
         )
@@ -580,7 +585,7 @@ def main(argv: list[str] | None = None) -> int:
         for path in paths:
             try:
                 meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
-            except (OSError, UnicodeDecodeError, FrontmatterParseError):
+            except OSError, UnicodeDecodeError, FrontmatterParseError:
                 continue
             if isinstance(meta, dict):
                 existing = meta.get("id")

@@ -741,19 +741,19 @@ def test_kebab_message_describes_the_enforced_rule(tmp_path: Path) -> None:
 def test_load_doc_types_missing_schema_is_config_error(tmp_path: Path) -> None:
     # The enum loads lazily (F27): a broken wheel surfaces as ConfigError/exit 2,
     # not an import-time traceback that kills even --help.
-    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
     from project_standards.validate_frontmatter import ConfigError
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
 
     with pytest.raises(ConfigError, match="cannot load doc_type enum"):
         _load_doc_types(tmp_path / "missing.schema.json")
 
 
 def test_load_doc_types_malformed_schema_is_config_error(tmp_path: Path) -> None:
-    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
     from project_standards.validate_frontmatter import ConfigError
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
 
     bad = tmp_path / "bad.schema.json"
-    bad.write_text("{\"properties\": {}}", encoding="utf-8")
+    bad.write_text('{"properties": {}}', encoding="utf-8")
     with pytest.raises(ConfigError, match="cannot load doc_type enum"):
         _load_doc_types(bad)
 
@@ -787,13 +787,11 @@ def test_main_unknown_pinned_version_exits_2(
 def test_load_doc_types_rejects_hyphenated_doc_type(tmp_path: Path) -> None:
     # split('-', 2) id parsing depends on hyphen-free doc_types; a schema that
     # adds one must fail fast at enum load, not misparse per document (F22).
-    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
     from project_standards.validate_frontmatter import ConfigError
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
 
     bad = tmp_path / "hyphen.schema.json"
-    bad.write_text(
-        '{"properties": {"doc_type": {"enum": ["note", "how-to"]}}}', encoding="utf-8"
-    )
+    bad.write_text('{"properties": {"doc_type": {"enum": ["note", "how-to"]}}}', encoding="utf-8")
     with pytest.raises(ConfigError, match="hyphenated doc_type"):
         _load_doc_types(bad)
 
@@ -802,14 +800,7 @@ def test_fix_file_refuses_block_scalar_id_instead_of_corrupting(tmp_path: Path) 
     # A block-scalar id (id: >- with a continuation line) cannot be rewritten by
     # the single-line replacement; fix_file must refuse, never write invalid
     # YAML while reporting success (F2).
-    text = (
-        "---\n"
-        "id: >-\n"
-        "  old-style\n"
-        "doc_type: 'note'\n"
-        "title: 'T'\n"
-        "---\n# Body\n"
-    )
+    text = "---\nid: >-\n  old-style\ndoc_type: 'note'\ntitle: 'T'\n---\n# Body\n"
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
     result = fix_file(f)
@@ -862,15 +853,13 @@ def test_fix_file_write_failure_is_reported_not_raised(
 ) -> None:
     # A directory that becomes unwritable between read and write must produce a
     # skip reason, not an uncaught OSError traceback (F20).
-    import os as _os
-
     f = tmp_path / "doc.md"
     f.write_text(_FULL_FM, encoding="utf-8")
-    _os.chmod(tmp_path, 0o555)  # mkstemp in the parent dir now fails
+    tmp_path.chmod(0o555)  # mkstemp in the parent dir now fails
     try:
         result = fix_file(f)
     finally:
-        _os.chmod(tmp_path, 0o755)
+        tmp_path.chmod(0o755)
     assert result.new_id is None
     assert result.skip_reason is not None and "cannot write" in result.skip_reason
 
@@ -896,10 +885,8 @@ def test_main_fix_two_files_same_title_get_distinct_ids(
     # existing-ids set, so identical titles cannot mint the same id even if the
     # token generator repeats (F25).
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        "project_standards.validate_id.random_token",
-        lambda counter=iter(["cccccc", "cccccc", "dddddd"]): next(counter),
-    )
+    tokens = iter(["cccccc", "cccccc", "dddddd"])
+    monkeypatch.setattr("project_standards.validate_id.random_token", lambda: next(tokens))
     a = tmp_path / "a.md"
     b = tmp_path / "b.md"
     a.write_text(_FULL_FM, encoding="utf-8")
@@ -908,7 +895,7 @@ def test_main_fix_two_files_same_title_get_distinct_ids(
     assert rc == 0
     import re as _re
 
-    ids = set()
+    ids: set[str] = set()
     for f in (a, b):
         m = _re.search(r"^id: '([^']+)'$", f.read_text(), _re.MULTILINE)
         assert m is not None

@@ -310,8 +310,10 @@ def main(argv: list[str] | None = None) -> int:
     # so a subdirectory run matches nothing and would otherwise print a green
     # "references valid (0 docs)" while checking nothing.
     if not index.docs:
-        print("note: no managed docs matched — is the working directory the repo root?",
-              file=sys.stderr)
+        print(
+            "note: no managed docs matched — is the working directory the repo root?",
+            file=sys.stderr,
+        )
     errors: list[str] = []
     warnings: list[str] = []
     warnings += index.skipped
