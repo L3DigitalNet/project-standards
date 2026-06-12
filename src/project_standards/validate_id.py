@@ -347,6 +347,17 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
     new_text_lf = _replace_frontmatter_id(text_lf, new_id)
     if new_text_lf == text_lf:
         return None
+    # Post-rewrite sanity check: _replace_frontmatter_id only understands
+    # single-line id: values. A block-scalar id (id: >- with an indented
+    # continuation) would leave the continuation orphaned — invalid YAML written
+    # to disk under a 'fixed:' banner. Refuse to write anything the parser cannot
+    # round-trip to the new id; the file degrades to a reported violation instead.
+    try:
+        new_meta = parse_frontmatter(new_text_lf)
+    except FrontmatterParseError:
+        return None
+    if not isinstance(new_meta, dict) or new_meta.get("id") != new_id:
+        return None
     # Reconstruct output preserving per-line endings.  Only the id: line differs between
     # text_lf and new_text_lf; all other lines — whether \r\n, \n, or \r — are kept
     # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.

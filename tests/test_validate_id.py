@@ -790,3 +790,24 @@ def test_load_doc_types_rejects_hyphenated_doc_type(tmp_path: Path) -> None:
     )
     with pytest.raises(ConfigError, match="hyphenated doc_type"):
         _load_doc_types(bad)
+
+
+def test_fix_file_refuses_block_scalar_id_instead_of_corrupting(tmp_path: Path) -> None:
+    # A block-scalar id (id: >- with a continuation line) cannot be rewritten by
+    # the single-line replacement; fix_file must refuse, never write invalid
+    # YAML while reporting success (F2).
+    text = (
+        "---\n"
+        "id: >-\n"
+        "  old-style\n"
+        "doc_type: 'note'\n"
+        "title: 'T'\n"
+        "---\n# Body\n"
+    )
+    f = tmp_path / "doc.md"
+    f.write_text(text, encoding="utf-8")
+    assert fix_file(f) is None
+    assert f.read_text(encoding="utf-8") == text  # file untouched
+    from project_standards.validate_frontmatter import parse_frontmatter as _pf
+
+    assert _pf(f.read_text(encoding="utf-8")) is not None  # still valid YAML
