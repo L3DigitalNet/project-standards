@@ -4,8 +4,6 @@ Mirrors the full CI check suite (format → lint → type-check → test → cov
 so developers and agents can run a single command to replicate what CI will see.
 """
 
-from __future__ import annotations
-
 import subprocess
 import sys
 from collections.abc import Sequence

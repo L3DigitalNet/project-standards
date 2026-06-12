@@ -6,7 +6,7 @@ description: 'How a PEP 517 build backend (uv_build) turns a src/ tree into inst
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-09'
-updated: '2026-06-09'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -85,8 +85,8 @@ src/project_standards/
 ```console
 $ uv build
 $ ls dist/
-project_standards-2.0.0-py3-none-any.whl   # wheel: pre-built, directly installable
-project_standards-2.0.0.tar.gz             # sdist: source + metadata, built into a wheel on demand
+project_standards-3.0.0-py3-none-any.whl   # wheel: pre-built, directly installable
+project_standards-3.0.0.tar.gz             # sdist: source + metadata, built into a wheel on demand
 ```
 
 The `py3-none-any` tag means "pure Python, any interpreter, any platform" — one wheel serves every consumer, and the on-demand build (§5) is cheap and identical everywhere.
@@ -96,20 +96,22 @@ The `py3-none-any` tag means "pure Python, any interpreter, any platform" — on
 This is the crux — the actual answer to "how does typing `validate-frontmatter` run Python?" A wheel is a zip whose metadata directory carries the recipe:
 
 ```text
-project_standards-2.0.0.dist-info/
+project_standards-3.0.0.dist-info/
 ├── METADATA         # name, version, deps, readme   (from [project])
 ├── WHEEL            # wheel-format version, build tool
 ├── RECORD           # every file + hash (install manifest)
 └── entry_points.txt # ← the console-script recipe, generated from [project.scripts]
 ```
 
-The backend translates `[project.scripts]` verbatim into a `[console_scripts]` section:
+The backend translates `[project.scripts]` verbatim into a `[console_scripts]` section (abbreviated — this repo defines seven entries, one per script):
 
 ```ini
 [console_scripts]
 validate-frontmatter = project_standards.validate_frontmatter:main
 project-standards    = project_standards.cli:main
 validate-id          = project_standards.validate_id:main
+; … plus sync-vscode-colors, sync-standards-include, format-frontmatter,
+; and validate-references, in the same name = module:function form.
 ```
 
 **Nothing is executable yet — `entry_points.txt` is a recipe, not a program.** The launcher is materialised at **install time**: when any installer (`uv pip install`, `uv tool install`, `uv sync`) lays the wheel down, it reads `[console_scripts]` and generates a small wrapper in the environment's `bin/`:
@@ -127,7 +129,7 @@ The `name = module:function` grammar is load-bearing: the wrapper imports the mo
 
 ## 5. Worked example — how this repository ships its CLIs
 
-This repo is configured exactly as above: `name = "project-standards"`, `build-backend = "uv_build"`, and five `[project.scripts]` entries. The twist is distribution: **there is no PyPI package.** Per [`deployed.md`](../../docs/handoff/deployed.md), a "release" is a signed git tag, and the wheel is built _on the consumer's machine_ from that ref:
+This repo is configured exactly as above: `name = "project-standards"`, `build-backend = "uv_build"`, and seven `[project.scripts]` entries. The twist is distribution: **there is no PyPI package.** Per [`deployed.md`](../../docs/handoff/deployed.md), a "release" is a signed git tag, and the wheel is built _on the consumer's machine_ from that ref:
 
 ```bash
 # uv clones project-standards at tag v3, sees [build-system], runs uv_build in a

@@ -6,7 +6,7 @@ description: 'Standard Python tooling stack, layout, CI gate, and agent instruct
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-08'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -29,9 +29,63 @@ license: null
 
 # Python Tooling SSOT Standard
 
-Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-07 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
+Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
 
 ---
+
+## Table of Contents
+
+- [Python Tooling SSOT Standard](#python-tooling-ssot-standard)
+  - [Table of Contents](#table-of-contents)
+  - [Evidence convention](#evidence-convention)
+  - [1. Purpose](#1-purpose)
+  - [2. Core contract](#2-core-contract)
+  - [3. Standard stack](#3-standard-stack)
+    - [Non-default tools](#non-default-tools)
+    - [Workstation provisioning boundary](#workstation-provisioning-boundary)
+  - [4. Repository layout](#4-repository-layout)
+  - [5. Python version policy](#5-python-version-policy)
+  - [6. `pyproject.toml` baseline](#6-pyprojecttoml-baseline)
+  - [7. Dependency policy](#7-dependency-policy)
+  - [8. Type policy](#8-type-policy)
+  - [9. Testing policy](#9-testing-policy)
+  - [10. Coverage policy](#10-coverage-policy)
+  - [11. Ruff policy](#11-ruff-policy)
+    - [Scope](#scope)
+  - [12. Security policy](#12-security-policy)
+  - [13. VS Code standard](#13-vs-code-standard)
+    - [`.vscode/extensions.json`](#vscodeextensionsjson)
+    - [Python language-server policy](#python-language-server-policy)
+    - [`.vscode/settings.json`](#vscodesettingsjson)
+    - [`.vscode/tasks.json`](#vscodetasksjson)
+    - [CLI-agent language-server policy](#cli-agent-language-server-policy)
+  - [14. `.editorconfig`](#14-editorconfig)
+  - [15. GitHub Actions standard](#15-github-actions-standard)
+  - [16. Agent instruction interface](#16-agent-instruction-interface)
+    - [16.1 Full `AGENTS.md` template](#161-full-agentsmd-template)
+    - [16.2 Thin `AGENTS.md` pointer template](#162-thin-agentsmd-pointer-template)
+  - [17. Claude Code instruction block](#17-claude-code-instruction-block)
+  - [18. Optional local check script](#18-optional-local-check-script)
+  - [19. Project profiles](#19-project-profiles)
+    - [19.1 Library package](#191-library-package)
+    - [19.2 CLI application](#192-cli-application)
+    - [19.3 FastAPI application](#193-fastapi-application)
+    - [19.4 Automation/script project](#194-automationscript-project)
+  - [20. Exceptions process](#20-exceptions-process)
+  - [21. Migration guide for existing projects](#21-migration-guide-for-existing-projects)
+    - [Step 1: Inventory](#step-1-inventory)
+    - [Step 2: Add uv without changing behavior](#step-2-add-uv-without-changing-behavior)
+    - [Step 3: Add Ruff](#step-3-add-ruff)
+    - [Step 4: Add pytest and coverage](#step-4-add-pytest-and-coverage)
+    - [Step 5: Add BasedPyright](#step-5-add-basedpyright)
+    - [Step 6: Add VS Code config](#step-6-add-vs-code-config)
+    - [Step 7: Add CI](#step-7-add-ci)
+    - [Step 8: Add agent instruction entry points](#step-8-add-agent-instruction-entry-points)
+    - [Step 9: Ratchet strictness](#step-9-ratchet-strictness)
+  - [22. Update process for this standard](#22-update-process-for-this-standard)
+  - [23. Source coverage map](#23-source-coverage-map)
+  - [24. Source register](#24-source-register)
+  - [25. Audit notes for versions 1.2 through 1.6](#25-audit-notes-for-versions-12-through-16)
 
 ## Evidence convention
 
@@ -436,7 +490,7 @@ Required:
 Preferred constructs:
 
 | Situation | Preferred construct | Source basis |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | External input/output validation | Pydantic model | [S23] |
 | Internal immutable record | `@dataclass(frozen=True)` | [S22] |
 | Mutable internal record | `@dataclass` | [S22] |
@@ -445,7 +499,7 @@ Preferred constructs:
 | Limited string options | `Literal` or `Enum` | [S21] |
 | Semantically distinct string/int identifiers | `NewType` | [S21] |
 | Path values | `pathlib.Path` | [S24] |
-| Optional value | `T | None` | [S21] |
+| Optional value | `T \| None` | [S21] |
 
 Discouraged:
 
@@ -489,26 +543,24 @@ Configuration policy:
 - Do not use `[tool.pytest]` in template repositories unless the project explicitly requires pytest 9.0+ native TOML configuration and documents that exception.
 - Keep `--strict-config` and `--strict-markers` in the active pytest table. A misplaced pytest table is a silent failure risk because pytest may still collect and run tests using defaults.
 
-Every feature should have tests for:
+Test coverage expectations:
 
-- happy path
-- invalid input
-- boundary case
-- expected failure behavior
-- regression case when fixing a bug
+- Material behavior changes SHOULD cover the happy path plus the most relevant invalid input, boundary case, and expected failure behavior.
+- Bug fixes MUST include a regression test that fails without the fix.
+- Low-risk mechanical edits MAY rely on existing behavior tests when the final report identifies the coverage relied on.
 
-Test naming:
+Test naming — new tests SHOULD follow this pattern (RECOMMENDED, not retroactively required for existing suites):
 
 ```python
 def test_<unit>__<condition>__<expected_result>() -> None:
-		...
+    ...
 ```
 
 Example:
 
 ```python
 def test_parse_config__missing_required_field__raises_validation_error() -> None:
-		...
+    ...
 ```
 
 Agent rules:
@@ -987,7 +1039,7 @@ Policy decision: `AGENTS.md` and `CLAUDE.md` are agent-visible entry points. The
 
 ### 16.1 Full `AGENTS.md` template
 
-Copy this into `AGENTS.md`, or into the canonical instruction source reached by a thin `AGENTS.md` pointer. Adapt only where necessary.
+Copy this into `AGENTS.md`, or into the canonical instruction source reached by a thin `AGENTS.md` pointer. Adapt only where necessary. Note: the adopt CLI (`project-standards adopt python-tooling`) delivers a condensed rewrite of this block as `AGENTS.md`, not this full template verbatim.
 
 ````markdown
 # Python Project Agent Instructions
@@ -1096,7 +1148,7 @@ Source basis: this block operationalizes the source-backed tool behavior documen
 
 ## 17. Claude Code instruction block
 
-Copy this into `CLAUDE.md` when the repository uses Claude Code, unless `CLAUDE.md` intentionally remains a thin pointer to `AGENTS.md` or another approved session memory/handoff source.
+Copy this into `CLAUDE.md` when the repository uses Claude Code, unless `CLAUDE.md` intentionally remains a thin pointer to `AGENTS.md` or another approved session memory/handoff source. Note: the adopt CLI delivers a condensed rewrite of this block as `CLAUDE.md`, not this full template verbatim.
 
 ```markdown
 # Claude Code Instructions
@@ -1134,39 +1186,37 @@ A Python wrapper can make the quality gate easier for agents and humans to run.
 `scripts/check.py`:
 
 ```python
-from __future__ import annotations
-
 import subprocess
 import sys
 from collections.abc import Sequence
 
 
 COMMANDS: tuple[tuple[str, ...], ...] = (
-		("uv", "run", "ruff", "format", "--check", "."),
-		("uv", "run", "ruff", "check", "."),
-		("uv", "run", "basedpyright"),
-		("uv", "run", "coverage", "run", "-m", "pytest"),
-		("uv", "run", "coverage", "report"),
-		("uv", "run", "pip-audit"),
+    ("uv", "run", "ruff", "format", "--check", "."),
+    ("uv", "run", "ruff", "check", "."),
+    ("uv", "run", "basedpyright"),
+    ("uv", "run", "coverage", "run", "-m", "pytest"),
+    ("uv", "run", "coverage", "report"),
+    ("uv", "run", "pip-audit"),
 )
 
 
 def run_command(command: Sequence[str]) -> int:
-		print(f"\n$ {' '.join(command)}", flush=True)
-		completed = subprocess.run(command, check=False)
-		return completed.returncode
+    print(f"\n$ {' '.join(command)}", flush=True)
+    completed = subprocess.run(command, check=False)
+    return completed.returncode
 
 
 def main() -> int:
-		for command in COMMANDS:
-				return_code = run_command(command)
-				if return_code != 0:
-						return return_code
-		return 0
+    for command in COMMANDS:
+        return_code = run_command(command)
+        if return_code != 0:
+            return return_code
+    return 0
 
 
 if __name__ == "__main__":
-		sys.exit(main())
+    sys.exit(main())
 ```
 
 Run:
