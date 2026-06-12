@@ -325,6 +325,21 @@ def validate_file(
 # ---------------------------------------------------------------------------
 
 
+def _glob_files(pattern: str) -> list[Path]:
+    """Glob *pattern* relative to cwd, surfacing bad patterns as operator errors.
+
+    Path.glob raises NotImplementedError for absolute patterns (and ValueError for
+    other unsupported shapes); uncaught, that exits 1 looking like a validator
+    crash instead of the documented exit-2 invocation error.
+    """
+    try:
+        return [p for p in Path().glob(pattern) if p.is_file()]
+    except (NotImplementedError, ValueError) as exc:
+        raise ConfigError(
+            f"invalid glob pattern {pattern!r} (patterns must be relative to the repo root): {exc}"
+        ) from exc
+
+
 def collect_paths(
     explicit: list[Path],
     glob_pattern: str | None,
@@ -350,10 +365,10 @@ def collect_paths(
             raise ConfigError("no such file: " + ", ".join(str(p) for p in missing))
         paths.update(explicit)
         if glob_pattern:
-            paths.update(p for p in Path().glob(glob_pattern) if p.is_file())
+            paths.update(_glob_files(glob_pattern))
     elif include_patterns:
         for pattern in include_patterns:
-            paths.update(p for p in Path().glob(pattern) if p.is_file())
+            paths.update(_glob_files(pattern))
     else:
         paths.update(p for p in Path().glob("**/*.md") if p.is_file())
 

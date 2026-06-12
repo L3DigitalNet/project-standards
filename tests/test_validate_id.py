@@ -709,3 +709,9 @@ def test_main_missing_explicit_file_exits_2(
     # A typo'd explicit FILE must exit 2, not print a green '0 file(s) validated' (F3).
     monkeypatch.chdir(tmp_path)
     assert main([str(tmp_path / "no-such-file.md")]) == 2
+
+
+def test_main_absolute_glob_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Same exit-2 contract as validate-frontmatter for bad glob patterns (F44).
+    monkeypatch.chdir(tmp_path)
+    assert main(["--glob", "/abs/*.md"]) == 2

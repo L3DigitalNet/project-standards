@@ -1468,3 +1468,14 @@ def test_main_missing_explicit_file_exits_2(
     rc = main(["no-such-file.md", "--schema", str(SCHEMA_PATH), "--quiet"])
     assert rc == 2
     assert "no such file" in capsys.readouterr().err
+
+
+def test_main_absolute_glob_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Path.glob raises NotImplementedError for absolute patterns; that must be the
+    # documented exit-2 invocation error, not a traceback (F44).
+    monkeypatch.chdir(tmp_path)
+    rc = main(["--glob", "/abs/*.md", "--quiet"])
+    assert rc == 2
+    assert "invalid glob pattern" in capsys.readouterr().err
