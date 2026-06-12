@@ -488,7 +488,17 @@ def resolve_effective_schema(
     if custom_path:
         return Path(cast("str", schema_value))
     if config.frontmatter_version is not None:
-        return find_bundled_schema(registry.frontmatter_schema_name(config.frontmatter_version))
+        resolved_name = registry.frontmatter_schema_name(config.frontmatter_version)
+        # A bundled NAME alongside a version is only redundant while they agree;
+        # letting the version silently win would reintroduce — for names — the same
+        # ambiguity the path case above rejects loudly.
+        if schema_value is not None and schema_value != resolved_name:
+            raise ConfigError(
+                f"markdown.frontmatter.schema {schema_value!r} does not match the bundled "
+                f"schema for frontmatter.version {config.frontmatter_version!r} "
+                f"({resolved_name!r}); remove one or make them agree"
+            )
+        return find_bundled_schema(resolved_name)
     return resolve_schema_path(schema_value)
 
 

@@ -1549,3 +1549,30 @@ def test_main_explicit_missing_config_exits_2(
     rc = main(["--config", "typo.yml", "--quiet"])
     assert rc == 2
     assert "config file not found" in capsys.readouterr().err
+
+
+def test_effective_schema_bundled_name_version_mismatch_is_config_error() -> None:
+    # A bundled schema NAME that disagrees with frontmatter.version must error
+    # loudly, mirroring the custom-path "not both" rule (F40).
+    from project_standards.registry import Registry
+
+    reg = Registry(
+        frontmatter_default="1.1",
+        frontmatter_versions={"1.1": "markdown-frontmatter", "2.0": "markdown-frontmatter-2.0"},
+        adr_default="1.0",
+        adr_supports={"1.0": ["1.1"]},
+        python_tooling_default="1.0",
+        python_tooling_versions=["1.0"],
+        markdown_tooling_default="1.0",
+        markdown_tooling_versions=["1.0"],
+    )
+    cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="2.0")
+    with pytest.raises(ConfigError, match="does not match"):
+        resolve_effective_schema(None, cfg, reg)
+
+
+def test_effective_schema_bundled_name_version_agreement_passes() -> None:
+    # The dogfood-config shape: schema name and version that agree stay valid (F40).
+    reg = load_registry()
+    cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="1.1")
+    assert resolve_effective_schema(None, cfg, reg).name == "markdown-frontmatter.schema.json"
