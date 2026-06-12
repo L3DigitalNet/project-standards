@@ -26,3 +26,24 @@ def test_random_token_is_six_base36_chars():
 
 def test_random_token_varies():
     assert len({random_token() for _ in range(50)}) > 1
+
+
+def test_slugify_caps_long_titles_at_word_boundary() -> None:
+    # Generated slugs are bounded so --fix on a long title cannot mint an
+    # unwieldy id (F26); the cut must land between words, never mid-word.
+    long_title = "word " * 30  # 150-char slug if uncapped
+    slug = slugify(long_title.strip())
+    assert len(slug) <= 60
+    assert not slug.endswith("-")
+    assert set(slug.split("-")) == {"word"}  # only whole words survive
+
+
+def test_slugify_single_long_token_hard_truncates() -> None:
+    # No word boundary exists inside one unbroken token — hard truncation is the
+    # only option and must still respect the cap.
+    slug = slugify("x" * 100)
+    assert slug == "x" * 60
+
+
+def test_slugify_short_titles_unchanged() -> None:
+    assert slugify("Tailscale ACL Tag") == "tailscale-acl-tag"
