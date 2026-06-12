@@ -223,6 +223,21 @@ def missing_adr_sections(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _no_frontmatter_reason(text: str) -> str:
+    """Explain why parse_frontmatter returned None, for the error message.
+
+    A present-but-non-mapping block and an unterminated block both parse to None,
+    but telling the author "no frontmatter found" while they stare at a visible
+    `---` block misdiagnoses the problem. None stays the parse contract; only the
+    reported reason is refined here.
+    """
+    if _FRONTMATTER_RE.match(text):
+        return "frontmatter block is not a YAML mapping"
+    if re.match(r"\A---[ \t]*\r?\n", text):
+        return "frontmatter block is not terminated by ---"
+    return "no frontmatter found at top of file"
+
+
 def validate_file(
     path: Path,
     validator: Draft202012Validator,
@@ -249,7 +264,7 @@ def validate_file(
         return [f"{path}: invalid YAML frontmatter: {exc}"]
     if meta is None:
         if require_frontmatter:
-            return [f"{path}: no frontmatter found at top of file"]
+            return [f"{path}: {_no_frontmatter_reason(text)}"]
         return []
 
     errors: list[str] = []

@@ -1346,3 +1346,20 @@ def test_non_string_key_is_clean_parse_error() -> None:
     # keys instead of laundering them through the dict[str, Any] cast (F46).
     with pytest.raises(FrontmatterParseError, match="non-string frontmatter key"):
         parse_frontmatter("---\non: push\n---\n# body\n")
+
+
+def test_non_mapping_block_message_names_the_real_problem(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # A visible block that parses to a list must not be reported as "no frontmatter" (F32).
+    errors = _check(tmp_path, validator, "---\n- a\n- b\n---\n# body\n")
+    assert len(errors) == 1
+    assert "not a YAML mapping" in errors[0]
+
+
+def test_unterminated_block_message_names_the_real_problem(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    errors = _check(tmp_path, validator, "---\nid: x\ntitle: T\n")
+    assert len(errors) == 1
+    assert "not terminated" in errors[0]
