@@ -477,3 +477,35 @@ def test_reciprocity_skips_doc_without_id(tmp_path: Path) -> None:
     )
     warnings = check_reciprocity(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
     assert not any("None" in w for w in warnings)
+
+
+def test_reciprocity_merges_sets_across_duplicate_ids(tmp_path: Path) -> None:
+    # When two docs share an id (itself an error elsewhere), reciprocity must
+    # consider the union of their supersede sets, not whichever doc indexed
+    # last (F49). Here the second duplicate carries the reciprocal link.
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        superseded_by="'note-dddddd-dup'",
+    )
+    _write(
+        tmp_path / "dup1.md",
+        id="'note-dddddd-dup'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    _write(
+        tmp_path / "dup2.md",
+        id="'note-dddddd-dup'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        supersedes="['note-aaaaaa-x']",
+    )
+    index = build_index([tmp_path / "a.md", tmp_path / "dup1.md", tmp_path / "dup2.md"])
+    warnings = check_reciprocity(index)
+    assert not any("note-aaaaaa-x" in w and "superseded_by" in w for w in warnings)

@@ -132,16 +132,18 @@ def check_reciprocity(index: Index) -> list[str]:
     B.supersedes=A, AND A.supersedes=B requires B.superseded_by=A. Only checked when
     the counterpart doc is local (cross-repo ids can't be inspected)."""
     warnings: list[str] = []
-    supersedes_map = {
-        d.meta.get("id"): set(_as_list(d.meta.get("supersedes")))
-        for d in index.docs
-        if isinstance(d.meta.get("id"), str)
-    }
-    superseded_by_map = {
-        d.meta.get("id"): set(_as_list(d.meta.get("superseded_by")))
-        for d in index.docs
-        if isinstance(d.meta.get("id"), str)
-    }
+    # Sets are MERGED per id, not last-wins: duplicate ids are already an error
+    # elsewhere in this run, but a dict comprehension would compute reciprocity
+    # from an arbitrary one of the duplicates, making these warnings unreliable
+    # noise in exactly the run that reports the duplicate.
+    supersedes_map: dict[str, set[str]] = {}
+    superseded_by_map: dict[str, set[str]] = {}
+    for d in index.docs:
+        d_id = d.meta.get("id")
+        if not isinstance(d_id, str):
+            continue
+        supersedes_map.setdefault(d_id, set()).update(_as_list(d.meta.get("supersedes")))
+        superseded_by_map.setdefault(d_id, set()).update(_as_list(d.meta.get("superseded_by")))
     for doc in index.docs:
         a_id = doc.meta.get("id")
         # A doc with supersede fields but no usable id of its own cannot satisfy
