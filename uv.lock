@@ -423,7 +423,7 @@ dev = [
     { name = "basedpyright" },
     { name = "coverage", extras = ["toml"] },
     { name = "pip-audit" },
-    { name = "pytest", specifier = ">=8.3.0" },
+    { name = "pytest", specifier = ">=9.0" },
     { name = "pytest-cov" },
     { name = "ruff", specifier = ">=0.9.0" },
     { name = "types-pyyaml" },
