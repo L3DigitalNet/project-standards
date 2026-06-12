@@ -1385,3 +1385,19 @@ def test_datetime_value_is_rejected_not_truncated(
     )
     errors = _check(tmp_path, validator, f"---\n{meta_yaml}---\n# body\n")
     assert any("updated" in e for e in errors)
+
+
+def test_error_sort_survives_mixed_type_paths(tmp_path: Path) -> None:
+    # A custom schema can produce errors whose paths mix str keys and int indices
+    # at the same depth; sorting them must not raise TypeError (F31).
+    schema = {
+        "type": "object",
+        "properties": {
+            "a": {"type": "object", "properties": {"x": {"type": "string"}}},
+            "b": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    validator = Draft202012Validator(schema)
+    path = _write(tmp_path, "---\na:\n  x: 1\nb:\n  - 2\n---\n# body\n")
+    errors = validate_file(path, validator, require_frontmatter=True)
+    assert len(errors) == 2

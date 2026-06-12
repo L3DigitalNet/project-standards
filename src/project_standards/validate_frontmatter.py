@@ -273,7 +273,10 @@ def validate_file(
         return []
 
     errors: list[str] = []
-    for error in sorted(validator.iter_errors(meta), key=lambda e: list(e.path)):  # pyright: ignore[reportUnknownMemberType]
+    # Sort key stringifies path elements: raw paths mix str keys with int array
+    # indices, and comparing those raises TypeError under custom schemas whose
+    # error paths diverge in type at the same position.
+    for error in sorted(validator.iter_errors(meta), key=lambda e: [str(p) for p in e.path]):  # pyright: ignore[reportUnknownMemberType]
         field = ".".join(str(p) for p in error.path) or "(root)"
         errors.append(f"{path}: [{field}] {error.message}")
 
