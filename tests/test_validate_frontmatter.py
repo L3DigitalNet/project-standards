@@ -1528,3 +1528,12 @@ def test_load_config_duplicate_key_is_config_error(tmp_path: Path) -> None:
     )
     with pytest.raises(ConfigError, match="duplicate key"):
         load_config(cfg)
+
+
+def test_load_config_unquoted_numeric_version_is_config_error(tmp_path: Path) -> None:
+    # YAML parses `version: 1.10` as the float 1.1; str()-coercing it would
+    # silently pin the wrong contract. Non-string versions must exit 2 (F30).
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    version: 1.10\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="must be a quoted string"):
+        load_config(cfg)

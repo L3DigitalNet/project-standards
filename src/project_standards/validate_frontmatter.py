@@ -524,6 +524,23 @@ def _as_str_list(value: Any) -> list[str]:
     return []
 
 
+def _version_str(value: Any, key: str) -> str | None:
+    """A config version value, or None when absent. Strings only — no coercion.
+
+    str() on a YAML float silently mangles versions: an unquoted `version: 1.10`
+    parses as the float 1.1 and would pin the wrong contract. Refusing non-strings
+    makes the precision loss an operator error instead of a silent downgrade.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ConfigError(
+            f"{key} must be a quoted string (got {value!r}); "
+            f"unquoted version numbers lose precision (1.10 parses as 1.1)"
+        )
+    return value
+
+
 def load_config(path: Path) -> ProjectConfig:
     """Read nested `markdown.frontmatter` + `markdown.adr`; missing keys default."""
     schema: str | None = None
@@ -562,8 +579,9 @@ def load_config(path: Path) -> ProjectConfig:
                     include = _as_str_list(fm.get("include"))
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
-                    version_val = fm.get("version")
-                    frontmatter_version = str(version_val) if version_val is not None else None
+                    frontmatter_version = _version_str(
+                        fm.get("version"), "markdown.frontmatter.version"
+                    )
                     references = fm.get("references")
                     if isinstance(references, dict):
                         references_dict = cast("dict[str, Any]", references)
@@ -574,19 +592,18 @@ def load_config(path: Path) -> ProjectConfig:
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
                     require_adr_sections = bool(adr_dict.get("require_sections", False))
-                    adr_version_val = adr_dict.get("version")
-                    adr_version = str(adr_version_val) if adr_version_val is not None else None
+                    adr_version = _version_str(adr_dict.get("version"), "markdown.adr.version")
             python_tooling = raw_dict.get("python_tooling")
             if isinstance(python_tooling, dict):
                 pt_dict = cast("dict[str, Any]", python_tooling)
-                pt_version_val = pt_dict.get("version")
-                python_tooling_version = str(pt_version_val) if pt_version_val is not None else None
+                python_tooling_version = _version_str(
+                    pt_dict.get("version"), "python_tooling.version"
+                )
             markdown_tooling = raw_dict.get("markdown_tooling")
             if isinstance(markdown_tooling, dict):
                 mt_dict = cast("dict[str, Any]", markdown_tooling)
-                mt_version_val = mt_dict.get("version")
-                markdown_tooling_version = (
-                    str(mt_version_val) if mt_version_val is not None else None
+                markdown_tooling_version = _version_str(
+                    mt_dict.get("version"), "markdown_tooling.version"
                 )
 
     return ProjectConfig(
