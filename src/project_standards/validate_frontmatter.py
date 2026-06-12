@@ -539,7 +539,10 @@ def load_config(path: Path) -> ProjectConfig:
 
     if path.exists():
         try:
-            raw: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+            # _UniqueKeyLoader, not safe_load: a duplicated key in the config that
+            # decides WHAT gets validated (two exclude: blocks, say) must error,
+            # not silently last-win — the same argument that applies to frontmatter.
+            raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
         except OSError as exc:
             # exists() passed but the read failed (permissions, path is a directory):
             # an operator error that must exit 2 cleanly, not traceback.

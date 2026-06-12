@@ -1516,3 +1516,15 @@ def test_load_config_unreadable_path_is_config_error(tmp_path: Path) -> None:
     cfg_dir.mkdir()
     with pytest.raises(ConfigError, match="cannot read config"):
         load_config(cfg_dir)
+
+
+def test_load_config_duplicate_key_is_config_error(tmp_path: Path) -> None:
+    # Duplicate keys in the config silently last-win under safe_load, dropping
+    # whole include/exclude blocks; they must be an explicit error (F41).
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    exclude: ['a.md']\n    exclude: ['b.md']\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="duplicate key"):
+        load_config(cfg)
