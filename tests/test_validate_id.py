@@ -873,3 +873,44 @@ def test_fix_file_write_failure_is_reported_not_raised(
         _os.chmod(tmp_path, 0o755)
     assert result.new_id is None
     assert result.skip_reason is not None and "cannot write" in result.skip_reason
+
+
+def test_fix_file_regenerates_token_on_corpus_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A minted id colliding with one already in the corpus must be regenerated:
+    # duplicate-id detection lives in opt-in validate-references, so a collision
+    # minted by --fix could otherwise pass CI forever (F25).
+    tokens = iter(["aaaaaa", "bbbbbb"])
+    monkeypatch.setattr("project_standards.validate_id.random_token", lambda: next(tokens))
+    f = tmp_path / "doc.md"
+    f.write_text(_FULL_FM, encoding="utf-8")
+    result = fix_file(f, None, {"note-aaaaaa-tailscale-acl-gotcha"})
+    assert result.new_id == "note-bbbbbb-tailscale-acl-gotcha"
+
+
+def test_main_fix_two_files_same_title_get_distinct_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Intra-run uniqueness: ids minted earlier in the same --fix run join the
+    # existing-ids set, so identical titles cannot mint the same id even if the
+    # token generator repeats (F25).
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "project_standards.validate_id.random_token",
+        lambda counter=iter(["cccccc", "cccccc", "dddddd"]): next(counter),
+    )
+    a = tmp_path / "a.md"
+    b = tmp_path / "b.md"
+    a.write_text(_FULL_FM, encoding="utf-8")
+    b.write_text(_FULL_FM, encoding="utf-8")
+    rc = main(["--fix", str(a), str(b)])
+    assert rc == 0
+    import re as _re
+
+    ids = set()
+    for f in (a, b):
+        m = _re.search(r"^id: '([^']+)'$", f.read_text(), _re.MULTILINE)
+        assert m is not None
+        ids.add(m.group(1))
+    assert len(ids) == 2

@@ -339,11 +339,20 @@ class FixResult:
     is_adr: bool = False
 
 
-def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> FixResult:
+def fix_file(
+    path: Path,
+    valid_doc_types: frozenset[str] | None = None,
+    existing_ids: set[str] | None = None,
+) -> FixResult:
     """Rewrite the ``id`` field in *path* to a valid standard-format id.
 
     Derives the new id from the document's ``doc_type`` and ``title`` fields:
     ``{doc_type}-{6-char base36 token}-{slugify(title)}``.
+
+    *existing_ids* are ids already present in the corpus; the random token is
+    regenerated on collision so a minted id is unique among them. (Duplicate-id
+    detection lives in opt-in validate-references — a collision minted here
+    could otherwise pass CI forever in a repo that never opted in.)
 
     Returns a FixResult: ``new_id`` set when the file was modified, otherwise a
     human-readable ``skip_reason`` (already-valid id, ADR doc_type, missing or
@@ -393,14 +402,22 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> FixRe
         return FixResult(skip_reason="id is already valid")
     if not isinstance(title, str) or not title.strip():
         return FixResult(skip_reason="title is missing or empty — cannot derive a slug")
-    token = random_token()
     slug = slugify(title)
     if not slug:
         return FixResult(
             skip_reason="title produces an empty slug (no ASCII-translatable "
             "characters) — set an ASCII-translatable title or write the id manually"
         )
-    new_id = f"{doc_type}-{token}-{slug}"
+    new_id = f"{doc_type}-{random_token()}-{slug}"
+    if existing_ids is not None:
+        # 36^6 tokens make a real collision astronomically rare; the bound only
+        # guards against a pathological existing_ids set.
+        for _ in range(100):
+            if new_id not in existing_ids:
+                break
+            new_id = f"{doc_type}-{random_token()}-{slug}"
+        else:
+            return FixResult(skip_reason="could not generate an unused id (token collisions)")
     new_text_lf = _replace_frontmatter_id(text_lf, new_id)
     if new_text_lf == text_lf:
         return FixResult(skip_reason="no rewritable id: line found in the frontmatter block")
@@ -557,12 +574,26 @@ def main(argv: list[str] | None = None) -> int:
         skip_notes: list[tuple[Path, str]] = []
         remaining_errors: list[str] = []
 
+        # Pre-collect every id in the corpus so minted ids cannot collide with an
+        # existing one (or with each other — fixed ids are added as they're minted).
+        existing_ids: set[str] = set()
+        for path in paths:
+            try:
+                meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
+            except (OSError, UnicodeDecodeError, FrontmatterParseError):
+                continue
+            if isinstance(meta, dict):
+                existing = meta.get("id")
+                if isinstance(existing, str) and existing:
+                    existing_ids.add(existing)
+
         for path in paths:
             violations = check_file(path, valid_doc_types)
             if not violations:
                 continue
-            result = fix_file(path, valid_doc_types)
+            result = fix_file(path, valid_doc_types, existing_ids)
             if result.new_id is not None:
+                existing_ids.add(result.new_id)
                 fixed.append((path, result.new_id))
             elif result.is_adr:
                 adr_skipped.append(path)
