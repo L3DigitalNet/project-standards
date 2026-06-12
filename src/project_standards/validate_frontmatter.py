@@ -228,6 +228,15 @@ def missing_adr_sections(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+# Shape of the schema's date pattern. The code-level calendar check below only fires
+# on values the schema pattern already accepts, so impossible dates (2026-13-40) get
+# exactly one error and malformed shapes keep their schema pattern error.
+_DATE_SHAPE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+
+# The standard's top-level date fields. Custom schemas without them are a no-op here.
+_DATE_FIELDS = ("created", "updated", "reviewed")
+
+
 def _no_frontmatter_reason(text: str) -> str:
     """Explain why parse_frontmatter returned None, for the error message.
 
@@ -279,6 +288,16 @@ def validate_file(
     for error in sorted(validator.iter_errors(meta), key=lambda e: [str(p) for p in e.path]):  # pyright: ignore[reportUnknownMemberType]
         field = ".".join(str(p) for p in error.path) or "(root)"
         errors.append(f"{path}: [{field}] {error.message}")
+
+    # The schema's date pattern accepts calendar-impossible values (2026-13-40);
+    # jsonschema does not enforce format:date by default, so check it here (F36).
+    for field_name in _DATE_FIELDS:
+        value = meta.get(field_name)
+        if isinstance(value, str) and _DATE_SHAPE_RE.fullmatch(value):
+            try:
+                datetime.date.fromisoformat(value)
+            except ValueError:
+                errors.append(f"{path}: [{field_name}] '{value}' is not a real calendar date")
 
     if require_adr_sections and meta.get("doc_type") == "adr":
         for section in missing_adr_sections(text):

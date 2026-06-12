@@ -1401,3 +1401,15 @@ def test_error_sort_survives_mixed_type_paths(tmp_path: Path) -> None:
     path = _write(tmp_path, "---\na:\n  x: 1\nb:\n  - 2\n---\n# body\n")
     errors = validate_file(path, validator, require_frontmatter=True)
     assert len(errors) == 2
+
+
+def test_calendar_impossible_date_fails(tmp_path: Path, validator: Draft202012Validator) -> None:
+    # The schema pattern accepts 2026-13-40; the code-level check must reject it (F36).
+    meta = {**MINIMAL, "created": "2026-13-40"}
+    errors = _check(tmp_path, validator, _doc(meta))
+    assert any("not a real calendar date" in e for e in errors)
+
+
+def test_real_dates_pass_calendar_check(tmp_path: Path, validator: Draft202012Validator) -> None:
+    meta = {**MINIMAL, "created": "2024-02-29"}  # real leap day
+    assert _check(tmp_path, validator, _doc(meta)) == []
