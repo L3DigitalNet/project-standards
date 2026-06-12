@@ -376,6 +376,12 @@ def collect_paths(
     Raises ConfigError for an explicitly named file that does not exist: globs and
     includes may legitimately match nothing, but silently dropping a named file
     turns a typo'd CI invocation into a green run that validated nothing.
+
+    Pattern-dialect warning: include patterns use Path.glob semantics (`*` stops at
+    `/`), but exclude patterns use fnmatch semantics where `*` ALSO spans path
+    separators — `docs/*.md` excludes nested files too. This asymmetry is the price
+    of version-independent `dir/**` exclusion (see the comment below); write exclude
+    patterns accordingly.
     """
     paths: set[Path] = set()
 
@@ -399,9 +405,20 @@ def collect_paths(
     # files beneath it on older interpreters. fnmatch's `*` spans path
     # separators, giving consistent prefix-style exclusion on every supported
     # Python version.
+    cwd = Path.cwd().resolve()
+
+    def _match_key(path: Path) -> str:
+        # Exclude patterns are written repo-root-relative; an explicitly passed
+        # absolute path must not bypass them just because its string form differs.
+        candidate = path if path.is_absolute() else cwd / path
+        try:
+            return candidate.resolve().relative_to(cwd).as_posix()
+        except (OSError, ValueError):
+            return path.as_posix()  # outside the repo root — match the raw form
+
     def is_excluded(path: Path) -> bool:
-        posix = path.as_posix()
-        return any(fnmatchcase(posix, pattern) for pattern in exclude_patterns)
+        key = _match_key(path)
+        return any(fnmatchcase(key, pattern) for pattern in exclude_patterns)
 
     return sorted(p for p in paths if not is_excluded(p))
 

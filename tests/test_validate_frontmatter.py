@@ -1495,3 +1495,15 @@ def test_default_fallback_skips_hidden_and_vendored_trees(
     monkeypatch.chdir(tmp_path)
     got = [p.as_posix() for p in collect_paths([], None, [], [])]
     assert got == ["docs/real.md"]
+
+
+def test_exclude_applies_to_absolute_explicit_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An absolute explicit path must not bypass repo-relative exclude patterns (F7):
+    # the docstring promises "exclude is applied in all cases".
+    (tmp_path / "standards" / "templates").mkdir(parents=True)
+    target = tmp_path / "standards" / "templates" / "t.md"
+    target.write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert collect_paths([target], None, [], ["standards/**"]) == []
