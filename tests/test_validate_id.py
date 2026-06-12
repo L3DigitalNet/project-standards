@@ -823,3 +823,11 @@ def test_fix_file_fixes_bom_prefixed_file_and_keeps_bom(tmp_path: Path) -> None:
     written = f.read_bytes()
     assert written.startswith(b"\xef\xbb\xbf")
     assert f"id: '{new_id}'".encode() in written
+
+
+def test_replace_frontmatter_id_unquoted_hash_gets_separating_space(tmp_path: Path) -> None:
+    # `id: old#id` (YAML reads the whole scalar) must not produce `'new'#id` —
+    # a comment without separating whitespace is invalid per the YAML spec (F15).
+    text = "---\nid: old#id\ndoc_type: note\n---\n# Body\n"
+    result = _replace_frontmatter_id(text, "note-a3f9zk-new-slug")
+    assert "id: 'note-a3f9zk-new-slug' #id" in result

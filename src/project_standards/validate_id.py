@@ -278,7 +278,14 @@ def _replace_frontmatter_id(text: str, new_id: str) -> str:
     # The lazy unquoted form [^\n]*? yields the shortest match, leaving any "  # comment"
     # suffix to group 3 rather than including it in the value.
     def _repl(m: re.Match[str]) -> str:
-        return f"id: '{new_id}'" + (m.group(3) or "")
+        trailing = m.group(3) or ""
+        # For an unquoted value like `id: old#id`, YAML reads the whole scalar but
+        # the lazy split assigns `#id` to the comment group with no separating
+        # space. Emitting it adjacent to the quote (`id: 'new'#id`) is junk that
+        # spec-strict parsers (e.g. Prettier's yaml) reject — insert the space.
+        if trailing.startswith("#"):
+            trailing = " " + trailing
+        return f"id: '{new_id}'" + trailing
 
     new_fm_body = re.sub(
         r"^(id:[ \t]*)('(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"|[^\n]*?)"
