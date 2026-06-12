@@ -566,3 +566,33 @@ def test_symlink_escaping_repo_root_does_not_resolve(tmp_path: Path) -> None:
     )
     warnings = check_references(build_index([repo / "a.md"]), repo)
     assert len(warnings) == 1
+
+
+def test_cross_repo_adr_citation_not_warned(tmp_path: Path) -> None:
+    # The standard endorses citing ADR ids across repositories (the repo-name
+    # segment makes them globally unique); a well-formed non-local ADR id must
+    # not produce a permanent unresolved warning (F10).
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        related="['adr-0007-otherrepo-use-postgres']",
+    )
+    assert check_references(build_index([tmp_path / "a.md"]), tmp_path) == []
+
+
+def test_malformed_adr_like_ref_still_warns(tmp_path: Path) -> None:
+    # Only WELL-FORMED ADR ids get the external-citation benefit of the doubt;
+    # adr-07-x (too few digits) is not a valid ADR id anywhere and stays warned.
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        related="['adr-07-otherrepo-use-postgres']",
+    )
+    warnings = check_references(build_index([tmp_path / "a.md"]), tmp_path)
+    assert len(warnings) == 1

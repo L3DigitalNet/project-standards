@@ -21,6 +21,9 @@ from project_standards.validate_frontmatter import (
     reconfigure_output_streams,
     schema_value_is_path,
 )
+from project_standards.validate_id import (
+    _ADR_ID_RE,  # pyright: ignore[reportPrivateUsage]  # one grammar, one owner
+)
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
 _REF_FIELDS = ("related", "depends_on", "supersedes", "superseded_by")  # NOT applies_to
@@ -148,7 +151,17 @@ def check_references(index: Index, repo_root: Path) -> list[str]:
                     f"[warning] {doc.path}: section anchors are not valid document "
                     f"references (use document-level links): '{ref}'"
                 )
-            elif not _resolves(ref, index, repo_root):
+            elif _resolves(ref, index, repo_root):
+                pass
+            elif _ADR_ID_RE.match(ref):
+                # The standard endorses citing ADR ids across repositories — the
+                # repo-name segment exists for exactly that — so a well-formed ADR
+                # id with no local match is assumed external, not broken. Warning
+                # here would emit permanent, unsuppressible noise on every
+                # documented cross-repo citation. Accepted trade-off: a dangling
+                # LOCAL ADR id that still matches the format is also skipped.
+                continue
+            else:
                 warnings.append(f"[warning] {doc.path}: unresolved reference '{ref}'")
     return warnings
 
