@@ -88,7 +88,10 @@ def _ref_values(meta: dict[str, Any]) -> list[str]:
         val = meta.get(field_name)
         if val is None:
             continue
-        if isinstance(val, str):
+        # Empty strings are schema-valid (no minLength on superseded_by) but carry
+        # no reference; both the scalar and list forms ignore them — a bare
+        # "unresolved reference ''" warning diagnoses nothing.
+        if isinstance(val, str) and val:
             values.append(val)
         elif isinstance(val, list):
             val_list = cast("list[Any]", val)

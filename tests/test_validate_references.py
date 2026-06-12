@@ -442,3 +442,17 @@ def test_main_explicit_missing_config_exits_2(
     rc = main(["--config", "typo.yml"])
     assert rc == 2
     assert "config file not found" in capsys.readouterr().err
+
+
+def test_empty_string_superseded_by_not_flagged(tmp_path: Path) -> None:
+    # Schema-valid but reference-free: '' must be ignored in the scalar form just
+    # as it is in the list form, not warned as "unresolved reference ''" (F47).
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        superseded_by="''",
+    )
+    assert check_references(build_index([tmp_path / "a.md"]), tmp_path) == []
