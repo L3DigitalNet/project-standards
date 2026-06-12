@@ -62,6 +62,7 @@ from project_standards.validate_frontmatter import (
     collect_paths,
     load_config,
     parse_frontmatter,
+    reconfigure_output_streams,
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
@@ -322,6 +323,7 @@ def fix_file(path: Path) -> str | None:
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point; returns an exit code."""
+    reconfigure_output_streams()
     parser = argparse.ArgumentParser(
         prog="validate-id",
         description=(

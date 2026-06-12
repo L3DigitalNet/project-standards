@@ -1632,3 +1632,17 @@ def test_load_registry_cross_field_violations_raise(
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)
+
+
+def test_summary_glyphs_survive_ascii_only_stream(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # On an ASCII-only console the ✓ summary raised UnicodeEncodeError (F45);
+    # reconfigure_output_streams degrades the glyph instead of crashing.
+    import io as _io
+
+    _write(tmp_path, _doc(MINIMAL), name="good.md")
+    monkeypatch.chdir(tmp_path)
+    ascii_out = _io.TextIOWrapper(_io.BytesIO(), encoding="ascii")
+    monkeypatch.setattr("sys.stdout", ascii_out)
+    assert main(["good.md", "--schema", str(SCHEMA_PATH)]) == 0

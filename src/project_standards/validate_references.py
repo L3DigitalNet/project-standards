@@ -17,6 +17,7 @@ from project_standards.validate_frontmatter import (
     collect_paths,
     load_config,
     parse_frontmatter,
+    reconfigure_output_streams,
     schema_value_is_path,
 )
 
@@ -174,6 +175,7 @@ def check_adr_sequence(index: Index) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    reconfigure_output_streams()
     _base_desc = __doc__ or ""
     parser = argparse.ArgumentParser(
         prog="validate-references",

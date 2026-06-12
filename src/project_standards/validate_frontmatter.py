@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import io
 import json
 import os
 import re
@@ -639,7 +640,22 @@ def load_config(path: Path) -> ProjectConfig:
 # ---------------------------------------------------------------------------
 
 
+def reconfigure_output_streams() -> None:
+    """Make the ✓/✗ summary glyphs safe on non-UTF-8 consoles.
+
+    On a cp1252/C-locale console (Windows, mis-configured self-hosted runners) the
+    summary print raises UnicodeEncodeError, turning a clean pass/fail into a
+    traceback. errors="replace" degrades the glyphs instead. Streams that are not
+    TextIOWrapper (harness doubles, detached pipes) are left alone. Shared by all
+    three validator mains.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    reconfigure_output_streams()
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
