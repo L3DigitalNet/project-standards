@@ -39,7 +39,9 @@ from project_standards.registry import Registry, RegistryError, load_registry
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
 # that appears anywhere else is intentionally NOT treated as frontmatter, so such
 # files are reported as "no frontmatter found" when frontmatter is required.
-_FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)", re.DOTALL)
+# Fence lines tolerate trailing spaces/tabs (Jekyll/python-frontmatter do too) so a
+# stray trailing space cannot flip a valid file to "missing frontmatter".
+_FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", re.DOTALL)
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
 _DEFAULT_CONFIG = Path(".project-standards.yml")

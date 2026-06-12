@@ -1363,3 +1363,10 @@ def test_unterminated_block_message_names_the_real_problem(
     errors = _check(tmp_path, validator, "---\nid: x\ntitle: T\n")
     assert len(errors) == 1
     assert "not terminated" in errors[0]
+
+
+def test_parse_tolerates_trailing_whitespace_on_fences() -> None:
+    # A trailing space on a fence line must not hide the block (F35); other
+    # frontmatter parsers (Jekyll, python-frontmatter) tolerate it too.
+    parsed = parse_frontmatter("--- \nid: x\n---  \nbody\n")
+    assert parsed == {"id": "x"}
