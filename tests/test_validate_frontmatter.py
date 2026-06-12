@@ -1479,3 +1479,19 @@ def test_main_absolute_glob_exits_2(
     rc = main(["--glob", "/abs/*.md", "--quiet"])
     assert rc == 2
     assert "invalid glob pattern" in capsys.readouterr().err
+
+
+def test_default_fallback_skips_hidden_and_vendored_trees(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # With no include config, the **/*.md fallback must not sweep .venv/,
+    # node_modules/, .git/ or other hidden trees (F6).
+    (tmp_path / ".venv" / "lib").mkdir(parents=True)
+    (tmp_path / ".venv" / "lib" / "README.md").write_text("x", encoding="utf-8")
+    (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
+    (tmp_path / "node_modules" / "pkg" / "README.md").write_text("x", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "real.md").write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    got = [p.as_posix() for p in collect_paths([], None, [], [])]
+    assert got == ["docs/real.md"]

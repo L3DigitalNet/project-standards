@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import re
 import sys
 from fnmatch import fnmatchcase
@@ -325,6 +326,25 @@ def validate_file(
 # ---------------------------------------------------------------------------
 
 
+def _default_corpus() -> list[Path]:
+    """Every Markdown file under cwd, skipping hidden and vendored trees.
+
+    The no-include fallback previously used Path().glob("**/*.md"), which recurses
+    into .git/, .venv/ and node_modules/ — making the advertised default unusable
+    after the first dependency install (and polluting validate-references' index
+    with vendored docs). Hidden components and node_modules are pruned during
+    traversal, so those trees are never walked at all. Explicit include patterns
+    are untouched: a repo that wants hidden paths can name them.
+    """
+    found: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk("."):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "node_modules"]
+        for filename in filenames:
+            if filename.endswith(".md") and not filename.startswith("."):
+                found.append(Path(dirpath, filename))
+    return found
+
+
 def _glob_files(pattern: str) -> list[Path]:
     """Glob *pattern* relative to cwd, surfacing bad patterns as operator errors.
 
@@ -370,7 +390,7 @@ def collect_paths(
         for pattern in include_patterns:
             paths.update(_glob_files(pattern))
     else:
-        paths.update(p for p in Path().glob("**/*.md") if p.is_file())
+        paths.update(_default_corpus())
 
     # Exclusion matches each candidate's posix path against the patterns with fnmatch
     # rather than Path.glob. Path.glob's `**` semantics are version-dependent (on Python
