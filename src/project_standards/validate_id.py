@@ -399,7 +399,11 @@ def main(argv: list[str] | None = None) -> int:
             print("note: custom schema in use; skipping id-format validation")
         return 0
 
-    paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    try:
+        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if args.fix:
         fixed: list[tuple[Path, str]] = []

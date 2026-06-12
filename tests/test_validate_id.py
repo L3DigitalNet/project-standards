@@ -701,3 +701,11 @@ def test_check_file_non_utf8_reports_error_not_traceback(tmp_path: Path) -> None
     errors = check_file(bad)
     assert len(errors) == 1
     assert "cannot read" in errors[0]
+
+
+def test_main_missing_explicit_file_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A typo'd explicit FILE must exit 2, not print a green '0 file(s) validated' (F3).
+    monkeypatch.chdir(tmp_path)
+    assert main([str(tmp_path / "no-such-file.md")]) == 2

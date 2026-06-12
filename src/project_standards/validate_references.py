@@ -209,7 +209,11 @@ def main(argv: list[str] | None = None) -> int:
     # cross-file references), so the index MUST cover the full configured set even when
     # the caller scopes to specific FILE / --glob (project-standards validate forwards
     # them) — otherwise a duplicate in an unselected doc is silently missed (codex P2).
-    paths = collect_paths([], None, config.include, config.exclude)
+    try:
+        paths = collect_paths([], None, config.include, config.exclude)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     index = build_index(paths)
     errors: list[str] = []
     warnings: list[str] = []

@@ -1457,3 +1457,14 @@ def test_deeply_indented_fence_is_not_a_fence(tmp_path: Path) -> None:
         "## Decision Outcome\n\nx\n"
     )
     assert missing_adr_sections(text) == []
+
+
+def test_main_missing_explicit_file_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A typo'd explicit FILE must be an invocation error, not a silently green
+    # run that validated nothing (F3).
+    monkeypatch.chdir(tmp_path)
+    rc = main(["no-such-file.md", "--schema", str(SCHEMA_PATH), "--quiet"])
+    assert rc == 2
+    assert "no such file" in capsys.readouterr().err

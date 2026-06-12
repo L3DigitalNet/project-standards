@@ -337,11 +337,18 @@ def collect_paths(
     the config `include` patterns are NOT added (naming files means "just these").
     Only when nothing is named do we fall back to config `include`, and failing
     that to every Markdown file under cwd. `exclude` is applied in all cases.
+
+    Raises ConfigError for an explicitly named file that does not exist: globs and
+    includes may legitimately match nothing, but silently dropping a named file
+    turns a typo'd CI invocation into a green run that validated nothing.
     """
     paths: set[Path] = set()
 
     if explicit or glob_pattern:
-        paths.update(p for p in explicit if p.is_file())
+        missing = [p for p in explicit if not p.is_file()]
+        if missing:
+            raise ConfigError("no such file: " + ", ".join(str(p) for p in missing))
+        paths.update(explicit)
         if glob_pattern:
             paths.update(p for p in Path().glob(glob_pattern) if p.is_file())
     elif include_patterns:
@@ -653,7 +660,11 @@ def main(argv: list[str] | None = None) -> int:
     validator = Draft202012Validator(schema)
 
     require_frontmatter = config.required and not args.no_require_frontmatter
-    paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    try:
+        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if not paths:
         if not args.quiet:

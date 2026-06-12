@@ -635,7 +635,11 @@ def main(argv: list[str] | None = None) -> int:
                 unparseable = True
         return 1 if unparseable else 0
 
-    paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    try:
+        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     write = args.write  # default is check-mode
     any_change = False
     unparseable = False
