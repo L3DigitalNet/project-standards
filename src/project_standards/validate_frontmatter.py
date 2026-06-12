@@ -104,7 +104,7 @@ class _UniqueKeyLoader(yaml.SafeLoader):
     last silently). Frontmatter with a duplicate key is a bug, not a valid doc."""
 
 
-def _construct_no_duplicates(loader: _UniqueKeyLoader, node: yaml.MappingNode) -> dict[str, Any]:
+def _construct_no_duplicates(loader: _UniqueKeyLoader, node: yaml.MappingNode) -> dict[Any, Any]:
     mapping: dict[Any, Any] = {}
     for key_node, value_node in node.value:
         key = cast(Any, loader.construct_object(key_node, deep=True))  # pyright: ignore[reportUnknownMemberType]
@@ -160,6 +160,14 @@ def parse_frontmatter(text: str) -> dict[str, Any] | None:
         raise FrontmatterParseError(str(exc)) from exc
     if not isinstance(loaded, dict):
         return None
+    # YAML 1.1 coerces some plain keys to non-strings (`on:` -> True, `2026:` -> int).
+    # Reject them explicitly so the dict[str, Any] cast below states a real invariant
+    # instead of laundering surprise key types into jsonschema and error formatting.
+    for key in cast("dict[Any, Any]", loaded):
+        if not isinstance(key, str):
+            raise FrontmatterParseError(
+                f"non-string frontmatter key {key!r} (quote YAML-coerced keys like 'on')"
+            )
     return cast("dict[str, Any]", _coerce_dates(loaded))
 
 

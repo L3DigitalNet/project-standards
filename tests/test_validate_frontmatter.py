@@ -1339,3 +1339,10 @@ def test_unhashable_complex_key_is_clean_parse_error() -> None:
     # must not let the TypeError escape as a traceback (F5).
     with pytest.raises(FrontmatterParseError, match="unhashable key"):
         parse_frontmatter("---\n? [a, b]\n: x\n---\n# body\n")
+
+
+def test_non_string_key_is_clean_parse_error() -> None:
+    # YAML 1.1 parses `on:` as the boolean True; the parser must reject non-string
+    # keys instead of laundering them through the dict[str, Any] cast (F46).
+    with pytest.raises(FrontmatterParseError, match="non-string frontmatter key"):
+        parse_frontmatter("---\non: push\n---\n# body\n")
