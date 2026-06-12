@@ -5,6 +5,7 @@ sequence. Repo-wide pass; warnings never fail the build, errors do."""
 from __future__ import annotations
 
 import argparse
+import datetime
 import re as _re
 import sys
 from dataclasses import dataclass, field
@@ -67,15 +68,31 @@ def check_id_uniqueness(index: Index) -> list[str]:
     return errors
 
 
+def _as_date(value: Any) -> datetime.date | None:
+    """Parse a frontmatter date value, or None if absent/unparseable.
+
+    Unparseable values are skipped, not errored: shape enforcement is the schema
+    validator's job, and this tool also runs standalone where schema validation
+    may not have happened — comparing such values as raw strings would order
+    non-padded dates wrongly ('2026-9-1' > '2026-10-01' lexicographically).
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def check_dates(index: Index) -> list[str]:
     errors: list[str] = []
     for doc in index.docs:
-        created = doc.meta.get("created")
-        updated = doc.meta.get("updated")
-        reviewed = doc.meta.get("reviewed")
-        if isinstance(created, str) and isinstance(updated, str) and created > updated:
+        created = _as_date(doc.meta.get("created"))
+        updated = _as_date(doc.meta.get("updated"))
+        reviewed = _as_date(doc.meta.get("reviewed"))
+        if created is not None and updated is not None and created > updated:
             errors.append(f"[error] {doc.path}: created '{created}' is after updated '{updated}'")
-        if isinstance(reviewed, str) and isinstance(created, str) and reviewed < created:
+        if reviewed is not None and created is not None and reviewed < created:
             errors.append(
                 f"[error] {doc.path}: reviewed '{reviewed}' is before created '{created}'"
             )

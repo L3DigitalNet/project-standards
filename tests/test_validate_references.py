@@ -531,3 +531,17 @@ def test_duplicate_adr_number_detected_across_zero_padding(tmp_path: Path) -> No
     errors = check_adr_sequence(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
     assert len(errors) == 1
     assert "adr-0001-repo-one" in errors[0] and "adr-00001-repo-two" in errors[0]
+
+
+def test_dates_compared_as_dates_not_strings(tmp_path: Path) -> None:
+    # Lexicographic comparison orders non-padded dates wrongly; values are now
+    # parsed and unparseable ones skipped — shape errors belong to the schema
+    # validator (F51).
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-9-1'",  # not ISO-padded: skipped, not mis-ordered
+        updated="'2026-10-01'",
+    )
+    assert check_dates(build_index([tmp_path / "a.md"])) == []
