@@ -103,7 +103,7 @@ Sorted by severity. Phase 2 complete 2026-06-12: all 58 findings selected; 55 im
 - **Location:** `src/project_standards/validate_id.py:422`, `src/project_standards/validate_references.py:47`
 - **Issue:** `except OSError, FrontmatterParseError:` uses PEP 758 unparenthesized multi-exception syntax — valid on the pinned Python ≥3.14 and semantically correct, but a `SyntaxError` on every earlier interpreter, visually identical to the Python 2 `except X, name:` trap, and inconsistent with the parenthesized style used everywhere else (e.g. `validate_frontmatter.py:551`). Copy-adopt consumers vendoring snippets onto <3.14 break confusingly.
 - **Fix:** Use the conventional `except (OSError, FrontmatterParseError):` at both sites.
-- **Status:** implemented (commit bfca01e; the validate_references site was normalized in f8c9697/F1)
+- **Status:** implemented (commit bfca01e; the validate_references site was normalized in f8c9697/F1). Post-verification note: ruff format under the repo's >=3.14 target CANONICALIZES no-`as` multi-exception clauses to the unparenthesized PEP 758 form (verified by re-adding parens and reformatting — they are stripped), so two newer no-`as` sites carry that form with explanatory comments; parenthesized form survives only where `as` binds. The original F13 sites no longer exist in their reviewed shape (one deleted by F16/F17, one split by F12).
 
 `F14` | Reliability | Severity: Low | Effort: S | Confidence: High
 

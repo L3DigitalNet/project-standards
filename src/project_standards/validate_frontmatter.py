@@ -416,6 +416,9 @@ def collect_paths(
         candidate = path if path.is_absolute() else cwd / path
         try:
             return candidate.resolve().relative_to(cwd).as_posix()
+        # Unparenthesized multi-exception is PEP 758 (Python >=3.14 only) and is
+        # what ruff format enforces here — re-adding parens gets stripped. Do not
+        # vendor this file onto older interpreters without re-parenthesizing.
         except OSError, ValueError:
             return path.as_posix()  # outside the repo root — match the raw form
 

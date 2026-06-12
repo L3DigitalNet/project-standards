@@ -585,6 +585,8 @@ def main(argv: list[str] | None = None) -> int:
         for path in paths:
             try:
                 meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
+            # Unparenthesized form: PEP 758 (>=3.14 only), enforced by ruff format
+            # — see the matching note in validate_frontmatter._match_key.
             except OSError, UnicodeDecodeError, FrontmatterParseError:
                 continue
             if isinstance(meta, dict):
