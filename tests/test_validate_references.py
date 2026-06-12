@@ -367,7 +367,9 @@ def test_main_custom_schema_skips(
     rc = main(["--schema", "custom.json", "--config", str(cfg)])
     assert rc == 0
     captured = capsys.readouterr()
-    assert "custom schema" in captured.out
+    # stderr, not stdout (F56): an explicitly enabled check that silently
+    # no-ops must leave a trace on the diagnostic stream.
+    assert "custom schema" in captured.err
 
 
 def test_main_config_error_returns_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -611,3 +613,37 @@ def test_build_index_reports_skipped_files_as_warnings(tmp_path: Path) -> None:
     assert len(index.skipped) == 2
     assert any("invalid frontmatter" in w for w in index.skipped)
     assert any("cannot read" in w for w in index.skipped)
+
+
+def test_custom_schema_skip_note_survives_quiet(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # references.enabled: true + a custom schema skips the whole pass; --quiet
+    # must not erase the only signal that an explicitly enabled check never ran (F56).
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--schema", "custom.json", "--quiet", "--config", str(cfg)])
+    assert rc == 0
+    assert "custom schema" in capsys.readouterr().err
+
+
+def test_empty_index_prints_note_not_silent_green(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Run from the wrong directory the include globs match nothing; a green
+    # "references valid (0 docs)" would hide that nothing was checked (F52).
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    monkeypatch.chdir(tmp_path)  # no .md files here
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg)])
+    assert rc == 0
+    assert "no managed docs matched" in capsys.readouterr().err

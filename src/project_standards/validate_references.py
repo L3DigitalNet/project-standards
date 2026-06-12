@@ -1,6 +1,10 @@
 """Opt-in cross-file frontmatter checks the JSON Schema cannot express: id
 uniqueness, referential integrity, supersede reciprocity, date ordering, ADR
-sequence. Repo-wide pass; warnings never fail the build, errors do."""
+sequence. Repo-wide pass; warnings never fail the build, errors do.
+
+Must run from the repository root: include globs and path references resolve
+against the current working directory (an empty match prints a note to stderr
+rather than a silent green summary)."""
 
 from __future__ import annotations
 
@@ -284,8 +288,11 @@ def main(argv: list[str] | None = None) -> int:
     if not config.references_enabled:
         return 0  # opt-in: disabled -> no checks
     if args.schema is not None or schema_value_is_path(config.schema):
-        if not args.quiet:
-            print("note: custom schema in use; skipping reference validation")
+        # The config explicitly enables references (the disabled case returned
+        # above), so this skip silently no-ops a check the operator asked for.
+        # The note therefore prints to stderr even under --quiet — one line is
+        # the only signal distinguishing "checked, clean" from "never ran".
+        print("note: custom schema in use; skipping reference validation", file=sys.stderr)
         return 0
 
     # validate-references is a REPO-WIDE invariant pass (duplicate ids / ADR numbers,
@@ -298,6 +305,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     index = build_index(paths)
+    # An empty index almost always means the wrong working directory: globs and
+    # path refs resolve against cwd (cwd == repo root is this tool's contract),
+    # so a subdirectory run matches nothing and would otherwise print a green
+    # "references valid (0 docs)" while checking nothing.
+    if not index.docs:
+        print("note: no managed docs matched — is the working directory the repo root?",
+              file=sys.stderr)
     errors: list[str] = []
     warnings: list[str] = []
     warnings += index.skipped
