@@ -133,13 +133,16 @@ _UniqueKeyLoader.add_constructor(
 
 
 def _coerce_dates(obj: Any) -> Any:
-    """Recursively convert datetime.date/datetime to ISO strings.
+    """Recursively convert datetime.date values to ISO strings.
 
     YAML's safe_load parses unquoted dates (2026-06-02) as datetime.date, but the
     schema validates them as strings. Coercing here lets authors write either form.
+    datetime.datetime is deliberately NOT coerced: truncating the time would let a
+    file whose literal content violates the YYYY-MM-DD contract pass validation,
+    so it is left for the string-typed schema to reject.
     """
     if isinstance(obj, datetime.datetime):
-        return obj.date().isoformat()
+        return obj
     if isinstance(obj, datetime.date):
         return obj.isoformat()
     if isinstance(obj, dict):

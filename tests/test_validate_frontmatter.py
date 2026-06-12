@@ -1370,3 +1370,18 @@ def test_parse_tolerates_trailing_whitespace_on_fences() -> None:
     # frontmatter parsers (Jekyll, python-frontmatter) tolerate it too.
     parsed = parse_frontmatter("--- \nid: x\n---  \nbody\n")
     assert parsed == {"id": "x"}
+
+
+def test_datetime_value_is_rejected_not_truncated(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # An unquoted datetime (2026-06-02 15:30:00) used to be silently truncated to
+    # its date, passing validation while the file's literal content violated the
+    # YYYY-MM-DD contract. It must now fail as a non-string value (F29).
+    meta_yaml = (
+        "schema_version: '1.0'\nid: test-doc\ntitle: T\ndescription: D.\n"
+        "doc_type: note\nstatus: draft\ncreated: '2026-06-02'\n"
+        "updated: 2026-06-02 15:30:00\ntags: []\naliases: []\nrelated: []\n"
+    )
+    errors = _check(tmp_path, validator, f"---\n{meta_yaml}---\n# body\n")
+    assert any("updated" in e for e in errors)
