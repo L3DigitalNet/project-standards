@@ -30,8 +30,4 @@ src/project_standards/bundles/python-tooling/check.py  ←→  scripts/check.py
 
 ## `build-validate-id-pyz.sh` — standalone validator bundle
 
-Builds `dist/validate-id.pyz`, a self-contained zipapp of `validate-id` for repos that cannot `uv tool install` the package. It bundles the package source from `src/project_standards/` directly (no copy in this directory is involved); see the script header for the PyYAML/jsonschema bundling details.
-
-## `validate_id.py` — stale snapshot (do not use)
-
-A superseded copy of the validator from before the `id_format` extraction. Nothing consumes it; it is kept only as history and is marked as stale in its header. Prefer deleting it.
+Builds `dist/validate-id.pyz`, a self-contained zipapp of `validate-id` for repos that cannot `uv tool install` the package. It bundles the package source from `src/project_standards/` directly; see the script header for the PyYAML/jsonschema bundling details.
