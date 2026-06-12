@@ -968,3 +968,168 @@ def test_stdin_fails_on_duplicate_keys() -> None:
     r = _run(["--stdin"], input=dup)
     assert r.returncode == 1
     assert "duplicate" in (r.stdout + r.stderr).lower()
+
+
+# ---------------------------------------------------------------------------
+# Helper edge cases: nested brackets, key mismatch, comment-only entries
+# ---------------------------------------------------------------------------
+
+
+def test_split_value_comment_nested_brackets() -> None:
+    value, comment = _split_value_comment("[['a'], 'b']  # keep")
+    assert value == "[['a'], 'b']"
+    assert comment == "  # keep"
+
+
+def test_requote_scalar_line_other_key_left_alone() -> None:
+    from project_standards.format_frontmatter import (
+        _requote_scalar_line,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    assert _requote_scalar_line("status: draft\n", "title") == "status: draft\n"
+
+
+def test_leading_run_counts_comment_only_entry() -> None:
+    entry = Entry(key=None, lines=["# trailing comment\n", "\n"])
+    assert _leading_run(entry) == 2
+
+
+def test_block_list_item_comment_ignores_non_item_lines() -> None:
+    from project_standards.format_frontmatter import (
+        _block_list_has_item_comment,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    assert _block_list_has_item_comment(["tags:\n", "  not-an-item\n", "  - 'a'\n"]) is False
+
+
+def test_requote_skips_keyless_entry() -> None:
+    from project_standards.format_frontmatter import requote
+
+    entry = Entry(key=None, lines=["# only a comment\n"])
+    requote([entry])
+    assert entry.lines == ["# only a comment\n"]
+
+
+# ---------------------------------------------------------------------------
+# format_text: denylist refusal, block-scalar updated under --bump-updated
+# ---------------------------------------------------------------------------
+
+
+def test_format_text_refuses_denylisted_path() -> None:
+    new, changed, warnings = format_text("# CLAUDE\n", path=Path("CLAUDE.md"))
+    assert new == "# CLAUDE\n"
+    assert changed is False
+    assert any("denylisted" in w for w in warnings)
+
+
+def test_bump_updated_skips_multiline_updated(tmp_path: Path) -> None:
+    # A multi-line `updated:` value (block scalars are rejected by tokenize, but
+    # a nested mapping passes) must not be bumped — rewriting just the key line
+    # would orphan the continuation — while the rest still gets formatted.
+    text = "---\nid: 'note-a3f9zk-x'\ntitle: needs quoting\nupdated:\n  nested: '2026-01-01'\n---\n"
+    new, changed, _warnings = format_text(
+        text, path=tmp_path / "n.md", bump_updated=True, today="2026-06-12"
+    )
+    assert changed is True
+    assert "title: 'needs quoting'\n" in new
+    assert "updated:\n  nested: '2026-01-01'\n" in new
+
+
+# ---------------------------------------------------------------------------
+# _atomic_write: interrupt cleanup
+# ---------------------------------------------------------------------------
+
+
+def test_atomic_write_cleans_tmp_on_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An interrupt mid-write must leave the original file untouched, remove the
+    # temp file, and re-raise — never swallow the interrupt.
+    from project_standards.format_frontmatter import (
+        _atomic_write,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    target = tmp_path / "doc.md"
+    target.write_text("original")
+
+    def boom(*_a: object, **_k: object) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("os.fdopen", boom)
+    with pytest.raises(KeyboardInterrupt):
+        _atomic_write(target, "new")
+    assert target.read_text() == "original"
+    assert list(tmp_path.iterdir()) == [target]
+
+
+# ---------------------------------------------------------------------------
+# main(): quiet schema note, stdin failures, config errors, unreadable files
+# ---------------------------------------------------------------------------
+
+
+def test_main_custom_schema_quiet_suppresses_note(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    schema = tmp_path / "custom.json"
+    schema.write_text("{}")
+    rc = main(["--schema", str(schema), "--quiet"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+
+
+def test_main_stdin_duplicate_key_warns_and_exits_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # stdin mode mirrors file mode's exit-code contract: a refused
+    # (duplicate-key) block must fail while passing the input through unchanged.
+    monkeypatch.chdir(tmp_path)
+    doc = "---\nid: 'a'\nid: 'b'\n---\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(doc))
+    rc = main(["--stdin"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "<stdin>:" in captured.err
+    assert captured.out == doc
+
+
+def test_main_missing_explicit_file_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    rc = main(["nope.md"])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "error:" in captured.err
+
+
+def test_main_unreadable_file_reported_exits_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "locked.md"
+    f.write_text(CLEAN)
+    f.chmod(0o000)
+    try:
+        rc = main([f.name])
+    finally:
+        f.chmod(0o644)
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "cannot read" in captured.err
+
+
+def test_main_stdin_non_refusal_warning_exits_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Warnings other than the duplicate-key refusal (here: an unsupported YAML
+    # construct) are reported but are not failures in stdin mode.
+    monkeypatch.chdir(tmp_path)
+    doc = "---\nid: >-\n  'a'\n---\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO(doc))
+    rc = main(["--stdin"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "<stdin>:" in captured.err
+    assert captured.out == doc

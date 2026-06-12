@@ -192,3 +192,94 @@ def test_main_missing_settings_exits(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
         with pytest.raises(SystemExit):
             main()
+
+
+# ---------------------------------------------------------------------------
+# _repo_root + main() success paths (real git repo in tmp)
+# ---------------------------------------------------------------------------
+
+
+def test_path_colors_entry_without_path_keys_is_skipped() -> None:
+    # A correctly-colored entry that carries neither filePath nor folderPath
+    # contributes nothing (defensive against hand-edited settings).
+    assert path_colors_to_patterns([{"color": _COLOR}], "proj") == []
+
+
+def test_repo_root_outside_git_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from project_standards.sync_standards_include import (
+        _repo_root,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit, match="not inside a git repository"):
+        _repo_root()
+
+
+def test_repo_root_returns_git_toplevel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    from project_standards.sync_standards_include import (
+        _repo_root,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    monkeypatch.chdir(tmp_path)
+    assert _repo_root().resolve() == tmp_path.resolve()
+
+
+def test_main_writes_include_patterns_end_to_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Full default-path flow: repo root from git, both files at their default
+    # locations, include list rewritten from the colored settings entries.
+    import subprocess
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    prefix = tmp_path.name
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(_YAML_TEMPLATE)
+    settings = tmp_path / ".vscode" / "settings.json"
+    settings.parent.mkdir()
+    settings.write_text(
+        json.dumps(
+            {
+                "folder-color.pathColors": [
+                    {"filePath": f"{prefix}/CHANGELOG.md", "color": _COLOR},
+                    {"folderPath": f"{prefix}/docs/", "color": _COLOR},
+                ]
+            },
+            indent="\t",
+        )
+        + "\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["sync-standards-include"])
+    from project_standards.sync_standards_include import main
+
+    main()
+    out = capsys.readouterr().out
+    assert "synced: 2 include patterns" in out
+    content = cfg.read_text()
+    assert '- "CHANGELOG.md"' in content
+    assert '- "docs/**/*.md"' in content
+
+
+def test_main_no_colored_entries_warns_and_empties(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(_YAML_TEMPLATE)
+    settings = tmp_path / ".vscode" / "settings.json"
+    settings.parent.mkdir()
+    settings.write_text('{\n\t"folder-color.pathColors": []\n}\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["sync-standards-include"])
+    from project_standards.sync_standards_include import main
+
+    main()
+    captured = capsys.readouterr()
+    assert "warning: no color_d7af00 entries" in captured.err
+    assert "synced: 0 include patterns" in captured.out

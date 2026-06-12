@@ -172,3 +172,69 @@ def test_main_missing_settings_file_exits(tmp_path: Path, monkeypatch: pytest.Mo
 
         with pytest.raises(SystemExit):
             main()
+
+
+# ---------------------------------------------------------------------------
+# _repo_root + rewrite_settings edge cases + main() success path
+# ---------------------------------------------------------------------------
+
+
+def test_repo_root_outside_git_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from project_standards.sync_vscode_colors import (
+        _repo_root,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit, match="not inside a git repository"):
+        _repo_root()
+
+
+def test_repo_root_returns_git_toplevel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    from project_standards.sync_vscode_colors import (
+        _repo_root,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    monkeypatch.chdir(tmp_path)
+    assert _repo_root().resolve() == tmp_path.resolve()
+
+
+def test_rewrite_settings_single_line_file(tmp_path: Path) -> None:
+    # A one-line settings file has no lines after the opening "{" — the header-
+    # comment scan must handle the zero-iteration case.
+    p = tmp_path / "settings.json"
+    p.write_text("{}")
+    rewrite_settings(p, [{"filePath": "x/y.md", "color": _COLOR}])
+    data = json.loads(p.read_text())
+    assert data["folder-color.pathColors"][0]["filePath"] == "x/y.md"
+
+
+def test_main_writes_colors_end_to_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Full default-path flow: repo root from git, both files at their default
+    # locations, pathColors written from the include patterns.
+    import subprocess
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        'markdown:\n  frontmatter:\n    include:\n      - "CHANGELOG.md"\n      - "docs/**/*.md"\n'
+    )
+    settings = tmp_path / ".vscode" / "settings.json"
+    settings.parent.mkdir()
+    settings.write_text("{}\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["sync-vscode-colors"])
+    from project_standards.sync_vscode_colors import main
+
+    main()
+    out = capsys.readouterr().out
+    assert "synced: 2 path color entries" in out
+    data = json.loads(settings.read_text())
+    entries = data["folder-color.pathColors"]
+    prefix = tmp_path.name
+    assert {"filePath": f"{prefix}/CHANGELOG.md", "color": _COLOR} in entries
+    assert {"folderPath": f"{prefix}/docs/", "color": _COLOR} in entries

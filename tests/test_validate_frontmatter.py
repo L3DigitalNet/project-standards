@@ -1657,3 +1657,94 @@ def test_tags_reject_edge_and_double_hyphens(
     meta = {**MINIMAL, "tags": [bad_tag]}
     errors = _check(tmp_path, validator, _doc(meta))
     assert any("tags" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Registry cross-field validation: every default must be a bundled version
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "9.9", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            "python_tooling.default",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "9.9", "versions": ["1.0"]}}',
+            "markdown_tooling.default",
+        ),
+    ],
+)
+def test_load_registry_default_not_bundled_raises(tmp_path: Path, payload: str, match: str) -> None:
+    bad = tmp_path / "registry.json"
+    bad.write_text(payload, encoding="utf-8")
+    with pytest.raises(RegistryError, match=match):
+        load_registry(bad)
+
+
+# ---------------------------------------------------------------------------
+# resolve_effective_schema / stream reconfiguration / ADR-gate registry errors
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_effective_schema_version_requires_registry() -> None:
+    # The lazy-registry contract: any caller that configures frontmatter.version
+    # must have loaded the registry first. None here is a caller bug -> loud
+    # RegistryError, never a silent fall-through to the default schema.
+    from project_standards.validate_frontmatter import ProjectConfig, resolve_effective_schema
+
+    cfg = ProjectConfig(
+        schema=None,
+        include=[],
+        exclude=[],
+        required=False,
+        require_adr_sections=False,
+        frontmatter_version="1.1",
+    )
+    with pytest.raises(RegistryError, match="registry required"):
+        resolve_effective_schema(None, cfg, None)
+
+
+def test_reconfigure_output_streams_skips_non_textiowrapper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Harness doubles (StringIO) lack reconfigure(); the helper must leave them
+    # alone instead of crashing before main() even parses argv.
+    import io
+
+    from project_standards.validate_frontmatter import reconfigure_output_streams
+
+    monkeypatch.setattr("sys.stdout", io.StringIO())
+    monkeypatch.setattr("sys.stderr", io.StringIO())
+    reconfigure_output_streams()  # must not raise
+
+
+def test_main_adr_gate_registry_error_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The FM->ADR compatibility gate can itself raise RegistryError (corrupt
+    # registry data discovered late); that must surface as a clean exit 2.
+    import project_standards.validate_frontmatter as vf
+
+    monkeypatch.chdir(tmp_path)
+    _write(tmp_path, _doc(MINIMAL), name="good.md")
+    _write_versioned_config(
+        tmp_path, "markdown:\n  frontmatter:\n    version: '1.1'\n    include: ['*.md']\n"
+    )
+
+    def boom(*_a: object, **_k: object) -> str | None:
+        raise RegistryError("injected registry corruption")
+
+    monkeypatch.setattr(vf, "frontmatter_adr_incompatibility", boom)
+    rc = vf.main(["good.md"])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "injected registry corruption" in captured.err

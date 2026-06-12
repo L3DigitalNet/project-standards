@@ -647,3 +647,126 @@ def test_empty_index_prints_note_not_silent_green(
     rc = main(["--config", str(cfg)])
     assert rc == 0
     assert "no managed docs matched" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# _ref_values / _resolves unit coverage
+# ---------------------------------------------------------------------------
+
+
+def test_ref_values_accepts_scalar_string() -> None:
+    from project_standards.validate_references import (
+        _ref_values,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    assert _ref_values({"superseded_by": "note-aaaaaa-x"}) == ["note-aaaaaa-x"]
+
+
+def test_resolves_anchor_ref_is_not_a_reference(tmp_path: Path) -> None:
+    from project_standards.validate_references import (
+        Index,
+        _resolves,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    (tmp_path / "doc.md").write_text("x")
+    assert _resolves("doc.md#section", Index(), tmp_path) is False
+
+
+def test_resolves_oserror_from_resolve_returns_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Path.resolve does not raise for symlink loops on this platform (non-strict
+    # mode), so the OSError guard is exercised by injection: any filesystem
+    # error while resolving must mean "unresolved", never a crash.
+    from project_standards.validate_references import (
+        Index,
+        _resolves,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    def boom(self: Path, strict: bool = False) -> Path:
+        raise OSError("injected")
+
+    monkeypatch.setattr(Path, "resolve", boom)
+    assert _resolves("some/file.md", Index(), tmp_path) is False
+
+
+def test_check_adr_sequence_ignores_non_string_and_malformed_ids(tmp_path: Path) -> None:
+    from project_standards.validate_references import Doc, Index
+
+    index = Index(
+        docs=[
+            Doc(path=tmp_path / "a.md", meta={"doc_type": "adr", "id": 123}),
+            Doc(path=tmp_path / "b.md", meta={"doc_type": "adr", "id": "adr-x-not-numbered"}),
+        ]
+    )
+    assert check_adr_sequence(index) == []
+
+
+# ---------------------------------------------------------------------------
+# main(): include config errors, warning-only runs, quiet success
+# ---------------------------------------------------------------------------
+
+
+def test_main_config_error_from_include_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n"
+        "    include: ['/absolute/**/*.md']\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg)])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "error:" in captured.err
+
+
+def test_main_unresolved_reference_warns_but_exits_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        related="['note-zzzzzz-missing']",
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "note-zzzzzz-missing" in captured.err
+    assert "1 warning(s)" in captured.out
+
+
+def test_main_quiet_suppresses_success_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n"
+    )
+    _write(
+        tmp_path / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", str(cfg), "--quiet"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""

@@ -948,3 +948,239 @@ def test_fix_adr_skip_ends_with_explicit_failure_summary(
     assert rc == 1
     captured = capsys.readouterr()
     assert "ADR id(s) require manual fix" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# validate_id / _replace_frontmatter_id edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_empty_readable_slug_segment_reported() -> None:
+    errors = validate_id("note-abc123-", "note")
+    assert any("readable-slug segment" in e and "empty" in e for e in errors)
+
+
+def test_replace_id_without_id_line_returns_text_unchanged() -> None:
+    text = "---\ntitle: 'X'\n---\nbody\n"
+    assert _replace_frontmatter_id(text, "note-aaaaaa-x") == text
+
+
+# ---------------------------------------------------------------------------
+# _atomic_write_bytes: interrupt cleanup
+# ---------------------------------------------------------------------------
+
+
+def test_atomic_write_bytes_cleans_tmp_on_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An interrupt mid-write must leave the original file untouched, remove the
+    # temp file, and re-raise — never swallow the interrupt.
+    from project_standards.validate_id import (
+        _atomic_write_bytes,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    target = tmp_path / "doc.md"
+    target.write_text("original")
+
+    def boom(*_a: object, **_k: object) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("os.fdopen", boom)
+    with pytest.raises(KeyboardInterrupt):
+        _atomic_write_bytes(target, b"new")
+    assert target.read_text() == "original"
+    assert list(tmp_path.iterdir()) == [target]
+
+
+# ---------------------------------------------------------------------------
+# fix_file: per-file degradation paths (every skip carries a reason)
+# ---------------------------------------------------------------------------
+
+
+def test_fix_file_unreadable_returns_skip(tmp_path: Path) -> None:
+    f = _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'T'")
+    f.chmod(0o000)
+    try:
+        result = fix_file(f)
+    finally:
+        f.chmod(0o644)
+    assert result.new_id is None
+    assert result.skip_reason is not None and "cannot read file" in result.skip_reason
+
+
+def test_fix_file_non_utf8_returns_skip(tmp_path: Path) -> None:
+    f = tmp_path / "doc.md"
+    f.write_bytes(b"---\nid: \xff\xfe\n---\n")
+    assert fix_file(f).skip_reason == "file is not valid UTF-8"
+
+
+def test_fix_file_invalid_yaml_returns_skip(tmp_path: Path) -> None:
+    f = _write(tmp_path, "id: a\nid: b")  # duplicate key -> FrontmatterParseError
+    result = fix_file(f)
+    assert result.skip_reason is not None and "invalid YAML frontmatter" in result.skip_reason
+
+
+def test_fix_file_no_frontmatter_returns_skip(tmp_path: Path) -> None:
+    f = tmp_path / "doc.md"
+    f.write_text("# just a body\n")
+    assert fix_file(f).skip_reason == "no frontmatter block found"
+
+
+def test_fix_file_missing_id_returns_skip(tmp_path: Path) -> None:
+    f = _write(tmp_path, "doc_type: note\ntitle: 'T'")
+    assert fix_file(f).skip_reason == "id field is missing or not a string"
+
+
+def test_fix_file_invalid_doc_type_returns_skip(tmp_path: Path) -> None:
+    f = _write(tmp_path, "id: bad\ndoc_type: nope\ntitle: 'T'")
+    assert fix_file(f).skip_reason == "doc_type field is missing or not a valid doc_type"
+
+
+def test_fix_file_token_collision_exhaustion_returns_skip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # With every generated token colliding, the bounded retry must give up with
+    # a reason instead of looping forever.
+    import project_standards.validate_id as vid
+
+    monkeypatch.setattr(vid, "random_token", lambda: "aaaaaa")
+    f = _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'Gotcha'")
+    result = fix_file(f, None, {"note-aaaaaa-gotcha"})
+    assert result.new_id is None
+    assert result.skip_reason is not None and "token collisions" in result.skip_reason
+
+
+def test_fix_file_quoted_id_key_returns_skip(tmp_path: Path) -> None:
+    # YAML parses '"id"' to the key id, but the single-line rewrite regex only
+    # recognises a bare `id:` line — the file must degrade to a skip, not be
+    # half-rewritten.
+    f = _write(tmp_path, "'id': bad\ndoc_type: note\ntitle: 'T'")
+    result = fix_file(f)
+    assert result.skip_reason is not None and "no rewritable id: line" in result.skip_reason
+
+
+def test_fix_file_post_rewrite_id_mismatch_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Failure injection for the round-trip guard: if the rewritten text parses
+    # but the id is not the one we wrote (parser/regex disagreement), nothing
+    # may be written to disk.
+    import project_standards.validate_id as vid
+
+    real_parse = vid.parse_frontmatter
+    calls = {"n": 0}
+
+    def tampering_parse(text: str) -> dict[str, object] | None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return real_parse(text)
+        return {"id": "something-else"}
+
+    monkeypatch.setattr(vid, "parse_frontmatter", tampering_parse)
+    original = _doc("id: bad\ndoc_type: note\ntitle: 'T'")
+    f = tmp_path / "doc.md"
+    f.write_text(original)
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.skip_reason is not None
+    assert "cannot be rewritten automatically" in result.skip_reason
+    assert f.read_text() == original
+
+
+def test_fix_file_nel_line_break_refuses_rewrite(tmp_path: Path) -> None:
+    # \x85 (NEL) is a YAML 1.1 line break but not a Python regex line break: the
+    # single-line rewrite would swallow `extra: 1` along with the id value. The
+    # line-count guard must refuse rather than silently delete the key.
+    original = "---\nid: bad\x85extra: 1\ntitle: 'Some Title'\ndoc_type: note\n---\n# B\n"
+    f = tmp_path / "doc.md"
+    f.write_text(original)
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.skip_reason is not None and "beyond the id line" in result.skip_reason
+    assert f.read_text() == original
+
+
+# ---------------------------------------------------------------------------
+# main(): config errors, broken-corpus --fix runs, quiet modes
+# ---------------------------------------------------------------------------
+
+
+def test_main_explicit_missing_config_exits_2(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    rc = main(["--config", "nope.yml"])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "config file not found" in captured.err
+
+
+def test_main_fix_skips_undecodable_and_odd_corpus_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # The --fix pre-collection pass must tolerate unreadable, frontmatter-less,
+    # and non-string-id files without aborting the run; the fixable file still
+    # gets fixed and the broken ones are reported, exit 1.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "broken.md").write_bytes(b"---\nid: \xff\xfe\n---\n")
+    (tmp_path / "nofm.md").write_text("# no frontmatter\n")
+    _write(tmp_path, "id: 123\ndoc_type: note\ntitle: 'T'", name="intid.md")
+    _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'Fixable Doc'", name="fixme.md")
+    rc = main(["--fix", "broken.md", "nofm.md", "intid.md", "fixme.md"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "fixed: fixme.md" in captured.out
+    assert "✗" in captured.err
+
+
+def test_main_fix_quiet_suppresses_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'Fixable Doc'", name="fixme.md")
+    rc = main(["--fix", "--quiet", "fixme.md"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+
+
+def test_main_quiet_success_suppresses_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write(tmp_path, "id: note-a3f9zk-my-note\ndoc_type: note\ntitle: My Note")
+    rc = main(["--quiet", "doc.md"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+
+
+def test_main_fix_handles_reasonless_skip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # fix_file always supplies a skip_reason today; inject a bare FixResult to
+    # pin main's defensive handling — the file must still count as a failure
+    # (exit 1) without a crash or a blank skip note.
+    import project_standards.validate_id as vid
+
+    monkeypatch.chdir(tmp_path)
+    _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'T'", name="odd.md")
+
+    def bare_result(*_a: object, **_k: object) -> vid.FixResult:
+        return vid.FixResult()
+
+    monkeypatch.setattr(vid, "fix_file", bare_result)
+    rc = vid.main(["--fix", "odd.md"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "✗" in captured.err

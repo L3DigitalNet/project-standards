@@ -74,3 +74,5 @@ source = ["src"]
 show_missing = true
 skip_covered = true
 fail_under = 85
+# __main__ guards only call sys.exit(main()); main() itself is tested directly.
+exclude_also = ["if __name__ == .__main__.:"]

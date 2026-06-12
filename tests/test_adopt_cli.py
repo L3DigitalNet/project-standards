@@ -349,3 +349,46 @@ def test_adopt_adr_existing_config_with_exclusion_validates(
     assert (tmp_path / "docs/decisions/adr.template.md").is_file()
     monkeypatch.chdir(tmp_path)
     assert validate_frontmatter.main(["--config", ".project-standards.yml"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# CLI plumbing: --config extraction, registry/bundle parity, empty dry-run
+# ---------------------------------------------------------------------------
+
+
+def test_extract_config_path_supports_equals_and_default() -> None:
+    from project_standards.cli import _extract_config_path  # pyright: ignore[reportPrivateUsage]
+
+    assert _extract_config_path(["--config=custom.yml"]) == Path("custom.yml")
+    assert _extract_config_path([]) == Path(".project-standards.yml")
+
+
+def test_main_list_registry_bundle_drift_exits_2(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A bundle on disk with no registry contract entry (or vice versa) must be a
+    # clean exit 2 before any listing output, not a half-emitted list.
+    import project_standards.cli as cli_mod
+
+    def fake_available() -> list[str]:
+        return ["markdown-frontmatter"]
+
+    monkeypatch.setattr(cli_mod, "available_standards", fake_available)
+    rc = cli_mod.main(["list"])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "registry/bundle drift" in captured.err
+    assert captured.out == ""
+
+
+def test_cmd_adopt_dry_run_empty_plan_prints_only_banner(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # No standards -> empty report -> format_report() is empty; only the dry-run
+    # banner is printed (an empty report must not add a stray blank line).
+    from project_standards.cli import _cmd_adopt  # pyright: ignore[reportPrivateUsage]
+
+    rc = _cmd_adopt([], tmp_path, False, True)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert out == "\n(dry run — no files written)\n"
