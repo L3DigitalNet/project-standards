@@ -651,10 +651,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Validate files matching PATTERN (relative to cwd) instead of the "
         "config include list; combines with explicit FILE arguments.",
     )
+    # Default None, not _DEFAULT_CONFIG: a missing implicit default falls back to
+    # defaults, but an operator-typed --config that does not exist must exit 2 —
+    # silently proceeding with defaults disables the very checks being requested.
     parser.add_argument(
         "--config",
         type=Path,
-        default=_DEFAULT_CONFIG,
+        default=None,
         metavar="PATH",
         help=f"Project config file (default: {_DEFAULT_CONFIG}).",
     )
@@ -671,8 +674,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.config is not None and not args.config.exists():
+        print(f"error: config file not found: {args.config}", file=sys.stderr)
+        return 2
     try:
-        config = load_config(args.config)
+        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

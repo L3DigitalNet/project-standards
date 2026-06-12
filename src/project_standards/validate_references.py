@@ -186,15 +186,21 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
-    parser.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+    # Default None so an operator-typed --config that does not exist exits 2; for
+    # THIS validator a silently defaulted config is the worst case — references
+    # stay disabled and the whole pass no-ops green.
+    parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--schema", type=Path, default=None)
     parser.add_argument("--glob", metavar="PATTERN")
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--quiet", "-q", action="store_true")
     args = parser.parse_args(argv)
 
+    if args.config is not None and not args.config.exists():
+        print(f"error: config file not found: {args.config}", file=sys.stderr)
+        return 2
     try:
-        config = load_config(args.config)
+        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

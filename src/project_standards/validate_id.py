@@ -336,11 +336,13 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Markdown files to validate. Omit to use the project config include list.",
     )
+    # Default None so an operator-typed --config that does not exist exits 2
+    # instead of silently validating with defaults (see validate_frontmatter).
     parser.add_argument(
         "--config",
         metavar="PATH",
         type=Path,
-        default=_DEFAULT_CONFIG,
+        default=None,
         help=f"Project config file (default: {_DEFAULT_CONFIG}).",
     )
     parser.add_argument(
@@ -381,8 +383,11 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
+    if args.config is not None and not args.config.exists():
+        print(f"error: config file not found: {args.config}", file=sys.stderr)
+        return 2
     try:
-        config = load_config(args.config)
+        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

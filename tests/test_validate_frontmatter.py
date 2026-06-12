@@ -1537,3 +1537,15 @@ def test_load_config_unquoted_numeric_version_is_config_error(tmp_path: Path) ->
     cfg.write_text("markdown:\n  frontmatter:\n    version: 1.10\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="must be a quoted string"):
         load_config(cfg)
+
+
+def test_main_explicit_missing_config_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # An operator-typed --config that does not exist must exit 2, not silently
+    # validate with defaults (F4). The implicit default staying optional is
+    # covered by test_main_no_files_matched_returns_0.
+    monkeypatch.chdir(tmp_path)
+    rc = main(["--config", "typo.yml", "--quiet"])
+    assert rc == 2
+    assert "config file not found" in capsys.readouterr().err

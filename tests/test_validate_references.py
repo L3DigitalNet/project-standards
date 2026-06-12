@@ -429,3 +429,16 @@ def test_build_index_skips_non_utf8_file(tmp_path: Path) -> None:
     bad.write_bytes(b"---\nid: caf\xe9\n---\n")
     index = build_index([bad])
     assert index.docs == []
+
+
+def test_main_explicit_missing_config_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The worst silent failure for this validator: a typo'd --config left
+    # references disabled and the pass exited 0 with no output (F4).
+    monkeypatch.chdir(tmp_path)
+    from project_standards.validate_references import main
+
+    rc = main(["--config", "typo.yml"])
+    assert rc == 2
+    assert "config file not found" in capsys.readouterr().err
