@@ -587,6 +587,7 @@ def main(argv: list[str] | None = None) -> int:
                 if isinstance(existing, str) and existing:
                     existing_ids.add(existing)
 
+        remaining_files: set[Path] = set()
         for path in paths:
             violations = check_file(path, valid_doc_types)
             if not violations:
@@ -600,8 +601,12 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 if result.skip_reason is not None:
                     skip_notes.append((path, result.skip_reason))
+                remaining_files.add(path)
                 remaining_errors.extend(violations)
 
+        # Stream contract (matches validate-frontmatter and the README's exit-code
+        # documentation): violations and ✗ failure summaries go to stderr; success
+        # output stays on stdout.
         if not args.quiet:
             for path, new_id in fixed:
                 print(f"fixed: {path}: id → '{new_id}'")
@@ -614,31 +619,51 @@ def main(argv: list[str] | None = None) -> int:
             for path, reason in skip_notes:
                 print(f"cannot auto-fix: {path}: {reason}", file=sys.stderr)
             for error in remaining_errors:
-                print(error)
+                print(error, file=sys.stderr)
             if remaining_errors:
-                file_count = len({e.split(":")[0] for e in remaining_errors})
                 print(
-                    f"\n✗  {len(remaining_errors)} violation(s) remain across {file_count} file(s)"
+                    f"\n✗  {len(remaining_errors)} violation(s) remain "
+                    f"across {len(remaining_files)} file(s)",
+                    file=sys.stderr,
                 )
             elif fixed:
                 print(f"\n✓  {len(fixed)} id(s) fixed")
             elif not adr_skipped:
                 print(f"✓  {len(paths)} file(s) already valid")
+            # The exit code is 1 whenever ADRs were skipped; without this line a
+            # run that fixed everything else ends with a green ✓ and a red exit
+            # code — an explicit ✗ names the reason.
+            if adr_skipped:
+                print(
+                    f"\n✗  {len(adr_skipped)} ADR id(s) require manual fix",
+                    file=sys.stderr,
+                )
 
         return 1 if (remaining_errors or adr_skipped) else 0
 
     all_errors: list[str] = []
+    failing_files: set[Path] = set()
     for path in paths:
-        all_errors.extend(check_file(path, valid_doc_types))
+        errors = check_file(path, valid_doc_types)
+        if errors:
+            # Count files structurally — deriving them by splitting the formatted
+            # strings on ':' miscounts any path containing a colon (every Windows
+            # drive path).
+            failing_files.add(path)
+            all_errors.extend(errors)
 
+    # Stream contract (matches validate-frontmatter and the README's exit-code
+    # documentation): violations and the ✗ summary go to stderr.
     if not args.quiet:
         for error in all_errors:
-            print(error)
+            print(error, file=sys.stderr)
 
     if all_errors:
         if not args.quiet:
-            file_count = len({e.split(":")[0] for e in all_errors})
-            print(f"\n✗  {len(all_errors)} violation(s) across {file_count} file(s)")
+            print(
+                f"\n✗  {len(all_errors)} violation(s) across {len(failing_files)} file(s)",
+                file=sys.stderr,
+            )
         return 1
 
     if not args.quiet:

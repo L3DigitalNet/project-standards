@@ -914,3 +914,50 @@ def test_main_fix_two_files_same_title_get_distinct_ids(
         assert m is not None
         ids.add(m.group(1))
     assert len(ids) == 2
+
+
+def test_violations_print_to_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # README contract: exit 1 prints each error, then a summary count, to stderr
+    # (F9) — matching validate-frontmatter so stream-filtering CI sees both.
+    doc = _write(tmp_path, "id: old-style\ndoc_type: note\ntitle: Old Style\n")
+    monkeypatch.setattr("sys.argv", ["validate-id", str(doc)])
+    assert main() == 1
+    captured = capsys.readouterr()
+    assert "[id]" in captured.err
+    assert "✗" in captured.err
+    assert "[id]" not in captured.out
+
+
+def test_file_count_correct_for_colon_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Colons are legal in POSIX file names; the per-file summary count must not
+    # collapse distinct files that share a pre-colon prefix (F18).
+    a = _write(tmp_path, "id: bad\ndoc_type: note\ntitle: A\n", "we:ird-a.md")
+    b = _write(tmp_path, "id: bad\ndoc_type: note\ntitle: B\n", "we:ird-b.md")
+    monkeypatch.chdir(tmp_path)
+    assert main([str(a), str(b)]) == 1
+    assert "across 2 file(s)" in capsys.readouterr().err
+
+
+def test_fix_adr_skip_ends_with_explicit_failure_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A --fix run that fixed files but skipped ADRs exits 1; the output must end
+    # with an explicit ✗ naming the reason, not a lone green checkmark (F24).
+    monkeypatch.chdir(tmp_path)
+    note = tmp_path / "note.md"
+    note.write_text(_FULL_FM, encoding="utf-8")
+    adr = tmp_path / "adr.md"
+    adr.write_text(
+        "---\nschema_version: '1.1'\nid: 'bad-adr'\ntitle: 'Use Postgres'\n"
+        "description: 'Test.'\ndoc_type: 'adr'\nstatus: 'active'\n"
+        "created: '2026-06-01'\nupdated: '2026-06-08'\ntags: []\naliases: []\nrelated: []\n---\n",
+        encoding="utf-8",
+    )
+    rc = main(["--fix", str(note), str(adr)])
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "ADR id(s) require manual fix" in captured.err
