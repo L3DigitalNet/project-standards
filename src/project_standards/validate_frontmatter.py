@@ -540,6 +540,10 @@ def load_config(path: Path) -> ProjectConfig:
     if path.exists():
         try:
             raw: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            # exists() passed but the read failed (permissions, path is a directory):
+            # an operator error that must exit 2 cleanly, not traceback.
+            raise ConfigError(f"cannot read config {path}: {exc}") from exc
         except yaml.YAMLError as exc:
             raise ConfigError(f"cannot parse config {path}: {exc}") from exc
         if isinstance(raw, dict):

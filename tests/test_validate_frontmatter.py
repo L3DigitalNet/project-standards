@@ -1507,3 +1507,12 @@ def test_exclude_applies_to_absolute_explicit_paths(
     target.write_text("x", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     assert collect_paths([target], None, [], ["standards/**"]) == []
+
+
+def test_load_config_unreadable_path_is_config_error(tmp_path: Path) -> None:
+    # A config path that exists but cannot be read as text (here: a directory)
+    # must raise ConfigError (exit 2), not an uncaught OSError (F8).
+    cfg_dir = tmp_path / ".project-standards.yml"
+    cfg_dir.mkdir()
+    with pytest.raises(ConfigError, match="cannot read config"):
+        load_config(cfg_dir)
