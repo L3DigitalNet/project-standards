@@ -157,6 +157,31 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         raise RegistryError("registry markdown_tooling.versions is not a list")
     mt_versions = [str(v) for v in cast("list[Any]", mt_versions_raw)]
 
+    # Cross-field validation: a default naming an unbundled version, or an ADR
+    # supports-list referencing one, loads "cleanly" and only fails later as a
+    # confusing incompatibility or missing-schema read error. Fail crisply here.
+    if fm_default not in fm_versions:
+        raise RegistryError(
+            f"registry frontmatter.default {fm_default!r} is not a bundled frontmatter version"
+        )
+    if adr_default not in adr_supports:
+        raise RegistryError(f"registry adr.default {adr_default!r} is not a bundled adr version")
+    if pt_default not in pt_versions:
+        raise RegistryError(
+            f"registry python_tooling.default {pt_default!r} is not a bundled version"
+        )
+    if mt_default not in mt_versions:
+        raise RegistryError(
+            f"registry markdown_tooling.default {mt_default!r} is not a bundled version"
+        )
+    for key, supports in adr_supports.items():
+        unknown = [v for v in supports if v not in fm_versions]
+        if unknown:
+            raise RegistryError(
+                f"registry adr.versions.{key}.supports_frontmatter references "
+                f"unbundled frontmatter versions: {unknown}"
+            )
+
     return Registry(
         frontmatter_default=fm_default,
         frontmatter_versions=fm_versions,

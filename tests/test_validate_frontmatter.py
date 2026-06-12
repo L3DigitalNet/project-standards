@@ -1576,3 +1576,40 @@ def test_effective_schema_bundled_name_version_agreement_passes() -> None:
     reg = load_registry()
     cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="1.1")
     assert resolve_effective_schema(None, cfg, reg).name == "markdown-frontmatter.schema.json"
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        (
+            '{"frontmatter": {"default": "1.2", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            "frontmatter.default '1.2' is not a bundled",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "2.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            "adr.default '2.0' is not a bundled",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["9.9"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            "supports_frontmatter references unbundled",
+        ),
+    ],
+)
+def test_load_registry_cross_field_violations_raise(
+    tmp_path: Path, payload: str, match: str
+) -> None:
+    # Defaults must be members of their versions, and ADR supports-lists must name
+    # bundled frontmatter versions — crisp load-time errors, not late confusion (F39).
+    bad = tmp_path / "registry.json"
+    bad.write_text(payload, encoding="utf-8")
+    with pytest.raises(RegistryError, match=match):
+        load_registry(bad)
