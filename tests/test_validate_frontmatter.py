@@ -1229,15 +1229,34 @@ def test_main_incompatible_combo_via_registry_exits_2(
 def test_main_registry_load_failure_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # The registry loads lazily (F43), so failure surfaces only when a gate
+    # consults it — here via a pinned frontmatter.version.
     def _boom() -> object:
         raise RegistryError("cannot load registry /nope/registry.json: boom")
 
     monkeypatch.setattr(_vf, "load_registry", _boom)
     monkeypatch.chdir(tmp_path)
-    _write_versioned_config(tmp_path, "markdown:\n  frontmatter:\n    required: true\n")
+    _write_versioned_config(tmp_path, "markdown:\n  frontmatter:\n    version: '1.1'\n")
     rc = main(["--config", ".project-standards.yml"])
     assert rc == 2
     assert "cannot load registry" in capsys.readouterr().err
+
+
+def test_main_broken_registry_does_not_break_unversioned_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # With no version keys and no ADR flags, the registry is never consulted; a
+    # corrupted registry.json must not break the run (F43) — including the
+    # --schema escape hatch consumers use to keep CI green.
+    def _boom() -> object:
+        raise RegistryError("cannot load registry /nope/registry.json: boom")
+
+    monkeypatch.setattr(_vf, "load_registry", _boom)
+    monkeypatch.chdir(tmp_path)
+    _write(tmp_path, _doc(MINIMAL), name="good.md")
+    _write_versioned_config(tmp_path, "markdown:\n  frontmatter:\n    required: true\n")
+    assert main(["good.md", "--schema", str(SCHEMA_PATH), "--quiet"]) == 0
+    assert main(["good.md", "--quiet"]) == 0
 
 
 def test_registry_exposes_markdown_tooling() -> None:
@@ -1415,7 +1434,7 @@ def test_real_dates_pass_calendar_check(tmp_path: Path, validator: Draft202012Va
     assert _check(tmp_path, validator, _doc(meta)) == []
 
 
-def test_h2_with_atx_closing_sequence_counts(tmp_path: Path) -> None:
+def test_h2_with_atx_closing_sequence_counts() -> None:
     # `## Decision Outcome ##` is valid CommonMark and must satisfy the section (F34).
     text = (
         "## Context and Problem Statement ##\n\nx\n\n"
@@ -1425,7 +1444,7 @@ def test_h2_with_atx_closing_sequence_counts(tmp_path: Path) -> None:
     assert missing_adr_sections(text) == []
 
 
-def test_fence_close_requires_same_char(tmp_path: Path) -> None:
+def test_fence_close_requires_same_char() -> None:
     # A ~~~ line inside a backtick fence is content, not a closer (F33); the
     # illustrative heading after it must not count as the document's own.
     text = (
@@ -1436,7 +1455,7 @@ def test_fence_close_requires_same_char(tmp_path: Path) -> None:
     assert missing_adr_sections(text) == ["Decision Outcome"]
 
 
-def test_fence_close_requires_at_least_equal_length(tmp_path: Path) -> None:
+def test_fence_close_requires_at_least_equal_length() -> None:
     # Three backticks inside a four-backtick fence do not close it (F33) — the
     # common docs pattern of showing a fenced example inside a wider fence.
     text = (
@@ -1447,7 +1466,7 @@ def test_fence_close_requires_at_least_equal_length(tmp_path: Path) -> None:
     assert missing_adr_sections(text) == ["Decision Outcome"]
 
 
-def test_deeply_indented_fence_is_not_a_fence(tmp_path: Path) -> None:
+def test_deeply_indented_fence_is_not_a_fence() -> None:
     # Four spaces of indentation make indented code, not a fence (F33); the
     # tracker must not open a phantom fence that swallows real headings.
     text = (

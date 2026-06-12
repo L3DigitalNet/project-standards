@@ -464,7 +464,7 @@ class ProjectConfig:
 
 
 def resolve_effective_schema(
-    args_schema: Path | None, config: ProjectConfig, registry: Registry
+    args_schema: Path | None, config: ProjectConfig, registry: Registry | None
 ) -> Path:
     """Pick the schema file, honouring the documented precedence.
 
@@ -488,6 +488,10 @@ def resolve_effective_schema(
     if custom_path:
         return Path(cast("str", schema_value))
     if config.frontmatter_version is not None:
+        # Callers load the registry lazily; a configured version is one of the
+        # conditions that requires it, so None here is a caller bug, not user error.
+        if registry is None:
+            raise RegistryError("registry required to resolve markdown.frontmatter.version")
         resolved_name = registry.frontmatter_schema_name(config.frontmatter_version)
         # A bundled NAME alongside a version is only redundant while they agree;
         # letting the version silently win would reintroduce — for names — the same
@@ -693,15 +697,31 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    try:
-        registry = load_registry()
-    except RegistryError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+    # The registry is loaded only when a gate actually consults it (version keys,
+    # ADR flags). A wheel with a corrupted registry.json must not break the
+    # --schema escape hatch or plain unversioned runs that never need it.
+    needs_registry = (
+        config.python_tooling_version is not None
+        or config.markdown_tooling_version is not None
+        or config.frontmatter_version is not None
+        or config.adr_version is not None
+        or config.require_adr_sections
+    )
+    registry: Registry | None = None
+    if needs_registry:
+        try:
+            registry = load_registry()
+        except RegistryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
 
     # python_tooling.version is metadata only: validated if present, never emitted.
-    if config.python_tooling_version is not None and not registry.is_known_python_tooling(
-        config.python_tooling_version
+    # (The registry guards below are type-narrowing no-ops: needs_registry loads it
+    # whenever the corresponding version key is set.)
+    if (
+        registry is not None
+        and config.python_tooling_version is not None
+        and not registry.is_known_python_tooling(config.python_tooling_version)
     ):
         print(
             f"error: unknown python_tooling.version {config.python_tooling_version!r}",
@@ -710,8 +730,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # markdown_tooling.version is metadata only: validated if present, never emitted.
-    if config.markdown_tooling_version is not None and not registry.is_known_markdown_tooling(
-        config.markdown_tooling_version
+    if (
+        registry is not None
+        and config.markdown_tooling_version is not None
+        and not registry.is_known_markdown_tooling(config.markdown_tooling_version)
     ):
         print(
             f"error: unknown markdown_tooling.version {config.markdown_tooling_version!r}",
@@ -729,7 +751,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # FM->ADR compatibility (bundled Frontmatter only; --schema bypasses it).
-    if args.schema is None:
+    # registry None implies no ADR keys are set, making the gate not applicable.
+    if args.schema is None and registry is not None:
         try:
             incompatibility = frontmatter_adr_incompatibility(config, registry)
         except RegistryError as exc:
