@@ -192,13 +192,20 @@ _ADR_REQUIRED_SECTIONS = (
 
 # A level-2 ATX heading: exactly two `#`, then whitespace, then the title. The
 # `[ \t]+` after `##` excludes `###` (level 3) because the third `#` is not
-# whitespace. Match is case-sensitive — MADR section titles are fixed strings.
-_H2_HEADING_RE = re.compile(r"^##[ \t]+(.+?)[ \t]*$")
+# whitespace. An optional ATX closing sequence (`## Title ##`) is stripped —
+# CommonMark allows it and it must not defeat the exact-title match. Match is
+# case-sensitive — MADR section titles are fixed strings.
+_H2_HEADING_RE = re.compile(r"^##[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$")
 
-# A fenced-code-block delimiter (``` or ~~~, optionally indented / with a
-# language). Headings inside a fence are illustrative (e.g. a template snippet),
-# not the document's own structure, so they must not count as present.
-_CODE_FENCE_RE = re.compile(r"^[ \t]*(?:```|~~~)")
+# A fenced-code-block delimiter (``` or ~~~, indented at most 3 spaces per
+# CommonMark — deeper indentation is indented code, not a fence). Headings inside
+# a fence are illustrative (e.g. a template snippet), not the document's own
+# structure, so they must not count as present. The marker char and length are
+# captured because a fence closes only with the SAME char at >= length: a `~~~`
+# line inside a backtick fence, or three backticks inside a four-backtick fence,
+# is content, not a closer.
+_CODE_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_CODE_FENCE_CLOSE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 
 
 def missing_adr_sections(text: str) -> list[str]:
@@ -210,12 +217,20 @@ def missing_adr_sections(text: str) -> list[str]:
     three are present.
     """
     present: set[str] = set()
-    in_code_fence = False
+    open_fence: str | None = None  # the opening fence marker (e.g. "```" or "~~~~")
     for line in text.splitlines():
-        if _CODE_FENCE_RE.match(line):
-            in_code_fence = not in_code_fence
+        if open_fence is not None:
+            close = _CODE_FENCE_CLOSE_RE.match(line)
+            if (
+                close
+                and close.group(1)[0] == open_fence[0]
+                and len(close.group(1)) >= len(open_fence)
+            ):
+                open_fence = None
             continue
-        if in_code_fence:
+        fence = _CODE_FENCE_RE.match(line)
+        if fence:
+            open_fence = fence.group(1)
             continue
         match = _H2_HEADING_RE.match(line)
         if match:

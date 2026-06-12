@@ -1413,3 +1413,47 @@ def test_calendar_impossible_date_fails(tmp_path: Path, validator: Draft202012Va
 def test_real_dates_pass_calendar_check(tmp_path: Path, validator: Draft202012Validator) -> None:
     meta = {**MINIMAL, "created": "2024-02-29"}  # real leap day
     assert _check(tmp_path, validator, _doc(meta)) == []
+
+
+def test_h2_with_atx_closing_sequence_counts(tmp_path: Path) -> None:
+    # `## Decision Outcome ##` is valid CommonMark and must satisfy the section (F34).
+    text = (
+        "## Context and Problem Statement ##\n\nx\n\n"
+        "## Considered Options ##\n\nx\n\n"
+        "## Decision Outcome ##\n\nx\n"
+    )
+    assert missing_adr_sections(text) == []
+
+
+def test_fence_close_requires_same_char(tmp_path: Path) -> None:
+    # A ~~~ line inside a backtick fence is content, not a closer (F33); the
+    # illustrative heading after it must not count as the document's own.
+    text = (
+        "## Context and Problem Statement\n\nx\n\n"
+        "## Considered Options\n\nx\n\n"
+        "```\n~~~\n## Decision Outcome\n```\n"
+    )
+    assert missing_adr_sections(text) == ["Decision Outcome"]
+
+
+def test_fence_close_requires_at_least_equal_length(tmp_path: Path) -> None:
+    # Three backticks inside a four-backtick fence do not close it (F33) — the
+    # common docs pattern of showing a fenced example inside a wider fence.
+    text = (
+        "## Context and Problem Statement\n\nx\n\n"
+        "## Considered Options\n\nx\n\n"
+        "````markdown\n```\n## Decision Outcome\n```\n````\n"
+    )
+    assert missing_adr_sections(text) == ["Decision Outcome"]
+
+
+def test_deeply_indented_fence_is_not_a_fence(tmp_path: Path) -> None:
+    # Four spaces of indentation make indented code, not a fence (F33); the
+    # tracker must not open a phantom fence that swallows real headings.
+    text = (
+        "## Context and Problem Statement\n\nx\n\n"
+        "    ```\n\n"
+        "## Considered Options\n\nx\n\n"
+        "## Decision Outcome\n\nx\n"
+    )
+    assert missing_adr_sections(text) == []
