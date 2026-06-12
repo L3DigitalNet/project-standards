@@ -1,5 +1,9 @@
 # Python Coding Standard
 
+Status: Draft (version 0.4) — in development, reference-only; not registered for adoption or validation Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-07 Scope: code shape and agent behavior for Python projects that follow the Python Tooling SSOT Standard.
+
+---
+
 ## Table of contents
 
 - [Python Coding Standard](#python-coding-standard)
@@ -69,6 +73,8 @@ Requirement keywords in this document are interpreted as follows:
 - **SHOULD** and **RECOMMENDED** indicate strong defaults; exceptions are allowed only when the reason is understood and project-scoped.
 - **SHOULD NOT** and **NOT RECOMMENDED** indicate strong discouragement; exceptions require a specific reason.
 - **MAY** and **OPTIONAL** indicate permitted choices.
+
+Lowercase modal verbs in running text — “must”, “must not”, “should”, “should not”, and “may” — carry the same normative force as their uppercase equivalents; uppercase is a typographic convention, not a stronger requirement level.
 
 Imperative bullets under **Rules** and **Agent rules** are normative even when they do not repeat an uppercase keyword. The leading verb controls the default requirement strength unless the bullet contains an explicit uppercase keyword.
 
@@ -201,15 +207,15 @@ DEFAULT_TIMEOUT_SECONDS: Final = 30
 
 
 class PublicType:
-		...
+    ...
 
 
 def public_function(values: Sequence[str]) -> list[str]:
-		...
+    ...
 
 
 def _private_helper(value: str) -> str:
-		...
+    ...
 ```
 
 Rules:
@@ -257,15 +263,15 @@ Good:
 
 ```python
 def load_config(path: Path) -> AppConfig:
-		raw_config = path.read_text(encoding="utf-8")
-		return AppConfig.model_validate_json(raw_config)
+    raw_config = path.read_text(encoding="utf-8")
+    return AppConfig.model_validate_json(raw_config)
 ```
 
 Bad:
 
 ```python
 def process(path, debug=False, save=True, mode="full"):
-		...
+    ...
 ```
 
 Agent rules:
@@ -351,15 +357,17 @@ Rules:
 - Prefer frozen dataclasses for internal values that should not change after creation.
 - Use domain names for fields, not transport-layer names, unless the model is specifically a transport model.
 
+Source basis: Pydantic validates data against declared models, which is why it is the boundary-validation construct here. [S04] Python's `dataclasses` module supports `frozen=True` for immutable-style internal records. [S03]
+
 Preferred flow:
 
 ```text
 external input
-	-> boundary parser / validator
-	-> typed domain object
-	-> pure business logic
-	-> typed result
-	-> boundary serializer / writer
+  -> boundary parser / validator
+  -> typed domain object
+  -> pure business logic
+  -> typed result
+  -> boundary serializer / writer
 ```
 
 Agent rules:
@@ -394,31 +402,31 @@ Good:
 
 ```python
 class ConfigLoadError(RuntimeError):
-		"""Raised when application configuration cannot be loaded."""
+    """Raised when application configuration cannot be loaded."""
 
 
 def load_config(path: Path) -> AppConfig:
-		try:
-				raw_config = path.read_text(encoding="utf-8")
-		except OSError as exc:
-				message = f"Failed to read config file: {path}"
-				raise ConfigLoadError(message) from exc
+    try:
+        raw_config = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        message = f"Failed to read config file: {path}"
+        raise ConfigLoadError(message) from exc
 
-		try:
-				return AppConfig.model_validate_json(raw_config)
-		except ValidationError as exc:
-				message = f"Invalid config file: {path}"
-				raise ConfigLoadError(message) from exc
+    try:
+        return AppConfig.model_validate_json(raw_config)
+    except ValidationError as exc:
+        message = f"Invalid config file: {path}"
+        raise ConfigLoadError(message) from exc
 ```
 
 Bad:
 
 ```python
 def load_config(path):
-		try:
-				...
-		except Exception:
-				return None
+    try:
+        ...
+    except Exception:
+        return None
 ```
 
 Agent rules:
@@ -466,7 +474,7 @@ logger = logging.getLogger(__name__)
 
 
 def sync_repository(repository_id: RepositoryId) -> None:
-		logger.info("Syncing repository", extra={"repository_id": str(repository_id)})
+    logger.info("Syncing repository", extra={"repository_id": str(repository_id)})
 ```
 
 `extra` rule:
@@ -514,11 +522,11 @@ Preferred shape:
 
 ```text
 entry point
-	-> load settings
-	-> construct dependencies
-	-> call application service
-	-> application service calls pure/domain functions
-	-> boundary adapters perform I/O
+  -> load settings
+  -> construct dependencies
+  -> call application service
+  -> application service calls pure/domain functions
+  -> boundary adapters perform I/O
 ```
 
 Agent rule:
@@ -549,7 +557,7 @@ Good:
 
 ```python
 def read_template(path: Path) -> str:
-		return path.read_text(encoding="utf-8")
+    return path.read_text(encoding="utf-8")
 ```
 
 Canonical atomic text write:
@@ -562,46 +570,46 @@ from pathlib import Path
 
 
 def _fsync_parent_directory(path: Path) -> None:
-		if not hasattr(os, "O_DIRECTORY"):
-				return
+    if not hasattr(os, "O_DIRECTORY"):
+        return
 
-		try:
-				directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-		except OSError:
-				return
+    try:
+        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError:
+        return
 
-		try:
-				os.fsync(directory_fd)
-		finally:
-				os.close(directory_fd)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def write_text_atomic(path: Path, content: str) -> None:
-		path.parent.mkdir(parents=True, exist_ok=True)
-		existing_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
 
-		with tempfile.NamedTemporaryFile(
-				"w",
-				encoding="utf-8",
-				dir=path.parent,
-				delete=False,
-		) as temp_file:
-				temp_path = Path(temp_file.name)
-				temp_file.write(content)
-				temp_file.flush()
-				os.fsync(temp_file.fileno())
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=path.parent,
+        delete=False,
+    ) as temp_file:
+        temp_path = Path(temp_file.name)
+        temp_file.write(content)
+        temp_file.flush()
+        os.fsync(temp_file.fileno())
 
-		if existing_mode is not None:
-				temp_path.chmod(existing_mode)
+    if existing_mode is not None:
+        temp_path.chmod(existing_mode)
 
-		try:
-				os.replace(temp_path, path)
-				_fsync_parent_directory(path)
-		except BaseException:
-				# Clean up the staged file even for KeyboardInterrupt/SystemExit after the
-				# temporary path has been created. Do not catch only Exception here.
-				temp_path.unlink(missing_ok=True)
-				raise
+    try:
+        os.replace(temp_path, path)
+        _fsync_parent_directory(path)
+    except BaseException:
+        # Clean up the staged file even for KeyboardInterrupt/SystemExit after the
+        # temporary path has been created. Do not catch only Exception here.
+        temp_path.unlink(missing_ok=True)
+        raise
 ```
 
 Source basis: Python documents `os.replace` as replacing an existing file when permitted and says the successful rename is atomic on POSIX, while also noting that the operation may fail across filesystems. [S19]
@@ -612,8 +620,8 @@ Bad:
 
 ```python
 def read_template(path):
-		with open(path) as file_obj:
-				return file_obj.read()
+    with open(path) as file_obj:
+        return file_obj.read()
 ```
 
 Agent rule:
@@ -643,10 +651,10 @@ Good:
 
 ```python
 completed = subprocess.run(
-		["git", "status", "--short"],
-		check=True,
-		capture_output=True,
-		text=True,
+    ["git", "status", "--short"],
+    check=True,
+    capture_output=True,
+    text=True,
 )
 ```
 
@@ -681,15 +689,15 @@ Preferred shape:
 
 ```python
 def main(argv: Sequence[str] | None = None) -> int:
-		args = parse_args(argv)
+    args = parse_args(argv)
 
-		try:
-				run_command(args)
-		except AppError as exc:
-				print(str(exc), file=sys.stderr)
-				return 1
+    try:
+        run_command(args)
+    except AppError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
-		return 0
+    return 0
 ```
 
 Agent rule:
@@ -716,9 +724,9 @@ Preferred shape:
 
 ```text
 route handler
-	-> parse/validate request model
-	-> call application service
-	-> return response model
+  -> parse/validate request model
+  -> call application service
+  -> return response model
 ```
 
 Agent rule:
@@ -759,18 +767,18 @@ Test coverage expectations:
 - Bug fixes MUST include a regression test that fails without the fix.
 - Low-risk mechanical edits MAY rely on existing behavior tests when the final report identifies the existing coverage used.
 
-Test naming:
+Test naming: new tests SHOULD follow the naming convention below. Existing tests MAY keep their current names until they are otherwise being changed; do not mass-rename a passing suite just to match the pattern.
 
 ```python
 def test_<unit>__<condition>__<expected_result>() -> None:
-		...
+    ...
 ```
 
 Example:
 
 ```python
 def test_load_config__missing_file__raises_config_load_error() -> None:
-		...
+    ...
 ```
 
 Agent rules:
@@ -902,7 +910,7 @@ Bad:
 ```python
 # Loop over users.
 for user in users:
-		...
+    ...
 ```
 
 Agent rule:
@@ -1196,7 +1204,7 @@ Use this checklist when reviewing agent-authored Python.
 | Version assumptions             | [S14], [S15], [S16], [S17], [S18], [S22], [S23] |
 | Design priorities               | [S01]                                           |
 | Type policy                     | [S02], [S03], [S04], [S05]                      |
-| Data modeling                   | [S02], [S03], [S04]                             |
+| Data modeling                   | [S03], [S04]                                    |
 | Error handling                  | [S06]                                           |
 | Logging and observability       | [S07], [S08]                                    |
 | Filesystem policy               | [S05], [S19]                                    |
@@ -1233,7 +1241,7 @@ Use this checklist when reviewing agent-authored Python.
 | S18 | FastAPI documentation | [https://fastapi.tiangolo.com/](https://fastapi.tiangolo.com/) | FastAPI as a framework based on standard Python type hints and Pydantic | 2026-06-07 |
 | S19 | Python docs: `os.replace` | [https://docs.python.org/3/library/os.html#os.replace](https://docs.python.org/3/library/os.html#os.replace) | Replacement/rename behavior and atomicity notes | 2026-06-07 |
 | S20 | PEP 257 — Docstring Conventions | [https://peps.python.org/pep-0257/](https://peps.python.org/pep-0257/) | Python docstring conventions | 2026-06-07 |
-| S21 | Research Review of the Python Coding Standard for Agent-Authored Code | `research-review-of-the-python-coding-standard-for-agent-authored-code.md` | Current 2025–2026 agent best-practice review; supports agent trust boundaries, dependency provenance, workflow reporting, and softened local-preference rules | 2026-06-07 |
+| S21 | Research Review of the Python Coding Standard for Agent-Authored Code | Unpublished internal research review; not tracked in this repository | Current 2025–2026 agent best-practice review; supports agent trust boundaries, dependency provenance, workflow reporting, and softened local-preference rules | 2026-06-07 |
 | S22 | Python Developer Guide: Status of Python versions | [https://devguide.python.org/versions/](https://devguide.python.org/versions/) | Python version lifecycle and active release status | 2026-06-07 |
 | S23 | Python.org Source Releases | [https://www.python.org/downloads/source/](https://www.python.org/downloads/source/) | Current Python 3.14 patch-release availability | 2026-06-07 |
 
@@ -1241,35 +1249,25 @@ Use this checklist when reviewing agent-authored Python.
 
 ## 31. Adoption note
 
-This standard should be adopted as a companion to the Python Tooling SSOT Standard.
+This standard is a reference-only companion to the Python Tooling SSOT Standard. It is not registered for adoption: the adopt CLI does not deliver it, and the frontmatter validator does not check it.
 
-Recommended relationship:
-
-```text
-standards/python/tooling.md   # toolchain, pyproject, CI, editor, agent entry points
-standards/python/coding.md    # code-shape and behavior rules
-```
-
-Agent instruction files SHOULD summarize this standard, but the canonical version SHOULD live in the standards repository and be referenced from project templates.
-
-Recommended consumption model:
+Current relationship:
 
 ```text
-standards/python/coding.md            # canonical standard, evidence, and rationale
-standards/python/coding.agent.md      # compact normative agent summary
-standards/python/coding-rationale.md  # optional extended rationale if the canonical file becomes too large
+standards/python-tooling/           # toolchain, pyproject, CI, editor, agent entry points (adoptable bundle)
+standards/python-coding/README.md   # code-shape and behavior rules (this document, reference-only)
 ```
+
+This document is the canonical version; agents and humans read it in place. No compact agent summary or separate rationale file exists today. A condensed agent-facing summary is a possible future artifact — the python-tooling bundle already ships condensed `AGENTS.md`/`CLAUDE.md` entry points for its own content — but until one exists, agents needing code-shape guidance read this document directly.
 
 Rules:
 
-- Agents SHOULD load the compact normative summary during ordinary implementation work.
-- Agents MAY load the full canonical standard when resolving ambiguity, reviewing exceptions, or modifying the standard itself.
-- Rationale and source evidence MUST remain discoverable from the canonical standard.
-- The agent summary MUST NOT weaken the canonical standard.
+- Rationale and source evidence MUST remain discoverable from this canonical document.
+- If a compact agent summary is added later, it MUST NOT weaken the canonical standard.
 - Repositories with repeated agent use SHOULD maintain a small golden-task or fixture suite that can detect regressions in how agents follow this standard.
 - Repositories with multiple agent instruction systems SHOULD document precedence across `AGENTS.md`, `CLAUDE.md`, `.continue/rules`, `.devin/rules`, project memory, and other active mechanisms.
 
-Policy decision: keep tooling and coding separate. Tooling changes more often because external tools change. Coding standards should be more stable and should evolve mainly when repeated agent failure patterns appear. The full standard is for audit and maintenance; the compact summary is for day-to-day agent context efficiency.
+Policy decision: keep tooling and coding separate. Tooling changes more often because external tools change. Coding standards should be more stable and should evolve mainly when repeated agent failure patterns appear.
 
 ---
 
@@ -1288,7 +1286,6 @@ Updated on 2026-06-07:
 - Softened the per-feature test matrix into material-behavior coverage expectations while keeping regression tests mandatory for bug fixes.
 - Clarified that `__all__` is encouraged for intentional public facades and re-export modules, not every module.
 - Clarified concurrency as a justification-and-lifecycle rule rather than a blanket anti-async rule.
-- Expanded agent workflow requirements with task specs, dependency verification reporting, checkpointing, fresh-context/adversarial review, and structured handoffs.
 - Added optional golden-task/eval-suite guidance for repositories with repeated agent use.
 - Added requirement-language definitions based on RFC 2119.
 - Added explicit Python version assumptions and tied code-shape features to the project `requires-python` range.
@@ -1300,7 +1297,7 @@ Updated on 2026-06-07:
 - Replaced vague atomic-write guidance with a canonical same-directory temporary-file plus `os.replace` pattern.
 - Added logging `extra` collision guidance for `LogRecord` attributes.
 - Added PEP 257 as the docstring convention baseline.
-- Added an agent-summary/rationale split recommendation for context efficiency.
+- Noted a condensed agent-facing summary as a possible future context-efficiency artifact in the adoption note.
 
 <!-- Citation reference-link definitions: every [Sxx] marker in the body and in the source coverage map resolves to the Source register (section 30). GFM cannot anchor individual table rows, so all citations jump to the section. -->
 
