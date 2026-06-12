@@ -1,3 +1,8 @@
+# STALE SNAPSHOT — superseded by src/project_standards/validate_id.py.
+# This copy predates the id_format extraction and the 2026-06-12 validator
+# fixes; nothing in the repo consumes it (build-validate-id-pyz.sh bundles the
+# package source, and the console script entry points target the package).
+# Do not edit or vendor this file; prefer deleting it.
 """Validate that frontmatter ``id`` fields follow the correct format for their doc_type.
 
 Two formats are in use; which applies depends on ``doc_type``:

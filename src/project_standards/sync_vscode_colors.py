@@ -24,6 +24,10 @@ from typing import Any, cast
 
 import yaml
 
+# The folder-colorizer color that marks managed-docs paths in the user's VS Code
+# setup. Cross-file contract: must equal _COLOR in sync_standards_include.py — the
+# two tools are inverse round-trips of the same convention, and a mismatch makes
+# one direction silently drop every entry the other wrote.
 _COLOR = "foldercolorizer.color_d7af00"
 
 

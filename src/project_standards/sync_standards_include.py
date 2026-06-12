@@ -29,6 +29,10 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
+# The folder-colorizer color that marks managed-docs paths in the user's VS Code
+# setup. Cross-file contract: must equal _COLOR in sync_vscode_colors.py — the two
+# tools are inverse round-trips of the same convention, and a mismatch makes one
+# direction silently drop every entry the other wrote.
 _COLOR = "foldercolorizer.color_d7af00"
 
 
@@ -46,6 +50,8 @@ def _repo_root() -> Path:
 def read_path_colors(settings_path: Path) -> list[dict[str, str]]:
     """Return all folder-color.pathColors entries from *settings_path*."""
     original = settings_path.read_text(encoding="utf-8")
+    # VS Code settings are JSONC; strip whole-line // comments or json.loads fails.
+    # (sync_vscode_colors.rewrite_settings preserves the header comments on write.)
     clean = re.sub(r"(?m)^\s*//[^\n]*\n?", "", original)
     data = cast(dict[str, Any], json.loads(clean))
     raw = data.get("folder-color.pathColors", [])

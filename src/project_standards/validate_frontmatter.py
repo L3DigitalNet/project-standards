@@ -17,6 +17,16 @@ Usage:
 
 Schema resolution order: --schema (path) > config markdown.frontmatter.schema
 (bundled name or path) > the bundled "markdown-frontmatter" schema.
+
+Exit codes: 0 = all matched files valid (or none matched); 1 = validation errors;
+2 = operator error (config, schema, registry, or invocation).
+
+This module is also the HUB of the validator family: validate_id,
+validate_references, and format_frontmatter import its primitives
+(parse_frontmatter, load_config, collect_paths, ConfigError,
+schema_value_is_path, resolve_effective_schema, reconfigure_output_streams).
+A change to any of those signatures or semantics propagates to every console
+script in the package.
 """
 
 from __future__ import annotations
@@ -59,7 +69,12 @@ class FrontmatterParseError(ValueError):
 
 
 class ConfigError(ValueError):
-    """The config file exists but is not valid YAML — an operator error (exit 2)."""
+    """An operator/invocation error: unreadable or invalid config, a bad glob or
+    named file, a non-string version value, or an unloadable doc_type enum.
+
+    Every CLI boundary in the package maps this to exit 2, so raising it from a
+    shared helper is the one sanctioned way to abort with a clean operator error.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +172,13 @@ def _coerce_dates(obj: Any) -> Any:
 
 
 def parse_frontmatter(text: str) -> dict[str, Any] | None:
-    """Return the parsed YAML frontmatter mapping, or None if absent/non-mapping."""
+    """Return the parsed YAML frontmatter mapping, or None if absent/non-mapping.
+
+    Raises FrontmatterParseError for a present-but-invalid block: a YAML syntax
+    error, a duplicate top-level key, or a non-string key. Callers across the
+    package rely on exactly this split — None means "skip / report missing",
+    the exception means "report the block as broken".
+    """
     match = _FRONTMATTER_RE.match(text)
     if not match:
         return None
@@ -280,6 +301,10 @@ def validate_file(
 ) -> list[str]:
     """Validate a single file; return a list of human-readable error strings.
 
+    Never raises for a bad file: unreadable, undecodable, and malformed inputs
+    all degrade to returned error strings, so one broken file cannot abort a
+    batch run.
+
     When ``require_adr_sections`` is set, documents with ``doc_type: adr`` are
     additionally checked for the three MADR-required ``##`` sections (DEC-5).
     Off by default, so existing callers are unaffected.
@@ -332,12 +357,12 @@ def validate_file(
 def _default_corpus() -> list[Path]:
     """Every Markdown file under cwd, skipping hidden and vendored trees.
 
-    The no-include fallback previously used Path().glob("**/*.md"), which recurses
-    into .git/, .venv/ and node_modules/ — making the advertised default unusable
-    after the first dependency install (and polluting validate-references' index
-    with vendored docs). Hidden components and node_modules are pruned during
-    traversal, so those trees are never walked at all. Explicit include patterns
-    are untouched: a repo that wants hidden paths can name them.
+    A bare Path().glob("**/*.md") is rejected here because it recurses into
+    .git/, .venv/ and node_modules/ — the advertised zero-config default would
+    become unusable after the first dependency install, and validate-references'
+    index would fill with vendored docs. Hidden components and node_modules are
+    pruned during traversal, so those trees are never walked at all. Explicit
+    include patterns are untouched: a repo that wants hidden paths can name them.
     """
     found: list[Path] = []
     for dirpath, dirnames, filenames in os.walk("."):
@@ -660,6 +685,7 @@ def reconfigure_output_streams() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point; returns an exit code (0 valid / 1 violations / 2 operator error)."""
     reconfigure_output_streams()
     parser = argparse.ArgumentParser(
         description=__doc__,

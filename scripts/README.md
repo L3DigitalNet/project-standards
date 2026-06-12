@@ -1,6 +1,6 @@
 # scripts/
 
-Developer helpers for `project-standards`. Currently one script.
+Developer helpers for `project-standards`.
 
 ## `check.py` — local CI gate
 
@@ -27,3 +27,11 @@ src/project_standards/bundles/python-tooling/check.py  ←→  scripts/check.py
 ```
 
 `test_adopt_dogfood.py` asserts byte-identity between the two. If you edit either file, update the other to match — the test will catch any divergence in CI.
+
+## `build-validate-id-pyz.sh` — standalone validator bundle
+
+Builds `dist/validate-id.pyz`, a self-contained zipapp of `validate-id` for repos that cannot `uv tool install` the package. It bundles the package source from `src/project_standards/` directly (no copy in this directory is involved); see the script header for the PyYAML/jsonschema bundling details.
+
+## `validate_id.py` — stale snapshot (do not use)
+
+A superseded copy of the validator from before the `id_format` extraction. Nothing consumes it; it is kept only as history and is marked as stale in its header. Prefer deleting it.

@@ -30,8 +30,16 @@ from project_standards.validate_id import (
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
-_REF_FIELDS = ("related", "depends_on", "supersedes", "superseded_by")  # NOT applies_to
 
+# The frontmatter fields whose values are document references. applies_to is
+# deliberately absent: the standard defines it as free-form scope identifiers
+# (services, components, environments), not links — including it would warn on
+# every legitimate value.
+_REF_FIELDS = ("related", "depends_on", "supersedes", "superseded_by")
+
+# Extracts only the numeric segment of an already-shaped ADR id for the
+# duplicate-number check; the full id grammar is owned by validate_id._ADR_ID_RE
+# (imported above), not re-stated here.
 _ADR_NUM_RE = _re.compile(r"^adr-([0-9]{4,})-")
 
 

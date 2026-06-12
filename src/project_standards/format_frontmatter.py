@@ -28,6 +28,10 @@ _FM_RE = re.compile(r"\A(---[ \t]*\r?\n)(.*?)(\r?\n---[ \t]*(?:\r?\n|$))", re.DO
 # A top-level (column 0) mapping key line: `key:` optionally followed by a value.
 _TOP_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):(.*)$")
 
+# The doc_type enum, read at import from the bundled DEFAULT schema. The formatter
+# is hardwired to the bundled default contract (see BUNDLED_SCHEMA_VERSION below,
+# which scaffolds write) — unlike validate_id, which resolves the enum per pinned
+# frontmatter.version through a lazy loader.
 _SCHEMA_PATH = Path(__file__).parent / "schemas" / "markdown-frontmatter.schema.json"
 VALID_DOC_TYPES: frozenset[str] = frozenset(
     json.loads(_SCHEMA_PATH.read_text())["properties"]["doc_type"]["enum"]
@@ -395,6 +399,10 @@ def _keys(entries: list[Entry]) -> set[str]:
 
 
 def rename_type(entries: list[Entry], warnings: list[str]) -> None:
+    """Rename a legacy top-level `type:` key to `doc_type:` (the standard avoids
+    `type` to dodge publishing-tool collisions). When BOTH keys are present the
+    rename would create a duplicate, so `type` is kept untouched and warned about
+    — deleting data is never this formatter's call."""
     present = _keys(entries)
     if "doc_type" in present:
         if "type" in present:
@@ -561,6 +569,10 @@ def format_text(
     return new_text, changed, warnings
 
 
+# CLI/config dependencies imported below the pure-formatting core (noqa: E402):
+# everything above this line operates on text alone, with no config or filesystem
+# discovery. There is no circular-import constraint — validate_frontmatter does
+# not import this module.
 from project_standards.validate_frontmatter import (  # noqa: E402
     ConfigError,
     collect_paths,
