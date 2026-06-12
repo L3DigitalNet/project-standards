@@ -121,9 +121,18 @@ def _resolves(ref: str, index: Index, repo_root: Path) -> bool:
         return True
     if "#" in ref:  # section anchors are not document references (standard)
         return False
-    if ref.startswith(("/", "../")) or "/../" in ref:
+    # Containment, not textual guards: Windows drive refs (C:/x.md), backslash
+    # traversal (..\\x), and symlinks pointing outside the repo all slip past
+    # startswith()-style checks, but none can defeat resolve()+is_relative_to.
+    # Costs a resolve() per ref, accepted at corpus scale; a symlinked path
+    # INSIDE the repo that targets outside it now correctly fails to resolve.
+    try:
+        resolved = (repo_root / ref).resolve()
+    except OSError:
         return False
-    return (repo_root / ref).is_file()
+    if not resolved.is_relative_to(repo_root.resolve()):
+        return False
+    return resolved.is_file()
 
 
 def check_references(index: Index, repo_root: Path) -> list[str]:

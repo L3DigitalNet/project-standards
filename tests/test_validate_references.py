@@ -545,3 +545,24 @@ def test_dates_compared_as_dates_not_strings(tmp_path: Path) -> None:
         updated="'2026-10-01'",
     )
     assert check_dates(build_index([tmp_path / "a.md"])) == []
+
+
+def test_symlink_escaping_repo_root_does_not_resolve(tmp_path: Path) -> None:
+    # A symlink inside the repo pointing outside it defeats textual ../ guards;
+    # containment via resolve()+is_relative_to must reject it (F54).
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.md").write_text("# S\n")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "link").symlink_to(outside)
+    _write(
+        repo / "a.md",
+        id="'note-aaaaaa-x'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        related="['link/secret.md']",
+    )
+    warnings = check_references(build_index([repo / "a.md"]), repo)
+    assert len(warnings) == 1
