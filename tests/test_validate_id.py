@@ -692,3 +692,12 @@ def test_main_fix_already_valid_exits_zero(tmp_path: Path, monkeypatch: pytest.M
     f.write_text(text, encoding="utf-8")
     rc = main(["--fix", str(f)])
     assert rc == 0
+
+
+def test_check_file_non_utf8_reports_error_not_traceback(tmp_path: Path) -> None:
+    # UnicodeDecodeError must be handled like an unreadable file (F1).
+    bad = tmp_path / "latin1.md"
+    bad.write_bytes(b"---\nid: caf\xe9\n---\n")
+    errors = check_file(bad)
+    assert len(errors) == 1
+    assert "cannot read" in errors[0]

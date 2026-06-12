@@ -44,7 +44,7 @@ def build_index(paths: list[Path]) -> Index:
     for path in paths:
         try:
             meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
-        except OSError, FrontmatterParseError:
+        except (OSError, UnicodeDecodeError, FrontmatterParseError):
             continue
         if not isinstance(meta, dict):
             continue

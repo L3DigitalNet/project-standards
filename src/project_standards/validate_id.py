@@ -181,7 +181,8 @@ def check_file(path: Path) -> list[str]:
     """
     try:
         text = path.read_text(encoding="utf-8-sig")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a ValueError, not an OSError — see validate_file.
         return [f"{path}: cannot read: {exc}"]
 
     try:

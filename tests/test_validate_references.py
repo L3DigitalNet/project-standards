@@ -421,3 +421,11 @@ def test_build_index_tolerates_utf8_bom(tmp_path: Path) -> None:
     index = build_index([bom_file])
     assert len(index.docs) == 1, "BOM-prefixed doc must be indexed, not silently dropped"
     assert "note-bomtest-x" in index.ids
+
+
+def test_build_index_skips_non_utf8_file(tmp_path: Path) -> None:
+    # A non-UTF-8 file must be skipped like an unreadable one, not crash the pass (F1).
+    bad = tmp_path / "latin1.md"
+    bad.write_bytes(b"---\nid: caf\xe9\n---\n")
+    index = build_index([bad])
+    assert index.docs == []

@@ -221,7 +221,9 @@ def validate_file(
     """
     try:
         text = path.read_text(encoding="utf-8-sig")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a ValueError, not an OSError: a non-UTF-8 file matched
+        # by a glob must fail as one per-file error, never as an uncaught traceback.
         return [f"{path}: cannot read file: {exc}"]
 
     try:

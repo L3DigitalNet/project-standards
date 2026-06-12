@@ -1320,3 +1320,15 @@ def test_duplicate_top_level_key_rejected() -> None:
 def test_unique_keys_still_parse() -> None:
     meta = parse_frontmatter("---\nid: 'x'\ntags: []\n---\n# body\n")
     assert meta == {"id": "x", "tags": []}
+
+
+def test_non_utf8_file_reports_error_not_traceback(
+    tmp_path: Path, validator: Draft202012Validator
+) -> None:
+    # A non-UTF-8 byte raises UnicodeDecodeError (a ValueError, not an OSError);
+    # it must surface as one per-file error, never an uncaught traceback (F1).
+    bad = tmp_path / "latin1.md"
+    bad.write_bytes(b"---\nid: caf\xe9\n---\n")
+    errors = validate_file(bad, validator, require_frontmatter=True)
+    assert len(errors) == 1
+    assert "cannot read file" in errors[0]
