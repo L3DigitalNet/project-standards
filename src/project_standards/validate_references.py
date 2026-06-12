@@ -144,6 +144,12 @@ def check_reciprocity(index: Index) -> list[str]:
     }
     for doc in index.docs:
         a_id = doc.meta.get("id")
+        # A doc with supersede fields but no usable id of its own cannot satisfy
+        # reciprocity; warning would interpolate None ("'None' is superseded_by
+        # ...") — diagnosing nothing. The missing id itself is the schema
+        # validator's finding, not this pass's.
+        if not isinstance(a_id, str) or not a_id:
+            continue
         for b_id in _as_list(doc.meta.get("superseded_by")):
             if b_id in supersedes_map and a_id not in supersedes_map[b_id]:
                 warnings.append(

@@ -456,3 +456,24 @@ def test_empty_string_superseded_by_not_flagged(tmp_path: Path) -> None:
         superseded_by="''",
     )
     assert check_references(build_index([tmp_path / "a.md"]), tmp_path) == []
+
+
+def test_reciprocity_skips_doc_without_id(tmp_path: Path) -> None:
+    # A doc lacking its own id used to produce "'None' is superseded_by ..." —
+    # a nonsense warning; the missing id is the schema validator's job (F48).
+    _write(
+        tmp_path / "a.md",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+        superseded_by="'note-bbbbbb-y'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'note-bbbbbb-y'",
+        doc_type="'note'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    warnings = check_reciprocity(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert not any("None" in w for w in warnings)
