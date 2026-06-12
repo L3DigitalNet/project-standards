@@ -1,11 +1,11 @@
 # State
 
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-12
 
 ## State at a glance
 
-- **Full `3.0.0` release state STAGED, REVIEWED + GREEN on `staging`; NOT tagged, NOT on `main`.** HEAD `415ccee`. The atomic v2→v3 contract bump is one signed commit (`afb3618`): `pyproject`+`uv.lock`→3.0.0 and ALL consumer pins→`@v3`; `major_ref()`→`v3`. Payload: adopt CLI + hardened `validate-id` + frontmatter suite (`format-frontmatter`, `validate-references` opt-in, `project-standards fix`, `.pre-commit-hooks.yaml`, `validate` runs all 3). 441 tests, 92% cov, basedpyright 0/0/0; ruff/prettier/markdownlint/pip-audit + dogfood clean.
-- **Readiness round 6 CONVERGED — zero blockers** (4 parallel reviewers: pins / adopt-delivery / narrative / version-integrity; both MAJOR breaking claims code-verified). Round fixes: dogfood test now guards the full "pin BOTH" invariant (`399cb79`); `adopt` delivers the caller as `validate-standards.yml` to match the docs (`415ccee`).
+- **Full `3.0.0` release state STAGED, REVIEWED + GREEN on `staging`; NOT tagged, NOT on `main`.** HEAD `c0e5dc3`. Atomic v2→v3 contract bump in one signed commit (`afb3618`): `pyproject`+`uv.lock`→3.0.0, ALL consumer pins→`@v3`, `major_ref()`→`v3`. Payload: adopt CLI + hardened `validate-id` + frontmatter suite. 441 tests, 92% cov, basedpyright 0/0/0; ruff/prettier/markdownlint/pip-audit + dogfood clean. Readiness rounds 1–6 converged.
+- **Standards-corpus review 2026-06-12** (5 parallel reviewers over `standards/`): 7 🔴 + 12 🟡 fixed in 6 commits (`5fac8ae`…`c0e5dc3`) — frontmatter adopt-guide id rules now match `validate-id`; python-tooling §8 GFM table (bug 002) + script counts + missing TOC; `__future__` import dropped from check.py (coding-standard conflict); **python-coding draft (0.4) now acknowledged in root README/CHANGELOG/AGENTS/CLAUDE/versioning/architecture** as reference-only + unregistered; pytest floor →9.0. Gate re-verified green.
 - **DEFERRED to the all-at-once `main` push (explicit user go ONLY) — the next-session action:** signed tag `v3.0.0`; moving `v3`; freeze `v2` (live moving 2.x tag until then); fast-forward `main`; GitHub release; flip `deployed.md` staged→published. Checklist in `TODO.md`.
 - Version `3.0.0` (MAJOR): `validate-id` now in consumer CI + duplicate-key rejection. `2.0.0` shipped 2026-06-07; `main` holds releases; handoff-system-v3.
 
