@@ -596,3 +596,18 @@ def test_malformed_adr_like_ref_still_warns(tmp_path: Path) -> None:
     )
     warnings = check_references(build_index([tmp_path / "a.md"]), tmp_path)
     assert len(warnings) == 1
+
+
+def test_build_index_reports_skipped_files_as_warnings(tmp_path: Path) -> None:
+    # Dropped docs make this pass silently blind (their duplicate-id violations
+    # vanish; references to them misreport). Each drop must surface as a
+    # warning line — warnings never fail the build, so severity is unchanged (F12).
+    dup = tmp_path / "dup.md"
+    dup.write_text("---\ntags: []\ntags: ['x']\n---\n# B\n")
+    missing = tmp_path / "missing.md"  # never created
+    plain = tmp_path / "plain.md"
+    plain.write_text("# No frontmatter\n")  # unmanaged by design: no warning
+    index = build_index([dup, missing, plain])
+    assert len(index.skipped) == 2
+    assert any("invalid frontmatter" in w for w in index.skipped)
+    assert any("cannot read" in w for w in index.skipped)

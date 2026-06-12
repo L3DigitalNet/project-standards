@@ -43,6 +43,12 @@ class Index:
     # id -> every path claiming it; membership doubles as the known-id set, so no
     # separate ids field exists to drift out of sync with this one.
     by_id: dict[str, list[Path]] = field(default_factory=dict)
+    # Files dropped from the index (unreadable / unparseable frontmatter), as
+    # ready-to-print warning lines. A dropped doc's duplicate-id violations
+    # vanish and references TO it misreport as unresolved — standalone runs (no
+    # validate-frontmatter alongside) would otherwise pass green on a fully
+    # broken corpus with zero indication why.
+    skipped: list[str] = field(default_factory=list)
 
 
 def build_index(paths: list[Path]) -> Index:
@@ -50,9 +56,16 @@ def build_index(paths: list[Path]) -> Index:
     for path in paths:
         try:
             meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
-        except (OSError, UnicodeDecodeError, FrontmatterParseError):
+        except (OSError, UnicodeDecodeError) as exc:
+            index.skipped.append(f"[warning] {path}: skipped (cannot read: {exc})")
+            continue
+        except FrontmatterParseError as exc:
+            index.skipped.append(f"[warning] {path}: skipped (invalid frontmatter: {exc})")
             continue
         if not isinstance(meta, dict):
+            # No (or non-mapping) frontmatter block: silently unmanaged here —
+            # whether frontmatter is REQUIRED is the schema validator's finding,
+            # and warning on every excluded-by-design file would be noise.
             continue
         doc = Doc(path=path, meta=meta)
         index.docs.append(doc)
@@ -287,6 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     index = build_index(paths)
     errors: list[str] = []
     warnings: list[str] = []
+    warnings += index.skipped
     errors += check_id_uniqueness(index)
     errors += check_dates(index)
     warnings += check_references(index, Path.cwd())
