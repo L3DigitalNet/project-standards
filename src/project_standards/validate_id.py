@@ -63,6 +63,7 @@ from project_standards.validate_frontmatter import (
     load_config,
     parse_frontmatter,
     reconfigure_output_streams,
+    schema_value_is_path,
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
@@ -176,9 +177,10 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
 def check_file(path: Path) -> list[str]:
     """Return formatted violation lines for *path*; empty list means the file is clean.
 
-    Files without frontmatter, or whose ``id`` / ``doc_type`` / ``title`` fields are
-    absent or have the wrong type, are silently skipped — those gaps are caught by the
-    frontmatter schema validator rather than duplicated here.
+    Files without frontmatter, or whose ``id`` / ``doc_type`` fields are absent or
+    have the wrong type, are silently skipped — those gaps are caught by the
+    frontmatter schema validator rather than duplicated here. (``title`` is NOT
+    inspected: a valid id without a title passes; only ``fix_file`` needs a title.)
     """
     try:
         text = path.read_text(encoding="utf-8-sig")
@@ -395,15 +397,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # Skip id-format validation when a custom (non-bundled) schema is in use — either
-    # via the --schema CLI flag or via a config-level path.  A bare token like
-    # "markdown-frontmatter" is a bundled schema name; anything containing a path
-    # separator or ending in ".json" is consumer-owned and may define different id
-    # conventions.  Mirrors the schema_value_is_path check in validate_frontmatter.
-    config_schema = config.schema
-    config_has_custom_schema = config_schema is not None and (
-        "/" in config_schema or "\\" in config_schema or config_schema.endswith(".json")
-    )
-    if args.schema is not None or config_has_custom_schema:
+    # via the --schema CLI flag or via a config-level path. Custom schemas are
+    # consumer-owned and may define different id conventions.
+    if args.schema is not None or schema_value_is_path(config.schema):
         if not args.quiet:
             print("note: custom schema in use; skipping id-format validation")
         return 0
@@ -433,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
                     if isinstance(meta, dict) and meta.get("doc_type") == "adr":
                         adr_skipped.append(path)
                         continue
-                except OSError, FrontmatterParseError:
+                except (OSError, FrontmatterParseError):
                     pass
                 remaining_errors.extend(violations)
 
