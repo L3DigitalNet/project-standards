@@ -351,7 +351,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--glob",
         metavar="PATTERN",
-        help="Additional glob pattern relative to cwd (same semantics as validate-frontmatter).",
+        help="Validate files matching PATTERN (relative to cwd) instead of the "
+        "config include list; combines with explicit FILE arguments "
+        "(same semantics as validate-frontmatter).",
     )
     parser.add_argument(
         "--schema",

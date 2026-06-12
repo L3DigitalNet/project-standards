@@ -624,7 +624,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--glob",
         metavar="PATTERN",
-        help="Additional glob pattern relative to cwd.",
+        help="Validate files matching PATTERN (relative to cwd) instead of the "
+        "config include list; combines with explicit FILE arguments.",
     )
     parser.add_argument(
         "--config",
