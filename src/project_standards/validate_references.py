@@ -168,7 +168,10 @@ def check_reciprocity(index: Index) -> list[str]:
 
 
 def check_adr_sequence(index: Index) -> list[str]:
-    by_num: dict[str, list[str]] = {}
+    # Keyed by the numeric value, not the digit string: the id grammar allows 4+
+    # zero-padded digits, so adr-0001-... and adr-00001-... are both ADR number 1
+    # and must collide here even though their raw strings differ.
+    by_num: dict[int, list[str]] = {}
     for doc in index.docs:
         if doc.meta.get("doc_type") != "adr":
             continue
@@ -177,7 +180,7 @@ def check_adr_sequence(index: Index) -> list[str]:
             continue
         m = _ADR_NUM_RE.match(doc_id)
         if m:
-            by_num.setdefault(m.group(1), []).append(doc_id)
+            by_num.setdefault(int(m.group(1)), []).append(doc_id)
     return [
         f"[error] duplicate ADR number {num}: {', '.join(sorted(ids))}"
         for num, ids in sorted(by_num.items())

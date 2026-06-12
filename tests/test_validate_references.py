@@ -509,3 +509,25 @@ def test_reciprocity_merges_sets_across_duplicate_ids(tmp_path: Path) -> None:
     index = build_index([tmp_path / "a.md", tmp_path / "dup1.md", tmp_path / "dup2.md"])
     warnings = check_reciprocity(index)
     assert not any("note-aaaaaa-x" in w and "superseded_by" in w for w in warnings)
+
+
+def test_duplicate_adr_number_detected_across_zero_padding(tmp_path: Path) -> None:
+    # adr-0001-... and adr-00001-... are both ADR number 1; the comparison must
+    # be numeric so padding variants cannot dodge the duplicate check (F50).
+    _write(
+        tmp_path / "a.md",
+        id="'adr-0001-repo-one'",
+        doc_type="'adr'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    _write(
+        tmp_path / "b.md",
+        id="'adr-00001-repo-two'",
+        doc_type="'adr'",
+        created="'2026-01-01'",
+        updated="'2026-01-02'",
+    )
+    errors = check_adr_sequence(build_index([tmp_path / "a.md", tmp_path / "b.md"]))
+    assert len(errors) == 1
+    assert "adr-0001-repo-one" in errors[0] and "adr-00001-repo-two" in errors[0]
