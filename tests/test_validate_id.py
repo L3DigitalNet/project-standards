@@ -730,3 +730,49 @@ def test_kebab_message_describes_the_enforced_rule(tmp_path: Path) -> None:
     # The message must not quote a pattern looser than the enforced regex (F19).
     errors = validate_id("note-a3f9zk-bad--slug", "note")
     assert any("consecutive hyphens" in e for e in errors)
+
+
+def test_load_doc_types_missing_schema_is_config_error(tmp_path: Path) -> None:
+    # The enum loads lazily (F27): a broken wheel surfaces as ConfigError/exit 2,
+    # not an import-time traceback that kills even --help.
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
+    from project_standards.validate_frontmatter import ConfigError
+
+    with pytest.raises(ConfigError, match="cannot load doc_type enum"):
+        _load_doc_types(tmp_path / "missing.schema.json")
+
+
+def test_load_doc_types_malformed_schema_is_config_error(tmp_path: Path) -> None:
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
+    from project_standards.validate_frontmatter import ConfigError
+
+    bad = tmp_path / "bad.schema.json"
+    bad.write_text("{\"properties\": {}}", encoding="utf-8")
+    with pytest.raises(ConfigError, match="cannot load doc_type enum"):
+        _load_doc_types(bad)
+
+
+def test_main_resolves_enum_from_pinned_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A pinned frontmatter.version resolves through the registry to its own
+    # bundled schema's enum (F11) — the wiring main() uses, end to end.
+    monkeypatch.chdir(tmp_path)
+    doc = _write(tmp_path, "id: note-a3f9zk-my-note\ndoc_type: note\ntitle: My Note\n")
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    version: '1.1'\n    include: ['doc.md']\n",
+        encoding="utf-8",
+    )
+    assert main(["--config", str(cfg), str(doc)]) == 0
+
+
+def test_main_unknown_pinned_version_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An unbundled frontmatter.version must exit 2 here too, matching
+    # validate-frontmatter (F11).
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    version: '9.9'\n", encoding="utf-8")
+    assert main(["--config", str(cfg)]) == 2

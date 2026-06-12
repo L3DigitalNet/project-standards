@@ -49,13 +49,15 @@ skipped — those structural gaps are the frontmatter schema validator's job.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from project_standards.id_format import random_token, slugify
+from project_standards.registry import RegistryError, load_registry
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
@@ -63,18 +65,34 @@ from project_standards.validate_frontmatter import (
     load_config,
     parse_frontmatter,
     reconfigure_output_streams,
+    resolve_effective_schema,
     schema_value_is_path,
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
 
-# Load the doc_type enum directly from the bundled schema so this list never drifts.
-# No valid doc_type contains a hyphen, which makes split('-', 2) safe: the first segment
-# is always the doc_type prefix with no ambiguity.
+# Default bundled schema: the doc_type enum source when no effective schema is
+# resolved (direct library calls, tests). main() resolves the enum from the
+# EFFECTIVE schema for the loaded config, so a consumer pinning
+# markdown.frontmatter.version is checked against that contract's enum, not
+# whatever the newest bundled default happens to allow.
 _SCHEMA_PATH = Path(__file__).parent / "schemas" / "markdown-frontmatter.schema.json"
-_VALID_DOC_TYPES: frozenset[str] = frozenset(
-    json.loads(_SCHEMA_PATH.read_text())["properties"]["doc_type"]["enum"]
-)
+
+
+@functools.cache
+def _load_doc_types(schema_path: Path) -> frozenset[str]:
+    """The ``doc_type`` enum from *schema_path*, cached per path.
+
+    Loaded lazily — at import time a broken wheel would kill even
+    ``validate-id --help`` with a raw traceback; here a missing or malformed
+    schema surfaces as ConfigError, which mains map to exit 2.
+    """
+    try:
+        raw: Any = json.loads(schema_path.read_text(encoding="utf-8"))
+        enum_values = cast("list[Any]", raw["properties"]["doc_type"]["enum"])
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise ConfigError(f"cannot load doc_type enum from schema {schema_path}: {exc}") from exc
+    return frozenset(str(v) for v in enum_values)
 
 # Exactly 6 characters from the base-36 alphabet (digits 0-9 + lowercase letters a-z).
 _BASE36_RE = re.compile(r"^[0-9a-z]{6}$")
@@ -112,8 +130,13 @@ def _validate_adr_id(doc_id: str) -> list[str]:
     return []
 
 
-def validate_id(doc_id: str, doc_type: str) -> list[str]:
+def validate_id(
+    doc_id: str, doc_type: str, valid_doc_types: frozenset[str] | None = None
+) -> list[str]:
     """Return violation messages for *doc_id*; empty list means the id is valid.
+
+    *valid_doc_types* is the effective schema's enum; None falls back to the
+    default bundled schema (direct library/test callers).
 
     Dispatches to ``_validate_adr_id`` for ``doc_type == 'adr'`` (sequential-number
     format) and validates the base-36 three-segment format for all other doc_types.
@@ -133,6 +156,8 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
     if doc_type == "adr":
         return _validate_adr_id(doc_id)
 
+    doc_types = valid_doc_types if valid_doc_types is not None else _load_doc_types(_SCHEMA_PATH)
+
     # maxsplit=2 so the readable-slug segment may itself contain hyphens.
     # e.g. "note-a3f9zk-tailscale-acl-gotcha" → ["note", "a3f9zk", "tailscale-acl-gotcha"]
     parts = doc_id.split("-", 2)
@@ -146,10 +171,9 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
     errors: list[str] = []
 
     # --- Segment 1: doc_type prefix ---
-    if id_type not in _VALID_DOC_TYPES:
+    if id_type not in doc_types:
         errors.append(
-            f"prefix '{id_type}' is not a valid doc_type "
-            f"(valid: {', '.join(sorted(_VALID_DOC_TYPES))})"
+            f"prefix '{id_type}' is not a valid doc_type (valid: {', '.join(sorted(doc_types))})"
         )
     elif id_type != doc_type:
         # The prefix must exactly match the document's own doc_type — catching cases
@@ -184,7 +208,7 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
     return errors
 
 
-def check_file(path: Path) -> list[str]:
+def check_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> list[str]:
     """Return formatted violation lines for *path*; empty list means the file is clean.
 
     Files without frontmatter, or whose ``id`` / ``doc_type`` fields are absent or
@@ -206,6 +230,7 @@ def check_file(path: Path) -> list[str]:
     if meta is None:
         return []
 
+    doc_types = valid_doc_types if valid_doc_types is not None else _load_doc_types(_SCHEMA_PATH)
     doc_id = meta.get("id")
     doc_type = meta.get("doc_type")
 
@@ -213,10 +238,10 @@ def check_file(path: Path) -> list[str]:
     # structural violations belong to the schema validator's output, not this one's.
     if not isinstance(doc_id, str) or not doc_id:
         return []
-    if not isinstance(doc_type, str) or doc_type not in _VALID_DOC_TYPES:
+    if not isinstance(doc_type, str) or doc_type not in doc_types:
         return []
 
-    violations = validate_id(doc_id, doc_type)
+    violations = validate_id(doc_id, doc_type, doc_types)
     return [f"{path}: [id] {msg}" for msg in violations]
 
 
@@ -257,7 +282,7 @@ def _replace_frontmatter_id(text: str, new_id: str) -> str:
     return prefix + new_fm_body + suffix + rest
 
 
-def fix_file(path: Path) -> str | None:
+def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str | None:
     """Rewrite the ``id`` field in *path* to a valid standard-format id.
 
     Derives the new id from the document's ``doc_type`` and ``title`` fields:
@@ -287,18 +312,19 @@ def fix_file(path: Path) -> str | None:
         return None
     if meta is None:
         return None
+    doc_types = valid_doc_types if valid_doc_types is not None else _load_doc_types(_SCHEMA_PATH)
     doc_id = meta.get("id")
     doc_type = meta.get("doc_type")
     title = meta.get("title")
     if not isinstance(doc_id, str) or not doc_id:
         return None
-    if not isinstance(doc_type, str) or doc_type not in _VALID_DOC_TYPES:
+    if not isinstance(doc_type, str) or doc_type not in doc_types:
         return None
     # ADR ids include a repo-name segment that cannot be derived from document fields.
     if doc_type == "adr":
         return None
     # Already valid — nothing to fix.
-    if not validate_id(doc_id, doc_type):
+    if not validate_id(doc_id, doc_type, doc_types):
         return None
     if not isinstance(title, str) or not title.strip():
         return None
@@ -414,6 +440,18 @@ def main(argv: list[str] | None = None) -> int:
             print("note: custom schema in use; skipping id-format validation")
         return 0
 
+    # Resolve the doc_type enum from the EFFECTIVE schema (a pinned
+    # markdown.frontmatter.version selects its own bundled contract). The registry
+    # is only needed to translate a version pin — mirrors validate-frontmatter's
+    # lazy-load so a broken registry cannot fail unversioned runs.
+    try:
+        registry = load_registry() if config.frontmatter_version is not None else None
+        schema_path = resolve_effective_schema(None, config, registry)
+        valid_doc_types = _load_doc_types(schema_path)
+    except (ConfigError, RegistryError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     try:
         paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
     except ConfigError as exc:
@@ -426,10 +464,10 @@ def main(argv: list[str] | None = None) -> int:
         remaining_errors: list[str] = []
 
         for path in paths:
-            violations = check_file(path)
+            violations = check_file(path, valid_doc_types)
             if not violations:
                 continue
-            new_id = fix_file(path)
+            new_id = fix_file(path, valid_doc_types)
             if new_id is not None:
                 fixed.append((path, new_id))
             else:
@@ -468,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
 
     all_errors: list[str] = []
     for path in paths:
-        all_errors.extend(check_file(path))
+        all_errors.extend(check_file(path, valid_doc_types))
 
     if not args.quiet:
         for error in all_errors:
