@@ -49,10 +49,13 @@ skipped — those structural gaps are the frontmatter schema validator's job.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import json
+import os
 import re
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -301,6 +304,26 @@ def _replace_frontmatter_id(text: str, new_id: str) -> str:
     return prefix + new_fm_body + suffix + rest
 
 
+def _atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Write atomically (mirrors format_frontmatter._atomic_write, bytes flavour).
+
+    A plain write_bytes truncates before writing — an interruption mid-write
+    leaves the document truncated. mkstemp creates the temp file 0600, so the
+    source's permission bits are copied before the replace.
+    """
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    tmp_path = Path(tmp)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        with contextlib.suppress(OSError):
+            tmp_path.chmod(path.stat().st_mode & 0o777)
+        tmp_path.replace(path)
+    except BaseException:
+        tmp_path.unlink()
+        raise
+
+
 @dataclass(frozen=True)
 class FixResult:
     """Outcome of one ``fix_file`` call.
@@ -420,7 +443,12 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> FixRe
             # Content changed: apply new content with the original line ending.
             orig_ending = orig_line[len(orig_stripped) :]
             output.append(new_stripped + orig_ending)
-    path.write_bytes((bom_prefix + "".join(output)).encode("utf-8"))
+    try:
+        _atomic_write_bytes(path, (bom_prefix + "".join(output)).encode("utf-8"))
+    except OSError as exc:
+        # Read-only file, or permissions changed between read and write: report
+        # it like the read errors instead of letting the traceback escape main.
+        return FixResult(skip_reason=f"cannot write file: {exc}")
     return FixResult(new_id=new_id)
 
 

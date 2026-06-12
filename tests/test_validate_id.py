@@ -855,3 +855,21 @@ def test_main_fix_prints_skip_reason_for_unfixable_file(
     rc = main(["--fix", str(f)])
     assert rc == 1
     assert "cannot auto-fix" in capsys.readouterr().err
+
+
+def test_fix_file_write_failure_is_reported_not_raised(
+    tmp_path: Path,
+) -> None:
+    # A directory that becomes unwritable between read and write must produce a
+    # skip reason, not an uncaught OSError traceback (F20).
+    import os as _os
+
+    f = tmp_path / "doc.md"
+    f.write_text(_FULL_FM, encoding="utf-8")
+    _os.chmod(tmp_path, 0o555)  # mkstemp in the parent dir now fails
+    try:
+        result = fix_file(f)
+    finally:
+        _os.chmod(tmp_path, 0o755)
+    assert result.new_id is None
+    assert result.skip_reason is not None and "cannot write" in result.skip_reason
