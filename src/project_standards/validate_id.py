@@ -158,17 +158,27 @@ def validate_id(doc_id: str, doc_type: str) -> list[str]:
 
     # --- Segment 2: base-36 token ---
     if not _BASE36_RE.match(id_base36):
+        if len(id_base36) != 6:
+            detail = f"got {len(id_base36)} chars"
+        else:
+            # Right length, so the failure is the charset — saying "(got 6 chars)"
+            # would point the author at a length problem that does not exist.
+            detail = "contains characters outside [0-9a-z]"
         errors.append(
             f"base-36 segment '{id_base36}' must be exactly 6 characters "
-            f"from [0-9a-z] (got {len(id_base36)} chars)"
+            f"from [0-9a-z] ({detail})"
         )
 
     # --- Segment 3: readable slug ---
     if not id_readable_slug:
         errors.append("readable-slug segment (after the base-36 token) is empty")
     elif not _KEBAB_RE.match(id_readable_slug):
+        # Describe the enforced rule (_KEBAB_RE) in words; the previously quoted
+        # pattern [a-z0-9][a-z0-9-]* was looser than what the code rejects.
         errors.append(
-            f"readable-slug '{id_readable_slug}' must be lowercase kebab-case ([a-z0-9][a-z0-9-]*)"
+            f"readable-slug '{id_readable_slug}' must be lowercase kebab-case "
+            f"(alphanumeric runs separated by single hyphens; no leading, trailing, "
+            f"or consecutive hyphens)"
         )
 
     return errors

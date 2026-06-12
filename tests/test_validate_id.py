@@ -715,3 +715,18 @@ def test_main_absolute_glob_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     # Same exit-2 contract as validate-frontmatter for bad glob patterns (F44).
     monkeypatch.chdir(tmp_path)
     assert main(["--glob", "/abs/*.md"]) == 2
+
+
+def test_base36_wrong_charset_message_does_not_claim_length(tmp_path: Path) -> None:
+    # A 6-char token failing on charset must name the charset, not '(got 6 chars)' (F19).
+    errors = validate_id("note-A3F9ZK-some-title", "note")
+    base36_errors = [e for e in errors if "base-36" in e]
+    assert base36_errors
+    assert "outside [0-9a-z]" in base36_errors[0]
+    assert "got 6 chars" not in base36_errors[0]
+
+
+def test_kebab_message_describes_the_enforced_rule(tmp_path: Path) -> None:
+    # The message must not quote a pattern looser than the enforced regex (F19).
+    errors = validate_id("note-a3f9zk-bad--slug", "note")
+    assert any("consecutive hyphens" in e for e in errors)
