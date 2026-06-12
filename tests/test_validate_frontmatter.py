@@ -1332,3 +1332,10 @@ def test_non_utf8_file_reports_error_not_traceback(
     errors = validate_file(bad, validator, require_frontmatter=True)
     assert len(errors) == 1
     assert "cannot read file" in errors[0]
+
+
+def test_unhashable_complex_key_is_clean_parse_error() -> None:
+    # A YAML complex key constructs to a list; the duplicate-key membership test
+    # must not let the TypeError escape as a traceback (F5).
+    with pytest.raises(FrontmatterParseError, match="unhashable key"):
+        parse_frontmatter("---\n? [a, b]\n: x\n---\n# body\n")

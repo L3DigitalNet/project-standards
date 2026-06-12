@@ -108,7 +108,16 @@ def _construct_no_duplicates(loader: _UniqueKeyLoader, node: yaml.MappingNode) -
     mapping: dict[Any, Any] = {}
     for key_node, value_node in node.value:
         key = cast(Any, loader.construct_object(key_node, deep=True))  # pyright: ignore[reportUnknownMemberType]
-        if key in mapping:
+        try:
+            duplicate = key in mapping
+        except TypeError as exc:
+            # A YAML complex key (e.g. `? [a, b]`) constructs to an unhashable value.
+            # PyYAML's stock constructor guards this; the override must too, or the
+            # TypeError escapes parse_frontmatter's yaml.YAMLError catch as a traceback.
+            raise yaml.constructor.ConstructorError(
+                None, None, f"found unhashable key {key!r}", key_node.start_mark
+            ) from exc
+        if duplicate:
             raise yaml.constructor.ConstructorError(
                 None, None, f"duplicate key {key!r}", key_node.start_mark
             )
