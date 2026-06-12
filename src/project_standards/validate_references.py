@@ -139,7 +139,16 @@ def check_references(index: Index, repo_root: Path) -> list[str]:
     warnings: list[str] = []
     for doc in index.docs:
         for ref in _ref_values(doc.meta):
-            if not _resolves(ref, index, repo_root):
+            if "#" in ref:
+                # Ids cannot contain '#' (schema pattern), so this is a section
+                # anchor. The file part may well exist — calling it "unresolved"
+                # misdiagnoses; the actual rule is that the standard mandates
+                # document-level links in reference fields.
+                warnings.append(
+                    f"[warning] {doc.path}: section anchors are not valid document "
+                    f"references (use document-level links): '{ref}'"
+                )
+            elif not _resolves(ref, index, repo_root):
                 warnings.append(f"[warning] {doc.path}: unresolved reference '{ref}'")
     return warnings
 

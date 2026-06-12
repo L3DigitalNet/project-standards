@@ -479,7 +479,7 @@ markdown:
 When enabled, it checks (each finding is an **error** or a **warning** — errors fail the run with exit `1`; warnings print to stderr and never fail the build):
 
 - **`id` uniqueness** (error) — no two managed documents share the same `id` value.
-- **Referential integrity** (warning) — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path.
+- **Referential integrity** (warning) — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path. Values containing a section anchor (`#`) get a dedicated warning — reference fields take document-level links only (see [Links and related documents](#links-and-related-documents)).
 - **Supersede reciprocity** (warning) — when document A lists B in `supersedes`, B must list A in `superseded_by`, and vice versa.
 - **Date ordering** (error) — `created` ≤ `updated`, and `reviewed` ≥ `created` when present.
 - **ADR sequence** (error) — no two ADRs share the same `adr-NNNN` number.
