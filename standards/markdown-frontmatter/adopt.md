@@ -6,7 +6,7 @@ description: 'Step-by-step procedure for an agent to adopt the project-standards
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-03'
-updated: '2026-06-09'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -43,7 +43,7 @@ A repository is **compliant** when:
 1. It has a `.project-standards.yml` config declaring which Markdown files are managed.
 2. It has a CI workflow that calls the reusable validator, pinned to `@v3` **for both the workflow and the validator/schema**.
 3. Every **managed** Markdown file carries conformant frontmatter (this section's rules), and every **excluded** file (templates, agent-instruction files) carries none.
-4. `validate-frontmatter --config .project-standards.yml` exits `0` locally and in CI.
+4. `uv run project-standards validate --config .project-standards.yml` exits `0` locally and in CI — this runs all three validators the installed workflow runs (schema, id format, references; see [§5](#5-validate-locally)).
 
 Do not modify any file under `.claude/`, `.agents/`, `.codex/`, or the repo's `CLAUDE.md` / `AGENTS.md` — see [§4.1](#41-which-files-are-managed). Do not invent new top-level frontmatter fields — see [§4.4](#44-controlled-values--formatting-rules).
 
@@ -124,7 +124,7 @@ jobs:
 
 `validate-markdown-frontmatter.yml` runs **three** validators: schema (`validate-frontmatter`), id format (`validate-id`), and cross-file references (`validate-references`). `validate-references` is a no-op unless `references.enabled: true` in your config.
 
-> **⚠️ Migration warning when re-pinning to `@v3`:** re-pinning starts running `validate-id` (repos with old-style kebab ids such as `restart-netbox-after-config-change` will newly fail) and `validate-references` (safe no-op unless `references.enabled: true`). Review your managed documents' `id` fields before bumping.
+> **⚠️ Migration warning when re-pinning to `@v3`:** re-pinning starts running `validate-id` (repos with old-style kebab ids such as `restart-netbox-after-config-change` will newly fail) and `validate-references` (safe no-op unless `references.enabled: true`). The v3 schema validator also newly rejects duplicate top-level YAML keys in a frontmatter block (previously the last occurrence silently won). Review your managed documents' `id` fields — and any repeated keys — before bumping.
 
 The reusable workflow installs the validator with `uv tool install git+…@<standards-ref>`; the schema travels inside the wheel, so the consuming repo never vendors schema or Python code.
 
@@ -176,7 +176,7 @@ Every managed document **must** have these, as the first thing in the file, insi
 ```yaml
 ---
 schema_version: '1.1'
-id: 'replace-with-stable-id'
+id: 'note-xxxxxx-replace-with-readable-slug'
 title: 'Human Title'
 description: 'One-sentence description of the document.'
 doc_type: 'note'
@@ -190,6 +190,8 @@ related: []
 ```
 
 Set `schema_version` to `'1.1'` for new documents. (`'1.0'` is still accepted, so pre-existing documents do not block compliance; prefer `'1.1'` going forward.)
+
+The `id` placeholder shows the required three-part shape — `{doc_type}-{6-char base-36 token}-{readable-slug}` — with `xxxxxx` standing in for the token. Replace the token and slug with real values per the rules in [§4.4](#44-controlled-values--formatting-rules) before relying on CI: `validate-id` rejects ids that do not match the format.
 
 ### 4.3 Recommended optional fields (the standard profile)
 
@@ -228,7 +230,7 @@ Optional relationship fields, used only when needed: `supersedes` (array), `supe
 - **Identifier-like numbers are strings**: `schema_version: '1.1'`, `zip_code: '01234'`.
 - **Non-empty lists** use block style (`- 'item'` per line); **empty lists** use `[]`.
 - **No duplicate items** in array fields.
-- **`id`** is a stable kebab/numeric slug, lowercase, matching `^[a-z0-9][a-z0-9._-]*$` (e.g. `tailscale-acl-gotcha`, `adr-0001-use-postgres`).
+- **`id`** is stable and frozen at creation, in the three-part format `{doc_type}-{6-char base-36 token}-{readable-slug}` (e.g. `note-13qo1q-tailscale-acl-gotcha`, `runbook-0f943i-restart-netbox-after-config-change`): the prefix must equal the document's `doc_type`, the token is exactly 6 characters from `[0-9a-z]`, and the slug is lowercase kebab-case. ADRs instead use `adr-{NNNN}-{repo-name}-{short-title}` with a zero-padded sequence number of at least four digits (e.g. `adr-0001-homelab-use-postgresql-for-persistent-storage` — the repo-name segment is required). Both formats are enforced by `validate-id`.
 - **`tags`** are lowercase, kebab-case for multiword, no leading `#`.
 - **`description`** is one line, no Markdown, ≤280 chars; state what the doc is for.
 - **No unknown top-level fields.** Project- or tool-specific metadata goes under one of the sanctioned extension objects: `publish` (publishing/export), `project`, or `x_project`. Each accepts any structure.
@@ -281,7 +283,7 @@ project:
 ### 4.6 Procedure to bring the repo into compliance
 
 1. Enumerate the files matched by `include` minus `exclude`.
-2. For each managed file with **no** frontmatter: prepend a block with at least the eleven required fields, inferring sensible values (`id` from the filename/slug, `title` from the H1, `created`/`updated` from git history or today, `doc_type` from the document's nature, `status: 'active'` for live docs).
+2. For each managed file with **no** frontmatter: prepend a block with at least the eleven required fields, inferring sensible values (`id` generated in the three-part format of [§4.4](#44-controlled-values--formatting-rules) — the `doc_type` prefix, a freshly generated 6-character base-36 token, and a kebab-case slug of the title; `title` from the H1, `created`/`updated` from git history or today, `doc_type` from the document's nature, `status: 'active'` for live docs).
 3. For each managed file with **existing** frontmatter: reconcile it to the rules — fix field names (`type` → `doc_type`), quote strings/dates, replace disallowed enum values, remove unknown top-level keys (move them under `project`/`publish`), and order keys canonically.
 4. Confirm no excluded/agent-instruction file has frontmatter.
 5. Run the local validation ([§5](#5-validate-locally)) and fix every reported error.

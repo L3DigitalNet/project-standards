@@ -6,7 +6,7 @@ description: 'Canonical, tool-neutral metadata profile for project Markdown docu
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-07'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -141,7 +141,7 @@ license: null
 | `reviewed` | No | date string or null | Last correctness review date. Distinct from `updated`. |
 | `owner` | No | string | Person, team, repo, or role responsible for maintenance. |
 | `consumer` | No | string enum | Intended reader/consumer of the document. |
-| `tags` | Yes | array of strings | Discovery labels. Prefer lowercase kebab-case. |
+| `tags` | Yes | array of strings | Discovery labels. Each tag must match `^[a-z0-9][a-z0-9-]*$` (schema-enforced). |
 | `aliases` | Yes | array of strings | Alternate names, abbreviations, or likely search terms. |
 | `related` | Yes | array of strings | Related documents as repo-root-relative paths. |
 | `source` | No | array of strings | Sources used to create or support the document. |
@@ -218,6 +218,7 @@ General conventions. Topic-specific rules live in their own sections; this list 
 
 - Use YAML frontmatter delimited by `---` at the very top of the file.
 - Use `snake_case` field names.
+- Top-level keys **MUST** be unique: the validator rejects a frontmatter block that defines the same key twice (plain YAML would otherwise keep the last value silently). New in v3 — previously-passing documents with a duplicated key newly fail.
 - Use `doc_type`, not `type`.
 - Keep `updated` separate from `reviewed` (see Field definitions).
 - **ID format — ordinary documents:** `{doc_type}-{6-char base-36 token}-{readable-slug}`, e.g. `runbook-0f943i-restart-netbox-after-config-change`. The base-36 token (`[0-9a-z]{6}`) provides global uniqueness; the readable slug is frozen at creation time and does **not** change when the title is edited. Generate a token with `python3 -c "import secrets, string; print(''.join(secrets.choice(string.digits + string.ascii_lowercase) for _ in range(6)))"`.
@@ -246,7 +247,7 @@ id: markdown-frontmatter-standard
 created: 2026-06-01
 ```
 
-Date values **MUST** be strings in `YYYY-MM-DD` format and **MUST** be quoted.
+Date values **MUST** be strings in `YYYY-MM-DD` format and **MUST** be quoted. The quoting is a formatting convention enforced by `format-frontmatter --check`, not by `validate-frontmatter` — the validator deliberately coerces unquoted YAML dates to ISO strings before schema validation, so it accepts either form.
 
 Boolean values, if ever added to the schema, **MUST** be literal `true` or `false`, never `yes`, `no`, `on`, `off`, `y`, or `n`.
 
@@ -281,6 +282,8 @@ related: []
 List items that are strings **MUST** be quoted.
 
 Array fields **MUST NOT** contain duplicate items; the validator rejects duplicates (`uniqueItems`).
+
+The block-style and empty-`[]` rules are formatting conventions enforced by `format-frontmatter --check`, not by `validate-frontmatter` — the validator sees only the parsed values and cannot distinguish block style from flow style. The duplicate-item rule is schema-enforced.
 
 ## Canonical key order
 
@@ -351,6 +354,8 @@ Rules:
 3. Use `kebab-case` for multiword tags.
 4. Do not use spaces.
 5. Where a project maintains a tag registry (for example `schemas/tag-registry.md`), every tag **MUST** appear in it before first use. Registry membership is a project-specific policy and is not enforced by the core validator.
+
+Rules 1–4 are machine-enforced, not style preferences: the schema requires every tag to match `^[a-z0-9][a-z0-9-]*$`, so a tag with uppercase letters, spaces, or a leading `#` fails validation.
 
 Correct:
 
@@ -471,13 +476,13 @@ markdown:
       enabled: true
 ```
 
-When enabled, it checks:
+When enabled, it checks (each finding is an **error** or a **warning** — errors fail the run with exit `1`; warnings print to stderr and never fail the build):
 
-- **`id` uniqueness** — no two managed documents share the same `id` value.
-- **Referential integrity** — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path.
-- **Supersede reciprocity** — when document A lists B in `supersedes`, B must list A in `superseded_by`, and vice versa.
-- **Date ordering** — `created` ≤ `updated`, and `reviewed` ≥ `created` when present.
-- **ADR sequence** — no two ADRs share the same `adr-NNNN` number.
+- **`id` uniqueness** (error) — no two managed documents share the same `id` value.
+- **Referential integrity** (warning) — every value in `related`, `depends_on`, `supersedes`, and `superseded_by` resolves, either as a known document `id` or as a file at that repo-root-relative path.
+- **Supersede reciprocity** (warning) — when document A lists B in `supersedes`, B must list A in `superseded_by`, and vice versa.
+- **Date ordering** (error) — `created` ≤ `updated`, and `reviewed` ≥ `created` when present.
+- **ADR sequence** (error) — no two ADRs share the same `adr-NNNN` number.
 
 `validate-references` is a repo-wide pass. It self-gates on `references_enabled`, so adding it to CI is a no-op until the repo opts in: `project-standards validate` always invokes it, but it exits 0 immediately when not enabled.
 
