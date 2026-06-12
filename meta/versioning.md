@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-08'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -50,7 +50,7 @@ license: null
 
 This repository ships **several components under one version number**: four standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), and [Markdown Tooling](../standards/markdown-tooling/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflow** (`.github/workflows/validate-markdown-frontmatter.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling and Markdown Tooling standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All four still ship under the same release tag.
+The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. The Python Tooling and Markdown Tooling standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All four still ship under the same release tag. A fifth document, the [Python Coding standard](../standards/python-coding/README.md), ships in the repository as an **in-development, reference-only draft** — unregistered, with no contract version, excluded from validation and the adopt CLI — and sits outside this release contract until registered.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 

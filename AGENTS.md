@@ -8,7 +8,7 @@
 
 ## Repo Purpose
 
-This repository is the **single source of truth** for reusable standards shared across projects. It _defines_ four standards: **Markdown Frontmatter** and **ADR** (enforced by a Python validator that downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig scaffolds plus an optional reusable `lint-markdown.yml`), and **Python Tooling SSOT** (copy-adopt scaffolds). Other repositories _consume_ them by config + workflow (the validator-enforced ones) or by copying scaffolds (the copy-adopt ones), rather than vendoring copies. See [README.md](README.md) for the full surface.
+This repository is the **single source of truth** for reusable standards shared across projects. It _defines_ four standards: **Markdown Frontmatter** and **ADR** (enforced by a Python validator that downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig scaffolds plus an optional reusable `lint-markdown.yml`), and **Python Tooling SSOT** (copy-adopt scaffolds). A fifth document, **Python Coding** (`standards/python-coding/`), ships as an in-development reference-only draft — unregistered, excluded from validation and the adopt CLI. Other repositories _consume_ the four released standards by config + workflow (the validator-enforced ones) or by copying scaffolds (the copy-adopt ones), rather than vendoring copies. See [README.md](README.md) for the full surface.
 
 ## Structure
 

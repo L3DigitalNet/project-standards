@@ -1,12 +1,12 @@
 # Architecture
 
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-12
 
 ## Components
 
 ```text
 project-standards
-├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling) + README index
+├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling) + python-coding (draft, reference-only, unregistered) + README index
 ├── meta/               -> docs about this repo (versioning); not a governed standard
 ├── src/project_standards/ + tests/ -> Python package: validator (validate_frontmatter.py) + bundled schema; the `project-standards` CLI (cli.py: adopt|list|validate); the adopt engine (adopt/); per-standard adopt bundles (bundles/<id>/adopt.toml + templates); pytest suite
 ├── .github/workflows/  -> reusable workflows consumers call (validate, lint-markdown, format)

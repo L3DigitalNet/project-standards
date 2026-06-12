@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-09'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -50,6 +50,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - **`project-standards` CLI with an `adopt <standard>...` subcommand** that materializes a chosen standard's canonical artifacts into a consumer repo (plus `list` and a back-compat `validate` subcommand). Adopting any subset — including all four standards together — is supported; runs are idempotent (skip-if-exists, `--force` to overwrite regular files only), path-safe (never writes through a symlink or outside `--dest`), and use atomic writes (a failed `--force` never truncates the original). `fragment` artifacts (the `pyproject.toml` and `.project-standards.yml` sections) are **reported for manual merge, never written**. The existing `validate-frontmatter` console script is retained as a back-compat alias.
 - **Per-standard `adopt.toml` manifests and bundled templates** under `src/project_standards/bundles/`, resolved at runtime by the same `Path(__file__)`-relative, wheel-safe lookup the bundled schema/registry already use. A generic engine reads each manifest, so adding a standard is data, not code.
 - **`.pre-commit-hooks.yaml`** — consumers can use this repo as a pre-commit source (`repo: https://github.com/L3DigitalNet/project-standards`). Six hooks: `format-frontmatter-fix`, `format-frontmatter-check`, `validate-id-fix`, `validate-id-check`, `validate-frontmatter`, and `validate-references` (whole-repo, `pass_filenames: false`).
+- **`standards/python-coding/` — Python Coding standard (in-development draft).** Code-shape and agent-behavior rules for Python; the reference companion to the Python Tooling SSOT. Ships as a **draft (version 0.4)**: reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. First present in the `3.0.0` tree; outside the release contract until registered.
 
 ### Changed
 

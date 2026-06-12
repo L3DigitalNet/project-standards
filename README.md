@@ -15,6 +15,7 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [ADR Standard](#adr-standard)
     - [Python Tooling SSOT Standard](#python-tooling-ssot-standard)
     - [Markdown Tooling Standard](#markdown-tooling-standard)
+    - [Python Coding Standard (draft)](#python-coding-standard-draft)
   - [Consuming the standards](#consuming-the-standards)
     - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
     - [Python Tooling SSOT](#python-tooling-ssot)
@@ -33,7 +34,8 @@ project-standards/
 │   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/
 │   ├── adr/                   #   standard + adopt + templates/ + examples/
 │   ├── python-tooling/        #   standard + adopt (doc-only)
-│   └── markdown-tooling/      #   standard + adopt (doc-only)
+│   ├── markdown-tooling/      #   standard + adopt (doc-only)
+│   └── python-coding/         #   draft standard (reference-only; README only)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
 ├── tests/                     # validator tests
@@ -81,6 +83,12 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 
 - **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
+
+### Python Coding Standard (draft)
+
+Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
+
+- **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
 
 ## Consuming the standards
 
