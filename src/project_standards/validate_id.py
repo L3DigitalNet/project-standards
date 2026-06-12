@@ -313,6 +313,13 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
         return None
+    # check_file reads with utf-8-sig (BOM stripped); a plain utf-8 decode keeps
+    # U+FEFF, the \A--- anchor never matches, and a BOM'd file is flagged by
+    # validation but silently unfixable. Strip it here and re-prepend on write so
+    # the file stays byte-faithful apart from the id line.
+    had_bom = text.startswith("﻿")
+    if had_bom:
+        text = text[1:]
     # Normalise to LF-only for YAML parsing and _replace_frontmatter_id (which requires LF).
     # Keep the original decoded string so we can reconstruct the output line-by-line,
     # preserving each line's individual ending — including files with mixed \r\n / \n.
@@ -363,9 +370,10 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
     # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.
     orig_lines = text.splitlines(keepends=True)
     new_lines_lf = new_text_lf.splitlines(keepends=True)
+    bom_prefix = "﻿" if had_bom else ""
     if len(orig_lines) != len(new_lines_lf):
         # Unexpected line-count mismatch; fall back to writing the LF-normalised content.
-        path.write_bytes(new_text_lf.encode("utf-8"))
+        path.write_bytes((bom_prefix + new_text_lf).encode("utf-8"))
         return new_id
     output: list[str] = []
     for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=False):
@@ -377,7 +385,7 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
             # Content changed: apply new content with the original line ending.
             orig_ending = orig_line[len(orig_stripped) :]
             output.append(new_stripped + orig_ending)
-    path.write_bytes("".join(output).encode("utf-8"))
+    path.write_bytes((bom_prefix + "".join(output)).encode("utf-8"))
     return new_id
 
 

@@ -811,3 +811,15 @@ def test_fix_file_refuses_block_scalar_id_instead_of_corrupting(tmp_path: Path) 
     from project_standards.validate_frontmatter import parse_frontmatter as _pf
 
     assert _pf(f.read_text(encoding="utf-8")) is not None  # still valid YAML
+
+
+def test_fix_file_fixes_bom_prefixed_file_and_keeps_bom(tmp_path: Path) -> None:
+    # check_file strips the BOM but fix_file used to keep it, so BOM'd files were
+    # flagged-but-unfixable (F14). The BOM must survive the rewrite byte-exact.
+    f = tmp_path / "bom.md"
+    f.write_bytes(b"\xef\xbb\xbf" + _FULL_FM.encode("utf-8"))
+    new_id = fix_file(f)
+    assert new_id is not None
+    written = f.read_bytes()
+    assert written.startswith(b"\xef\xbb\xbf")
+    assert f"id: '{new_id}'".encode() in written
