@@ -1646,3 +1646,14 @@ def test_summary_glyphs_survive_ascii_only_stream(
     ascii_out = _io.TextIOWrapper(_io.BytesIO(), encoding="ascii")
     monkeypatch.setattr("sys.stdout", ascii_out)
     assert main(["good.md", "--schema", str(SCHEMA_PATH)]) == 0
+
+
+@pytest.mark.parametrize("bad_tag", ["infra-", "a--b", "-infra"])
+def test_tags_reject_edge_and_double_hyphens(
+    tmp_path: Path, validator: Draft202012Validator, bad_tag: str
+) -> None:
+    # The tags pattern now matches validate-id's kebab rule: no leading,
+    # trailing, or consecutive hyphens (F37).
+    meta = {**MINIMAL, "tags": [bad_tag]}
+    errors = _check(tmp_path, validator, _doc(meta))
+    assert any("tags" in e for e in errors)

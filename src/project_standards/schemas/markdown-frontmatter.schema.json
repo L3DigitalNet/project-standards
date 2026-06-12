@@ -90,9 +90,9 @@
 		},
 		"tags": {
 			"type": "array",
-			"items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+			"items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
 			"uniqueItems": true,
-			"description": "Discovery labels. Prefer lowercase kebab-case."
+			"description": "Discovery labels. Lowercase kebab-case: single hyphens between alphanumeric runs."
 		},
 		"aliases": {
 			"type": "array",

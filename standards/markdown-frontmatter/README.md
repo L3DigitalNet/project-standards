@@ -141,7 +141,7 @@ license: null
 | `reviewed` | No | date string or null | Last correctness review date. Distinct from `updated`. |
 | `owner` | No | string | Person, team, repo, or role responsible for maintenance. |
 | `consumer` | No | string enum | Intended reader/consumer of the document. |
-| `tags` | Yes | array of strings | Discovery labels. Each tag must match `^[a-z0-9][a-z0-9-]*$` (schema-enforced). |
+| `tags` | Yes | array of strings | Discovery labels. Each tag must match `^[a-z0-9]+(-[a-z0-9]+)*$` (schema-enforced) — the same kebab rule `validate-id` applies to id slugs. |
 | `aliases` | Yes | array of strings | Alternate names, abbreviations, or likely search terms. |
 | `related` | Yes | array of strings | Related documents as repo-root-relative paths. |
 | `source` | No | array of strings | Sources used to create or support the document. |
