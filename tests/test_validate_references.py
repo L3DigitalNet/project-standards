@@ -53,7 +53,7 @@ def test_build_index_skips_unreadable_unparseable_and_non_dict(tmp_path: Path) -
     missing = tmp_path / "missing.md"  # never created -> OSError on read
     index = build_index([dup, list_fm, missing])
     assert index.docs == []
-    assert index.ids == set()
+    assert index.by_id == {}
 
 
 def test_unique_ids_no_error(tmp_path: Path) -> None:
@@ -420,7 +420,7 @@ def test_build_index_tolerates_utf8_bom(tmp_path: Path) -> None:
     bom_file.write_bytes(b"\xef\xbb\xbf" + body.encode("utf-8"))
     index = build_index([bom_file])
     assert len(index.docs) == 1, "BOM-prefixed doc must be indexed, not silently dropped"
-    assert "note-bomtest-x" in index.ids
+    assert "note-bomtest-x" in index.by_id
 
 
 def test_build_index_skips_non_utf8_file(tmp_path: Path) -> None:

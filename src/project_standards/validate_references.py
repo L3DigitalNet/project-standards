@@ -36,8 +36,9 @@ class Doc:
 @dataclass
 class Index:
     docs: list[Doc] = field(default_factory=list)
+    # id -> every path claiming it; membership doubles as the known-id set, so no
+    # separate ids field exists to drift out of sync with this one.
     by_id: dict[str, list[Path]] = field(default_factory=dict)
-    ids: set[str] = field(default_factory=set)
 
 
 def build_index(paths: list[Path]) -> Index:
@@ -54,7 +55,6 @@ def build_index(paths: list[Path]) -> Index:
         doc_id = meta.get("id")
         if isinstance(doc_id, str) and doc_id:
             index.by_id.setdefault(doc_id, []).append(path)
-            index.ids.add(doc_id)
     return index
 
 
@@ -97,7 +97,7 @@ def _ref_values(meta: dict[str, Any]) -> list[str]:
 
 
 def _resolves(ref: str, index: Index, repo_root: Path) -> bool:
-    if ref in index.ids:  # exact id match
+    if ref in index.by_id:  # exact id match
         return True
     if "#" in ref:  # section anchors are not document references (standard)
         return False
