@@ -776,3 +776,17 @@ def test_main_unknown_pinned_version_exits_2(
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text("markdown:\n  frontmatter:\n    version: '9.9'\n", encoding="utf-8")
     assert main(["--config", str(cfg)]) == 2
+
+
+def test_load_doc_types_rejects_hyphenated_doc_type(tmp_path: Path) -> None:
+    # split('-', 2) id parsing depends on hyphen-free doc_types; a schema that
+    # adds one must fail fast at enum load, not misparse per document (F22).
+    from project_standards.validate_id import _load_doc_types  # pyright: ignore[reportPrivateUsage]
+    from project_standards.validate_frontmatter import ConfigError
+
+    bad = tmp_path / "hyphen.schema.json"
+    bad.write_text(
+        '{"properties": {"doc_type": {"enum": ["note", "how-to"]}}}', encoding="utf-8"
+    )
+    with pytest.raises(ConfigError, match="hyphenated doc_type"):
+        _load_doc_types(bad)

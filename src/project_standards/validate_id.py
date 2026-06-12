@@ -92,7 +92,18 @@ def _load_doc_types(schema_path: Path) -> frozenset[str]:
         enum_values = cast("list[Any]", raw["properties"]["doc_type"]["enum"])
     except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
         raise ConfigError(f"cannot load doc_type enum from schema {schema_path}: {exc}") from exc
-    return frozenset(str(v) for v in enum_values)
+    doc_types = frozenset(str(v) for v in enum_values)
+    # Load-bearing invariant: ids are parsed with split('-', 2), so a hyphenated
+    # doc_type (e.g. 'how-to') would misparse every id of that type with confusing
+    # prefix errors. A schema revision adding one must change the id grammar first;
+    # fail fast at enum load rather than per-document.
+    hyphenated = sorted(t for t in doc_types if "-" in t)
+    if hyphenated:
+        raise ConfigError(
+            f"schema {schema_path} defines hyphenated doc_type values {hyphenated}; "
+            f"the id grammar (split on '-') cannot parse them"
+        )
+    return doc_types
 
 # Exactly 6 characters from the base-36 alphabet (digits 0-9 + lowercase letters a-z).
 _BASE36_RE = re.compile(r"^[0-9a-z]{6}$")
