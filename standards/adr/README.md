@@ -6,7 +6,7 @@ description: 'How to write Architecture Decision Records using the MADR format w
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-08'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -32,7 +32,7 @@ license: null
 
 # Architecture Decision Record (ADR) Standard
 
-Status: Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions)) Owner: Project standards / repository template Last updated: 2026-06-07 Last source check: 2026-06-07 Scope: Architecture Decision Records in repositories governed by the Markdown Frontmatter Standard.
+Status: Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions)) Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-07 Scope: Architecture Decision Records in repositories governed by the Markdown Frontmatter Standard.
 
 ---
 

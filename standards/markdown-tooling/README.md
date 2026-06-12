@@ -6,7 +6,7 @@ description: 'Recommended linting/formatting tools and settings for Markdown and
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-07'
-updated: '2026-06-07'
+updated: '2026-06-12'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -29,7 +29,7 @@ license: null
 
 # Markdown Tooling Standard
 
-Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see `meta/versioning.md`) Owner: Project standards / repository template Last updated: 2026-06-07 Last source check: 2026-06-07 Scope: Markdown and the structured-text/config files Prettier supports, across CLI, VS Code, and CI.
+Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see `meta/versioning.md`) Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-07 Scope: Markdown and the structured-text/config files Prettier supports, across CLI, VS Code, and CI.
 
 ---
 
@@ -269,6 +269,8 @@ Recommend two extensions (`.vscode/extensions.json`):
 
 - `esbenp.prettier-vscode` — the default formatter for `md` / `json` / `jsonc` / `yaml`. It reads `.prettierrc`, respects `editor.formatOnSave`, and prefers a locally installed Prettier over its bundled copy [S10].
 - `DavidAnson.vscode-markdownlint` — Markdown **diagnostics**. Rule violations surface as editor warnings; it reads `.markdownlint.json` [S11].
+
+Note: the CLI adopt path delivers `.vscode/extensions.json` as a 9-extension superset shared with the python-tooling bundle — the two Markdown extensions above plus the seven Python-toolchain extensions documented in the [Python Tooling Standard](../python-tooling/README.md) §13. Markdown-only adopters receive (and may trim) that shared file; these two are the ones this standard requires.
 
 ### One-formatter-authority rule
 
