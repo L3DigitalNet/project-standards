@@ -550,7 +550,7 @@ _FULL_FM = (
 def test_fix_file_rewrites_invalid_id(tmp_path: Path) -> None:
     f = tmp_path / "doc.md"
     f.write_text(_FULL_FM, encoding="utf-8")
-    new_id = fix_file(f)
+    new_id = fix_file(f).new_id
     assert new_id is not None
     # Format: note-{6-char base36}-tailscale-acl-gotcha
     assert new_id.startswith("note-")
@@ -562,11 +562,13 @@ def test_fix_file_rewrites_invalid_id(tmp_path: Path) -> None:
     assert f"id: '{new_id}'" in f.read_text()
 
 
-def test_fix_file_already_valid_returns_none(tmp_path: Path) -> None:
+def test_fix_file_already_valid_is_skipped(tmp_path: Path) -> None:
     text = _FULL_FM.replace("id: 'old-kebab-id'", "id: 'note-a3f9zk-tailscale-acl-gotcha'")
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
-    assert fix_file(f) is None
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.skip_reason == "id is already valid"
     assert "note-a3f9zk-tailscale-acl-gotcha" in f.read_text()  # unchanged
 
 
@@ -578,7 +580,9 @@ def test_fix_file_adr_returns_none(tmp_path: Path) -> None:
     )
     f = tmp_path / "adr.md"
     f.write_text(text, encoding="utf-8")
-    assert fix_file(f) is None  # ADR — needs repo-name
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.is_adr  # ADR — needs repo-name; --fix prints its dedicated message
 
 
 def test_fix_file_no_title_returns_none(tmp_path: Path) -> None:
@@ -589,7 +593,9 @@ def test_fix_file_no_title_returns_none(tmp_path: Path) -> None:
     )
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
-    assert fix_file(f) is None
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.skip_reason is not None and "title" in result.skip_reason
 
 
 def test_fix_file_preserves_mixed_line_endings(tmp_path: Path) -> None:
@@ -610,7 +616,7 @@ def test_fix_file_preserves_mixed_line_endings(tmp_path: Path) -> None:
     )
     path = tmp_path / "mixed.md"
     path.write_bytes(mixed.encode("utf-8"))
-    new_id = fix_file(path)
+    new_id = fix_file(path).new_id
     assert new_id is not None
     written = path.read_bytes()
     # id: line originally had bare LF — must still have bare LF after fix.
@@ -639,7 +645,7 @@ def test_fix_file_preserves_crlf_line_endings(tmp_path: Path) -> None:
     )
     path = tmp_path / "crlf.md"
     path.write_bytes(crlf.encode("utf-8"))
-    new_id = fix_file(path)
+    new_id = fix_file(path).new_id
     assert new_id is not None
     written = path.read_bytes()
     assert b"\r\n" in written, "CRLF line endings must be preserved after fix"
@@ -806,7 +812,9 @@ def test_fix_file_refuses_block_scalar_id_instead_of_corrupting(tmp_path: Path) 
     )
     f = tmp_path / "doc.md"
     f.write_text(text, encoding="utf-8")
-    assert fix_file(f) is None
+    result = fix_file(f)
+    assert result.new_id is None
+    assert result.skip_reason is not None
     assert f.read_text(encoding="utf-8") == text  # file untouched
     from project_standards.validate_frontmatter import parse_frontmatter as _pf
 
@@ -818,7 +826,7 @@ def test_fix_file_fixes_bom_prefixed_file_and_keeps_bom(tmp_path: Path) -> None:
     # flagged-but-unfixable (F14). The BOM must survive the rewrite byte-exact.
     f = tmp_path / "bom.md"
     f.write_bytes(b"\xef\xbb\xbf" + _FULL_FM.encode("utf-8"))
-    new_id = fix_file(f)
+    new_id = fix_file(f).new_id
     assert new_id is not None
     written = f.read_bytes()
     assert written.startswith(b"\xef\xbb\xbf")
@@ -831,3 +839,19 @@ def test_replace_frontmatter_id_unquoted_hash_gets_separating_space(tmp_path: Pa
     text = "---\nid: old#id\ndoc_type: note\n---\n# Body\n"
     result = _replace_frontmatter_id(text, "note-a3f9zk-new-slug")
     assert "id: 'note-a3f9zk-new-slug' #id" in result
+
+
+def test_main_fix_prints_skip_reason_for_unfixable_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # When the auto-fix cannot apply (here: a fully non-Latin title slugifies to
+    # nothing), --fix must say why instead of silently re-printing violations (F16).
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "doc.md"
+    f.write_text(
+        _FULL_FM.replace("title: 'Tailscale ACL gotcha'", "title: '日本語ガイド'"),
+        encoding="utf-8",
+    )
+    rc = main(["--fix", str(f)])
+    assert rc == 1
+    assert "cannot auto-fix" in capsys.readouterr().err

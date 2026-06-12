@@ -53,6 +53,7 @@ import functools
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
@@ -300,26 +301,40 @@ def _replace_frontmatter_id(text: str, new_id: str) -> str:
     return prefix + new_fm_body + suffix + rest
 
 
-def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str | None:
+@dataclass(frozen=True)
+class FixResult:
+    """Outcome of one ``fix_file`` call.
+
+    ``new_id`` is set when the file was rewritten. Otherwise ``skip_reason`` says
+    why the fix could not be applied — printed by ``--fix`` so a user is never
+    left with 'violation(s) remain' and no clue the auto-fix was attempted.
+    ``is_adr`` marks the one skip class with its own remediation message.
+    """
+
+    new_id: str | None = None
+    skip_reason: str | None = None
+    is_adr: bool = False
+
+
+def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> FixResult:
     """Rewrite the ``id`` field in *path* to a valid standard-format id.
 
     Derives the new id from the document's ``doc_type`` and ``title`` fields:
     ``{doc_type}-{6-char base36 token}-{slugify(title)}``.
 
-    Returns the new id string if the file was modified. Returns ``None`` when:
-    - the id is already valid (nothing to do),
-    - the ``doc_type`` is ``adr`` (repo-name cannot be auto-derived),
-    - required fields (``doc_type``, ``title``) are absent or have wrong types,
-    - or ``title`` slugifies to an empty string.
+    Returns a FixResult: ``new_id`` set when the file was modified, otherwise a
+    human-readable ``skip_reason`` (already-valid id, ADR doc_type, missing or
+    unslugifiable title, unreadable file, or an id layout the single-line
+    replacement cannot rewrite safely).
     """
     try:
         raw = path.read_bytes()
-    except OSError:
-        return None
+    except OSError as exc:
+        return FixResult(skip_reason=f"cannot read file: {exc}")
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
-        return None
+        return FixResult(skip_reason="file is not valid UTF-8")
     # check_file reads with utf-8-sig (BOM stripped); a plain utf-8 decode keeps
     # U+FEFF, the \A--- anchor never matches, and a BOM'd file is flagged by
     # validation but silently unfixable. Strip it here and re-prepend on write so
@@ -333,45 +348,54 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
     text_lf = text.replace("\r\n", "\n").replace("\r", "\n")
     try:
         meta: dict[str, Any] | None = parse_frontmatter(text_lf)
-    except FrontmatterParseError:
-        return None
+    except FrontmatterParseError as exc:
+        return FixResult(skip_reason=f"invalid YAML frontmatter: {exc}")
     if meta is None:
-        return None
+        return FixResult(skip_reason="no frontmatter block found")
     doc_types = valid_doc_types if valid_doc_types is not None else _load_doc_types(_SCHEMA_PATH)
     doc_id = meta.get("id")
     doc_type = meta.get("doc_type")
     title = meta.get("title")
     if not isinstance(doc_id, str) or not doc_id:
-        return None
+        return FixResult(skip_reason="id field is missing or not a string")
     if not isinstance(doc_type, str) or doc_type not in doc_types:
-        return None
+        return FixResult(skip_reason="doc_type field is missing or not a valid doc_type")
     # ADR ids include a repo-name segment that cannot be derived from document fields.
     if doc_type == "adr":
-        return None
+        return FixResult(
+            is_adr=True, skip_reason="ADR ids require a repo-name segment — fix manually"
+        )
     # Already valid — nothing to fix.
     if not validate_id(doc_id, doc_type, doc_types):
-        return None
+        return FixResult(skip_reason="id is already valid")
     if not isinstance(title, str) or not title.strip():
-        return None
+        return FixResult(skip_reason="title is missing or empty — cannot derive a slug")
     token = random_token()
     slug = slugify(title)
     if not slug:
-        return None
+        return FixResult(
+            skip_reason="title produces an empty slug (no ASCII-translatable "
+            "characters) — set an ASCII-translatable title or write the id manually"
+        )
     new_id = f"{doc_type}-{token}-{slug}"
     new_text_lf = _replace_frontmatter_id(text_lf, new_id)
     if new_text_lf == text_lf:
-        return None
+        return FixResult(skip_reason="no rewritable id: line found in the frontmatter block")
     # Post-rewrite sanity check: _replace_frontmatter_id only understands
     # single-line id: values. A block-scalar id (id: >- with an indented
     # continuation) would leave the continuation orphaned — invalid YAML written
     # to disk under a 'fixed:' banner. Refuse to write anything the parser cannot
     # round-trip to the new id; the file degrades to a reported violation instead.
+    _UNSAFE_LAYOUT = FixResult(
+        skip_reason="id value layout cannot be rewritten automatically "
+        "(multi-line or unusual quoting) — edit the id manually"
+    )
     try:
         new_meta = parse_frontmatter(new_text_lf)
     except FrontmatterParseError:
-        return None
+        return _UNSAFE_LAYOUT
     if not isinstance(new_meta, dict) or new_meta.get("id") != new_id:
-        return None
+        return _UNSAFE_LAYOUT
     # Reconstruct output preserving per-line endings.  Only the id: line differs between
     # text_lf and new_text_lf; all other lines — whether \r\n, \n, or \r — are kept
     # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.
@@ -383,7 +407,9 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
         # single-line id swap. The old fallback wrote the LF-normalised text,
         # which would mass-rewrite a CRLF file's endings behind the user's back —
         # refuse to fix instead (the violation stays reported).
-        return None
+        return FixResult(
+            skip_reason="rewrite would alter the file beyond the id line — edit the id manually"
+        )
     output: list[str] = []
     for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=True):
         orig_stripped = orig_line.rstrip("\r\n")
@@ -395,7 +421,7 @@ def fix_file(path: Path, valid_doc_types: frozenset[str] | None = None) -> str |
             orig_ending = orig_line[len(orig_stripped) :]
             output.append(new_stripped + orig_ending)
     path.write_bytes((bom_prefix + "".join(output)).encode("utf-8"))
-    return new_id
+    return FixResult(new_id=new_id)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -500,24 +526,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.fix:
         fixed: list[tuple[Path, str]] = []
         adr_skipped: list[Path] = []
+        skip_notes: list[tuple[Path, str]] = []
         remaining_errors: list[str] = []
 
         for path in paths:
             violations = check_file(path, valid_doc_types)
             if not violations:
                 continue
-            new_id = fix_file(path, valid_doc_types)
-            if new_id is not None:
-                fixed.append((path, new_id))
+            result = fix_file(path, valid_doc_types)
+            if result.new_id is not None:
+                fixed.append((path, result.new_id))
+            elif result.is_adr:
+                adr_skipped.append(path)
             else:
-                # fix_file returns None for ADR files; distinguish for a clearer message.
-                try:
-                    meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
-                    if isinstance(meta, dict) and meta.get("doc_type") == "adr":
-                        adr_skipped.append(path)
-                        continue
-                except (OSError, FrontmatterParseError):
-                    pass
+                if result.skip_reason is not None:
+                    skip_notes.append((path, result.skip_reason))
                 remaining_errors.extend(violations)
 
         if not args.quiet:
@@ -529,6 +552,8 @@ def main(argv: list[str] | None = None) -> int:
                     f"(e.g. adr-0001-myrepo-short-title) — fix manually",
                     file=sys.stderr,
                 )
+            for path, reason in skip_notes:
+                print(f"cannot auto-fix: {path}: {reason}", file=sys.stderr)
             for error in remaining_errors:
                 print(error)
             if remaining_errors:
