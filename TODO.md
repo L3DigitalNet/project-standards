@@ -16,7 +16,7 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 ## User Tracked Tasks
 
-- _None._
+- [ ] Disable markdownlint MD060. It conflicts with Prettier.
 
 ## Repo & Agent Tracked Tasks
 
