@@ -1,4 +1,4 @@
-# TODO **Do not delete.**
+# TODO
 
 ## Purpose
 
@@ -16,7 +16,7 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 ## User Tracked Tasks
 
-- [ ] Disable markdownlint MD060. It conflicts with Prettier.
+- [ ] Fix markdownlint MD060. It conflicts with Prettier.
 
 ## Agent Tracked Tasks
 
