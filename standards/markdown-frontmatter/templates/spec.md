@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'replace-with-stable-id'
+id: 'spec-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: 'Spec: Feature or Change Name'
 description: 'One-sentence description of what this specification defines.'
 doc_type: 'spec'

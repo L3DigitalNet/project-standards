@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'replace-with-stable-id'
+id: 'concept-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: 'Concept Name'
 description: 'One-sentence explanation of the idea, model, or principle.'
 doc_type: 'concept'

@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'replace-with-stable-id'
+id: 'research-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: 'Research: Question or Topic'
 description: 'One-sentence description of the investigation.'
 doc_type: 'research'

@@ -158,7 +158,7 @@ Seed your repo's rules by copying this repo's published [`.markdownlint.json`](.
 
 ### Also — pre-commit integration
 
-The standards repo ships six pre-commit hooks that consumers can run locally as a faster feedback loop before CI. Add the following stanza to your `.pre-commit-config.yaml`:
+The standards repo ships six pre-commit hooks that consumers can run locally as a faster feedback loop before CI. (In a repo that also follows the Python Tooling SSOT Standard: using pre-commit solely for these non-Python hooks is explicitly sanctioned by that standard's non-default-tools scope note — no exception ADR is needed.) Add the following stanza to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:

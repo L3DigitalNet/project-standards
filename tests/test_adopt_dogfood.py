@@ -131,6 +131,17 @@ def test_frontmatter_adopt_doc_fences_match_bundle_artifacts() -> None:
     assert doc.count("<!-- prettier-ignore -->\n```yaml\n") >= 2
 
 
+def test_adr_adopt_doc_config_fence_matches_fragment_semantically() -> None:
+    # adr/adopt.md §3 teaches the same markdown.adr block the CLI reports as a
+    # fragment. The doc fence carries a teaching comment and Prettier-normalized
+    # quotes, so compare parsed values rather than bytes.
+    doc = (_REPO / "standards" / "adr" / "adopt.md").read_text()
+    fences = re.findall(r"```yaml\n(markdown:.*?)```", doc, re.DOTALL)
+    assert len(fences) == 1
+    fragment = yaml.safe_load((_BUNDLES / "adr" / "project-standards.adr-fragment.yml").read_text())
+    assert yaml.safe_load(fences[0]) == fragment
+
+
 def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
     doc = (_REPO / "standards" / "markdown-tooling" / "README.md").read_text()
     fences = re.findall(r"```json\n(.*?)```", doc, re.DOTALL)

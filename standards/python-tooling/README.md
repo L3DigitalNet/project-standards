@@ -196,6 +196,8 @@ Policy decision: this is not a claim that these tools are bad. It is a local sta
 
 This list is a **per-project add prohibition**, not an automatic instruction to uninstall every matching executable from a workstation. A workstation may already contain tools installed through multiple layers: `uv tool`, `pip --user`, the OS package manager, editor extensions, npm, or a project-local virtual environment. Removing a pre-existing tool requires layer-specific review. [S34], [N01]
 
+Scope note — `pre-commit`: the prohibition targets pre-commit as a **duplicate Python gate** (running Ruff, a type checker, or tests in hooks alongside the verification gate creates the competing instructions this list exists to prevent). Using pre-commit solely for **non-Python-toolchain hooks** — e.g. the Markdown Frontmatter standard's validation/format hooks ([`standards/markdown-frontmatter/adopt.md`](../markdown-frontmatter/adopt.md)) — is compatible with this standard and requires **no exception ADR**. Adopting one standard of this repository must never force a documented deviation from another.
+
 ### Workstation provisioning boundary
 
 This standard is primarily **repository-scoped**. It defines how each Python project declares and runs its own toolchain. Workstation provisioning is a separate layer.
@@ -1641,6 +1643,7 @@ Review fixes on 2026-07-01:
 - **Adopt CLI now delivers `.vscode/settings.json` and `.vscode/tasks.json`** (previously only `extensions.json`, silently leaving the §13-mandated files to manual copying).
 - Synced §6's dev group with the bundle fragment (sorted, pinned) and added a drift test comparing the §6 tool tables to the fragment semantically.
 - Reworded the §15 pinning policy to match its own template (SHA pin required where no moving tag exists), documented the direct-commit `push.branches` caveat, retitled this section from "Audit notes for versions 1.2 through 1.6" (it had outgrown that range), and reformatted the status paragraph as a list.
+- Cross-standard consistency (same day): added the §3 `pre-commit` scope note — the prohibition targets duplicate Python gates, so using pre-commit solely for the Markdown Frontmatter standard's hooks requires no exception ADR. Adopting one standard of this repository must never force a documented deviation from another.
 
 <!-- Citation reference-link definitions: every [Sxx]/[N01] marker in the body and in the source coverage map resolves to the Source register (section 24). GFM cannot anchor individual table rows, so all citations jump to the section. -->
 

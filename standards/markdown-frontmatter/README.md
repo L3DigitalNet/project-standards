@@ -6,7 +6,7 @@ description: 'Canonical, tool-neutral metadata profile for project Markdown docu
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-12'
+updated: '2026-07-01'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -355,7 +355,7 @@ Rules:
 4. Do not use spaces.
 5. Where a project maintains a tag registry (for example `schemas/tag-registry.md`), every tag **MUST** appear in it before first use. Registry membership is a project-specific policy and is not enforced by the core validator.
 
-Rules 1–4 are machine-enforced, not style preferences: the schema requires every tag to match `^[a-z0-9][a-z0-9-]*$`, so a tag with uppercase letters, spaces, or a leading `#` fails validation.
+Rules 1–4 are machine-enforced, not style preferences: the schema requires every tag to match `^[a-z0-9]+(-[a-z0-9]+)*$`, so a tag with uppercase letters, spaces, a leading `#`, or a leading/trailing/doubled hyphen fails validation.
 
 Correct:
 

@@ -1,6 +1,6 @@
 ---
 schema_version: "1.1"
-id: "replace-with-stable-id"
+id: "note-xxxxxx-replace-with-readable-slug" # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: "Human Title"
 description: "One-sentence description of the document."
 doc_type: "note"

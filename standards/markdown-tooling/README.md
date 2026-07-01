@@ -29,7 +29,11 @@ license: null
 
 # Markdown Tooling Standard
 
-Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see `meta/versioning.md`) Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-07 Scope: Markdown and the structured-text/config files Prettier supports, across CLI, VS Code, and CI.
+- **Status:** Source-checked standard, contract version `1.0` (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see [`meta/versioning.md`](../../meta/versioning.md))
+- **Owner:** Project standards / repository template
+- **Last updated:** 2026-07-01
+- **Last source check:** 2026-06-07
+- **Scope:** Markdown and the structured-text/config files Prettier supports, across CLI, VS Code, and CI.
 
 ---
 

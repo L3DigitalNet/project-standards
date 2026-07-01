@@ -1,6 +1,6 @@
 ---
 schema_version: '1.1'
-id: 'replace-with-stable-id'
+id: 'runbook-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
 title: 'Runbook: Procedure Name'
 description: 'One-sentence description of the operational procedure.'
 doc_type: 'runbook'

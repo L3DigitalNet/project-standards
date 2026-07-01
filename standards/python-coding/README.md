@@ -1,6 +1,10 @@
 # Python Coding Standard
 
-Status: Draft (version 0.4) — in development, reference-only; not registered for adoption or validation Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-07 Scope: code shape and agent behavior for Python projects that follow the Python Tooling SSOT Standard.
+- **Status:** Draft (version 0.4) — in development, reference-only; not registered for adoption or validation
+- **Owner:** Project standards / repository template
+- **Last updated:** 2026-07-01
+- **Last source check:** 2026-06-07
+- **Scope:** code shape and agent behavior for Python projects that follow the Python Tooling SSOT Standard.
 
 ---
 
@@ -185,7 +189,7 @@ Policy decision: agent-authored code should trade a small amount of verbosity fo
 
 ## 4. Module structure
 
-Each module SHOULD have one clear responsibility.
+Each module MUST have one clear responsibility (restated in the Rules list below).
 
 Preferred module shape:
 
@@ -390,7 +394,7 @@ Rules:
 
 - Raise exceptions for invalid states.
 - Catch exceptions only when the current layer can add context, recover, retry, translate, or present the error.
-- Do not catch broad `Exception` unless at an application boundary.
+- Do not catch broad `Exception` unless at an application boundary. Narrow carve-out: a cleanup-and-re-raise handler MAY catch `BaseException` when cleanup must also run on `KeyboardInterrupt`/`SystemExit` (see the atomic-write example later in this section); it MUST re-raise and MUST carry a justifying comment.
 - Do not swallow exceptions.
 - Do not return `None`, `False`, or empty collections to hide failure.
 - Use custom exceptions for domain-specific failures that callers can reasonably handle.
@@ -1298,6 +1302,16 @@ Updated on 2026-06-07:
 - Added logging `extra` collision guidance for `LogRecord` attributes.
 - Added PEP 257 as the docstring convention baseline.
 - Noted a condensed agent-facing summary as a possible future context-efficiency artifact in the adoption note.
+
+Updated on 2026-06-12 (backfilled 2026-07-01 — this entry was originally omitted):
+
+- Reworked the status banner, corrected the audit notes and source register to describe content that actually exists (including the S21 entry), rewrote §31, and converted tab-indented code examples to spaces.
+
+Updated on 2026-07-01 (consistency review):
+
+- Aligned the §4 module-responsibility statement with its own Rules list (intro said SHOULD, rules said MUST — now MUST in both).
+- Added the explicit `BaseException` cleanup-and-re-raise carve-out to §8, which the canonical atomic-write example already relied on without a stated exception.
+- Reformatted the status paragraph as a list, matching the other standards.
 
 <!-- Citation reference-link definitions: every [Sxx] marker in the body and in the source coverage map resolves to the Source register (section 30). GFM cannot anchor individual table rows, so all citations jump to the section. -->
 
