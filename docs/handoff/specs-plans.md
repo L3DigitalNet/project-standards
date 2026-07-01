@@ -27,3 +27,4 @@
 
 - Specs and design artifacts: `docs/superpowers/specs/`
 - Implementation plans: `docs/superpowers/plans/`
+- `docs/superpowers/specs/README.md` — human-facing index of the specs directory (own status table, kept separate from this pointer table)

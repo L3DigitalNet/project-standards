@@ -1,13 +1,13 @@
 # State
 
-**Last updated:** 2026-06-12
+**Last updated:** 2026-07-01
 
 ## State at a glance
 
-- **Validator review pass 2026-06-12 (Fable, review-then-implement):** 58 findings over `src/` validation files (`docs/fable-findings.md`); user selected all — **55 implemented** (one commit per finding/pair, IDs in subjects, `f8c9697`…`9da01a9`), 3 skipped w/ recorded rationale. Headliners: UnicodeDecodeError crashes at read boundaries (F1), `--fix` corrupting block-scalar ids while reporting success (F2), silent green CI on missing files/typo'd `--config` (F3/F4). Fresh-context verifier: 0 failures.
-- **Test-suite exhaustiveness pass 2026-06-12 (`c55ca81`):** coverage 93% → **100%** (statements + branches), 509 → **584 tests**. Every error path covered; remaining defensive guards covered via failure injection; `__main__` guards excluded via coverage `exclude_also`.
-- **Strictness bumps need a CHANGELOG note at next release** (TODO.md): F29 datetime rejection, F30 quoted versions, F37 tags pattern, F41 config dup keys, F46 non-string keys, F3/F4 new exit-2 paths.
-- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`; GitHub release live). `testing` is now ~58 commits ahead of `main` with the unreleased validator fixes.
+- **Handoff system resynced to engine v3.4 (2026-07-01):** SessionStart hooks (`.claude/`, `.codex/`) and `.codex/config.toml` byte-matched to canonical; root `STATUS.md` created (3.3 requirement); `TODO.md` section renamed to the required `## Agent Tracked Tasks`; `docs/handoff/specs-plans.md` backfilled to index `docs/superpowers/specs/README.md`. `validate-layout.sh` clean apart from local `python3`-shim false positives on the JSON/TOML checks (independently confirmed valid via `uv run python3`).
+- **2026-06-12 validator review + coverage passes complete** — 55/58 findings implemented, coverage 93%→100% (584 tests). Full detail: `STATUS.md` and `docs/handoff/sessions/2026-06.md`.
+- **Strictness bumps still need a CHANGELOG note before next release** — tracked in `TODO.md` (F29/F30/F37/F41/F46/F3/F4).
+- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` is ~58 commits ahead of `main` with the unreleased validator fixes.
 
 ## Active incidents
 
