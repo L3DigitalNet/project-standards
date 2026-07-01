@@ -20,6 +20,7 @@ This is the human-facing completion summary for the project. Agents maintain it 
 - [2026-06-12] 55/58 validator findings implemented; coverage 93% → 100%, 584 tests; `3.0.0` released on `main`.
 - [2026-07-01] Handoff-system-v3 resynced to engine v3.4.
 - [2026-07-01] Python Tooling standard reviewed: 11 findings fixed (invalid §15 YAML, ruff floor, adopt `.vscode` gap, pytest-cov, doc↔bundle drift guards).
+- [2026-07-01] Markdown standards swept for the same class: starter/caller/prettierrc doc fences byte-locked to bundles (starter example had dropped `**/*.template.md`); drift tests added.
 
 ## Notes For The Builder
 

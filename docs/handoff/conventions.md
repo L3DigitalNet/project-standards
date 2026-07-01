@@ -134,7 +134,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 ## 9. Doc-embedded scaffolds are byte-locked to their bundle twin
 
-**Applies when:** editing a copy-paste scaffold fence inside a standard doc (e.g. python-tooling §15 `check.yml`, §6 pyproject baseline) or adding a new one.
+**Applies when:** editing a copy-paste scaffold fence inside a standard doc (e.g. python-tooling §15 `check.yml`, §6 pyproject baseline; markdown-frontmatter adopt.md starter + caller; markdown-tooling §6 prettierrc) or adding a new one.
 
 **Rule:** a scaffold that exists both as a fenced block in a standard doc and as an adopt bundle artifact is ONE artifact with two representations. Keep them in sync via a drift test in `tests/test_adopt_dogfood.py` (byte-equality for verbatim blocks; semantic TOML/YAML comparison when the doc adds illustrative content). For **YAML** fences two extra hazards apply:
 
@@ -143,6 +143,6 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 **Why:** manual copy-adopters use the doc block, the CLI ships the bundle; drift means the two adoption paths deliver different (or broken) tooling.
 
-**Sources:** 2026-07-01 python-tooling standard review (tab-YAML §15 defect + Prettier embedded-formatting verification).
+**Sources:** 2026-07-01 python-tooling standard review (tab-YAML §15 defect + Prettier embedded-formatting verification); same-day markdown-standards sweep (starter example had silently lost `**/*.template.md` to unguarded drift).
 
 **Related:** 1, 5, 6.
