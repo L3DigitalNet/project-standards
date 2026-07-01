@@ -6,7 +6,7 @@ description: 'Recommended linting/formatting tools and settings for Markdown and
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-07'
-updated: '2026-06-12'
+updated: '2026-07-01'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -153,6 +153,10 @@ Policy decision (DEC-9): the markdownlint rule set ships **and** has a reusable 
 
 Prettier owns physical formatting: whitespace, wrapping, list/marker spacing, fence and emphasis style, and JSON/YAML shape. The config is `.prettierrc.json`:
 
+<!-- This fence must stay byte-identical to the adopt bundle's prettierrc.json
+(guarded by test_adopt_dogfood.py). The bare prettier-ignore keeps Prettier's
+embedded formatting from ever reshaping the block. -->
+<!-- prettier-ignore -->
 ```json
 {
 	"$schema": "https://json.schemastore.org/prettierrc.json",

@@ -6,7 +6,7 @@ description: 'Step-by-step procedure for an agent to adopt the project-standards
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-03'
-updated: '2026-06-12'
+updated: '2026-07-01'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -57,36 +57,41 @@ Do not modify any file under `.claude/`, `.agents/`, `.codex/`, or the repo's `C
 
 Create `.project-standards.yml` at the repo root. It declares the schema, whether frontmatter is required, and which paths are validated (`include`) vs skipped (`exclude`).
 
+<!-- This fence must stay byte-identical to the adopt bundle's
+project-standards.starter.yml — the file `adopt markdown-frontmatter` writes as
+.project-standards.yml (guarded by test_adopt_dogfood.py). The bare
+prettier-ignore keeps Prettier's embedded formatting from rewriting its quote style. -->
+<!-- prettier-ignore -->
 ```yaml
-standards_version: 'v3'
+standards_version: "v3"
 
 markdown:
   frontmatter:
-    version: '1.1' # OPTIONAL — pin the Frontmatter contract version; omit to track the tool's default
-    # Bundled schema name — resolves to the standard's JSON Schema. Do not change
-    # unless you ship a custom schema.
-    schema: 'markdown-frontmatter'
-    # true = a managed file with no frontmatter block is an error.
+    version: "1.1"
+    schema: "markdown-frontmatter"
     required: true
     include:
-      - 'README.md'
-      - 'docs/**/*.md'
+      - "README.md"
+      - "docs/**/*.md"
     exclude:
-      # Intentional placeholders / non-managed docs:
-      - 'CHANGELOG.md'
-      - 'LICENSE.md'
+      # Intentional placeholders / template files (e.g. the ADR template):
+      - "**/*.template.md"
+      # Non-managed docs:
+      - "CHANGELOG.md"
+      - "LICENSE.md"
       # Agent-instruction files are harness config, never managed docs:
-      - 'CLAUDE.md'
-      - 'AGENTS.md'
-      - '.claude/**'
-      - '.agents/**'
-      - '.codex/**'
-      - '.github/**'
-      # Tooling / generated content you do not want validated:
-      - '.obsidian/**'
-      - 'node_modules/**'
-    references:
-      enabled: false # Set to true to enable cross-file checks (id uniqueness, referential integrity, etc.)
+      - "CLAUDE.md"
+      - "AGENTS.md"
+      - ".claude/**"
+      - ".agents/**"
+      - ".codex/**"
+      - ".github/**"
+      # Tooling / generated content:
+      - "node_modules/**"
+    # Optional: cross-file checks (id uniqueness, referential integrity, date ordering, ADR-number
+    # uniqueness). No-op unless enabled.
+    # references:
+    #   enabled: true
 ```
 
 **Selecting a contract version (optional).** `markdown.frontmatter.version` pins which bundled Frontmatter contract validates your documents; omit it to use the tool's current default (today `1.1`, which also accepts legacy `schema_version: '1.0'` documents). A custom `schema:` path owns its own versioning — setting both a custom `schema:` path and `version` is a config error.
@@ -95,7 +100,8 @@ markdown:
 
 - `include` the directories that hold real, maintained documentation. Start narrow (`README.md`, `docs/**/*.md`) and widen later.
 - Always `exclude` agent-instruction files (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) — adding frontmatter to them is forbidden.
-- `exclude` template files with intentional placeholders, generated output, and vendored/third-party Markdown.
+- `exclude` template files with intentional placeholders (the starter's `**/*.template.md` covers the ADR template — keep it), generated output, vendored/third-party Markdown, and tool-owned trees your repo carries (e.g. `.obsidian/**`).
+- Cross-file reference checks are opt-in: uncomment the `references:` block and set `enabled: true` (see [§3](#3-step-2--add-the-ci-workflow)).
 - The root `README.md` is a managed document by default, but you may `exclude` it if the repo prefers no frontmatter table on its landing page.
 - `exclude` patterns match the **file path** via `fnmatch`; a trailing `/**` excludes everything beneath a directory.
 
@@ -103,6 +109,12 @@ markdown:
 
 Create `.github/workflows/validate-standards.yml` (the file must live under `.github/workflows/`; GitHub only discovers workflows there):
 
+<!-- This fence must stay byte-identical to the adopt bundle's
+validate-markdown-frontmatter.caller.yml rendered at the current major — the file
+`adopt markdown-frontmatter` writes as validate-standards.yml (guarded by
+test_adopt_dogfood.py). The bare prettier-ignore keeps Prettier's embedded
+formatting from rewriting its quote style. -->
+<!-- prettier-ignore -->
 ```yaml
 name: Validate project standards
 
@@ -116,8 +128,8 @@ jobs:
   validate:
     uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v3
     with:
-      config-path: '.project-standards.yml'
-      standards-ref: 'v3'
+      config-path: ".project-standards.yml"
+      standards-ref: "v3"
 ```
 
 > **⚠️ Pin BOTH refs.** `@v3` on the `uses:` line pins the **workflow definition**. The `standards-ref` input pins the **validator + bundled schema** that gets installed; it **defaults to the major tag `v3`** (a pinned major, _not_ `main`), so set it explicitly to the **same ref as your `uses:` pin** (`'v3'`), so the two never drift. For a fully immutable pin, set both to `v3.0.0`.

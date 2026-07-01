@@ -111,6 +111,61 @@ def test_standard_doc_pyproject_block_matches_bundle_fragment() -> None:
         assert doc_toml[table] == value, table
 
 
+def test_frontmatter_adopt_doc_fences_match_bundle_artifacts() -> None:
+    # adopt.md §2/§3 instruct manual adopters to create the same two files the CLI
+    # delivers (.project-standards.yml, validate-standards.yml) — one artifact, two
+    # representations, byte-locked like the python-tooling §15 block. The caller is
+    # compared at the CURRENT major so a v4 bump forces the doc to follow.
+    doc = (_REPO / "standards" / "markdown-frontmatter" / "adopt.md").read_text()
+    fences = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
+    starter = (_BUNDLES / "markdown-frontmatter" / "project-standards.starter.yml").read_text()
+    caller = (
+        (_BUNDLES / "markdown-frontmatter" / "validate-markdown-frontmatter.caller.yml")
+        .read_text()
+        .replace("{{ref}}", major_ref())
+    )
+    assert starter in fences
+    assert caller in fences
+    # Guard the guards: both byte-locked fences need a bare prettier-ignore, or
+    # Prettier's embedded formatting rewrites their quote style on the next --write.
+    assert doc.count("<!-- prettier-ignore -->\n```yaml\n") >= 2
+
+
+def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
+    doc = (_REPO / "standards" / "markdown-tooling" / "README.md").read_text()
+    fences = re.findall(r"```json\n(.*?)```", doc, re.DOTALL)
+    assert (_BUNDLES / "markdown-tooling" / "prettierrc.json").read_text() in fences
+    assert "<!-- prettier-ignore -->\n```json\n" in doc
+
+
+def test_no_yaml_fence_in_standards_docs_contains_tabs() -> None:
+    # YAML forbids tab indentation; a tab-indented scaffold fence ships a broken
+    # artifact to manual copy-adopters (python-tooling §15 did exactly that until
+    # 2026-07-01). The shared .editorconfig defaults Markdown to tabs, so this is
+    # an easy authoring mistake to reintroduce.
+    for md in (_REPO / "standards").rglob("*.md"):
+        for block in re.findall(r"```ya?ml\n(.*?)```", md.read_text(), re.DOTALL):
+            assert "\t" not in block, md
+
+
+def test_doc_workflow_snippets_reference_current_major() -> None:
+    # Partial `jobs:` snippets stay Prettier-managed (they are examples, not
+    # byte-locked artifacts); guard the load-bearing parts — every `uses:` of this
+    # repo's reusable workflows must name a workflow that exists, at the current major.
+    ref = major_ref()
+    workflows = {p.name for p in (_REPO / ".github" / "workflows").glob("*.yml")}
+    pat = re.compile(
+        r"uses: L3DigitalNet/project-standards/\.github/workflows/([\w.-]+\.yml)@(\S+)"
+    )
+    seen = 0
+    for md in (_REPO / "standards").rglob("*.md"):
+        for workflow, used_ref in pat.findall(md.read_text()):
+            assert workflow in workflows, f"{md}: {workflow}"
+            assert used_ref == ref, f"{md}: {workflow}@{used_ref}"
+            seen += 1
+    assert seen >= 4  # both callers + the lint-markdown snippets
+
+
 def test_adopt_python_tooling_delivers_vscode_settings_and_tasks(tmp_path: Path) -> None:
     # §13 mandates all three .vscode files; before 2026-07-01 the CLI silently
     # delivered only extensions.json, leaving settings/tasks to manual copying.
