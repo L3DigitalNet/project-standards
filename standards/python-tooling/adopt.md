@@ -6,7 +6,7 @@ description: 'How to adopt the Python Tooling SSOT Standard: copy the in-doc sca
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-06'
+updated: '2026-07-01'
 reviewed: null
 owner: ''
 consumer: 'agent'
@@ -36,7 +36,7 @@ uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
   project-standards adopt python-tooling
 ```
 
-This writes `.python-version`, `.github/workflows/check.yml`, `scripts/check.py`, the agent entry points (`AGENTS.md`/`CLAUDE.md`), and the shared `.editorconfig` and `.vscode/extensions.json`. The `pyproject.toml` sections are **reported, not written** (the CLI never edits an existing config in place) — copy the printed block into your `pyproject.toml`. Existing files are skipped unless you pass `--force`. Then run the verification gate (below). The manual steps remain the reference for what each scaffold is.
+This writes `.python-version`, `.github/workflows/check.yml`, `scripts/check.py`, the agent entry points (`AGENTS.md`/`CLAUDE.md`), the `.vscode/` trio (`settings.json`, `tasks.json`, and the shared `extensions.json`), and the shared `.editorconfig`. The `pyproject.toml` sections are **reported, not written** (the CLI never edits an existing config in place) — copy the printed block into your `pyproject.toml`. Existing files are skipped unless you pass `--force`. Then run the verification gate (below). The manual steps remain the reference for what each scaffold is.
 
 ## Steps
 

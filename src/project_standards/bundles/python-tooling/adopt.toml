@@ -39,6 +39,18 @@ dest = "CLAUDE.md"
 
 [[artifact]]
 kind = "file"
+owner = true
+source = "vscode-settings.json"
+dest = ".vscode/settings.json"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "vscode-tasks.json"
+dest = ".vscode/tasks.json"
+
+[[artifact]]
+kind = "file"
 shared = "_shared/editorconfig"
 dest = ".editorconfig"
 

@@ -6,7 +6,7 @@ description: 'Standard Python tooling stack, layout, CI gate, and agent instruct
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-12'
+updated: '2026-07-01'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -29,7 +29,11 @@ license: null
 
 # Python Tooling SSOT Standard
 
-Status: Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via python_tooling.version — see meta/versioning.md) Owner: Project standards / repository template Last updated: 2026-06-12 Last source check: 2026-06-06 Scope: Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
+- **Status:** Source-checked standard, contract version 1.0 (a copy-adopted label; selected by consumers via `python_tooling.version` — see [`meta/versioning.md`](../../meta/versioning.md))
+- **Owner:** Project standards / repository template
+- **Last updated:** 2026-07-01
+- **Last source check:** 2026-06-06 (ruff `py314` floor and the S23 URL re-verified 2026-07-01)
+- **Scope:** Python projects primarily authored or modified by Claude Code, Codex CLI, and VS Code-based agents.
 
 ---
 
@@ -85,7 +89,7 @@ Status: Source-checked standard, contract version 1.0 (a copy-adopted label; sel
   - [22. Update process for this standard](#22-update-process-for-this-standard)
   - [23. Source coverage map](#23-source-coverage-map)
   - [24. Source register](#24-source-register)
-  - [25. Audit notes for versions 1.2 through 1.6](#25-audit-notes-for-versions-12-through-16)
+  - [25. Audit notes](#25-audit-notes)
 
 ## Evidence convention
 
@@ -333,13 +337,14 @@ requires-python = ">=3.14"
 dependencies = []
 
 [dependency-groups]
+# pytest floor matches [tool.pytest.ini_options].minversion; ruff>=0.14 is the first
+# release with non-preview py314 target-version support (0.9-0.11 reject "py314").
 dev = [
-	"basedpyright",
-	"coverage[toml]",
-	"pip-audit",
-	"pytest",
-	"pytest-cov",
-	"ruff",
+    "basedpyright",
+    "coverage[toml]",
+    "pip-audit",
+    "pytest>=9.0",
+    "ruff>=0.14",
 ]
 
 [build-system]
@@ -356,25 +361,25 @@ extend-exclude = [".claude", ".agents", ".codex", ".continue"]
 
 [tool.ruff.lint]
 select = [
-	"E",    # pycodestyle errors
-	"F",    # pyflakes
-	"I",    # import sorting
-	"B",    # bugbear
-	"UP",   # pyupgrade
-	"SIM",  # simplification
-	"C4",   # comprehensions
-	"PIE",  # misc improvements
-	"PTH",  # pathlib
-	"RET",  # return-value issues
-	"RUF",  # Ruff-specific rules
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # import sorting
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "SIM",  # simplification
+    "C4",   # comprehensions
+    "PIE",  # misc improvements
+    "PTH",  # pathlib
+    "RET",  # return-value issues
+    "RUF",  # Ruff-specific rules
 ]
 ignore = [
-	"E501", # formatter owns line wrapping
+    "E501", # formatter owns line wrapping
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-	"S101", # assert is normal in pytest tests if security rules are later enabled
+    "S101", # assert is normal in pytest tests if security rules are later enabled
 ]
 
 [tool.ruff.format]
@@ -393,9 +398,9 @@ failOnWarnings = true
 minversion = "9.0"
 testpaths = ["tests"]
 addopts = [
-	"-ra",
-	"--strict-markers",
-	"--strict-config",
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
 ]
 
 [tool.coverage.run]
@@ -410,6 +415,9 @@ fail_under = 85
 
 Notes:
 
+- The tool tables above are exactly what the adopt CLI reports as the `pyproject.toml` fragment (a drift test keeps the two in sync); only the `[project]` table is illustrative.
+- `pytest-cov` is intentionally **not** in the dev group: the gate measures coverage with coverage.py directly (`coverage run -m pytest`), and carrying a second coverage entry point is exactly the overlapping-tools problem §3 exists to prevent.
+- The `ruff>=0.14` floor is load-bearing: 0.14.0 is the first release with non-preview `target-version = "py314"` support (0.9–0.11 reject `py314` outright; 0.12–0.13 accept it with a preview warning). Verified 2026-07-01.
 - The pytest table uses `[tool.pytest.ini_options]` as the standard table. pytest 9.0 also supports native TOML config under `[tool.pytest]`, but `[tool.pytest.ini_options]` remains supported and is safer for templates because it is recognized by pytest versions back to 6.0. [S13]
 - Keep `minversion = "9.0"` in the active pytest table so older pytest versions fail explicitly instead of silently ignoring newer expectations.
 - `fail_under = 85` is a default threshold, not a universal measure of quality.
@@ -758,7 +766,7 @@ Workspace settings must not define personal preferences:
 
 Policy decision: extension recommendations are intentionally limited to project behavior, syntax/config assistance, and quality gate integration.
 
-Note: when adopting both Python Tooling and Markdown Tooling standards together, the `adopt`-delivered `.vscode/extensions.json` is the shared superset (9 extensions — the 7 above plus `esbenp.prettier-vscode` and `DavidAnson.vscode-markdownlint` from the Markdown Tooling standard). A python-tooling-only adopter will see the two Markdown extensions included; they are safe to keep and do not affect Python tooling behavior.
+Note: when adopting both Python Tooling and Markdown Tooling standards together, the `adopt`-delivered `.vscode/extensions.json` is the shared superset (9 extensions — the 7 above plus `esbenp.prettier-vscode` and `DavidAnson.vscode-markdownlint` from the Markdown Tooling standard). A python-tooling-only adopter will see the two Markdown extensions included; they are safe to keep and do not affect Python tooling behavior. The adopt CLI delivers all three `.vscode/` files — `extensions.json` (shared), plus the `settings.json` and `tasks.json` blocks below.
 
 ### Python language-server policy
 
@@ -943,68 +951,77 @@ Source basis:
 - uv's GitHub guide shows `python-version-file: ".python-version"`. [S20]
 - uv's GitHub guide says pinning to a specific uv version is best practice. [S20]
 
+<!-- This fence must stay byte-identical to the adopt bundle's check.yml (guarded by
+test_adopt_dogfood.py). The bare prettier-ignore below keeps Prettier's embedded
+formatting from rewriting its quote style. YAML forbids tab indentation - spaces only. -->
+<!-- prettier-ignore -->
 ```yaml
 name: Check
 
 on:
-	pull_request:
-	push:
-		branches: ["main"]
+  pull_request:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
-	check:
-		runs-on: ubuntu-latest
+  check:
+    runs-on: ubuntu-latest
 
-		steps:
-			- uses: actions/checkout@v6
+    steps:
+      - uses: actions/checkout@v6
 
-			- uses: actions/setup-python@v6
-				with:
-					python-version-file: ".python-version"
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
 
-			# SHA-pin setup-uv: as of v8.0.0 it publishes NO moving major/minor tag
-			# (no `@v8`/`@v8.0`), so a tag pin no longer resolves. Pin a full-version
-			# commit SHA with the version in a trailing comment (GitHub/Astral hardening
-			# guidance) and let Dependabot bump it. Re-resolve the SHA when adopting.
-			- uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
-				with:
-					# Pin this to the current reviewed uv version when applying the template.
-					# Example: version: "0.11.6" (the version this repo currently pins).
-					# Note: the CLI-delivered bundle (adopt python-tooling) ships an explicit
-					# version: pin in check.yml; add your own version: line when adopting manually.
-					enable-cache: true
+      # SHA-pinned: setup-uv has no moving @v8 tag (dropped as of v8.0.0);
+      # Dependabot bumps the SHA via the trailing version comment.
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.6"
+          enable-cache: true
 
-			- name: Sync dependencies
-				run: uv sync --locked --all-groups
+      - name: Sync dependencies
+        run: uv sync --locked --all-groups
 
-			- name: Check formatting
-				run: uv run ruff format --check .
+      - name: Check formatting
+        run: uv run ruff format --check .
 
-			- name: Lint
-				run: uv run ruff check .
+      - name: Lint
+        run: uv run ruff check .
 
-			- name: Type check
-				run: uv run basedpyright
+      - name: Type check
+        run: uv run basedpyright
 
-			- name: Test with coverage
-				run: uv run coverage run -m pytest
+      - name: Test with coverage
+        run: uv run coverage run -m pytest
 
-			- name: Coverage report
-				run: uv run coverage report
+      - name: Coverage report
+        run: uv run coverage report
 
-			- name: Dependency audit
-				run: uv run pip-audit
+      - name: Dependency audit
+        run: uv run pip-audit
 ```
+
+Notes:
+
+- This block is exactly what `project-standards adopt python-tooling` writes to `.github/workflows/check.yml` (a dogfood test keeps the two byte-identical).
+- The `version:` and SHA pins are template defaults — re-resolve the setup-uv SHA and the pinned uv version when adopting, and recheck them when this standard is reviewed. `setup-uv` publishes **no** moving major/minor tag as of v8.0.0 (`@v8`/`@v8.0` 404), so it must stay SHA-pinned with the version in a trailing comment for Dependabot.
+- The template triggers on `pull_request` and pushes to `main`. A repository that develops by direct commits to a working branch (no PRs) must add that branch to `push.branches`, or CI never runs before merge; the local verification gate is then the only pre-merge check.
 
 Rules:
 
 - CI must use the lockfile.
 - CI must not install dependencies outside uv.
 - CI must run formatting check, lint, type check, tests, coverage report, and audit.
+- CI must hold `permissions` to the minimum the workflow needs (`contents: read` for the check gate).
 - CI failures must not be bypassed by weakening the standard without a documented exception.
 - CI should be kept boring and transparent.
 
-Policy decision: pin action major versions in templates; pin action SHAs or exact action versions for hardened/security-sensitive repositories.
+Policy decision: pin action major versions in templates, except actions that publish no moving tag (setup-uv), which must be SHA-pinned; hardened/security-sensitive repositories SHA-pin every action.
 
 ---
 
@@ -1181,7 +1198,7 @@ Policy decision: `AGENTS.md` is the default cross-agent entry point; `CLAUDE.md`
 
 ## 18. Optional local check script
 
-A Python wrapper can make the quality gate easier for agents and humans to run.
+A Python wrapper can make the quality gate easier for agents and humans to run. The adopt CLI materializes it by default; "optional" means a project may delete it and rely on the explicit gate commands — the gate itself, not this wrapper, is the contract.
 
 `scripts/check.py`:
 
@@ -1397,7 +1414,7 @@ Source basis: Ruff supports linting, formatting, and `pyproject.toml` configurat
 ### Step 4: Add pytest and coverage
 
 ```bash
-uv add --dev pytest coverage[toml] pytest-cov
+uv add --dev pytest coverage[toml]
 uv run coverage run -m pytest
 uv run coverage report
 ```
@@ -1551,7 +1568,7 @@ Source basis: these tools are active projects whose documented behavior can chan
 
 ---
 
-## 25. Audit notes for versions 1.2 through 1.6
+## 25. Audit notes
 
 Updated on 2026-06-06:
 
@@ -1611,6 +1628,19 @@ Action-pin fix on 2026-06-07:
 
 - §15 `check.yml` template: replaced the unresolvable `astral-sh/setup-uv@v8` with a full-version commit SHA + trailing version comment (`@fac544c…39 # v8.2.0`). As of setup-uv v8.0.0 (March 2026) Astral publishes **no** moving major/minor tag, so `@v8`/`@v8.0` 404 — confirmed against the GitHub refs API on 2026-06-07. A copied template previously red-failed at the install step before any gate ran.
 - Review reminder: when this standard is re-checked, verify every embedded action ref still resolves (a moving tag can be withdrawn, as setup-uv's was). The [S20] uv GitHub Actions guide already shows the SHA-pinned form, so re-reading the cited source catches this class of drift.
+
+Consistency fixes on 2026-06-12 (backfilled 2026-07-01 — this entry was originally omitted):
+
+- Repaired the §8 "Preferred constructs" table (malformed GFM header/delimiter), corrected build-backend.md counts and wheel paths, dropped the redundant `from __future__ import annotations` from `check.py` (contradicted python-coding), aligned the bundle fragment with §6's `extend-exclude` and `pytest>=9.0`, added the missing TOC, softened the test-matrix and test-naming mandates to SHOULD, and noted that the adopt CLI delivers condensed agent files.
+
+Review fixes on 2026-07-01:
+
+- **§15 template was invalid YAML**: the fenced block was tab-indented (YAML forbids tabs), so the manual copy-adopt path shipped a workflow that failed at parse. Re-indented with spaces and made the block byte-identical to the bundle's `check.yml` (gaining `permissions: contents: read` and the explicit uv `version:` pin); a `<!-- prettier-ignore -->` guard keeps Prettier's embedded formatting from rewriting the fence, and a dogfood test now asserts README-block ↔ bundle byte equality.
+- **Raised the ruff floor to `>=0.14`** in §6 and the bundle fragment: `ruff>=0.9.0` could not run the shipped config (`target-version = "py314"` is rejected by 0.9–0.11; non-preview support lands in 0.14.0). Verified against ruff 0.9.0/0.12.0/0.13.0/0.14.0 on 2026-07-01.
+- **Dropped `pytest-cov`** from the dev group (doc, fragment, and this repo): nothing in the standard uses it — the gate measures coverage via `coverage run -m pytest` — and a second coverage entry point is the overlapping-tools problem §3 prohibits.
+- **Adopt CLI now delivers `.vscode/settings.json` and `.vscode/tasks.json`** (previously only `extensions.json`, silently leaving the §13-mandated files to manual copying).
+- Synced §6's dev group with the bundle fragment (sorted, pinned) and added a drift test comparing the §6 tool tables to the fragment semantically.
+- Reworded the §15 pinning policy to match its own template (SHA pin required where no moving tag exists), documented the direct-commit `push.branches` caveat, retitled this section from "Audit notes for versions 1.2 through 1.6" (it had outgrown that range), and reformatted the status paragraph as a list.
 
 <!-- Citation reference-link definitions: every [Sxx]/[N01] marker in the body and in the source coverage map resolves to the Source register (section 24). GFM cannot anchor individual table rows, so all citations jump to the section. -->
 
