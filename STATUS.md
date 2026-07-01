@@ -21,6 +21,7 @@ This is the human-facing completion summary for the project. Agents maintain it 
 - [2026-07-01] Handoff-system-v3 resynced to engine v3.4.
 - [2026-07-01] Python Tooling standard reviewed: 11 findings fixed (invalid §15 YAML, ruff floor, adopt `.vscode` gap, pytest-cov, doc↔bundle drift guards).
 - [2026-07-01] Markdown standards swept for the same class: starter/caller/prettierrc doc fences byte-locked to bundles (starter example had dropped `**/*.template.md`); drift tests added.
+- [2026-07-01] Full cross-standard consistency review: combined adoption of all four standards verified collision-free with every gate passing; pre-commit ban vs frontmatter hooks resolved (scope note), stale tags pattern, template id placeholders, and two missing md-tooling adopt steps fixed.
 
 ## Notes For The Builder
 
