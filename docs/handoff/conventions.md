@@ -13,6 +13,8 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 5 | Python tooling follows the SSOT standard | Adding or changing Python tooling, CI gate, or layout |
 | 6 | Standards live in per-standard bundles | Adding/moving a standard, template, or example |
 | 7 | Style gates exclude generated/template content | Wiring or debugging markdownlint / Prettier / frontmatter gates |
+| 8 | `except A, B:` is ruff-canonical — NOT a Python-2 bug | Reviewing/fixing multi-exception clauses in `src/` |
+| 9 | Doc-embedded scaffolds are byte-locked to their bundle twin | Editing a copy-paste scaffold fence inside a standard doc |
 
 ## 1. Dogfood the standards
 
@@ -129,3 +131,18 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 **Sources:** 2026-06-09 round-3 release-readiness review.
 
 **Related:** 3.
+
+## 9. Doc-embedded scaffolds are byte-locked to their bundle twin
+
+**Applies when:** editing a copy-paste scaffold fence inside a standard doc (e.g. python-tooling §15 `check.yml`, §6 pyproject baseline) or adding a new one.
+
+**Rule:** a scaffold that exists both as a fenced block in a standard doc and as an adopt bundle artifact is ONE artifact with two representations. Keep them in sync via a drift test in `tests/test_adopt_dogfood.py` (byte-equality for verbatim blocks; semantic TOML/YAML comparison when the doc adds illustrative content). For **YAML** fences two extra hazards apply:
+
+- The shared `.editorconfig` defaults Markdown to tab indentation — tabs inside a YAML fence make the scaffold unparseable (this shipped broken for weeks; caught 2026-07-01). Author fences with spaces.
+- Prettier's `embeddedLanguageFormatting: "auto"` DOES reformat yaml fences in Markdown, and the `**/*.md` override (`singleQuote: true`) rewrites their quote style — silently breaking byte-equality with the bundle. Put a bare `<!-- prettier-ignore -->` (no trailing text — Prettier ignores the directive if anything follows it in the comment) on the line before the fence. Prettier does NOT format toml fences (no TOML parser), so TOML needs no guard.
+
+**Why:** manual copy-adopters use the doc block, the CLI ships the bundle; drift means the two adoption paths deliver different (or broken) tooling.
+
+**Sources:** 2026-07-01 python-tooling standard review (tab-YAML §15 defect + Prettier embedded-formatting verification).
+
+**Related:** 1, 5, 6.

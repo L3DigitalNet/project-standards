@@ -4,14 +4,14 @@
 
 ## State at a glance
 
-- **Handoff system resynced to engine v3.4 (2026-07-01):** SessionStart hooks (`.claude/`, `.codex/`) and `.codex/config.toml` byte-matched to canonical; root `STATUS.md` created (3.3 requirement); `TODO.md` section renamed to the required `## Agent Tracked Tasks`; `docs/handoff/specs-plans.md` backfilled to index `docs/superpowers/specs/README.md`. `validate-layout.sh` clean apart from local `python3`-shim false positives on the JSON/TOML checks (independently confirmed valid via `uv run python3`).
-- **2026-06-12 validator review + coverage passes complete** — 55/58 findings implemented, coverage 93%→100% (584 tests). Full detail: `STATUS.md` and `docs/handoff/sessions/2026-06.md`.
-- **Strictness bumps still need a CHANGELOG note before next release** — tracked in `TODO.md` (F29/F30/F37/F41/F46/F3/F4).
-- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` is ~58 commits ahead of `main` with the unreleased validator fixes.
+- **Python Tooling standard reviewed + fixed (2026-07-01):** §15 template was invalid YAML (tab-indented) — now byte-locked to the bundle `check.yml` behind `<!-- prettier-ignore -->` with drift tests (conventions §9); ruff floor →`>=0.14` (first non-preview py314); `pytest-cov` dropped (doc/fragment/repo); adopt CLI now delivers `.vscode/settings.json`+`tasks.json`; §25 audit notes backfilled.
+- **Handoff system resynced to engine v3.4 (2026-07-01)** — hooks/config byte-matched, `STATUS.md` created, `specs-plans.md` backfilled; `validate-layout.sh` clean apart from local `python3`-shim false positives.
+- **CHANGELOG note owed before next release** — validator strictness bumps (F29/F30/F37/F41/F46/F3/F4) **plus** 2026-07-01 python-tooling consumer-visible changes (ruff floor, pytest-cov removal, new `.vscode` artifacts) — tracked in `TODO.md`.
+- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` is ~60 commits ahead of `main` with the unreleased fixes.
 
 ## Active incidents
 
-- _None._ Full gate green: 584 tests, 100% cov, basedpyright 0/0/0, prettier/markdownlint/dogfood clean.
+- _None._ Full gate green: 587 tests, 100% cov, basedpyright 0/0/0, prettier/markdownlint/dogfood clean.
 
 ## Session instructions
 
