@@ -1,12 +1,12 @@
 ---
 spec_id: SPEC-____ # placeholder — assign on creation; real ids match ^SPEC-[0-9A-Z]{4}$ (base36×4, e.g. SPEC-7F3Q). Underscores fail that pattern so validators reject an unfilled template.
-title: "<Project / Feature Name>"
+title: '<Project / Feature Name>'
 status: draft # draft | review | approved | superseded
 profile: standard # this is the Standard template; see header note for sibling profiles
-owner: "<person or team>"
-implementer: "<person, team, or coding agent>"
-created: "YYYY-MM-DD"
-last_reviewed: "YYYY-MM-DD"
+owner: '<person or team>'
+implementer: '<person, team, or coding agent>'
+created: 'YYYY-MM-DD'
+last_reviewed: 'YYYY-MM-DD'
 supersedes: null # SPEC id this replaces, if any
 superseded_by: null # filled in when this spec is retired
 related:
@@ -22,7 +22,7 @@ related:
 >
 > This is the **Standard** spec template — for typical features and services. Two sibling templates exist: `spec-light-template.md` (scripts, small tools, single-session agent tasks) and `spec-full-template.md` (multi-service systems, durable data, external integrations, or multiple stakeholders). If the project needs Full-tier sections, copy your content into that template (see [Appendix D](#appendix-d-tailoring)).
 >
-> **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Standard spec omits the Full-only sections, so section **and appendix** numbers have intentional gaps — §5, §8.4, §8.6, §14–§16, §18.4, §20, and Appendix C are absent by design. That is expected, not missing content; a section keeps the same number no matter which profile a spec uses, and upgrading to Full only *adds* sections.
+> **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Standard spec omits the Full-only sections, so section **and appendix** numbers have intentional gaps — §5, §8.4, §8.6, §14–§16, §18.4, §20, and Appendix C are absent by design. That is expected, not missing content; a section keeps the same number no matter which profile a spec uses, and upgrading to Full only _adds_ sections.
 >
 > 1. Replace `<angle-bracket>` placeholders. Delete guidance blockquotes and "Suggested prompts" lists once used.
 > 2. **Prose-first for narrative sections** (Purpose, Background, Architecture Summary, Recovery); tables only for enumerable facts. Do not fill a table with one-word cells when a paragraph would explain more.

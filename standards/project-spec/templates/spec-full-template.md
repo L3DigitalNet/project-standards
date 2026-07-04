@@ -1,12 +1,12 @@
 ---
 spec_id: SPEC-____ # placeholder — assign on creation; real ids match ^SPEC-[0-9A-Z]{4}$ (base36×4, e.g. SPEC-7F3Q). Underscores fail that pattern so validators reject an unfilled template.
-title: "<Project / Feature Name>"
+title: '<Project / Feature Name>'
 status: draft # draft | review | approved | superseded
 profile: full # this is the Full template; see header note for sibling profiles
-owner: "<person or team>"
-implementer: "<person, team, or coding agent>"
-created: "YYYY-MM-DD"
-last_reviewed: "YYYY-MM-DD"
+owner: '<person or team>'
+implementer: '<person, team, or coding agent>'
+created: 'YYYY-MM-DD'
+last_reviewed: 'YYYY-MM-DD'
 supersedes: null # SPEC id this replaces, if any
 superseded_by: null # filled in when this spec is retired
 related:

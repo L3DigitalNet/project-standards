@@ -1,12 +1,12 @@
 ---
 spec_id: SPEC-____ # placeholder — assign on creation; real ids match ^SPEC-[0-9A-Z]{4}$ (base36×4, e.g. SPEC-7F3Q). Underscores fail that pattern so validators reject an unfilled template.
-title: "<Project / Feature Name>"
+title: '<Project / Feature Name>'
 status: draft # draft | review | approved | superseded
 profile: light # this is the Light template; see header note for sibling profiles
-owner: "<person or team>"
-implementer: "<person, team, or coding agent>"
-created: "YYYY-MM-DD"
-last_reviewed: "YYYY-MM-DD"
+owner: '<person or team>'
+implementer: '<person, team, or coding agent>'
+created: 'YYYY-MM-DD'
+last_reviewed: 'YYYY-MM-DD'
 supersedes: null # SPEC id this replaces, if any
 superseded_by: null # filled in when this spec is retired
 related:
@@ -22,7 +22,7 @@ related:
 >
 > This is the **Light** spec template — for scripts, small tools, and single-session agent tasks. Two sibling templates exist for larger work: `spec-standard-template.md` (typical features and services) and `spec-full-template.md` (multi-service systems, durable data, external integrations). If this project outgrows Light, copy your content into the next template up (see [Appendix D](#appendix-d-upgrading-this-spec)).
 >
-> **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Light spec omits the Standard/Full-only sections, so section **and appendix** numbers have intentional gaps — e.g. this template jumps §2 → §7 and A → B → D. That is expected, not missing content; it means a section keeps the same number no matter which profile a spec uses, and upgrading a tier only *adds* sections.
+> **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Light spec omits the Standard/Full-only sections, so section **and appendix** numbers have intentional gaps — e.g. this template jumps §2 → §7 and A → B → D. That is expected, not missing content; it means a section keeps the same number no matter which profile a spec uses, and upgrading a tier only _adds_ sections.
 >
 > 1. Replace `<angle-bracket>` placeholders. Delete guidance blockquotes and "Suggested prompts" lists once used.
 > 2. **Prose-first for the narrative section** (Purpose); tables only for enumerable facts. Do not fill a table with one-word cells when a paragraph would explain more.
