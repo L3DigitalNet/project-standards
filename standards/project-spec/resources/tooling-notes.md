@@ -6,7 +6,7 @@ Reference for building programmatic tooling (validators, generators, spec manage
 - `spec-standard-template.md`
 - `spec-full-template.md`
 
-The companion validator `check_specs.py` enforces the machine-checkable subset of this document. Read this before assuming anything about structure — several deliberate design choices will trip a naive parser (see [Gotchas](#gotchas--anti-patterns)).
+The companion validator `check_specs.py` enforces the machine-checkable subset of this document. Read this before assuming anything about structure — several deliberate design choices will trip a naive parser (see [Gotchas](#9-gotchas--anti-patterns)).
 
 ## Table of Contents
 
@@ -141,7 +141,7 @@ A prefix present in a tier's Appendix A resolves to the **same "Defined In"** se
 
 Extraction regex that captures **all** ID types including milestones:
 
-```
+```text
 \b([A-Z]{1,4})-([0-9]+)\b       # then validate: MS → 1 digit; everything else → 3 digits
 ```
 

@@ -25,6 +25,10 @@ markdown:
       # python-coding is an in-development standard, not yet released for adoption (excluded from
       # `adopt`); its README is a draft, not a managed doc, so it is not frontmatter-validated yet.
       - "standards/python-coding/**"
+      # project-spec is likewise an in-development draft standard, not yet registered for adoption;
+      # its README, adopt guide, and resources are drafts (no frontmatter yet), not managed docs —
+      # excluded until the standard is released. (Its templates are already covered above.)
+      - "standards/project-spec/**"
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"
