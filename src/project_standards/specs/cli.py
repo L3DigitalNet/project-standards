@@ -436,16 +436,35 @@ def _upgrade_output(
 def _deliver_upgrade(
     args: argparse.Namespace, text: str, *, source_profile: str, spec_id: str
 ) -> int:
-    # Task 9 fills in -i / -o; this task ships preview only.
+    if args.in_place:
+        target, mode = args.src, "in_place"
+    elif args.output is not None:
+        if args.output.exists() and args.src.exists() and args.output.samefile(args.src):
+            raise NewError("flag_conflict", "output equals source; use --in-place")
+        target, mode = args.output, "output"
+    else:
+        _upgrade_output(
+            text,
+            json_mode=args.json,
+            source_profile=source_profile,
+            target_tier=args.to,
+            spec_id=spec_id,
+            path=None,
+            mode="stdout",
+            written=False,
+        )
+        return 0
+    # -i overwrites the source as the normal path; -o refuses an existing target unless --force.
+    _safe_atomic_write(target, text, force=args.force or args.in_place)
     _upgrade_output(
         text,
         json_mode=args.json,
         source_profile=source_profile,
         target_tier=args.to,
         spec_id=spec_id,
-        path=None,
-        mode="stdout",
-        written=False,
+        path=str(target),
+        mode=mode,
+        written=True,
     )
     return 0
 
