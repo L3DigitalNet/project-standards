@@ -89,11 +89,7 @@ def split_front_matter(text: str):
 
 
 def fm_keys(fm: str) -> list[str]:
-    return [
-        m.group(1)
-        for line in fm.splitlines()
-        if (m := re.match(r"^([A-Za-z_][\w]*):", line))
-    ]
+    return [m.group(1) for line in fm.splitlines() if (m := re.match(r"^([A-Za-z_][\w]*):", line))]
 
 
 def headings(body: str) -> list[tuple[int, str, int]]:
@@ -136,9 +132,7 @@ def check_file(
     # --- frontmatter -------------------------------------------------------
     keys = fm_keys(fm)
     if keys != fm_reference:
-        problems.append(
-            f"[frontmatter] key set/order differs from full: {keys} != {fm_reference}"
-        )
+        problems.append(f"[frontmatter] key set/order differs from full: {keys} != {fm_reference}")
     prof = re.search(r"^profile:\s*(\S+)", fm, re.M)
     if not prof or prof.group(1) != name:
         problems.append(
@@ -153,35 +147,31 @@ def check_file(
     # --- sections: subset of canonical, ascending, gaps annotated ----------
     for n, ln in secs:
         if n not in canonical:
-            problems.append(
-                f"[sections] §{n} (L{ln}) is not in the canonical (full) registry"
-            )
+            problems.append(f"[sections] §{n} (L{ln}) is not in the canonical (full) registry")
     order = [numkey(n) for n, _ in secs]
     if order != sorted(order):
         problems.append("[sections] headings are not in ascending numeric order")
     # top-level gap annotation coverage (range-aware)
     omit_lines = [
-        l
-        for l in body.splitlines()
-        if l.lstrip().startswith(">") and "tier" in l and "omitted" in l
+        line
+        for line in body.splitlines()
+        if line.lstrip().startswith(">") and "tier" in line and "omitted" in line
     ]
     covered: set[int] = set()
-    for l in omit_lines:
-        ranges: list[tuple[str, str]] = re.findall(
-            r"§(\d+)\s*[–-]\s*§?(\d+)", l
-        )  # §3–§6
+    for line in omit_lines:
+        # The class matches a U+2013 en dash or a plain hyphen -- the
+        # range separator used in omission notes such as a 3-to-6 span.
+        ranges: list[tuple[str, str]] = re.findall(r"§(\d+)\s*[\u2013-]\s*§?(\d+)", line)
         for a, b in ranges:
             covered.update(range(int(a), int(b) + 1))
-        singles: list[str] = re.findall(r"§(\d+)", l)  # §5
+        singles: list[str] = re.findall(r"§(\d+)", line)  # e.g. §5
         for n in singles:
             covered.add(int(n))
     canon_top = {int(n) for n in canonical if "." not in n}
     present_top = {int(n) for n, _ in secs if "." not in n}
     for n in sorted(canon_top - present_top):
         if n not in covered:
-            problems.append(
-                f"[sections] gap at §{n} is not annotated with an omission note"
-            )
+            problems.append(f"[sections] gap at §{n} is not annotated with an omission note")
 
     # --- appendices --------------------------------------------------------
     apps = re.findall(r"^## Appendix ([A-Z]):", body, re.M)
@@ -204,9 +194,7 @@ def check_file(
     for m in re.finditer(r"\[([^\]]+)\]\(#([^)]+)\)", body):
         if m.group(2) not in slugs:
             ln = body[: m.start()].count("\n") + 1
-            problems.append(
-                f"[xref] dead anchor '#{m.group(2)}' (L{ln}, text '{m.group(1)}')"
-            )
+            problems.append(f"[xref] dead anchor '#{m.group(2)}' (L{ln}, text '{m.group(1)}')")
 
     # --- ID format + registry ---------------------------------------------
     used: dict[str, int] = {}
@@ -232,17 +220,11 @@ def check_file(
             declared[row.group(1)] = row.group(2).strip()
     for pfx in used:
         if pfx not in declared:
-            problems.append(
-                f"[id-registry] prefix '{pfx}-' used but not declared in Appendix A"
-            )
+            problems.append(f"[id-registry] prefix '{pfx}-' used but not declared in Appendix A")
     for pfx, definedin in declared.items():
         defined_in_acc.setdefault(pfx, {})[name] = definedin
         mm = re.search(r"([0-9]+(?:\.[0-9]+)*)", definedin)
-        if (
-            mm
-            and mm.group(1) not in canonical
-            and mm.group(1).split(".")[0] not in canonical
-        ):
+        if mm and mm.group(1) not in canonical and mm.group(1).split(".")[0] not in canonical:
             problems.append(
                 f"[id-registry] Appendix A '{pfx}-' Defined In '{definedin}' not in registry"
             )
@@ -272,11 +254,7 @@ def check_file(
 
 
 def main() -> int:
-    root = (
-        pathlib.Path(sys.argv[1])
-        if len(sys.argv) > 1
-        else pathlib.Path(__file__).parent
-    )
+    root = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(__file__).parent
     paths = {n: root / f for n, f in TIER_FILES.items()}
     missing = [str(p) for p in paths.values() if not p.exists()]
     if missing:
@@ -297,7 +275,7 @@ def main() -> int:
     # cross-file: Defined In identical for shared prefixes
     xfile: list[str] = []
     for pfx, per_file in sorted(defined_in_acc.items()):
-        if len({v for v in per_file.values()}) > 1:
+        if len(set(per_file.values())) > 1:
             xfile.append(
                 f"[cross-file] '{pfx}-' Defined In differs: "
                 + "; ".join(f"{f}={v!r}" for f, v in per_file.items())
