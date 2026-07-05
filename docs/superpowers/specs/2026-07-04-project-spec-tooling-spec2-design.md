@@ -218,7 +218,7 @@ With `--json`, stdout carries exactly one JSON object and nothing else (I7). Fie
 { "ok": false, "error": "refusing to overwrite existing file: docs/specs/checkout.md (use --force)", "code": "exists" }
 ```
 
-`code` is a stable, low-cardinality slug (`exists`, `not_regular_file`, `symlinked_parent`, `flag_conflict`, `bad_id`, `id_collision`, `bad_field_value`, `id_exhausted`, `config_error`, `mkdir_failed`, `self_validation_failed`). For `self_validation_failed`, a `findings` array of the `validate` `Finding` records (the same `dataclasses.asdict` shape the existing commands emit) is included so automation sees exactly what failed.
+`code` is a stable, low-cardinality slug (`exists`, `not_regular_file`, `symlinked_parent`, `flag_conflict`, `bad_id`, `id_collision`, `bad_field_value`, `id_exhausted`, `config_error`, `mkdir_failed`, `write_failed`, `self_validation_failed`). For `self_validation_failed`, a `findings` array of the `validate` `Finding` records (the same `dataclasses.asdict` shape the existing commands emit) is included so automation sees exactly what failed.
 
 ## Component 7 — Testing
 
