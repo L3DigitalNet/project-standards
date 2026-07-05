@@ -4,11 +4,9 @@
 
 ## State at a glance
 
-- **Release-readiness audit + fixes (2026-07-05, `testing`):** two multi-agent passes → **24 verified findings (0 false positives), all in-scope fixed**. Pass 1 (`38b7980`): 🔴 `spec upgrade` failed self-validation on every tier-increasing upgrade (dead Appendix D anchor) — fixed in `upgrade.py` + regression tests; AGENTS/CLAUDE "four"→**five** standards; `src` README `spec` signatures; CHANGELOG `### Fixed`; `meta/versioning.md` checklist hardened. Pass 2 (`206e97e`): 🟡 `spec extract "Appendix "` IndexError crash fixed; `validate-specs.yml` consuming-repo path now `has_spec`-gated; ADR bundle byte-identity guard added; `architecture.md` component graph refreshed. **Deferred to the release commit** (now mandated by the checklist): all `@v3`→`@v4` pin bumps + `UPGRADING.md` v3→v4 rewrite.
-- **Next release off `testing` is MAJOR (v4.0.0)** — six validator strictness bumps + Python Tooling floor raise (each MAJOR) + project-spec (MINOR). Not yet cut.
-- **`project-spec` (5th standard) REGISTERED:** full `validate|lint|extract|next|new|upgrade` surface, `spec:` config, `validate-specs.yml` CI.
-- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` ahead.
-- **Docs pruned for v4.0.0 (`9bf50be`):** 53 deleted (codex-reviews, implemented plans, `v1.1.0/`). Kept all specs + pending `check`-drift plan.
+- **v4.0.0 RELEASED on `main` 2026-07-05** (release commit `c7c2fd8`; tags `v4.0.0` + moving `v4`; `v3` frozen at `e69ab6b`; GitHub release live). MAJOR: six validator/config strictness bumps + Python Tooling ruff floor `>=0.14`; ships **project-spec** (5th standard) as additive opt-in. Release commit carried every checklist item: `standards-ref` defaults + all `@v3`→`@v4` doc pins (incl. the project-spec adopt.md availability banner), `UPGRADING.md` rewritten v3→v4, pyproject `4.0.0` + `uv.lock`, CHANGELOG `[4.0.0]` migration notes. All 5 CI workflows green on `main`.
+- **Pre-release drift caught while cutting:** two spec-design docs failed Prettier + markdownlint (60× MD049) — `testing` never runs format/lint CI (push triggers are `main`-only); fixed in `a2fe444` before the release commit.
+- **`testing` synced to `main`** post-release; branches identical.
 
 ## Active incidents
 
