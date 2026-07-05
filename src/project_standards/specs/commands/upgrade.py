@@ -162,8 +162,12 @@ def _reconcile_shared(source_block: str, target_block: str) -> str:
             # Author subsection BODY kept verbatim, but its trailing filler (dividers /
             # stale whole-section omission notes that ride on the last source subsection's
             # slice) is reconciled from the target — else a stale "§N omitted" note survives
-            # next to a now-present section (task-5 review). Middle subsections' tails are
-            # already "\n\n" in both, so this is a no-op for them.
+            # next to a now-present section (task-5 review). This trims only lines _is_filler
+            # matches (blank / "---" / a "> …tier…omitted" note). It is NOT a structural
+            # invariant that a kept subsection's tail is inert: the reshape-identity precheck
+            # (check_upgradeable, Task 8) refuses any source whose kept-subsection trailing
+            # filler is non-canonical, so an author's own trailing divider or tier/omitted
+            # blockquote yields a clean source_not_upgradeable refusal, not silent loss here.
             out.append(_swap_tail(src_subs[key], tgt_text))
         else:
             out.append(tgt_text)  # inserted subsection OR tier-variant boilerplate (e.g. §17.1)
@@ -200,6 +204,13 @@ def upgrade_text(source_text: str, target_template_text: str, *, target_tier: st
     """Splice ``source_text`` up to ``target_tier`` using ``target_template_text`` as the
     donor for missing sections and tier-owned boilerplate. Source-as-spine: the source's
     frontmatter and authored blocks are the base; the target template only fills gaps.
+
+    Precondition: ``source_text`` is a frontmatter-bearing spec that has passed the
+    upgradeability precheck (``check_upgradeable``) — its scaffolding, including each kept
+    subsection's trailing filler, is canonical for its tier. The impure shell
+    ``cli._run_upgrade`` enforces this (and self-validates the output) before/after calling;
+    calling directly on a non-canonical source can drop trailing filler (see
+    ``_reconcile_shared``) or, for frontmatter-less input, emit a spurious empty fence.
     """
     src_fm, src_body = split_front_matter(source_text)
     _tgt_fm, tgt_body = split_front_matter(target_template_text)
