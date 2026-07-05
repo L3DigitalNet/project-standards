@@ -352,3 +352,22 @@ def test_dogfood_new_then_validate(
     target = tmp_path / f"{tier}.md"
     assert run(["new", "--profile", tier, str(target)]) == 0  # minted id, no --id
     assert run(["validate", str(target)]) == 0  # still validates
+
+
+def test_absolute_path_with_symlinked_ancestor_above_cwd_is_allowed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The symlinked-parent guard is bounded to cwd: a symlink in the ancestry ABOVE the
+    # working directory (macOS /var -> /private/var, a symlinked $HOME, a repo under a
+    # symlinked path) must NOT refuse an otherwise-valid absolute PATH. Here `syslink -> sys`
+    # sits above cwd (sys/repo), so `syslink/repo/out.md` is a legitimate absolute target.
+    # Complements test_symlinked_parent_refused, which proves an in-tree symlink is still refused.
+    real = tmp_path / "sys" / "repo"
+    real.mkdir(parents=True)
+    (tmp_path / "syslink").symlink_to(tmp_path / "sys", target_is_directory=True)
+    monkeypatch.chdir(real)
+    target = tmp_path / "syslink" / "repo" / "out.md"  # absolute; `syslink` ancestor is above cwd
+    assert run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(target)]) == 0
+    assert (
+        real / "out.md"
+    ).is_file()  # written through the above-cwd symlink, resolves into the tree

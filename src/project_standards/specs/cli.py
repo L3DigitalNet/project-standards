@@ -230,8 +230,29 @@ def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
 
 def _parent_chain_has_symlink(target: Path) -> bool:
     # Path.exists()/is_file() follow symlinks, so a symlinked PARENT (docs/link/spec.md)
-    # could redirect the write outside the tree. Refuse a symlink anywhere in the chain.
-    return any(parent.is_symlink() for parent in target.parents)
+    # could redirect the write outside the working tree — refuse it. The walk is BOUNDED to
+    # the cwd like adopt/engine._has_symlinked_ancestor (which stops at dest_root) — but note
+    # the parity is adaptive, not a straight port: the engine's caller (validate_dest) rejects
+    # `..`/absolute and pre-normalizes containment BEFORE the walk, so its helper needs no
+    # containment test. `new` has no such pre-validation of the raw args.path, so the walk
+    # folds the boundary in itself via the is_relative_to check below.
+    # symlinks in the invocation's own system/home ancestry ABOVE cwd (e.g. macOS
+    # /var -> /private/var, a symlinked $HOME, a repo checked out under a symlinked path)
+    # are the environment, not an attack surface, and must not spuriously refuse an absolute
+    # PATH. Parents are inspected UNRESOLVED — Path.resolve() would follow the very symlinks
+    # we mean to detect; is_symlink() is False for non-existent paths, so only real symlinked
+    # ancestors within the tree trip this. An absolute PATH outside cwd gets no ancestry check
+    # (the user pointed there deliberately; its layout is not ours to police).
+    root = Path.cwd()
+    abs_target = root / target  # relative -> under root; an absolute target overrides root
+    for parent in abs_target.parents:
+        if parent == root:
+            break
+        if not parent.is_relative_to(root):
+            break  # walked above/outside cwd: no longer part of the working tree
+        if parent.is_symlink():
+            return True
+    return False
 
 
 def _target_type_conflict(target: Path) -> bool:
