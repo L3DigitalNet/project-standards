@@ -185,7 +185,10 @@ def main(argv: list[str] | None = None) -> int:
             _p.add_argument(
                 "--glob",
                 metavar="PATTERN",
-                help="Additional glob pattern relative to cwd.",
+                help=(
+                    "Glob pattern (relative to cwd) to validate instead of the "
+                    "config include list; combines with explicit FILE arguments."
+                ),
             )
             _p.add_argument(
                 "--no-require-frontmatter",

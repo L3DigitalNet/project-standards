@@ -606,7 +606,11 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
-    parser.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+    # Default None, not _DEFAULT_CONFIG: a missing implicit default falls back to
+    # defaults, but an operator-typed --config that does not exist must exit 2 —
+    # silently formatting (and writing) under defaults disables the checks being
+    # requested. Mirrors validate_frontmatter's --config handling.
+    parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--schema", type=Path, default=None)
     parser.add_argument("--glob", metavar="PATTERN")
     mode = parser.add_mutually_exclusive_group()
@@ -623,8 +627,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.stdin and (args.files or args.glob or args.write):
         parser.error("--stdin cannot be combined with FILE, --glob, or --write")
 
+    if args.config is not None and not args.config.exists():
+        print(f"error: config file not found: {args.config}", file=sys.stderr)
+        return 2
     try:
-        config = load_config(args.config)
+        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -660,7 +667,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         try:
             text = path.read_text(encoding="utf-8-sig")
-        except OSError as exc:
+        except (OSError, UnicodeDecodeError) as exc:
             print(f"{path}: cannot read: {exc}", file=sys.stderr)
             unparseable = True
             continue

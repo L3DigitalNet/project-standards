@@ -813,6 +813,33 @@ def test_main_custom_schema_via_flag_skips(
     assert "custom schema" in (out + err).lower()
 
 
+def test_main_typo_config_path_exits_2_not_silent_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A typo'd --config must fail loudly, not silently fall back to defaults and write."""
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    rc = main(["--write", "--config", str(tmp_path / "no-such-config.yml"), str(f)])
+    assert rc == 2
+    _out, err = capsys.readouterr()
+    assert "config file not found" in err.lower()
+    assert f.read_text() == _doc(title="X").replace("title: 'X'", "title: X")
+
+
+def test_main_non_utf8_file_reports_error_not_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_bytes(b"\xff\xfe garbage not utf-8 \x00\x81")
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--config", str(cfg), str(f)])
+    assert rc == 1
+    _out, err = capsys.readouterr()
+    assert "cannot read" in err.lower()
+
+
 def test_main_malformed_config_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

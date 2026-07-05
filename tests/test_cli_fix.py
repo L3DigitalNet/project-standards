@@ -167,6 +167,18 @@ def test_fix_help_in_process(capsys: pytest.CaptureFixture[str]) -> None:
     assert "usage" in (captured.out + captured.err).lower()
 
 
+def test_validate_help_glob_text_matches_real_replace_semantics(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--glob replaces the config include list; it is not merely "additional"."""
+    rc = cli_main(["validate", "--help"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    text = " ".join((captured.out + captured.err).lower().split())
+    assert "additional glob pattern" not in text
+    assert "instead of the config include list" in text
+
+
 def test_fix_bad_config_in_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """fix with a malformed --config (bad YAML) → returns 2."""
     monkeypatch.chdir(tmp_path)
