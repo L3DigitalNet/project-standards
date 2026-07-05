@@ -12,5 +12,6 @@ Design documents and brainstorming outputs for `project-standards`. Each spec ca
 | 2026-06-06 | [Markdown Tooling Standard](2026-06-06-markdown-tooling-standard-design.md) | approved | Define the Markdown Tooling governed standard (markdownlint, Prettier, EditorConfig) as a new adoptable bundle |
 | 2026-06-08 | [Adopt CLI](2026-06-08-adopt-cli-design.md) | approved | The `project-standards adopt \| list` CLI — packaged scaffolder for materializing standard artifacts into target repos |
 | 2026-06-08 | [Check / Drift Detection](2026-06-08-check-drift-design.md) | approved | The `project-standards check` command — detect drift between adopted artifacts and the canonical bundle |
+| 2026-07-04 | [Project-Spec Tooling — Spec #1](2026-07-04-project-spec-tooling-design.md) | approved | The `project-standards spec validate \| lint \| extract \| next` read-only commands over a shared registry core; retires `check_specs.py` |
 
 Implementation plans for these specs live in [`../plans/`](../plans/).
