@@ -13,7 +13,7 @@ import re
 from project_standards.specs.commands.new import (
     _rewrite_frontmatter,  # pyright: ignore[reportPrivateUsage]
 )
-from project_standards.specs.registry import gh_slug
+from project_standards.specs.registry import gh_slug, split_front_matter
 
 _TIER_WORD = {"light": "Light", "standard": "Standard", "full": "Full"}
 # Line-anchored (^ + MULTILINE) with horizontal-only whitespace [ \t] so a substitution
@@ -159,7 +159,12 @@ def _reconcile_shared(source_block: str, target_block: str) -> str:
         if key == "":
             out.append(tgt_text)  # target heading + intro (drops stale reduction note)
         elif key in src_subs and key not in _TEMPLATE_OWNED_SUBS:
-            out.append(src_subs[key])  # author subsection verbatim
+            # Author subsection BODY kept verbatim, but its trailing filler (dividers /
+            # stale whole-section omission notes that ride on the last source subsection's
+            # slice) is reconciled from the target — else a stale "§N omitted" note survives
+            # next to a now-present section (task-5 review). Middle subsections' tails are
+            # already "\n\n" in both, so this is a no-op for them.
+            out.append(_swap_tail(src_subs[key], tgt_text))
         else:
             out.append(tgt_text)  # inserted subsection OR tier-variant boilerplate (e.g. §17.1)
     return "".join(out)
@@ -189,3 +194,16 @@ def _is_filler(line: str) -> bool:
     if s in ("", "---"):
         return True
     return s.startswith(">") and "tier" in s and "omitted" in s
+
+
+def upgrade_text(source_text: str, target_template_text: str, *, target_tier: str) -> str:
+    """Splice ``source_text`` up to ``target_tier`` using ``target_template_text`` as the
+    donor for missing sections and tier-owned boilerplate. Source-as-spine: the source's
+    frontmatter and authored blocks are the base; the target template only fills gaps.
+    """
+    src_fm, src_body = split_front_matter(source_text)
+    _tgt_fm, tgt_body = split_front_matter(target_template_text)
+    merged_body = _merge_top(src_body, tgt_body)
+    text = f"---\n{src_fm}\n---\n{merged_body}"  # source frontmatter preserved verbatim
+    text = _set_profile(text, target_tier)
+    return _rewrite_h1_suffix(text, target_tier)

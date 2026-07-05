@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from project_standards.specs.commands.upgrade import (  # pyright: ignore[reportPrivateUsage]
     _merge_top,  # pyright: ignore[reportPrivateUsage]
     _present_top_keys,  # pyright: ignore[reportPrivateUsage]
@@ -7,7 +11,17 @@ from project_standards.specs.commands.upgrade import (  # pyright: ignore[report
     _rewrite_h1_suffix,  # pyright: ignore[reportPrivateUsage]
     _set_profile,  # pyright: ignore[reportPrivateUsage]
     _top_blocks,  # pyright: ignore[reportPrivateUsage]
+    upgrade_text,
 )
+from project_standards.specs.commands.validate import validate_document
+from project_standards.specs.document import parse_document
+from project_standards.specs.registry import TEMPLATES_DIR, TIER_FILES, load_registry
+
+_FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
+
+
+def _tmpl(tier: str) -> str:
+    return (TEMPLATES_DIR / TIER_FILES[tier]).read_text(encoding="utf-8")
 
 
 def test_set_profile_rewrites_only_the_profile_line() -> None:
@@ -160,3 +174,49 @@ def test_reconcile_takes_tier_variant_subsection_17_1_from_target() -> None:
     assert "LIGHT dod item" not in out  # light's DoD dropped
     assert "### 17.2 Test Strategy" in out  # missing subsection inserted
     assert "At the Light profile" not in out  # reduction-note intro dropped (target intro used)
+
+
+def test_reconcile_drops_trailing_omission_note_on_last_source_subsection() -> None:
+    source = (
+        "## 7. Requirements\n\n"
+        "### 7.1 Functional Requirements\n\nAUTHORED FR TABLE\n\n---\n\n"
+        "> **Sections §8–§16 are Standard/Full-tier** and are intentionally omitted at the Light profile.\n\n"  # noqa: RUF001
+    )
+    target = (
+        "## 7. Requirements\n\n"
+        "### 7.1 Functional Requirements\n\nstub\n\n"
+        "### 7.2 Non-Functional Requirements\n\nnfr stub\n\n"
+    )
+    out = _reconcile_shared(source, target)
+    assert "AUTHORED FR TABLE" in out  # author body kept
+    assert "### 7.2 Non-Functional" in out  # inserted subsection present
+    assert "intentionally omitted" not in out  # stale trailing note dropped (target tail used)
+    assert "§8–§16" not in out  # noqa: RUF001
+
+
+@pytest.mark.parametrize(
+    ("src", "tier", "want"),
+    [
+        ("upgrade_light.md", "standard", "upgrade_standard.md"),
+        ("upgrade_light.md", "full", "upgrade_full.md"),
+        ("upgrade_standard.md", "full", "upgrade_full.md"),
+    ],
+)
+def test_upgrade_round_trip_is_byte_identical_to_target_fixture(
+    src: str, tier: str, want: str
+) -> None:
+    out = upgrade_text((_FIX / src).read_text(encoding="utf-8"), _tmpl(tier), target_tier=tier)
+    assert out == (_FIX / want).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("src", "tier"),
+    [
+        ("upgrade_light.md", "standard"),
+        ("upgrade_light.md", "full"),
+        ("upgrade_standard.md", "full"),
+    ],
+)
+def test_upgrade_output_validates(src: str, tier: str) -> None:
+    out = upgrade_text((_FIX / src).read_text(encoding="utf-8"), _tmpl(tier), target_tier=tier)
+    assert validate_document(parse_document("<out>", out), load_registry()) == []
