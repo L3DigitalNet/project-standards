@@ -10,6 +10,7 @@ from project_standards.specs.commands.upgrade import (  # pyright: ignore[report
     _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
     _rewrite_h1_suffix,  # pyright: ignore[reportPrivateUsage]
     _set_profile,  # pyright: ignore[reportPrivateUsage]
+    _sub_blocks,  # pyright: ignore[reportPrivateUsage]
     _top_blocks,  # pyright: ignore[reportPrivateUsage]
     upgrade_text,
 )
@@ -308,3 +309,41 @@ def test_check_upgradeable_rejects_noncanonical_trailing_blockquote_in_kept_subs
         1,
     )
     assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+@pytest.mark.parametrize(
+    ("lo", "hi"),
+    [("light", "standard"), ("light", "full"), ("standard", "full")],
+)
+def test_no_section_gains_first_subsection_across_a_tier_boundary(lo: str, hi: str) -> None:
+    """Pin an unenforced template-structure invariant the upgrade precheck's U2
+    soundness silently depends on: no top-level numbered section may be
+    un-subsectioned (zero ``### `` subsections) at a lower tier but subsectioned
+    (>=1) at a higher tier.
+
+    A section may gain MORE subsections across tiers (light §7 has only §7.1;
+    standard adds §7.2-§7.4) — that's fine, the source already has >=1. The
+    forbidden transition is 0 -> N: if a future template edit ever gave a
+    section its FIRST subsection across a tier boundary, `_reconcile_shared`'s
+    ``key == ""`` branch would take the higher tier's (target's) short intro
+    unconditionally, silently dropping the lower tier's entire un-subsectioned
+    section body — the reshape-identity precheck (`check_upgradeable`) would no
+    longer be a true superset of the splice's mutations for that section, and
+    real author content could be lost with no refusal. This test fails loudly
+    the moment the invariant is violated, instead of the splice losing bytes
+    quietly.
+    """
+    lo_body = _tmpl(lo)
+    hi_body = _tmpl(hi)
+    lo_blocks = dict(_top_blocks(lo_body))
+    hi_blocks = dict(_top_blocks(hi_body))
+    shared_keys = set(_present_top_keys(lo_body)) & set(_present_top_keys(hi_body))
+    for key in sorted(shared_keys):
+        lo_has_subs = any(k for k, _ in _sub_blocks(lo_blocks[key]) if k)
+        hi_has_subs = any(k for k, _ in _sub_blocks(hi_blocks[key]) if k)
+        if not lo_has_subs:
+            assert not hi_has_subs, (
+                f"section {key}: un-subsectioned at {lo} but subsectioned at {hi} — "
+                "would silently drop author body in _reconcile_shared (U2 risk); "
+                "update _reconcile_shared's key=='' path before adding such a section"
+            )
