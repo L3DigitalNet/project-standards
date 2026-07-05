@@ -144,7 +144,7 @@ Define every domain term an implementer could misread. Ambiguous terminology is 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
 | FR-001 | The system shall remain valid at every tier its profile declares. | Task 6's round-trip test keys off the declared profile | `parse_document(...).profile` matches the fixture's tier and `validate_document(...) == []` | Must |
-| FR-002 | The system shall keep its shared author cells byte-identical across the light/standard/full fixture triple. | The Task 6 round-trip test compares upgraded output to these fixtures byte-for-byte | Manual diff of §1/§2/§7.1/§17.1/§21/Deviations Log across the three fixtures shows no differences | Should |
+| FR-002 | The system shall keep its shared author cells byte-identical across the light/standard/full fixture triple. | The Task 6 round-trip test compares upgraded output to these fixtures byte-for-byte | Manual diff of §1/§2/§7.1/§21/Deviations Log across the three fixtures shows no differences | Should |
 
 ### 7.2 Non-Functional Requirements
 
