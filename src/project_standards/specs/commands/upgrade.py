@@ -15,7 +15,15 @@ from project_standards.specs.commands.new import (
 )
 
 _TIER_WORD = {"light": "Light", "standard": "Standard", "full": "Full"}
-_H1_SUFFIX = re.compile(r"(#\s+`[^`]*`\s+—\s+Specification\s+\()(Light|Standard|Full)(\))")
+# Line-anchored (^ + MULTILINE) with horizontal-only whitespace [ \t] so a substitution
+# can only land on a real H1 heading line, never an H1-shaped example quoted inside a
+# spliced source body (this module copies author source verbatim, and a spec-about-specs
+# may contain such an example). count=1 in _rewrite_h1_suffix then takes the first such
+# line, which is always the document's real H1.
+_H1_SUFFIX = re.compile(
+    r"^(#[ \t]+`[^`]*`[ \t]+—[ \t]+Specification[ \t]+\()(Light|Standard|Full)(\))",
+    re.MULTILINE,
+)
 
 
 def _set_profile(text: str, tier: str) -> str:  # pyright: ignore[reportUnusedFunction]
