@@ -36,7 +36,14 @@ def _rewrite_h1_suffix(text: str, tier: str) -> str:  # pyright: ignore[reportUn
     return _H1_SUFFIX.sub(lambda m: m.group(1) + word + m.group(3), text, count=1)
 
 
-_NUM = re.compile(r"^(\d+)\.")
+# Captures the leading numeral of a heading, dotted-decimal-aware: "7. Requirements" (top
+# level, trailing "." is punctuation) -> "7", and "17.1 Definition of Done" (subsection,
+# no trailing punctuation before the space) -> "17.1". A naive `(\d+)\.` captures only the
+# digits before the FIRST dot, which collapses every subsection of a section (17.1, 17.2,
+# 17.3) to the same key as the section itself ("17") — silently merging them in _sub_blocks.
+# The trailing `\.?` is optional so it eats the top-level's punctuation dot without also
+# being required for the subsection form, which has no such dot before the space.
+_NUM = re.compile(r"^(\d+(?:\.\d+)*)\.?(?=[ \t])")
 _APX = re.compile(r"^Appendix ([A-Z]):")
 # CommonMark fenced-code delimiters, mirroring validate_frontmatter._CODE_FENCE_RE /
 # _CODE_FENCE_CLOSE_RE exactly (DRY across the package): a fence OPENS with up to 3 leading
@@ -100,13 +107,83 @@ def _present_top_keys(body: str) -> list[str]:  # pyright: ignore[reportUnusedFu
 # is lost by replacing them.
 _TEMPLATE_OWNED = {"appendix-A", "appendix-B", "appendix-D"}
 
+# §17.1 (Definition of Done) is tier-variant canonical boilerplate — identical across
+# standard/full but simpler at light (its DoD can't reference §17.3/§18.7/§13.6, absent at
+# light). Like Appendix A/B/D it is taken from the TARGET, never the source. The precheck
+# (Task 8) guarantees the source's §17.1 is canonical, so replacing it loses no author bytes.
+_TEMPLATE_OWNED_SUBS = {"17.1"}
+
 
 def _merge_top(source_body: str, target_body: str) -> str:  # pyright: ignore[reportUnusedFunction]
     source_map = dict(_top_blocks(source_body))
     out: list[str] = []
     for key, target_text in _top_blocks(target_body):
-        if key in source_map and key not in _TEMPLATE_OWNED:
-            out.append(source_map[key])
+        if key == "":
+            out.append(source_map[key])  # preamble from source
+        elif key in source_map and key not in _TEMPLATE_OWNED:
+            out.append(_reconcile_shared(source_map[key], target_text))
         else:
             out.append(target_text)  # missing unit, tier-owned appendix, or target preamble
     return "".join(out)
+
+
+def _sub_blocks(block: str) -> list[tuple[str, str]]:
+    starts = _heading_starts(block, "### ")  # fence-aware (Task 3)
+    out: list[tuple[str, str]] = []
+    intro_end = starts[0][0] if starts else len(block)
+    out.append(("", block[:intro_end]))  # heading + pre-first-subsection intro filler
+    for i, (pos, heading) in enumerate(starts):
+        end = starts[i + 1][0] if i + 1 < len(starts) else len(block)
+        out.append((_block_key(heading), block[pos:end]))
+    return out
+
+
+def _reconcile_shared(source_block: str, target_block: str) -> str:
+    """Reconcile a shared top-level block: keep the source's authored subsections
+    verbatim, insert any subsection the target has but the source lacks, and always
+    take the pre-first-subsection intro and (via ``_swap_tail``) the trailing filler
+    from the target — dropping stale omission/reduction notes in favor of the
+    target's canonical ones. §17.1 is template-owned (see ``_TEMPLATE_OWNED_SUBS``)
+    and is always taken from the target even when the source has it.
+    """
+    src_subs = dict(_sub_blocks(source_block))
+    tgt_subs = _sub_blocks(target_block)
+    if len(tgt_subs) == 1:
+        # No subsection structure: keep the author body, take only the trailing filler
+        # (dividers / now-stale omission notes) from the target block.
+        return _swap_tail(source_block, target_block)
+    out: list[str] = []
+    for key, tgt_text in tgt_subs:
+        if key == "":
+            out.append(tgt_text)  # target heading + intro (drops stale reduction note)
+        elif key in src_subs and key not in _TEMPLATE_OWNED_SUBS:
+            out.append(src_subs[key])  # author subsection verbatim
+        else:
+            out.append(tgt_text)  # inserted subsection OR tier-variant boilerplate (e.g. §17.1)
+    return "".join(out)
+
+
+def _swap_tail(source_block: str, target_block: str) -> str:
+    """Return the source block with its trailing filler replaced by the target's.
+
+    Trailing filler = the maximal suffix of blank / `---` / omission-note (`> … tier …
+    omitted`) lines. This is where stale whole-section omission notes live.
+    """
+
+    def split(block: str) -> tuple[str, str]:
+        lines = block.splitlines(keepends=True)
+        i = len(lines)
+        while i > 0 and _is_filler(lines[i - 1]):
+            i -= 1
+        return "".join(lines[:i]), "".join(lines[i:])
+
+    src_body, _src_tail = split(source_block)
+    _tgt_body, tgt_tail = split(target_block)
+    return src_body + tgt_tail
+
+
+def _is_filler(line: str) -> bool:
+    s = line.strip()
+    if s in ("", "---"):
+        return True
+    return s.startswith(">") and "tier" in s and "omitted" in s

@@ -108,3 +108,66 @@ def test_merge_top_inserts_missing_section_and_keeps_author_block() -> None:
     assert "## 3. Context" in out  # target's §3 inserted
     assert "context stub" in out
     assert out.index("## 1. Purpose") < out.index("## 3. Context") < out.index("## 7. Requirements")
+
+
+def test_reconcile_drops_stale_omission_note_tail() -> None:
+    from project_standards.specs.commands.upgrade import (
+        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    source = (
+        "## 2. Scope\n\nAUTHORED scope\n\n---\n\n"
+        "> **Sections §3–§6 are Standard/Full-tier** and are intentionally omitted "  # noqa: RUF001
+        "at the Light profile.\n\n"
+    )
+    target = "## 2. Scope\n\nscope stub\n\n---\n\n"
+    out = _reconcile_shared(source, target)
+    assert "AUTHORED scope" in out  # author body kept
+    assert "intentionally omitted" not in out  # stale tail dropped (target tail used)
+
+
+def test_reconcile_inserts_missing_subsections_and_drops_reduction_note() -> None:
+    from project_standards.specs.commands.upgrade import (
+        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    source = (
+        "## 7. Requirements\n\n"
+        "> At the Light profile, Requirements is functional-only (§7.1). "
+        "§7.2–§7.4 are Standard-tier.\n\n"  # noqa: RUF001
+        "### 7.1 Functional Requirements\n\nAUTHORED FR TABLE\n\n"
+    )
+    target = (
+        "## 7. Requirements\n\n"
+        "> **Quality rule:** one testable statement.\n\n"
+        "### 7.1 Functional Requirements\n\nstub\n\n"
+        "### 7.2 Non-Functional Requirements\n\nnfr stub\n\n"
+    )
+    out = _reconcile_shared(source, target)
+    assert "AUTHORED FR TABLE" in out  # source §7.1 kept
+    assert "### 7.2 Non-Functional" in out  # target §7.2 inserted
+    assert "functional-only" not in out  # reduction note dropped
+    assert "Quality rule" in out  # target intro used
+
+
+def test_reconcile_takes_tier_variant_subsection_17_1_from_target() -> None:
+    from project_standards.specs.commands.upgrade import (
+        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    source = (
+        "## 17. Testing and Acceptance\n\n"
+        "> At the Light profile, this is the Definition of Done only (§17.1).\n\n"
+        "### 17.1 Definition of Done\n\n- [ ] LIGHT dod item\n\n---\n\n"
+    )
+    target = (
+        "## 17. Testing and Acceptance\n\n"
+        "### 17.1 Definition of Done\n\n- [ ] STANDARD dod item\n\n"
+        "### 17.2 Test Strategy\n\nstub\n\n"
+        "### 17.3 Traceability\n\nstub\n\n---\n\n"
+    )
+    out = _reconcile_shared(source, target)
+    assert "STANDARD dod item" in out  # §17.1 taken from TARGET (tier-variant boilerplate)
+    assert "LIGHT dod item" not in out  # light's DoD dropped
+    assert "### 17.2 Test Strategy" in out  # missing subsection inserted
+    assert "At the Light profile" not in out  # reduction-note intro dropped (target intro used)
