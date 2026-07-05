@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         help="validate schema + id + references (validate-frontmatter, validate-id, validate-references)",
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
-    sub.add_parser("spec", help="validate|lint|extract|next over project specs")
+    sub.add_parser("spec", help="validate|lint|extract|next|new over project specs")
 
     p_adopt = sub.add_parser(
         "adopt",

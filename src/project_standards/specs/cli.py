@@ -5,21 +5,43 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import random
+import re
 import sys
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
+from typing import NoReturn
 
 from project_standards.specs.commands.extract import extract_slice
 from project_standards.specs.commands.lint import lint_document
+from project_standards.specs.commands.new import (
+    FieldValueError,
+    NewOptions,
+    SpecIdExhausted,
+    check_field,
+    mint_spec_id,
+    scaffold,
+)
 from project_standards.specs.commands.next_id import next_free_id
 from project_standards.specs.commands.validate import validate_document
-from project_standards.specs.config import ConfigError, collect_spec_paths, load_spec_config
+from project_standards.specs.config import (
+    ConfigError,
+    collect_existing_spec_ids,
+    collect_spec_paths,
+    load_spec_config,
+)
 from project_standards.specs.document import SpecParseError, parse_document
 from project_standards.specs.model import Finding
-from project_standards.specs.registry import load_registry
+from project_standards.specs.registry import (
+    SPEC_ID_PATTERN,
+    TEMPLATES_DIR,
+    TIER_FILES,
+    load_registry,
+)
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
-_USAGE = "usage: project-standards spec {validate|lint|extract|next} ..."
+_USAGE = "usage: project-standards spec {validate|lint|extract|next|new} ..."
 
 
 def _read(path: Path) -> str:
@@ -128,11 +150,159 @@ def _run_lint(argv: list[str]) -> int:
     return _run_setwide(argv, lint=True)
 
 
+class _ArgparseError(Exception):
+    """Raised by _NewArgParser.error so a bad invocation reaches the JSON wrapper
+    instead of argparse's default sys.exit(2) + stderr (which would bypass I7)."""
+
+
+class _NewArgParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        raise _ArgparseError(message)
+
+
+class NewError(Exception):
+    """A `spec new` refusal/usage/validation failure. Carries the frozen JSON `code`."""
+
+    def __init__(self, code: str, message: str, findings: list[dict[str, object]] | None = None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.findings = findings or []
+
+
+def _emit_new_failure(json_mode: bool, err: NewError) -> int:
+    if json_mode:
+        obj: dict[str, object] = {"ok": False, "error": err.message, "code": err.code}
+        if err.findings:
+            obj["findings"] = err.findings
+        print(json.dumps(obj))
+    else:
+        print(f"error: {err.message}", file=sys.stderr)
+    return 2
+
+
+def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
+    """Validate flags, resolve the spec_id (mint or --id); return (opts, template_text).
+    Raises NewError for every exit-2 condition."""
+    for flag, value, is_title in (
+        ("title", args.title, True),
+        ("owner", args.owner, False),
+        ("implementer", args.implementer, False),
+    ):
+        if value is not None:
+            try:
+                check_field(flag, value, is_title=is_title)
+            except FieldValueError as exc:
+                raise NewError("bad_field_value", str(exc)) from exc
+
+    try:
+        cfg = load_spec_config(args.config)
+        existing_ids = collect_existing_spec_ids(cfg)
+    except ConfigError as exc:
+        raise NewError("config_error", str(exc)) from exc
+
+    if args.spec_id is not None:
+        if not re.match(SPEC_ID_PATTERN, args.spec_id):
+            raise NewError("bad_id", f"--id {args.spec_id!r} does not match {SPEC_ID_PATTERN}")
+        if args.spec_id in existing_ids:
+            raise NewError("id_collision", f"--id {args.spec_id} is already used in this repo")
+        spec_id = args.spec_id
+    else:
+        try:
+            spec_id = mint_spec_id(random.Random(), existing_ids)
+        except SpecIdExhausted as exc:
+            raise NewError("id_exhausted", str(exc)) from exc
+
+    opts = NewOptions(
+        profile=args.profile,
+        spec_id=spec_id,
+        title=args.title,
+        owner=args.owner,
+        implementer=args.implementer,
+    )
+    template_text = (TEMPLATES_DIR / TIER_FILES[args.profile]).read_text(encoding="utf-8")
+    return opts, template_text
+
+
+def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
+    raise NewError("write_failed", "file writing not yet implemented")  # replaced in Task 6
+
+
+def _run_new(argv: list[str]) -> int:
+    json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
+    ap = _NewArgParser(prog="project-standards spec new")
+    ap.add_argument("path", nargs="?", type=Path)
+    ap.add_argument("--profile", required=True, choices=("light", "standard", "full"))
+    ap.add_argument("--id", dest="spec_id")
+    ap.add_argument("--title")
+    ap.add_argument("--owner")
+    ap.add_argument("--implementer")
+    ap.add_argument("--stdout", action="store_true")
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+
+    try:
+        try:
+            args = ap.parse_args(argv)
+        except _ArgparseError as exc:
+            raise NewError("usage", str(exc)) from exc
+
+        if args.path is not None and args.stdout:
+            raise NewError("flag_conflict", "--stdout writes to stdout; do not also pass PATH")
+        if args.path is None and not args.stdout:
+            raise NewError("flag_conflict", "PATH is required unless --stdout")
+        if args.stdout and args.force:
+            raise NewError("flag_conflict", "--force has no meaning with --stdout")
+
+        opts, template_text = _resolve_new_options(args)
+        text = scaffold(template_text, opts, today=date.today())
+
+        # Fail-closed self-validation (I1): never emit a spec validate would reject, and
+        # map a parse failure of our OWN output to self_validation_failed (not exit 1).
+        try:
+            doc = parse_document("<new>", text)
+        except SpecParseError as exc:
+            raise NewError(
+                "self_validation_failed", f"generated scaffold did not parse: {exc}"
+            ) from exc
+        findings = validate_document(doc, load_registry())
+        if findings:
+            raise NewError(
+                "self_validation_failed",
+                "generated scaffold failed self-validation",
+                [dataclasses.asdict(f) for f in findings],
+            )
+
+        if args.stdout:
+            if args.json:
+                print(
+                    json.dumps(
+                        {
+                            "ok": True,
+                            "spec_id": opts.spec_id,
+                            "profile": opts.profile,
+                            "path": None,
+                            "written": False,
+                            "content": text,
+                        }
+                    )
+                )
+            else:
+                sys.stdout.write(text)
+            return 0
+
+        return _write_new_file(args, opts, text)  # Task 6
+    except NewError as err:
+        return _emit_new_failure(json_mode, err)
+
+
 _VERBS: dict[str, Callable[[list[str]], int]] = {
     "validate": _run_validate,
     "lint": _run_lint,
     "extract": _run_extract,
     "next": _run_next,
+    "new": _run_new,
 }
 
 
