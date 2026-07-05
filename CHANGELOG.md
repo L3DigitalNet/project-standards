@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-12'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -28,6 +28,26 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+> **Note for release planning: this release will be MAJOR.** Six independent validator/config strictness bumps below each newly-fail a previously-passing document or config, and the Python Tooling SSOT's ruff floor raise newly-fails a previously-passing re-sync — the previously-passing rule in `meta/versioning.md` applies "without exception" to each on its own. The Project Specification Standard's registration is additive (MINOR) and the `pytest-cov` removal is a no-op (PATCH, confirmed via `git log -p` on commit `752ad32`: the gate command never used it), but a release is classified by its **worst** change, so this ships as MAJOR whenever it's cut. Full migration notes belong in the release commit per `meta/versioning.md`'s release-requirements checklist; this entry records what changed and why.
+
+### Added
+
+- **Project Specification Standard registered — `project-standards spec` command group.** A fifth governed standard (`standards/project-spec/`): three tiered spec templates (Light ⊂ Standard ⊂ Full) with stable canonical numbering and typed IDs, plus a CLI operating on a repository's real specs — `validate` (deterministic structural gate: numbering, annotated gaps, appendix lettering, cross-references, frontmatter, ID uniqueness/tier/format, table shape), `lint` (advisory: unfilled placeholders, un-deleted template guidance, status-aware traceability), `extract` (print one ID row, section, heading match, or appendix), `next` (next free ID for a prefix), `new` (scaffold from a template, fail-closed self-validated before writing), and `upgrade` (additive Light→Standard→Full tier promotion — inserts missing sections/appendices at their stable numbers, never renumbers, gated on the source already validating clean and its scaffolding matching the canonical template for its tier). A new reusable CI workflow (`.github/workflows/validate-specs.yml`, `workflow_call` with `config-path`/`standards-ref`/`strict-lint` inputs) runs `spec validate`/`spec lint --strict` against a consumer's declared `spec:` config block. Unlike the copy-adopt standards, nothing is seeded into a consumer repo — installing `project-standards` gives the full tool surface directly. Full adoption procedure: [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md). **Additive — MINOR** per `meta/versioning.md`'s "Bundled contract set" row (a new, opt-in standard; nothing previously-passing is affected).
+- **`adopt python-tooling` now also delivers `.vscode/settings.json` and `.vscode/tasks.json`.** The standard's §13 always mandated all three `.vscode` files, but the adopt CLI only ever shipped `extensions.json` — `adopt.md` never disclosed the gap. Additive (skip-if-exists) — **MINOR**.
+
+### Changed
+
+- **`validate-frontmatter` — six independent strictness bumps, each MAJOR on its own (previously-passing rule):**
+  - Frontmatter `date`-typed fields (`created`, `updated`, `reviewed`) now reject a `datetime` value outright instead of silently truncating it to a date — a document whose YAML parsed a value as a full timestamp (e.g. an unquoted `2026-06-03T00:00:00`) now fails instead of passing with data silently dropped.
+  - A config `version` field (`markdown.frontmatter.version`, `markdown.adr.version`, etc.) given as an unquoted number now exits 2 (`"{key} must be a quoted string..."`) instead of parsing as a float and silently losing precision (`1.10` → `1.1`).
+  - The `tags` field's pattern tightened to `^[a-z0-9]+(-[a-z0-9]+)*$` (in-place 1.1 schema change) — a previously-accepted tag with, e.g., a leading/trailing hyphen or consecutive hyphens now fails.
+  - `.project-standards.yml` config files with a duplicate top-level key now exit 2 (`_UniqueKeyLoader`) instead of silently keeping only the last occurrence — the config analog of the frontmatter duplicate-key rejection that shipped in `3.0.0`.
+  - A non-string frontmatter key (e.g. a bare YAML key that parses as a number or boolean) is now explicitly rejected with a clear message instead of whatever downstream behavior it previously triggered.
+  - An explicitly-named file argument that does not exist, or a typo'd `--config` path, now exits 2 instead of silently falling through to a vacuous green run.
+- **Python Tooling SSOT — ruff dev-group floor raised `>=0.9.0` → `>=0.14`.** Required because `target-version = "py314"` is rejected outright by ruff 0.9–0.11 and only preview-supported in 0.12–0.13 (verified against 0.9.0/0.12.0/0.13.0/0.14.0) — the previously-recommended floor could not actually run the standard's own shipped config. Raising a tool floor is **MAJOR** for a consumer that re-syncs, per `meta/versioning.md`'s Python/Markdown Tooling row.
+- **Python Tooling SSOT — `pytest-cov` dropped from §6, the fragment, and this repo's own dev group.** Confirmed via commit history that nothing in the standard's documented verification gate ever used it — the gate has always run `coverage run -m pytest` directly, and a second coverage entry point is exactly the overlapping-tools problem the standard's §3 prohibits. **PATCH — no consumer-visible change** (a re-syncing consumer's working gate command is unaffected).
+- **Frontmatter template `id` placeholders reworded** from the literal `replace-with-stable-id` to format-teaching hints, and the Python Tooling standard gained a pre-commit scope note. Both docs-plane, no schema/validator change — **PATCH**.
 
 ## [3.0.0] — 2026-06-09
 
