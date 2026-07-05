@@ -8,7 +8,9 @@ file-writing shell lives in project_standards.specs.cli._run_new.
 
 from __future__ import annotations
 
+import random
 import re
+from collections.abc import Container
 
 import yaml
 
@@ -42,3 +44,23 @@ def emit_scalar(value: str) -> str:
     """
     dumped = yaml.safe_dump(value, default_style="'", allow_unicode=True, width=1_000_000)
     return dumped.strip()
+
+
+_ID_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"  # base36, matching ^SPEC-[0-9A-Z]{4}$
+_MINT_ATTEMPTS = 1000
+
+
+class SpecIdExhausted(RuntimeError):
+    """mint_spec_id could not find a free id within the attempt cap (advise --id)."""
+
+
+def mint_spec_id(
+    rng: random.Random, existing_ids: Container[str], *, attempts: int = _MINT_ATTEMPTS
+) -> str:
+    for _ in range(attempts):
+        candidate = "SPEC-" + "".join(rng.choice(_ID_ALPHABET) for _ in range(4))
+        if candidate not in existing_ids:
+            return candidate
+    raise SpecIdExhausted(
+        f"could not mint a unique spec_id in {attempts} attempts; pass --id SPEC-XXXX"
+    )
