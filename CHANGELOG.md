@@ -27,9 +27,17 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.0.0] — 2026-07-05
 
-> **Note for release planning: this release will be MAJOR.** Six independent validator/config strictness bumps below each newly-fail a previously-passing document or config, and the Python Tooling SSOT's ruff floor raise newly-fails a previously-passing re-sync — the previously-passing rule in `meta/versioning.md` applies "without exception" to each on its own. The Project Specification Standard's registration is additive (MINOR) and the `pytest-cov` removal is a no-op (PATCH, confirmed via `git log -p` on commit `752ad32`: the gate command never used it), but a release is classified by its **worst** change, so this ships as MAJOR whenever it's cut. Full migration notes belong in the release commit per `meta/versioning.md`'s release-requirements checklist; this entry records what changed and why.
+> **Why MAJOR:** six independent validator/config strictness bumps below each newly-fail a previously-passing document or config, and the Python Tooling SSOT's ruff floor raise newly-fails a previously-passing re-sync — the previously-passing rule in `meta/versioning.md` applies "without exception" to each on its own. The Project Specification Standard's registration is additive (MINOR) and the `pytest-cov` removal is a no-op (PATCH, confirmed via `git log -p` on commit `752ad32`: the gate command never used it), but a release is classified by its **worst** change, so this ships as `4.0.0`.
+
+**Migration from `v3`.** This is a major release; adopt it deliberately. The full step-by-step runbook is [`UPGRADING.md`](UPGRADING.md); the essentials:
+
+- **Re-pin both refs to `@v4`.** Bump the reusable-workflow pin `validate-markdown-frontmatter.yml@v3` → `@v4` **and** set `standards-ref: 'v4'` — match it to your `uses:` pin so the workflow definition and the installed validator never drift. Same for `lint-markdown.yml` if you call it.
+- **Audit documents and config before re-pinning — v4 rejects what v3 silently accepted.** Datetime-shaped `created`/`updated`/`reviewed` values now fail (quote as `'YYYY-MM-DD'`); tags with leading/trailing/consecutive hyphens fail; non-string frontmatter keys fail; duplicate top-level config keys, unquoted numeric config `version` values, and nonexistent explicit file/`--config` paths now exit 2 instead of passing silently.
+- **Repos with `references.enabled: true`:** the corrected cross-file semantics (per-id supersede merging, numeric ADR ordering, date-typed ordering) may newly flag real violations that v3's bugs masked. Repos without the opt-in are unaffected.
+- **Copy-adopters (Python Tooling SSOT), on re-sync only:** ruff dev-group floor is now `>=0.14`; `pytest-cov` is dropped from the scaffolds.
+- **New, opt-in:** the **Project Specification Standard** (`spec:` config block, `project-standards spec` CLI, `validate-specs.yml@v4` reusable workflow) is available from `v4.0.0` onward — see [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md). Nothing is inherited without the config block.
 
 ### Added
 
@@ -59,6 +67,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
   - Files skipped from the index are now surfaced as warnings instead of vanishing silently.
 
   (Pure-internal refactors and error-path hardening — e.g. the `Index.ids` removal and `UnicodeDecodeError` handling — are intentionally omitted here: they do not change outcomes for well-formed inputs.)
+
 - **`format-frontmatter` / CLI fixes** (to commands shipped in `3.0.0`):
   - `format-frontmatter --config <nonexistent-path>` now exits 2 (`"config file not found"`) instead of silently formatting and writing under repo defaults — the same previously-passing-rule fix already applied to `validate-frontmatter`.
   - `format-frontmatter` no longer tracebacks on non-UTF-8 input; it reports a clean per-file error and the run continues.
@@ -68,7 +77,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
   - Markdown Tooling `adopt.md` gained two missing adoption steps.
   - Frontmatter `adopt.md`'s §2 example config byte-locked to the shipped starter — it had drifted to omit the `**/*.template.md` exclusion, which would have led a manual adopter to wrongly validate template placeholder frontmatter.
 
-Exhaustive per-commit migration detail for the above belongs in the release commit, per `meta/versioning.md`'s release-requirements checklist.
+The migration notes at the top of this section are the consumer-facing summary; [`UPGRADING.md`](UPGRADING.md) is the step-by-step runbook.
 
 ## [3.0.0] — 2026-06-09
 

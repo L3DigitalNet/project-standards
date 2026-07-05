@@ -27,7 +27,7 @@ on:
   #
   #   jobs:
   #     lint-markdown:
-  #       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
+  #       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
   #       with:
   #         globs: '**/*.md'
   workflow_call:

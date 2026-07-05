@@ -6,7 +6,7 @@ description: 'Recommended linting/formatting tools and settings for Markdown and
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-07'
-updated: '2026-07-01'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -31,7 +31,7 @@ license: null
 
 - **Status:** Source-checked standard, contract version `1.0` (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see [`meta/versioning.md`](../../meta/versioning.md))
 - **Owner:** Project standards / repository template
-- **Last updated:** 2026-07-01
+- **Last updated:** 2026-07-05
 - **Last source check:** 2026-06-07
 - **Scope:** Markdown and the structured-text/config files Prettier supports, across CLI, VS Code, and CI.
 
@@ -145,7 +145,7 @@ The two halves of this standard ship asymmetrically (DEC-9).
 | Artifact | Role | Shipped to consumers? |
 | --- | --- | --- |
 | `.markdownlint.json` | The markdownlint **rule set** | ✅ Yes — the seedable artifact a consumer copies. |
-| `.github/workflows/lint-markdown.yml` | Reusable markdownlint **workflow** (`@v3`) | ✅ Yes — callable via `workflow_call`. |
+| `.github/workflows/lint-markdown.yml` | Reusable markdownlint **workflow** (`@v4`) | ✅ Yes — callable via `workflow_call`. |
 | `.prettierrc.json` | Prettier **config** | ❌ Copy-adopt only — no reusable workflow. |
 | `.github/workflows/format.yml` | This repo's **repo-local** Prettier CI | ❌ Not reusable; dogfood only. |
 | `.markdownlint-cli2.jsonc` | **Repo-local** runner config (`globs`, `gitignore`) | ❌ Never shipped — controls which files a bare local run lints. |
@@ -316,17 +316,17 @@ The linter half ships as a reusable workflow, `.github/workflows/lint-markdown.y
 - `globs` — newline-delimited glob(s) of Markdown to lint (default `**/*.md`). Passed explicitly because the action's own default glob is the non-recursive `*.{md,markdown}` [S06].
 - `config` — path to a base config file; empty means no `--config` flag is passed, so the underlying `markdownlint-cli2` auto-discovers config from the caller's repo (its own `.markdownlint.json` / `.markdownlint-cli2.jsonc`) [S03].
 
-Consumer opt-in (pin `@v3`):
+Consumer opt-in (pin `@v4`):
 
 ```yaml
 jobs:
   lint-markdown:
-    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
     with:
       globs: '**/*.md'
 ```
 
-Pin `@v3` (the current major), **not** `@v1`: this workflow first ships in the locked `2.0.0` release, so no `uses:` ref should point at a tag that predates the workflow (see `meta/versioning.md` §"Consuming").
+Pin `@v4` (the current major), **not** `@v1`: this workflow first ships in the locked `2.0.0` release, so no `uses:` ref should point at a tag that predates the workflow (see `meta/versioning.md` §"Consuming").
 
 The linter is deliberately separate from the frontmatter-validation workflow (DEC-8): a frontmatter-only consumer never inherits a Node/markdownlint toolchain. And Prettier ships **no** reusable workflow (DEC-9) — a consumer wanting Prettier CI wires their own job.
 

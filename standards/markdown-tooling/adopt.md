@@ -6,7 +6,7 @@ description: 'How to adopt the Markdown Tooling Standard: seed the markdownlint 
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-07'
-updated: '2026-07-01'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'agent'
@@ -33,7 +33,7 @@ The **linter** half ships a reusable workflow and a seedable rule set; the **for
 As of `v3`, the packaged CLI materializes every artifact below in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards adopt markdown-tooling
 ```
 
@@ -50,7 +50,7 @@ This drops `.markdownlint.json`, `.prettierrc.json`, the shared `.editorconfig` 
    ```yaml
    jobs:
      lint-markdown:
-       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v3
+       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
        with:
          globs: '**/*.md'
    ```

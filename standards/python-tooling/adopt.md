@@ -6,7 +6,7 @@ description: 'How to adopt the Python Tooling SSOT Standard: copy the in-doc sca
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-07-01'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'agent'
@@ -32,7 +32,7 @@ Unlike the Markdown standards, this one is **not** enforced by the shared valida
 As of `v3`, the packaged CLI materializes the scaffolds in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards adopt python-tooling
 ```
 

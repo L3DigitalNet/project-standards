@@ -6,7 +6,7 @@ description: 'How a PEP 517 build backend (uv_build) turns a src/ tree into inst
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-09'
-updated: '2026-06-12'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -134,7 +134,7 @@ This repo is configured exactly as above: `name = "project-standards"`, `build-b
 ```bash
 # uv clones project-standards at tag v3, sees [build-system], runs uv_build in a
 # throwaway env, installs the wheel, runs the generated wrapper, then discards it:
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   validate-frontmatter --config .project-standards.yml
 ```
 

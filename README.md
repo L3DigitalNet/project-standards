@@ -111,7 +111,7 @@ How a repository adopts each standard. The two **Markdown frontmatter standards*
 Add two files, pinned to a major tag:
 
 1. **`.project-standards.yml`** at the repo root — declares which Markdown files are managed.
-2. **`.github/workflows/validate-standards.yml`** — calls the reusable `validate-markdown-frontmatter.yml@v3` workflow, with `standards-ref` pinned to the same major.
+2. **`.github/workflows/validate-standards.yml`** — calls the reusable `validate-markdown-frontmatter.yml@v4` workflow, with `standards-ref` pinned to the same major.
 
 ADR enforcement (managed ADR docs, plus the opt-in MADR section check) rides the **same** workflow — no extra job. Optional Markdown _body_ linting is a separate opt-in workflow (`lint-markdown.yml`).
 
@@ -126,17 +126,17 @@ No config or workflow — copy the in-doc scaffolds and run the verification gat
 
 ### Markdown Tooling
 
-Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v3` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
+Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v4` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 
 > **Availability:** `lint-markdown.yml` is available since `@v2`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
 
 ### Project Specification
 
-Add a `spec:` block to `.project-standards.yml` declaring which files are project specs, then optionally call the reusable `validate-specs.yml@v3` workflow (same pinning rules as the Markdown standards). See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
+Add a `spec:` block to `.project-standards.yml` declaring which files are project specs, then optionally call the reusable `validate-specs.yml@v4` workflow (same pinning rules as the Markdown standards). Available from `v4.0.0` onward — no earlier tag carries the standard or its workflow. See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v3`), never `@main`: a repo that passed validation yesterday must not fail today because the standard changed. Breaking changes ship only as a new major (`@v4`); `@v3` receives bug fixes and backward-compatible updates. For an immutable pin, use a full version (`@v3.0.0`) or a commit SHA. The adopt guides explain the full rationale, and [`UPGRADING.md`](UPGRADING.md) is the step-by-step runbook for moving an existing repo across a major (e.g. `@v2` → `@v3`).
+Reference reusable workflows by **major tag** (`@v4`), never `@main`: a repo that passed validation yesterday must not fail today because the standard changed. Breaking changes ship only as a new major (`@v5`); `@v4` receives bug fixes and backward-compatible updates. For an immutable pin, use a full version (`@v4.0.0`) or a commit SHA. The adopt guides explain the full rationale, and [`UPGRADING.md`](UPGRADING.md) is the step-by-step runbook for moving an existing repo across a major (e.g. `@v3` → `@v4`).
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
@@ -144,7 +144,7 @@ For private standards repos called by private consumers, enable cross-repository
 
 Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but the contract is the **consuming repo's validation outcome** — a release's level reflects the worst-case impact of any change across the standard, schema, validator, and workflow.
 
-- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v3`); a repo that passed yesterday still passes today.
+- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v4`); a repo that passed yesterday still passes today.
 - **MAJOR** → may newly-fail a previously-passing repo (a new required field, a stricter rule, even a validator bug fix); old `vN.x` tags stay intact, and consumers migrate intentionally.
 
 See [`meta/versioning.md`](meta/versioning.md) for the full classification table, the previously-passing rule, and release requirements.

@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-12'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -60,7 +60,7 @@ Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 > **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all shipped components.
 
-This reframing is what makes the moving major tag (`@v3`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
+This reframing is what makes the moving major tag (`@v4`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
 
 ## Version grammar
 
@@ -134,15 +134,13 @@ Every release MUST:
    Only the moving major tag is ever repointed. Never delete or move a full-version tag once it is pushed.
 
 3. **Bump the in-repo version references (MAJOR only).** A new major moves the moving-major tag, but the workflow defaults and usage examples still name the old one. In the release commit for a MAJOR, bump both, so a `@vN` caller that omits the `standards-ref` input runs the vN workflow against the vN validator (not the previous major's):
-
    - **Reusable-workflow defaults.** Bump every hardcoded `default: "vN-1"` for the `standards-ref` input to the new major in [`.github/workflows/validate-markdown-frontmatter.yml`](../.github/workflows/validate-markdown-frontmatter.yml) and [`.github/workflows/validate-specs.yml`](../.github/workflows/validate-specs.yml). This is the silent-drift trap: a caller pinned `@vN` on `uses:` but relying on the default `standards-ref` would otherwise install the previous major's CLI.
    - **In-repo usage examples.** Bump the `@vN` / `standards-ref: vN` refs in the doc examples — `README.md` and each `standards/*/adopt.md` — to the new major so copy-paste snippets pin the current line.
 
    With these carve-outs stated explicitly:
-
    - **(a) `UPGRADING.md` is not a find/replace.** It gets a _new_ `v(N-1)→vN` section (step 6), not a blanket rewrite of the historical runbook. Leave existing historical version references in it intact.
    - **(b) Fixed `blob/vN/…` permalinks are deliberate.** Any `.../blob/vN/...` permalink that pins a specific tagged snapshot is reviewed individually, not blanket-rewritten — some are meant to keep pointing at the old tag.
-   - **(c) SPECIAL CASE — `project-spec`.** [`standards/project-spec/adopt.md`](../standards/project-spec/adopt.md) currently pins `@v3`, but **project-spec does not exist at the `v3` tag** — it first ships at `v4.0.0`. At the v4 cut its examples MUST go to `@v4` (never left at `@v3`, which would pin a tag without the standard), and its intro banner MUST state that project-spec is available only from `v4.0.0` onward.
+   - **(c) A standard's examples must never pin a tag that predates the standard.** When a new standard first ships in a MAJOR, its `adopt.md` examples MUST pin the new major in the same release commit, and its intro banner MUST state the first release that carries it. Precedent: `project-spec` first ships at `v4.0.0` — at the v4 cut its examples went `@v3`→`@v4` and [`standards/project-spec/adopt.md`](../standards/project-spec/adopt.md) gained the availability banner.
 
    Optional pre-release assertion: grep the reusable workflows for the `standards-ref` default and fail if any lags the `pyproject.toml` major — e.g. no `default: "vN-1"` may remain once `pyproject.toml` reads `N.0.0`.
 
@@ -155,7 +153,7 @@ Every release MUST:
 Pin the reusable workflow and the CLI by **major tag** to receive non-breaking fixes automatically:
 
 ```yaml
-uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v3
+uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
 ```
 
 - **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule guarantees these updates never newly-fail a passing repo.

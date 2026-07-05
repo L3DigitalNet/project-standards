@@ -28,7 +28,7 @@ license: null
 
 # Adopt the Project Specification Standard
 
-> **Target release:** this procedure is written against the `project-standards` v3 line — pin the moving major tag `@v3` (see [§5](#5-versioning--staying-in-compliance)). This standard registers on the `testing` branch first; confirm a tagged release actually carries it before pinning in a consuming repo (check [`CHANGELOG.md`](../../CHANGELOG.md)).
+> **Target release:** `project-standards` **v4.0.0** — pin the moving major tag `@v4` (see [§5](#5-versioning--staying-in-compliance)). **The Project Specification Standard is available only from `v4.0.0` onward**: it first ships at the `v4.0.0` release, so no earlier tag (`v3` and below) carries the standard, its CLI, or the `validate-specs.yml` workflow — never pin this standard to a pre-v4 ref.
 
 ## 0. What you are doing — definition of done
 
@@ -59,7 +59,7 @@ Three tiers, matching project size — see [§4 Templates](README.md#4-templates
 Scaffold one directly with the CLI — no manual template copying:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards spec new docs/specs/my-feature.md --profile standard --title 'My Feature'
 ```
 
@@ -106,21 +106,21 @@ on:
 
 jobs:
   validate-specs:
-    uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v3
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v4
     with:
       config-path: '.project-standards.yml'
-      standards-ref: 'v3'
+      standards-ref: 'v4'
       strict-lint: false # set true to also fail CI on lint warnings
 ```
 
-> **⚠️ Pin both refs**, exactly as for the [Markdown Frontmatter Standard](../markdown-frontmatter/adopt.md#3-step-2--add-the-ci-workflow): `@v3` on `uses:` pins the workflow definition; `standards-ref` pins the installed CLI. Set them to the same ref so they never drift; use a full version (`v3.0.0`) for a fully immutable pin.
+> **⚠️ Pin both refs**, exactly as for the [Markdown Frontmatter Standard](../markdown-frontmatter/adopt.md#3-step-2--add-the-ci-workflow): `@v4` on `uses:` pins the workflow definition; `standards-ref` pins the installed CLI. Set them to the same ref so they never drift; use a full version (`v4.0.0`) for a fully immutable pin.
 
 The reusable workflow installs the CLI with `uv tool install git+…@<standards-ref>` (or runs in-place if invoked from this repo itself) and runs `spec validate` (always) and `spec lint --strict` (only if `strict-lint: true`) against the configured `spec:` block.
 
 **Local.** Run the same check directly, no checkout required:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards spec validate --config .project-standards.yml
 ```
 
@@ -128,7 +128,7 @@ Adoption is complete when this exits `0` and CI runs it on every push/PR.
 
 ## 5. Versioning & staying in compliance
 
-- **Pin the major tag `@v3`** for both the `uses:` ref and `standards-ref`, matching the CI workflow above. Within a major, additive changes only — a spec that validates clean today keeps validating clean tomorrow.
+- **Pin the major tag `@v4`** for both the `uses:` ref and `standards-ref`, matching the CI workflow above (`v4.0.0` is the first release that carries this standard). Within a major, additive changes only — a spec that validates clean today keeps validating clean tomorrow.
 - **A major bump is intentional work**, same as for the other standards ([§7 Versioning & staying in compliance](../markdown-frontmatter/adopt.md#7-versioning--staying-in-compliance) documents the general policy). Read the CHANGELOG migration notes before re-pinning.
 
 ## 6. Authoritative references

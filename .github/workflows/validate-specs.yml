@@ -25,7 +25,7 @@ on:
         description: "project-standards git ref to install from (match your uses: @vN pin)."
         required: false
         type: string
-        default: "v3"
+        default: "v4"
       strict-lint:
         description: "Also run `spec lint --strict` (fail on advisory warnings)."
         required: false

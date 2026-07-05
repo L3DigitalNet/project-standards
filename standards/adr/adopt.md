@@ -6,7 +6,7 @@ description: 'How to adopt the ADR Standard in a consuming repository; it rides 
 doc_type: 'runbook'
 status: 'active'
 created: '2026-06-06'
-updated: '2026-06-12'
+updated: '2026-07-05'
 reviewed: null
 owner: ''
 consumer: 'agent'
@@ -34,7 +34,7 @@ ADRs are **managed Markdown documents**: they carry full frontmatter and are val
 As of `v3`, the packaged CLI drops the ADR template and reports the config knobs in one command:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v3' \
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards adopt adr
 ```
 
