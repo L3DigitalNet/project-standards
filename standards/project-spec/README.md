@@ -209,6 +209,17 @@ Until the standard is released for adoption it is under active development and r
 
 ## 10. Source register
 
-<!-- TODO: source-backed facts + register table once the standard cites external sources. -->
+This register records the external standards the **templates** draw structure and terminology from. The README body itself is policy prose and carries no inline citations, so the register stands alone rather than resolving `[Sxx]` markers. It is the check target for [§8](#8-update-process--review-cadence)'s "a referenced external standard shifts" review trigger; the `Last checked` date is when each edition was last confirmed current.
 
-_To be written._
+| ID | Source | URL | What it grounds in the templates | Last checked |
+| --- | --- | --- | --- | --- |
+| S01 | ISO/IEC/IEEE 29148:2018 — Systems and software engineering — Requirements engineering | [iso.org/standard/72089](https://www.iso.org/standard/72089.html) | §7 requirements structure and quality criteria ("The system shall …"; testable, necessary, unambiguous) | 2026-07-04 |
+| S02 | IEEE 1016-2009 — Software Design Descriptions | [standards.ieee.org/ieee/1016/4502](https://standards.ieee.org/ieee/1016/4502) | §8 Architecture and Design — design-description structure and views | 2026-07-04 |
+| S03 | ISO/IEC/IEEE 42010:2022 — Architecture description (2nd ed.) | [standards.ieee.org/ieee/42010/6846](https://standards.ieee.org/ieee/42010/6846) | §8 architecture concepts — stakeholders, concerns, viewpoints, views | 2026-07-04 |
+| S04 | OpenAPI Specification | [spec.openapis.org](https://spec.openapis.org/) | §7.3 Interface Requirements and §11 — HTTP API contracts | 2026-07-04 |
+
+Notes from the 2026-07-04 verification pass:
+
+- All four editions were confirmed current on 2026-07-04. **OpenAPI's current release is 3.2.0** (2025-09-19); the templates cite "OpenAPI Specification" without pinning a version, so no template change is required — pin to a specific version only if a spec needs a particular contract dialect.
+- **IEEE 830-1998** appears in the templates only as an explicitly **superseded** caution (replaced by 29148:2018); it is not an authority and is not tracked as a live source here.
+- The **ADR / MADR** relationship is owned by the sibling [ADR Standard](../adr/README.md) and tracked in its own source register (MADR 4.0.0); it is not duplicated here.
