@@ -52,7 +52,7 @@ Spec #1 split the v1-core set along a read/write seam and deferred both generati
 6. **`--profile` is required.** No silent default; choosing a tier is a deliberate authoring act.
 7. **`new` self-validates its output (fail-closed).** Before writing, `new` parses and validates the generated text in memory; if it is not `validate`-clean it refuses to write and reports the finding. A **parse failure** of the generated text (`SpecParseError`, e.g. from a future template edit) is caught in the same block and mapped to `self_validation_failed` — it must not escape as the outer `spec` group's generic exit-1 parse path. This makes "`new` always emits a validate-clean scaffold" a runtime invariant, not just a test-time hope.
 8. **`--json` is mandatory (universal tooling contract).** `new` offers `--json` for both success and failure, per README §5. The default (non-`--json`) output stays human-oriented.
-9. **Flag values are serialized YAML-safely; control characters are rejected.** `--title`/`--owner`/`--implementer` values are emitted through a YAML scalar serializer (PyYAML), so quotes, colons, and Unicode are escaped correctly rather than hand-quoted. Values containing a newline, carriage return, or other C0/C1 control character, and the empty string, are rejected with a usage error (exit 2) — an agent-safe CLI must handle non-interactive input predictably. **`--title` additionally rejects the backtick** (`` ` ``): unlike owner/implementer (which land only in YAML frontmatter, where `emit_scalar` makes any character safe), the title is also substituted into the H1's Markdown **code span** (`` # `…` — Specification (T) ``), where a backtick would break the span. Rejecting is more predictable than inventing a code-span-escaping rule.
+9. **Flag values are serialized YAML-safely; control characters are rejected.** `--title`/`--owner`/`--implementer` values are emitted through a YAML scalar serializer (PyYAML), so quotes, colons, and Unicode are escaped correctly rather than hand-quoted. Values containing a newline, carriage return, or other C0/C1 control character, and the empty string, are rejected with a usage error (exit 2) — an agent-safe CLI must handle non-interactive input predictably. **`--title` additionally rejects the backtick** (`` ` ``): unlike owner/implementer (which land only in YAML frontmatter, where `emit_scalar` makes any character safe), the title is also substituted into the H1's Markdown **code span** (``# `…` — Specification (T)``), where a backtick would break the span. Rejecting is more predictable than inventing a code-span-escaping rule.
 
 ## Invariants — the consumer contract (must NOT change)
 
@@ -126,7 +126,7 @@ The purity boundary is the design's backbone: **all nondeterminism is a paramete
 | `owner` | `emit_scalar(--owner)` | only if given; else keep `'<person or team>'` |
 | `implementer` | `emit_scalar(--implementer)` | only if given; else keep `'<person, team, or coding agent>'` |
 
-The **H1 line** (`` # `<Project / Feature Name>` — Specification (Standard) ``) is rewritten **only when `--title` is given** — the `— Specification (<Tier>)` suffix and formatting are preserved; only the back-ticked name is substituted. `profile` and the H1 tier word are **never** rewritten: selecting `spec-standard-template.md` already carries `profile: standard` and `(Standard)`.
+The **H1 line** (``# `<Project / Feature Name>` — Specification (Standard)``) is rewritten **only when `--title` is given** — the `— Specification (<Tier>)` suffix and formatting are preserved; only the back-ticked name is substituted. `profile` and the H1 tier word are **never** rewritten: selecting `spec-standard-template.md` already carries `profile: standard` and `(Standard)`.
 
 Rewriting is confined to the frontmatter block (between the opening `---` and its closing `---`) plus that single H1 line, so decision 5's "body byte-identical" invariant (I4) is structural, not incidental.
 
@@ -197,25 +197,36 @@ With `--json`, stdout carries exactly one JSON object and nothing else (I7). Fie
 
 ```json
 {
-  "ok": true,
-  "spec_id": "SPEC-7F3Q",
-  "profile": "standard",
-  "path": "docs/specs/checkout.md",
-  "written": true,
-  "overwritten": false
+	"ok": true,
+	"spec_id": "SPEC-7F3Q",
+	"profile": "standard",
+	"path": "docs/specs/checkout.md",
+	"written": true,
+	"overwritten": false
 }
 ```
 
 **Success — `--stdout`:** `path` is `null`, `written` is `false`, and the scaffold text rides along so a caller need not re-read it:
 
 ```json
-{ "ok": true, "spec_id": "SPEC-7F3Q", "profile": "light", "path": null, "written": false, "content": "---\nspec_id: SPEC-7F3Q\n…" }
+{
+	"ok": true,
+	"spec_id": "SPEC-7F3Q",
+	"profile": "light",
+	"path": null,
+	"written": false,
+	"content": "---\nspec_id: SPEC-7F3Q\n…"
+}
 ```
 
 **Failure (any exit-2 case):**
 
 ```json
-{ "ok": false, "error": "refusing to overwrite existing file: docs/specs/checkout.md (use --force)", "code": "exists" }
+{
+	"ok": false,
+	"error": "refusing to overwrite existing file: docs/specs/checkout.md (use --force)",
+	"code": "exists"
+}
 ```
 
 `code` is a stable, low-cardinality slug (`usage`, `exists`, `not_regular_file`, `symlinked_parent`, `flag_conflict`, `bad_id`, `id_collision`, `bad_field_value`, `id_exhausted`, `config_error`, `mkdir_failed`, `write_failed`, `self_validation_failed`). `usage` covers **argparse-level** failures (missing/invalid `--profile`, unknown flag, missing required arg): the parser is made JSON-aware (a subclass whose `error()` raises rather than calling `sys.exit`) so even these emit the `--json` object and never leak argparse's stderr or a `SystemExit` — a raw argparse exit would violate I6/I7. For `self_validation_failed`, a `findings` array of the `validate` `Finding` records (the same `dataclasses.asdict` shape the existing commands emit) is included so automation sees exactly what failed.
