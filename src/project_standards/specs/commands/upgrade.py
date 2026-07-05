@@ -218,3 +218,43 @@ def upgrade_text(source_text: str, target_template_text: str, *, target_tier: st
     text = f"---\n{src_fm}\n---\n{merged_body}"  # source frontmatter preserved verbatim
     text = _set_profile(text, target_tier)
     return _rewrite_h1_suffix(text, target_tier)
+
+
+def _h1_tier(text: str) -> str | None:
+    """The tier word in a canonical H1 (`# `…` — Specification (Tier)`), or None."""
+    m = _H1_SUFFIX.search(text)
+    return m.group(2) if m else None
+
+
+def check_upgradeable(source_text: str, source_tier_template: str) -> str | None:
+    """Return a deviation message if the source's scaffolding is not canonical for its
+    tier, else None. Enforces design decision 10: everything outside authored section
+    bodies must match the source-tier template — gaps, notes, Appendices A/B/D,
+    subsection membership, §17.1, AND (per ``_reconcile_shared``/``_swap_tail``) each
+    KEPT subsection's trailing filler. That last one is not a cosmetic nicety: a kept
+    subsection's trailing filler is reconciled from the target on every upgrade, so an
+    author blockquote sitting in that trailing run that happens to match the loose
+    ``_is_filler`` heuristic (blank / `---` / a `> … tier … omitted` line) would be
+    silently dropped by ``_swap_tail`` during the real splice. Implemented as a
+    reshape-to-own-tier identity check — a canonical source reshapes to itself; any of
+    the above deviations, including a non-canonical trailing filler line, changes the
+    reshape and is caught here before that silent loss can happen."""
+    _sfm, src_body = split_front_matter(source_text)
+    _tfm, tmpl_body = split_front_matter(source_tier_template)
+    # The H1 must be canonical for the declared tier. The reshape below takes the
+    # preamble (incl. H1) from the source, so it CANNOT catch a wrong/missing H1 suffix;
+    # without this check `_rewrite_h1_suffix` would silently no-op and validate never
+    # inspects the H1 (Codex CR-001). Check it explicitly.
+    if _h1_tier(src_body) is None or _h1_tier(src_body) != _h1_tier(tmpl_body):
+        return (
+            "source H1 is missing or its `— Specification (Tier)` suffix does not match "
+            "the declared tier; restore the canonical H1 before upgrading"
+        )
+    if _merge_top(src_body, tmpl_body) != src_body:
+        return (
+            "source scaffolding is not canonical for its tier (author prose in a gap, "
+            "an edited Appendix A/B/D, a non-canonical subsection, or a non-canonical "
+            "trailing filler line in a kept subsection); restore the template structure "
+            "before upgrading"
+        )
+    return None

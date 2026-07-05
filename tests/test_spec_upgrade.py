@@ -220,3 +220,91 @@ def test_upgrade_round_trip_is_byte_identical_to_target_fixture(
 def test_upgrade_output_validates(src: str, tier: str) -> None:
     out = upgrade_text((_FIX / src).read_text(encoding="utf-8"), _tmpl(tier), target_tier=tier)
     assert validate_document(parse_document("<out>", out), load_registry()) == []
+
+
+def test_check_upgradeable_accepts_a_canonical_source() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    assert check_upgradeable(light, _tmpl("light")) is None
+
+
+def test_check_upgradeable_rejects_gap_prose() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace(
+        "## 7. Requirements", "Author prose in a gap.\n\n## 7. Requirements", 1
+    )
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_non_canonical_subsection() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace("## 17. ", "### 7.3 Interface Requirements\n\nx\n\n## 17. ", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_edited_appendix_b() -> None:
+    # Appendix B is template-owned (SA-NEW-001); an author edit makes the reshape differ.
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace(
+        "### B.1 Implementation Rules", "### B.1 Implementation Rules\n\nAuthor-added rule.", 1
+    )
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_wrong_h1_tier_suffix() -> None:
+    # A validate-clean Light spec whose H1 wrongly says (Standard) must be refused —
+    # the reshape takes the H1 from the source, so only the explicit H1 check catches it
+    # (Codex CR-001). validate never inspects the H1.
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace("— Specification (Light)", "— Specification (Standard)", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_accepts_fenced_heading_in_a_section_body() -> None:
+    # A code fence containing heading-looking lines inside an authored section body is
+    # legitimate and must NOT make the source non-upgradeable (fence-aware segmentation).
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace(
+        "### 7.1 Functional Requirements",
+        "### 7.1 Functional Requirements\n\n```markdown\n## Example\n```",
+        1,
+    )
+    assert check_upgradeable(tampered, _tmpl("light")) is None
+
+
+def test_check_upgradeable_rejects_noncanonical_trailing_blockquote_in_kept_subsection() -> None:
+    # A validate-clean source whose kept §7.1 ends in an author blockquote that _is_filler
+    # would trim must be refused (reshape differs) — proving no silent author-content loss.
+    #
+    # The note must land in §7.1's TRAILING FILLER RUN — contiguous with the existing
+    # blank/"---"/omission-note lines right before "## 17." — not merely somewhere inside
+    # the subsection body. `_swap_tail` only rewrites a block's trailing filler run (the
+    # maximal suffix `_is_filler` matches), so a filler-shaped blockquote placed mid-body
+    # (e.g. immediately after the "### 7.1" heading, before the FR table) survives
+    # untouched and the reshape stays identical. Placed in the trailing run, it gets
+    # swept up in the same backward scan as the genuine filler and silently dropped by
+    # the real splice — which is exactly what this precheck must catch first.
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    anchor = "at the Light profile.\n\n## 17. Testing and Acceptance"
+    assert anchor in light  # guard: fixture text the tampering depends on still exists
+    tampered = light.replace(
+        anchor,
+        "at the Light profile.\n\n"
+        "> Note: nothing is Standard-tier here, none omitted.\n\n"
+        "## 17. Testing and Acceptance",
+        1,
+    )
+    assert check_upgradeable(tampered, _tmpl("light")) is not None

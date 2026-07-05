@@ -28,6 +28,7 @@ from project_standards.specs.commands.new import (
     scaffold,
 )
 from project_standards.specs.commands.next_id import next_free_id
+from project_standards.specs.commands.upgrade import check_upgradeable, upgrade_text
 from project_standards.specs.commands.validate import validate_document
 from project_standards.specs.config import (
     ConfigError,
@@ -45,7 +46,8 @@ from project_standards.specs.registry import (
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
-_USAGE = "usage: project-standards spec {validate|lint|extract|next|new} ..."
+_USAGE = "usage: project-standards spec {validate|lint|extract|next|new|upgrade} ..."
+_TIER_ORDER = {"light": 0, "standard": 1, "full": 2}
 
 
 def _read(path: Path) -> str:
@@ -401,12 +403,148 @@ def _run_new(argv: list[str]) -> int:
         return _emit_new_failure(json_mode, err)
 
 
+def _upgrade_output(
+    text: str,
+    *,
+    json_mode: bool,
+    source_profile: str,
+    target_tier: str,
+    spec_id: str,
+    path: str | None,
+    mode: str,
+    written: bool,
+) -> None:
+    if json_mode:
+        obj: dict[str, object] = {
+            "ok": True,
+            "spec_id": spec_id,
+            "from_profile": source_profile,
+            "to_profile": target_tier,
+            "path": path,
+            "written": written,
+            "mode": mode,
+        }
+        if mode == "stdout":
+            obj["content"] = text
+        print(json.dumps(obj))
+    elif mode == "stdout":
+        sys.stdout.write(text)
+    else:
+        print(f"wrote {path}")
+
+
+def _deliver_upgrade(
+    args: argparse.Namespace, text: str, *, source_profile: str, spec_id: str
+) -> int:
+    # Task 9 fills in -i / -o; this task ships preview only.
+    _upgrade_output(
+        text,
+        json_mode=args.json,
+        source_profile=source_profile,
+        target_tier=args.to,
+        spec_id=spec_id,
+        path=None,
+        mode="stdout",
+        written=False,
+    )
+    return 0
+
+
+def _run_upgrade(argv: list[str]) -> int:
+    json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
+    ap = _NewArgParser(prog="project-standards spec upgrade")
+    ap.add_argument("src", type=Path)
+    ap.add_argument("--to", required=True, choices=("standard", "full"))
+    ap.add_argument("--stdout", action="store_true")
+    ap.add_argument("--output", "-o", type=Path)
+    ap.add_argument("--in-place", "-i", action="store_true", dest="in_place")
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--json", action="store_true")
+    try:
+        try:
+            args = ap.parse_args(argv)
+        except _ArgparseError as exc:
+            raise NewError("usage", str(exc)) from exc
+
+        # Flag matrix (Task 9 tests -i/-o cases; wire it all here).
+        if args.in_place and args.output is not None:
+            raise NewError("flag_conflict", "choose one of --in-place or --output")
+        if args.in_place and args.stdout:
+            raise NewError("flag_conflict", "--stdout previews; do not also pass --in-place")
+        if args.stdout and args.output is not None:
+            raise NewError("flag_conflict", "choose one of --stdout or --output")
+        if args.force and not args.output:
+            raise NewError("flag_conflict", "--force only applies to --output")
+
+        if not args.src.is_file():
+            raise NewError("source_not_found", f"source spec not found: {args.src}")
+        try:
+            source_text = _read(args.src)
+        except (SpecParseError, ConfigError) as exc:  # _read wraps OSError/decode errors
+            raise NewError("source_read_error", str(exc)) from exc
+
+        reg = load_registry()
+        try:
+            src_doc = parse_document(str(args.src), source_text)
+        except SpecParseError as exc:
+            raise NewError("source_read_error", str(exc)) from exc
+
+        # Gate 1: validate-clean.
+        findings = validate_document(src_doc, reg)
+        if findings:
+            raise NewError(
+                "source_invalid",
+                f"source has {len(findings)} validation finding(s); fix them before upgrading",
+                [dataclasses.asdict(f) for f in findings],
+            )
+
+        # Tier direction (additive-only). profile is a valid tier here (validate passed).
+        source_profile = src_doc.profile or ""
+        if _TIER_ORDER.get(source_profile, -1) >= _TIER_ORDER[args.to]:
+            raise NewError(
+                "not_upgradeable",
+                f"cannot upgrade profile {source_profile!r} to {args.to}: additive-only",
+            )
+
+        # Gate 2: upgradeability precheck (design decision 10).
+        source_template = (TEMPLATES_DIR / TIER_FILES[source_profile]).read_text(encoding="utf-8")
+        deviation = check_upgradeable(source_text, source_template)
+        if deviation is not None:
+            raise NewError("source_not_upgradeable", deviation)
+
+        template_text = (TEMPLATES_DIR / TIER_FILES[args.to]).read_text(encoding="utf-8")
+        upgraded = upgrade_text(source_text, template_text, target_tier=args.to)
+
+        # Gate 3: output self-validation (fail-closed, U6).
+        try:
+            out_doc = parse_document("<upgrade>", upgraded)
+        except SpecParseError as exc:
+            raise NewError("self_validation_failed", f"upgraded spec did not parse: {exc}") from exc
+        out_findings = validate_document(out_doc, reg)
+        if out_findings:
+            raise NewError(
+                "self_validation_failed",
+                "upgraded spec failed self-validation",
+                [dataclasses.asdict(f) for f in out_findings],
+            )
+
+        return _deliver_upgrade(
+            args,
+            upgraded,
+            source_profile=source_profile,
+            spec_id=src_doc.frontmatter.get("spec_id", ""),
+        )
+    except NewError as err:
+        return _emit_new_failure(json_mode, err)
+
+
 _VERBS: dict[str, Callable[[list[str]], int]] = {
     "validate": _run_validate,
     "lint": _run_lint,
     "extract": _run_extract,
     "next": _run_next,
     "new": _run_new,
+    "upgrade": _run_upgrade,
 }
 
 
