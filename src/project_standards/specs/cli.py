@@ -261,8 +261,11 @@ def _target_type_conflict(target: Path) -> bool:
     return os.path.lexists(target) and not target.is_file()  # dir / fifo / device / socket
 
 
-def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
-    target: Path = args.path
+def _safe_atomic_write(target: Path, text: str, *, force: bool) -> bool:
+    """Write text atomically to target with mode preservation. Returns whether file was overwritten.
+
+    Raises NewError for not_regular_file / symlinked_parent / exists / mkdir_failed / write_failed.
+    """
     if _target_type_conflict(target):
         raise NewError("not_regular_file", f"refusing to write non-regular target: {target}")
     if _parent_chain_has_symlink(target):
@@ -270,7 +273,7 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
             "symlinked_parent", f"refusing to write through a symlinked parent: {target}"
         )
     overwritten = target.is_file()
-    if overwritten and not args.force:
+    if overwritten and not force:
         raise NewError("exists", f"refusing to overwrite existing file: {target} (use --force)")
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -281,7 +284,7 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
 
     tmp: Path | None = None
     try:
-        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".spec-new-", suffix=".tmp")
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".spec-write-", suffix=".tmp")
         tmp = Path(tmp_name)
         # Mode (mirrors adopt/engine._atomic_write): preserve on overwrite; umask-respecting
         # 0o666 for a new file, so the result is not left at mkstemp's owner-only 0600.
@@ -295,7 +298,7 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
                 tmp.chmod(stat.S_IMODE(0o666 & ~mask))
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
-        os.replace(tmp, target)  # atomic same-filesystem rename (I8)  # noqa: PTH105
+        os.replace(tmp, target)  # noqa: PTH105
     except OSError as exc:
         if tmp is not None:
             tmp.unlink(missing_ok=True)
@@ -306,7 +309,11 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
         if tmp is not None:
             tmp.unlink(missing_ok=True)
         raise
+    return overwritten
 
+
+def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
+    overwritten = _safe_atomic_write(args.path, text, force=args.force)
     if args.json:
         print(
             json.dumps(
@@ -314,14 +321,14 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
                     "ok": True,
                     "spec_id": opts.spec_id,
                     "profile": opts.profile,
-                    "path": str(target),
+                    "path": str(args.path),
                     "written": True,
                     "overwritten": overwritten,
                 }
             )
         )
     else:
-        print(f"wrote {target}")
+        print(f"wrote {args.path}")
     return 0
 
 

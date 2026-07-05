@@ -149,7 +149,7 @@ def test_write_leaves_no_temp_files(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.chdir(tmp_path)
     target = tmp_path / "s.md"
     assert run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(target)]) == 0
-    assert [p.name for p in tmp_path.iterdir()] == ["s.md"]  # no leftover .spec-new-*.tmp
+    assert [p.name for p in tmp_path.iterdir()] == ["s.md"]  # no leftover .spec-write-*.tmp
 
 
 def test_new_file_mode_is_umask_respecting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
