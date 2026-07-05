@@ -211,6 +211,19 @@ def test_present_top_keys_lists_numbered_sections() -> None:
 
     body = "## 1. Purpose\n\n## 2. Scope\n\n## 7. Requirements\n"
     assert _present_top_keys(body) == ["1", "2", "7"]
+
+
+def test_top_blocks_ignores_headings_inside_code_fences() -> None:
+    # A spec section body may contain a Markdown/code example with heading-looking
+    # lines; those must NOT be treated as section boundaries (Codex CR-003).
+    from project_standards.specs.commands.upgrade import _top_blocks
+
+    body = (
+        "## 1. Purpose\n\n"
+        "```markdown\n## Not A Heading\n### Also Not\n```\n\n"
+        "## 2. Scope\n\nx\n"
+    )
+    assert [k for k, _ in _top_blocks(body)] == ["1", "2"]
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -223,9 +236,9 @@ Expected: FAIL — functions absent.
 ```python
 from project_standards.specs.registry import gh_slug  # add to imports
 
-_H2_LINE = re.compile(r"^## (.+)$", re.M)
 _NUM = re.compile(r"^(\d+)\.")
 _APX = re.compile(r"^Appendix ([A-Z]):")
+_FENCE = re.compile(r"^\s*(```|~~~)")
 
 
 def _block_key(heading_text: str) -> str:
@@ -236,8 +249,25 @@ def _block_key(heading_text: str) -> str:
     return gh_slug(heading_text)
 
 
+def _heading_starts(text: str, prefix: str) -> list[tuple[int, str]]:
+    """(byte offset, heading text) for each line starting with `prefix` (e.g. ``"## "``),
+    skipping lines inside ``` / ~~~ fenced code blocks so example headings in a spec's own
+    code samples are never mistaken for section boundaries (Codex CR-003). ``"## "`` does
+    not match ``"### "`` (third char differs), so each level is isolated."""
+    out: list[tuple[int, str]] = []
+    in_fence = False
+    off = 0
+    for line in text.splitlines(keepends=True):
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and line.startswith(prefix):
+            out.append((off, line[len(prefix) :].rstrip("\n")))
+        off += len(line)
+    return out
+
+
 def _top_blocks(body: str) -> list[tuple[str, str]]:
-    starts = [(m.start(), m.group(1)) for m in _H2_LINE.finditer(body)]
+    starts = _heading_starts(body, "## ")
     out: list[tuple[str, str]] = []
     if not starts or starts[0][0] > 0:
         out.append(("", body[: starts[0][0] if starts else len(body)]))
@@ -386,11 +416,8 @@ Expected: FAIL — `_reconcile_shared` absent.
 - [ ] **Step 3: Write minimal implementation** (append). This mirrors `_merge_top` one level down, keyed on `### ` subsection headings, with intro/tail filler always from the target.
 
 ```python
-_H3_LINE = re.compile(r"^### (.+)$", re.M)
-
-
 def _sub_blocks(block: str) -> list[tuple[str, str]]:
-    starts = [(m.start(), m.group(1)) for m in _H3_LINE.finditer(block)]
+    starts = _heading_starts(block, "### ")  # fence-aware (Task 3)
     out: list[tuple[str, str]] = []
     intro_end = starts[0][0] if starts else len(block)
     out.append(("", block[:intro_end]))  # heading + pre-first-subsection intro filler
@@ -688,6 +715,29 @@ def test_check_upgradeable_rejects_edited_appendix_b() -> None:
     tampered = light.replace(
         "### B.1 Implementation Rules", "### B.1 Implementation Rules\n\nAuthor-added rule.", 1)
     assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_wrong_h1_tier_suffix() -> None:
+    # A validate-clean Light spec whose H1 wrongly says (Standard) must be refused —
+    # the reshape takes the H1 from the source, so only the explicit H1 check catches it
+    # (Codex CR-001). validate never inspects the H1.
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace("— Specification (Light)", "— Specification (Standard)", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_accepts_fenced_heading_in_a_section_body() -> None:
+    # A code fence containing heading-looking lines inside an authored section body is
+    # legitimate and must NOT make the source non-upgradeable (fence-aware segmentation).
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace(
+        "### 7.1 Functional Requirements",
+        "### 7.1 Functional Requirements\n\n```markdown\n## Example\n```", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is None
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -698,6 +748,12 @@ Expected: FAIL — `check_upgradeable` absent.
 - [ ] **Step 3: Implement `check_upgradeable`** (append to `upgrade.py`)
 
 ```python
+def _h1_tier(text: str) -> str | None:
+    """The tier word in a canonical H1 (`# `…` — Specification (Tier)`), or None."""
+    m = _H1_SUFFIX.search(text)
+    return m.group(2) if m else None
+
+
 def check_upgradeable(source_text: str, source_tier_template: str) -> str | None:
     """Return a deviation message if the source's scaffolding is not canonical for its
     tier, else None. Enforces design decision 10: everything outside authored section
@@ -706,6 +762,15 @@ def check_upgradeable(source_text: str, source_tier_template: str) -> str | None
     canonical source reshapes to itself; any deviation changes the reshape."""
     _sfm, src_body = split_front_matter(source_text)
     _tfm, tmpl_body = split_front_matter(source_tier_template)
+    # The H1 must be canonical for the declared tier. The reshape below takes the
+    # preamble (incl. H1) from the source, so it CANNOT catch a wrong/missing H1 suffix;
+    # without this check `_rewrite_h1_suffix` would silently no-op and validate never
+    # inspects the H1 (Codex CR-001). Check it explicitly.
+    if _h1_tier(src_body) is None or _h1_tier(src_body) != _h1_tier(tmpl_body):
+        return (
+            "source H1 is missing or its `— Specification (Tier)` suffix does not match "
+            "the declared tier; restore the canonical H1 before upgrading"
+        )
     if _merge_top(src_body, tmpl_body) != src_body:
         return (
             "source scaffolding is not canonical for its tier (author prose in a gap, "
@@ -1053,7 +1118,9 @@ def test_dogfood_upgrade_then_validate_is_clean(tmp_path: Path) -> None:
 Run: `uv run pytest tests/test_spec_upgrade_cli.py::test_dogfood_upgrade_then_validate_is_clean -v`
 Expected: PASS.
 
-- [ ] **Step 4: Run the full gate**
+- [ ] **Step 4: Add explicit error-branch tests** (do not rely on coverage pressure to discover them — Codex CR review): in `tests/test_spec_upgrade_cli.py` assert each remaining refusal path emits the documented `code` — `source_read_error` (a non-UTF-8 / undecodable source file), `mkdir_failed` (`-o` under a path whose parent component is a regular file), `write_failed` (best-effort: e.g. `-o` into a read-only directory), and `self_validation_failed` (monkeypatch `upgrade_text` to return a knowingly-invalid doc, asserting the gate refuses rather than writes). Run: `uv run pytest tests/test_spec_upgrade_cli.py -v` → PASS.
+
+- [ ] **Step 5: Run the full local gate**
 
 Run:
 ```bash
@@ -1061,11 +1128,13 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && \
 uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && \
 uv run validate-frontmatter --config .project-standards.yml
 ```
-Expected: all green; branch coverage ≥ `fail_under`. Add targeted tests for any uncovered `upgrade.py`/`_run_upgrade` branch (e.g. `source_read_error` on a non-UTF-8 source, `mkdir_failed`, `write_failed`) until coverage holds.
+Expected: all green; branch coverage ≥ `fail_under`.
 
-- [ ] **Step 5: Update handoff docs** — mark Spec #3 implemented in `docs/handoff/specs-plans.md` and refresh `docs/handoff/state.md` (per the handoff-system-v3 ritual). Note in `TODO.md` that the `upgrade` command surface now needs a CHANGELOG line when `project-spec` is registered/released, and that the v1-core tool surface is complete.
+- [ ] **Step 5b: Note the repo-level `Validate Specs` CI gap (Codex CR-002)** — the repo's `.github/workflows/validate-specs.yml` runs `project-standards spec validate --config .project-standards.yml` on any push touching `src/**`/`*.md`, but `.project-standards.yml` has **no `spec:` block**, so that command exits 2 ("no `spec:` config block and no paths given") — the deliberate "never a vacuous green run" guard. This is **pre-existing (since Spec #1 added the workflow) and independent of `upgrade`**: this repo authors no `project-spec`-format specs yet (the `docs/superpowers/specs/**` design docs are not `project-spec` documents), and `project-spec` is an unregistered draft. The `upgrade` dogfood (Step 2) proves the upgraded *output* validates, which is the behavior this plan is responsible for. Do **not** add a `spec:` block or otherwise expand this plan to fix repo CI — instead record it in `TODO.md` as a pre-existing item to resolve alongside registering `project-spec` (when real specs and a `spec:` block will exist). If the local run of the workflow command is executed, expect the exit-2 and treat it as the known gap, not a regression from this work.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Update handoff docs** — mark Spec #3 implemented in `docs/handoff/specs-plans.md` and refresh `docs/handoff/state.md` (per the handoff-system-v3 ritual). Note in `TODO.md` that the `upgrade` command surface now needs a CHANGELOG line when `project-spec` is registered/released, that the v1-core tool surface is complete, and (per Step 5b) the pre-existing `Validate Specs` CI gap to resolve at registration time.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/project_standards/cli.py src/project_standards/README.md tests/test_spec_upgrade_cli.py docs/handoff/specs-plans.md docs/handoff/state.md TODO.md
@@ -1076,7 +1145,7 @@ git commit -m "feat(spec): register upgrade in help + package README + dogfood; 
 
 ## Self-Review
 
-**Spec coverage:** CLI surface + flag matrix → Task 8/9. Tier rules/direction → Task 8. **Triply-fail-closed pipeline (validate + upgradeability precheck + output self-validate) → Task 8.** Upgradeability precheck (decision 10, `source_not_upgradeable`, Codex SA-001/002/003) → Task 8 (`check_upgradeable`, pure reshape-identity). Appendix A/B/D template-owned (SA-NEW-001) → Task 4 (`_TEMPLATE_OWNED`) + Task 6 U3 covers Appendix B byte-for-byte. Splice/unit-ownership/three passes → Tasks 2–6. Canonical-position subsection insertion (SA-002) → Task 5. Module layout → Tasks 2 (new module), 7 (extract), 8 (shell + precheck). Write model + safety → Tasks 7, 9. No config coupling (SA-005) → Task 8 (no `--config`). Error/`--json` contract incl. `source_not_upgradeable` → Tasks 8, 9. Package README (SA-006) → Task 10 Step 1b. Testing (U1–U9) → U1 Task 6/10, U2 Tasks 4–6, U3 Task 6, U4 Task 8, U5 Task 8, U6 Task 8 (all three gates), U7 Tasks 7/9, U8 Tasks 8/9, U9 Tasks 8/9. Non-goals (no downgrade, no placeholder-fill, no revision entry, no non-canonical-scaffold merge) → enforced by additive-only + template-owned + precheck. Versioning/docs → Task 10 Steps 1b/5.
+**Spec coverage:** CLI surface + flag matrix → Task 8/9. Tier rules/direction → Task 8. **Triply-fail-closed pipeline (validate + upgradeability precheck + output self-validate) → Task 8.** Upgradeability precheck (decision 10, `source_not_upgradeable`, Codex SA-001/002/003) → Task 8 (`check_upgradeable`, pure reshape-identity). Appendix A/B/D template-owned (SA-NEW-001) → Task 4 (`_TEMPLATE_OWNED`) + Task 6 U3 covers Appendix B byte-for-byte. Splice/unit-ownership/three passes → Tasks 2–6. Canonical-position subsection insertion (SA-002) → Task 5. Module layout → Tasks 2 (new module), 7 (extract), 8 (shell + precheck). Write model + safety → Tasks 7, 9. No config coupling (SA-005) → Task 8 (no `--config`). Error/`--json` contract incl. `source_not_upgradeable` → Tasks 8, 9. Package README (SA-006) → Task 10 Step 1b. Fenced-code segmentation + strict H1 (Codex CR-001/003) → Task 3 (`_heading_starts` fence-aware) + Task 8 (`_h1_tier` H1 check). Pre-existing `Validate Specs` CI gap (CR-002) → Task 10 Step 5b (scoped out, logged, not upgrade's to fix). Testing (U1–U9) → U1 Task 6/10, U2 Tasks 4–6, U3 Task 6, U4 Task 8, U5 Task 8, U6 Task 8 (all three gates), U7 Tasks 7/9, U8 Tasks 8/9/10, U9 Tasks 8/9. Non-goals (no downgrade, no placeholder-fill, no revision entry, no non-canonical-scaffold merge) → enforced by additive-only + template-owned + precheck. Versioning/docs → Task 10 Steps 1b/6.
 
 **Placeholder scan:** none — every code step shows real code; the one deliberate iteration point (Task 6 Step 4, byte-tuning against U3) is a TDD convergence loop against a concrete oracle, not a placeholder.
 
