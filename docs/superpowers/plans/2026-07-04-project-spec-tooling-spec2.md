@@ -4,7 +4,7 @@
 
 **Goal:** Ship `project-standards spec new` — a guarded-generative command that scaffolds a conformant spec from a chosen profile, so the first file the tool writes already passes `validate`.
 
-**Architecture:** A new `src/project_standards/specs/commands/new.py` holds pure, injectable helpers (`emit_scalar`, `check_field`, `mint_spec_id`, `scaffold`) plus `NewOptions`. `config.py` gains a tolerant `collect_existing_spec_ids`. The impure file-writing shell (`_run_new`) lives in `specs/cli.py`, wired into the existing `_VERBS` dispatch. Every nondeterministic input (today's date, the RNG, the existing-id set) is resolved in the shell and passed into the pure core.
+**Architecture:** A new `src/project_standards/specs/commands/new.py` holds pure, injectable helpers (`emit_scalar`, `check_field`, `mint_spec_id`, `scaffold`) plus `NewOptions`. `config.py` gains a tolerant `collect_existing_spec_ids`. The impure file-writing shell (`_run_new`) lives in `specs/cli.py`, wired into the existing `_VERBS` dispatch behind a JSON-aware argument parser. Every nondeterministic input (today's date, the RNG, the existing-id set) is resolved in the shell and passed into the pure core.
 
 **Tech Stack:** Python ≥3.14, `uv_build`, PyYAML, pytest + coverage (branch, `fail_under=85`), Ruff, BasedPyright strict. No new runtime dependencies.
 
@@ -12,12 +12,12 @@
 
 - Python `>=3.14`; Ruff `target-version = py314`, line-length 100, double quotes, space indent.
 - No new runtime dependencies (PyYAML + stdlib only). No new `[project.scripts]` entry point — `new` is a verb of the existing `spec` group.
-- Exit codes: `0` ok · `2` any refusal/usage/validation failure. **`new` never returns exit 1** (exit 1 is reserved for `validate`/`lint` findings against a consumer spec). Never a traceback on bad input.
-- Output must pass `validate` as a runtime post-condition (fail-closed self-validation) — spec invariant **I1**.
-- `--json` is mandatory on every outcome (README §5 universal tooling contract) — invariant **I7**. In `--json` mode stdout carries exactly one JSON object and nothing else.
-- Writes are atomic (temp file + `os.replace`); symlink targets, non-regular targets, and symlinked parent directories are refused; the write guarantee is scoped to the destination file (**I8**).
-- The `--json` `code` slug set is frozen by the spec: `exists`, `not_regular_file`, `symlinked_parent`, `flag_conflict`, `bad_id`, `id_collision`, `bad_field_value`, `id_exhausted`, `config_error`, `mkdir_failed`, `write_failed`, `self_validation_failed`.
-- Every task ends green on the full gate: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`.
+- Exit codes: `0` ok · `2` any refusal/usage/validation failure. **`new` never returns exit 1** (exit 1 is reserved for `validate`/`lint` findings). Never a traceback, and never a bare argparse `SystemExit`, on bad input.
+- Output must pass `validate` as a runtime post-condition (fail-closed self-validation) — spec invariant **I1**. A parse failure of the generated text also maps to `self_validation_failed`, never the outer group's exit-1 parse path.
+- `--json` is mandatory on **every** outcome, **including argparse-level failures** (README §5 universal contract) — invariant **I7**. In `--json` mode stdout carries exactly one JSON object and nothing else.
+- Writes are atomic (temp file + `os.replace`); symlink targets, non-regular targets, and symlinked parent directories are refused; file mode mirrors `adopt/engine._atomic_write` (preserve on overwrite, umask-respecting `0o666` for new); the write guarantee is scoped to the destination file (**I8**).
+- The `--json` `code` slug set is frozen by the spec: `usage`, `exists`, `not_regular_file`, `symlinked_parent`, `flag_conflict`, `bad_id`, `id_collision`, `bad_field_value`, `id_exhausted`, `config_error`, `mkdir_failed`, `write_failed`, `self_validation_failed`.
+- Every task ends green on the full gate: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`. **Run `ruff check` + `basedpyright` after every task that adds tests**, not only at the end.
 - Spec reference: `docs/superpowers/specs/2026-07-04-project-spec-tooling-spec2-design.md`.
 
 ---
@@ -28,11 +28,11 @@
 | --- | --- |
 | `src/project_standards/specs/commands/new.py` | Pure core: `NewOptions`, `emit_scalar`, `check_field`, `mint_spec_id`, `scaffold` + typed errors `FieldValueError`, `SpecIdExhausted`. No I/O. |
 | `src/project_standards/specs/config.py` | Add `collect_existing_spec_ids(cfg)` — tolerant discovery for the collision set. |
-| `src/project_standards/specs/cli.py` | Add `_run_new` shell + `NewError`; register `"new"` in `_VERBS`; update `_USAGE`. |
+| `src/project_standards/specs/cli.py` | Add `_run_new` shell, `NewError`, the JSON-aware `_NewArgParser`; register `"new"` in `_VERBS`; update `_USAGE`. |
 | `src/project_standards/cli.py` | Update the top-level `spec` help string to mention `new`. |
 | `tests/test_spec_new.py` | Unit tests for the pure core. |
 | `tests/test_spec_new_discovery.py` | Unit tests for `collect_existing_spec_ids`. |
-| `tests/test_spec_new_cli.py` | CLI/integration tests (flag matrix, write safety, `--json`, dogfood). |
+| `tests/test_spec_new_cli.py` | CLI/integration tests (flag matrix, write safety, file mode, `--json` slug matrix, dogfood). |
 
 ---
 
@@ -91,6 +91,8 @@ def test_check_field_accepts_ordinary_values() -> None:
     check_field("implementer", "coding agent", is_title=False)
 ```
 
+Import only what this task uses (`pytest`, `yaml`, the three names under test). Tasks 2 and 4 add `import random`/`import re` and `from datetime import date` to this top block as they introduce the tests that use them — each import lands with its first consumer, so every task stays free of both unused-import (F401) and E402.
+
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_spec_new.py -v`
@@ -146,10 +148,12 @@ def emit_scalar(value: str) -> str:
     return dumped.strip()
 ```
 
+`new.py` imports only what Task 1 uses (`re`, `yaml`). Task 2 adds `import random` and `from collections.abc import Container` to this top block; Task 4 adds `from dataclasses import dataclass` and `from datetime import date`. Each import arrives with its first consumer, so Task 1 stays free of unused-import (F401) warnings under the strict gate.
+
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new.py -v`
-Expected: PASS (all parametrizations).
+Run: `uv run pytest tests/test_spec_new.py -v && uv run ruff check src/project_standards/specs/commands/new.py tests/test_spec_new.py && uv run basedpyright src/project_standards/specs/commands/new.py tests/test_spec_new.py`
+Expected: tests PASS; Ruff and BasedPyright clean.
 
 - [ ] **Step 5: Commit**
 
@@ -176,13 +180,16 @@ git commit -m "feat(spec): value grammar + YAML-safe scalar emission for spec ne
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# append to tests/test_spec_new.py
+# 1) Merge into the TOP import block of tests/test_spec_new.py — never below code (E402).
+#    Ruff sorts them among the existing imports:
 import random
+import re
 
 from project_standards.specs.commands.new import SpecIdExhausted, mint_spec_id
 from project_standards.specs.registry import SPEC_ID_PATTERN
 
 
+# 2) Append these test functions to the end of the file:
 def test_mint_matches_pattern_and_is_deterministic_per_seed() -> None:
     first = mint_spec_id(random.Random(0), set())
     again = mint_spec_id(random.Random(0), set())
@@ -192,20 +199,20 @@ def test_mint_matches_pattern_and_is_deterministic_per_seed() -> None:
 
 def test_mint_retries_past_a_collision() -> None:
     taken = mint_spec_id(random.Random(0), set())
-    # Seeding the same way but marking the first candidate as taken must yield a different id.
     other = mint_spec_id(random.Random(0), {taken})
     assert other != taken
     assert re.match(SPEC_ID_PATTERN, other)
 
 
 def test_mint_exhaustion_raises() -> None:
-    class _Fixed:
-        def choice(self, seq: str) -> str:
-            return seq[0]  # always "0" -> always SPEC-0000
-
+    # Reproduce the seed-0 first candidate, then demand a fresh id in exactly 1 attempt
+    # while that id is already taken -> the single attempt collides -> exhausted.
+    taken = mint_spec_id(random.Random(0), set())
     with pytest.raises(SpecIdExhausted):
-        mint_spec_id(_Fixed(), {"SPEC-0000"}, attempts=5)
+        mint_spec_id(random.Random(0), {taken}, attempts=1)
 ```
+
+Using a real `random.Random` (not a hand-rolled stub) keeps the call type-correct under BasedPyright strict — no fake-RNG protocol needed.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -216,9 +223,7 @@ Expected: FAIL with `ImportError: cannot import name 'mint_spec_id'`.
 
 ```python
 # add to src/project_standards/specs/commands/new.py
-
-import random  # noqa: E402  (grouped with the other stdlib import at file top in final form)
-from collections.abc import Container
+# first add to the top import block: `import random` and `from collections.abc import Container`
 
 _ID_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"  # base36, matching ^SPEC-[0-9A-Z]{4}$
 _MINT_ATTEMPTS = 1000
@@ -240,12 +245,10 @@ def mint_spec_id(
     )
 ```
 
-Move `import random` and `from collections.abc import Container` into the sorted import block at the top of `new.py` (remove the inline `# noqa`); the code above shows them inline only to mark what Task 2 adds.
-
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new.py -k mint -v`
-Expected: PASS.
+Run: `uv run pytest tests/test_spec_new.py -k mint -v && uv run ruff check src/project_standards/specs/commands/new.py tests/test_spec_new.py && uv run basedpyright src/project_standards/specs/commands/new.py tests/test_spec_new.py`
+Expected: tests PASS; Ruff and BasedPyright clean.
 
 - [ ] **Step 5: Commit**
 
@@ -265,7 +268,7 @@ git commit -m "feat(spec): bounded-retry spec_id minting"
 
 **Interfaces:**
 
-- Consumes: `SpecConfig`, `collect_spec_paths`, `DiscoveryError` (this module); `parse_document`, `SpecParseError` (document module).
+- Consumes: `SpecConfig`, `collect_spec_paths`, `DiscoveryError`, `ConfigError` (this module); `parse_document`, `SpecParseError` (document module).
 - Produces: `collect_existing_spec_ids(cfg: SpecConfig) -> set[str]` — the spec_ids already used in the repo, tolerating an empty corpus but propagating real config errors.
 
 - [ ] **Step 1: Write the failing test**
@@ -280,14 +283,16 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.specs import config as cfgmod
 from project_standards.specs.config import (
     ConfigError,
+    SpecConfig,
     collect_existing_spec_ids,
     load_spec_config,
 )
 
 
-def _cfg(tmp: Path, body: str):
+def _cfg(tmp: Path, body: str) -> SpecConfig:
     p = tmp / ".project-standards.yml"
     p.write_text(body, encoding="utf-8")
     return load_spec_config(p)
@@ -313,16 +318,21 @@ def test_collects_ids_and_skips_malformed_neighbor(
         "---\nspec_id: SPEC-7F3Q\n---\n# t\n", encoding="utf-8"
     )
     # Unterminated frontmatter fence -> SpecParseError -> skipped, not fatal.
-    (tmp_path / "docs" / "bad.md").write_text("---\nspec_id: SPEC-9Z9Z\n# no close\n", encoding="utf-8")
+    (tmp_path / "docs" / "bad.md").write_text(
+        "---\nspec_id: SPEC-9Z9Z\n# no close\n", encoding="utf-8"
+    )
     cfg = _cfg(tmp_path, "spec:\n  include:\n    - docs/*.md\n")
     assert collect_existing_spec_ids(cfg) == {"SPEC-7F3Q"}
 
 
-def test_unparseable_config_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.chdir(tmp_path)
-    cfg = load_spec_config(tmp_path / "does-not-exist.yml")  # absent -> not present
-    # An absent config is an empty corpus, not an error:
-    assert collect_existing_spec_ids(cfg) == set()
+def test_non_discovery_configerror_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Only DiscoveryError becomes an empty set; every OTHER ConfigError still propagates.
+    def _boom(explicit: list[Path], cfg: SpecConfig) -> list[Path]:
+        raise ConfigError("boom")
+
+    monkeypatch.setattr(cfgmod, "collect_spec_paths", _boom)
+    with pytest.raises(ConfigError):
+        collect_existing_spec_ids(SpecConfig(include=["x"], exclude=[], present=True))
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -334,7 +344,7 @@ Expected: FAIL with `ImportError: cannot import name 'collect_existing_spec_ids'
 
 ```python
 # add to src/project_standards/specs/config.py
-# new imports at the top of the file (grouped with the existing imports):
+# new import at the top (grouped with the existing imports):
 #   from project_standards.specs.document import SpecParseError, parse_document
 
 
@@ -364,12 +374,12 @@ def collect_existing_spec_ids(cfg: SpecConfig) -> set[str]:
     return ids
 ```
 
-Add `from project_standards.specs.document import SpecParseError, parse_document` to `config.py`'s import block. This is acyclic: `document` imports only `registry` + `model`, neither of which imports `config`.
+Add `from project_standards.specs.document import SpecParseError, parse_document` to `config.py`'s import block. This is acyclic: `document` imports only `registry` + `model`, neither of which imports `config`. (`DiscoveryError` and `collect_spec_paths` are already defined above in this module.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new_discovery.py -v`
-Expected: PASS.
+Run: `uv run pytest tests/test_spec_new_discovery.py -v && uv run ruff check src/project_standards/specs/config.py tests/test_spec_new_discovery.py && uv run basedpyright src/project_standards/specs/config.py tests/test_spec_new_discovery.py`
+Expected: tests PASS; Ruff and BasedPyright clean.
 
 - [ ] **Step 5: Commit**
 
@@ -389,7 +399,7 @@ git commit -m "feat(spec): tolerant collect_existing_spec_ids discovery for new"
 
 **Interfaces:**
 
-- Consumes: `emit_scalar` (Task 1); `TEMPLATES_DIR`, `TIER_FILES` (registry); `parse_document`, `validate_document` (for the property test).
+- Consumes: `emit_scalar` (Task 1); `TEMPLATES_DIR`, `TIER_FILES` (registry); `parse_document`, `validate_document` (property test).
 - Produces:
   - `NewOptions` (frozen) with `profile: str`, `spec_id: str` (already resolved — minted or `--id`), `title: str | None`, `owner: str | None`, `implementer: str | None`.
   - `scaffold(template_text: str, opts: NewOptions, *, today: date) -> str` — the filled scaffold.
@@ -399,7 +409,7 @@ Minting is a separate pure function (Task 2) the shell calls to resolve `opts.sp
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# append to tests/test_spec_new.py
+# 1) Merge into the TOP import block of tests/test_spec_new.py — never below code (E402):
 from datetime import date
 
 from project_standards.specs.commands.new import NewOptions, scaffold
@@ -407,6 +417,8 @@ from project_standards.specs.commands.validate import validate_document
 from project_standards.specs.document import parse_document
 from project_standards.specs.registry import TEMPLATES_DIR, TIER_FILES, load_registry
 
+
+# 2) Append this helper + test functions to the end of the file:
 _TODAY = date(2026, 7, 4)
 
 
@@ -414,16 +426,17 @@ def _template(tier: str) -> str:
     return (TEMPLATES_DIR / TIER_FILES[tier]).read_text(encoding="utf-8")
 
 
-def _opts(tier: str, **kw: object) -> NewOptions:
-    base: dict[str, object] = {
-        "profile": tier,
-        "spec_id": "SPEC-7F3Q",
-        "title": None,
-        "owner": None,
-        "implementer": None,
-    }
-    base.update(kw)
-    return NewOptions(**base)  # type: ignore[arg-type]
+def _opts(
+    tier: str,
+    *,
+    spec_id: str = "SPEC-7F3Q",
+    title: str | None = None,
+    owner: str | None = None,
+    implementer: str | None = None,
+) -> NewOptions:
+    return NewOptions(
+        profile=tier, spec_id=spec_id, title=title, owner=owner, implementer=implementer
+    )
 
 
 @pytest.mark.parametrize("tier", list(TIER_FILES))
@@ -461,18 +474,21 @@ def test_scaffold_only_rewrites_h1_with_title() -> None:
 @pytest.mark.parametrize("tier", list(TIER_FILES))
 @pytest.mark.parametrize("filled", [False, True])
 def test_scaffold_output_validates_clean(tier: str, filled: bool) -> None:
-    kw = {"title": "T", "owner": "O", "implementer": "I"} if filled else {}
-    out = scaffold(_template(tier), _opts(tier, **kw), today=_TODAY)
+    opts = (
+        _opts(tier, title="T", owner="O", implementer="I") if filled else _opts(tier)
+    )
+    out = scaffold(_template(tier), opts, today=_TODAY)
     findings = validate_document(parse_document("new.md", out), load_registry())
     assert findings == []  # spec invariant I1
 
 
 @pytest.mark.parametrize("tier", list(TIER_FILES))
-def test_scaffold_leaves_body_below_frontmatter_untouched_when_no_title(tier: str) -> None:
+def test_scaffold_leaves_body_below_frontmatter_untouched(tier: str) -> None:
     template = _template(tier)
     out = scaffold(template, _opts(tier), today=_TODAY)
-    # Everything after the H1 line is byte-identical to the template (I4): no title -> even H1 matches.
-    marker = "\n## "  # first second-level heading onward is pure body
+    # No --title -> even the H1 is unchanged, so from the first '## ' heading onward the
+    # output is byte-identical to the template (I4).
+    marker = "\n## "
     assert template[template.index(marker):] == out[out.index(marker):]
 ```
 
@@ -485,7 +501,7 @@ Expected: FAIL with `ImportError: cannot import name 'NewOptions'`.
 
 ```python
 # add to src/project_standards/specs/commands/new.py
-# new imports (group at top): from dataclasses import dataclass; from datetime import date
+# first add to the top import block: `from dataclasses import dataclass` and `from datetime import date`
 
 
 @dataclass(frozen=True)
@@ -558,8 +574,8 @@ def scaffold(template_text: str, opts: NewOptions, *, today: date) -> str:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new.py -v`
-Expected: PASS (all scaffold + earlier tests).
+Run: `uv run pytest tests/test_spec_new.py -v && uv run ruff check src/project_standards/specs/commands/new.py tests/test_spec_new.py && uv run basedpyright src/project_standards/specs/commands/new.py tests/test_spec_new.py`
+Expected: tests PASS; Ruff and BasedPyright clean.
 
 - [ ] **Step 5: Commit**
 
@@ -570,9 +586,9 @@ git commit -m "feat(spec): scaffold assembler (frontmatter rewrite + H1) — val
 
 ---
 
-## Task 5: `_run_new` shell — parsing, matrix, discovery, self-validate, `--stdout`
+## Task 5: `_run_new` shell — JSON-aware parser, matrix, discovery, self-validate, `--stdout`
 
-This task delivers a fully working `--stdout` command (no file writing yet — that is Task 6), so it is independently testable end-to-end via `--stdout`.
+Delivers a fully working `--stdout` command (no file writing yet — Task 6), independently testable end-to-end via `--stdout`. The parser is JSON-aware so even argparse-level failures honor the `--json`/exit-2 contract (I6/I7).
 
 **Files:**
 
@@ -582,7 +598,7 @@ This task delivers a fully working `--stdout` command (no file writing yet — t
 
 **Interfaces:**
 
-- Consumes: `NewOptions`, `scaffold`, `mint_spec_id`, `check_field`, `FieldValueError`, `SpecIdExhausted` (new module); `collect_existing_spec_ids`, `load_spec_config`, `ConfigError` (config); `parse_document`, `validate_document`, `load_registry`, `TEMPLATES_DIR`, `TIER_FILES` (existing).
+- Consumes: `NewOptions`, `scaffold`, `mint_spec_id`, `check_field`, `FieldValueError`, `SpecIdExhausted` (new module); `collect_existing_spec_ids`, `load_spec_config`, `ConfigError` (config); `parse_document`, `SpecParseError`, `validate_document`, `load_registry`, `SPEC_ID_PATTERN`, `TEMPLATES_DIR`, `TIER_FILES` (existing).
 - Produces: `_run_new(argv: list[str]) -> int`, registered under `_VERBS["new"]`.
 
 - [ ] **Step 1: Write the failing test**
@@ -599,6 +615,13 @@ from pathlib import Path
 import pytest
 
 from project_standards.specs.cli import run
+
+
+def _one_json(captured: str) -> dict[str, object]:
+    lines = [ln for ln in captured.splitlines() if ln.strip()]
+    assert len(lines) == 1, f"expected exactly one JSON line, got: {captured!r}"
+    obj: dict[str, object] = json.loads(lines[0])
+    return obj
 
 
 def test_stdout_prints_valid_spec_and_writes_nothing(
@@ -618,52 +641,76 @@ def test_stdout_json_payload(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     rc = run(["new", "--profile", "full", "--stdout", "--json", "--id", "SPEC-AB12"])
-    payload = json.loads(capsys.readouterr().out)
+    payload = _one_json(capsys.readouterr().out)
     assert rc == 0
     assert payload["ok"] is True
     assert payload["spec_id"] == "SPEC-AB12"
     assert payload["profile"] == "full"
     assert payload["path"] is None and payload["written"] is False
-    assert payload["content"].startswith("---\n")
+    assert isinstance(payload["content"], str) and payload["content"].startswith("---\n")
 
 
 @pytest.mark.parametrize(
     "argv",
     [
-        ["new", "--profile", "light", "--stdout", "out.md"],   # PATH + --stdout
-        ["new", "--profile", "light"],                          # neither PATH nor --stdout
-        ["new", "--profile", "light", "--stdout", "--force"],   # --force with --stdout
+        ["new", "--profile", "light", "--stdout", "out.md"],  # PATH + --stdout
+        ["new", "--profile", "light"],                         # neither PATH nor --stdout
+        ["new", "--profile", "light", "--stdout", "--force"],  # --force with --stdout
     ],
 )
-def test_flag_conflicts_exit_2(argv: list[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_flag_conflicts_exit_2(
+    argv: list[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.chdir(tmp_path)
     assert run(argv) == 2
 
 
-def test_bad_id_and_collision_and_bad_field_exit_2(
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["new", "--stdout", "--json"],                       # missing required --profile
+        ["new", "--profile", "medium", "--stdout", "--json"],  # invalid --profile choice
+        ["new", "--profile", "light", "--stdout", "--json", "--bogus"],  # unknown flag
+    ],
+)
+def test_argparse_failures_are_json_and_never_systemexit(
+    argv: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    rc = run(argv)  # must NOT raise SystemExit
+    payload = _one_json(capsys.readouterr().out)
+    assert rc == 2
+    assert payload["ok"] is False and payload["code"] == "usage"
+
+
+def test_bad_id_and_bad_field_exit_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.chdir(tmp_path)
     assert run(["new", "--profile", "light", "--stdout", "--id", "SPEC-lower"]) == 2
     assert run(["new", "--profile", "light", "--stdout", "--title", "has\nnewline"]) == 2
-    # --json failure payload shape:
+    capsys.readouterr()  # drain stderr from the two non-json runs above
     rc = run(["new", "--profile", "light", "--stdout", "--json", "--id", "nope"])
-    payload = json.loads(capsys.readouterr().out)
-    assert rc == 2 and payload["ok"] is False and payload["code"] == "bad_id"
+    payload = _one_json(capsys.readouterr().out)
+    assert rc == 2 and payload["code"] == "bad_id"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/test_spec_new_cli.py -v`
-Expected: FAIL — `run(["new", ...])` returns 2 with `unknown spec verb 'new'` (not yet registered), so assertions on rc 0 / payloads fail.
+Expected: FAIL — `run(["new", ...])` returns 2 with `unknown spec verb 'new'` (not yet registered); rc-0 and payload assertions fail.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Add to `src/project_standards/specs/cli.py`. New imports at the top:
+Add to `src/project_standards/specs/cli.py`. New imports (extend the existing `config`/`registry`/`document` import lines rather than duplicating them):
 
 ```python
 import random
 from datetime import date
+from typing import NoReturn
 
 from project_standards.specs.commands.new import (
     FieldValueError,
@@ -679,13 +726,29 @@ from project_standards.specs.config import (
     collect_spec_paths,
     load_spec_config,
 )
-from project_standards.specs.registry import SPEC_ID_PATTERN, TEMPLATES_DIR, TIER_FILES, load_registry
+from project_standards.specs.document import SpecParseError, parse_document
+from project_standards.specs.registry import (
+    SPEC_ID_PATTERN,
+    TEMPLATES_DIR,
+    TIER_FILES,
+    load_registry,
+)
 ```
 
-(Extend the existing `config` and `registry` import lines rather than duplicating them.) Then:
+Then, in the module body:
 
 ```python
 import re
+
+
+class _ArgparseError(Exception):
+    """Raised by _NewArgParser.error so a bad invocation reaches the JSON wrapper
+    instead of argparse's default sys.exit(2) + stderr (which would bypass I7)."""
+
+
+class _NewArgParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        raise _ArgparseError(message)
 
 
 class NewError(Exception):
@@ -710,9 +773,8 @@ def _emit_new_failure(json_mode: bool, err: NewError) -> int:
 
 
 def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
-    """Validate flags, resolve the spec_id (mint or --id), and return (opts, template_text).
+    """Validate flags, resolve the spec_id (mint or --id); return (opts, template_text).
     Raises NewError for every exit-2 condition."""
-    # Field grammar (title excludes backtick; all exclude empty/control chars).
     for flag, value, is_title in (
         ("title", args.title, True),
         ("owner", args.owner, False),
@@ -754,7 +816,8 @@ def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
 
 
 def _run_new(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(prog="project-standards spec new")
+    json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
+    ap = _NewArgParser(prog="project-standards spec new")
     ap.add_argument("path", nargs="?", type=Path)
     ap.add_argument("--profile", required=True, choices=("light", "standard", "full"))
     ap.add_argument("--id", dest="spec_id")
@@ -765,10 +828,13 @@ def _run_new(argv: list[str]) -> int:
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
-    args = ap.parse_args(argv)
 
     try:
-        # Flag conflict matrix (frozen by the spec) -> exit 2.
+        try:
+            args = ap.parse_args(argv)
+        except _ArgparseError as exc:
+            raise NewError("usage", str(exc)) from exc
+
         if args.path is not None and args.stdout:
             raise NewError("flag_conflict", "--stdout writes to stdout; do not also pass PATH")
         if args.path is None and not args.stdout:
@@ -779,8 +845,13 @@ def _run_new(argv: list[str]) -> int:
         opts, template_text = _resolve_new_options(args)
         text = scaffold(template_text, opts, today=date.today())
 
-        # Fail-closed self-validation (I1): never emit a spec validate would reject.
-        findings = validate_document(parse_document("<new>", text), load_registry())
+        # Fail-closed self-validation (I1): never emit a spec validate would reject, and
+        # map a parse failure of our OWN output to self_validation_failed (not exit 1).
+        try:
+            doc = parse_document("<new>", text)
+        except SpecParseError as exc:
+            raise NewError("self_validation_failed", f"generated scaffold did not parse: {exc}") from exc
+        findings = validate_document(doc, load_registry())
         if findings:
             raise NewError(
                 "self_validation_failed",
@@ -808,10 +879,10 @@ def _run_new(argv: list[str]) -> int:
 
         return _write_new_file(args, opts, text)  # Task 6
     except NewError as err:
-        return _emit_new_failure(args.json, err)
+        return _emit_new_failure(json_mode, err)
 ```
 
-For this task, add a temporary stub so the module imports and `--stdout` tests pass; Task 6 replaces it:
+Temporary stub so the module imports and `--stdout` tests pass (Task 6 replaces it):
 
 ```python
 def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
@@ -840,19 +911,19 @@ In `src/project_standards/cli.py`, update the advertised help:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new_cli.py -v`
-Expected: PASS (all `--stdout`, flag-matrix, and failure-payload cases). The file-writing tests are added in Task 6.
+Run: `uv run pytest tests/test_spec_new_cli.py -v && uv run ruff check src/project_standards/specs/cli.py src/project_standards/cli.py tests/test_spec_new_cli.py && uv run basedpyright src/project_standards/specs/cli.py`
+Expected: tests PASS (all `--stdout`, flag-matrix, argparse-JSON, and failure-payload cases); Ruff and BasedPyright clean. File-writing tests come in Task 6.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/specs/cli.py src/project_standards/cli.py tests/test_spec_new_cli.py
-git commit -m "feat(spec): spec new shell — parsing, flag matrix, discovery, self-validate, --stdout"
+git commit -m "feat(spec): spec new shell — JSON-aware parser, matrix, discovery, self-validate, --stdout"
 ```
 
 ---
 
-## Task 6: File write + safety (`_write_new_file`)
+## Task 6: File write + safety + mode (`_write_new_file`)
 
 **Files:**
 
@@ -862,27 +933,24 @@ git commit -m "feat(spec): spec new shell — parsing, flag matrix, discovery, s
 **Interfaces:**
 
 - Consumes: `NewError`, `NewOptions` (this module).
-- Produces: `_write_new_file(args, opts, text) -> int` — atomic write with the full target-type, parent-chain, refuse/force, and mkdir safety model.
+- Produces: `_write_new_file(args, opts, text) -> int` — atomic write with target-type, parent-chain, refuse/force, mkdir, and mode-preservation safety (mirrors `adopt/engine._atomic_write`).
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# append to tests/test_spec_new_cli.py
+# 1) Merge into the TOP import block of tests/test_spec_new_cli.py — never below code (E402);
+#    `os` and `stat` are used by the mode tests:
 import os
+import stat
 
 
-def _make(tmp: Path, argv: list[str]) -> int:
-    return run(argv)
-
-
+# 2) Append these test functions to the end of the file:
 def test_writes_new_file_that_validates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     target = tmp_path / "docs" / "specs" / "checkout.md"  # parents auto-created
-    rc = run(["new", "--profile", "standard", "--id", "SPEC-7F3Q", str(target)])
-    assert rc == 0 and target.is_file()
-    from project_standards.specs.cli import run as _run2
-
-    assert _run2(["validate", str(target)]) == 0  # I1 end-to-end
+    assert run(["new", "--profile", "standard", "--id", "SPEC-7F3Q", str(target)]) == 0
+    assert target.is_file()
+    assert run(["validate", str(target)]) == 0  # I1 end-to-end
 
 
 def test_refuse_existing_then_force(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -931,13 +999,33 @@ def test_write_leaves_no_temp_files(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert [p.name for p in tmp_path.iterdir()] == ["s.md"]  # no leftover .spec-new-*.tmp
 
 
+def test_new_file_mode_is_umask_respecting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "s.md"
+    run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(target)])
+    mask = os.umask(0)
+    os.umask(mask)
+    assert stat.S_IMODE(target.stat().st_mode) == stat.S_IMODE(0o666 & ~mask)  # not 0600
+
+
+def test_force_overwrite_preserves_target_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "s.md"
+    target.write_text("old\n", encoding="utf-8")
+    target.chmod(0o640)
+    run(["new", "--profile", "light", "--id", "SPEC-7F3Q", "--force", str(target)])
+    assert stat.S_IMODE(target.stat().st_mode) == 0o640
+
+
 def test_write_json_payload(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.chdir(tmp_path)
     target = tmp_path / "s.md"
     run(["new", "--profile", "light", "--id", "SPEC-7F3Q", "--json", str(target)])
-    payload = json.loads(capsys.readouterr().out)
+    payload = _one_json(capsys.readouterr().out)
     assert payload == {
         "ok": True,
         "spec_id": "SPEC-7F3Q",
@@ -948,14 +1036,16 @@ def test_write_json_payload(
     }
 ```
 
+Both `os` and `stat` were intentionally omitted from earlier tasks to keep those tasks import-clean; they arrive here with their first consumers (the mode tests).
+
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_spec_new_cli.py -k "write or refuse or symlink or parent or directory" -v`
-Expected: FAIL — the Task 5 stub raises `NewError("write_failed", ...)`, so every write case exits 2 (including the ones that should be 0).
+Run: `uv run pytest tests/test_spec_new_cli.py -k "write or refuse or symlink or parent or directory or mode" -v`
+Expected: FAIL — the Task 5 stub raises `NewError("write_failed")`, so every write case exits 2 (including those that should be 0).
 
 - [ ] **Step 3: Write minimal implementation**
 
-Replace the Task 5 stub in `src/project_standards/specs/cli.py`. Add imports `import os`, `import tempfile` at the top:
+Replace the Task 5 stub in `src/project_standards/specs/cli.py`. Add imports `import contextlib`, `import os`, `import stat`, `import tempfile` at the top:
 
 ```python
 def _parent_chain_has_symlink(target: Path) -> bool:
@@ -975,7 +1065,9 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
     if _target_type_conflict(target):
         raise NewError("not_regular_file", f"refusing to write non-regular target: {target}")
     if _parent_chain_has_symlink(target):
-        raise NewError("symlinked_parent", f"refusing to write through a symlinked parent: {target}")
+        raise NewError(
+            "symlinked_parent", f"refusing to write through a symlinked parent: {target}"
+        )
     overwritten = target.is_file()
     if overwritten and not args.force:
         raise NewError("exists", f"refusing to overwrite existing file: {target} (use --force)")
@@ -983,17 +1075,34 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
         target.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise NewError("mkdir_failed", f"cannot create parent directory for {target}: {exc}") from exc
+
+    tmp: Path | None = None
     try:
-        fd, tmpname = tempfile.mkstemp(dir=str(target.parent), prefix=".spec-new-", suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write(text)
-            os.replace(tmpname, target)  # atomic same-filesystem rename (I8)
-        except OSError:
-            _silent_unlink(tmpname)
-            raise
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".spec-new-", suffix=".tmp")
+        tmp = Path(tmp_name)
+        # Mode (mirrors adopt/engine._atomic_write): preserve on overwrite; umask-respecting
+        # 0o666 for a new file, so the result is not left at mkstemp's owner-only 0600.
+        if target.exists():
+            with contextlib.suppress(OSError):
+                tmp.chmod(target.stat().st_mode & 0o777)
+        else:
+            mask = os.umask(0)
+            os.umask(mask)
+            with contextlib.suppress(OSError):
+                tmp.chmod(stat.S_IMODE(0o666 & ~mask))
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, target)  # atomic same-filesystem rename (I8)  # noqa: PTH105
     except OSError as exc:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
         raise NewError("write_failed", f"cannot write {target}: {exc}") from exc
+    except BaseException:
+        # Full parity with adopt/engine._atomic_write: also clean up on interruption /
+        # unexpected non-OSError (KeyboardInterrupt, generator-throw), then re-raise as-is.
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
+        raise
 
     if args.json:
         print(
@@ -1011,30 +1120,199 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
     else:
         print(f"wrote {target}")
     return 0
-
-
-def _silent_unlink(name: str) -> None:
-    try:
-        os.unlink(name)
-    except OSError:
-        pass
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest tests/test_spec_new_cli.py -v`
-Expected: PASS (all write, safety, refuse/force, and payload cases).
+Run: `uv run pytest tests/test_spec_new_cli.py -v && uv run ruff check src/project_standards/specs/cli.py tests/test_spec_new_cli.py && uv run basedpyright src/project_standards/specs/cli.py`
+Expected: tests PASS; Ruff and BasedPyright clean. (Mode tests are POSIX-behavioral; the repo CI runs on Linux.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/specs/cli.py tests/test_spec_new_cli.py
-git commit -m "feat(spec): spec new atomic write + target/parent safety model"
+git commit -m "feat(spec): spec new atomic write + target/parent safety + mode preservation"
 ```
 
 ---
 
-## Task 7: Dogfood + full-gate green
+## Task 7: `--json` failure-code coverage (every frozen slug)
+
+Proves each frozen `code` slug is actually emitted by some path, so the consumer JSON contract cannot silently drift. Hard-to-trigger slugs (`id_exhausted`, `mkdir_failed`, `write_failed`, `self_validation_failed`) are forced via monkeypatch rather than host state.
+
+**Files:**
+
+- Modify: `tests/test_spec_new_cli.py`
+
+**Interfaces:**
+
+- Consumes: `run`, and the `project_standards.specs.cli` module for monkeypatching internal call points.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# 1) Merge into the TOP import block of tests/test_spec_new_cli.py — never below code (E402):
+from project_standards.specs import cli as spec_cli
+from project_standards.specs.commands.new import SpecIdExhausted
+
+
+# 2) Append these helpers + test functions to the end of the file:
+def _json_code(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
+    rc = run(argv)
+    payload = _one_json(capsys.readouterr().out)
+    assert payload["ok"] is False
+    return rc, str(payload["code"])
+
+
+def test_json_codes_for_arg_and_field_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    cases = {
+        "usage": ["new", "--stdout", "--json"],  # missing --profile
+        "flag_conflict": ["new", "--profile", "light", "--json", "--stdout", "x.md"],
+        "bad_id": ["new", "--profile", "light", "--stdout", "--json", "--id", "nope"],
+        "bad_field_value": ["new", "--profile", "light", "--stdout", "--json", "--title", "a\nb"],
+    }
+    for expected, argv in cases.items():
+        rc, code = _json_code(argv, capsys)
+        assert (rc, code) == (2, expected)
+
+
+def test_json_code_config_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    bad = tmp_path / "bad.yml"
+    bad.write_text("spec: [unterminated\n", encoding="utf-8")
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--config", str(bad)], capsys
+    )
+    assert (rc, code) == (2, "config_error")
+
+
+def test_json_code_id_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "e.md").write_text("---\nspec_id: SPEC-7F3Q\n---\n# t\n", encoding="utf-8")
+    (tmp_path / ".project-standards.yml").write_text(
+        "spec:\n  include:\n    - docs/*.md\n", encoding="utf-8"
+    )
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--id", "SPEC-7F3Q"], capsys
+    )
+    assert (rc, code) == (2, "id_collision")
+
+
+def test_json_codes_for_write_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "e.md"
+    existing.write_text("x\n", encoding="utf-8")
+    d = tmp_path / "d"
+    d.mkdir()
+    (tmp_path / "afile").write_text("x", encoding="utf-8")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "plink").symlink_to(outside, target_is_directory=True)
+    cases = {
+        "exists": ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(existing)],
+        "not_regular_file": ["new", "--profile", "light", "--json", "--force", "--id", "SPEC-7F3Q", str(d)],
+        "mkdir_failed": ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(tmp_path / "afile" / "s.md")],
+        "symlinked_parent": ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(tmp_path / "plink" / "s.md")],
+    }
+    for expected, argv in cases.items():
+        rc, code = _json_code(argv, capsys)
+        assert (rc, code) == (2, expected)
+
+
+def test_json_code_id_exhausted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(rng: object, existing: object) -> str:
+        raise SpecIdExhausted("forced")
+
+    monkeypatch.setattr(spec_cli, "mint_spec_id", _boom)
+    rc, code = _json_code(["new", "--profile", "light", "--stdout", "--json"], capsys)
+    assert (rc, code) == (2, "id_exhausted")
+
+
+def test_json_code_self_validation_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _malformed(template_text: str, opts: object, *, today: object) -> str:
+        return "---\nnot a real spec\n"  # unterminated fence -> SpecParseError on self-validate
+
+    monkeypatch.setattr(spec_cli, "scaffold", _malformed)
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--id", "SPEC-7F3Q"], capsys
+    )
+    assert (rc, code) == (2, "self_validation_failed")
+
+
+def test_json_code_write_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(src: object, dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")], capsys
+    )
+    assert (rc, code) == (2, "write_failed")
+    assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, no destination left
+
+
+def test_write_cleanup_on_interruption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # CR-NEW-001: a non-OSError (KeyboardInterrupt) after temp creation must still remove
+    # the temp file and leave no destination — full parity with adopt/engine._atomic_write.
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(src: object, dst: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    with pytest.raises(KeyboardInterrupt):
+        run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")])
+    assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, destination untouched
+```
+
+- [ ] **Step 2: Run test to verify it fails or passes**
+
+Run: `uv run pytest tests/test_spec_new_cli.py -k json_code -v`
+Expected: PASS if Tasks 5–6 emit the correct slugs. A failure here means a path emits the wrong `code` (or non-JSON) — fix the shell, not the test.
+
+- [ ] **Step 3: (implementation already complete)**
+
+No new production code — this task hardens the JSON contract. If a slug is wrong, correct the corresponding `NewError(...)` in `cli.py`.
+
+- [ ] **Step 4: Run to verify**
+
+Run: `uv run pytest tests/test_spec_new_cli.py -v && uv run ruff check tests/test_spec_new_cli.py && uv run basedpyright tests/test_spec_new_cli.py`
+Expected: PASS; Ruff and BasedPyright clean.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/test_spec_new_cli.py
+git commit -m "test(spec): assert every frozen --json code slug for spec new"
+```
+
+---
+
+## Task 8: Dogfood + full-gate green
 
 **Files:**
 
@@ -1043,7 +1321,6 @@ git commit -m "feat(spec): spec new atomic write + target/parent safety model"
 **Interfaces:**
 
 - Consumes: the full `new` → `validate` pipeline.
-- Produces: an end-to-end dogfood test proving every tier's scaffold validates through the real CLI.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1055,14 +1332,14 @@ def test_dogfood_new_then_validate(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     target = tmp_path / f"{tier}.md"
-    assert run(["new", "--profile", tier, str(target)]) == 0
-    assert run(["validate", str(target)]) == 0  # minted id, no --id, still validates
+    assert run(["new", "--profile", tier, str(target)]) == 0  # minted id, no --id
+    assert run(["validate", str(target)]) == 0  # still validates
 ```
 
-- [ ] **Step 2: Run test to verify it fails or passes**
+- [ ] **Step 2: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_spec_new_cli.py -k dogfood -v`
-Expected: PASS (the pipeline is complete after Task 6). If any tier fails, the fault is a scaffold/validate mismatch surfaced end-to-end — fix in `new.py`, not the test.
+Expected: PASS. If any tier fails, a scaffold/validate mismatch is surfaced end-to-end — fix in `new.py`.
 
 - [ ] **Step 3: Run the full gate**
 
@@ -1073,12 +1350,12 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
 ```
 
-Expected: all green; branch coverage ≥ `fail_under`. If Ruff reports import-sort or unused-import issues from the incremental import additions, apply `uv run ruff check --fix .` and re-run.
+Expected: all green; branch coverage ≥ `fail_under`. If Ruff reports import-sort/format issues from the incremental additions, run `uv run ruff format . && uv run ruff check --fix .` and re-run.
 
-- [ ] **Step 4: Dogfood the standards' own frontmatter validator (repo non-negotiable)**
+- [ ] **Step 4: Dogfood the repo's own frontmatter validator (non-negotiable)**
 
 Run: `uv run validate-frontmatter --config .project-standards.yml`
-Expected: PASS (this plan touches no managed Markdown frontmatter, so it stays green).
+Expected: PASS (this plan touches no managed Markdown frontmatter).
 
 - [ ] **Step 5: Commit**
 
@@ -1091,11 +1368,13 @@ git commit -m "test(spec): dogfood new -> validate across all three tiers"
 
 ## Self-Review notes (coverage of the spec)
 
-- **CLI surface & flag matrix (spec C1):** Task 5 (`argparse` + the three conflict raises); tested in `test_flag_conflicts_exit_2`.
-- **Module layout & reuse (spec C2):** Tasks 1–6 create exactly the files the spec lists; `scaffold`/`mint_spec_id`/`emit_scalar`/`collect_existing_spec_ids` all present.
+- **CLI surface & flag matrix (spec C1):** Task 5 (JSON-aware parser + three conflict raises); `test_flag_conflicts_exit_2`, `test_argparse_failures_are_json_and_never_systemexit`.
+- **Module layout & reuse (spec C2):** Tasks 1–6 create exactly the files the spec lists.
 - **Fill operation + value grammar (spec C3):** Tasks 1 & 4; H1 rewrite only with `--title`; backtick-in-title rejection.
-- **Minting & tolerant discovery (spec C4):** Tasks 2 & 3; bounded retries + `SpecIdExhausted`; `DiscoveryError`→empty while other `ConfigError`→exit 2; malformed neighbor skipped.
-- **Write model & safety (spec C5):** Task 6; atomic temp+`os.replace`, target-type + parent-chain symlink refusal, mkdir, refuse/force.
-- **Error handling & exit codes + `--json` contract (spec C6):** Task 5 (`NewError` + `_emit_new_failure`) and Task 6 (success payloads); every frozen `code` slug is raised by some path (`flag_conflict`, `bad_field_value`, `config_error`, `bad_id`, `id_collision`, `id_exhausted`, `self_validation_failed`, `not_regular_file`, `symlinked_parent`, `exists`, `mkdir_failed`, `write_failed`).
-- **Invariants I1–I8:** I1 (scaffold property test + dogfood), I2/I3 (CLI tests), I4 (body-untouched test), I5 (seeded-RNG determinism test), I6 (every failure returns 2, no traceback), I7 (json payload tests), I8 (no-temp-left + atomic replace).
-- **Acceptance criteria:** all mapped to Task 6/7 tests. Versioning/docs/CHANGELOG are out of code scope (spec Non-goals + the separately-owed CHANGELOG entry in `TODO.md`).
+- **Minting & tolerant discovery (spec C4):** Tasks 2 & 3; bounded retries + `SpecIdExhausted`; `DiscoveryError`→empty while other `ConfigError`→exit 2 (`test_non_discovery_configerror_propagates`); malformed neighbor skipped.
+- **Write model & safety (spec C5):** Task 6; atomic temp+`os.replace`, target-type + parent-chain symlink refusal, mkdir, refuse/force, **mode preservation**, and **`BaseException` temp cleanup** — full parity with `adopt/engine._atomic_write` (interruption test in Task 7).
+- **Error handling, exit codes & `--json` contract (spec C6):** Tasks 5–7. **Every frozen `code` slug is asserted in Task 7** (`usage`, `flag_conflict`, `bad_id`, `bad_field_value`, `config_error`, `id_collision`, `id_exhausted`, `self_validation_failed`, `exists`, `not_regular_file`, `symlinked_parent`, `mkdir_failed`, `write_failed`). Parser failures route through the JSON wrapper (CR-001); self-validation catches `SpecParseError` (CR-003).
+- **Invariants I1–I8:** I1 (scaffold property test + dogfood), I2/I3 (CLI tests), I4 (body-untouched test), I5 (seeded-RNG determinism), I6 (no `SystemExit`/traceback; every failure returns 2), I7 (JSON on every outcome incl. argparse), I8 (no-temp-left + atomic replace + mode).
+- **Static gate cleanliness (CR-002):** every test snippet imports what it uses (`re`, `os`, `stat`), has no unused imports, annotates helpers (`_cfg -> SpecConfig`), and uses a real `random.Random` (no untyped RNG fake); each implementation task re-runs `ruff check` + `basedpyright`.
+- **Out of scope (documented decisions):** bundled-template read failure is an install-integrity concern already guarded by Spec #1's `test_spec_packaging` (byte-identical + wheel-inclusion), so `new` does not add a runtime slug for it. Versioning/CHANGELOG are spec Non-goals (the CHANGELOG entry is separately owed in `TODO.md`).
+```
