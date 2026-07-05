@@ -3,6 +3,7 @@ from __future__ import annotations
 from project_standards.specs.commands.upgrade import (  # pyright: ignore[reportPrivateUsage]
     _merge_top,  # pyright: ignore[reportPrivateUsage]
     _present_top_keys,  # pyright: ignore[reportPrivateUsage]
+    _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
     _rewrite_h1_suffix,  # pyright: ignore[reportPrivateUsage]
     _set_profile,  # pyright: ignore[reportPrivateUsage]
     _top_blocks,  # pyright: ignore[reportPrivateUsage]
@@ -111,10 +112,6 @@ def test_merge_top_inserts_missing_section_and_keeps_author_block() -> None:
 
 
 def test_reconcile_drops_stale_omission_note_tail() -> None:
-    from project_standards.specs.commands.upgrade import (
-        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
-    )
-
     source = (
         "## 2. Scope\n\nAUTHORED scope\n\n---\n\n"
         "> **Sections §3–§6 are Standard/Full-tier** and are intentionally omitted "  # noqa: RUF001
@@ -127,10 +124,6 @@ def test_reconcile_drops_stale_omission_note_tail() -> None:
 
 
 def test_reconcile_inserts_missing_subsections_and_drops_reduction_note() -> None:
-    from project_standards.specs.commands.upgrade import (
-        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
-    )
-
     source = (
         "## 7. Requirements\n\n"
         "> At the Light profile, Requirements is functional-only (§7.1). "
@@ -151,10 +144,6 @@ def test_reconcile_inserts_missing_subsections_and_drops_reduction_note() -> Non
 
 
 def test_reconcile_takes_tier_variant_subsection_17_1_from_target() -> None:
-    from project_standards.specs.commands.upgrade import (
-        _reconcile_shared,  # pyright: ignore[reportPrivateUsage]
-    )
-
     source = (
         "## 17. Testing and Acceptance\n\n"
         "> At the Light profile, this is the Definition of Done only (§17.1).\n\n"

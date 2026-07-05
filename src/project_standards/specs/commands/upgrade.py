@@ -119,7 +119,9 @@ def _merge_top(source_body: str, target_body: str) -> str:  # pyright: ignore[re
     out: list[str] = []
     for key, target_text in _top_blocks(target_body):
         if key == "":
-            out.append(source_map[key])  # preamble from source
+            # Preamble from source; fall back to the target's if the source has none
+            # (pure-function safety — no caller precondition guarantees a source preamble).
+            out.append(source_map.get("", target_text))
         elif key in source_map and key not in _TEMPLATE_OWNED:
             out.append(_reconcile_shared(source_map[key], target_text))
         else:
