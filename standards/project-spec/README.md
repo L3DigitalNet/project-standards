@@ -150,17 +150,45 @@ _To be written — see [`adopt.md`](adopt.md)._
 
 ## 7. Exceptions process
 
-<!-- TODO: how a project documents a deviation (ADR convention used by the sibling standards). -->
+Three different things get called a "deviation"; the test for a true exception to _this standard_ is simple — **does the deterministic tooling refuse it?**
 
-_To be written._
+1. **Tailoring** — choosing a profile, deleting a conditional section (§11, §18.6) with an annotated reason, upgrading a tier. Tooling-safe **by construction**: the templates and validator are built to accept these (profile gaps, annotated omissions, additive upgrades). Not an exception.
+2. **Implementation deviations** — where the _built software_ diverges from what a spec requires. Recorded in that spec's **Deviations Log** (`DEV-` IDs) per the Agent Implementation Contract. The log is itself a canonical section, so it too is tooling-safe. Not an exception.
+3. **Deviating from the standard itself** — dropping a canonical section, changing the numbering or ID scheme, using a different frontmatter schema, abandoning the tiered templates. This is exactly the class of deviation the tooling **cannot absorb**, and it is the exceptions process.
+
+**An exception forfeits the machine guarantees — and an ADR does not restore them.** The deterministic tooling ([§5](#5-tooling)) rests on these invariants; a case-3 deviation will make `validate` report the spec as non-conformant and may cause `extract` / `next` / `upgrade` to mis-parse or refuse it. Documenting the exception in an ADR records _why_; it does not teach the tool to accept it. The consumer must **also scope the tooling to exclude the non-conforming spec** (or accept its failures) — the same way this repository excludes files from the frontmatter validator. That cost is deliberate: an exception opts a spec out of the guarantees (G2–G7) that make the standard worth adopting, so prefer tailoring (case 1) wherever it suffices.
+
+When an exception is genuinely warranted, document it as a conformant ADR under `docs/decisions/`, using a zero-padded sequence number for `NNNN`:
+
+```text
+docs/decisions/adr-NNNN-project-spec-exception.md
+```
+
+The [ADR Standard](../adr/README.md) is the authority for the ADR's shape (`id`, filename, frontmatter, MADR sections). State what the standard requires, what the project does instead, **which tooling guarantees are forfeited and how the tool is scoped around them**, and why built-in tailoring does not already cover it.
+
+- **Valid exceptions:** an existing project with a heavily-invested house spec format it cannot migrate yet; a domain that needs a section the canonical registry does not model; a regulated context requiring a fixed external template.
+- **Invalid exceptions:** deleting a required section to avoid writing it; inventing a private ID scheme on preference; skipping the Agent Implementation Contract because "the agent will figure it out."
 
 ---
 
 ## 8. Update process / review cadence
 
-<!-- TODO: triggers for review and light/full/immediate review cadence. -->
+Review this standard when:
 
-_To be written._
+- **A template changes** — a canonical section or appendix is added, removed, or renumbered. Any such change must preserve the interchangeability guarantees (G2); re-run [`resources/check_specs.py`](resources/check_specs.py) to prove the three profiles still agree.
+- The **spec frontmatter schema** (`spec_id`, `status`, `profile`, relations) or its lifecycle changes.
+- The **ID prefix registry** (Appendix A) or ID format changes.
+- The **Agent Implementation Contract** (Appendix B) changes.
+- A **referenced external standard** shifts — ISO/IEC/IEEE 29148, IEEE 1016, ISO/IEC/IEEE 42010, the [ADR Standard](../adr/README.md) / MADR, or the OpenAPI Specification (the templates cite these; verify citations on review).
+- The **tooling contract or capability set** ([§5](#5-tooling)) changes.
+
+Review cadence:
+
+- Light review: quarterly.
+- Full review: annually.
+- Immediate review: after any template-breaking change, a frontmatter/ID-scheme change, or an upstream standard revision.
+
+Until the standard is released for adoption it is under active development and reviewed continuously; the cadence above takes effect at first release.
 
 ---
 
