@@ -78,13 +78,23 @@ The standard makes the following guarantees to an adopter. Each is a promise the
 
 ## 4. Templates
 
-The standard ships three templates, one per project size and complexity:
+The standard ships three templates — **profiles** — that form a strict ladder: **Light ⊂ Standard ⊂ Full**. Full is canonical; Light and Standard are pruned views of it that keep the **same section and appendix numbers**, so a section means the same thing in every profile and upgrading is purely additive (G1, G2).
 
-- [Light template](templates/spec-light-template.md)
-- [Standard template](templates/spec-standard-template.md)
-- [Full template](templates/spec-full-template.md)
+| Profile | Template | Use for |
+| --- | --- | --- |
+| **Light** | [`spec-light-template.md`](templates/spec-light-template.md) | Scripts, small tools, single-session agent tasks. |
+| **Standard** | [`spec-standard-template.md`](templates/spec-standard-template.md) | Typical features and services. |
+| **Full** | [`spec-full-template.md`](templates/spec-full-template.md) | Multi-service systems, durable data, external integrations, or multiple stakeholders. |
 
-<!-- TODO: describe when to reach for each template and how they relate (subset/superset). -->
+**How the tiers relate.** Because lower tiers omit higher-tier sections but keep the canonical numbers, their numbering has **intentional, annotated gaps** — an omission note (`> **§N … is Full-tier** and is intentionally omitted`) marks every one, so "deliberately absent" is always distinguishable from "accidentally missing." Upgrading inserts the missing sections at their canonical numbers and clears the omission notes; it never renumbers sections or rewrites `§`/ID references. (The `upgrade` command, [§5](#5-tooling), performs this mechanically.)
+
+**Choosing a profile.** Pick the smallest that fits, then upgrade if the project grows:
+
+- Owns durable data → at least **Standard** (it carries Backup/DR at §18.6; Light does not).
+- Talks to external paid or rate-limited APIs, makes automated decisions users must trust, or spans multiple services or stakeholders → **Full**.
+- Implemented by a coding agent → the Agent Implementation Contract (Appendix B) applies at every tier; it is the cheapest section and the highest-leverage one.
+
+Each template's own **Appendix D (Tailoring)** carries the authoritative per-tier guidance; the full canonical section registry and the tooling contract live in [`resources/tooling-notes.md`](resources/tooling-notes.md).
 
 ---
 
