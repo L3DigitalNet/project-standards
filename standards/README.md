@@ -8,6 +8,7 @@ This directory holds the **governing standards** this repository defines. Each s
 | ADR | Architecture Decision Records (MADR on the frontmatter profile) | [adr/](adr/) | [adopt](adr/adopt.md) |
 | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
+| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | [python-coding/](python-coding/) | — (**in-development draft**, reference-only; not yet released for adoption) |
 
 ## Table of Contents

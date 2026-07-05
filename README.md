@@ -15,11 +15,13 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [ADR Standard](#adr-standard)
     - [Python Tooling SSOT Standard](#python-tooling-ssot-standard)
     - [Markdown Tooling Standard](#markdown-tooling-standard)
+    - [Project Specification Standard](#project-specification-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
   - [Consuming the standards](#consuming-the-standards)
     - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
     - [Python Tooling SSOT](#python-tooling-ssot)
     - [Markdown Tooling](#markdown-tooling)
+    - [Project Specification](#project-specification)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
@@ -35,6 +37,7 @@ project-standards/
 │   ├── adr/                   #   standard + adopt + templates/ + examples/
 │   ├── python-tooling/        #   standard + adopt (doc-only)
 │   ├── markdown-tooling/      #   standard + adopt (doc-only)
+│   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
 │   └── python-coding/         #   draft standard (reference-only; README only)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
@@ -84,6 +87,13 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 - **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
 
+### Project Specification Standard
+
+Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Unlike the copy-adopt standards, there is nothing to seed into a consumer repo besides a `spec:` config block — installing `project-standards` gives the full tool surface directly, and `new` scaffolds from the package's bundled templates.
+
+- **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
+- **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
+
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
@@ -92,7 +102,7 @@ Code-shape and agent-behavior rules for Python — the reference companion to th
 
 ## Consuming the standards
 
-How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling** and **Markdown Tooling** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
+How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, and **Project Specification** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
@@ -119,6 +129,10 @@ No config or workflow — copy the in-doc scaffolds and run the verification gat
 Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v3` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 
 > **Availability:** `lint-markdown.yml` is available since `@v2`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
+
+### Project Specification
+
+Add a `spec:` block to `.project-standards.yml` declaring which files are project specs, then optionally call the reusable `validate-specs.yml@v3` workflow (same pinning rules as the Markdown standards). See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
 
 ### Pin to a release tag, not `main`
 

@@ -995,7 +995,14 @@ def test_find_bundled_schema_resolves_from_package_dir(
 # Contract / dogfood — the shipped artifacts must stay valid for consumers
 # ===========================================================================
 
-EXAMPLE_FILES = sorted(_REPO_ROOT.glob("standards/*/examples/*.md"))
+# project-spec's examples/ use that standard's OWN frontmatter schema (spec_id/status/
+# profile/related), not this canonical one — see standards/project-spec/README.md §2 Scope.
+# They are dogfooded separately by `spec validate` (tests/test_spec_validate.py), not here.
+EXAMPLE_FILES = sorted(
+    p
+    for p in _REPO_ROOT.glob("standards/*/examples/*.md")
+    if p.parent.parent.name != "project-spec"
+)
 
 
 def test_examples_directory_is_not_empty() -> None:

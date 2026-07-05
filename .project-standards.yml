@@ -25,10 +25,10 @@ markdown:
       # python-coding is an in-development standard, not yet released for adoption (excluded from
       # `adopt`); its README is a draft, not a managed doc, so it is not frontmatter-validated yet.
       - "standards/python-coding/**"
-      # project-spec is likewise an in-development draft standard, not yet registered for adoption;
-      # its README, adopt guide, and resources are drafts (no frontmatter yet), not managed docs —
-      # excluded until the standard is released. (Its templates are already covered above.)
-      - "standards/project-spec/**"
+      # project-spec's dogfood example is a spec document, not a canonical-frontmatter one — it
+      # uses the standard's OWN frontmatter schema (spec_id/status/profile/related), validated by
+      # `spec validate` below, not this validator. (Its templates are already covered above.)
+      - "standards/project-spec/examples/**"
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"
@@ -60,3 +60,11 @@ python_tooling:
 
 markdown_tooling:
   version: "1.0"
+
+# Project Specification Standard: which files `spec validate`/`spec lint` check.
+# This repo's own planning docs (docs/superpowers/specs/) predate this standard and use
+# a different convention — they are not project specs. The dogfood example under
+# standards/project-spec/examples/ is what's validated here, per standards/project-spec/adopt.md.
+spec:
+  include:
+    - "standards/project-spec/examples/**/*.md"
