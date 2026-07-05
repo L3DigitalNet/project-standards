@@ -91,8 +91,17 @@ def numkey(s: str) -> list[int]:
     return [int(x) for x in s.split(".")]
 
 
-def _appendix_letters(body: str) -> list[str]:
-    return re.findall(r"^## Appendix ([A-Z]):", body, re.M)
+_APPENDIX_HEADING = "^## Appendix "
+
+
+def appendix_letters(body: str) -> list[str]:
+    """Return every '## Appendix X:' letter found in body, in document order."""
+    return re.findall(rf"{_APPENDIX_HEADING}([A-Z]):", body, re.M)
+
+
+def appendix_pattern(letter: str) -> str:
+    """Regex source matching one lettered appendix heading through its content."""
+    return rf"{_APPENDIX_HEADING}{re.escape(letter)}:.*?(?=^## |\Z)"
 
 
 def declared_prefixes(body: str) -> dict[str, str]:
@@ -129,7 +138,7 @@ def load_registry() -> Registry:
         tier: frozenset(n for n, _ in section_numbers(headings(body)))
         for tier, body in tier_body.items()
     }
-    appendices = {tier: frozenset(_appendix_letters(body)) for tier, body in tier_body.items()}
+    appendices = {tier: frozenset(appendix_letters(body)) for tier, body in tier_body.items()}
     tier_prefixes = {tier: frozenset(declared_prefixes(body)) for tier, body in tier_body.items()}
     prefix_defined_in = declared_prefixes(full)
 

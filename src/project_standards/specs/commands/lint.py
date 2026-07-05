@@ -42,7 +42,7 @@ def _must_frs(doc: SpecDocument) -> list[str]:
     out: list[str] = []
     for line in rows[1:]:
         cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
-        if len(cells) > pcol and re.match(r"^FR-\d+$", cells[0]) and cells[pcol] == "Must":
+        if len(cells) > pcol and re.match(r"^FR-\d+$", cells[0]) and cells[pcol].lower() == "must":
             out.append(cells[0])
     return out
 

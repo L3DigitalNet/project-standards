@@ -8,6 +8,7 @@ surface the frontmatter validator checks.
 
 from __future__ import annotations
 
+import bisect
 import re
 from typing import Any, cast
 
@@ -17,6 +18,7 @@ from project_standards.specs.model import SpecDocument
 from project_standards.specs.registry import (
     ID_TOKEN,
     NOT_AN_ID,
+    declared_prefixes,
     gh_slug,
     headings,
     numkey,
@@ -24,7 +26,6 @@ from project_standards.specs.registry import (
     split_front_matter,
 )
 
-_DECLARE_ROW = re.compile(r"^\|\s*`([A-Z]{1,4})-`\s*\|[^|]*\|\s*([^|]+?)\s*\|", re.M)
 _DEFINED_NUM = re.compile(r"([0-9]+(?:\.[0-9]+)*)")
 
 
@@ -77,17 +78,15 @@ def parse_document(path: str, text: str) -> SpecDocument:
         raise SpecParseError(f"{path}: malformed frontmatter fence: {exc}") from exc
     hs = headings(body)
     scalars = _scalar_frontmatter(fm)
+    nl_offsets = [i for i, ch in enumerate(body) if ch == "\n"]
     used: dict[str, list[tuple[str, int]]] = {}
     for m in ID_TOKEN.finditer(body):
         pfx = m.group(1)
         if pfx in NOT_AN_ID:
             continue
-        line = body[: m.start()].count("\n") + 1
+        line = bisect.bisect_left(nl_offsets, m.start()) + 1
         used.setdefault(pfx, []).append((f"{pfx}-{m.group(2)}", line))
-    apx = re.search(r"## Appendix A:.*?(?=\n## |\Z)", body, re.S)
-    declared = (
-        {r.group(1): r.group(2).strip() for r in _DECLARE_ROW.finditer(apx.group(0))} if apx else {}
-    )
+    declared = declared_prefixes(body)
     return SpecDocument(
         path=path,
         profile=scalars.get("profile"),

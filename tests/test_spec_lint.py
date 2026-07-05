@@ -36,3 +36,13 @@ def test_approved_standard_should_requirement_not_flagged() -> None:
     traces = [f.locus for f in lint_document(doc, load_registry()) if f.code == "SL-TRACE"]
     assert "FR-002" not in traces
     assert "FR-001" not in traces
+
+
+def test_uppercase_must_priority_is_still_traced() -> None:
+    """`Priority` values are authored freehand; `MUST`/`must` must count like `Must`."""
+    doc = parse_document(
+        "approved_standard_uppercase_must.md",
+        (_FIX / "approved_standard_uppercase_must.md").read_text(encoding="utf-8"),
+    )
+    traces = [f.locus for f in lint_document(doc, load_registry()) if f.code == "SL-TRACE"]
+    assert "FR-002" in traces

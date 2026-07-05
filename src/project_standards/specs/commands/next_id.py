@@ -8,7 +8,7 @@ from project_standards.specs.model import Registry, SpecDocument
 def next_free_id(doc: SpecDocument, reg: Registry, prefix: str) -> str:
     """Return the next available ID, honoring tier and width rules."""
     prefix = prefix.rstrip("-").upper()
-    tier_ok = reg.tier_prefixes.get(doc.profile or "full", frozenset())
+    tier_ok = reg.tier_prefixes.get(doc.profile or "", frozenset())
     if prefix not in reg.prefix_defined_in:
         raise ValueError(f"unknown prefix {prefix!r}")
     if prefix not in tier_ok:
@@ -16,4 +16,9 @@ def next_free_id(doc: SpecDocument, reg: Registry, prefix: str) -> str:
     used = doc.used_ids.get(prefix, [])
     highest = max((int(fid.split("-", 1)[1]) for fid, _ in used), default=0)
     nxt = highest + 1
+    cap = 9 if prefix == "MS" else 999
+    if nxt > cap:
+        raise ValueError(
+            f"prefix {prefix!r} exhausted: no free ID fits its validator-mandated width"
+        )
     return f"{prefix}-{nxt}" if prefix == "MS" else f"{prefix}-{nxt:03d}"

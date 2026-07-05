@@ -31,6 +31,11 @@ def test_raw_template_frontmatter_ignores_inline_comments(tier: str) -> None:
     assert doc.frontmatter["spec_id"] == "SPEC-____"
 
 
+def test_used_ids_line_numbers_are_one_indexed() -> None:
+    doc = parse_document("x.md", "---\n\n---\n# t\nline2\nFR-001 here\nline4\nFR-002 and FR-003\n")
+    assert [ln for _fid, ln in doc.used_ids["FR"]] == [3, 5, 5]
+
+
 def test_denylist_excludes_non_ids() -> None:
     doc = parse_document("x.md", "---\n\n---\n# t\nText about WCAG-2 and PITR-1 and FR-005.\n")
     assert "WCAG" not in doc.used_ids and "PITR" not in doc.used_ids

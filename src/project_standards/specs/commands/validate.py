@@ -6,7 +6,7 @@ import re
 
 from project_standards.specs.document import definition_sites
 from project_standards.specs.model import Finding, Registry, SpecDocument
-from project_standards.specs.registry import numkey
+from project_standards.specs.registry import appendix_letters, numkey
 
 # Range dashes: en-dash (\u2013), em-dash (\u2014), and hyphen. Em-dash is
 # common via editor autocorrect; without it a "14 to 16 omitted" range note
@@ -106,7 +106,7 @@ def _check_sections(doc: SpecDocument, reg: Registry) -> list[Finding]:
 
 def _check_appendices(doc: SpecDocument, reg: Registry) -> list[Finding]:
     out: list[Finding] = []
-    apps = re.findall(r"^## Appendix ([A-Z]):", doc.body, re.M)
+    apps = appendix_letters(doc.body)
     if apps != sorted(apps):
         out.append(_f("SV-APX-ORDER", f"appendix letters not ascending: {apps}"))
     for required in ("A", "B", "D"):

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from project_standards.specs.document import section_slice
 from project_standards.specs.model import SpecDocument
-from project_standards.specs.registry import ID_TOKEN
+from project_standards.specs.registry import ID_TOKEN, appendix_pattern
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class ExtractResult:
 
 
 def _appendix_slice(body: str, letter: str) -> str | None:
-    m = re.search(rf"^## Appendix {re.escape(letter)}:.*?(?=^## |\Z)", body, re.M | re.S)
+    m = re.search(appendix_pattern(letter), body, re.M | re.S)
     return m.group(0).rstrip() if m else None
 
 
