@@ -6,7 +6,7 @@
 
 **Architecture:** A pure splice core (`specs/commands/upgrade.py`, `str -> str`, no I/O, no RNG, no clock) plus an impure CLI shell (`specs/cli.py::_run_upgrade`). Source-as-spine: the source's authored blocks are copied as **raw text** (never re-serialized); only missing units and canonical filler come from the target-tier bundled template. Two fail-closed gates bracket the splice — the source must be `validate`-clean before, and the spliced output must be `validate`-clean before any write.
 
-**Tech Stack:** Python 3.14, argparse, PyYAML (via existing `emit_scalar`), pytest + coverage, ruff, basedpyright. Reuses `new.py` (`_rewrite_frontmatter`) and `cli.py` (`NewError`, `_emit_new_failure`, `_NewArgParser`/`_ArgparseError`, `_parent_chain_has_symlink`, `_target_type_conflict`, and the atomic-write core extracted in Task 8).
+**Tech Stack:** Python 3.14, argparse, PyYAML (via existing `emit_scalar`), pytest + coverage, ruff, basedpyright. Reuses `new.py` (`_rewrite_frontmatter`) and `cli.py` (`NewError`, `_emit_new_failure`, `_NewArgParser`/`_ArgparseError`, `_parent_chain_has_symlink`, `_target_type_conflict`, and the atomic-write core extracted in Task 7).
 
 ## Global Constraints
 
@@ -15,7 +15,7 @@
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
 - `project-spec` stays an **unregistered draft**: `standards/project-spec/**` is excluded from frontmatter validation; do not register it in this plan.
 - Every command outcome supports `--json`; stdout carries exactly one JSON object in that mode. Exit codes: `0` success, `2` refusal/usage. There is **no exit-1 path** for `upgrade`.
-- Frozen `--json` `code` slugs (extend `new`'s set): new — `source_not_found`, `source_read_error`, `source_invalid`, `not_upgradeable`; reused — `usage`, `flag_conflict`, `exists`, `not_regular_file`, `symlinked_parent`, `mkdir_failed`, `write_failed`, `config_error`, `self_validation_failed`.
+- Frozen `--json` `code` slugs (extend `new`'s set): new — `source_not_found`, `source_read_error`, `source_invalid`, `source_not_upgradeable`, `not_upgradeable`; reused — `usage`, `flag_conflict`, `exists`, `not_regular_file`, `symlinked_parent`, `mkdir_failed`, `write_failed`, `self_validation_failed`. **No `config_error`** — `upgrade` reads no repo config (no `--config` flag).
 - Additive-only: `--to light` is invalid; same-tier and downgrade refuse with `not_upgradeable`.
 - Invariants to satisfy (from the design): U1 output validates, U2 author bytes verbatim, U3 tier fixture round-trip byte-identical, U4 preview writes nothing, U5 additive-only, U6 fail-closed both ends, U7 atomic + symlink/non-regular refusal, U8 no tracebacks, U9 `--json` on every outcome.
 
@@ -36,7 +36,9 @@ The single most important artifact: three fixtures with **identical author-fille
 **Interfaces:**
 - Produces: three validate-clean fixtures used by Tasks 7, 9, 10. `upgrade_light.md` has `profile: light`; `upgrade_standard.md` `profile: standard`; `upgrade_full.md` `profile: full`.
 
-Construction rule (critical for U3): start each fixture from the corresponding bundled template (`standards/project-spec/templates/spec-<tier>-template.md`). Fill the SAME author cells (title, spec_id `SPEC-UP01`, owner, a couple of `FR-0xx` rows, a Deviations row, etc.) in every tier. In the higher-tier fixtures, leave the **target-only sections as pristine template stubs** (do not author new prose into §3, §4, §8… in `upgrade_standard.md`) — because `upgrade(light)` cannot invent content the light source never had; U3 only holds if the new sections are byte-identical to the target template's stubs. Delete the templates' "delete before publishing" instruction blockquotes in all three identically (a real spec would).
+Construction rule (critical for U3): start each fixture from the corresponding bundled template (`standards/project-spec/templates/spec-<tier>-template.md`). Fill the SAME author cells (title, spec_id `SPEC-UP01`, owner, a couple of `FR-0xx` rows, a Deviations row, etc.) in every tier. In the higher-tier fixtures, leave the **target-only sections as pristine template stubs** (do not author new prose into §3, §4, §8… in `upgrade_standard.md`) — because `upgrade(light)` cannot invent content the light source never had; U3 only holds if the new sections are byte-identical to the target template's stubs. Two subtleties the U3 round-trip (Task 6) will otherwise surface:
+- **Preamble parity.** `upgrade` keeps the source's preamble (everything before `## Revision History`: the H1 and any intro blockquotes) and only rewrites the H1 tier word. So the three fixtures must share a **byte-identical preamble except the `(Light|Standard|Full)` H1 suffix** — author one canonical preamble and reuse it. (The tier templates' own preambles differ in wording; do not copy each template's preamble verbatim, or U3 will mismatch.) Delete the templates' "delete before publishing" instruction blockquotes in all three identically.
+- **Canonical Appendices A/B/D.** These are template-owned and tier-variant; keep each fixture's Appendix A/B/D exactly as its tier template's (do not edit them), or the precheck (Task 8) will reject the fixture and the round-trip's Appendix B comparison will fail.
 
 - [ ] **Step 1: Author `upgrade_full.md` first** (the superset), from `spec-full-template.md`, filling the shared author cells and deleting the template-instruction blockquotes.
 
@@ -302,7 +304,12 @@ Expected: FAIL — `_merge_top` absent.
 - [ ] **Step 3: Write minimal implementation** (append)
 
 ```python
-_TEMPLATE_OWNED = {"appendix-A", "appendix-D"}
+# Appendices A, B, and D are all tier-variant canonical boilerplate — taken from
+# the target tier, never the source. (Appendix C is Full-only, so it arrives as a
+# missing unit, not a template-owned replacement.) The upgradeability precheck
+# (Task 8) guarantees the source's A/B/D are canonical, so nothing author-written
+# is lost by replacing them.
+_TEMPLATE_OWNED = {"appendix-A", "appendix-B", "appendix-D"}
 
 
 def _merge_top(source_body: str, target_body: str) -> str:
@@ -316,7 +323,7 @@ def _merge_top(source_body: str, target_body: str) -> str:
     return "".join(out)
 ```
 
-Note: the preamble key `""` is in `source_map` (source has one) and not template-owned, so the source preamble is kept — its stale `(Light)` suffix is corrected by `_rewrite_h1_suffix` in Task 7. **The U3 round-trip in Task 7 is the real acceptance test** — expect to refine trailing-filler handling (stale omission notes at the tail of shared blocks; see Task 5) before it is byte-exact.
+Note: the preamble key `""` is in `source_map` (source has one) and not template-owned, so the source preamble is kept — its stale `(Light)` suffix is corrected by `_rewrite_h1_suffix` in Task 2. **The U3 round-trip in Task 6 is the real acceptance test** — expect to refine trailing-filler handling (stale omission notes at the tail of shared blocks; see Task 5) before it is byte-exact.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -450,7 +457,7 @@ Then update `_merge_top` (Task 4) to call `_reconcile_shared` for shared non-tem
 - [ ] **Step 4: Run to verify they pass**
 
 Run: `uv run pytest tests/test_spec_upgrade.py -k "reconcile or merge_top" -v`
-Expected: PASS. (`_swap_tail`'s `_is_filler` heuristic may need widening once the U3 round-trip runs in Task 7 — an author body legitimately ending in a blockquote is rare but is the known risk; U3 will surface it.)
+Expected: PASS. (`_swap_tail`'s `_is_filler` heuristic may need widening once the U3 round-trip runs in Task 6 — an author body legitimately ending in a blockquote is rare but is the known risk; U3 will surface it.)
 
 - [ ] **Step 5: Commit**
 
@@ -632,19 +639,88 @@ git commit -m "refactor(spec): extract _safe_atomic_write shared by new and upgr
 
 ---
 
-### Task 8: CLI shell — argparse, flag matrix, input gate, tier direction
+### Task 8: Upgradeability precheck + CLI shell (flag matrix, gates, tier direction)
 
-The impure `_run_upgrade`: parse flags, enforce the flag matrix, read + `validate` the source (fail-closed), check tier direction, call `upgrade_text`, self-validate output, and (this task) deliver **preview** only. `-i`/`-o` delivery lands in Task 9.
+Two deliverables that ship together: (a) the pure `check_upgradeable` precheck (design decision 10 — refuses a `validate`-clean-but-non-canonical source before splicing), and (b) the impure `_run_upgrade` shell that wires all three fail-closed gates (`validate`, precheck, output self-validate), the flag matrix, and preview delivery. `-i`/`-o` delivery lands in Task 9.
+
+`check_upgradeable` is implemented by **reshaping the source to its *own* tier** with the same `_merge_top` engine and requiring the identity: a source whose scaffolding (gaps, notes, Appendices A/B/D, subsection membership) is canonical reshapes to itself; any deviation (gap prose, edited appendix, non-canonical subsection) makes the reshape differ, so it is refused. This reuses proven code and needs no separate parser.
 
 **Files:**
+- Modify: `src/project_standards/specs/commands/upgrade.py` (add `check_upgradeable`)
 - Modify: `src/project_standards/specs/cli.py`
-- Test: `tests/test_spec_upgrade_cli.py`
+- Test: `tests/test_spec_upgrade.py` (pure precheck), `tests/test_spec_upgrade_cli.py` (shell)
 
 **Interfaces:**
-- Consumes: `upgrade_text`; `NewError`, `_emit_new_failure`, `_NewArgParser`, `_ArgparseError`, `_read`, `load_registry`, `parse_document`, `validate_document`, `TEMPLATES_DIR`, `TIER_FILES`, `load_spec_config`, `ConfigError`.
-- Produces: `_run_upgrade(argv) -> int`; registered as `"upgrade"` in `_VERBS`; `_USAGE` updated.
+- Consumes: `_merge_top`, `split_front_matter` (for `check_upgradeable`); `upgrade_text`, `NewError`, `_emit_new_failure`, `_NewArgParser`, `_ArgparseError`, `_read`, `load_registry`, `parse_document`, `validate_document`, `TEMPLATES_DIR`, `TIER_FILES`, `ConfigError` (for `_run_upgrade`). **No `--config` / `load_spec_config`** — `upgrade` reads no repo config (design SA-005).
+- Produces: `check_upgradeable(source_text: str, source_tier_template: str) -> str | None` (deviation message or `None`); `_run_upgrade(argv) -> int`; registered as `"upgrade"` in `_VERBS`; `_USAGE` updated.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing precheck tests** (pure, in `tests/test_spec_upgrade.py`)
+
+```python
+def test_check_upgradeable_accepts_a_canonical_source() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    assert check_upgradeable(light, _tmpl("light")) is None
+
+
+def test_check_upgradeable_rejects_gap_prose() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace("## 7. Requirements", "Author prose in a gap.\n\n## 7. Requirements", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_non_canonical_subsection() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace("## 17. ", "### 7.3 Interface Requirements\n\nx\n\n## 17. ", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+
+
+def test_check_upgradeable_rejects_edited_appendix_b() -> None:
+    # Appendix B is template-owned (SA-NEW-001); an author edit makes the reshape differ.
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    light = (_FIX / "upgrade_light.md").read_text(encoding="utf-8")
+    tampered = light.replace(
+        "### B.1 Implementation Rules", "### B.1 Implementation Rules\n\nAuthor-added rule.", 1)
+    assert check_upgradeable(tampered, _tmpl("light")) is not None
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `uv run pytest tests/test_spec_upgrade.py -k check_upgradeable -v`
+Expected: FAIL — `check_upgradeable` absent.
+
+- [ ] **Step 3: Implement `check_upgradeable`** (append to `upgrade.py`)
+
+```python
+def check_upgradeable(source_text: str, source_tier_template: str) -> str | None:
+    """Return a deviation message if the source's scaffolding is not canonical for its
+    tier, else None. Enforces design decision 10: everything outside authored section
+    bodies (gaps, notes, Appendices A/B/D, subsection membership) must match the
+    source-tier template. Implemented as a reshape-to-own-tier identity check — a
+    canonical source reshapes to itself; any deviation changes the reshape."""
+    _sfm, src_body = split_front_matter(source_text)
+    _tfm, tmpl_body = split_front_matter(source_tier_template)
+    if _merge_top(src_body, tmpl_body) != src_body:
+        return (
+            "source scaffolding is not canonical for its tier (author prose in a gap, "
+            "an edited Appendix A/B/D, or a non-canonical subsection); restore the "
+            "template structure before upgrading"
+        )
+    return None
+```
+
+- [ ] **Step 4: Run to verify the precheck tests pass**
+
+Run: `uv run pytest tests/test_spec_upgrade.py -k check_upgradeable -v`
+Expected: PASS. (If a canonical fixture spuriously fails — e.g. `_is_filler` over-trims an author body ending in a blockquote — that is the known Task 5 risk; tighten `_is_filler` so the canonical source reshapes to identity.)
+
+- [ ] **Step 5: Write the failing CLI tests**
 
 ```python
 # tests/test_spec_upgrade_cli.py
@@ -670,11 +746,10 @@ def test_missing_to_flag_is_usage_error(capsys: pytest.CaptureFixture[str]) -> N
     assert json.loads(capsys.readouterr().out)["code"] == "usage"
 
 
-def test_downgrade_is_not_upgradeable(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_downgrade_target_light_is_usage_error(tmp_path: Path) -> None:
     src = tmp_path / "s.md"
     src.write_text((_FIX / "upgrade_standard.md").read_text(), encoding="utf-8")
-    rc = _run([str(src), "--to", "light", "--json"])  # light is not even a choice
-    assert rc == 2  # argparse rejects --to light -> usage
+    assert _run([str(src), "--to", "light", "--json"]) == 2  # argparse rejects --to light
 
 
 def test_same_tier_is_not_upgradeable(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -691,6 +766,17 @@ def test_invalid_source_is_refused_with_findings(tmp_path: Path, capsys: pytest.
     rc = _run([str(src), "--to", "standard", "--json"])
     obj = json.loads(capsys.readouterr().out)
     assert rc == 2 and obj["code"] == "source_invalid" and obj["findings"]
+
+
+def test_gap_prose_source_is_not_upgradeable(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    # Validate-clean (gap prose does not trip validate) but non-canonical → precheck refuses.
+    src = tmp_path / "s.md"
+    tampered = (_FIX / "upgrade_light.md").read_text().replace(
+        "## 7. Requirements", "Author prose in a gap.\n\n## 7. Requirements", 1)
+    src.write_text(tampered, encoding="utf-8")
+    rc = _run([str(src), "--to", "standard", "--json"])
+    obj = json.loads(capsys.readouterr().out)
+    assert rc == 2 and obj["code"] == "source_not_upgradeable"
 
 
 def test_preview_prints_upgraded_doc_and_writes_nothing(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -710,15 +796,15 @@ def test_missing_source_file(capsys: pytest.CaptureFixture[str]) -> None:
     assert rc == 2 and obj["code"] == "source_not_found"
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 6: Run to verify they fail**
 
 Run: `uv run pytest tests/test_spec_upgrade_cli.py -v`
 Expected: FAIL — unknown verb `upgrade`.
 
-- [ ] **Step 3: Write minimal implementation** (add to `cli.py`; import `upgrade_text`)
+- [ ] **Step 7: Write the CLI implementation** (add to `cli.py`; import `upgrade_text` and `check_upgradeable`)
 
 ```python
-from project_standards.specs.commands.upgrade import upgrade_text  # add to imports
+from project_standards.specs.commands.upgrade import check_upgradeable, upgrade_text  # add to imports
 
 _TIER_ORDER = {"light": 0, "standard": 1, "full": 2}
 
@@ -747,14 +833,13 @@ def _run_upgrade(argv: list[str]) -> int:
     ap.add_argument("--in-place", "-i", action="store_true", dest="in_place")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--json", action="store_true")
-    ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
     try:
         try:
             args = ap.parse_args(argv)
         except _ArgparseError as exc:
             raise NewError("usage", str(exc)) from exc
 
-        # Flag matrix (Task 9 tests the rest; wire it all here).
+        # Flag matrix (Task 9 tests -i/-o cases; wire it all here).
         if args.in_place and args.output is not None:
             raise NewError("flag_conflict", "choose one of --in-place or --output")
         if args.in_place and args.stdout:
@@ -768,7 +853,7 @@ def _run_upgrade(argv: list[str]) -> int:
             raise NewError("source_not_found", f"source spec not found: {args.src}")
         try:
             source_text = _read(args.src)
-        except (SpecParseError, ConfigError) as exc:
+        except (SpecParseError, ConfigError) as exc:  # _read wraps OSError/decode errors
             raise NewError("source_read_error", str(exc)) from exc
 
         reg = load_registry()
@@ -776,21 +861,30 @@ def _run_upgrade(argv: list[str]) -> int:
             src_doc = parse_document(str(args.src), source_text)
         except SpecParseError as exc:
             raise NewError("source_read_error", str(exc)) from exc
+
+        # Gate 1: validate-clean.
         findings = validate_document(src_doc, reg)
         if findings:
             raise NewError("source_invalid",
                            f"source has {len(findings)} validation finding(s); fix them before upgrading",
                            [dataclasses.asdict(f) for f in findings])
 
+        # Tier direction (additive-only). profile is a valid tier here (validate passed).
         source_profile = src_doc.profile or ""
         if _TIER_ORDER.get(source_profile, -1) >= _TIER_ORDER[args.to]:
             raise NewError("not_upgradeable",
                            f"cannot upgrade profile {source_profile!r} to {args.to}: additive-only")
 
+        # Gate 2: upgradeability precheck (design decision 10).
+        source_template = (TEMPLATES_DIR / TIER_FILES[source_profile]).read_text(encoding="utf-8")
+        deviation = check_upgradeable(source_text, source_template)
+        if deviation is not None:
+            raise NewError("source_not_upgradeable", deviation)
+
         template_text = (TEMPLATES_DIR / TIER_FILES[args.to]).read_text(encoding="utf-8")
         upgraded = upgrade_text(source_text, template_text, target_tier=args.to)
 
-        # Output self-validation (fail-closed, U6).
+        # Gate 3: output self-validation (fail-closed, U6).
         try:
             out_doc = parse_document("<upgrade>", upgraded)
         except SpecParseError as exc:
@@ -821,16 +915,16 @@ _USAGE = "usage: project-standards spec {validate|lint|extract|next|new|upgrade}
     "upgrade": _run_upgrade,
 ```
 
-- [ ] **Step 4: Run to verify they pass**
+- [ ] **Step 8: Run to verify they pass**
 
-Run: `uv run pytest tests/test_spec_upgrade_cli.py -v`
+Run: `uv run pytest tests/test_spec_upgrade.py tests/test_spec_upgrade_cli.py -v`
 Expected: PASS (the `-i`/`-o` tests come in Task 9).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/project_standards/specs/cli.py tests/test_spec_upgrade_cli.py
-git commit -m "feat(spec): upgrade CLI shell — gates, tier direction, preview"
+git add src/project_standards/specs/commands/upgrade.py src/project_standards/specs/cli.py tests/test_spec_upgrade.py tests/test_spec_upgrade_cli.py
+git commit -m "feat(spec): upgrade precheck + CLI shell — three gates, tier direction, preview"
 ```
 
 ---
@@ -929,15 +1023,18 @@ git commit -m "feat(spec): upgrade -i in-place + -o output delivery with atomic 
 
 ---
 
-### Task 10: Help string, dogfood, and full gate
+### Task 10: Help string, package docs, dogfood, and full gate
 
 **Files:**
 - Modify: `src/project_standards/cli.py:245` (the `spec` group help string)
+- Modify: `src/project_standards/README.md` (CLI table `:30-44` — document the `spec` group)
 - Test: `tests/test_spec_upgrade_cli.py` (dogfood)
 
 **Interfaces:** none new.
 
 - [ ] **Step 1: Update the top-level help** — add `upgrade` to the `spec` subcommand advertisement at `src/project_standards/cli.py:245` (currently lists `validate|lint|extract|next|new`). Match the existing wording.
+
+- [ ] **Step 1b: Update the package developer README (design SA-006)** — `src/project_standards/README.md`'s CLI table (`:30-44`) omits the nested `project-standards spec` command group entirely. Add a row (or short subsection) documenting the `spec` group's six verbs (`validate|lint|extract|next|new|upgrade`) so developer-facing docs are not left stale. (`src/**` is **not** in the frontmatter validator's `include`, so this README carries no frontmatter — a plain edit, no frontmatter to add.)
 
 - [ ] **Step 2: Write the dogfood test**
 
@@ -971,15 +1068,15 @@ Expected: all green; branch coverage ≥ `fail_under`. Add targeted tests for an
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/project_standards/cli.py tests/test_spec_upgrade_cli.py docs/handoff/specs-plans.md docs/handoff/state.md TODO.md
-git commit -m "feat(spec): register upgrade in help + dogfood; complete v1-core tool surface"
+git add src/project_standards/cli.py src/project_standards/README.md tests/test_spec_upgrade_cli.py docs/handoff/specs-plans.md docs/handoff/state.md TODO.md
+git commit -m "feat(spec): register upgrade in help + package README + dogfood; complete v1-core tool surface"
 ```
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** CLI surface + flag matrix → Task 8/9. Tier rules/direction → Task 8. Doubly-fail-closed pipeline → Task 8 (input + output gates). Splice/unit-ownership/three passes → Tasks 2–6. Module layout → Tasks 2 (new module), 7 (extract), 8 (shell). Write model + safety → Tasks 7, 9. Error/`--json` contract → Tasks 8, 9. Testing (U1–U9) → U1 Task 6/10, U2 Tasks 4–6, U3 Task 6, U4 Task 8, U5 Task 8, U6 Task 8, U7 Tasks 7/9, U8 Tasks 8/9, U9 Tasks 8/9. Non-goals (no downgrade, no placeholder-fill, no revision entry) → enforced by additive-only + template-owned model. Versioning/docs → Task 10 Step 5.
+**Spec coverage:** CLI surface + flag matrix → Task 8/9. Tier rules/direction → Task 8. **Triply-fail-closed pipeline (validate + upgradeability precheck + output self-validate) → Task 8.** Upgradeability precheck (decision 10, `source_not_upgradeable`, Codex SA-001/002/003) → Task 8 (`check_upgradeable`, pure reshape-identity). Appendix A/B/D template-owned (SA-NEW-001) → Task 4 (`_TEMPLATE_OWNED`) + Task 6 U3 covers Appendix B byte-for-byte. Splice/unit-ownership/three passes → Tasks 2–6. Canonical-position subsection insertion (SA-002) → Task 5. Module layout → Tasks 2 (new module), 7 (extract), 8 (shell + precheck). Write model + safety → Tasks 7, 9. No config coupling (SA-005) → Task 8 (no `--config`). Error/`--json` contract incl. `source_not_upgradeable` → Tasks 8, 9. Package README (SA-006) → Task 10 Step 1b. Testing (U1–U9) → U1 Task 6/10, U2 Tasks 4–6, U3 Task 6, U4 Task 8, U5 Task 8, U6 Task 8 (all three gates), U7 Tasks 7/9, U8 Tasks 8/9, U9 Tasks 8/9. Non-goals (no downgrade, no placeholder-fill, no revision entry, no non-canonical-scaffold merge) → enforced by additive-only + template-owned + precheck. Versioning/docs → Task 10 Steps 1b/5.
 
 **Placeholder scan:** none — every code step shows real code; the one deliberate iteration point (Task 6 Step 4, byte-tuning against U3) is a TDD convergence loop against a concrete oracle, not a placeholder.
 
