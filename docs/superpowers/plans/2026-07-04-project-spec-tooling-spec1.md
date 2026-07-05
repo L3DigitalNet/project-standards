@@ -38,6 +38,7 @@
 | `src/project_standards/cli.py` | Add early-dispatch for `argv[0] == "spec"`. |
 | `.github/workflows/validate-specs.yml` | Reusable `workflow_call` running `spec validate`. |
 | `tests/test_spec_*.py` | Unit + integration tests per task. |
+| `tests/test_spec_wheel_contents.py` | Built-wheel template-inclusion smoke test (CR-008). |
 | `tests/test_template_conformance.py` | Maintainer dogfood (replaces `check_specs.py` per-file half). |
 | `tests/test_template_interchangeability.py` | Cross-tier Defined-In identity (replaces cross-file half). |
 
@@ -96,9 +97,9 @@ def test_bundled_template_is_byte_identical(tier: str) -> None:
 
 Run: `uv run pytest tests/test_spec_packaging.py -v` Expected: 3 PASS (the copies exist and match).
 
-- [ ] **Step 4: Add a wheel-inclusion check**
+- [ ] **Step 4: Add a runtime-lookup check**
 
-Append to `tests/test_spec_packaging.py`:
+This proves the `Path(__file__)`-relative lookup resolves in the source tree; the actual **built-wheel** inclusion is proven separately in Task 12 Step 4 (CR-008). Append to `tests/test_spec_packaging.py`:
 
 ```python
 def test_templates_resolve_from_package_root() -> None:
@@ -196,7 +197,7 @@ class SpecDocument:
 
 - [ ] **Step 2: Write `registry.py` primitives + parser**
 
-Copy `gh_slug`, `split_front_matter`, `headings`, `section_numbers`, `numkey`, `ID_TOKEN`, and `NOT_AN_ID` verbatim from `check_specs.py` (lines 77–116 and the module constants), then add:
+Port `gh_slug`, `split_front_matter`, `headings`, `section_numbers`, `numkey` from `check_specs.py` (lines 77–116) **adding the strict-clean signatures shown in the code comment below** (the originals are untyped and this module is BasedPyright-strict, CR-NEW-005); copy `ID_TOKEN` and `NOT_AN_ID` verbatim (they are already typed constants). Then add:
 
 ```python
 # src/project_standards/specs/registry.py  (head)
@@ -225,8 +226,22 @@ SPEC_ID_PATTERN = r"^SPEC-[0-9A-Z]{4}$"
 
 # --- primitives (verbatim from check_specs.py) ---------------------------
 ID_TOKEN = re.compile(r"\b([A-Z]{1,4})-([0-9]+)\b")
-NOT_AN_ID = {"HTTP", "HTTPS", "AES", "ISO", "IEC", "IEEE", "SHA", "RPO", "RTO", "UTF", "TLS", "API"}
-# gh_slug, split_front_matter, headings, section_numbers, numkey: paste from check_specs.py
+# NOT_AN_ID: copy VERBATIM from check_specs.py (do not hand-edit — a missing entry
+# misclassifies acronyms like WCAG-2 / PITR-1 as project IDs). The exact current set:
+NOT_AN_ID = {
+    "HTTP", "AES", "SHA", "UTF", "ISO", "IEEE", "IEC", "WCAG", "RPO", "RTO",
+    "PII", "API", "URL", "SPEC", "TLS", "CSRF", "CORS", "SSO", "WAL", "PITR",
+}
+# gh_slug, split_front_matter, headings, section_numbers, numkey: PORT from check_specs.py
+# PRESERVING SEMANTICS BUT ADDING STRICT-CLEAN SIGNATURES (CR-NEW-005) — the originals
+# are untyped (`def split_front_matter(text):`) and this module is under BasedPyright
+# strict (failOnWarnings). Use exactly:
+#   def gh_slug(text: str) -> str
+#   def split_front_matter(text: str) -> tuple[str, str]   # raises ValueError on an unterminated fence
+#   def headings(body: str) -> list[tuple[int, str, int]]  # (level, title, line)
+#   def section_numbers(hs: list[tuple[int, str, int]]) -> list[tuple[str, int]]  # (number, line)
+#   def numkey(s: str) -> list[int]
+# numkey is re-exported for the level-aware section_slice (document.py) and validate.
 ```
 
 Then the builder:
@@ -345,22 +360,35 @@ git commit -m "feat(spec): registry parser deriving canonical rules from the bun
 
 **Interfaces:**
 
-- Consumes: primitives from `registry.py`.
-- Produces: `document.parse_document(path: str, text: str) -> SpecDocument`.
+- Consumes: primitives from `registry.py` (`ID_TOKEN`, `NOT_AN_ID`, `gh_slug`, `headings`, `section_numbers`, `numkey`, `split_front_matter`).
+- Produces:
+  - `document.SpecParseError` (subclass of `ValueError`) — raised on malformed frontmatter / non-UTF-8, caught by the CLI (CR-005).
+  - `document.parse_document(path: str, text: str) -> SpecDocument`.
+  - `document.section_slice(doc: SpecDocument, number: str) -> str | None` — level-aware slice (used by extract, lint, and definition detection; CR-007).
+  - `document.definition_sites(doc: SpecDocument) -> dict[str, list[tuple[str, int]]]` — an ID's _defining_ occurrences only (leftmost table cell inside its Appendix-A "Defined In" section), so uniqueness ignores traceability/summary references (CR-001).
 
-- [ ] **Step 1: Create a minimal valid fixture per tier**
+- [ ] **Step 1: Create valid fixtures per tier (filled, plus a traceability case)**
 
-Create `tests/fixtures/specs/valid_light.md` by copying the bundled Light template, then editing the frontmatter so it is a _filled_ consumer spec: replace `spec_id: SPEC-____` with `spec_id: SPEC-7F3Q`, and delete every `<angle-bracket>` placeholder / `> **Template instructions...` block and the `YYYY-MM-DD` dates (use `2026-07-04`). Do the same for `valid_standard.md` from the Standard template. Keep the canonical section numbers and IDs intact.
+Create `tests/fixtures/specs/valid_light.md` by copying the bundled Light template, then editing the frontmatter so it is a _filled_ consumer spec: replace `spec_id: SPEC-____` with `spec_id: SPEC-7F3Q`, strip the inline `#` comments from the frontmatter lines, and delete every `<angle-bracket>` placeholder / `> **Template instructions...` block and the `YYYY-MM-DD` dates (use `2026-07-04`). Do the same for `valid_standard.md` from the Standard template. Keep the canonical section numbers **and** the §17.3 traceability rows intact — `valid_standard.md` MUST keep `FR-001` appearing in both §7.1 and §17.3 (that repetition is the CR-001 regression guard; it must still validate clean).
 
 - [ ] **Step 2: Write `document.py`**
 
 ```python
 # src/project_standards/specs/document.py
-"""Parse a consumer spec into a SpecDocument (the thing validate/lint check)."""
+"""Parse a consumer spec into a SpecDocument (the thing validate/lint check).
+
+Frontmatter scalars come from PyYAML (NOT a regex) so inline `# comments` on
+spec_id/status/profile are stripped — a regex grab would read `full # ...` as the
+profile and false-fail every real template (CR-002). Key ORDER still comes from a
+regex, since PyYAML discards it.
+"""
 
 from __future__ import annotations
 
 import re
+from typing import Any, cast
+
+import yaml
 
 from project_standards.specs.model import SpecDocument
 from project_standards.specs.registry import (
@@ -368,17 +396,33 @@ from project_standards.specs.registry import (
     NOT_AN_ID,
     gh_slug,
     headings,
+    numkey,
     section_numbers,
     split_front_matter,
 )
 
 _DECLARE_ROW = re.compile(r"^\|\s*`([A-Z]{1,4})-`\s*\|[^|]*\|\s*([^|]+?)\s*\|", re.M)
+_DEFINED_NUM = re.compile(r"([0-9]+(?:\.[0-9]+)*)")
+
+
+class SpecParseError(ValueError):
+    """Malformed frontmatter / undecodable spec — the CLI turns this into exit 1,
+    never a traceback (CR-005)."""
 
 
 def _scalar_frontmatter(fm: str) -> dict[str, str]:
+    try:
+        loaded: Any = yaml.safe_load(fm) if fm.strip() else {}
+    except yaml.YAMLError as exc:
+        raise SpecParseError(f"unparseable frontmatter: {exc}") from exc
+    if not isinstance(loaded, dict):
+        return {}
     out: dict[str, str] = {}
-    for m in re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*):[ \t]*(\S.*?)\s*$", fm, re.M):
-        out.setdefault(m.group(1), m.group(2))
+    for k, v in cast("dict[str, Any]", loaded).items():
+        if isinstance(v, str):
+            out[str(k)] = v
+        elif isinstance(v, (int, float, bool)):
+            out[str(k)] = str(v)
     return out
 
 
@@ -387,7 +431,10 @@ def _fm_key_order(fm: str) -> list[str]:
 
 
 def parse_document(path: str, text: str) -> SpecDocument:
-    fm, body = split_front_matter(text)
+    try:
+        fm, body = split_front_matter(text)
+    except ValueError as exc:  # unterminated `---` fence -> str.index ValueError
+        raise SpecParseError(f"{path}: malformed frontmatter fence: {exc}") from exc
     hs = headings(body)
     scalars = _scalar_frontmatter(fm)
     used: dict[str, list[tuple[str, int]]] = {}
@@ -410,6 +457,64 @@ def parse_document(path: str, text: str) -> SpecDocument:
         used_ids=used,
         declared_prefixes=declared,
     )
+
+
+def section_slice(doc: SpecDocument, number: str) -> str | None:
+    """Body text of §number, stopping at the next heading of the SAME OR HIGHER
+    level — so §7 includes §7.1..§7.n, but §7.1 stops at §7.2 (CR-007). Uses the
+    already-parsed section list + numkey depth, not a fragile heading regex."""
+    lines = doc.body.splitlines(keepends=True)
+    start = next((ln for n, ln in doc.sections if n == number), None)
+    if start is None:
+        return None
+    depth = len(numkey(number))
+    later = [ln for n, ln in doc.sections if ln > start and len(numkey(n)) <= depth]
+    end = min(later) if later else len(lines) + 1
+    return "".join(lines[start - 1 : end - 1]).rstrip()
+
+
+def _defined_in_slice(doc: SpecDocument, definedin: str) -> tuple[str, int] | None:
+    """(slice_text, start_line) for a prefix's Appendix-A 'Defined In'. Resolves a
+    numbered section (§7.1) OR a named unnumbered heading — Deviations Log for DEV-
+    (CR-NEW-002), so duplicate DEV-001 rows are caught like any other prefix."""
+    m = _DEFINED_NUM.search(definedin)
+    if m is not None:
+        num = m.group(1)
+        start = next((ln for n, ln in doc.sections if n == num), None)
+        sec = section_slice(doc, num)
+        return (sec, start) if sec is not None and start is not None else None
+    name = definedin.strip().lower()
+    lines = doc.body.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        hm = re.match(r"^(#+)\s+(.*)$", line)
+        if hm and name in hm.group(2).strip().lower():
+            level = len(hm.group(1))
+            end = len(lines) + 1
+            for j in range(i + 1, len(lines)):
+                nm = re.match(r"^(#+)\s", lines[j])
+                if nm and len(nm.group(1)) <= level:
+                    end = j + 1
+                    break
+            return ("".join(lines[i : end - 1]).rstrip(), i + 1)
+    return None
+
+
+def definition_sites(doc: SpecDocument) -> dict[str, list[tuple[str, int]]]:
+    """An ID is DEFINED at the leftmost cell of a table row inside its Appendix-A
+    'Defined In' section. Occurrences elsewhere (traceability §17.3, milestone
+    summary, prose) are references, so uniqueness must count only these (CR-001)."""
+    defs: dict[str, list[tuple[str, int]]] = {}
+    for pfx, definedin in doc.declared_prefixes.items():
+        resolved = _defined_in_slice(doc, definedin)
+        if resolved is None:
+            continue
+        sec, start = resolved
+        row = re.compile(rf"^\|\s*`?({re.escape(pfx)}-\d+)`?\b")
+        for i, line in enumerate(sec.splitlines()):
+            rm = row.match(line)
+            if rm:
+                defs.setdefault(pfx, []).append((rm.group(1), start + i))
+    return defs
 ```
 
 - [ ] **Step 3: Write failing test**
@@ -420,7 +525,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from project_standards.specs.document import parse_document
+import pytest
+
+from project_standards.specs.document import (
+    SpecParseError,
+    definition_sites,
+    parse_document,
+    section_slice,
+)
+from project_standards.specs.registry import TEMPLATES_DIR, TIER_FILES
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
@@ -431,11 +544,49 @@ def test_parse_valid_light() -> None:
     assert doc.frontmatter["spec_id"] == "SPEC-7F3Q"
     assert "FR" in doc.used_ids
     assert doc.frontmatter_keys[0] == "spec_id"
+
+
+@pytest.mark.parametrize("tier", list(TIER_FILES))
+def test_raw_template_frontmatter_ignores_inline_comments(tier: str) -> None:
+    # CR-002: `profile: full # ...` must parse to "full", `spec_id: SPEC-____ # ...` to the sentinel.
+    path = TEMPLATES_DIR / TIER_FILES[tier]
+    doc = parse_document(str(path), path.read_text(encoding="utf-8"))
+    assert doc.profile == tier
+    assert doc.frontmatter["spec_id"] == "SPEC-____"
+
+
+def test_denylist_excludes_non_ids() -> None:
+    # CR-006: WCAG-2 / PITR-1 are acronyms, not project ids.
+    doc = parse_document("x.md", "---\n---\n# t\nText about WCAG-2 and PITR-1 and FR-005.\n")
+    assert "WCAG" not in doc.used_ids and "PITR" not in doc.used_ids
+    assert "FR" in doc.used_ids
+
+
+def test_definition_sites_ignore_traceability_references() -> None:
+    # CR-001: FR-001 defined in §7.1 and referenced in §17.3 counts ONCE.
+    doc = parse_document(
+        "valid_standard.md", (_FIX / "valid_standard.md").read_text(encoding="utf-8")
+    )
+    fr_defs = [fid for fid, _ in definition_sites(doc).get("FR", [])]
+    assert fr_defs.count("FR-001") == 1
+
+
+def test_section_slice_includes_subsections() -> None:
+    doc = parse_document(
+        "valid_standard.md", (_FIX / "valid_standard.md").read_text(encoding="utf-8")
+    )
+    sl = section_slice(doc, "7")
+    assert sl is not None and "FR-001" in sl  # §7 slice reaches the §7.1 table (CR-007)
+
+
+def test_malformed_frontmatter_raises_specparseerror() -> None:
+    with pytest.raises(SpecParseError):
+        parse_document("bad.md", "---\nspec_id: SPEC-7F3Q\n# no closing fence, no body\n")
 ```
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `uv run pytest tests/test_spec_document.py -v` → PASS.
+Run: `uv run pytest tests/test_spec_document.py -v` → all PASS. If `test_definition_sites_ignore_traceability_references` fails with count 2, the §7.1/§17.3 slice boundary is wrong — check `section_slice("7.1")` stops before §7.2/§8, not that it swallows §17.3.
 
 - [ ] **Step 5: Commit**
 
@@ -520,9 +671,23 @@ def load_spec_config(path: Path) -> SpecConfig:
 
 
 def collect_spec_paths(explicit: list[Path], cfg: SpecConfig) -> list[Path]:
-    if not explicit and not cfg.present:
-        raise DiscoveryError("no `spec:` config block and no paths given")
-    paths = collect_paths(explicit, None, cfg.include, cfg.exclude)
+    # Explicit paths validate EXACTLY those and bypass config discovery AND excludes
+    # (CR-NEW-004): naming a file means "check this one", even if `spec.exclude` would
+    # otherwise drop it.
+    if explicit:
+        missing = [p for p in explicit if not p.is_file()]
+        if missing:
+            raise ConfigError("no such file: " + ", ".join(str(p) for p in missing))
+        return sorted(explicit)
+    # No explicit paths: config-driven. Guard the empty-source cases so an empty/absent
+    # `spec:` never falls through to collect_paths' whole-repo corpus fallback (CR-003).
+    if not cfg.include:
+        raise DiscoveryError(
+            "no `spec:` config block and no paths given"
+            if not cfg.present
+            else "`spec:` block has no include globs"
+        )
+    paths = collect_paths([], None, cfg.include, cfg.exclude)
     if not paths:
         raise DiscoveryError("spec discovery matched no files")
     return paths
@@ -562,11 +727,33 @@ def test_zero_match_include_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         collect_spec_paths([], cfg)
 
 
+def test_empty_include_list_does_not_fall_back_to_corpus(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # CR-003: `spec: {include: []}` present must raise, never validate every .md.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "stray.md").write_text("x", encoding="utf-8")
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  include: []\n"))
+    assert cfg.present is True
+    with pytest.raises(DiscoveryError):
+        collect_spec_paths([], cfg)
+
+
 def test_explicit_path_bypasses_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     spec = tmp_path / "a.md"
     spec.write_text("x", encoding="utf-8")
     cfg = load_spec_config(_write(tmp_path, "markdown:\n  frontmatter: {}\n"))
+    assert collect_spec_paths([spec], cfg) == [spec]
+
+
+def test_explicit_path_survives_config_exclude(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # CR-NEW-004: naming a file means "check this one" even if spec.exclude would drop it.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "docs").mkdir()
+    spec = tmp_path / "docs" / "s.md"
+    spec.write_text("x", encoding="utf-8")
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  include:\n    - '**/*.md'\n  exclude:\n    - 'docs/**'\n"))
     assert collect_spec_paths([spec], cfg) == [spec]
 ```
 
@@ -617,6 +804,7 @@ from __future__ import annotations
 
 import re
 
+from project_standards.specs.document import definition_sites
 from project_standards.specs.model import Finding, Registry, SpecDocument
 from project_standards.specs.registry import numkey
 
@@ -716,21 +904,26 @@ def _check_references(doc: SpecDocument, reg: Registry) -> list[Finding]:
 
 def _check_ids(doc: SpecDocument, reg: Registry) -> list[Finding]:
     out: list[Finding] = []
-    seen: set[str] = set()
     tier_ok = reg.tier_prefixes.get(doc.profile or "", frozenset())
+    # Format + declared-prefix + tier checks run over EVERY occurrence/prefix.
     for pfx, occurrences in doc.used_ids.items():
         for full_id, ln in occurrences:
             digits = full_id.split("-", 1)[1]
             ok = (pfx == "MS" and len(digits) == 1) or (pfx != "MS" and len(digits) == 3)
             if not ok:
                 out.append(_f("SV-ID-FMT", f"{full_id} bad width", line=ln, locus=full_id))
-            if full_id in seen:
-                out.append(_f("SV-ID-DUP", f"duplicate id {full_id}", line=ln, locus=full_id))
-            seen.add(full_id)
         if pfx not in doc.declared_prefixes:
             out.append(_f("SV-ID-UNDECLARED", f"prefix {pfx}- used but not in Appendix A", locus=f"{pfx}-"))
         elif pfx not in tier_ok:
             out.append(_f("SV-ID-TIER", f"prefix {pfx}- not valid at {doc.profile} tier", locus=f"{pfx}-"))
+    # Uniqueness runs ONLY over definition sites — a traceability/summary reference
+    # to FR-001 is not a second definition (CR-001).
+    seen: set[str] = set()
+    for sites in definition_sites(doc).values():
+        for full_id, ln in sites:
+            if full_id in seen:
+                out.append(_f("SV-ID-DUP", f"duplicate definition of {full_id}", line=ln, locus=full_id))
+            seen.add(full_id)
     for pfx, definedin in doc.declared_prefixes.items():
         canon = reg.prefix_defined_in.get(pfx)
         if canon is not None and definedin != canon:
@@ -766,7 +959,8 @@ From `tests/fixtures/specs/valid_standard.md`, make single-mutation copies under
 
 - `bad_sentinel.md` — `spec_id: SPEC-____`
 - `bad_spec_id.md` — `spec_id: SPEC-123`
-- `bad_dup_id.md` — a duplicated `FR-001` row
+- `bad_dup_id.md` — a second `| FR-001 | ... |` **definition row inside §7.1** (a duplicated _definition_, not a §17.3 reference — the reference case must still pass, per CR-001)
+- `bad_dup_dev.md` — two `| DEV-001 | ... |` rows in the Deviations Log (unnumbered-section uniqueness, CR-NEW-002)
 - `bad_undeclared.md` — introduce a `ZZ-001` in the body
 - `bad_tier_prefix.md` — a Full-only `R-001` in a `profile: standard` spec (also add `R-` to its Appendix A so the failure is SV-ID-TIER, not SV-ID-UNDECLARED)
 - `bad_gap.md` — delete one omission-note blockquote
@@ -806,6 +1000,7 @@ def test_valid_specs_pass(name: str) -> None:
         ("bad_sentinel.md", "SV-SENTINEL"),
         ("bad_spec_id.md", "SV-SPEC-ID"),
         ("bad_dup_id.md", "SV-ID-DUP"),
+        ("bad_dup_dev.md", "SV-ID-DUP"),
         ("bad_undeclared.md", "SV-ID-UNDECLARED"),
         ("bad_tier_prefix.md", "SV-ID-TIER"),
         ("bad_gap.md", "SV-GAP"),
@@ -857,6 +1052,7 @@ from __future__ import annotations
 
 import re
 
+from project_standards.specs.document import section_slice
 from project_standards.specs.model import Finding, Registry, SpecDocument
 
 _ANGLE = re.compile(r"<[^>\n]+>")
@@ -879,27 +1075,43 @@ def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
+def _must_frs(doc: SpecDocument) -> list[str]:
+    """FR ids whose §7.1 table row has Priority = Must. Only these need §17.3 mapping
+    — a `Should`/`Could` requirement is not a traceability gap (CR-NEW-003). The
+    check reads the specific Priority COLUMN (located from the header) so the word
+    'must' in a requirement/rationale cell does not falsely promote a Should row."""
+    rows = [ln for ln in (section_slice(doc, "7.1") or "").splitlines() if ln.lstrip().startswith("|")]
+    if not rows:
+        return []
+    header = [c.strip().lower() for c in rows[0].strip().strip("|").split("|")]
+    if "priority" not in header:
+        return []
+    pcol = header.index("priority")
+    out: list[str] = []
+    for line in rows[1:]:  # skip header; the `|---|` separator has no FR id, harmlessly skipped
+        cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
+        if len(cells) > pcol and re.match(r"^FR-\d+$", cells[0]) and cells[pcol] == "Must":
+            out.append(cells[0])
+    return out
+
+
 def _traceability(doc: SpecDocument, reg: Registry) -> list[Finding]:
     has_matrix = "17.3" in reg.tier_sections.get(doc.profile or "", frozenset())
     if has_matrix:
-        # Standard/Full: every Must FR should appear in the §17.3 matrix.
-        matrix = _section_body(doc.body, "17.3")
-        missing = [fid for fid, _ in doc.used_ids.get("FR", []) if fid not in matrix]
+        # Standard/Full: every MUST FR (not every FR) must appear in the §17.3 matrix.
+        matrix = section_slice(doc, "17.3") or ""
+        missing = [fid for fid in _must_frs(doc) if fid not in matrix]
         return [_w("SL-TRACE", f"Must requirement {fid} not mapped in §17.3", locus=fid) for fid in dict.fromkeys(missing)]
     # Light: no §17.3 — flag unchecked §17.1 DoD items instead.
-    dod = _section_body(doc.body, "17.1")
+    dod = section_slice(doc, "17.1") or ""
     return [_w("SL-DOD", "unchecked Definition-of-Done item in §17.1")] if "- [ ]" in dod else []
-
-
-def _section_body(body: str, number: str) -> str:
-    m = re.search(rf"^#+\s*{re.escape(number)}\b.*?(?=^#+\s|\Z)", body, re.M | re.S)
-    return m.group(0) if m else ""
 ```
 
 - [ ] **Step 2: Create fixtures**
 
 - `draft_placeholders.md` — copy the Light template unchanged (`status: draft`, retains `<...>` + guidance).
 - `approved_light.md` — copy `valid_light.md`, set `status: approved`, ensure §17.1 has an unchecked `- [ ]` item.
+- `approved_standard_traceability.md` — copy `valid_standard.md`, set `status: approved`; keep §7.1 with `FR-001` Priority `Must` **and** `FR-002` Priority `Should` **whose Requirement cell contains the word "must"** (e.g. "The system must optionally …"), and keep §17.3 mapping only `FR-001`. (Must-mapped, Should-unmapped, plus a decoy "must" outside the Priority column: the CR-NEW-003 guard — no `SL-TRACE` for `FR-002`.)
 
 - [ ] **Step 3: Write failing tests**
 
@@ -933,6 +1145,17 @@ def test_approved_light_flags_dod_not_matrix() -> None:
 
 def test_valid_light_is_clean() -> None:
     assert _codes("valid_light.md") == set()
+
+
+def test_approved_standard_should_requirement_not_flagged() -> None:
+    # CR-NEW-003: only Must FRs need §17.3 mapping; a Should FR is not a traceability gap.
+    doc = parse_document(
+        "approved_standard_traceability.md",
+        (_FIX / "approved_standard_traceability.md").read_text(encoding="utf-8"),
+    )
+    traces = [f.locus for f in lint_document(doc, load_registry()) if f.code == "SL-TRACE"]
+    assert "FR-002" not in traces  # Should, unmapped -> no warning
+    assert "FR-001" not in traces  # Must, but mapped -> no warning
 ```
 
 - [ ] **Step 4: Run to verify pass**
@@ -942,8 +1165,8 @@ Run: `uv run pytest tests/test_spec_lint.py -v`. If `valid_light.md` warns on `S
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/project_standards/specs/commands/lint.py tests/fixtures/specs/draft_placeholders.md tests/fixtures/specs/approved_light.md tests/test_spec_lint.py
-git commit -m "feat(spec): advisory lint (placeholders, guidance, traceability)"
+git add src/project_standards/specs/commands/lint.py tests/fixtures/specs/draft_placeholders.md tests/fixtures/specs/approved_light.md tests/fixtures/specs/approved_standard_traceability.md tests/test_spec_lint.py
+git commit -m "feat(spec): advisory lint (placeholders, guidance, Must-traceability)"
 ```
 
 ---
@@ -970,6 +1193,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from project_standards.specs.document import section_slice  # level-aware (CR-007)
 from project_standards.specs.model import SpecDocument
 from project_standards.specs.registry import ID_TOKEN
 
@@ -980,11 +1204,6 @@ class ExtractResult:
     found: bool
     markdown: str | None
     selector: str
-
-
-def _section_slice(body: str, number: str) -> str | None:
-    m = re.search(rf"^#+\s*{re.escape(number)}\b.*?(?=^#+\s|\Z)", body, re.M | re.S)
-    return m.group(0).rstrip() if m else None
 
 
 def _appendix_slice(body: str, letter: str) -> str | None:
@@ -1004,7 +1223,7 @@ def extract_slice(doc: SpecDocument, selector: str) -> ExtractResult:
     if ID_TOKEN.fullmatch(selector):
         return ExtractResult("id", (r := _id_row(body, selector)) is not None, r, selector)
     if selector.startswith("§"):
-        return ExtractResult("section", (r := _section_slice(body, selector[1:])) is not None, r, selector)
+        return ExtractResult("section", (r := section_slice(doc, selector[1:])) is not None, r, selector)
     if selector.lower().startswith("appendix "):
         letter = selector.split()[1].upper()
         return ExtractResult("appendix", (r := _appendix_slice(body, letter)) is not None, r, selector)
@@ -1022,18 +1241,20 @@ from pathlib import Path
 
 from project_standards.specs.commands.extract import extract_slice
 from project_standards.specs.document import parse_document
+from project_standards.specs.model import SpecDocument
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
 
-def _doc():
+def _doc() -> SpecDocument:
     return parse_document("valid_standard.md", (_FIX / "valid_standard.md").read_text(encoding="utf-8"))
 
 
-def test_extract_section_found() -> None:
+def test_extract_section_includes_subsections() -> None:
     r = extract_slice(_doc(), "§7")
     assert r.found and r.kind == "section" and r.markdown
     assert r.markdown.lstrip().startswith("#")
+    assert "FR-001" in r.markdown  # §7 must reach the §7.1 requirement table (CR-007)
 
 
 def test_extract_appendix_found() -> None:
@@ -1106,12 +1327,13 @@ import pytest
 
 from project_standards.specs.commands.next_id import next_free_id
 from project_standards.specs.document import parse_document
+from project_standards.specs.model import SpecDocument
 from project_standards.specs.registry import load_registry
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
 
-def _doc(name: str = "valid_standard.md"):
+def _doc(name: str = "valid_standard.md") -> SpecDocument:
     return parse_document(name, (_FIX / name).read_text(encoding="utf-8"))
 
 
@@ -1179,7 +1401,8 @@ from project_standards.specs.commands.lint import lint_document
 from project_standards.specs.commands.next_id import next_free_id
 from project_standards.specs.commands.validate import validate_document
 from project_standards.specs.config import ConfigError, collect_spec_paths, load_spec_config
-from project_standards.specs.document import parse_document
+from project_standards.specs.document import SpecParseError, parse_document
+from project_standards.specs.model import Finding
 from project_standards.specs.registry import load_registry
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
@@ -1188,11 +1411,16 @@ _DEFAULT_CONFIG = Path(".project-standards.yml")
 def _read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
+    except UnicodeDecodeError as exc:
+        # Non-UTF-8 is a SPEC-INPUT problem -> exit 1 (a per-file finding), per the
+        # design's "malformed/non-UTF-8 spec -> graceful exit 1" rule (CR-005).
+        raise SpecParseError(f"{path}: not valid UTF-8: {exc}") from exc
+    except OSError as exc:
+        # Missing/unreadable file is an INVOCATION problem -> exit 2.
         raise ConfigError(f"cannot read spec {path}: {exc}") from exc
 
 
-def _findings_payload(results: list[tuple[Path, list]]) -> list[dict[str, object]]:
+def _findings_payload(results: list[tuple[Path, list[Finding]]]) -> list[dict[str, object]]:
     return [
         {"file": str(p), "ok": not fs, "findings": [dataclasses.asdict(f) for f in fs]}
         for p, fs in results
@@ -1209,10 +1437,14 @@ def _run_setwide(argv: list[str], *, lint: bool) -> int:
     reg = load_registry()
     cfg = load_spec_config(args.config)
     paths = collect_spec_paths(args.files, cfg)
-    results = [
-        (p, (lint_document if lint else validate_document)(parse_document(str(p), _read(p)), reg))
-        for p in paths
-    ]
+    fn = lint_document if lint else validate_document
+    results: list[tuple[Path, list[Finding]]] = []
+    for p in paths:
+        try:
+            results.append((p, fn(parse_document(str(p), _read(p)), reg)))
+        except SpecParseError as exc:
+            # A malformed spec is a finding, not a crash — keep per-file granularity (CR-005).
+            results.append((p, [Finding(code="SV-PARSE", severity="error", message=str(exc))]))
     if args.json:
         print(json.dumps(_findings_payload(results), indent=2))
     else:
@@ -1262,10 +1494,17 @@ def _run_next(argv: list[str]) -> int:
 _VERBS = {"validate": lambda a: _run_setwide(a, lint=False), "lint": lambda a: _run_setwide(a, lint=True), "extract": _run_extract, "next": _run_next}
 
 
+_USAGE = "usage: project-standards spec {validate|lint|extract|next} ..."
+
+
 def run(argv: list[str]) -> int:
-    if not argv or argv[0] in {"-h", "--help"}:
-        print("usage: project-standards spec {validate|lint|extract|next} ...", file=sys.stderr)
-        return 0 if argv[:1] in ([], ["-h"], ["--help"]) else 2
+    if argv[:1] in (["-h"], ["--help"]):
+        print(_USAGE)
+        return 0
+    if not argv:
+        # Bare `spec` with no verb is a bad invocation, not a help request (CR-NEW-001).
+        print(_USAGE, file=sys.stderr)
+        return 2
     verb, rest = argv[0], argv[1:]
     if verb not in _VERBS:
         print(f"error: unknown spec verb {verb!r}", file=sys.stderr)
@@ -1275,6 +1514,10 @@ def run(argv: list[str]) -> int:
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except SpecParseError as exc:
+        # extract/next parse a single file directly; a malformed target exits 1, not a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 ```
 
 - [ ] **Step 2: Add early-dispatch to `cli.py`**
@@ -1330,6 +1573,50 @@ def test_spec_next_json(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["spec", "next", "--json", str(_FIX / "valid_standard.md"), "FR"])
     out = json.loads(capsys.readouterr().out)
     assert rc == 0 and out["next_id"].startswith("FR-")
+
+
+def test_spec_malformed_input_no_traceback(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    bad = tmp_path / "bad.md"
+    bad.write_text("---\nspec_id: SPEC-7F3Q\n# unterminated frontmatter\n", encoding="utf-8")
+    rc = main(["spec", "validate", str(bad)])  # SV-PARSE finding -> exit 1
+    assert rc == 1
+    rc2 = main(["spec", "extract", str(bad), "§7"])  # propagates to run() -> exit 1
+    assert rc2 == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_bare_spec_is_exit2_but_help_is_exit0(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["spec"]) == 2  # no verb is a bad invocation (CR-NEW-001)
+    assert main(["spec", "--help"]) == 0
+    assert main(["spec", "bogus"]) == 2
+
+
+def test_non_utf8_spec_exits_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    bad = tmp_path / "latin1.md"
+    bad.write_bytes(b"---\nspec_id: SPEC-7F3Q\n---\n# t \xff\xfe not utf-8\n")
+    rc = main(["spec", "validate", str(bad)])  # non-UTF-8 is a spec-input finding (CR-005)
+    assert rc == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_lint_json_shape(capsys: pytest.CaptureFixture[str]) -> None:
+    # CR-NEW-006: lint --json is a frozen surface too.
+    rc = main(["spec", "lint", "--json", str(_FIX / "draft_placeholders.md")])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0  # advisory: warnings do not fail without --strict
+    assert set(data[0]) == {"file", "ok", "findings"}
+    assert data[0]["findings"] and data[0]["findings"][0]["severity"] == "warning"
+
+
+def test_extract_json_found_and_no_match(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["spec", "extract", "--json", str(_FIX / "valid_standard.md"), "§7"])
+    found = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert found["found"] is True and found["kind"] == "section" and found["markdown"]
+    rc2 = main(["spec", "extract", "--json", str(_FIX / "valid_standard.md"), "FR-999"])
+    miss = json.loads(capsys.readouterr().out)
+    assert rc2 == 1
+    assert miss["found"] is False and miss["markdown"] is None
 ```
 
 - [ ] **Step 4: Run to verify pass**
@@ -1483,18 +1770,49 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   validate-specs:
+    name: Specs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - name: Install project-standards
-        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref || 'v3' }}"
-      - name: Validate specs
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        # SHA-pinned to match validate-markdown-frontmatter.yml; read that file's
+        # current pin at implementation time in case it moved.
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
+
+      # CR-004: this repo runs the CHECKED-OUT source so the PR that adds `spec` is
+      # validated by its own code, NOT the already-published v3 tag (which lacks it).
+      - name: Install (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv sync --dev
+
+      - name: Validate specs (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Lint specs (this repo, strict)
+        if: github.repository == 'L3DigitalNet/project-standards' && inputs.strict-lint
+        run: uv run project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      # Consuming repo: install the tool (+ bundled templates) from the pinned ref.
+      - name: Install (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref }}"
+
+      - name: Validate specs (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
         run: project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
-      - name: Lint specs (strict, optional)
-        if: ${{ inputs.strict-lint }}
+
+      - name: Lint specs (consuming repo, strict)
+        if: github.repository != 'L3DigitalNet/project-standards' && inputs.strict-lint
         run: project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
 ```
 
@@ -1517,13 +1835,24 @@ def test_workflow_exposes_workflow_call_with_config_and_ref() -> None:
     assert set(call["inputs"]) >= {"config-path", "standards-ref", "strict-lint"}
 
 
-def test_workflow_runs_spec_validate() -> None:
-    assert "spec validate" in _WF.read_text(encoding="utf-8")
+def test_workflow_has_self_repo_and_consumer_branches() -> None:
+    # CR-004: this repo must run local source, not install the published tag.
+    text = _WF.read_text(encoding="utf-8")
+    assert "uv sync --dev" in text  # self-repo path
+    assert "uv run project-standards spec validate" in text  # self-repo runs checked-out code
+    assert "uv tool install" in text  # consuming-repo path
+
+
+def test_self_repo_steps_do_not_install_published_tag() -> None:
+    data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
+    for step in data["jobs"]["validate-specs"]["steps"]:
+        if step.get("if", "").strip() == "github.repository == 'L3DigitalNet/project-standards'":
+            assert "uv tool install" not in step.get("run", "")
 ```
 
 - [ ] **Step 3: Run to verify pass**
 
-Run: `uv run pytest tests/test_validate_specs_workflow.py -v` → 2 PASS. (If `data[True]` KeyErrors, the repo's other workflow tests show the exact idiom for the parsed `on:` key — match it.)
+Run: `uv run pytest tests/test_validate_specs_workflow.py -v` → 3 PASS. (If `data[True]` KeyErrors, the repo's other workflow tests show the exact idiom for the parsed `on:` key — match it.)
 
 - [ ] **Step 4: Commit**
 
@@ -1560,11 +1889,40 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
 
 Expected: all pass, coverage ≥ 85%, dogfood (`uv run validate-frontmatter --config .project-standards.yml`) still clean (the new `.md` fixtures live under `tests/` and `standards/**/templates/**`, both already excluded from the frontmatter validator).
 
-- [ ] **Step 4: Final commit**
+- [ ] **Step 4: Prove the BUILT WHEEL contains the templates (CR-008)**
+
+The source-tree test in Task 1 proves the files exist under `src/`, not that the release artifact ships them. Add a build-inspection test that inspects the actual wheel:
+
+```python
+# tests/test_spec_wheel_contents.py
+"""CR-008: the built wheel — not just the source tree — must ship the 3 templates."""
+
+from __future__ import annotations
+
+import subprocess
+import zipfile
+from pathlib import Path
+
+
+def test_built_wheel_contains_templates(tmp_path: Path) -> None:
+    repo = Path(__file__).resolve().parent.parent
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(tmp_path)], cwd=repo, check=True
+    )
+    wheels = list(tmp_path.glob("*.whl"))
+    assert wheels, "no wheel built"
+    names = set(zipfile.ZipFile(wheels[0]).namelist())
+    for tier in ("light", "standard", "full"):
+        assert f"project_standards/specs/templates/spec-{tier}-template.md" in names
+```
+
+Mark this test `@pytest.mark.slow` if the suite grows a slow marker; otherwise leave it — a single `uv build` is acceptable. Run: `uv run pytest tests/test_spec_wheel_contents.py -v` → PASS.
+
+- [ ] **Step 5: Final commit**
 
 ```bash
 git add -A src/project_standards/specs tests
-git commit -m "chore(spec): full-gate green for spec tooling (spec #1)"
+git commit -m "chore(spec): full-gate green + built-wheel template smoke test"
 ```
 
 ---
@@ -1575,4 +1933,10 @@ git commit -m "chore(spec): full-gate green for spec tooling (spec #1)"
 
 **Type consistency:** `Finding(code, severity, message, line, locus)` used identically in validate/lint/cli. `SpecDocument` fields (`used_ids: dict[str, list[tuple[str,int]]]`, `declared_prefixes`, `sections`) consumed consistently. `Registry` field names (`tier_prefixes`, `prefix_defined_in`, `canonical_sections`, `full_only_appendices`) match across registry/validate/next.
 
-**Open items deferred to execution (documented, not placeholders):** exact `FR`-Defined-In string (Task 2 Step 4 tells the implementer to read + match it); `extract` duplicate/partial-heading disambiguation (spec Open Question — first-match is the coded default; tighten only if a fixture demands); the parsed `on:` YAML key idiom (Task 11 points at the repo's existing workflow tests).
+**Codex plan-review round 1 fixes applied (CR-001…008):** definition-vs-reference so traceability repeats don't false-fail uniqueness (Task 3 `definition_sites`, Task 5 `_check_ids`); PyYAML frontmatter parsing so inline `#` comments don't break profile/sentinel reads (Task 3); discovery no longer falls back to the whole-repo corpus on empty `spec:` (Task 4); workflow self-repo/consumer split so this repo tests checked-out code (Task 11); `SpecParseError` boundary so malformed input never tracebacks (Tasks 3/9); verbatim `NOT_AN_ID` denylist (Task 2); level-aware `section_slice` so `extract §7` includes §7.1 (Task 3 shared helper, used by extract/lint); built-wheel inclusion test (Task 12).
+
+**Codex plan-review round 2 fixes applied (CR-NEW-001…005, CR-005):** bare `spec` (no verb) exits 2, only `--help` exits 0 (Task 9 `run`); non-UTF-8 input is a per-file finding at exit 1, not a config error at exit 2 (Task 9 `_read` splits `UnicodeDecodeError` from `OSError`); `DEV-` uniqueness via a named-heading Defined-In resolver (Task 3 `_defined_in_slice`); traceability lint checks only `Must` FRs, not every FR (Task 6 `_must_frs`); explicit path args bypass `spec.exclude` (Task 4 `collect_spec_paths`); strict-type-clean snippets (`list[tuple[Path, list[Finding]]]`, `-> SpecDocument` test helpers).
+
+**Codex plan-review round 3 fixes applied (converged; CR-NEW-003/005/006):** `_must_frs` reads the located Priority COLUMN, not a substring, with a decoy-"must" fixture (Task 6); ported registry primitives carry explicit strict-clean signatures — `split_front_matter(text: str) -> tuple[str, str]` etc. — rather than untyped verbatim paste (Task 2); the frozen `--json` surface is fully tested — `lint --json`, `extract --json` found, and `extract --json` no-match (`found:false`/`markdown:null`) (Task 9).
+
+**Open items deferred to execution (documented, not placeholders):** exact `FR`-Defined-In string (Task 2 Step 4 tells the implementer to read + match it); `extract` duplicate/partial-heading disambiguation (spec Open Question — first-match is the coded default; tighten only if a fixture demands).
