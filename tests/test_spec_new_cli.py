@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
+from project_standards.specs.commands.new import SpecIdExhausted
 
 
 def _one_json(captured: str) -> dict[str, object]:
@@ -185,3 +187,158 @@ def test_write_json_payload(
         "written": True,
         "overwritten": False,
     }
+
+
+def _json_code(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
+    rc = run(argv)
+    payload = _one_json(capsys.readouterr().out)
+    assert payload["ok"] is False
+    return rc, str(payload["code"])
+
+
+def test_json_codes_for_arg_and_field_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    cases = {
+        "usage": ["new", "--stdout", "--json"],  # missing --profile
+        "flag_conflict": ["new", "--profile", "light", "--json", "--stdout", "x.md"],
+        "bad_id": ["new", "--profile", "light", "--stdout", "--json", "--id", "nope"],
+        "bad_field_value": ["new", "--profile", "light", "--stdout", "--json", "--title", "a\nb"],
+    }
+    for expected, argv in cases.items():
+        rc, code = _json_code(argv, capsys)
+        assert (rc, code) == (2, expected)
+
+
+def test_json_code_config_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    bad = tmp_path / "bad.yml"
+    bad.write_text("spec: [unterminated\n", encoding="utf-8")
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--config", str(bad)], capsys
+    )
+    assert (rc, code) == (2, "config_error")
+
+
+def test_json_code_id_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "e.md").write_text("---\nspec_id: SPEC-7F3Q\n---\n# t\n", encoding="utf-8")
+    (tmp_path / ".project-standards.yml").write_text(
+        "spec:\n  include:\n    - docs/*.md\n", encoding="utf-8"
+    )
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--id", "SPEC-7F3Q"], capsys
+    )
+    assert (rc, code) == (2, "id_collision")
+
+
+def test_json_codes_for_write_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "e.md"
+    existing.write_text("x\n", encoding="utf-8")
+    d = tmp_path / "d"
+    d.mkdir()
+    (tmp_path / "afile").write_text("x", encoding="utf-8")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "plink").symlink_to(outside, target_is_directory=True)
+    cases = {
+        "exists": ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(existing)],
+        "not_regular_file": [
+            "new",
+            "--profile",
+            "light",
+            "--json",
+            "--force",
+            "--id",
+            "SPEC-7F3Q",
+            str(d),
+        ],
+        "mkdir_failed": [
+            "new",
+            "--profile",
+            "light",
+            "--json",
+            "--id",
+            "SPEC-7F3Q",
+            str(tmp_path / "afile" / "s.md"),
+        ],
+        "symlinked_parent": [
+            "new",
+            "--profile",
+            "light",
+            "--json",
+            "--id",
+            "SPEC-7F3Q",
+            str(tmp_path / "plink" / "s.md"),
+        ],
+    }
+    for expected, argv in cases.items():
+        rc, code = _json_code(argv, capsys)
+        assert (rc, code) == (2, expected)
+
+
+def test_json_code_id_exhausted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(rng: object, existing: object) -> str:
+        raise SpecIdExhausted("forced")
+
+    monkeypatch.setattr(spec_cli, "mint_spec_id", _boom)
+    rc, code = _json_code(["new", "--profile", "light", "--stdout", "--json"], capsys)
+    assert (rc, code) == (2, "id_exhausted")
+
+
+def test_json_code_self_validation_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _malformed(template_text: str, opts: object, *, today: object) -> str:
+        return "---\nnot a real spec\n"  # unterminated fence -> SpecParseError on self-validate
+
+    monkeypatch.setattr(spec_cli, "scaffold", _malformed)
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--stdout", "--json", "--id", "SPEC-7F3Q"], capsys
+    )
+    assert (rc, code) == (2, "self_validation_failed")
+
+
+def test_json_code_write_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(src: object, dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    rc, code = _json_code(
+        ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")], capsys
+    )
+    assert (rc, code) == (2, "write_failed")
+    assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, no destination left
+
+
+def test_write_cleanup_on_interruption(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # CR-NEW-001: a non-OSError (KeyboardInterrupt) after temp creation must still remove
+    # the temp file and leave no destination — full parity with adopt/engine._atomic_write.
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(src: object, dst: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    with pytest.raises(KeyboardInterrupt):
+        run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")])
+    assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, destination untouched
