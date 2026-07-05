@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import dataclasses
 import json
+import os
 import random
 import re
+import stat
 import sys
+import tempfile
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -224,8 +228,80 @@ def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
     return opts, template_text
 
 
+def _parent_chain_has_symlink(target: Path) -> bool:
+    # Path.exists()/is_file() follow symlinks, so a symlinked PARENT (docs/link/spec.md)
+    # could redirect the write outside the tree. Refuse a symlink anywhere in the chain.
+    return any(parent.is_symlink() for parent in target.parents)
+
+
+def _target_type_conflict(target: Path) -> bool:
+    if target.is_symlink():  # includes broken symlinks (never followed for writes)
+        return True
+    return os.path.lexists(target) and not target.is_file()  # dir / fifo / device / socket
+
+
 def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
-    raise NewError("write_failed", "file writing not yet implemented")  # replaced in Task 6
+    target: Path = args.path
+    if _target_type_conflict(target):
+        raise NewError("not_regular_file", f"refusing to write non-regular target: {target}")
+    if _parent_chain_has_symlink(target):
+        raise NewError(
+            "symlinked_parent", f"refusing to write through a symlinked parent: {target}"
+        )
+    overwritten = target.is_file()
+    if overwritten and not args.force:
+        raise NewError("exists", f"refusing to overwrite existing file: {target} (use --force)")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise NewError(
+            "mkdir_failed", f"cannot create parent directory for {target}: {exc}"
+        ) from exc
+
+    tmp: Path | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".spec-new-", suffix=".tmp")
+        tmp = Path(tmp_name)
+        # Mode (mirrors adopt/engine._atomic_write): preserve on overwrite; umask-respecting
+        # 0o666 for a new file, so the result is not left at mkstemp's owner-only 0600.
+        if target.exists():
+            with contextlib.suppress(OSError):
+                tmp.chmod(target.stat().st_mode & 0o777)
+        else:
+            mask = os.umask(0)
+            os.umask(mask)
+            with contextlib.suppress(OSError):
+                tmp.chmod(stat.S_IMODE(0o666 & ~mask))
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, target)  # atomic same-filesystem rename (I8)  # noqa: PTH105
+    except OSError as exc:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
+        raise NewError("write_failed", f"cannot write {target}: {exc}") from exc
+    except BaseException:
+        # Full parity with adopt/engine._atomic_write: also clean up on interruption /
+        # unexpected non-OSError (KeyboardInterrupt, generator-throw), then re-raise as-is.
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
+        raise
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "spec_id": opts.spec_id,
+                    "profile": opts.profile,
+                    "path": str(target),
+                    "written": True,
+                    "overwritten": overwritten,
+                }
+            )
+        )
+    else:
+        print(f"wrote {target}")
+    return 0
 
 
 def _run_new(argv: list[str]) -> int:
