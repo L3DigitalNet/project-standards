@@ -8,6 +8,7 @@ from typing import Any, cast
 
 import yaml
 
+from project_standards.specs.document import SpecParseError, parse_document
 from project_standards.validate_frontmatter import ConfigError, collect_paths
 
 
@@ -73,3 +74,29 @@ def collect_spec_paths(explicit: list[Path], cfg: SpecConfig) -> list[Path]:
     if not paths:
         raise DiscoveryError("spec discovery matched no files")
     return paths
+
+
+def collect_existing_spec_ids(cfg: SpecConfig) -> set[str]:
+    """Best-effort set of spec_ids already used in the repo, for `new`'s collision check.
+
+    Unlike collect_spec_paths (which raises DiscoveryError on an empty corpus so
+    validate/lint never pass vacuously), `new` MUST tolerate an empty corpus — a repo
+    legitimately has zero specs before the first `new`. So a DiscoveryError becomes an
+    empty set, while every OTHER ConfigError (unreadable / unparseable config) still
+    propagates and the shell maps it to exit 2. A spec that cannot be parsed is skipped,
+    so duplicate detection is best-effort over the parseable corpus.
+    """
+    try:
+        paths = collect_spec_paths([], cfg)
+    except DiscoveryError:
+        return set()
+    ids: set[str] = set()
+    for path in paths:
+        try:
+            doc = parse_document(str(path), path.read_text(encoding="utf-8"))
+        except OSError, UnicodeDecodeError, SpecParseError:
+            continue
+        spec_id = doc.frontmatter.get("spec_id")
+        if spec_id:
+            ids.add(spec_id)
+    return ids
