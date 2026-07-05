@@ -1,9 +1,11 @@
 # Specs And Plans
 
-**Last updated:** 2026-06-08
+**Last updated:** 2026-07-04
 
 | Item | Path | Status |
 | --- | --- | --- |
+| project-spec tooling Spec #1 design | `docs/superpowers/specs/2026-07-04-project-spec-tooling-design.md` | approved (codex spec-review converged r2) |
+| project-spec tooling Spec #1 plan | `docs/superpowers/plans/2026-07-04-project-spec-tooling-spec1.md` | approved (codex plan-review converged r3); ready to execute — Codex to implement |
 | Frontmatter suite (format/references/fix) design | `docs/superpowers/specs/2026-06-08-frontmatter-suite-design.md` | approved (codex spec-review converged r3) |
 | Frontmatter suite plan | `docs/superpowers/plans/2026-06-08-frontmatter-suite.md` | approved (codex plan-review converged r4); ready to execute (targets 2.1.0) |
 | `check` drift design | `docs/superpowers/specs/2026-06-08-check-drift-design.md` | approved (codex spec-review converged r3) |
