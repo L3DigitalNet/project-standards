@@ -240,6 +240,22 @@ def test_top_blocks_handles_nested_and_mixed_fences() -> None:
         "## 7. Requirements\n"
     )
     assert [k for k, _ in _top_blocks(body)] == ["1", "2", "7"]
+
+
+def test_top_blocks_fence_indent_and_info_string_rules() -> None:
+    # CommonMark: a 4-space-indented ``` is indented code, not a fence opener; and a
+    # closing-looking ```lang line carries an info string, so it does NOT close a
+    # backtick fence (Codex CR-003, mirroring validate_frontmatter's close rule).
+    from project_standards.specs.commands.upgrade import _top_blocks
+
+    body = (
+        "## 1. Purpose\n\n"
+        "    ```\n"                                             # 4-space indent → not a fence
+        "## 2. Scope\n\n"
+        "```\n## Inside\n```lang\n## Still Inside\n```\n\n"      # ```lang has info → not a closer
+        "## 7. Requirements\n"
+    )
+    assert [k for k, _ in _top_blocks(body)] == ["1", "2", "7"]
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -254,7 +270,14 @@ from project_standards.specs.registry import gh_slug  # add to imports
 
 _NUM = re.compile(r"^(\d+)\.")
 _APX = re.compile(r"^Appendix ([A-Z]):")
-_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")  # opening/closing code-fence run (>=3 of one char)
+# CommonMark fenced-code delimiters, mirroring validate_frontmatter._CODE_FENCE_RE /
+# _CODE_FENCE_CLOSE_RE exactly (DRY across the package): a fence OPENS with up to 3 leading
+# spaces + a run of >=3 of one char (`` ` `` or ``~``), optionally followed by an info string;
+# it CLOSES only on the SAME marker char, length >= the opener, up to 3 spaces, and NOTHING
+# but spaces/tabs after — so `` ```aaa `` inside a `` ``` `` fence is content, not a closer,
+# and a 4-space-indented `` ``` `` is indented code, not a fence.
+_FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 
 
 def _block_key(heading_text: str) -> str:
@@ -269,22 +292,19 @@ def _heading_starts(text: str, prefix: str) -> list[tuple[int, str]]:
     """(byte offset, heading text) for each line starting with `prefix` (e.g. ``"## "``),
     skipping lines inside fenced code so example headings in a spec's own code samples are
     never mistaken for section boundaries (Codex CR-003). Fence tracking mirrors
-    validate_frontmatter's CommonMark model: a fence closes only on a run of the SAME char
-    (``` vs ~~~) that is AT LEAST AS LONG as the opener — so a ```` fence is not closed by an
-    inner ``` and a ``` fence is not closed by ~~~. ``"## "`` does not match ``"### "``
+    validate_frontmatter's ``missing_adr_sections`` loop. ``"## "`` does not match ``"### "``
     (third char differs), so each level is isolated."""
     out: list[tuple[int, str]] = []
     fence: str | None = None  # the opening run (e.g. "```" or "~~~~"), or None outside a fence
     off = 0
     for line in text.splitlines(keepends=True):
-        if m := _FENCE.match(line):
-            run = m.group(1)
-            if fence is None:
-                fence = run  # open
-            elif run[0] == fence[0] and len(run) >= len(fence):
-                fence = None  # close: same char, length >= opener
-            # otherwise an inner fence (other char, or shorter) — stays open
-        elif fence is None and line.startswith(prefix):
+        if fence is not None:
+            close = _FENCE_CLOSE.match(line)
+            if close and close.group(1)[0] == fence[0] and len(close.group(1)) >= len(fence):
+                fence = None
+        elif opener := _FENCE_OPEN.match(line):
+            fence = opener.group(1)
+        elif line.startswith(prefix):
             out.append((off, line[len(prefix) :].rstrip("\n")))
         off += len(line)
     return out
