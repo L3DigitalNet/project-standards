@@ -16,8 +16,6 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 ## User Tracked Tasks
 
-- [ ] Fix markdownlint MD060. It conflicts with Prettier.
-
 ## Agent Tracked Tasks
 
 - [ ] **(Informational, do not block) `spec new` symlinked-parent edge cases** (from Spec #2 final + security review, pre-existing, not regressions): (a) a deliberate above-cwd relative write like `spec new ../sibling/x.md` gets partial/arbitrary ancestor checking because pathlib does not normalize `..` before the `is_relative_to` bound; (b) a TOCTOU window exists between the parent-symlink check and `mkstemp`/`os.replace` (shared with `adopt/engine._atomic_write`). Both are acceptable for the Linux target; revisit only if `new` grows an engine-style `..`-rejecting pre-validation of `args.path`.
