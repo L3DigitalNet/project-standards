@@ -52,6 +52,23 @@ def _fm_key_order(fm: str) -> list[str]:
     return [m.group(1) for m in re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*):", fm, re.M)]
 
 
+def _anchor_slugs(hs: list[tuple[int, str, int]]) -> frozenset[str]:
+    """Valid in-document anchors, following GitHub's repeated-heading rule.
+
+    GitHub disambiguates identically-titled headings by suffixing the 2nd, 3rd,
+    ... occurrence with -1, -2, ... A plain deduped set would flag `#slug-1` as a
+    dead anchor (SV-ANCHOR) on a spec whose link is actually correct.
+    """
+    counts: dict[str, int] = {}
+    out: set[str] = set()
+    for _lvl, text, _ln in hs:
+        base = gh_slug(text)
+        seen = counts.get(base, 0)
+        out.add(base if seen == 0 else f"{base}-{seen}")
+        counts[base] = seen + 1
+    return frozenset(out)
+
+
 def parse_document(path: str, text: str) -> SpecDocument:
     """Parse a project spec document into the command-facing model."""
     try:
@@ -78,7 +95,7 @@ def parse_document(path: str, text: str) -> SpecDocument:
         frontmatter=scalars,
         body=body,
         sections=section_numbers(hs),
-        slugs=frozenset(gh_slug(t) for _lvl, t, _ln in hs),
+        slugs=_anchor_slugs(hs),
         used_ids=used,
         declared_prefixes=declared,
     )

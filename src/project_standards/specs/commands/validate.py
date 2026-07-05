@@ -8,10 +8,22 @@ from project_standards.specs.document import definition_sites
 from project_standards.specs.model import Finding, Registry, SpecDocument
 from project_standards.specs.registry import numkey
 
-_OMIT = re.compile(r"§(\d+)\s*[\u2013-]\s*§?(\d+)")
+# Range dashes: en-dash (\u2013), em-dash (\u2014), and hyphen. Em-dash is
+# common via editor autocorrect; without it a "14 to 16 omitted" range note
+# leaves the interior sections looking like un-annotated gaps (SV-GAP).
+_OMIT = re.compile(r"§(\d+)\s*[\u2013\u2014-]\s*§?(\d+)")
 _OMIT_SINGLE = re.compile(r"§(\d+)")
 _SECTION_REF = re.compile(r"§\s?([0-9]+(?:\.[0-9]+)*)")
 _ANCHOR = re.compile(r"\[([^\]]+)\]\(#([^)]+)\)")
+# Inline code spans hide their contents from GFM table parsing, so pipes
+# inside them (and backslash-escaped pipes) are not column delimiters. Count
+# only real delimiters, or a cell like a code-span pipe inflates the count.
+_INLINE_CODE = re.compile(r"`+[^`]*`+")
+
+
+def _delim_pipes(line: str) -> int:
+    """Count GFM column-delimiter pipes, ignoring inline code and escaped pipes."""
+    return _INLINE_CODE.sub("", line).replace("\\|", "").count("|")
 
 
 def _f(code: str, message: str, line: int | None = None, locus: str | None = None) -> Finding:
@@ -173,14 +185,14 @@ def _check_tables(doc: SpecDocument) -> list[Finding]:
             and i + 1 < len(lines)
             and re.match(r"^\s*\|[\s:|-]+\|\s*$", lines[i + 1])
         ):
-            cols = lines[i].count("|")
+            cols = _delim_pipes(lines[i])
             j = i
             while j < len(lines) and lines[j].strip().startswith("|"):
-                if j != i + 1 and lines[j].count("|") != cols:
+                if j != i + 1 and _delim_pipes(lines[j]) != cols:
                     out.append(
                         _f(
                             "SV-TABLE",
-                            f"L{j + 1}: {lines[j].count('|')} pipes vs header {cols}",
+                            f"L{j + 1}: {_delim_pipes(lines[j])} pipes vs header {cols}",
                             line=j + 1,
                         )
                     )
