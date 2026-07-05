@@ -4,15 +4,15 @@
 
 ## State at a glance
 
-- **`project-spec` (5th standard) REGISTERED (2026-07-05, `testing`):** full `validate|lint|extract|next|new|upgrade` surface complete, bug-fixed (3 🟡 + 2 🟢 from `/code-review high spec`), adoption docs written, `spec:` config block live, dogfood example added, `README.md`/`meta/versioning.md` updated. CI (`validate-specs.yml`) auto-activated.
-- **Residual `format-frontmatter`/`cli.py` gaps fixed (2026-07-05):** typo'd `--config` no longer silently formats; non-UTF-8 input no longer tracebacks; `validate --help` `--glob` text corrected.
-- **CHANGELOG caught up + version resolved (2026-07-05):** `project-spec` registration is MINOR; six validator/config strictness bumps + a Python Tooling floor raise are each independently MAJOR (previously-passing rule); `pytest-cov` removal confirmed PATCH via commit history. **Next release off `testing` is MAJOR (v4.0.0).**
-- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` ahead — next release will be v4.0.0, not yet cut.
-- **Docs pruned for v4.0.0 (2026-07-05):** 53 deleted — codex-reviews (31), `fable-findings.md`, `python-backend.md`, all implemented plans + `v1.1.0/` archive. Kept: all specs + the pending `check`-drift plan; distribution folders audited clean. `specs-plans.md` table pruned.
+- **Release-readiness audit + fixes (2026-07-05, `testing`, `38b7980`):** 33-agent audit → **18 verified findings (0 false positives), all in-scope ones fixed**. 🔴 `spec upgrade` failed self-validation on every tier-increasing upgrade of a fresh scaffold (dead Appendix D anchor) — fixed in `upgrade.py` + real-scaffold regression tests (**795 pass**). Drift corrected: AGENTS/CLAUDE now say **five** standards; `src` README `spec extract`/`next` signatures; CHANGELOG `### Fixed`; `meta/versioning.md` release checklist hardened. Four products audited clean (frontmatter, ADR, python-tooling, manifests). **Deferred to the release commit** (now mandated by the checklist): all `@v3`→`@v4` pin bumps + `UPGRADING.md` v3→v4 rewrite.
+- **Next release off `testing` is MAJOR (v4.0.0)** — six validator strictness bumps + Python Tooling floor raise (each MAJOR) + project-spec (MINOR). Not yet cut.
+- **`project-spec` (5th standard) REGISTERED:** full `validate|lint|extract|next|new|upgrade` surface, `spec:` config, `validate-specs.yml` CI.
+- **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` ahead.
+- **Docs pruned for v4.0.0 (`9bf50be`):** 53 deleted (codex-reviews, implemented plans, `v1.1.0/`). Kept all specs + pending `check`-drift plan.
 
 ## Active incidents
 
-- _None._ Gate green: 790 tests, 98% branch cov, basedpyright 0/0/0, ruff, dogfood frontmatter, pip-audit clean.
+- _None._ Gate green: 795 tests, 98% branch cov, basedpyright 0/0/0, ruff, dogfood (19), pip-audit clean.
 
 ## Session instructions
 
