@@ -229,6 +229,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         return max(rc_format, rc_idfix, rc_check)
 
+    if args_list and args_list[0] == "spec":
+        from project_standards.specs.cli import run as _spec_run
+
+        return _spec_run(args_list[1:])
+
     parser = argparse.ArgumentParser(prog="project-standards")
     sub = parser.add_subparsers(dest="command", required=True)
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
@@ -237,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         help="validate schema + id + references (validate-frontmatter, validate-id, validate-references)",
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
+    sub.add_parser("spec", help="validate|lint|extract|next over project specs")
 
     p_adopt = sub.add_parser(
         "adopt",

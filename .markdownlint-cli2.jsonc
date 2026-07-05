@@ -15,8 +15,10 @@
 	// validation (it excludes docs/handoff/**). These paths are regenerated
 	// artifacts (codex review transcripts; v3 handoff session state), so
 	// body-linting them is churn, not quality, and would keep CI permanently red on
-	// content no human wrote to a style bar. Authored design docs under
-	// docs/superpowers/{specs,plans} are deliberately NOT ignored — they stay gated.
-	"ignores": ["docs/codex-reviews/**", "docs/handoff/**"],
+	// content no human wrote to a style bar. The spec fixtures are deliberately
+	// mutated/generated Markdown used to exercise parser failures, not authored docs.
+	// Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
+	// ignored — they stay gated.
+	"ignores": ["docs/codex-reviews/**", "docs/handoff/**", "tests/fixtures/specs/**"],
 	"gitignore": true
 }

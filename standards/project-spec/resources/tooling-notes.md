@@ -6,7 +6,7 @@ Reference for building programmatic tooling (validators, generators, spec manage
 - `spec-standard-template.md`
 - `spec-full-template.md`
 
-The companion validator `check_specs.py` enforces the machine-checkable subset of this document. Read this before assuming anything about structure — several deliberate design choices will trip a naive parser (see [Gotchas](#9-gotchas--anti-patterns)).
+The `project-standards spec validate` command and the maintainer pytest checks enforce the machine-checkable subset of this document. Read this before assuming anything about structure — several deliberate design choices will trip a naive parser (see [Gotchas](#9-gotchas--anti-patterns)).
 
 ## Table of Contents
 
@@ -87,7 +87,7 @@ Top-level sections (each has the subsections shown in Full; unnumbered sections 
 | 20 | Success Evaluation | — | — | ✅ |
 | 21 | Open Questions and Decisions | — | ✅ | ✅ |
 
-Full has **65 numbered headings** total (top-level + subsections). `check_specs.py` prints the exact canonical count.
+Full has **65 numbered headings** total (top-level + subsections). The registry tests derive the exact canonical count from the bundled Full template.
 
 ---
 
@@ -145,7 +145,7 @@ Extraction regex that captures **all** ID types including milestones:
 \b([A-Z]{1,4})-([0-9]+)\b       # then validate: MS → 1 digit; everything else → 3 digits
 ```
 
-Exclude standards/acronyms that match the shape but are not IDs (`HTTP-…`, `AES-…`, `ISO-…`, `SHA-…`, `RPO`, `RTO`, …). `check_specs.py` carries a `NOT_AN_ID` denylist.
+Exclude standards/acronyms that match the shape but are not IDs (`HTTP-…`, `AES-…`, `ISO-…`, `SHA-…`, `RPO`, `RTO`, …). The spec registry carries a `NOT_AN_ID` denylist.
 
 ### 5.3 Example IDs are placeholders
 
@@ -200,8 +200,8 @@ related:
 1. A section/subsection **number denotes the same content** in every tier it appears in (same heading title too).
 2. **Appendix letters are stable**; the tailoring appendix is always **D**.
 3. Every shared **ID prefix maps to the same "Defined In"** section across tiers.
-4. **Shared example IDs are identical** in shared sections.
-5. Shared **boilerplate is identical** (spec-lifecycle paragraph, Must/Should/Could definitions, "The system shall", the Agent Implementation Contract) — except where a lower tier legitimately drops a reference to a section it lacks.
+4. **Shared example IDs are identical** in shared sections — documented convention, **not currently machine-checked**.
+5. Shared **boilerplate is identical** (spec-lifecycle paragraph, Must/Should/Could definitions, "The system shall", the Agent Implementation Contract) — except where a lower tier legitimately drops a reference to a section it lacks — documented convention, **not currently machine-checked**.
 6. A given logical **table has the same column count** across tiers (FR = 5 cols, NG = 3, WH = 4, Boundaries = 2, OQ = 7, DEV = 5, Revision History = 4, Appendix A = 3).
 
 ---
@@ -238,13 +238,18 @@ A spec is still an unfilled template if any of these are present — useful for 
 
 ## 11. Validation
 
-`check_specs.py` (same directory) enforces the machine-checkable invariants:
+Consumer specs are checked with the packaged CLI:
 
 ```bash
-python3 check_specs.py [DIR]     # DIR defaults to the script's own directory
+project-standards spec validate [FILE ...] --config .project-standards.yml
 ```
 
-Exit `0` = all consistent; `1` = at least one problem; `2` = a template file was not found. Suitable for CI / pre-commit. It checks: frontmatter key-set/profile/sentinel; section subset + ascending order + gap annotation; appendix lettering; `§`/anchor reference resolution; ID format; Appendix-A registry (used ⊆ declared, Defined-In resolvable); the cross-file "Defined In identical for a shared prefix" guarantee; and table column consistency.
+Exit `0` = all selected specs conform; `1` = at least one finding; `2` = bad invocation or discovery/configuration error. Suitable for CI / pre-commit. It checks: frontmatter key-set/profile/sentinel; section subset + ascending order + gap annotation; appendix lettering; `§`/anchor reference resolution; ID format; Appendix-A registry (used ⊆ declared, Defined-In identity); per-spec ID uniqueness; and table column consistency.
+
+Maintainer template consistency is covered by pytest instead of a standalone script:
+
+- `tests/test_template_conformance.py` checks each bundled template has no structural findings beyond the intentional `SPEC-____` sentinel.
+- `tests/test_template_interchangeability.py` checks the cross-tier "Defined In identical for shared prefixes" guarantee.
 
 It intentionally does **not** judge prose (terminology drift, "Context" vs "Background" in shared boilerplate). That layer is better covered by an LLM review — the two together (deterministic structure + semantic prose) are stronger than either alone.
 

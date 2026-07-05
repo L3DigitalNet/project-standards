@@ -102,7 +102,7 @@ Each template's own **Appendix D (Tailoring)** carries the authoritative per-tie
 
 The standard ships tooling — distributed as a `project-standards` CLI subcommand group with an optional reusable CI workflow — that operates on a repository's real specifications. It is **read-only plus guarded authoring**: it never rewrites a spec's prose, only analyzing it or generatively producing/extending structure. Every command is profile-agnostic (one code path serves all three tiers via the canonical registry) and offers machine-readable `--json` output. The capability set below is a considered draft, tiered into a v1 core and a planned wave; the surface is still subject to change.
 
-> **Not the same as `check_specs.py`.** [`resources/check_specs.py`](resources/check_specs.py) validates the **three templates against each other** for mutual consistency — a maintainer tool for the standard itself. The `validate`/`lint` capabilities below run against a **consumer's own specs**. Same registry logic, opposite subject.
+> **Consumer vs. maintainer checks.** The `validate`/`lint` capabilities below run against a **consumer's own specs**. This repository's three bundled templates are checked by `tests/test_template_conformance.py` and `tests/test_template_interchangeability.py` so template drift is caught in the normal pytest gate.
 
 ### Purpose
 
@@ -123,8 +123,8 @@ Grouped by what they do to a spec. Each notes the guarantee(s) from [§3](#3-fea
 
 **Analyze — read-only, never writes:**
 
-- **`validate`** _(core)_ — the deterministic structural gate: canonical-registry conformance (numbering subset, annotated gaps, appendix lettering), cross-reference resolution, frontmatter key-set/enum/sentinel, and table shape. Hard pass/fail with CI exit codes — the contract downstream tooling relies on. → **G2, G3, G7**
-- **`lint`** _(core)_ — advisory authoring quality on top of a valid spec: leftover sentinel or `<angle-bracket>` placeholders and un-deleted template guidance, per-spec ID uniqueness and `used ⊆ declared`, and status-aware traceability (an `approved` spec must map every `Must` requirement in §17.3). Warns without failing a draft. → **G4, G5, G7**
+- **`validate`** _(core)_ — the deterministic structural gate: canonical-registry conformance (numbering subset, annotated gaps, appendix lettering), cross-reference resolution, frontmatter key-set/enum/sentinel, `spec_id` pattern, per-spec ID uniqueness, `used ⊆ declared`, canonical Defined-In mappings, tier-valid prefixes, and table shape. Hard pass/fail with CI exit codes — the contract downstream tooling relies on. → **G2, G3, G7**
+- **`lint`** _(core)_ — advisory authoring quality on top of a valid spec: `<angle-bracket>` placeholders, un-deleted template guidance, and status-aware traceability (an `approved` spec must map every `Must` requirement in §17.3, or complete §17.1 at Light tier). Warns without failing a draft. → **G4, G5, G7**
 - **`extract`** _(core)_ — print a slice as raw Markdown or JSON: one ID row, a numbered section, a heading-matched section, or an appendix. The context-window optimizer — an agent pulls just §7 and the Deviations Log instead of the whole spec. → **G2, G4**
 - **`next`** _(core)_ — print the next free ID for a prefix (e.g. `FR-013`), aware of the per-spec registry and the format rules (three digits; `MS-` single digit). Collision-free ID assignment. → **G4**
 - **`status`** _(planned)_ — progress rollup: ID counts by prefix, Must/Should/Could split, traceability coverage, open and blocking `OQ-` counts, unchecked Definition-of-Done items, and milestone state. Human table or `--json`. A reporting view over data the commands above already expose. → **G5**
@@ -175,7 +175,7 @@ The [ADR Standard](../adr/README.md) is the authority for the ADR's shape (`id`,
 
 Review this standard when:
 
-- **A template changes** — a canonical section or appendix is added, removed, or renumbered. Any such change must preserve the interchangeability guarantees (G2); re-run [`resources/check_specs.py`](resources/check_specs.py) to prove the three profiles still agree.
+- **A template changes** — a canonical section or appendix is added, removed, or renumbered. Any such change must preserve the interchangeability guarantees (G2); run `tests/test_template_conformance.py` and `tests/test_template_interchangeability.py` to prove the three profiles still agree.
 - The **spec frontmatter schema** (`spec_id`, `status`, `profile`, relations) or its lifecycle changes.
 - The **ID prefix registry** (Appendix A) or ID format changes.
 - The **Agent Implementation Contract** (Appendix B) changes.
@@ -197,7 +197,8 @@ Until the standard is released for adoption it is under active development and r
 **Tooling (preliminary):**
 
 - [Tooling notes](resources/tooling-notes.md)
-- [Validation tooling](resources/check_specs.py)
+- [Maintainer template conformance test](../../tests/test_template_conformance.py)
+- [Maintainer template interchangeability test](../../tests/test_template_interchangeability.py)
 
 **Templates:**
 

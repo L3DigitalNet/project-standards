@@ -22,6 +22,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = _REPO_ROOT / ".markdownlint.json"
+CLI2_CONFIG_PATH = _REPO_ROOT / ".markdownlint-cli2.jsonc"
 
 # The 13 deliberate deviations from markdownlint's defaults. Every other rule is
 # stated at its v0.40.0 default for determinism; these are the values that carry
@@ -83,3 +84,9 @@ def test_config_is_fully_explicit_not_sparse(config: dict[str, Any]) -> None:
     # accidental revert to the old 13-override sparse form: v0.40.0 has 53 rules.
     rules = [k for k in config if k.startswith("MD")]
     assert len(rules) == 53, f"expected the full rule set explicitly, found {len(rules)}"
+
+
+def test_spec_parser_fixtures_are_excluded_from_repo_markdownlint() -> None:
+    # Fixtures intentionally contain malformed tables and dead anchors to test the
+    # spec validator; the repo markdown body-style gate must not lint them.
+    assert "tests/fixtures/specs/**" in CLI2_CONFIG_PATH.read_text(encoding="utf-8")

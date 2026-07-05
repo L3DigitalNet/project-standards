@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from project_standards.cli import main
+
+_FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
+
+
+def test_spec_validate_valid_exit0(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["spec", "validate", str(_FIX / "valid_standard.md")]) == 0
+    assert "OK" in capsys.readouterr().out
+
+
+def test_spec_validate_bad_exit1_json(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["spec", "validate", "--json", str(_FIX / "bad_dup_id.md")])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert any(f["code"] == "SV-ID-DUP" for f in data[0]["findings"])
+
+
+def test_spec_missing_config_exit2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert main(["spec", "validate"]) == 2
+
+
+def test_spec_next_json(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["spec", "next", "--json", str(_FIX / "valid_standard.md"), "FR"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 0 and out["next_id"].startswith("FR-")
+
+
+def test_spec_malformed_input_no_traceback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = tmp_path / "bad.md"
+    bad.write_text("---\nspec_id: SPEC-7F3Q\n# unterminated frontmatter\n", encoding="utf-8")
+    assert main(["spec", "validate", str(bad)]) == 1
+    assert main(["spec", "extract", str(bad), "§7"]) == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_bare_spec_is_exit2_but_help_is_exit0(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["spec"]) == 2
+    assert main(["spec", "--help"]) == 0
+    assert main(["spec", "bogus"]) == 2
+    assert "usage:" in capsys.readouterr().out
+
+
+def test_non_utf8_spec_exits_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    bad = tmp_path / "latin1.md"
+    bad.write_bytes(b"---\nspec_id: SPEC-7F3Q\n---\n# t \xff\xfe not utf-8\n")
+    assert main(["spec", "validate", str(bad)]) == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_lint_json_shape(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["spec", "lint", "--json", str(_FIX / "draft_placeholders.md")])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert set(data[0]) == {"file", "ok", "findings"}
+    assert data[0]["findings"] and data[0]["findings"][0]["severity"] == "warning"
+
+
+def test_extract_json_found_and_no_match(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["spec", "extract", "--json", str(_FIX / "valid_standard.md"), "§7"])
+    found = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert found["found"] is True and found["kind"] == "section" and found["markdown"]
+    rc2 = main(["spec", "extract", "--json", str(_FIX / "valid_standard.md"), "FR-999"])
+    miss = json.loads(capsys.readouterr().out)
+    assert rc2 == 1
+    assert miss["found"] is False and miss["markdown"] is None

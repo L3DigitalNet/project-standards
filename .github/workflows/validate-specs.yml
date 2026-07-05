@@ -1,0 +1,73 @@
+name: Validate Specs
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+      - "src/**"
+      - ".project-standards.yml"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "src/**"
+      - ".project-standards.yml"
+      - "pyproject.toml"
+  workflow_call:
+    inputs:
+      config-path:
+        description: "Path to the project standards config file in the calling repo."
+        required: false
+        type: string
+        default: ".project-standards.yml"
+      standards-ref:
+        description: "project-standards git ref to install from (match your uses: @vN pin)."
+        required: false
+        type: string
+        default: "v3"
+      strict-lint:
+        description: "Also run `spec lint --strict` (fail on advisory warnings)."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate-specs:
+    name: Specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
+
+      - name: Install (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv sync --dev
+
+      - name: Validate specs (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Lint specs (this repo, strict)
+        if: github.repository == 'L3DigitalNet/project-standards' && inputs.strict-lint
+        run: uv run project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Install (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref }}"
+
+      - name: Validate specs (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Lint specs (consuming repo, strict)
+        if: github.repository != 'L3DigitalNet/project-standards' && inputs.strict-lint
+        run: project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
