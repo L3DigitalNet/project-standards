@@ -272,7 +272,7 @@ Constraints the implementer must not violate:
 
 ## 9. Data Model
 
-Define persistent storage concretely: schemas or collection/document definitions, migrations, indexes, retention, constraints. Concrete DDL belongs here when the datastore is relational; Appendix C.5 shows the expected depth (its example tables are **illustrative, not normative**).
+Define persistent storage concretely: schemas or collection/document definitions, migrations, indexes, retention, constraints. Concrete DDL belongs here when the datastore is relational.
 
 Define for each entity:
 
@@ -379,7 +379,7 @@ For each, specify: data source and primary query; filters/sorts; empty and error
 - Non-retried operations: `<operations>`
 - Idempotency key / deduplication strategy: `<strategy>`
 
-If the system runs scheduled or high-volume external work, add the scheduler/circuit-breaker module (Appendix C.2) and reference its config here.
+If the system runs scheduled or high-volume external work, define its throttling, retry caps, and circuit-breaker behavior here.
 
 ### 12.3 Rollback / Recovery
 
@@ -627,7 +627,7 @@ Break the work into ordered milestones with observable exit criteria. Each step 
 
 1. Core rules/calculations/decisions implemented.
 2. Missing, ambiguous, or low-confidence inputs handled.
-3. Decision provenance persisted (see §9 / Appendix C.4).
+3. Decision provenance persisted (see §9).
 4. Edge-case and threshold tests.
 
 ### MS-3 — User and admin experience

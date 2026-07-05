@@ -367,7 +367,7 @@ For each, specify: data source and primary query; filters/sorts; empty and error
 - Non-retried operations: `<operations>`
 - Idempotency key / deduplication strategy: `<strategy>`
 
-If the system runs scheduled or high-volume external work, define its throttling, retry caps, and circuit-breaker behavior here (or upgrade to the Full template, which carries a dedicated scheduling module in Appendix C.2).
+If the system runs scheduled or high-volume external work, define its throttling, retry caps, and circuit-breaker behavior here.
 
 ### 12.3 Rollback / Recovery
 
