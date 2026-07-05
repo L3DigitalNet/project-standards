@@ -91,3 +91,22 @@ def _top_blocks(body: str) -> list[tuple[str, str]]:  # pyright: ignore[reportUn
 
 def _present_top_keys(body: str) -> list[str]:  # pyright: ignore[reportUnusedFunction]
     return [k for k, _ in _top_blocks(body) if k and not k.startswith("appendix-")]
+
+
+# Appendices A, B, and D are all tier-variant canonical boilerplate — taken from
+# the target tier, never the source. (Appendix C is Full-only, so it arrives as a
+# missing unit, not a template-owned replacement.) The upgradeability precheck
+# (Task 8) guarantees the source's A/B/D are canonical, so nothing author-written
+# is lost by replacing them.
+_TEMPLATE_OWNED = {"appendix-A", "appendix-B", "appendix-D"}
+
+
+def _merge_top(source_body: str, target_body: str) -> str:  # pyright: ignore[reportUnusedFunction]
+    source_map = dict(_top_blocks(source_body))
+    out: list[str] = []
+    for key, target_text in _top_blocks(target_body):
+        if key in source_map and key not in _TEMPLATE_OWNED:
+            out.append(source_map[key])
+        else:
+            out.append(target_text)  # missing unit, tier-owned appendix, or target preamble
+    return "".join(out)

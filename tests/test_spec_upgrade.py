@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from project_standards.specs.commands.upgrade import (  # pyright: ignore[reportPrivateUsage]
+    _merge_top,  # pyright: ignore[reportPrivateUsage]
     _present_top_keys,  # pyright: ignore[reportPrivateUsage]
     _rewrite_h1_suffix,  # pyright: ignore[reportPrivateUsage]
     _set_profile,  # pyright: ignore[reportPrivateUsage]
@@ -93,3 +94,17 @@ def test_top_blocks_fence_indent_and_info_string_rules() -> None:
         "## 7. Requirements\n"
     )
     assert [k for k, _ in _top_blocks(body)] == ["1", "2", "7"]
+
+
+def test_merge_top_inserts_missing_section_and_keeps_author_block() -> None:
+    source = "# `T` — Specification (Light)\n\n## 1. Purpose\n\nAUTHORED\n\n## 7. Requirements\n\nFR stuff\n"
+    target = (
+        "# `X` — Specification (Standard)\n\n## 1. Purpose\n\nstub\n\n"
+        "## 3. Context\n\ncontext stub\n\n## 7. Requirements\n\nreq stub\n"
+    )
+    out = _merge_top(source, target)
+    assert "AUTHORED" in out  # source's §1 kept verbatim
+    assert "FR stuff" in out  # source's §7 kept verbatim
+    assert "## 3. Context" in out  # target's §3 inserted
+    assert "context stub" in out
+    assert out.index("## 1. Purpose") < out.index("## 3. Context") < out.index("## 7. Requirements")
