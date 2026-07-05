@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
@@ -236,6 +237,50 @@ def test_output_symlink_target_refused_even_with_force(
     obj = json.loads(capsys.readouterr().out)
     assert rc == 2 and obj["code"] == "not_regular_file"
     assert not (tmp_path / "real.md").exists()  # symlink not followed
+
+
+def test_dogfood_upgrade_then_validate_is_clean(tmp_path: Path) -> None:
+    src = tmp_path / "s.md"
+    src.write_text((_FIX / "upgrade_light.md").read_text(), encoding="utf-8")
+    out = tmp_path / "up.md"
+    assert _run([str(src), "--to", "full", "-o", str(out)]) == 0
+    from project_standards.specs.cli import run as _run_group
+
+    assert _run_group(["validate", str(out)]) == 0  # end-to-end U1
+
+
+def test_mkdir_failed_when_output_parent_is_a_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A regular file sitting where an intermediate directory component is expected makes
+    # Path.mkdir(parents=True) raise NotADirectoryError/FileExistsError -> mkdir_failed,
+    # not a traceback (mirrors test_spec_new_cli.test_json_codes_for_write_paths).
+    src = _valid_light_src(tmp_path)
+    blocker = tmp_path / "afile"
+    blocker.write_text("x", encoding="utf-8")
+    out = blocker / "nested" / "out.md"
+    rc = _run([str(src), "--to", "standard", "-o", str(out), "--json"])
+    obj = json.loads(capsys.readouterr().out)
+    assert rc == 2 and obj["code"] == "mkdir_failed"
+
+
+def test_write_failed_when_atomic_replace_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Best-effort per the plan: forcing the OSError via monkeypatch of os.replace (used by
+    # _safe_atomic_write) is deterministic across environments (root ignores read-only-dir
+    # mode bits, so chmod(0o500) is not reliable here) — mirrors
+    # test_spec_new_cli.test_json_code_write_failed.
+    src = _valid_light_src(tmp_path)
+    out = tmp_path / "out.md"
+
+    def _boom(_src: object, _dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    rc = _run([str(src), "--to", "standard", "-o", str(out), "--json"])
+    obj = json.loads(capsys.readouterr().out)
+    assert rc == 2 and obj["code"] == "write_failed"
 
 
 def test_output_symlinked_parent_refused(

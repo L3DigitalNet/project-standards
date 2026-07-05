@@ -18,6 +18,7 @@ This is the Python package that ships the validator, adopt engine, bundled schem
     - [format-frontmatter](#format-frontmatter)
     - [project-standards validate (combined command)](#project-standards-validate-combined-command)
     - [project-standards fix (combined fix command)](#project-standards-fix-combined-fix-command)
+    - [project-standards spec (nested command group)](#project-standards-spec-nested-command-group)
   - [Module map](#module-map)
   - [Adopt engine](#adopt-engine)
     - [Artifact kinds](#artifact-kinds)
@@ -37,6 +38,7 @@ Console scripts registered by `pyproject.toml`:
 | `project-standards list [--json]` | `cli.py` | List adoptable standards and their artifacts |
 | `project-standards validate [FLAGS] [FILE …]` | `cli.py` | Run all three validators (schema + id + references) in one pass |
 | `project-standards fix [FLAGS] [FILE …]` | `cli.py` | Format frontmatter, fix ids, then re-validate (bundled schema only) |
+| `project-standards spec {validate\|lint\|extract\|next\|new\|upgrade} …` | `specs/cli.py` | Nested command group over project specs — see [project-standards spec (nested command group)](#project-standards-spec-nested-command-group) |
 | `validate-frontmatter [FLAGS] [FILE …]` | `validate_frontmatter.py` | Validate YAML frontmatter against the JSON Schema |
 | `validate-id [FLAGS] [FILE …]` | `validate_id.py` | Validate `id` field format per `doc_type` |
 | `validate-references [FLAGS]` | `validate_references.py` | Cross-file checks (id uniqueness, referential integrity, etc.) |
@@ -228,6 +230,23 @@ uv run project-standards validate --config .project-standards.yml
 Returns the worst exit code across all three phases. If the final validate fails (e.g. a duplicate-id reference error), the exit code is non-zero even though the write phases succeeded.
 
 **Custom-schema skip (CR-001):** when `--schema` is passed, or `markdown.frontmatter.schema:` in the config is a path, `fix` prints a note and exits 0 without touching any files — bundled transforms are semantically undefined for non-standard schemas.
+
+---
+
+### project-standards spec (nested command group)
+
+`project-standards spec {validate|lint|extract|next|new|upgrade} …` is an early-dispatch group forwarded to `project_standards.specs.cli.run()`. It operates on project **specs** — the `docs/superpowers/specs/` documents this repo's own SDD workflow produces — independently of the frontmatter/id/references validators above.
+
+| Verb | Purpose |
+| --- | --- |
+| `spec validate [FILE …] [--config PATH]` | Validate spec documents against the configured `spec:` schema (exits 2 with no vacuous green run if `.project-standards.yml` has no `spec:` block) |
+| `spec lint [FILE …] [--config PATH]` | Lint spec documents for style/structure issues beyond schema validation |
+| `spec extract SOURCE` | Extract structured data (e.g. a section) from a spec document |
+| `spec next` | Report the next actionable step in the spec workflow |
+| `spec new` | Scaffold a new spec document from the canonical template, fail-closed self-validated before write |
+| `spec upgrade SOURCE --to {standard\|full} [-i \| -o PATH \| --stdout] [--force] [--json]` | Additively promote a spec from a lower tier (`light`) to a higher tier (`standard`/`full`), inserting missing template-owned sections; triply fail-closed (source validation, upgradeability precheck, output self-validation) before any write |
+
+Each verb is implemented in `src/project_standards/specs/cli.py`; `spec new` and `spec upgrade` share the `_NewArgParser`/`NewError`-style refusal contract (frozen `code` + `message` + `findings`, `--json` support) so both fail closed rather than emitting a document the validator would reject.
 
 ---
 
