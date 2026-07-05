@@ -40,7 +40,13 @@ def extract_slice(doc: SpecDocument, selector: str) -> ExtractResult:
         sec = section_slice(doc, selector[1:])
         return ExtractResult("section", sec is not None, sec, selector)
     if selector.lower().startswith("appendix "):
-        letter = selector.split()[1].upper()
+        # startswith("appendix ") is satisfied by a bare "Appendix " (only trailing
+        # whitespace), but str.split() strips it → a 1-element list, so [1] would raise.
+        # Degrade a letterless selector to a clean no-match, like every other selector kind.
+        parts = selector.split()
+        if len(parts) < 2:
+            return ExtractResult("appendix", False, None, selector)
+        letter = parts[1].upper()
         appendix = _appendix_slice(body, letter)
         return ExtractResult("appendix", appendix is not None, appendix, selector)
     m = re.search(rf"^#+\s.*{re.escape(selector)}.*?(?=^#+\s|\Z)", body, re.M | re.S)

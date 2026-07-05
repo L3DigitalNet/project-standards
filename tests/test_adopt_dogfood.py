@@ -32,6 +32,9 @@ _DOGFOOD = {
     "markdown-tooling/prettierrc.json": ".prettierrc.json",
     "python-tooling/check.yml": ".github/workflows/check.yml",
     "python-tooling/check.py": "scripts/check.py",
+    # ADR bundle template ↔ its canonical copy under standards/ (guards silent drift —
+    # the project-spec templates have the analogous guard in test_spec_packaging.py).
+    "adr/adr.template.md": "standards/adr/templates/adr.md",
 }
 
 

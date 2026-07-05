@@ -26,6 +26,15 @@ def test_extract_appendix_found() -> None:
     assert extract_slice(_doc(), "Appendix B").found
 
 
+def test_extract_letterless_appendix_selector_degrades_cleanly() -> None:
+    # Regression: "Appendix " (trailing space only) satisfies the startswith("appendix ")
+    # guard but split() strips it, so the old code raised IndexError instead of no-matching.
+    # (Bare "Appendix" with no space skips this branch and matches a heading — not tested here.)
+    for sel in ("Appendix ", "appendix   "):
+        result = extract_slice(_doc(), sel)
+        assert not result.found and result.markdown is None
+
+
 def test_extract_missing_id_not_found() -> None:
     result = extract_slice(_doc(), "FR-999")
     assert not result.found and result.markdown is None
