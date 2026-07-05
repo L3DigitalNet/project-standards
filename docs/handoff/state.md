@@ -4,7 +4,7 @@
 
 ## State at a glance
 
-- **Release-readiness audit + fixes (2026-07-05, `testing`, `38b7980`):** 33-agent audit → **18 verified findings (0 false positives), all in-scope ones fixed**. 🔴 `spec upgrade` failed self-validation on every tier-increasing upgrade of a fresh scaffold (dead Appendix D anchor) — fixed in `upgrade.py` + real-scaffold regression tests (**795 pass**). Drift corrected: AGENTS/CLAUDE now say **five** standards; `src` README `spec extract`/`next` signatures; CHANGELOG `### Fixed`; `meta/versioning.md` release checklist hardened. Four products audited clean (frontmatter, ADR, python-tooling, manifests). **Deferred to the release commit** (now mandated by the checklist): all `@v3`→`@v4` pin bumps + `UPGRADING.md` v3→v4 rewrite.
+- **Release-readiness audit + fixes (2026-07-05, `testing`):** two multi-agent passes → **24 verified findings (0 false positives), all in-scope fixed**. Pass 1 (`38b7980`): 🔴 `spec upgrade` failed self-validation on every tier-increasing upgrade (dead Appendix D anchor) — fixed in `upgrade.py` + regression tests; AGENTS/CLAUDE "four"→**five** standards; `src` README `spec` signatures; CHANGELOG `### Fixed`; `meta/versioning.md` checklist hardened. Pass 2 (`206e97e`): 🟡 `spec extract "Appendix "` IndexError crash fixed; `validate-specs.yml` consuming-repo path now `has_spec`-gated; ADR bundle byte-identity guard added; `architecture.md` component graph refreshed. **Deferred to the release commit** (now mandated by the checklist): all `@v3`→`@v4` pin bumps + `UPGRADING.md` v3→v4 rewrite.
 - **Next release off `testing` is MAJOR (v4.0.0)** — six validator strictness bumps + Python Tooling floor raise (each MAJOR) + project-spec (MINOR). Not yet cut.
 - **`project-spec` (5th standard) REGISTERED:** full `validate|lint|extract|next|new|upgrade` surface, `spec:` config, `validate-specs.yml` CI.
 - **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` ahead.
@@ -12,7 +12,7 @@
 
 ## Active incidents
 
-- _None._ Gate green: 795 tests, 98% branch cov, basedpyright 0/0/0, ruff, dogfood (19), pip-audit clean.
+- _None._ Gate green: 796 tests, 98% branch cov, basedpyright 0/0/0, ruff, dogfood (19), pip-audit clean.
 
 ## Session instructions
 
