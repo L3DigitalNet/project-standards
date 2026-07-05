@@ -8,6 +8,7 @@
 - **Residual `format-frontmatter`/`cli.py` gaps fixed (2026-07-05):** typo'd `--config` no longer silently formats; non-UTF-8 input no longer tracebacks; `validate --help` `--glob` text corrected.
 - **CHANGELOG caught up + version resolved (2026-07-05):** `project-spec` registration is MINOR; six validator/config strictness bumps + a Python Tooling floor raise are each independently MAJOR (previously-passing rule); `pytest-cov` removal confirmed PATCH via commit history. **Next release off `testing` is MAJOR (v4.0.0).**
 - **`3.0.0` RELEASED on `main` 2026-06-12** (tags `v3.0.0`+`v3`; `v2` frozen at `3ece2c9`). `testing` ahead — next release will be v4.0.0, not yet cut.
+- **Docs pruned for v4.0.0 (2026-07-05):** 53 deleted — codex-reviews (31), `fable-findings.md`, `python-backend.md`, all implemented plans + `v1.1.0/` archive. Kept: all specs + the pending `check`-drift plan; distribution folders audited clean. `specs-plans.md` table pruned.
 
 ## Active incidents
 
