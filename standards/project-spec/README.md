@@ -4,7 +4,7 @@
 - **Owner:** Project standards / repository template
 - **Last updated:** 2026-07-04
 - **Last source check:** _TBD_
-- **Scope:** _TBD — the documents and repositories this standard governs._
+- **Scope:** Format, structure, conventions, and tooling for authoring project specifications (software projects, features, subsystems, scripts, services) — reusable across repositories.
 
 ---
 
@@ -28,17 +28,36 @@
 
 ## 1. Purpose
 
-The _Project Specification Standard_ provides a clear and consistent framework for defining project specifications across projects.
+A **project specification** is the durable, reviewable definition of a software project, feature, or subsystem _before and while_ it is built: the problem it solves, its scope and non-goals, its requirements, its design, and the plan to deliver it. This standard defines a consistent, machine-checkable format for those specifications so that humans **and coding agents** can produce, read, and act on them reliably.
 
-<!-- TODO: expand — what a project specification is, why a standard exists, and what problem it solves. -->
+Without a shared format, specifications drift: every project invents its own structure, requirements are stated ambiguously, completion claims cannot be verified, and cross-references rot. That ad-hoc variability is expensive for humans and _especially_ for coding agents — an agent burns context re-reading an unfamiliar layout, spends tokens on prose it does not need, and has no deterministic way to confirm the work it produced satisfies the spec.
+
+The Project Specification Standard answers that with three tiered templates (Light ⊂ Standard ⊂ Full), stable numbering and typed IDs, a built-in Agent Implementation Contract, and tooling that operates on the result ([§5](#5-tooling)). The payoff compounds: a spec written to this standard is a stable, referenceable contract that survives across sessions, tools, and implementers — and doubles as an executable work order an agent can be held to.
 
 ---
 
 ## 2. Scope
 
-<!-- TODO: define in scope vs out of scope (which repos, which documents, relationship to sibling standards). -->
+**In scope** — the format, structure, and conventions of a project specification (a pre- and during-implementation definition of a software project, feature, subsystem, script, or service): the three tiered templates and their canonical section/appendix registry; spec-specific frontmatter and lifecycle; ID and cross-reference conventions; the tier interchangeability guarantees; the Agent Implementation Contract; and the tooling and semantic review contract ([§5](#5-tooling)).
 
-_To be written._
+**Out of scope** — this standard does not govern:
+
+- **Project execution** — tickets, boards, scheduling, and status tracking. A spec defines _what and why_; running the work lives in the consumer's project-management system.
+- **Architecture decisions themselves** — a single hard-to-reverse decision is an **ADR** ([ADR Standard](../adr/README.md)); a spec _references_ ADRs (§8.3) rather than embedding them.
+- **Canonical Markdown frontmatter** — spec documents use their **own** frontmatter schema (`spec_id`, `status`, `profile`, relations) and are **not** governed by the [Markdown Frontmatter Standard](../markdown-frontmatter/README.md). The two relate by reference, not schema inheritance; a consumer that adopts both excludes its spec files from the canonical frontmatter validator (as this repository does).
+- **Implementation code and its tooling** — owned by the language standards ([Python Tooling](../python-tooling/README.md) and [Python Coding](../python-coding/README.md)).
+- **General prose quality** — the semantic review layer (G8) checks only spec-specific concerns (testable requirements, terminology, traceability), not house writing style.
+
+**Relationship to sibling standards** — a project spec is the _plan_; the sibling standards govern the artifacts the plan produces or references.
+
+| Sibling | Relationship |
+| --- | --- |
+| ADR | A spec's design decisions (`D-`) link to ADRs; the ADR standard owns the decision record itself. |
+| Markdown Frontmatter | Independent schema; specs are excluded from its validator. |
+| Markdown Tooling | Still applies — a spec is ordinary `.md`, formatted by Prettier and linted by markdownlint. |
+| Python Tooling / Coding | Govern the implementation a spec is realized in. |
+
+**When to write a spec** — this standard defines the _format_; it does not mandate that every change have a spec. Reach for one when a project, feature, or subsystem is large or durable enough that its requirements, design, and plan are worth writing down and holding an implementer to. Pick the smallest profile that fits ([§4](#4-templates)) and upgrade additively as scope grows.
 
 ---
 
