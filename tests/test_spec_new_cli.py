@@ -342,3 +342,13 @@ def test_write_cleanup_on_interruption(tmp_path: Path, monkeypatch: pytest.Monke
     with pytest.raises(KeyboardInterrupt):
         run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")])
     assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, destination untouched
+
+
+@pytest.mark.parametrize("tier", ["light", "standard", "full"])
+def test_dogfood_new_then_validate(
+    tier: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / f"{tier}.md"
+    assert run(["new", "--profile", tier, str(target)]) == 0  # minted id, no --id
+    assert run(["validate", str(target)]) == 0  # still validates
