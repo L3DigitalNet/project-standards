@@ -8,6 +8,7 @@
 | project-spec tooling Spec #1 plan | `docs/superpowers/plans/2026-07-04-project-spec-tooling-spec1.md` | implemented (`2a6c4c0`, 651 tests green) |
 | project-spec tooling Spec #2 design (`new` scaffold) | `docs/superpowers/specs/2026-07-04-project-spec-tooling-spec2-design.md` | approved (codex spec-review converged r2, 0 blocking) |
 | project-spec tooling Spec #2 plan (`new` scaffold) | `docs/superpowers/plans/2026-07-04-project-spec-tooling-spec2.md` | implemented (`8d48c22`, 720 tests green; subagent-driven, 8 tasks + opus final review + symlink-scope fix) |
+| project-spec tooling Spec #3 design (`upgrade` tier promotion) | `docs/superpowers/specs/2026-07-05-project-spec-tooling-spec3-design.md` | brainstorming complete; awaiting user spec review (then writing-plans) |
 | Frontmatter suite (format/references/fix) design | `docs/superpowers/specs/2026-06-08-frontmatter-suite-design.md` | approved (codex spec-review converged r3) |
 | Frontmatter suite plan | `docs/superpowers/plans/2026-06-08-frontmatter-suite.md` | approved (codex plan-review converged r4); ready to execute (targets 2.1.0) |
 | `check` drift design | `docs/superpowers/specs/2026-06-08-check-drift-design.md` | approved (codex spec-review converged r3) |
