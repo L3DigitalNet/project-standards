@@ -240,9 +240,9 @@ Returns the worst exit code across all three phases. If the final validate fails
 | Verb | Purpose |
 | --- | --- |
 | `spec validate [FILE …] [--config PATH]` | Validate spec documents against the configured `spec:` schema (exits 2 with no vacuous green run if `.project-standards.yml` has no `spec:` block) |
-| `spec lint [FILE …] [--config PATH]` | Lint spec documents for style/structure issues beyond schema validation |
-| `spec extract SOURCE` | Extract structured data (e.g. a section) from a spec document |
-| `spec next` | Report the next actionable step in the spec workflow |
+| `spec lint [FILE …] [--config PATH] [--strict]` | Lint spec documents for style/structure issues beyond schema validation; `--strict` turns warnings into a failing exit (default exits 0 with findings printed). `--strict` is also accepted on `spec validate` for argparse symmetry but is a no-op there — `validate` already exits 1 on any finding |
+| `spec extract FILE SELECTOR [--json]` | Print a slice (ID row, numbered section, heading match, or appendix) from a spec document as raw Markdown |
+| `spec next FILE PREFIX [--json]` | Print the next free ID for a prefix (e.g. `FR-013`), registry- and format-aware |
 | `spec new` | Scaffold a new spec document from the canonical template, fail-closed self-validated before write |
 | `spec upgrade SOURCE --to {standard\|full} [-i \| -o PATH \| --stdout] [--force] [--json]` | Additively promote a spec from a lower tier (`light`) to a higher tier (`standard`/`full`), inserting missing template-owned sections; triply fail-closed (source validation, upgradeability precheck, output self-validation) before any write |
 

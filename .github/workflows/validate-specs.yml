@@ -52,11 +52,14 @@ jobs:
         if: github.repository == 'L3DigitalNet/project-standards'
         run: uv sync --dev
 
-      # This repo defines no `project-spec` specs yet (project-spec is an unregistered
-      # draft), so `.project-standards.yml` has no `spec:` block and `spec validate` would
-      # exit 2 on its deliberate "never a vacuous green run" guard. Gate the this-repo spec
-      # steps on the block's presence so CI is green until project-spec is registered; the
-      # steps light up automatically once a `spec:` block (and real specs) exist.
+      # project-spec is registered and this repo's `.project-standards.yml` has a `spec:`
+      # block, but this job is also reused by `workflow_call` for consuming repos (and
+      # can run against a config-path override), so the block's presence isn't guaranteed
+      # at every call site. `spec validate` deliberately exits 2 on a vacuous "no spec:
+      # block" run rather than passing green with nothing checked, so detect the block
+      # first and gate the this-repo spec steps on it: this keeps CI green and defensive
+      # for any repo/config that hasn't adopted a `spec:` block yet, while validating for
+      # real wherever one is present (as it is here).
       - name: Detect spec config (this repo)
         id: cfg
         if: github.repository == 'L3DigitalNet/project-standards'
@@ -67,7 +70,7 @@ jobs:
             echo "has_spec=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_spec=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No top-level 'spec:' block in $CONFIG_PATH; skipping this-repo spec validation until project-spec is registered."
+            echo "::notice::No top-level 'spec:' block in $CONFIG_PATH; skipping this-repo spec validation for this config."
           fi
 
       - name: Validate specs (this repo)

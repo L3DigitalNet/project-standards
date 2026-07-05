@@ -49,6 +49,7 @@ license: null
   - [6. Formatter — Prettier](#6-formatter--prettier)
   - [7. Linter — markdownlint](#7-linter--markdownlint)
     - [The MD043 sentinel trap](#the-md043-sentinel-trap)
+    - [MD060 and Prettier table alignment](#md060-and-prettier-table-alignment)
   - [8. Frontmatter coupling](#8-frontmatter-coupling)
   - [9. `.editorconfig`](#9-editorconfig)
   - [10. VS Code standard](#10-vs-code-standard)
@@ -239,6 +240,10 @@ Five of these turn **off** rules Prettier already owns (MD009, MD010, MD013, MD0
 ### The MD043 sentinel trap
 
 MD043 (required-headings) is configured by a `headings` array [S08]. Its schema default for that array is `[]` (empty) — which, stated explicitly, means "**require exactly zero headings**" and would flag every heading in every file. The correct **inert** form is `"MD043": true`, which leaves the rule enabled at its real default (no required structure). This repo uses `true`, and the trap is guarded by `tests/test_markdownlint_config.py` (`test_md043_stays_inert` plus a defensive check that no rule anywhere carries an empty `headings: []`).
+
+### MD060 and Prettier table alignment
+
+MD060 (table-column-style) is pinned to `{ "style": "any", "aligned_delimiter": false }` [S08]. This is not a gap — Prettier reflows Markdown tables to its own column widths and delimiter alignment, and `style: "any"` tells markdownlint to accept whichever alignment Prettier produces rather than enforcing a competing convention. A live repro of prettier@3 and markdownlint-cli2 over this repo's Markdown under the shipped config confirms zero MD060 findings; do not tighten this setting without re-running that repro.
 
 ---
 

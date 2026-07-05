@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -247,6 +248,71 @@ def test_dogfood_upgrade_then_validate_is_clean(tmp_path: Path) -> None:
     from project_standards.specs.cli import run as _run_group
 
     assert _run_group(["validate", str(out)]) == 0  # end-to-end U1
+
+
+def _new_scaffold(tmp_path: Path, tier: str) -> Path:
+    """Write an UNMODIFIED real `spec new` scaffold of `tier` to disk and return its path.
+
+    Unlike the hand-maintained upgrade_*.md fixtures, real `spec new` output carries the
+    intro-blockquote `[Appendix D](#appendix-d-…)` cross-reference — the exact element the
+    tier-crossing anchor-rewrite regression (dead SV-ANCHOR after Appendix D's heading is
+    swapped to the target tier) depends on. Generating it here keeps the guard drift-proof.
+    """
+    src = tmp_path / f"scaffold_{tier}.md"
+    rc = run(
+        [
+            "new",
+            "--profile",
+            tier,
+            "--id",
+            "SPEC-9999",
+            "--title",
+            "Anchor Regression",
+            "--owner",
+            "me",
+            "--implementer",
+            "agent",
+            str(src),
+        ]
+    )
+    assert rc == 0
+    return src
+
+
+@pytest.mark.parametrize("source_tier", ["light", "standard"])
+def test_real_scaffold_carries_preamble_appendix_d_link(tmp_path: Path, source_tier: str) -> None:
+    # Precondition guard for the regression tests below: if `spec new` ever stops emitting the
+    # intro-blockquote Appendix D anchor, the round-trip tests would pass vacuously. Fail loudly
+    # here instead. (This is exactly the coverage the upgrade_*.md fixtures silently lacked.)
+    body = _new_scaffold(tmp_path, source_tier).read_text(encoding="utf-8")
+    assert re.search(r"\[Appendix D\]\(#appendix-d-[-\w]+\)", body)
+
+
+@pytest.mark.parametrize(
+    ("source_tier", "target_tier", "target_anchor"),
+    [
+        ("light", "standard", "#appendix-d-tailoring"),
+        ("light", "full", "#appendix-d-tailoring-guide"),
+        ("standard", "full", "#appendix-d-tailoring-guide"),
+    ],
+)
+def test_tier_increasing_upgrade_of_real_scaffold_self_validates(
+    tmp_path: Path, source_tier: str, target_tier: str, target_anchor: str
+) -> None:
+    # Regression for the release-blocker: `spec upgrade` on an unmodified `spec new` scaffold
+    # failed SV-ANCHOR self-validation for EVERY tier-increasing pair, because the kept source
+    # preamble's `[Appendix D](#appendix-d-<source-slug>)` pointed at the vanished source-tier
+    # heading after Appendix D was swapped to the target tier. upgrade_text now re-points every
+    # Appendix D anchor at the target tier's real slug. Assert the upgrade both succeeds (its
+    # own self-validation gate) and independently re-validates, and that the anchor is retargeted.
+    src = _new_scaffold(tmp_path, source_tier)
+    out = tmp_path / "up.md"
+    assert run(["upgrade", str(src), "--to", target_tier, "-o", str(out)]) == 0
+    upgraded = out.read_text(encoding="utf-8")
+    assert f"profile: {target_tier}" in upgraded
+    assert target_anchor in upgraded  # retargeted to the target tier's Appendix D slug
+    assert "#appendix-d-upgrading-this-spec" not in upgraded  # source (Light) slug is gone
+    assert run(["validate", str(out)]) == 0  # independent end-to-end SV-ANCHOR check
 
 
 def test_mkdir_failed_when_output_parent_is_a_file(

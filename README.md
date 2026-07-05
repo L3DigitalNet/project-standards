@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, and the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds an optional reusable lint workflow) — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds an optional reusable lint workflow), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).

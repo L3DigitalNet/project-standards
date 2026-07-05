@@ -1282,7 +1282,7 @@ Updated on 2026-06-07:
 - Corrected section numbering after the Agent trust boundaries insertion so the Source register is section 30 and all `[Sxx]` reference links resolve to the intended `#30-source-register` anchor.
 - Added explicit verb mapping so `Prefer`, `Avoid`, and `Consider` do not collide with the action-verb requirement rule.
 - Polished the canonical atomic-write helper with parent-directory fsync where supported, an explanatory `except BaseException` cleanup comment, and explicit permission-mode handling for replacements.
-- Advanced the coding standard draft to contract version 0.4.
+- Advanced the coding standard draft to version 0.4.
 - Updated the assumed Python baseline from 3.13 to 3.14, while preserving the Python Tooling SSOT Standard as the baseline authority.
 - Reframed the `from __future__ import annotations` default as a local compatibility and reliability policy rather than a universal consensus claim.
 - Added dependency provenance and package-identity verification rules for agent-suggested packages.

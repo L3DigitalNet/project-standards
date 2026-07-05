@@ -53,6 +53,10 @@ _APX = re.compile(r"^Appendix ([A-Z]):")
 # and a 4-space-indented `` ``` `` is indented code, not a fence.
 _FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
+# Any GitHub anchor pointing at an Appendix D heading, whatever the tier's heading text.
+# The slug body is [-\w]+ to mirror gh_slug's output charset (word chars + hyphens); the
+# match stops at the first non-slug char, so a Markdown link's closing `)` is left intact.
+_APX_D_ANCHOR = re.compile(r"#appendix-d-[-\w]+")
 
 
 def _block_key(heading_text: str) -> str:
@@ -127,6 +131,15 @@ def _merge_top(source_body: str, target_body: str) -> str:  # pyright: ignore[re
         else:
             out.append(target_text)  # missing unit, tier-owned appendix, or target preamble
     return "".join(out)
+
+
+def _target_apx_d_slug(target_body: str) -> str | None:
+    """gh_slug of the target template's ``## Appendix D:`` heading, or None if it has none.
+    Fence-aware via ``_heading_starts``, so an example heading in a code sample can't win."""
+    for _off, heading in _heading_starts(target_body, "## "):
+        if heading.startswith("Appendix D:"):
+            return gh_slug(heading)
+    return None
 
 
 def _sub_blocks(block: str) -> list[tuple[str, str]]:
@@ -215,6 +228,17 @@ def upgrade_text(source_text: str, target_template_text: str, *, target_tier: st
     src_fm, src_body = split_front_matter(source_text)
     _tgt_fm, tgt_body = split_front_matter(target_template_text)
     merged_body = _merge_top(src_body, tgt_body)
+    # Appendix D is _TEMPLATE_OWNED, so _merge_top swaps in the TARGET tier's heading, whose
+    # GitHub anchor slug is tier-specific: Light "appendix-d-upgrading-this-spec" vs Standard
+    # "appendix-d-tailoring" vs Full "appendix-d-tailoring-guide". The source preamble (and any
+    # authored block) is kept verbatim, so a `[Appendix D](#appendix-d-…)` cross-reference in it
+    # would now point at the vanished source-tier slug and fail SV-ANCHOR self-validation. Re-point
+    # every Appendix D anchor at the target tier's real slug. This is confined to upgrade_text and
+    # never runs inside _merge_top, so check_upgradeable's `_merge_top(src) != src` precheck is
+    # untouched; and for a same-tier reshape target slug == source slug, making the rewrite an
+    # identity no-op anyway.
+    if (tgt_slug := _target_apx_d_slug(tgt_body)) is not None:
+        merged_body = _APX_D_ANCHOR.sub(f"#{tgt_slug}", merged_body)
     text = f"---\n{src_fm}\n---\n{merged_body}"  # source frontmatter preserved verbatim
     text = _set_profile(text, target_tier)
     return _rewrite_h1_suffix(text, target_tier)

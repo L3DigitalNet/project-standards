@@ -77,6 +77,7 @@ Each standard carries its own `major.minor` contract version, selected per stand
 | ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
 | Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
 | Markdown Tooling | `1.0` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
+| Project Specification | none — tracks the installed release | n/a (no selectable version) | yes — `spec:` config + `validate-specs.yml` |
 
 **Adding a bundled contract version is a MINOR tool release; removing one is MAJOR** (a consumer pinned to it would newly fail). Within a single standard's line, the previously-passing rule applies: an additive field/value is MINOR, a stricter rule or removed enum value is MAJOR.
 
@@ -120,6 +121,7 @@ The inverse is the freedom this buys: anything that _cannot_ newly-fail a passin
 
 Every release MUST:
 
+0. **Land the release on `main` first.** The release commit and **both** tags — the full-version `vMAJOR.MINOR.PATCH` and the moving-major `vMAJOR` — MUST live on `main`. Merge the release commit to `main` **before** tagging, then tag the commit as it exists on `main`. This is not optional polish: [`docs/handoff/deployed.md`](../docs/handoff/deployed.md) defines "Deployed" as _published git refs on `main`_, and every prior release (`v1.x`–`v3.x`) was cut there. A tag on a topic branch (`testing`) is not a release. Do the version-pin bumps (steps 3–6 below) in the release commit on `main`, not on the development branch.
 1. **Tag a full version.** Create an annotated, GPG-signed tag `vMAJOR.MINOR.PATCH` on the release commit. Full-version tags are **immutable** — never deleted, moved, or repointed once pushed.
 2. **Advance the moving major tag.** Maintain a `vMAJOR` tag that always points at the newest release within that major. Repoint it locally, then move it on the remote by **deleting and re-pushing** — not `git push --force`. The force flag is unnecessary for a tag move, can clobber branch history, and is blocked by this repository's force-push guard (`release-pipeline`):
 
@@ -131,8 +133,22 @@ Every release MUST:
 
    Only the moving major tag is ever repointed. Never delete or move a full-version tag once it is pushed.
 
-3. **Bump the package version** in `pyproject.toml` and regenerate `uv.lock` in the release commit, so `uv tool install` resolves a version that matches the tag.
-4. **Update the changelog** in the same commit: move entries from `## [Unreleased]` into a new `## [vMAJOR.MINOR.PATCH] — YYYY-MM-DD` section, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A MAJOR release MUST include migration notes describing what a consumer must change.
+3. **Bump the in-repo version references (MAJOR only).** A new major moves the moving-major tag, but the workflow defaults and usage examples still name the old one. In the release commit for a MAJOR, bump both, so a `@vN` caller that omits the `standards-ref` input runs the vN workflow against the vN validator (not the previous major's):
+
+   - **Reusable-workflow defaults.** Bump every hardcoded `default: "vN-1"` for the `standards-ref` input to the new major in [`.github/workflows/validate-markdown-frontmatter.yml`](../.github/workflows/validate-markdown-frontmatter.yml) and [`.github/workflows/validate-specs.yml`](../.github/workflows/validate-specs.yml). This is the silent-drift trap: a caller pinned `@vN` on `uses:` but relying on the default `standards-ref` would otherwise install the previous major's CLI.
+   - **In-repo usage examples.** Bump the `@vN` / `standards-ref: vN` refs in the doc examples — `README.md` and each `standards/*/adopt.md` — to the new major so copy-paste snippets pin the current line.
+
+   With these carve-outs stated explicitly:
+
+   - **(a) `UPGRADING.md` is not a find/replace.** It gets a _new_ `v(N-1)→vN` section (step 6), not a blanket rewrite of the historical runbook. Leave existing historical version references in it intact.
+   - **(b) Fixed `blob/vN/…` permalinks are deliberate.** Any `.../blob/vN/...` permalink that pins a specific tagged snapshot is reviewed individually, not blanket-rewritten — some are meant to keep pointing at the old tag.
+   - **(c) SPECIAL CASE — `project-spec`.** [`standards/project-spec/adopt.md`](../standards/project-spec/adopt.md) currently pins `@v3`, but **project-spec does not exist at the `v3` tag** — it first ships at `v4.0.0`. At the v4 cut its examples MUST go to `@v4` (never left at `@v3`, which would pin a tag without the standard), and its intro banner MUST state that project-spec is available only from `v4.0.0` onward.
+
+   Optional pre-release assertion: grep the reusable workflows for the `standards-ref` default and fail if any lags the `pyproject.toml` major — e.g. no `default: "vN-1"` may remain once `pyproject.toml` reads `N.0.0`.
+
+4. **Bump the package version** in `pyproject.toml` and regenerate `uv.lock` in the release commit, so `uv tool install` resolves a version that matches the tag.
+5. **Update the changelog** in the same commit: move entries from `## [Unreleased]` into a new `## [vMAJOR.MINOR.PATCH] — YYYY-MM-DD` section, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A MAJOR release MUST include migration notes describing what a consumer must change.
+6. **Rewrite `UPGRADING.md` for the new major (MAJOR only).** [`UPGRADING.md`](../UPGRADING.md) is the step-by-step major-upgrade runbook README.md points consumers to, and both prior majors shipped it rewritten in the release commit. Its frontmatter `title` (and `id`, if it encodes the version) still reads "Upgrading from v(N-1) to vN" — rewrite the document as **"Upgrading from v(N-1) to vN"** for the new pair, with the new major's breaking-change steps, and update the frontmatter `title` (and `id` if applicable) to match. Confirm `README.md`'s pin example (e.g. `@v2` → `@v3`) names the current major pair.
 
 ## Consuming repositories
 

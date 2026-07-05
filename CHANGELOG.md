@@ -49,6 +49,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - **Python Tooling SSOT — `pytest-cov` dropped from §6, the fragment, and this repo's own dev group.** Confirmed via commit history that nothing in the standard's documented verification gate ever used it — the gate has always run `coverage run -m pytest` directly, and a second coverage entry point is exactly the overlapping-tools problem the standard's §3 prohibits. **PATCH — no consumer-visible change** (a re-syncing consumer's working gate command is unaffected).
 - **Frontmatter template `id` placeholders reworded** from the literal `replace-with-stable-id` to format-teaching hints, and the Python Tooling standard gained a pre-commit scope note. Both docs-plane, no schema/validator change — **PATCH**.
 
+### Fixed
+
+- **`validate-references` semantic corrections — affect only consumers who set `markdown.frontmatter.references.enabled: true`.** These change cross-file check outcomes; a consumer who has the check enabled may see a previously-passing run newly flag or newly pass:
+  - Supersede sets are now merged per-id across the index instead of last-wins, so a document superseded from multiple sources is reconciled correctly rather than dropping all but the last relationship.
+  - ADR sequence numbers are compared **numerically**, not lexically — `adr-0010` now sorts after `adr-0009`, so duplicate/ordering violations that lexical comparison masked are newly caught.
+  - `created`/`updated`/`reviewed` dates are parsed as dates for ordering rather than compared as strings.
+  - A run over an empty index, or one that skips a custom-schema repo, no longer exits silently green as a vacuous no-op.
+  - Files skipped from the index are now surfaced as warnings instead of vanishing silently.
+
+  (Pure-internal refactors and error-path hardening — e.g. the `Index.ids` removal and `UnicodeDecodeError` handling — are intentionally omitted here: they do not change outcomes for well-formed inputs.)
+- **`format-frontmatter` / CLI fixes** (to commands shipped in `3.0.0`):
+  - `format-frontmatter --config <nonexistent-path>` now exits 2 (`"config file not found"`) instead of silently formatting and writing under repo defaults — the same previously-passing-rule fix already applied to `validate-frontmatter`.
+  - `format-frontmatter` no longer tracebacks on non-UTF-8 input; it reports a clean per-file error and the run continues.
+  - `project-standards validate --help` — the `--glob` help text is corrected: the flag **replaces** the config include list, it does not add to it.
+- **Doc-consistency fixes** (docs-plane, **PATCH**):
+  - Markdown Frontmatter README's Tags section corrected from the stale `^[a-z0-9][a-z0-9-]*$` to the enforced `^[a-z0-9]+(-[a-z0-9]+)*$`.
+  - Markdown Tooling `adopt.md` gained two missing adoption steps.
+  - Frontmatter `adopt.md`'s §2 example config byte-locked to the shipped starter — it had drifted to omit the `**/*.template.md` exclusion, which would have led a manual adopter to wrongly validate template placeholder frontmatter.
+
+Exhaustive per-commit migration detail for the above belongs in the release commit, per `meta/versioning.md`'s release-requirements checklist.
+
 ## [3.0.0] — 2026-06-09
 
 > **Note for release planning:** This release is **3.0.0 / MAJOR**. Two independent changes each individually require a major bump per the **"The previously-passing rule"** section and the **Validator CLI** + **Reusable workflow** rows of the Change-classification table in `meta/versioning.md`: (1) `validate-id` now runs in the reusable CI workflow, so consumers with old-style kebab ids will newly fail on re-pin; (2) `parse_frontmatter` now rejects duplicate top-level YAML keys, which can fail a previously-passing document that happened to contain them.

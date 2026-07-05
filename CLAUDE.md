@@ -2,7 +2,7 @@
 
 **Session startup:** live state is injected by the SessionStart hook (`.claude/hooks/session_start.py`); do not read `docs/handoff/state.md` directly.
 
-**Purpose:** single source of truth for reusable standards — defines four: **Markdown Frontmatter** and **ADR** (enforced by a Python validator downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`), and **Python Tooling SSOT** (copy-adopt scaffolds) — plus **Python Coding**, an in-development reference-only draft (unregistered, excluded from validation/adopt).
+**Purpose:** single source of truth for reusable standards — defines five: **Markdown Frontmatter** and **ADR** (enforced by a Python validator downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`), **Python Tooling SSOT** (copy-adopt scaffolds), and **Project Specification** (tiered spec format + stable IDs, validator-enforced via the `project-standards spec` CLI + `validate-specs.yml` CI) — plus **Python Coding**, an in-development reference-only draft (unregistered, excluded from validation/adopt).
 
 **Document layout (read on demand):**
 
