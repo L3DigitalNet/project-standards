@@ -224,6 +224,22 @@ def test_top_blocks_ignores_headings_inside_code_fences() -> None:
         "## 2. Scope\n\nx\n"
     )
     assert [k for k, _ in _top_blocks(body)] == ["1", "2"]
+
+
+def test_top_blocks_handles_nested_and_mixed_fences() -> None:
+    # CommonMark: a fence closes only on a same-character run at least as long as the
+    # opener. A 4-backtick fence is not closed by an inner ```; a ``` fence is not
+    # closed by ~~~ (Codex CR-003, mirroring validate_frontmatter's fence model).
+    from project_standards.specs.commands.upgrade import _top_blocks
+
+    body = (
+        "## 1. Purpose\n\n"
+        "````markdown\n```\n## Inner Backtick\n```\n````\n\n"   # inner ``` does NOT close ````
+        "## 2. Scope\n\n"
+        "```\n~~~\n### Inner Tilde\n~~~\n```\n\n"               # ~~~ does NOT close ```
+        "## 7. Requirements\n"
+    )
+    assert [k for k, _ in _top_blocks(body)] == ["1", "2", "7"]
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -238,7 +254,7 @@ from project_standards.specs.registry import gh_slug  # add to imports
 
 _NUM = re.compile(r"^(\d+)\.")
 _APX = re.compile(r"^Appendix ([A-Z]):")
-_FENCE = re.compile(r"^\s*(```|~~~)")
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")  # opening/closing code-fence run (>=3 of one char)
 
 
 def _block_key(heading_text: str) -> str:
@@ -251,16 +267,24 @@ def _block_key(heading_text: str) -> str:
 
 def _heading_starts(text: str, prefix: str) -> list[tuple[int, str]]:
     """(byte offset, heading text) for each line starting with `prefix` (e.g. ``"## "``),
-    skipping lines inside ``` / ~~~ fenced code blocks so example headings in a spec's own
-    code samples are never mistaken for section boundaries (Codex CR-003). ``"## "`` does
-    not match ``"### "`` (third char differs), so each level is isolated."""
+    skipping lines inside fenced code so example headings in a spec's own code samples are
+    never mistaken for section boundaries (Codex CR-003). Fence tracking mirrors
+    validate_frontmatter's CommonMark model: a fence closes only on a run of the SAME char
+    (``` vs ~~~) that is AT LEAST AS LONG as the opener — so a ```` fence is not closed by an
+    inner ``` and a ``` fence is not closed by ~~~. ``"## "`` does not match ``"### "``
+    (third char differs), so each level is isolated."""
     out: list[tuple[int, str]] = []
-    in_fence = False
+    fence: str | None = None  # the opening run (e.g. "```" or "~~~~"), or None outside a fence
     off = 0
     for line in text.splitlines(keepends=True):
-        if _FENCE.match(line):
-            in_fence = not in_fence
-        elif not in_fence and line.startswith(prefix):
+        if m := _FENCE.match(line):
+            run = m.group(1)
+            if fence is None:
+                fence = run  # open
+            elif run[0] == fence[0] and len(run) >= len(fence):
+                fence = None  # close: same char, length >= opener
+            # otherwise an inner fence (other char, or shorter) — stays open
+        elif fence is None and line.startswith(prefix):
             out.append((off, line[len(prefix) :].rstrip("\n")))
         off += len(line)
     return out
