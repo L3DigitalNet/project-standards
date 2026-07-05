@@ -11,6 +11,8 @@ from __future__ import annotations
 import random
 import re
 from collections.abc import Container
+from dataclasses import dataclass
+from datetime import date
 
 import yaml
 
@@ -64,3 +66,71 @@ def mint_spec_id(
     raise SpecIdExhausted(
         f"could not mint a unique spec_id in {attempts} attempts; pass --id SPEC-XXXX"
     )
+
+
+@dataclass(frozen=True)
+class NewOptions:
+    profile: str
+    spec_id: str  # already resolved by the shell (minted or --id); never the sentinel
+    title: str | None
+    owner: str | None
+    implementer: str | None
+
+
+_FM_KEY = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):")
+_H1 = re.compile(r"^(#\s+`)[^`]*(`)")
+
+
+def _rewrite_frontmatter(text: str, replacements: dict[str, str]) -> str:
+    """Replace whole frontmatter lines whose key is in `replacements`, inside the first
+    `---`…`---` block only. Replacing the whole line drops any trailing inline comment
+    (e.g. the spec_id placeholder note), which is intended."""
+    out: list[str] = []
+    seen_open = False
+    in_fm = False
+    for line in text.splitlines(keepends=True):
+        if line.rstrip("\n") == "---":
+            if not seen_open:
+                seen_open, in_fm = True, True
+            elif in_fm:
+                in_fm = False
+            out.append(line)
+            continue
+        if in_fm:
+            m = _FM_KEY.match(line)
+            if m and m.group(1) in replacements:
+                nl = "\n" if line.endswith("\n") else ""
+                out.append(replacements[m.group(1)] + nl)
+                continue
+        out.append(line)
+    return "".join(out)
+
+
+def _rewrite_h1(text: str, title: str) -> str:
+    """Substitute the back-ticked name in the first `# \\`…\\` — Specification (T)` line.
+    title is backtick-free by grammar (check_field), so the code span stays well-formed."""
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if _H1.match(line):
+            lines[i] = _H1.sub(lambda m: m.group(1) + title + m.group(2), line, count=1)
+            break
+    return "".join(lines)
+
+
+def scaffold(template_text: str, opts: NewOptions, *, today: date) -> str:
+    iso = today.isoformat()
+    replacements: dict[str, str] = {
+        "spec_id": f"spec_id: {opts.spec_id}",
+        "created": f"created: '{iso}'",
+        "last_reviewed": f"last_reviewed: '{iso}'",
+    }
+    if opts.title is not None:
+        replacements["title"] = f"title: {emit_scalar(opts.title)}"
+    if opts.owner is not None:
+        replacements["owner"] = f"owner: {emit_scalar(opts.owner)}"
+    if opts.implementer is not None:
+        replacements["implementer"] = f"implementer: {emit_scalar(opts.implementer)}"
+    text = _rewrite_frontmatter(template_text, replacements)
+    if opts.title is not None:
+        text = _rewrite_h1(text, opts.title)
+    return text
