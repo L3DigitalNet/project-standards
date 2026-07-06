@@ -489,6 +489,7 @@ def _run_upgrade(argv: list[str]) -> int:
     ap.add_argument("--in-place", "-i", action="store_true", dest="in_place")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--config", type=Path, default=None)
     try:
         try:
             args = ap.parse_args(argv)
@@ -513,8 +514,18 @@ def _run_upgrade(argv: list[str]) -> int:
             raise NewError("source_read_error", str(exc)) from exc
 
         reg = load_registry()
+        # --config is opt-in (default None): with no --config, .project-standards.yml is
+        # never read, even if malformed, preserving v4.0.0 default behavior exactly (SA-001).
         try:
-            src_doc = parse_document(str(args.src), source_text)
+            refs: frozenset[str] = (
+                frozenset(load_spec_config(args.config).reference_prefixes)
+                if args.config is not None
+                else frozenset()
+            )
+        except ConfigError as exc:
+            raise NewError("config_error", str(exc)) from exc
+        try:
+            src_doc = parse_document(str(args.src), source_text, refs)
         except SpecParseError as exc:
             raise NewError("source_read_error", str(exc)) from exc
 
@@ -546,7 +557,7 @@ def _run_upgrade(argv: list[str]) -> int:
 
         # Gate 3: output self-validation (fail-closed, U6).
         try:
-            out_doc = parse_document("<upgrade>", upgraded)
+            out_doc = parse_document("<upgrade>", upgraded, refs)
         except SpecParseError as exc:
             raise NewError("self_validation_failed", f"upgraded spec did not parse: {exc}") from exc
         out_findings = validate_document(out_doc, reg)

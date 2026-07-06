@@ -349,6 +349,61 @@ def test_write_failed_when_atomic_replace_raises(
     assert rc == 2 and obj["code"] == "write_failed"
 
 
+def _inject_ref(base: str) -> str:
+    # Insert RQ-123 as prose at a point that keeps the doc upgradeable (does NOT add a
+    # heading/table/section, so upgrade's Gate-2 check_upgradeable is unaffected). Insert
+    # right after the frontmatter's closing fence, before the first "# " title line.
+    marker = "\n---\n"  # end of frontmatter
+    head, _, tail = base.partition(marker)
+    return head + marker + "\nExternal backlog: RQ-123.\n" + tail
+
+
+def test_upgrade_honors_reference_prefixes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Negative proves RQ-123 is the ONLY blocker (source_invalid via SV-ID-UNDECLARED),
+    # not a structural/upgradeability problem; positive proves the config clears it.
+    src = tmp_path / "s.md"
+    src.write_text(
+        _inject_ref((_FIX / "upgrade_standard.md").read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+
+    rc = _run([str(src), "--to", "full", "--stdout", "--json"])
+    obj = json.loads(capsys.readouterr().out)
+    assert rc == 2 and obj["code"] == "source_invalid"
+    assert any(f["code"] == "SV-ID-UNDECLARED" for f in obj["findings"])
+
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("spec:\n  reference_prefixes: ['RQ']\n", encoding="utf-8")
+    assert _run([str(src), "--to", "full", "--stdout", "--config", str(cfg)]) == 0
+
+
+def test_upgrade_without_config_ignores_malformed_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Guards SA-NEW-001: no --config means config is never read, even a broken one present.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".project-standards.yml").write_text("spec: [not, a, mapping\n", encoding="utf-8")
+    src = tmp_path / "s.md"
+    src.write_text((_FIX / "upgrade_light.md").read_text(encoding="utf-8"), encoding="utf-8")
+    assert _run([str(src), "--to", "standard", "--stdout"]) == 0  # unchanged v4.0.0 behavior
+
+
+def test_upgrade_explicit_malformed_config_is_json_safe(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # CR-004: an explicit --config pointing at broken YAML returns the JSON config_error
+    # envelope (not a bare crash), preserving the machine contract for --json operators.
+    bad = tmp_path / "bad.yml"
+    bad.write_text("spec: [not, a, mapping\n", encoding="utf-8")
+    src = tmp_path / "s.md"
+    src.write_text((_FIX / "upgrade_light.md").read_text(encoding="utf-8"), encoding="utf-8")
+    rc = _run([str(src), "--to", "standard", "--stdout", "--config", str(bad), "--json"])
+    assert rc == 2
+    assert json.loads(capsys.readouterr().out)["code"] == "config_error"
+
+
 def test_output_symlinked_parent_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
