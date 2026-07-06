@@ -6,10 +6,10 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | codex-converged (spec r5); **plan implemented on `testing` (`2eb1c1e..d61a74c`)**, full gate green, release deferred (CHANGELOG `[4.2.0]`; pyproject still 4.1.0) |
-| Markdown-Tooling formatter authority (Spec B) plan | `docs/superpowers/plans/2026-07-06-markdown-tooling-formatter-authority.md` | codex-converged (plan r4); **implemented on `testing` (`2eb1c1e..d61a74c`)** — opt-in reusable Prettier gate + `tests/coherence/` tool; DEC-9→DEC-10, `markdown_tooling 1.1` |
-| spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | codex-converged (spec r3); plan implemented on `testing` (`1341dc0..84c0054`), **v4.1.0 prepared, release deferred** |
-| spec-validator external references plan | `docs/superpowers/plans/2026-07-06-spec-validator-external-references.md` | codex-converged (plan r2); implemented on `testing`, whole-branch review READY-TO-MERGE |
+| Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | **RELEASED in `v4.2.0`** (opt-in reusable Prettier gate; `markdown_tooling 1.1`; DEC-9→DEC-10) |
+| Markdown-Tooling formatter authority (Spec B) plan | `docs/superpowers/plans/2026-07-06-markdown-tooling-formatter-authority.md` | **RELEASED in `v4.2.0`** — 10-task TDD plan implemented via executing-plans + scoped opus review (0 Critical/Important); + `tests/coherence/` tool |
+| spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | **RELEASED in `v4.1.0`** (`spec.reference_prefixes` + token hygiene) |
+| spec-validator external references plan | `docs/superpowers/plans/2026-07-06-spec-validator-external-references.md` | **RELEASED in `v4.1.0`** (`1341dc0..84c0054`, whole-branch review READY-TO-MERGE) |
 | project-spec tooling Spec #1 design | `docs/superpowers/specs/2026-07-04-project-spec-tooling-design.md` | approved (codex r2); plan implemented (`2a6c4c0`) |
 | project-spec tooling Spec #2 design (`new` scaffold) | `docs/superpowers/specs/2026-07-04-project-spec-tooling-spec2-design.md` | approved (codex r2); plan implemented (`8d48c22`) |
 | project-spec tooling Spec #3 design (`upgrade` tier promotion) | `docs/superpowers/specs/2026-07-05-project-spec-tooling-spec3-design.md` | approved (codex r3); plan implemented (`testing`) |
