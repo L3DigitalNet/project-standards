@@ -41,6 +41,14 @@ def test_bad_fixture_reports_code(name: str, code: str) -> None:
     assert code in _codes(name)
 
 
+def test_undeclared_message_names_reference_prefixes() -> None:
+    doc = parse_document("t.md", "---\nspec_id: SPEC-0001\n---\nBody cites RQ-123 as an id.\n")
+    findings = validate_document(doc, load_registry())
+    undeclared = [f for f in findings if f.code == "SV-ID-UNDECLARED" and f.locus == "RQ-"]
+    assert undeclared, "expected an SV-ID-UNDECLARED for RQ-"
+    assert "spec.reference_prefixes" in undeclared[0].message
+
+
 def test_shipped_dogfood_example_validates_and_lints_clean() -> None:
     """standards/project-spec/examples/spec.example.md is this standard's shipped worked
     example (see standards/project-spec/README.md §2 Scope) — it is excluded from the
