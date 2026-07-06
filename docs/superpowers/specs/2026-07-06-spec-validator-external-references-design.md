@@ -1,6 +1,6 @@
 # Design: spec-validator external references & token hygiene (issue #3, F1–F4)
 
-**Date:** 2026-07-06 **Status:** codex spec-review round 2 applied (SA-001…004 + SA-NEW-001/002 resolved) — awaiting user spec review **Author:** session 2026-07-06
+**Date:** 2026-07-06 **Status:** codex spec-review converged (round 3, verdict "minor correction"; SA-001…004 + SA-NEW-001/002/003 resolved) — awaiting user spec review **Author:** session 2026-07-06
 
 ## Table of Contents
 
@@ -80,7 +80,7 @@ The scan needs the config-derived reference prefixes, which `registry.py` (templ
 `extract` and `next` are deliberately **not** made config-aware:
 
 - `extract ID` is a raw row selector — `extract_slice` matches `ID_TOKEN.fullmatch(selector)` and searches raw table rows (`commands/extract.py`); it never consults `used_ids`, `declared_prefixes`, or ownership. Passing prefixes would not change its output, and restricting it to reject external selectors would be a real behavior change to a documented core command for no benefit. It stays a pure lookup.
-- `next PREFIX` counts `used_ids[PREFIX]` to suggest the next number. A referenced id can only skew it if it shares a **canonical** prefix — but canonical prefixes are collision-rejected from `reference_prefixes` (Component 1), so `reference_prefixes` cannot exempt them anyway; and a non-canonical prefix like `RQ` is not a mintable target for `next`. So `next` gains nothing from the skip set.
+- `next PREFIX` counts `used_ids[PREFIX]` to suggest the next number. It gains **no** `--config` flag and never reads `.project-standards.yml`, so `reference_prefixes` (a per-call param it does not pass) cannot affect it — and a canonical prefix can't be a reference prefix anyway (collision-rejected, Component 1). One honest caveat: `next` _does_ inherit the **unconditional** built-in skips (dot-rule, broadened `NOT_AN_ID`, built-in `ADR`) that apply to _every_ `parse_document` call, because those are not gated on config. So `next FR` on a file containing a version-shaped canonical token like `FR-1.2` may suggest a different number than v4.0.0 did — but that is the _correct_ consequence of no longer miscounting a version string as an `FR` id, and it changes a **suggestion**, never a pass/fail result (Validator-CLI MINOR: "new output that does not change any pass/fail result"). This is intended parser hygiene, not a config surface.
 
 **Opt-in, not default-load (compatibility).** `upgrade`'s new `--config` defaults to **not loading any config** (unlike `validate`/`lint`, which default to `.project-standards.yml` because they were always config-driven to discover specs). This preserves v4.0.0 default behavior exactly: an `upgrade` invocation with no `--config` parses and validates precisely as it does today, so a repo with a missing/malformed `.project-standards.yml` cannot be newly broken. Reference prefixes take effect only when the consumer explicitly passes `--config` — the same flag they already pass to `validate`. This is what keeps the release MINOR under `meta/versioning.md` (see Versioning).
 
@@ -127,13 +127,13 @@ Test-driven, per the repo's TDD discipline. Unit:
 
 Integration: a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `MPL-2.0`, and `GPL-3` `validate`s clean; the same spec with `RQ-123` _not_ configured fails with the reworded `SV-ID-UNDECLARED`. Add a lower-tier fixture with a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) that both `validate`s and `upgrade --config …`s cleanly, including the upgrade output's self-validation.
 
-Compatibility (guards SA-NEW-001): `upgrade` **without** `--config` behaves exactly as v4.0.0 — assert it neither reads nor fails on a missing/malformed `.project-standards.yml`. `extract` and `next` (which gain no flag) are unaffected by any config and still return today's results for the same inputs.
+Compatibility (guards SA-NEW-001): `upgrade` **without** `--config` behaves exactly as v4.0.0 — assert it neither reads nor fails on a missing/malformed `.project-standards.yml`. `extract` and `next` gain no flag and never read config — assert that (they ignore even a malformed `.project-standards.yml`). Separately, add a parser-behavior test documenting the _intended_ effect of the global skips on a canonical-prefix version token: a fixture with `FR-1.2` shows `next FR` no longer counts it (a deliberate suggestion change, not a pass/fail change).
 
 ## Acceptance criteria
 
 - The issue's minimal repro (`spec validate` over a spec citing an ADR, an external ID, and a license id) exits 0 with the documented config.
 - A lower-tier spec containing a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) both `validate`s and `upgrade --config …`s cleanly (source + output self-validation).
-- Backward compatibility: `upgrade` with no `--config`, and `extract`/`next` (unflagged), produce byte-identical results to v4.0.0 for the same inputs — including when a malformed `.project-standards.yml` is present.
+- Backward compatibility: `upgrade` with no `--config`, and `extract`/`next`, never read `.project-standards.yml` (even a malformed one cannot break them). The one intended, documented behavior change is that the global token-hygiene skips stop `next`/`validate` from miscounting version/SPDX-shaped false positives (e.g. `FR-1.2`) — a suggestion/loosening change, never a previously-passing → failing change.
 - `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit` all green; branch coverage stays at or above the configured `fail_under = 85` threshold (measurable via `coverage report`; not a baseline-delta claim).
 - `uv run validate-frontmatter --config .project-standards.yml` and `spec validate` (dogfood) both pass.
 
