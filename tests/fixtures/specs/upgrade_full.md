@@ -232,7 +232,7 @@ Guidance: keep domain logic separate from framework glue where practical; make i
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | `<decision>` | `<why>` | `<alternatives and why rejected>` | `<link if durable>` |
+| D-001 | `<decision>` | `<why>` | `<alternatives and why rejected>` | `adr-0001-repo-short-title` |
 
 ### 8.4 Solution Alternatives Considered
 
