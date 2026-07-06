@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-05'
+updated: '2026-07-06'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -26,6 +26,21 @@ license: null
 All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [4.1.0] - 2026-07-06
+
+### Added
+
+- **Project Specification:** `spec.reference_prefixes` config key — declare external ID namespaces (backlog, tickets, ADRs) the spec cites but does not mint, exempting them from the Appendix-A, width, and tier checks. Validated for shape and rejected on collision with a canonical spec-local prefix.
+- **Project Specification:** opt-in `--config` on `spec upgrade` so it honors `reference_prefixes` during source and output validation. Defaults to not loading config, so existing `upgrade` invocations are unchanged.
+
+### Changed
+
+- **Project Specification:** the ID scan now skips the sibling ADR standard's ids (built-in `ADR` reference prefix; lowercase `adr-…` was already ignored) and versioned SPDX license identifiers (`MPL-2.0`, `CC-BY-4.0`, `GPL-3.0-only`, `LGPL-2.1-or-later`, …), plus common license-family prefixes for bare colloquial forms like `GPL-3`. Zero-version SPDX ids (`MIT-0`, `NTP-0`) share a spec-local id's shape — declare their family in `reference_prefixes`.
+- **Project Specification:** `SV-ID-UNDECLARED` now names `spec.reference_prefixes` as the resolution instead of dead-ending at Appendix A.
+- **Project Specification:** the §8.3 template `ADR` column models a real `adr-0001-…` example.
+
+All changes are a backward-compatible loosening (a previously-passing spec cannot newly fail); `@v4` consumers inherit them automatically.
 
 ## [4.0.0] — 2026-07-05
 
