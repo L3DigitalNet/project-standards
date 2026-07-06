@@ -39,7 +39,22 @@ NOT_AN_ID = {
     "SSO",
     "WAL",
     "PITR",
+    # SPDX license family prefixes that share the ID_TOKEN shape. MIT/NTP are
+    # deliberately omitted — a zero-version license like MIT-0 is indistinguishable
+    # from a spec-local id by shape, so a consumer lists it in spec.reference_prefixes.
+    "GPL",
+    "LGPL",
+    "AGPL",
+    "MPL",
+    "BSD",
+    "EPL",
+    "BY",  # from CC-BY-4.0, which ID_TOKEN tokenizes as BY-4
 }
+
+# Prefixes that are real IDs in ANOTHER namespace (not spec-local), always exempt
+# from the ID checks. Kept separate from NOT_AN_ID (which means "not an ID at all")
+# so the two intents stay legible. ADR ids are minted by the sibling ADR standard.
+BUILTIN_REFERENCE_PREFIXES = frozenset({"ADR"})
 
 
 def gh_slug(text: str) -> str:

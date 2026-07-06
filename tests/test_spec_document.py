@@ -61,3 +61,35 @@ def test_section_slice_includes_subsections() -> None:
 def test_malformed_frontmatter_raises_specparseerror() -> None:
     with pytest.raises(SpecParseError):
         parse_document("bad.md", "---\nspec_id: SPEC-7F3Q\n# no closing fence, no body\n")
+
+
+def _body(text: str) -> str:
+    # parse_document needs frontmatter to split; a minimal fence is enough here.
+    return "---\nspec_id: SPEC-0001\n---\n" + text
+
+
+def test_skip_set_zero_config():
+    doc = parse_document(
+        "t.md",
+        _body(
+            "Refs adr-0001-x and ADR-0001. Licenses MPL-2.0, CC-BY-4.0, and the current SPDX "
+            "forms GPL-3.0-only and AGPL-3.0-or-later, plus the bare colloquial GPL-3. "
+            "Own id FR-007 and a sentence end FR-008. Version-shaped FR-1.2 here."
+        ),
+    )
+    prefixes = set(doc.used_ids)
+    # ADR (built-in ref) and the license families are never recorded — including the
+    # modern SPDX forms (GPL-3.0-only -> GPL-3 then ".0" => dot-rule) and the bare GPL-3
+    # (via the NOT_AN_ID family denylist):
+    assert "ADR" not in prefixes
+    assert prefixes.isdisjoint({"MPL", "BY", "GPL", "AGPL"})
+    # Real spec-local ids survive, including one at a sentence boundary:
+    assert [fid for fid, _ in doc.used_ids["FR"]] == ["FR-007", "FR-008"]
+    # The version-shaped token FR-1.2 is skipped (dot+digit), so FR-1 is absent:
+    assert "FR-1" not in [fid for fid, _ in doc.used_ids["FR"]]
+
+
+def test_reference_prefixes_param_skips_configured():
+    doc = parse_document("t.md", _body("Backlog RQ-123 and GAP-56."), frozenset({"RQ", "GAP"}))
+    assert "RQ" not in doc.used_ids
+    assert "GAP" not in doc.used_ids

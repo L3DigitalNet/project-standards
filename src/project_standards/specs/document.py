@@ -16,6 +16,7 @@ import yaml
 
 from project_standards.specs.model import SpecDocument
 from project_standards.specs.registry import (
+    BUILTIN_REFERENCE_PREFIXES,
     ID_TOKEN,
     NOT_AN_ID,
     declared_prefixes,
@@ -70,8 +71,14 @@ def _anchor_slugs(hs: list[tuple[int, str, int]]) -> frozenset[str]:
     return frozenset(out)
 
 
-def parse_document(path: str, text: str) -> SpecDocument:
-    """Parse a project spec document into the command-facing model."""
+def parse_document(
+    path: str, text: str, reference_prefixes: frozenset[str] = frozenset()
+) -> SpecDocument:
+    """Parse a consumer spec into a SpecDocument.
+
+    reference_prefixes are external namespaces the spec cites but does not own; like
+    NOT_AN_ID and the built-in reference prefixes they are skipped in the ID scan.
+    """
     try:
         fm, body = split_front_matter(text)
     except ValueError as exc:
@@ -82,7 +89,12 @@ def parse_document(path: str, text: str) -> SpecDocument:
     used: dict[str, list[tuple[str, int]]] = {}
     for m in ID_TOKEN.finditer(body):
         pfx = m.group(1)
-        if pfx in NOT_AN_ID:
+        if pfx in NOT_AN_ID or pfx in BUILTIN_REFERENCE_PREFIXES or pfx in reference_prefixes:
+            continue
+        # Version/SPDX shape: digits immediately followed by ".<digit>" (MPL-2.0, FR-1.2).
+        # A real id at a sentence end (FR-007.) is "."+space, never "."+digit, so it survives.
+        tail = body[m.end() : m.end() + 2]
+        if len(tail) == 2 and tail[0] == "." and tail[1].isdigit():
             continue
         line = bisect.bisect_left(nl_offsets, m.start()) + 1
         used.setdefault(pfx, []).append((f"{pfx}-{m.group(2)}", line))
