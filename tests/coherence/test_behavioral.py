@@ -29,9 +29,16 @@ def _prettier_write(target: Path) -> None:
 
 
 def _markdownlint(target: Path) -> subprocess.CompletedProcess[bytes]:
+    # Run from the corpus's own dir (tmp_path), NOT the repo: markdownlint-cli2
+    # MERGES the CLI target with any discoverable `.markdownlint-cli2.jsonc`
+    # `globs`, so cwd=_REPO would lint all 68 repo .md files too — coupling this
+    # coherence gate to whole-repo cleanliness (redundant with lint-markdown.yml)
+    # and breaking the "lint only Prettier's output" isolation. tmp_path has no
+    # cli2 config to discover, so only the explicit target is linted; the rule
+    # set still comes from the explicit --config.
     return subprocess.run(
         [_BIN / "markdownlint-cli2", "--config", _MDLINT_CFG, str(target)],
-        cwd=_REPO,
+        cwd=target.parent,
         capture_output=True,
     )
 
