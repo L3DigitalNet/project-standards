@@ -1,6 +1,6 @@
 # Design: spec-validator external references & token hygiene (issue #3, F1–F4)
 
-**Date:** 2026-07-06 **Status:** codex spec-review round 1 applied (SA-001…004 resolved) — awaiting user spec review **Author:** session 2026-07-06
+**Date:** 2026-07-06 **Status:** codex spec-review round 2 applied (SA-001…004 + SA-NEW-001/002 resolved) — awaiting user spec review **Author:** session 2026-07-06
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ The validator's job is to enforce that a spec's **own, mintable** requirement ID
 
 ## Scope
 
-Single subsystem: `src/project_standards/specs/` — `config.py` (config surface), `registry.py` (the token regex, the built-in denylist), `document.py` (the ID scan), `commands/validate.py` (the ID checks and their messages), `cli.py` (the command wiring) — plus both `spec-full-template.md` copies and the `standards/project-spec/README.md` docs. The only CLI-surface change is _additive_: an optional `--config` flag is added to `extract`, `next`, and `upgrade` (defaulting to `.project-standards.yml`, matching the existing `validate`/`lint`/`new` flag) so those commands parse IDs the same config-aware way — no new command, no changed flag semantics, no changed default behavior. No registry/template _contract_ change (canonical sections, appendices, frontmatter keys, and spec-local ID width all stay fixed).
+Single subsystem: `src/project_standards/specs/` — `config.py` (config surface), `registry.py` (the token regex, the built-in denylist), `document.py` (the ID scan), `commands/validate.py` (the ID checks and their messages), `cli.py` (the command wiring) — plus both `spec-full-template.md` copies and the `standards/project-spec/README.md` docs. The only CLI-surface change is _additive_: a single **opt-in** `--config` flag is added to `upgrade` (the one pass/fail gate, besides `validate`/`lint`, that re-validates a document), defaulting to _not_ loading config so unchanged invocations behave exactly as v4.0.0 — no new command, no changed flag semantics, no changed default behavior. `extract` and `next` are intentionally left untouched (§Component 3 explains why neither benefits from the skip set). No registry/template _contract_ change (canonical sections, appendices, frontmatter keys, and spec-local ID width all stay fixed).
 
 ## Decisions (locked during brainstorming)
 
@@ -66,18 +66,23 @@ The dot rule is safe against real IDs: a spec-local ID at a sentence boundary (`
 
 The scan needs the config-derived reference prefixes, which `registry.py` (template-only, no config) must not import. Cleanest seam: `parse_document` in `document.py` gains an optional parameter `reference_prefixes: frozenset[str] = frozenset()`. Inside the scan loop (`document.py:83`), the existing `if pfx in NOT_AN_ID: continue` becomes a single `_skip(pfx, digits, tail)` predicate covering all four rows of the table above. Built-in prefix constants (`NOT_AN_ID`, and a new `BUILTIN_REFERENCE_PREFIXES = frozenset({"ADR"})`) stay in `registry.py` as the zero-config floor; the config layer only _adds_ to them.
 
-**Every command that parses body IDs for command semantics must pass the resolved prefixes — not just `validate`/`lint`.** Otherwise a spec that `validate`s clean could still fail a sibling command, which is exactly the contradiction (a valid spec that cannot `upgrade`) SA-001 flagged. The `parse_document` call sites and their treatment:
+**A command needs the resolved prefixes only if it runs `validate_document` — i.e. it is a pass/fail gate.** The only such command besides the already-config-aware `validate`/`lint` is `upgrade` (it re-validates both the source and the upgraded output). That is exactly the contradiction SA-001 flagged: a spec that `validate`s clean but cannot `upgrade`. Every `parse_document` call site and its treatment:
 
 | Call site (`cli.py`) | Command | Config today | Change |
 | --- | --- | --- | --- |
 | `_run_setwide` (:87) | `validate`/`lint` | has `--config` | pass resolved prefixes |
 | `_run_new` self-check (:370) | `new` | has `--config` | pass resolved prefixes (generated docs rarely carry refs, but keep it consistent) |
-| `_run_extract` (:111) | `extract` | **none** | add `--config`; pass prefixes so referenced ids aren't extracted as spec-local |
-| `_run_next` (:138) | `next` | **none** | add `--config`; pass prefixes so a referenced id can't skew the next-id computation |
-| `_run_upgrade` source + output (:507, :539) | `upgrade` | **none** | add `--config`; pass prefixes to **both** the source validation and the output self-validation |
+| `_run_upgrade` source + output (:507, :539) | `upgrade` | **none** | add an **opt-in** `--config`; when passed, apply prefixes to **both** the source validation and the output self-validation |
+| `_run_extract` (:111) | `extract` | **none** | **no change** — see below |
+| `_run_next` (:138) | `next` | **none** | **no change** — see below |
 | `collect_existing_spec_ids` (`config.py:96`) | `new` corpus | n/a | **no change** — reads `spec_id` from frontmatter only, never body IDs |
 
-Adding `--config` to `extract`/`next`/`upgrade` reuses the existing `_DEFAULT_CONFIG = Path(".project-standards.yml")` default, so the flag is optional and behavior is unchanged when it is absent.
+`extract` and `next` are deliberately **not** made config-aware:
+
+- `extract ID` is a raw row selector — `extract_slice` matches `ID_TOKEN.fullmatch(selector)` and searches raw table rows (`commands/extract.py`); it never consults `used_ids`, `declared_prefixes`, or ownership. Passing prefixes would not change its output, and restricting it to reject external selectors would be a real behavior change to a documented core command for no benefit. It stays a pure lookup.
+- `next PREFIX` counts `used_ids[PREFIX]` to suggest the next number. A referenced id can only skew it if it shares a **canonical** prefix — but canonical prefixes are collision-rejected from `reference_prefixes` (Component 1), so `reference_prefixes` cannot exempt them anyway; and a non-canonical prefix like `RQ` is not a mintable target for `next`. So `next` gains nothing from the skip set.
+
+**Opt-in, not default-load (compatibility).** `upgrade`'s new `--config` defaults to **not loading any config** (unlike `validate`/`lint`, which default to `.project-standards.yml` because they were always config-driven to discover specs). This preserves v4.0.0 default behavior exactly: an `upgrade` invocation with no `--config` parses and validates precisely as it does today, so a repo with a missing/malformed `.project-standards.yml` cannot be newly broken. Reference prefixes take effect only when the consumer explicitly passes `--config` — the same flag they already pass to `validate`. This is what keeps the release MINOR under `meta/versioning.md` (see Versioning).
 
 ## Component 4 — Error message (F2's misleading chain)
 
@@ -120,12 +125,15 @@ Test-driven, per the repo's TDD discipline. Unit:
 - License scope: `MPL-2.0`, `LGPL-2.1`, `CC-BY-4.0`, `GPL-3` are skipped zero-config; `MIT-0`/`NTP-0` are **not** skipped zero-config but **are** skipped when `MIT`/`NTP` is in `reference_prefixes` (proves the documented escape hatch, honest about the scope boundary).
 - Message: `SV-ID-UNDECLARED` emits the new text (human output); the finding `code` stays `SV-ID-UNDECLARED` in the `--json` payload (machine contract); `SV-ID-TIER` still fires for a real tier violation.
 
-Integration, all ID-consuming commands (not just `validate`): a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `MPL-2.0`, and `GPL-3` `validate`s clean; the same spec with `RQ-123` _not_ configured fails with the reworded `SV-ID-UNDECLARED`. Add a lower-tier fixture containing a configured external reference (`RQ-123` with `spec.reference_prefixes: ["RQ"]`) that both `validate`s and `upgrade`s cleanly — including the upgrade output's self-validation — plus an `extract`/`next` case confirming the referenced id is neither extracted as spec-local nor counted by next-id.
+Integration: a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `MPL-2.0`, and `GPL-3` `validate`s clean; the same spec with `RQ-123` _not_ configured fails with the reworded `SV-ID-UNDECLARED`. Add a lower-tier fixture with a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) that both `validate`s and `upgrade --config …`s cleanly, including the upgrade output's self-validation.
+
+Compatibility (guards SA-NEW-001): `upgrade` **without** `--config` behaves exactly as v4.0.0 — assert it neither reads nor fails on a missing/malformed `.project-standards.yml`. `extract` and `next` (which gain no flag) are unaffected by any config and still return today's results for the same inputs.
 
 ## Acceptance criteria
 
 - The issue's minimal repro (`spec validate` over a spec citing an ADR, an external ID, and a license id) exits 0 with the documented config.
-- A lower-tier spec containing a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) both `validate`s and `upgrade`s cleanly (source + output self-validation), and `extract`/`next` do not treat `RQ-123` as spec-local.
+- A lower-tier spec containing a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) both `validate`s and `upgrade --config …`s cleanly (source + output self-validation).
+- Backward compatibility: `upgrade` with no `--config`, and `extract`/`next` (unflagged), produce byte-identical results to v4.0.0 for the same inputs — including when a malformed `.project-standards.yml` is present.
 - `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit` all green; branch coverage stays at or above the configured `fail_under = 85` threshold (measurable via `coverage report`; not a baseline-delta claim).
 - `uv run validate-frontmatter --config .project-standards.yml` and `spec validate` (dogfood) both pass.
 
@@ -138,4 +146,10 @@ Integration, all ID-consuming commands (not just `validate`): a full-profile spe
 
 ## Versioning & docs impact
 
-A backward-compatible **loosening** plus additive config and additive optional CLI flags: specs that failed on F1–F4 now pass, nothing that passed regresses, and the new `--config` on `extract`/`next`/`upgrade` is optional with an unchanged default. Under the repo's per-standard/semantic versioning that is a **minor bump, v4.0.0 → v4.1.0**. The release must update `CHANGELOG.md` ([4.1.0] with the new config key, the `--config` additions, and the token-hygiene behavior), the `standards/project-spec/README.md` namespace-split docs + config example, and the §8.3 example row in **both** `spec-full-template.md` copies. Downstream `@v4` pins pick it up automatically via the moving `v4` tag.
+A backward-compatible **loosening** that maps to the MINOR column of `meta/versioning.md`'s Validator-CLI row on every axis:
+
+- `spec.reference_prefixes` is "a new config option with a backward-compatible default" (`[]` — a spec with no external refs is unaffected; a spec that previously _failed_ now passes, which is loosening, never a new failure).
+- The token-hygiene changes (built-in `ADR`, dot-rule, broadened `NOT_AN_ID`) only ever make a previously-failing token pass — they cannot turn a passing document into a failure.
+- `upgrade`'s `--config` is "a new opt-in flag." Because it defaults to _not loading_ config, no existing invocation changes outcome, so it does **not** trip the MAJOR "a default changed so pass/fail differs" clause or the previously-passing rule.
+
+That is a **minor bump, v4.0.0 → v4.1.0**. The release must update `CHANGELOG.md` ([4.1.0] with the new config key, the opt-in `upgrade --config`, and the token-hygiene behavior), the `standards/project-spec/README.md` namespace-split docs + config example, and the §8.3 example row in **both** `spec-full-template.md` copies. Downstream `@v4` pins pick it up automatically via the moving `v4` tag.
