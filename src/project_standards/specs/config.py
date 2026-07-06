@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
 
 from project_standards.specs.document import SpecParseError, parse_document
+from project_standards.specs.registry import load_registry
 from project_standards.validate_frontmatter import ConfigError, collect_paths
 
 
@@ -21,6 +23,7 @@ class SpecConfig:
     include: list[str]
     exclude: list[str]
     present: bool
+    reference_prefixes: list[str] = field(default_factory=list)
 
 
 def _str_list(value: Any) -> list[str]:
@@ -35,10 +38,34 @@ def _str_list(value: Any) -> list[str]:
     raise ConfigError("spec.include/spec.exclude must be strings or lists of strings")
 
 
+_PREFIX_RE = re.compile(r"^[A-Z]{1,4}$")
+
+
+def _validate_reference_prefixes(prefixes: list[str]) -> list[str]:
+    """Reject malformed prefixes and ones that shadow a canonical spec-local prefix.
+
+    A canonical collision (e.g. listing 'FR') would silently disable validation of the
+    consumer's own requirement IDs, so it is a hard error, not a warning.
+    """
+    canonical = set(load_registry().prefix_defined_in)
+    for pfx in prefixes:
+        if not _PREFIX_RE.match(pfx):
+            raise ConfigError(
+                f"spec.reference_prefixes entry {pfx!r} must be 1-4 uppercase letters"
+            )
+        if pfx in canonical:
+            raise ConfigError(
+                f"spec.reference_prefixes entry {pfx!r} is a canonical spec-local prefix; "
+                "listing it would disable validation of your own IDs"
+            )
+    return prefixes
+
+
 def load_spec_config(path: Path) -> SpecConfig:
     """Load the optional project-spec discovery block from a config file."""
     include: list[str] = []
     exclude: list[str] = []
+    reference_prefixes: list[str] = []
     present = False
     if path.exists():
         try:
@@ -54,7 +81,12 @@ def load_spec_config(path: Path) -> SpecConfig:
                 b = cast("dict[str, Any]", block)
                 include = _str_list(b.get("include"))
                 exclude = _str_list(b.get("exclude"))
-    return SpecConfig(include=include, exclude=exclude, present=present)
+                reference_prefixes = _validate_reference_prefixes(
+                    _str_list(b.get("reference_prefixes"))
+                )
+    return SpecConfig(
+        include=include, exclude=exclude, present=present, reference_prefixes=reference_prefixes
+    )
 
 
 def collect_spec_paths(explicit: list[Path], cfg: SpecConfig) -> list[Path]:

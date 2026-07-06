@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.specs.config import DiscoveryError, collect_spec_paths, load_spec_config
+from project_standards.validate_frontmatter import ConfigError
 
 
 def _write(tmp: Path, body: str) -> Path:
@@ -61,3 +62,25 @@ def test_explicit_path_survives_config_exclude(
         )
     )
     assert collect_spec_paths([spec], cfg) == [spec]
+
+
+def test_reference_prefixes_parsed(tmp_path: Path) -> None:
+    cfg = load_spec_config(
+        _write(tmp_path, "spec:\n  include: ['x/**']\n  reference_prefixes: ['RQ', 'GAP']\n")
+    )
+    assert cfg.reference_prefixes == ["RQ", "GAP"]
+
+
+def test_reference_prefixes_default_empty(tmp_path: Path) -> None:
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  include: ['x/**']\n"))
+    assert cfg.reference_prefixes == []
+
+
+def test_reference_prefixes_bad_shape_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="1-4 uppercase"):
+        load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: ['rq']\n"))
+
+
+def test_reference_prefixes_canonical_collision_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="canonical spec-local prefix"):
+        load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: ['FR']\n"))
