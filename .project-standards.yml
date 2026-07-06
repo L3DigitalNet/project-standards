@@ -59,7 +59,7 @@ python_tooling:
   version: "1.0"
 
 markdown_tooling:
-  version: "1.0"
+  version: "1.1"
 
 # Project Specification Standard: which files `spec validate`/`spec lint` check.
 # This repo's own planning docs (docs/superpowers/specs/) predate this standard and use
