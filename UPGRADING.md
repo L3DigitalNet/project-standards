@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for upgrading a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-05'
+updated: '2026-07-06'
 tags:
   - 'migration'
   - 'upgrade'
@@ -40,6 +40,17 @@ The v4 validator rejects several inputs that v3 silently accepted or truncated. 
 ## What's new (opt-in)
 
 The **Project Specification Standard** — tiered spec templates, stable IDs, and the `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) with its own reusable `validate-specs.yml` workflow — first ships at `v4.0.0`. It is fully opt-in (a `spec:` config block; nothing is inherited automatically). To adopt it, follow [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md).
+
+## Markdown Tooling — optional: enforce Prettier (contract 1.1)
+
+Prettier is now a shipped, opt-in gate (contract `markdown_tooling 1.1`, from `v4.2.0`). To enforce it in your repo:
+
+1. Adopt the workflow: re-run `project-standards adopt markdown-tooling` (writes `.github/workflows/format.yml`) or add `uses: …/format.yml@v4`.
+2. Format once: `npx prettier@3.8.3 --write .`, commit the result.
+3. File-set parity: if you exclude generated Markdown from markdownlint via `.markdownlint-cli2.jsonc`, mirror those globs into `.prettierignore` so Prettier does not gate files markdownlint skips.
+4. Not ready yet? Set `prettier: false` in the caller to defer (the whole job skips — a clean pass).
+
+Nothing is required: unchanged consumers keep passing.
 
 ## Before you start
 

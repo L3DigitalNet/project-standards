@@ -27,6 +27,12 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-07-06
+
+### Added
+
+- **Markdown Tooling: opt-in reusable Prettier gate.** A new `format.yml` reusable workflow (dual-role) plus the adoptable `format.caller.yml` enforce `prettier --check .` repo-wide (pinned Prettier `3.8.3`), with a `prettier: false` job-level opt-out. `adopt markdown-tooling` now also writes `.github/workflows/format.yml`. Contract `markdown_tooling` bumped `1.0 → 1.1`. Supersedes DEC-9 (see DEC-10). Additive/opt-in — no existing consumer is affected until they adopt.
+
 ## [4.1.0] - 2026-07-06
 
 ### Added
