@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.cli import main
+from project_standards.specs.cli import run
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
@@ -74,3 +75,20 @@ def test_extract_json_found_and_no_match(capsys: pytest.CaptureFixture[str]) -> 
     miss = json.loads(capsys.readouterr().out)
     assert rc2 == 1
     assert miss["found"] is False and miss["markdown"] is None
+
+
+def test_validate_honors_reference_prefixes(tmp_path: Path) -> None:
+    # valid_light.md validates clean today; injecting RQ-123 as prose (not a heading
+    # or table cell) keeps it structurally valid, so rc turns on the reference behavior.
+    base = (_FIX / "valid_light.md").read_text(encoding="utf-8")
+    spec = tmp_path / "s.md"
+    spec.write_text(
+        base.replace("## Revision History", "External backlog: RQ-123.\n\n## Revision History", 1),
+        encoding="utf-8",
+    )
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("spec:\n  include: ['s.md']\n  reference_prefixes: ['RQ']\n", encoding="utf-8")
+    # Sanity: without the config the same file fails (RQ-123 trips SV-ID-UNDECLARED).
+    assert run(["validate", str(spec)]) == 1
+    # With RQ declared as an external reference, the file is clean again.
+    assert run(["validate", str(spec), "--config", str(cfg)]) == 0

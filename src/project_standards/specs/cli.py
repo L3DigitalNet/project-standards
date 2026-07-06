@@ -84,7 +84,15 @@ def _run_setwide(argv: list[str], *, lint: bool) -> int:
     results: list[tuple[Path, list[Finding]]] = []
     for path in paths:
         try:
-            results.append((path, fn(parse_document(str(path), _read(path)), reg)))
+            results.append(
+                (
+                    path,
+                    fn(
+                        parse_document(str(path), _read(path), frozenset(cfg.reference_prefixes)),
+                        reg,
+                    ),
+                )
+            )
         except SpecParseError as exc:
             results.append((path, [Finding(code="SV-PARSE", severity="error", message=str(exc))]))
     if args.json:
@@ -367,7 +375,9 @@ def _run_new(argv: list[str]) -> int:
         # Fail-closed self-validation (I1): never emit a spec validate would reject, and
         # map a parse failure of our OWN output to self_validation_failed (not exit 1).
         try:
-            doc = parse_document("<new>", text)
+            doc = parse_document(
+                "<new>", text, frozenset(load_spec_config(args.config).reference_prefixes)
+            )
         except SpecParseError as exc:
             raise NewError(
                 "self_validation_failed", f"generated scaffold did not parse: {exc}"
