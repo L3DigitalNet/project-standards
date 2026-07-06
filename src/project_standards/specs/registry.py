@@ -17,6 +17,7 @@ TIER_FILES = {
 SENTINEL = "SPEC-____"
 SPEC_ID_PATTERN = r"^SPEC-[0-9A-Z]{4}$"
 
+# (?!\.[0-9]) excludes version-string shapes like MPL-2.0 / GPL-3.0 (SPDX pattern X-N.M).
 ID_TOKEN = re.compile(r"\b([A-Z]{1,4})-([0-9]+)(?!\.[0-9])\b")
 NOT_AN_ID = {
     "HTTP",

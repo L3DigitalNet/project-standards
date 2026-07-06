@@ -44,25 +44,34 @@ def test_denylist_excludes_non_ids() -> None:
 
 def test_license_tokens_excluded_from_used_ids() -> None:
     """SPDX license identifiers must not be parsed as spec-local IDs (F4)."""
-    # Single-digit forms covered by NOT_AN_ID
+    # Single-digit forms covered by NOT_AN_ID; dotted forms (MPL-2.0) covered by lookahead
     doc = parse_document(
         "x.md",
         "---\n\n---\n# t\nDependency licensed under MPL-2, GPL-3, LGPL-2, AGPL-3, BSD-3.\n",
     )
     for pfx in ("MPL", "GPL", "LGPL", "AGPL", "BSD"):
         assert pfx not in doc.used_ids, f"{pfx} should be in NOT_AN_ID"
+    # Dotted versions — also excluded by NOT_AN_ID and the lookahead
+    doc2 = parse_document(
+        "x.md",
+        "---\n\n---\n# t\nMPL-2.0 or GPL-3.0 or LGPL-2.1 licensed. FR-001 is still matched.\n",
+    )
+    for pfx in ("MPL", "GPL", "LGPL"):
+        assert pfx not in doc2.used_ids, f"dotted {pfx}-N.M should not produce an ID token"
+    assert "FR" in doc2.used_ids
 
 
 def test_spdx_version_string_excluded_by_lookahead() -> None:
     """MPL-2.0 / GPL-3.0 style tokens are excluded by the regex lookahead (F4)."""
-    # The version-string forms must not produce false ID tokens.
-    # MPL/GPL/LGPL are also in NOT_AN_ID, so we use a synthetic prefix for the lookahead test.
-    doc2 = parse_document(
+    # MPL/GPL/LGPL are in NOT_AN_ID, so use a synthetic prefix to isolate the lookahead.
+    doc = parse_document(
         "x.md",
         "---\n\n---\n# t\nLicense ZZ-2.0 (version string). ZZ-001 is a real ID.\n",
     )
-    zz_ids = [fid for fid, _ in doc2.used_ids.get("ZZ", [])]
-    assert "ZZ-2" not in zz_ids, "ZZ-2.0 should be excluded by the version-string lookahead"
+    zz_ids = [fid for fid, _ in doc.used_ids.get("ZZ", [])]
+    assert "ZZ-2" not in zz_ids, (
+        "ZZ-2 from ZZ-2.0 should be excluded by the version-string lookahead"
+    )
     assert "ZZ-001" in zz_ids, "ZZ-001 must still be matched"
 
 
