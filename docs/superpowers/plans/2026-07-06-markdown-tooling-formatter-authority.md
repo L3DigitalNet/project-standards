@@ -15,7 +15,7 @@
 - **`proseWrap: "never"`** and every `.markdownlint.json` / `.prettierrc.json` value stay **unchanged** — no config-value edits.
 - **Opt-in/additive only:** never modify `lint-markdown.yml`, `validate-markdown-frontmatter.yml`, or move `@v4`. No existing consumer may newly fail.
 - **Never add frontmatter** to `CLAUDE.md`, `AGENTS.md`, `.claude/**` (repo rule). CHANGELOG/UPGRADING/standards/\*\* are frontmatter-validated (`.project-standards.yml` `include`).
-- **Green-gate before finishing:** `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && uv run validate-frontmatter --config .project-standards.yml`, plus `npx prettier@3.8.3 --check .` and `npx markdownlint-cli2 '**/*.md'`.
+- **Green-gate before finishing (run `npm ci` first so Node behavioral tests don't skip — CR-004):** `npm ci && uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && uv run validate-frontmatter --config .project-standards.yml && uv run pytest tests/coherence -v`, plus `npx prettier@3.8.3 --check .` and `npx markdownlint-cli2 '**/*.md'`.
 - **Commit style:** Conventional Commits; commit after each task. Branch `testing` (do not merge to `main`).
 - **Doc edits are Prettier-gated:** after editing any tracked `.md`, run `npx prettier@3.8.3 --write <file>` before committing (docs under `docs/handoff/**` are Prettier-ignored).
 
@@ -104,23 +104,26 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 _REPO = Path(__file__).resolve().parent.parent
 _REGISTRY = _REPO / "src" / "project_standards" / "schemas" / "registry.json"
 
 
 def test_markdown_tooling_default_is_1_1_and_1_0_still_known() -> None:
-    reg = json.loads(_REGISTRY.read_text(encoding="utf-8"))
+    reg: dict[str, Any] = json.loads(_REGISTRY.read_text(encoding="utf-8"))
     mt = reg["markdown_tooling"]
     assert mt["default"] == "1.1"
     assert set(mt["versions"]) == {"1.0", "1.1"}
 
 
 def test_dogfood_config_selects_1_1() -> None:
-    text = (_REPO / ".project-standards.yml").read_text(encoding="utf-8")
-    assert "markdown_tooling:" in text
-    # the version line under markdown_tooling must be 1.1
-    assert 'version: "1.1"' in text or "version: '1.1'" in text
+    # CR-003: parse YAML and assert the *markdown_tooling* version specifically —
+    # a substring check false-passes on the unrelated frontmatter `version: "1.1"`.
+    cfg: dict[str, Any] = yaml.safe_load((_REPO / ".project-standards.yml").read_text("utf-8"))
+    assert cfg["markdown_tooling"]["version"] == "1.1"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -176,14 +179,15 @@ git commit -m "feat(markdown-tooling): bump contract version 1.0 -> 1.1 (adds Pr
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
 
 _WF = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "format.yml"
 
 
-def _load() -> dict:
-    return yaml.safe_load(_WF.read_text(encoding="utf-8"))
+def _load() -> dict[str, Any]:
+    return cast("dict[str, Any]", yaml.safe_load(_WF.read_text(encoding="utf-8")))
 
 
 def test_workflow_is_reusable_with_boolean_prettier_input() -> None:
@@ -205,10 +209,19 @@ def test_optout_is_job_level_and_coercion_safe() -> None:
     assert job["if"].strip() == "${{ format('{0}', inputs.prettier) != 'false' }}"
 
 
-def test_prettier_check_is_repo_wide_and_pinned() -> None:
-    text = _WF.read_text(encoding="utf-8")
-    assert "npx --yes prettier@3.8.3 --check ." in text
-    assert "npm ci" not in text  # consumer checkout has no lockfile
+def test_prettier_check_is_repo_wide_and_pin_matches_package_json() -> None:
+    import json
+
+    pkg: dict[str, Any] = json.loads((_WF.parent.parent.parent / "package.json").read_text("utf-8"))
+    pin = pkg["devDependencies"]["prettier"]  # SSOT for the pin (no hardcoded duplicate)
+    steps = _load()["jobs"]["prettier"]["steps"]
+    runs = [str(s.get("run", "")) for s in steps]
+    # Assert on parsed `run:` commands, not raw text (CR-NEW-002): the workflow's
+    # header comment legitimately mentions `npm ci`, so a raw-text `"npm ci" not in
+    # text` check would false-fail. The pinned repo-wide check must run; no step
+    # may invoke `npm ci` (a consumer checkout has no lockfile).
+    assert any(f"npx --yes prettier@{pin} --check ." in r for r in runs)
+    assert not any("npm ci" in r for r in runs)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -314,6 +327,8 @@ git commit -m "feat(markdown-tooling): make format.yml a dual-role reusable Pret
 
 - Create: `src/project_standards/bundles/markdown-tooling/format.caller.yml`
 - Modify: `src/project_standards/bundles/markdown-tooling/adopt.toml`
+- Modify: `tests/test_adopt_packaging.py` (add the new caller to the wheel `must` list — CR-NEW-001)
+- Modify: `tests/test_adopt_dogfood.py` (add the caller stub to `test_caller_stubs_valid_and_reference_correct_workflow`)
 - Test: `tests/test_adopt_markdown_format.py` (create)
 
 **Interfaces:**
@@ -381,20 +396,27 @@ source = "format.caller.yml"
 dest = ".github/workflows/format.yml"
 ```
 
-- [ ] **Step 5: Run tests + an end-to-end adopt into a temp dir**
+- [ ] **Step 5: Extend the existing packaging + caller-stub guards (CR-NEW-001)**
 
-Run: `uv run pytest tests/test_adopt_markdown_format.py tests/test_adopt_dogfood.py tests/test_adopt_packaging.py -v` Expected: PASS (packaging test confirms the new file ships in the wheel).
+The source-checkout test above does not prove the file ships in the wheel or that its rendered `@vN` reference is valid. Extend the two existing guards:
 
-- [ ] **Step 6: Verify adopt renders the ref**
+- In `tests/test_adopt_packaging.py`, add `"project_standards/bundles/markdown-tooling/format.caller.yml"` to the wheel-contents `must`/expected list (alongside the existing `markdown-tooling/adopt.toml` entry).
+- In `tests/test_adopt_dogfood.py` `test_caller_stubs_valid_and_reference_correct_workflow`, add the mapping `"markdown-tooling/format.caller.yml": "format.yml"` so the stub's `uses: …@{{ref}}` reference is validated like the other callers.
+
+- [ ] **Step 6: Run tests + an end-to-end adopt into a temp dir**
+
+Run: `uv run pytest tests/test_adopt_markdown_format.py tests/test_adopt_dogfood.py tests/test_adopt_packaging.py -v` Expected: PASS — the packaging test now proves `format.caller.yml` is in the wheel `must` list, and the caller-stub test validates its rendered reference.
+
+- [ ] **Step 7: Verify adopt renders the ref**
 
 Run: `uv run project-standards adopt markdown-tooling --dest "$(mktemp -d)"` then inspect the written `.github/workflows/format.yml`. Expected: `uses: …/format.yml@v4` (the `{{ref}}` substituted to the installed major).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/project_standards/bundles/markdown-tooling/format.caller.yml \
         src/project_standards/bundles/markdown-tooling/adopt.toml \
-        tests/test_adopt_markdown_format.py
+        tests/test_adopt_markdown_format.py tests/test_adopt_packaging.py tests/test_adopt_dogfood.py
 git commit -m "feat(markdown-tooling): ship opt-in format.caller.yml (Prettier gate)"
 ```
 
@@ -412,7 +434,7 @@ git commit -m "feat(markdown-tooling): ship opt-in format.caller.yml (Prettier g
 **Interfaces:**
 
 - Consumes: `.markdownlint.json`, `.prettierrc.json` at repo root; the existing `CUSTOMIZATIONS` dict in `tests/test_markdownlint_config.py`.
-- Produces: `SPLIT: list[Concern]` and `check_conformance(markdownlint: dict, prettier: dict) -> list[str]` (returns human-readable violation strings; empty = coherent).
+- Produces: `SPLIT: list[Concern]` and `check_conformance(markdownlint: Config, prettier: Config) -> list[str]` (where `Config = dict[str, Any]`; returns human-readable violation strings, empty = coherent).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -422,14 +444,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
-from tests.coherence.declaration import check_conformance
+from tests.coherence.declaration import SPLIT, check_conformance
 
 _REPO = Path(__file__).resolve().parent.parent.parent
 
 
-def _load(name: str) -> dict:
-    return json.loads((_REPO / name).read_text(encoding="utf-8"))
+def _load(name: str) -> dict[str, Any]:
+    data: dict[str, Any] = json.loads((_REPO / name).read_text(encoding="utf-8"))
+    return data
 
 
 def test_shipped_configs_conform() -> None:
@@ -469,13 +493,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
+
+Config = dict[str, Any]  # a parsed .markdownlint.json / .prettierrc.json
 
 
 @dataclass(frozen=True)
 class Concern:
     name: str
     owner: str  # "markdownlint" | "prettier"
-    check: Callable[[dict, dict], bool]  # (markdownlint_cfg, prettier_cfg) -> holds?
+    check: Callable[[Config, Config], bool]  # (markdownlint_cfg, prettier_cfg) -> holds?
     why: str
 
 
@@ -509,7 +536,7 @@ SPLIT: list[Concern] = [
 ]
 
 
-def check_conformance(markdownlint: dict, prettier: dict) -> list[str]:
+def check_conformance(markdownlint: Config, prettier: Config) -> list[str]:
     """Return one violation string per concern whose assertion does not hold."""
     return [
         f"[{c.name}] owned by {c.owner}: {c.why}"
@@ -530,12 +557,15 @@ from tests.test_markdownlint_config import CUSTOMIZATIONS
 
 
 def test_declaration_agrees_with_existing_customizations() -> None:
-    # The declaration must not contradict the markdownlint deviations already
-    # pinned in test_markdownlint_config.py (single source of intent, no drift).
+    # Non-vacuous drift guard (CR-NEW-003): filter by Concern.owner STRUCTURALLY,
+    # not by rendered strings (every violation string contains "Prettier", so a
+    # string filter would always be empty). Each markdownlint-owned concern must
+    # hold against the CUSTOMIZATIONS dict — if a customization drifts (e.g. MD048
+    # changes), that concern's check fails and this test catches it.
     ml = dict(CUSTOMIZATIONS)
     pr = {"proseWrap": "never"}
-    violations = [v for v in check_conformance(ml, pr) if "prettier" not in v.lower()]
-    assert violations == [], violations
+    failing = [c.name for c in SPLIT if c.owner == "markdownlint" and not c.check(ml, pr)]
+    assert failing == [], failing
 ```
 
 - [ ] **Step 6: Run it; typecheck**
@@ -571,7 +601,6 @@ git commit -m "test(coherence): declare + hermetically verify the markdownlint/P
 # tests/coherence/test_behavioral.py
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -580,6 +609,11 @@ import pytest
 _REPO = Path(__file__).resolve().parent.parent.parent
 _BIN = _REPO / "node_modules" / ".bin"
 _CORPUS = Path(__file__).resolve().parent / "corpus"
+# CR-001: the corpus lives in tmp_path (outside the repo), so Prettier's upward
+# config discovery would miss the repo's .prettierrc.json and use defaults —
+# proving nothing. Pass the shipped configs explicitly to both tools.
+_PRETTIER_CFG = str(_REPO / ".prettierrc.json")
+_MDLINT_CFG = str(_REPO / ".markdownlint.json")
 
 pytestmark = pytest.mark.skipif(
     not (_BIN / "prettier").exists() or not (_BIN / "markdownlint-cli2").exists(),
@@ -588,11 +622,19 @@ pytestmark = pytest.mark.skipif(
 
 
 def _prettier_write(target: Path) -> None:
-    subprocess.run([_BIN / "prettier", "--write", str(target)], cwd=_REPO, check=True)
+    subprocess.run(
+        [_BIN / "prettier", "--config", _PRETTIER_CFG, "--write", str(target)],
+        cwd=_REPO,
+        check=True,
+    )
 
 
 def _markdownlint(target: Path) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run([_BIN / "markdownlint-cli2", str(target)], cwd=_REPO, capture_output=True)
+    return subprocess.run(
+        [_BIN / "markdownlint-cli2", "--config", _MDLINT_CFG, str(target)],
+        cwd=_REPO,
+        capture_output=True,
+    )
 
 
 def test_corpus_co_satisfies(tmp_path: Path) -> None:
@@ -875,13 +917,17 @@ git commit -m "docs: changelog + upgrading for the opt-in Prettier gate (markdow
 - [ ] **Step 1: Run the complete gate**
 
 ```bash
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
+# CR-004: `npm ci` FIRST so the Node behavioral coherence tests actually run
+# (they skip when node_modules is absent) instead of being silently skipped.
+npm ci \
+  && uv run ruff format --check . && uv run ruff check . && uv run basedpyright \
   && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit \
   && uv run validate-frontmatter --config .project-standards.yml \
-  && npm ci && npx prettier@3.8.3 --check . && npx markdownlint-cli2 '**/*.md'
+  && uv run pytest tests/coherence -v \
+  && npx prettier@3.8.3 --check . && npx markdownlint-cli2 '**/*.md'
 ```
 
-Expected: every command exits 0; coverage does not regress; `pytest` includes the new `tests/coherence`, `tests/test_format_workflow.py`, adopt, registry, and stale-claim tests.
+Expected: every command exits 0; coverage does not regress; `pytest` includes the new `tests/coherence` (behavioral tests **run**, not skip, because `node_modules` is present), `tests/test_format_workflow.py`, adopt, registry, and stale-claim tests.
 
 - [ ] **Step 2: Confirm the invariants held**
 
