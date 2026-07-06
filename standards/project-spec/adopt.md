@@ -78,6 +78,24 @@ spec:
 
 `include`/`exclude` accept a string or a list of strings (glob patterns, matched the same way as the Markdown Frontmatter Standard's `include`/`exclude`). A missing `spec:` block is not an error by itself, but every `spec` subcommand that discovers files from config (`validate`, `lint`) requires either this block or explicit file arguments — an empty corpus is refused, not silently passed, so CI can never go green vacuously.
 
+### Referencing external IDs (ADRs, tickets, backlog items)
+
+A spec body may contain tokens that match the ID pattern (`[A-Z]{1,4}-[0-9]+`) but belong to an **external namespace** — ADR sequence numbers (`ADR-0001`), ticket IDs, backlog prefixes, and similar. The validator would normally flag these as undeclared spec-local IDs. Declare them as **reference prefixes** in the `spec:` block and they are treated as external references, exempt from `SV-ID-UNDECLARED`, `SV-ID-TIER`, and width checks:
+
+```yaml
+spec:
+  include:
+    - 'docs/specs/**/*.md'
+  reference_prefixes:
+    - ADR   # ADR-0001 style references in the Design Decisions table (§8.3)
+    - RQ    # project-local resolved-questions backlog
+    - GAP   # gap-log items
+```
+
+`reference_prefixes` accepts a string or a list of strings (bare uppercase prefix, without the trailing dash). Prefixes listed here are still scanned and reported in `--json` output; they are just exempt from spec-local-ID structural checks.
+
+**Note on `ADR-` references:** The spec template's §8.3 Design Decisions table has an `ADR` column intended for ADR links. If you write `ADR-0001` in that column (4-digit, as the ADR Standard mints), add `ADR` to `reference_prefixes`. The spec validator does not impose a width rule on reference prefixes.
+
 The full CLI surface, once specs exist:
 
 | Command | Does | Example |

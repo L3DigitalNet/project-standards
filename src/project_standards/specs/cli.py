@@ -80,11 +80,16 @@ def _run_setwide(argv: list[str], *, lint: bool) -> int:
     reg = load_registry()
     cfg = load_spec_config(args.config)
     paths = collect_spec_paths(args.files, cfg)
-    fn = lint_document if lint else validate_document
+    ref_pfx = frozenset(cfg.reference_prefixes)
     results: list[tuple[Path, list[Finding]]] = []
     for path in paths:
         try:
-            results.append((path, fn(parse_document(str(path), _read(path)), reg)))
+            doc = parse_document(str(path), _read(path))
+            if lint:
+                findings = lint_document(doc, reg)
+            else:
+                findings = validate_document(doc, reg, reference_prefixes=ref_pfx)
+            results.append((path, findings))
         except SpecParseError as exc:
             results.append((path, [Finding(code="SV-PARSE", severity="error", message=str(exc))]))
     if args.json:

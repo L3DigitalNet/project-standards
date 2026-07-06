@@ -94,6 +94,8 @@ Policy decision: this is the "non-Python structured-text" tooling standard. ruff
 
 ## 3. Core contract
 
+**Enforcement hierarchy:** `markdownlint` is the **CI-enforced gate** — the reusable `lint-markdown.yml` workflow is what must pass in CI. Prettier is **recommended but not enforced by any shipped workflow** — `.prettierrc.json` is a copy-adopt scaffold; a consumer who wants a Prettier CI gate wires their own job. See §5 for the full artifact table and DEC-9.
+
 Two command pairs prove and repair a repository.
 
 Check (non-mutating):

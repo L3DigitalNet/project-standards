@@ -21,6 +21,7 @@ class SpecConfig:
     include: list[str]
     exclude: list[str]
     present: bool
+    reference_prefixes: list[str]
 
 
 def _str_list(value: Any) -> list[str]:
@@ -39,6 +40,7 @@ def load_spec_config(path: Path) -> SpecConfig:
     """Load the optional project-spec discovery block from a config file."""
     include: list[str] = []
     exclude: list[str] = []
+    reference_prefixes: list[str] = []
     present = False
     if path.exists():
         try:
@@ -54,7 +56,13 @@ def load_spec_config(path: Path) -> SpecConfig:
                 b = cast("dict[str, Any]", block)
                 include = _str_list(b.get("include"))
                 exclude = _str_list(b.get("exclude"))
-    return SpecConfig(include=include, exclude=exclude, present=present)
+                reference_prefixes = _str_list(b.get("reference_prefixes"))
+    return SpecConfig(
+        include=include,
+        exclude=exclude,
+        present=present,
+        reference_prefixes=reference_prefixes,
+    )
 
 
 def collect_spec_paths(explicit: list[Path], cfg: SpecConfig) -> list[Path]:

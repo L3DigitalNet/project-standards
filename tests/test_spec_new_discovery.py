@@ -57,4 +57,6 @@ def test_non_discovery_configerror_propagates(monkeypatch: pytest.MonkeyPatch) -
 
     monkeypatch.setattr(cfgmod, "collect_spec_paths", _boom)
     with pytest.raises(ConfigError):
-        collect_existing_spec_ids(SpecConfig(include=["x"], exclude=[], present=True))
+        collect_existing_spec_ids(
+            SpecConfig(include=["x"], exclude=[], present=True, reference_prefixes=[])
+        )

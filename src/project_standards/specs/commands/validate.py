@@ -30,14 +30,19 @@ def _f(code: str, message: str, line: int | None = None, locus: str | None = Non
     return Finding(code=code, severity="error", message=message, line=line, locus=locus)
 
 
-def validate_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def validate_document(
+    doc: SpecDocument,
+    reg: Registry,
+    *,
+    reference_prefixes: frozenset[str] = frozenset(),
+) -> list[Finding]:
     """Return integrity findings; an empty list means the spec passes."""
     out: list[Finding] = []
     out += _check_frontmatter(doc, reg)
     out += _check_sections(doc, reg)
     out += _check_appendices(doc, reg)
     out += _check_references(doc, reg)
-    out += _check_ids(doc, reg)
+    out += _check_ids(doc, reg, reference_prefixes)
     out += _check_tables(doc)
     return out
 
@@ -137,10 +142,16 @@ def _check_references(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_ids(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def _check_ids(
+    doc: SpecDocument, reg: Registry, reference_prefixes: frozenset[str]
+) -> list[Finding]:
     out: list[Finding] = []
     tier_ok = reg.tier_prefixes.get(doc.profile or "", frozenset())
     for pfx, occurrences in doc.used_ids.items():
+        if pfx in reference_prefixes:
+            # External/project-local reference namespace — not a spec-local ID.
+            # Skip all spec-local ID checks (undeclared, tier, width) for this prefix.
+            continue
         for full_id, ln in occurrences:
             digits = full_id.split("-", 1)[1]
             ok = (pfx == "MS" and len(digits) == 1) or (pfx != "MS" and len(digits) == 3)

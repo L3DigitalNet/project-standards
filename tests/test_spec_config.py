@@ -61,3 +61,23 @@ def test_explicit_path_survives_config_exclude(
         )
     )
     assert collect_spec_paths([spec], cfg) == [spec]
+
+
+def test_reference_prefixes_parsed_from_config(tmp_path: Path) -> None:
+    cfg = load_spec_config(
+        _write(
+            tmp_path,
+            "spec:\n  include:\n    - '**/*.md'\n  reference_prefixes:\n    - ADR\n    - RQ\n",
+        )
+    )
+    assert cfg.reference_prefixes == ["ADR", "RQ"]
+
+
+def test_reference_prefixes_defaults_to_empty(tmp_path: Path) -> None:
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  include:\n    - '**/*.md'\n"))
+    assert cfg.reference_prefixes == []
+
+
+def test_reference_prefixes_absent_when_no_spec_block(tmp_path: Path) -> None:
+    cfg = load_spec_config(_write(tmp_path, "markdown:\n  frontmatter:\n    include: []\n"))
+    assert cfg.reference_prefixes == []

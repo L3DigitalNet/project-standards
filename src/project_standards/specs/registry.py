@@ -17,7 +17,7 @@ TIER_FILES = {
 SENTINEL = "SPEC-____"
 SPEC_ID_PATTERN = r"^SPEC-[0-9A-Z]{4}$"
 
-ID_TOKEN = re.compile(r"\b([A-Z]{1,4})-([0-9]+)\b")
+ID_TOKEN = re.compile(r"\b([A-Z]{1,4})-([0-9]+)(?!\.[0-9])\b")
 NOT_AN_ID = {
     "HTTP",
     "AES",
@@ -39,6 +39,16 @@ NOT_AN_ID = {
     "SSO",
     "WAL",
     "PITR",
+    # SPDX / common open-source license identifiers — these carry numeric suffixes
+    # (e.g. GPL-3, MPL-2, LGPL-2, BSD-3) that are part of a version string, not
+    # spec-local IDs. The regex lookahead already drops X-N.M shapes; this set
+    # also covers single-digit or Clause-suffix forms like BSD-3-Clause.
+    "AGPL",
+    "BSD",
+    "CC",
+    "GPL",
+    "LGPL",
+    "MPL",
 }
 
 
