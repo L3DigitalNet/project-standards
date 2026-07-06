@@ -1,6 +1,6 @@
 # Design: Markdown-Tooling formatter authority & config coherence (issue #3, F5 — Spec B)
 
-**Date:** 2026-07-06 **Status:** draft — awaiting user spec review **Author:** session 2026-07-06
+**Date:** 2026-07-06 **Status:** draft — revised after Codex spec-review round 2 (SA-001 condition made coercion-safe, SA-003 standards-ref defaults added; SA-002/004/005/006 resolved r2); awaiting user spec review **Author:** session 2026-07-06
 
 ## Table of Contents
 
@@ -53,9 +53,25 @@ Config _values_ are unchanged: `proseWrap` stays `"never"`, no markdownlint rule
 
 `.github/workflows/lint-markdown.yml` (the reusable Stack-B Markdown gate) gains a second, opt-out check that runs Prettier over the same Markdown the markdownlint step already lints.
 
-- **New input `prettier`** — boolean, **default `true`**. Setting `prettier: false` in the caller disables the step (the escape hatch). The existing `globs` and `config` inputs are unchanged.
-- **Step mechanism** — a step guarded by `if: inputs.prettier` that runs `npx --yes prettier@<PIN> --check` over `inputs.globs`. Node is available on `ubuntu-latest`; `actions/setup-node@v4` pins the Node major for reproducibility, but **without `cache: npm`** — the workflow runs in the _consumer's_ checkout, which has no `package.json`/lockfile (unlike this repo's `format.yml`), so npm caching cannot apply. The pinned Prettier is fetched by `npx --yes prettier@<PIN>`. Prettier auto-discovers the caller's adopted `.prettierrc.json` and honors the caller's `.prettierignore`.
-- **Version pin `<PIN>` = `3.8.3`.** The pin is mandatory: Prettier reformats differently across releases, so an unpinned `npx prettier` would make consumer CI non-reproducible and could flip a pinned consumer red on a Prettier release. The single source of truth for the pin is this repo's `package.json` (`prettier@3.8.3`); the workflow carries the same literal with a comment pointing at that SSOT, and a coherence-tool assertion (Component C) fails if the two drift.
+- **New input `prettier`** — `type: boolean`, **default `true`** (natural caller syntax `prettier: false`). The existing `globs` and `config` inputs are unchanged.
+- **Step condition (SA-001) — must be coercion-safe across three cases.** `lint-markdown.yml` is dual-role: direct `push`/`pull_request` triggers _and_ `workflow_call`. Three evaluations must hold: **direct run** (empty `inputs` context ⇒ **runs** — the repo dogfoods it, mirroring the existing markdownlint step's `inputs.globs || '**/*.md'` fallback), **reusable default/`true`** (**runs**), **reusable explicit `false`** (**skips** — the escape hatch). The naive `if: ${{ inputs.prettier != 'false' }}` is **unsafe**: GitHub keeps `workflow_call` booleans as booleans and coerces mismatched-type equality through numbers, so boolean `false != 'false'` → `0 != NaN` → `true` and the step wrongly runs — the opt-out fails to opt out. The condition must force a **string** comparison; the recommended form is `if: ${{ format('{0}', inputs.prettier) != 'false' }}` — `format()` stringifies the boolean to `'false'`/`'true'` (and the absent direct-run value to a non-`'false'` string), making all three cases deterministic. **The plan must prove the chosen expression with a truth-table test modeling GitHub's typed-boolean semantics** (direct→run, `true`→run, `false`→skip), not merely assert the literal string is present.
+- **Safe glob handling (SA-002) — `globs` is newline-delimited data, not shell text.** The `globs` input is a newline-delimited string (markdownlint-cli2's contract). It must never be interpolated into a `run:` command directly (`--check ${{ inputs.globs }}`) — that is a shell-injection/word-splitting hazard and lets the _shell_ expand globs instead of Prettier. Pass it via `env:` and split in-shell into a quoted argv, with an empty fallback mirroring the markdownlint step:
+
+  ```yaml
+  - name: Prettier (formatter authority)
+    if: ${{ format('{0}', inputs.prettier) != 'false' }} # string-safe; see Step condition
+    env:
+      GLOBS: ${{ inputs.globs }}
+    run: |
+      mapfile -t patterns < <(printf '%s\n' "$GLOBS" | grep -v '^[[:space:]]*$')
+      [ ${#patterns[@]} -eq 0 ] && patterns=('**/*.md')
+      npx --yes prettier@3.8.3 --check "${patterns[@]}"
+  ```
+
+  Quoting `"${patterns[@]}"` hands glob expansion to Prettier (per Prettier's CLI guidance), not the shell. Node is available on `ubuntu-latest`; `actions/setup-node@v4` pins the Node major for reproducibility, but **without `cache: npm`** — the workflow runs in the _consumer's_ checkout, which has no `package.json`/lockfile (unlike this repo's `format.yml`), so npm caching cannot apply. Prettier auto-discovers the caller's adopted `.prettierrc.json`.
+
+- **Version pin `3.8.3`.** The pin is mandatory: Prettier reformats differently across releases, so an unpinned `npx prettier` would make consumer CI non-reproducible and could flip a pinned consumer red on a Prettier release. The single source of truth for the pin is this repo's `package.json` (`prettier@3.8.3`); the workflow carries the same literal with a comment pointing at that SSOT, and a coherence-tool assertion (Component C) fails if the two drift.
+- **File-set parity (SA-004) — Prettier gates `globs` minus its own ignores.** markdownlint-cli2 discovers `.markdownlint-cli2.jsonc` ignore lists; Prettier does not read that file — it honors `.prettierignore` and `.gitignore`. So the two gates cover the _same_ Markdown only when a consumer's markdownlint-only ignores are mirrored into `.prettierignore`. A consumer that excludes generated Markdown from markdownlint (but not from Prettier) would see it newly gated. The standard ships neither ignore file (Prettier honors the consumer's own — see Non-goals); the parity requirement and the one-line mirroring fix are documented in `UPGRADING.md` (§Versioning).
 - **Why this does not violate DEC-8.** DEC-8 keeps _frontmatter-only_ consumers from inheriting a Node toolchain — that promise is about `validate-markdown-frontmatter.yml`, a different workflow. `lint-markdown.yml` is the Markdown-body stack and is already Node-based (markdownlint ships its own Node); a consumer who adopts it has already opted into Node. Adding Prettier to _this_ workflow is consistent with that boundary.
 - **Caller template unchanged.** `lint-markdown.caller.yml` sets no `prettier:` key, so it inherits the `true` default. Every fresh adopter (and anyone who re-adopts under `@v5`) gets enforcement with no template edit.
 
@@ -69,7 +85,7 @@ The issue's one mandatory recommendation ("state plainly which formatter is auth
 
 ## Component C — Config-coherence tool (repo-local gate)
 
-A repo-local Python tool that makes the two-config split **explicit and machine-checked**. It is dev tooling, not part of the installable wheel; its job is to guarantee the configs the standard _ships_ can both pass on the same file. Proposed home: `tools/markdown_coherence/` (declaration + validator), a thin `tests/` wrapper, and a CI job — exact paths finalized in the plan.
+A repo-local Python tool that makes the two-config split **explicit and machine-checked**. It is dev tooling, not part of the installable wheel; its job is to guarantee the configs the standard _ships_ can both pass on the same file. **Home: under `tests/` (e.g. `tests/coherence/` — validator, declaration, corpus).** (SA-005: `tools/` is neither typechecked nor coverage-scoped — `pyproject.toml` sets `basedpyright.include = ["src", "tests"]` and `coverage.run.source = ["src"]`. Placing it under `tests/` gets it typechecked by the existing `tests` include and run by the existing pytest gate, without touching config or claiming coverage it would not get.)
 
 **1. Split-ownership declaration** — a tracked TOML artifact (matching the repo's `adopt.toml` / `pyproject.toml` idiom) that enumerates each overlapping formatting concern, the tool that owns it, and the exact config assertion that must hold. Illustrative rows:
 
@@ -90,11 +106,11 @@ The declaration is authoritative documentation of the precise split — "this re
 - **Behavioral co-satisfaction.** Run a curated adversarial corpus through pinned Prettier (`--write` into a temp copy), then run pinned markdownlint-cli2 over the Prettier output and assert **zero** violations. Behavior is the truth: this catches emergent conflicts that rule-by-rule static analysis would miss.
 - **Fixed-point (round-trip) stability.** Assert a clean file survives both tools unchanged — Prettier is idempotent on its own output, and markdownlint-clean + Prettier-clean input stays clean. Prevents a config pair that "passes" only by oscillating.
 
-**3. Version-matched pins.** The guarantee is only meaningful if the tool runs the _same_ tool versions the enforced CI uses. The tool pins Prettier to `3.8.3` (from `package.json`) and `markdownlint-cli2` to the version bundled by `markdownlint-cli2-action@v23` (resolved during implementation and added to `package.json` devDeps). A test asserts (a) the workflow's Prettier pin equals `package.json`'s, and (b) the local markdownlint-cli2 pin matches the action's bundled version. This alignment _is_ part of the coherence contract: it prevents the local proof and the production gate from silently diverging.
+**3. Version-matched pins.** The guarantee is only meaningful if the tool runs the _same_ tool versions the enforced CI uses. The tool pins Prettier to `3.8.3` (from `package.json`) and `markdownlint-cli2` to **`0.22.1`** — the version bundled by `markdownlint-cli2-action@v23` (= action `23.2.0`), added to `package.json` devDeps. A test asserts (a) the workflow's Prettier pin equals `package.json`'s, and (b) the local `markdownlint-cli2` pin matches the version the pinned action bundles. This alignment _is_ part of the coherence contract: it prevents the local proof and the production gate from silently diverging. (If a future action bump changes the bundled `markdownlint-cli2`, this assertion fails and forces the pins back into lockstep.)
 
 **4. Adversarial corpus.** A set of `.md` fixtures exercising every overlapping construct — wide and narrow tables, nested and ordered lists, mixed `_`/`*` emphasis, fenced code, horizontal rules, and multi-paragraph prose — deliberately harder than the repo's own docs, so the co-satisfaction check has teeth beyond the incidental coverage of real content.
 
-**5. Wiring.** A new CI job runs the coherence gate on PR/push, and the tool is added to the repo's green-gate toolchain list in `CLAUDE.md` so it is part of "keep the toolchain green." The tool is invokable as a script (`python -m ...`) and imported by a pytest wrapper so it counts toward coverage and rides the existing `pytest` gate.
+**5. Wiring.** The coherence checks are pytest tests under `tests/coherence/`, so they ride the existing `pytest` gate and are typechecked via the `tests` include. Because they shell out to the pinned Node formatters (`npx prettier`, `npx markdownlint-cli2`), they are guarded by a **Node-availability skip** so the pure-Python local gate and `coverage run -m pytest` do not break when Node/`npx` is absent. A **dedicated CI job provisions both uv (Python) and Node** (`actions/setup-node@v4`) so the checks actually execute in CI. The green-gate toolchain line is updated in **both `CLAUDE.md` and `AGENTS.md`** (SA-006 — the repo carries a parallel Codex-facing gate) to name the coherence check. "Enforceable by script" is satisfied by the pytest invocation plus the CI job; the tool is not exposed as a `src/` module or consumer command (it would otherwise fall outside the coverage/typecheck scope it claimed).
 
 ## Invariants — what must NOT change
 
@@ -106,12 +122,13 @@ The declaration is authoritative documentation of the precise split — "this re
 
 ## Versioning & rollout
 
-Enforcing a new gate changes what "conforming to the Markdown Tooling standard" means (your Markdown must now be Prettier-clean too), and on-by-default can turn a previously-passing consumer red once they adopt it. That is a **breaking** change and is versioned honestly as a MAJOR:
+Enforcing a new gate changes what "conforming to the Markdown Tooling standard" means (your Markdown must now be Prettier-clean too). A consumer who has adopted `lint-markdown.yml` pins the _reusable_ workflow by tag, so a new Prettier step on `@v4` reaches them by reference on their next run and can turn a previously-passing workflow red. `meta/versioning.md`'s governing principle is explicit: _"If any change can turn a previously-passing consumer document or workflow run into a failure, the release is MAJOR — without exception."_ So this is not merely a prudent MAJOR — it is a **mandated** one:
 
 - **Package: `4.x` → `5.0.0`**, reusable major tag `@v5`. `@v4` stays at its last release and is not moved. This repo's release policy leaves the _timing_ of any release to the user; this spec fixes only the _size_ (MAJOR) and the safety property (`@v4` frozen). Interaction with the prepared-but-deferred `v4.1.0` (the F1–F4 Spec A work): either ship `v4.1.0` first and this change as `v5.0.0`, or fold both into `v5.0.0` — a release-sequencing call, not a design call.
 - **Standard contract: `markdown_tooling` `1.0` → `2.0`** in `src/project_standards/schemas/registry.json`. Keep `1.0` in the known-versions list (`"versions": ["1.0", "2.0"]`, `"default": "2.0"`) so a consumer config still pinning `"1.0"` validates (known version ⇒ no output) rather than exiting 2 mid-migration.
 - **Dogfood config.** `.project-standards.yml` bumps `markdown_tooling.version` to `"2.0"` so this repo dogfoods the current contract.
-- **CHANGELOG `[5.0.0]`** with a prominent **BREAKING** entry: Prettier is now an enforced Markdown gate; describe the `prettier` opt-out input, the `3.8.3` pin, and the `@v4`-frozen / bump-to-`@v5`-to-adopt rollout. **`UPGRADING.md`** gains a matching migration section (run `prettier --write` once, or set `prettier: false` to defer).
+- **CHANGELOG `[5.0.0]`** with a prominent **BREAKING** entry: Prettier is now an enforced Markdown gate; describe the `prettier` opt-out input, the `3.8.3` pin, and the `@v4`-frozen / bump-to-`@v5`-to-adopt rollout. **`UPGRADING.md`** gains a matching migration section: run `prettier --write` once (or set `prettier: false` to defer), and — for parity (SA-004) — mirror any markdownlint-only ignores (`.markdownlint-cli2.jsonc`) into `.prettierignore`.
+- **Full major-release update surface (SA-003)** — a MAJOR triggers `meta/versioning.md`'s release requirements beyond the items above; the plan carries a checklist covering them: `pyproject.toml` version → `5.0.0` and regenerated `uv.lock`; every in-repo `@v4` example → `@v5` across `README.md` and all `standards/*/adopt.md` (the markdown-tooling `adopt.md` shows `@v4` in both the `uvx` and `uses:` snippets, plus `markdown_tooling.version: '1.0'`); the **bare `standards-ref: "v4"` defaults** in the reusable validator workflows `.github/workflows/validate-markdown-frontmatter.yml` and `validate-specs.yml` → `"v5"` (a stale default silently installs the v4 validator for a `@v5` caller that omits the input); the Markdown Tooling standard's **status/contract banner** in `standards/markdown-tooling/README.md` (`contract version 1.0` → `2.0`); and any other `1.0`/`@v4` consumer-facing reference. A grep-based test fails on stale references after the bump — covering both `@v4` _and_ bare `v4` `standards-ref` defaults _and_ `markdown_tooling` `1.0`-default references — excluding historical CHANGELOG/UPGRADING sections intentionally frozen.
 
 ## Non-goals
 
@@ -124,17 +141,21 @@ Enforcing a new gate changes what "conforming to the Markdown Tooling standard" 
 
 ## Acceptance criteria
 
-- The reusable `lint-markdown.yml` runs `prettier --check` (pinned `3.8.3`) over the caller's Markdown by default, and skips it iff the caller sets `prettier: false`.
+- The reusable `lint-markdown.yml` runs `prettier --check` (pinned `3.8.3`) over the caller's Markdown by default on **both** its direct `push`/`pull_request` runs and reusable-call runs, and skips it iff a caller sets `prettier: false`. Multiple newline-delimited globs are passed to Prettier without shell expansion.
 - A fresh `adopt markdown-tooling` under `@v5` yields a caller that enforces both markdownlint and Prettier with no manual edit.
 - `standards/markdown-tooling/README.md` and `adopt.md` state both tools are authoritative/enforced and document the `proseWrap: "never"` intent.
 - The coherence tool fails closed on: a declaration-assertion violation, any markdownlint violation on Prettier's output over the corpus, a non-idempotent Prettier result, or a pin mismatch (workflow vs `package.json`, or local markdownlint-cli2 vs the action).
-- `registry.json` offers `markdown_tooling` `2.0` (default) with `1.0` still known; `.project-standards.yml` selects `2.0`; CHANGELOG `[5.0.0]` and `UPGRADING.md` carry the breaking-change migration.
+- `registry.json` offers `markdown_tooling` `2.0` (default) with `1.0` still known; `.project-standards.yml` selects `2.0`; CHANGELOG `[5.0.0]` and `UPGRADING.md` carry the breaking-change migration (including the `.prettierignore` parity note).
+- The full `meta/versioning.md` major-release surface is updated: `pyproject.toml` `5.0.0` + regenerated `uv.lock`, every in-repo `@v4`→`@v5` example, the bare `standards-ref: "v4"`→`"v5"` defaults in both reusable validator workflows, the markdown-tooling `1.0`→`2.0` status banner, and no stale `@v4` / bare-`v4` default / `1.0`-default reference survives outside frozen history (grep guard green). The green-gate line is present in both `CLAUDE.md` and `AGENTS.md`.
 - The full repo green-gate — `ruff format --check`, `ruff check`, `basedpyright`, `pytest` + coverage, `pip-audit`, `validate-frontmatter`, `format.yml`, `lint-markdown.yml`, and the new coherence job — is green.
 
 ## Testing
 
-- **Workflow shape** — assert the reusable workflow declares the `prettier` input with default `true`, guards the step on it, and carries the `3.8.3` pin.
-- **Pin alignment** — assert the workflow's Prettier pin equals `package.json`'s, and the local `markdownlint-cli2` pin matches the version bundled by `markdownlint-cli2-action@v23`.
+- **Workflow shape & condition (SA-001)** — assert the reusable workflow declares the `prettier` input (`type: boolean`, default `true`), carries the `3.8.3` pin, and uses a string-safe guard (`format('{0}', inputs.prettier) != 'false'`, not the coercion-unsafe `inputs.prettier != 'false'`). The condition test must model GitHub's typed-boolean semantics as a truth table — direct trigger (absent input ⇒ runs), caller `true` (runs), caller boolean `false` (skips) — proving the opt-out actually opts out, not merely that the expression string is present.
+- **Glob safety (SA-002)** — assert the step reads `globs` via `env:` (not inline `${{ }}` in the `run:` body), splits on newlines with a blank-line filter, falls back to `**/*.md` when empty, and quotes the argv (`"${patterns[@]}"`). Behavioral cases: default glob, one explicit glob, newline-delimited multiple globs, and a glob containing shell metacharacters that must not be shell-expanded.
+- **Pin alignment** — assert the workflow's Prettier pin equals `package.json`'s, and the local `markdownlint-cli2` pin (`0.22.1`) matches the version bundled by `markdownlint-cli2-action@v23`.
+- **File-set parity (SA-004)** — a case with markdownlint-only ignores proving Prettier gates the intended set (and that mirroring into `.prettierignore` restores parity).
+- **Stale-reference guard (SA-003)** — after the bump, grep-based test fails on stale `@v4`, bare `standards-ref: "v4"` defaults, and `markdown_tooling` `1.0`-default references outside frozen changelog/upgrading history.
 - **Declaration conformance** — unit tests over the validator: a tampered `.markdownlint.json` (MD013 re-enabled, MD060 style tightened) and a tampered `.prettierrc.json` (`proseWrap` changed) each fail.
 - **Behavioral co-satisfaction** — the adversarial corpus passes markdownlint after Prettier; a deliberately conflicting fixture pair is caught.
 - **Fixed-point** — a clean corpus file is unchanged by a second Prettier pass and stays markdownlint-clean.
