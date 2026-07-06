@@ -17,43 +17,6 @@ This document is the user's visible task list alongside the v3 handoff system. U
 ## User Tracked Tasks
 
 - [ ] Adopt the branch protection strategy and PR requirements from the `hw-radar` repo.
-- [ ] Update the TODO.md from the standard distribution template to reflect the following example:
-
-  ```markdown
-  # TODO
-
-  **Usage Instructions:** See `## Usage and maintenance`.
-
-  ## User tasks
-
-  <!--
-
-  - [ ] Example user task 1
-  - [ ] Example user task 2
-
-  -->
-
-  ## Agent tasks
-
-  <!--
-
-  - [ ] Example agent task 1
-  - [ ] Example agent task 2
-
-  -->
-
-  ## Completed tasks
-
-  <!-- Move completed tasks here at session end -->
-
-  ## Usage and maintenance
-
-  - Add new tasks in `- [ ]` format: Claude-generated tasks go under `## Agent tasks`, user-added tasks under `## User tasks`.
-  - Claude should not complete `## User tasks` items unless the user requests it.
-  - During session closeout, move completed items to `## Completed tasks` — for user review/convenience only, not an agent record; use `docs/handoff.md` or another adopted handoff mechanism for agent handoff.
-  - The user manually deletes reviewed items from `## Completed tasks`.
-  - For partially completed tasks, add brief nested-bullet comments for tracking.
-  ```
 
 ## Agent Tracked Tasks
 
