@@ -169,7 +169,7 @@ Extraction regex that captures **all** ID types including milestones:
 \b([A-Z]{1,4})-([0-9]+)\b       # then validate: MS → 1 digit; everything else → 3 digits
 ```
 
-Exclude standards/acronyms that match the shape but are not IDs (`HTTP-…`, `AES-…`, `ISO-…`, `SHA-…`, `RPO`, `RTO`, …). The spec registry carries a `NOT_AN_ID` denylist.
+A raw regex match is not yet a spec-local ID — skip it when any of four conditions holds: its prefix is standards/acronym noise that matches the shape but is not an ID (`HTTP-…`, `AES-…`, `ISO-…`, `SHA-…`, `RPO`, `RTO`, …), carried in the spec registry's `NOT_AN_ID` denylist; its prefix is the built-in `ADR` reference prefix (ADR ids are minted by the sibling [ADR Standard](../../adr/README.md), not here); its prefix is listed in the consumer's `spec.reference_prefixes` config key (external namespaces the spec only cites, e.g. a backlog `RQ-123` or a zero-version license family like `MIT`); or its digits are immediately followed by `.`+digit — a version/SPDX shape such as `MPL-2.0` (a real ID at a sentence end, `FR-007.`, is `.`+space and never matches). Only the remaining tokens are spec-local IDs.
 
 ### 5.3 Example IDs are placeholders
 
@@ -284,6 +284,6 @@ It intentionally does **not** judge prose (terminology drift, "Context" vs "Back
 1. Split YAML frontmatter from body; read `profile`.
 2. Extract headings → build `{number → (title, line, slug)}`; compute GitHub slugs.
 3. Load the **canonical registry** once from `spec-full-template.md`; validate this file's numbers as an ordered subset of it.
-4. Index IDs with `\b([A-Z]{1,4})-(\d+)\b` (minus the `NOT_AN_ID` denylist); validate format.
+4. Index IDs with `\b([A-Z]{1,4})-(\d+)\b`, then skip a match when its prefix is in the `NOT_AN_ID` denylist, is a built-in reference prefix (`ADR`), is listed in the consumer's `spec.reference_prefixes`, or its digits are immediately followed by `.`+digit (a version/SPDX shape such as `MPL-2.0`). Only the remaining tokens are spec-local IDs to validate for format.
 5. Resolve `§`/`Appendix` references against the canonical registry; resolve `#anchors` against this file's slugs.
 6. Parse Appendix A into the prefix→"Defined In" map; assert it matches the canonical map.

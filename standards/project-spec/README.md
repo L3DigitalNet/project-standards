@@ -166,6 +166,24 @@ Grouped by what they do to a spec. Each notes the guarantee(s) from [§3](#3-fea
 
 - **Review contract** _(core)_ — a checklist and prompt an agent runs _after_ `validate` and `lint` pass: weak or untestable language ("fast", "robust" without a criterion), terminology drift against the Glossary, requirement atomicity, goal-to-requirement coherence, and non-goal violations. The prose layer the deterministic tools cannot judge. → **G8**
 
+#### External references vs. spec-local IDs
+
+Uppercase `PFX-NNN` tokens are **spec-local IDs** you mint — they must be declared in Appendix A and are width- and tier-checked. Tokens you only **reference** are exempt:
+
+- Lowercase ids such as an ADR's `adr-0001-…` are ignored automatically.
+- The `ADR` prefix is a built-in reference, so `ADR-0001` is accepted too.
+- Versioned SPDX license identifiers are ignored via the trailing-`.`+digit rule — e.g. `MPL-2.0`, `CC-BY-4.0`, and the current GNU forms `GPL-3.0-only` / `LGPL-2.1-or-later`. A bare colloquial `GPL-3` (not a current SPDX id) is caught by the built-in license-family denylist. A **zero-version** SPDX id like `MIT-0` or `NTP-0` shares a spec-local ID's exact shape — list its family (`MIT`, `NTP`) in `reference_prefixes`.
+- Any other external namespace (a backlog `RQ-123`, a gap log `GAP-56`, tickets) goes in `spec.reference_prefixes`:
+
+```yaml
+spec:
+  include:
+    - 'docs/specs/**/*.md'
+  reference_prefixes: ['RQ', 'GAP', 'MIT'] # cited, not minted here
+```
+
+Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade --config` read this key; `extract` and `next` never load config.
+
 ---
 
 ## 6. Adoption
