@@ -31,6 +31,7 @@ def test_wheel_contains_bundles_and_manifests(tmp_path: Path) -> None:
     must = [
         "project_standards/bundles/_shared/editorconfig",
         "project_standards/bundles/markdown-tooling/adopt.toml",
+        "project_standards/bundles/markdown-tooling/format.caller.yml",
         "project_standards/bundles/python-tooling/check.yml",
         "project_standards/bundles/markdown-frontmatter/project-standards.starter.yml",
         "project_standards/bundles/adr/adr.template.md",

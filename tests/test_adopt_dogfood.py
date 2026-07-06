@@ -56,6 +56,7 @@ def test_caller_stubs_valid_and_reference_correct_workflow() -> None:
             "validate-markdown-frontmatter.yml"
         ),
         "markdown-tooling/lint-markdown.caller.yml": "lint-markdown.yml",
+        "markdown-tooling/format.caller.yml": "format.yml",
     }
     for rel, workflow in cases.items():
         raw = (_BUNDLES / rel).read_text()

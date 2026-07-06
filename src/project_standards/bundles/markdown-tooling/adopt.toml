@@ -28,3 +28,9 @@ kind = "workflow-caller"
 owner = true
 source = "lint-markdown.caller.yml"
 dest = ".github/workflows/lint-markdown.yml"
+
+[[artifact]]
+kind = "workflow-caller"
+owner = true
+source = "format.caller.yml"
+dest = ".github/workflows/format.yml"
