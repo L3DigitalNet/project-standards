@@ -8,6 +8,7 @@
 		"format:check": "prettier --check ."
 	},
 	"devDependencies": {
+		"markdownlint-cli2": "0.22.1",
 		"prettier": "3.8.3"
 	}
 }
