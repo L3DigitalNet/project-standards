@@ -56,14 +56,17 @@ def test_skip_set_zero_config():
     doc = parse_document(
         "t.md",
         _body(
-            "Refs adr-0001-x and ADR-0001. Licenses MPL-2.0, LGPL-2.1, CC-BY-4.0, GPL-3. "
+            "Refs adr-0001-x and ADR-0001. Licenses MPL-2.0, CC-BY-4.0, and the current SPDX "
+            "forms GPL-3.0-only and AGPL-3.0-or-later, plus the bare colloquial GPL-3. "
             "Own id FR-007 and a sentence end FR-008. Version-shaped FR-1.2 here."
         ),
     )
     prefixes = set(doc.used_ids)
-    # ADR (built-in ref) and the license families are never recorded:
+    # ADR (built-in ref) and the license families are never recorded — including the
+    # modern SPDX forms (GPL-3.0-only -> GPL-3 then ".0" => dot-rule) and the bare GPL-3
+    # (via the NOT_AN_ID family denylist):
     assert "ADR" not in prefixes
-    assert prefixes.isdisjoint({"MPL", "LGPL", "BY", "GPL"})
+    assert prefixes.isdisjoint({"MPL", "BY", "GPL", "AGPL"})
     # Real spec-local ids survive, including one at a sentence boundary:
     assert [fid for fid, _ in doc.used_ids["FR"]] == ["FR-007", "FR-008"]
     # The version-shaped token FR-1.2 is skipped (dot+digit), so FR-1 is absent:
@@ -418,26 +421,38 @@ Wires the config-derived prefixes into the two already-config-aware pass/fail ga
 
 Add to `tests/test_spec_cli.py` (adapt the import of the command entrypoint to the file's existing helper — this uses `run` from `project_standards.specs.cli`):
 
+A stub document fails `validate` for many unrelated structural reasons (frontmatter keys, profile, required appendices, section gaps), so `rc == 0` is only meaningful over a **known-valid** spec. Start from the shipped `valid_light.md` fixture and inject an external reference into its prose:
+
 ```python
+from pathlib import Path
+
 from project_standards.specs.cli import run
+
+_FIX = Path(__file__).parent / "fixtures" / "specs"
 
 
 def test_validate_honors_reference_prefixes(tmp_path):
+    # valid_light.md validates clean today; injecting RQ-123 as prose (not a heading
+    # or table cell) keeps it structurally valid, so rc turns on the reference behavior.
+    base = (_FIX / "valid_light.md").read_text(encoding="utf-8")
     spec = tmp_path / "s.md"
     spec.write_text(
-        "---\nspec_id: SPEC-0001\n---\n# 1. Overview\nCites RQ-123.\n", encoding="utf-8"
+        base.replace("## Revision History", "External backlog: RQ-123.\n\n## Revision History", 1),
+        encoding="utf-8",
     )
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text(
         "spec:\n  include: ['s.md']\n  reference_prefixes: ['RQ']\n", encoding="utf-8"
     )
-    rc = run(["validate", str(spec), "--config", str(cfg)])
-    assert rc == 0  # RQ-123 is a declared external reference, not a bad id
+    # Sanity: without the config the same file fails (RQ-123 trips SV-ID-UNDECLARED).
+    assert run(["validate", str(spec)]) == 1
+    # With RQ declared as an external reference, the file is clean again.
+    assert run(["validate", str(spec), "--config", str(cfg)]) == 0
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `uv run pytest tests/test_spec_cli.py::test_validate_honors_reference_prefixes -v` Expected: FAIL with rc == 1 (RQ-123 currently trips `SV-ID-UNDECLARED`).
+Run: `uv run pytest tests/test_spec_cli.py::test_validate_honors_reference_prefixes -v` Expected: FAIL on the second assertion (rc == 1) — `RQ-123` currently trips `SV-ID-UNDECLARED` even with the config, because the prefixes aren't threaded yet. (The first assertion already passes.)
 
 - [ ] **Step 3: Thread the prefixes in `_run_setwide` (`cli.py:87`)**
 
@@ -459,13 +474,15 @@ Change the scan call inside the `for path in paths:` loop:
 
 - [ ] **Step 4: Thread the prefixes in `_run_new` self-check (`cli.py:370`)**
 
-The generated scaffold is validated against config-aware rules for consistency. `_run_new` already loads `--config` (default `.project-standards.yml`), so this adds no new default-load surface:
+The generated scaffold is validated against config-aware rules for consistency. `_run_new` already loads `--config` (default `.project-standards.yml`) via `_resolve_new_options`, so this adds no new default-load surface:
 
 ```python
             doc = parse_document(
                 "<new>", text, frozenset(load_spec_config(args.config).reference_prefixes)
             )
 ```
+
+This re-reads the config a second time (once in `_resolve_new_options`, once here). That is a deliberate, accepted cost: the CLI is single-threaded so there is no race, `load_spec_config` is an idempotent read of a small YAML file, and `_resolve_new_options` has already validated it (so this call cannot newly raise). Threading the parsed config out of `_resolve_new_options` to avoid the second read is a valid future refactor but out of scope here — it would touch an unrelated signature.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -499,16 +516,32 @@ git commit -m "feat(spec): validate/lint/new honor spec.reference_prefixes"
 Add to `tests/test_spec_upgrade_cli.py` (reuse the file's existing `_run` helper and `_FIX` fixtures directory; the upgrade fixtures live under `tests/fixtures/specs/`):
 
 ```python
+import json
+
+
+def _inject_ref(base: str) -> str:
+    # Insert RQ-123 as prose at a point that keeps the doc upgradeable (does NOT add a
+    # heading/table/section, so upgrade's Gate-2 check_upgradeable is unaffected). Insert
+    # right after the frontmatter's closing fence, before the first "# " title line.
+    marker = "\n---\n"  # end of frontmatter
+    head, _, tail = base.partition(marker)
+    return head + marker + "\nExternal backlog: RQ-123.\n" + tail
+
+
 def test_upgrade_honors_reference_prefixes(tmp_path):
-    # A standard-tier spec that cites an external RQ-123; without config it fails
-    # source validation, with config it upgrades cleanly.
+    # Negative proves RQ-123 is the ONLY blocker (source_invalid via SV-ID-UNDECLARED),
+    # not a structural/upgradeability problem; positive proves the config clears it.
     src = tmp_path / "s.md"
-    base = (_FIX / "upgrade_standard.md").read_text(encoding="utf-8")
-    src.write_text(base.replace("## 1.", "Cites RQ-123.\n\n## 1.", 1), encoding="utf-8")
+    src.write_text(_inject_ref((_FIX / "upgrade_standard.md").read_text(encoding="utf-8")), "utf-8")
+
+    rc = _run([str(src), "--to", "full", "--stdout", "--json"])
+    obj = json.loads(_capsys_out())  # or however this file reads captured stdout
+    assert rc == 2 and obj["code"] == "source_invalid"
+    assert any(f["code"] == "SV-ID-UNDECLARED" for f in obj["findings"])
+
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text("spec:\n  reference_prefixes: ['RQ']\n", encoding="utf-8")
-    rc = _run([str(src), "--to", "full", "--stdout", "--config", str(cfg)])
-    assert rc == 0
+    assert _run([str(src), "--to", "full", "--stdout", "--config", str(cfg)]) == 0
 
 
 def test_upgrade_without_config_ignores_malformed_config(tmp_path, monkeypatch):
@@ -517,13 +550,26 @@ def test_upgrade_without_config_ignores_malformed_config(tmp_path, monkeypatch):
     (tmp_path / ".project-standards.yml").write_text("spec: [not, a, mapping\n", encoding="utf-8")
     src = tmp_path / "s.md"
     src.write_text((_FIX / "upgrade_light.md").read_text(encoding="utf-8"), encoding="utf-8")
-    rc = _run([str(src), "--to", "standard", "--stdout"])
-    assert rc == 0  # unchanged v4.0.0 behavior; the malformed config is never loaded
+    assert _run([str(src), "--to", "standard", "--stdout"]) == 0  # unchanged v4.0.0 behavior
+
+
+def test_upgrade_explicit_malformed_config_is_json_safe(tmp_path):
+    # CR-004: an explicit --config pointing at broken YAML returns the JSON config_error
+    # envelope (not a bare crash), preserving the machine contract for --json operators.
+    bad = tmp_path / "bad.yml"
+    bad.write_text("spec: [not, a, mapping\n", encoding="utf-8")
+    src = tmp_path / "s.md"
+    src.write_text((_FIX / "upgrade_light.md").read_text(encoding="utf-8"), encoding="utf-8")
+    rc = _run([str(src), "--to", "standard", "--stdout", "--config", str(bad), "--json"])
+    assert rc == 2
+    assert json.loads(_capsys_out())["code"] == "config_error"
 ```
+
+> **Note on stdout capture:** `tests/test_spec_upgrade_cli.py` already reads captured stdout for its `--json` assertions (see the existing `capsys.readouterr().out` usage). Match that file's exact pattern for the two tests above that parse JSON — the `_capsys_out()` placeholder stands in for whatever helper/fixture the file uses; do not invent a new one.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `uv run pytest tests/test_spec_upgrade_cli.py -k "reference_prefixes or malformed_config" -v` Expected: FAIL — `upgrade` has no `--config` flag, so argparse rejects it (rc 2) in the first test.
+Run: `uv run pytest tests/test_spec_upgrade_cli.py -k "reference_prefixes or malformed_config or json_safe" -v` Expected: both `--config`-dependent assertions FAIL because `upgrade` has no `--config` flag yet — argparse rejects the flag (rc 2, `code == "usage"`), so `test_upgrade_honors_reference_prefixes`'s final `== 0` assertion and `test_upgrade_explicit_malformed_config_is_json_safe`'s `config_error` assertion both fail. (The negative `source_invalid` assertion in the first test already passes — RQ-123 trips source validation with or without the feature; that is intentional, it proves the injection is otherwise upgradeable.) `test_upgrade_without_config_ignores_malformed_config` already passes — expected for a compatibility guard.
 
 - [ ] **Step 3: Add the flag and resolve prefixes (`cli.py`)**
 
@@ -634,12 +680,13 @@ Make the uppercase-mintable vs. lowercase/listed-reference split discoverable, w
 **Files:**
 
 - Modify: `standards/project-spec/README.md`
+- Modify: `standards/project-spec/resources/tooling-notes.md` (the maintainer parse-pipeline reference — §"ID extraction" ~L166-172 and §12 "Suggested parse pipeline" ~L282-288)
 - Test: manual gate (frontmatter validator + Prettier + markdownlint)
 
 **Interfaces:**
 
 - Consumes: nothing.
-- Produces: README section documenting `spec.reference_prefixes`, the built-in `ADR`, and the scoped license handling.
+- Produces: README + tooling-notes documenting `spec.reference_prefixes`, the built-in `ADR`, and the scoped license handling.
 
 - [ ] **Step 1: Add the documentation**
 
@@ -652,7 +699,7 @@ Uppercase `PFX-NNN` tokens are **spec-local IDs** you mint — they must be decl
 
 - Lowercase ids such as an ADR's `adr-0001-…` are ignored automatically.
 - The `ADR` prefix is a built-in reference, so `ADR-0001` is accepted too.
-- Common versioned license identifiers (`MPL-2.0`, `LGPL-2.1`, `CC-BY-4.0`, `GPL-3`) are ignored. A zero-version SPDX id like `MIT-0` shares an ID's shape — list its family in `reference_prefixes`.
+- Versioned SPDX license identifiers are ignored via the trailing-`.`+digit rule — e.g. `MPL-2.0`, `CC-BY-4.0`, and the current GNU forms `GPL-3.0-only` / `LGPL-2.1-or-later`. A bare colloquial `GPL-3` (not a current SPDX id) is caught by the built-in license-family denylist. A **zero-version** SPDX id like `MIT-0` or `NTP-0` shares a spec-local ID's exact shape — list its family (`MIT`, `NTP`) in `reference_prefixes`.
 - Any other external namespace (a backlog `RQ-123`, a gap log `GAP-56`, tickets) goes in `spec.reference_prefixes`:
 
 ```yaml
@@ -665,25 +712,39 @@ spec:
 Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade --config` read this key; `extract` and `next` never load config.
 ````
 
-- [ ] **Step 2: Format and lint the doc**
+- [ ] **Step 2: Update the maintainer parse-pipeline notes**
+
+The `NOT_AN_ID`-only description in `standards/project-spec/resources/tooling-notes.md` is now stale — this repo is the source of truth, so the parse-pipeline reference must match the shipped contract. In the ID-extraction section (~L166-172) and §12 "Suggested parse pipeline" step 4 (~L282-288), change the "index IDs with `\b([A-Z]{1,4})-(\d+)\b` minus the `NOT_AN_ID` denylist" description to reflect the full skip set. Replace step 4's parenthetical with:
+
+```text
+4. Index IDs with `\b([A-Z]{1,4})-(\d+)\b`, then skip a match when its prefix is in the
+   `NOT_AN_ID` denylist, is a built-in reference prefix (`ADR`), is listed in the consumer's
+   `spec.reference_prefixes`, or its digits are immediately followed by `.`+digit (a
+   version/SPDX shape such as `MPL-2.0`). Only the remaining tokens are spec-local IDs to
+   validate for format.
+```
+
+and extend the ID-extraction note (~L172) so it mentions the built-in `ADR` reference prefix, the `spec.reference_prefixes` config key, and the dot-version rule alongside `NOT_AN_ID`.
+
+- [ ] **Step 3: Format and lint both docs**
 
 Run:
 
 ```bash
-npx --no-install prettier --write standards/project-spec/README.md
-npx --no-install markdownlint-cli2 standards/project-spec/README.md
+npx --no-install prettier --write standards/project-spec/README.md standards/project-spec/resources/tooling-notes.md
+npx --no-install markdownlint-cli2 standards/project-spec/README.md standards/project-spec/resources/tooling-notes.md
 ```
 
 Expected: Prettier reports clean; markdownlint `Summary: 0 error(s)`. Fix any reported issue.
 
-- [ ] **Step 3: Verify frontmatter still validates**
+- [ ] **Step 4: Verify frontmatter still validates**
 
-Run: `uv run validate-frontmatter --config .project-standards.yml` Expected: exit 0 — the README's existing frontmatter is untouched and still conforms.
+Run: `uv run validate-frontmatter --config .project-standards.yml` Expected: exit 0 — both files keep their existing frontmatter and still conform.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add standards/project-spec/README.md
+git add standards/project-spec/README.md standards/project-spec/resources/tooling-notes.md
 git commit -m "docs(spec): document reference_prefixes and the ID namespace split"
 ```
 
@@ -719,7 +780,7 @@ In `CHANGELOG.md`, add a new section above the most recent release (keep the fro
 
 ### Changed
 
-- **Project Specification:** the ID scan now skips the sibling ADR standard's ids (built-in `ADR` reference prefix; lowercase `adr-…` was already ignored) and common versioned SPDX license identifiers (`MPL-2.0`, `LGPL-2.1`, `CC-BY-4.0`, `GPL-3`, …). Zero-version SPDX ids (`MIT-0`) use `reference_prefixes`.
+- **Project Specification:** the ID scan now skips the sibling ADR standard's ids (built-in `ADR` reference prefix; lowercase `adr-…` was already ignored) and versioned SPDX license identifiers (`MPL-2.0`, `CC-BY-4.0`, `GPL-3.0-only`, `LGPL-2.1-or-later`, …), plus common license-family prefixes for bare colloquial forms like `GPL-3`. Zero-version SPDX ids (`MIT-0`, `NTP-0`) share a spec-local id's shape — declare their family in `reference_prefixes`.
 - **Project Specification:** `SV-ID-UNDECLARED` now names `spec.reference_prefixes` as the resolution instead of dead-ending at Appendix A.
 - **Project Specification:** the §8.3 template `ADR` column models a real `adr-0001-…` example.
 
