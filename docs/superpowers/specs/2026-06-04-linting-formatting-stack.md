@@ -40,7 +40,8 @@
       - [DEC-6 — O4 resolved: **hybrid filename/id (option b)** · ⚠️ **REVISED 2026-06-05 (DEC-6b)**](#dec-6--o4-resolved-hybrid-filenameid-option-b---revised-2026-06-05-dec-6b)
       - [DEC-7 — S1 resolved: CI uses **`markdownlint-cli2-action@v23`** (refines DEC-3)](#dec-7--s1-resolved-ci-uses-markdownlint-cli2-actionv23-refines-dec-3)
       - [DEC-8 — S2 resolved: **separate opt-in reusable workflow** `lint-markdown.yml`](#dec-8--s2-resolved-separate-opt-in-reusable-workflow-lint-markdownyml)
-      - [DEC-9 — Prettier is the repo's **formatter**, repo-local and not shipped (2026-06-05)](#dec-9--prettier-is-the-repos-formatter-repo-local-and-not-shipped-2026-06-05)
+      - [DEC-9 — Prettier is the repo's **formatter**, repo-local and not shipped (2026-06-05) — SUPERSEDED by DEC-10 (2026-07-06)](#dec-9--prettier-is-the-repos-formatter-repo-local-and-not-shipped-2026-06-05--superseded-by-dec-10-2026-07-06)
+      - [DEC-10 — Prettier promoted to a shipped, enforceable reusable artifact (2026-07-06)](#dec-10--prettier-promoted-to-a-shipped-enforceable-reusable-artifact-2026-07-06)
     - [D4 — ADR filename + id convention (O4)](#d4--adr-filename--id-convention-o4)
     - [D5 — ✅ RESOLVED: target MADR 4.0 (see DEC-1)](#d5---resolved-target-madr-40-see-dec-1)
   - [5. Dependency / requirements summary](#5-dependency--requirements-summary)
@@ -394,7 +395,9 @@ The MADR section-presence + chosen-option checks live only in the extension (edi
 - **Versioning:** new reusable workflow = additive → minor; it joins the versioned shipped surface (standard + schema + validator + workflow**s**).
 - **Re-eval trigger:** if essentially all consumers adopt both, consider a combined umbrella workflow that calls both — without removing the standalone ones.
 
-#### DEC-9 — Prettier is the repo's **formatter**, repo-local and not shipped (2026-06-05)
+#### DEC-9 — Prettier is the repo's **formatter**, repo-local and not shipped (2026-06-05) — SUPERSEDED by DEC-10 (2026-07-06)
+
+> **Superseded (2026-07-06):** the "not shipped / no reusable workflow" clause is reversed by DEC-10. Prettier is now a shipped, opt-in enforceable artifact. Rationale below retained as history.
 
 Added outside the 2026-06-04 DEC-1…8 scope; formalized here so the formatting layer is trailed like the rest.
 
@@ -409,6 +412,10 @@ Added outside the 2026-06-04 DEC-1…8 scope; formalized here so the formatting 
 - **Quote tiebreaker:** `*.md singleQuote: true` makes single quotes the canonical frontmatter quote style; the standard allows either and the validator is quote-agnostic, so this is a formatting convention, not a schema rule.
 - **Versioning:** Prettier is dev tooling, not part of the versioned consumer contract — `.prettierrc.json` changes cannot fail a previously-passing consumer (consumers don't run our Prettier). Out of the standard/schema/validator/workflows versioning surface.
 - **Re-eval triggers:** (a) a Prettier-vs-markdownlint conflict on a rule we cannot disable; (b) adopting SPL (revisit `proseWrap`); (c) demand for a _consumer-facing_ formatting standard — then ship a Prettier config + guidance as a new published artifact (a separate decision), rather than quietly widening this repo-local one.
+
+#### DEC-10 — Prettier promoted to a shipped, enforceable reusable artifact (2026-07-06)
+
+- **Chosen:** ship Prettier enforcement to consumers. `format.yml` gains `workflow_call` (dual-role) and a bundle caller `format.caller.yml` is adopted opt-in; it enforces `prettier --check .` repo-wide, pinned to `3.8.3`, with a `prettier: false` job-level opt-out. Supersedes DEC-9's repo-local/not-shipped clause. Additive (opt-in) ⇒ MINOR release; contract `markdown_tooling 1.0 → 1.1`. Resolves issue #3 F5.
 
 ### D4 — ADR filename + id convention (O4)
 
@@ -486,7 +493,7 @@ All six original questions are resolved (2026-06-04):
 - **S1** ✅ → CI uses `markdownlint-cli2-action@v23`; no committed Node project (DEC-7).
 - **S2** ✅ → separate opt-in reusable workflow `lint-markdown.yml` (DEC-8).
 
-**Nothing left open.** All nine decisions (DEC-1…DEC-9) are made and trailed. (DEC-9 — the Prettier formatter layer — was added 2026-06-05, outside the original eight.)
+**Nothing left open.** All ten decisions (DEC-1…DEC-10) are made and trailed. (DEC-9 — the Prettier formatter layer — was added 2026-06-05, outside the original eight; DEC-10 — 2026-07-06 — promoted Prettier to a shipped, opt-in reusable gate, superseding DEC-9's repo-local/not-shipped clause.)
 
 ### Implementation backlog (decisions made; edits NOT yet applied — still gather/decide mode)
 

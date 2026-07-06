@@ -29,7 +29,7 @@ license: null
 
 # Markdown Tooling Standard
 
-- **Status:** Source-checked standard, contract version `1.0` (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see [`meta/versioning.md`](../../meta/versioning.md))
+- **Status:** Source-checked standard, contract version `1.1` (a copy-adopted label; selected by consumers via `markdown_tooling.version` — see [`meta/versioning.md`](../../meta/versioning.md))
 - **Owner:** Project standards / repository template
 - **Last updated:** 2026-07-05
 - **Last source check:** 2026-06-07
@@ -129,7 +129,7 @@ Policy decision: work over these file types is not complete until the check cont
 
 | Tool | Source-backed basis | Policy |
 | --- | --- | --- |
-| **Prettier** | Opinionated formatter; reads `.prettierrc.json` discovered up the file tree, supports per-file `overrides`, and recursively formats all supported files via `prettier .`. [S01], [S02] | Prettier owns physical formatting of all the structured-text it supports (`md`/`json`/`jsonc`/`yaml` here). Copy-adopt config; **no** reusable workflow (DEC-9: Prettier is repo-local tooling, not a shipped/enforced artifact). |
+| **Prettier** | Opinionated formatter; reads `.prettierrc.json` discovered up the file tree, supports per-file `overrides`, and recursively formats all supported files via `prettier .`. [S01], [S02] | Prettier owns physical formatting of all the structured-text it supports (`md`/`json`/`jsonc`/`yaml` here). Copy-adopt config **plus** a reusable opt-in workflow (`format.yml` + `format.caller.yml`; DEC-10) that enforces `prettier --check .` repo-wide. |
 | **`markdownlint-cli2`** | Markdown linter that auto-discovers `.markdownlint-cli2.jsonc` / `.markdownlint.json` up the tree, accepts globs on the CLI, honors `gitignore`, and applies `--fix` in place. [S03], [S04] | markdownlint owns Markdown-only structural linting. The rule set (`.markdownlint.json`) is the seedable artifact. |
 | **`markdownlint-cli2-action`** | GitHub Action running on its own bundled **Node 24** (`using: node24`) [S06]; globs newline-delimited, default glob the non-recursive `*.{md,markdown}`, pinned by major tag (`@v23`) [S05]. | The reusable CI surface for the linter half. Pin the action by major tag; pass `globs` explicitly. |
 | **EditorConfig** | Cross-editor style file; `root = true` stops the upward search; supports `charset`, `end_of_line`, `indent_style`/`indent_size`, `insert_final_newline`, `trim_trailing_whitespace`; `[glob]` sections match by filepath. [S07] | The floor under both tools. Recommended copy. |
@@ -140,17 +140,17 @@ Node-runtime note: **no committed Node project is required for the linter.** Git
 
 ## 5. Published vs repo-local artifacts
 
-The two halves of this standard ship asymmetrically (DEC-9).
+Both halves of this standard now ship a reusable workflow (DEC-10); the remaining asymmetry is only which config is a copy-adopt seed.
 
 | Artifact | Role | Shipped to consumers? |
 | --- | --- | --- |
 | `.markdownlint.json` | The markdownlint **rule set** | ✅ Yes — the seedable artifact a consumer copies. |
 | `.github/workflows/lint-markdown.yml` | Reusable markdownlint **workflow** (`@v4`) | ✅ Yes — callable via `workflow_call`. |
-| `.prettierrc.json` | Prettier **config** | ❌ Copy-adopt only — no reusable workflow. |
-| `.github/workflows/format.yml` | This repo's **repo-local** Prettier CI | ❌ Not reusable; dogfood only. |
+| `.prettierrc.json` | Prettier **config** | ✅ Copy-adopt config, enforced via the reusable `format.yml`. |
+| `.github/workflows/format.yml` | Reusable Prettier **workflow** (`@v4`) | ✅ Yes — dual-role, callable via `workflow_call` (opt-in `format.caller.yml`). |
 | `.markdownlint-cli2.jsonc` | **Repo-local** runner config (`globs`, `gitignore`) | ❌ Never shipped — controls which files a bare local run lints. |
 
-Policy decision (DEC-9): the markdownlint rule set ships **and** has a reusable workflow; Prettier is **copy-adopt with no reusable workflow**. A consumer who wants Prettier CI wires their own job (like this repo's `format.yml`). `.markdownlint-cli2.jsonc` exists so a bare `npx markdownlint-cli2` locally matches CI (same files, `.gitignore` honored) — it is not part of the published standard; the artifact consumers seed is `.markdownlint.json`, which `markdownlint-cli2` auto-merges [S03].
+Policy decision (DEC-10): both the markdownlint rule set and the Prettier config ship, and **both** now have a reusable workflow (`lint-markdown.yml`, `format.yml`). Prettier enforcement is opt-in — adopt `format.caller.yml` (or `uses: …/format.yml@v4`), and set `prettier: false` to defer it (the whole job skips). `.markdownlint-cli2.jsonc` exists so a bare `npx markdownlint-cli2` locally matches CI (same files, `.gitignore` honored) — it is not part of the published standard; the artifact consumers seed is `.markdownlint.json`, which `markdownlint-cli2` auto-merges [S03].
 
 ---
 
@@ -204,7 +204,7 @@ The load-bearing values:
 
 Prettier discovers this file by searching up the tree from each formatted file; `.prettierrc.json` is one of the recognized names [S02].
 
-Policy decision (DEC-9): `.prettierrc.json` is a **copy-adopt scaffold**, not a shipped or enforced artifact. Copy it, pin Prettier reproducibly, and (optionally) wire your own Prettier CI. This standard recommends it and documents its values, but ships no Prettier workflow.
+Policy decision (DEC-10): `.prettierrc.json` is a copy-adopt config **and** Prettier is now a shipped, enforceable artifact via the opt-in reusable `format.yml` (adopted as `format.caller.yml`, pinned Prettier `3.8.3`, `prettier: false` to defer). Copy the config, then enforce it in CI by adopting the workflow — no hand-rolled Prettier job needed. (Supersedes DEC-9's "copy-adopt scaffold, not shipped or enforced" clause.)
 
 ---
 
@@ -307,6 +307,8 @@ Format-on-save is enabled (for Prettier) only on `[markdown]` — this standard'
 
 Policy decision: editor tooling must not create overlapping authorities for the same concern. Prettier is the format authority for these file types across VS Code, CLI, and CI; markdownlint is the diagnostics authority. There is no markdownlint fix-on-save code action in this standard.
 
+Both authorities are CI-enforceable, neither advisory-only: markdownlint is authoritative over Markdown body structure (enforced via `lint-markdown.yml`), and Prettier is authoritative over physical formatting of every supported file (enforced via the opt-in `format.yml`; DEC-10).
+
 ---
 
 ## 11. CI reusable workflow
@@ -328,7 +330,7 @@ jobs:
 
 Pin `@v4` (the current major), **not** `@v1`: this workflow first ships in the locked `2.0.0` release, so no `uses:` ref should point at a tag that predates the workflow (see `meta/versioning.md` §"Consuming").
 
-The linter is deliberately separate from the frontmatter-validation workflow (DEC-8): a frontmatter-only consumer never inherits a Node/markdownlint toolchain. And Prettier ships **no** reusable workflow (DEC-9) — a consumer wanting Prettier CI wires their own job.
+The linter is deliberately separate from the frontmatter-validation workflow (DEC-8): a frontmatter-only consumer never inherits a Node/markdownlint toolchain. Prettier now **also** ships a reusable workflow (`format.yml`, DEC-10) — dual-role and adopted opt-in via `format.caller.yml`; set `prettier: false` to defer enforcement (the whole job skips).
 
 ---
 
