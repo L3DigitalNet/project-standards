@@ -1,37 +1,23 @@
 name: Format
 
-# Repo-local dev gate: enforces Prettier formatting on every Prettier-supported
-# file. Distinct from lint-markdown.yml (markdownlint, reusable for consumers) —
-# Prettier is this repo's own formatter (a committed dev dependency, see
-# package.json), NOT part of the published standard, so this workflow is not
-# reusable and installs from the committed lockfile. Prettier honors .gitignore,
-# so .venv/ and caches are skipped without extra config.
+# Dual-role: this repo's own Prettier dogfood (direct push/PR) AND the reusable
+# formatter gate consumers adopt via markdown-tooling's format.caller.yml. Runs
+# repo-wide `prettier --check .` (Prettier's own scope: md/json/jsonc/yaml),
+# honoring the caller's .prettierignore/.gitignore. Prettier is pinned inline via
+# npx because a consumer checkout has no package.json/lockfile to `npm ci` from;
+# the pin mirrors this repo's package.json (the SSOT). Supersedes DEC-9's
+# "repo-local, not shipped" clause (see DEC-10).
 on:
   push:
     branches: ["main"]
-    paths:
-      - "**/*.md"
-      - "**/*.json"
-      - "**/*.jsonc"
-      - "**/*.yml"
-      - "**/*.yaml"
-      - "**/*.code-workspace"
-      - ".prettierrc.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/format.yml"
   pull_request:
-    paths:
-      - "**/*.md"
-      - "**/*.json"
-      - "**/*.jsonc"
-      - "**/*.yml"
-      - "**/*.yaml"
-      - "**/*.code-workspace"
-      - ".prettierrc.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/format.yml"
+  workflow_call:
+    inputs:
+      prettier:
+        description: "Run the Prettier check. Set false to defer enforcement (whole job skips)."
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -39,8 +25,12 @@ permissions:
 jobs:
   prettier:
     name: Prettier
+    # Whole-job gate (SA-NEW-003): opting out skips checkout/setup-node too, so a
+    # deferring consumer gets a clean pass with no setup failure surface. String-
+    # safe comparison (SA-001): a typed boolean `false` must not coerce-compare
+    # unequal to the string 'false'; format() stringifies it deterministically.
+    if: ${{ format('{0}', inputs.prettier) != 'false' }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -49,10 +39,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
+          # No `cache: npm`: a consumer checkout has no lockfile to key the cache on.
 
-      - name: Install pinned Prettier
-        run: npm ci
-
-      - name: Check formatting
-        run: npx prettier --check .
+      - name: Check formatting (Prettier)
+        run: npx --yes prettier@3.8.3 --check . # pin mirrors package.json (SSOT)

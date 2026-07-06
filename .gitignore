@@ -22,3 +22,9 @@ node_modules/
 
 # Editor/backup snapshots (never tracked)
 *.bak
+
+# Superpowers subagent-driven-development scratch (machine-generated task briefs/
+# reports). A nested .superpowers/sdd/.gitignore already hides these from git, but
+# Prettier only reads the root ignore files — declaring the dir here keeps the
+# repo-wide `prettier --check .` gate green on these local-only transcripts.
+.superpowers/
