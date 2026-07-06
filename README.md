@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds an optional reusable lint workflow), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds optional reusable lint and format workflows), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -82,7 +82,7 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 
 ### Markdown Tooling Standard
 
-The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The tool-specific complement to the tool-neutral Frontmatter standard; markdownlint ships a reusable workflow + seedable rule set, while Prettier is copy-adopt (no workflow).
+The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The tool-specific complement to the tool-neutral Frontmatter standard; markdownlint ships the reusable `lint-markdown.yml` + a seedable rule set, and Prettier ships the opt-in reusable `format.yml` alongside its copy-adopt config (since `@v4.x`).
 
 - **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
@@ -126,9 +126,9 @@ No config or workflow — copy the in-doc scaffolds and run the verification gat
 
 ### Markdown Tooling
 
-Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v4` workflow. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
+Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v4` and `format.yml@v4` workflows. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
 
-> **Availability:** `lint-markdown.yml` is available since `@v2`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
+> **Availability:** `lint-markdown.yml` is available since `@v2`; the opt-in `format.yml` since `@v4.x`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
 
 ### Project Specification
 
