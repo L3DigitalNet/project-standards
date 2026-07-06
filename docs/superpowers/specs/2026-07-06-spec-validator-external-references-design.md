@@ -1,6 +1,6 @@
 # Design: spec-validator external references & token hygiene (issue #3, F1–F4)
 
-**Date:** 2026-07-06 **Status:** brainstorming complete — awaiting user spec review **Author:** session 2026-07-06
+**Date:** 2026-07-06 **Status:** codex spec-review round 1 applied (SA-001…004 resolved) — awaiting user spec review **Author:** session 2026-07-06
 
 ## Table of Contents
 
@@ -12,7 +12,7 @@
   - [Root cause — one missing abstraction](#root-cause--one-missing-abstraction)
   - [Component 1 — Config: `spec.reference_prefixes`](#component-1--config-specreference_prefixes)
   - [Component 2 — The skip set (built-ins + config + shape rules)](#component-2--the-skip-set-built-ins--config--shape-rules)
-  - [Component 3 — Wiring the skip set into the scan](#component-3--wiring-the-skip-set-into-the-scan)
+  - [Component 3 — Wiring the skip set into every ID-consuming command](#component-3--wiring-the-skip-set-into-every-id-consuming-command)
   - [Component 4 — Error message (F2's misleading chain)](#component-4--error-message-f2s-misleading-chain)
   - [Component 5 — Docs & template (F1)](#component-5--docs--template-f1)
   - [Invariants — what must NOT change](#invariants--what-must-not-change)
@@ -29,13 +29,13 @@ The validator's job is to enforce that a spec's **own, mintable** requirement ID
 
 ## Scope
 
-Single subsystem: `src/project_standards/specs/` — `config.py` (config surface), `registry.py` (the token regex, the built-in denylist), `document.py` (the ID scan), `commands/validate.py` (the ID checks and their messages) — plus the shipped `spec-full-template.md` and the `standards/project-spec/README.md` docs. No CLI-surface change, no new command, no registry/template _contract_ change (canonical sections, appendices, frontmatter keys, and spec-local ID width all stay fixed).
+Single subsystem: `src/project_standards/specs/` — `config.py` (config surface), `registry.py` (the token regex, the built-in denylist), `document.py` (the ID scan), `commands/validate.py` (the ID checks and their messages), `cli.py` (the command wiring) — plus both `spec-full-template.md` copies and the `standards/project-spec/README.md` docs. The only CLI-surface change is _additive_: an optional `--config` flag is added to `extract`, `next`, and `upgrade` (defaulting to `.project-standards.yml`, matching the existing `validate`/`lint`/`new` flag) so those commands parse IDs the same config-aware way — no new command, no changed flag semantics, no changed default behavior. No registry/template _contract_ change (canonical sections, appendices, frontmatter keys, and spec-local ID width all stay fixed).
 
 ## Decisions (locked during brainstorming)
 
 1. **F2 mechanism:** a config key `spec.reference_prefixes` (not an in-document Appendix-A marker). External namespaces are repo-wide conventions, so repo-level config is their natural home; this extends the existing `SpecConfig` (already `include`/`exclude`) and leaves the versioned Appendix-A template contract untouched.
 2. **F1 (ADR):** ship `ADR` as a _built-in_ reference prefix (always exempt, zero config) _and_ fix docs. Both `adr-0001-…` (the ADR standard's canonical lowercase form, already passing) and the tempting uppercase `ADR-0001` validate out of the box, so the shipped template's `ADR` column just works.
-3. **F4 (licenses):** a zero-config pair — skip tokens whose digits are immediately followed by `.`+digit (versioned SPDX/version strings), _and_ broaden the built-in `NOT_AN_ID` denylist with common SPDX family prefixes. No new config key.
+3. **F4 (licenses):** a **scoped** zero-config promise, not blanket SPDX coverage. Zero-config handles the _common_ shapes — skip tokens whose digits are immediately followed by `.`+digit (versioned SPDX/version strings such as `MPL-2.0`, `LGPL-2.1`, `CC-BY-4.0`), _and_ broaden the built-in `NOT_AN_ID` denylist with common family prefixes (`GPL LGPL AGPL MPL BSD EPL BY`). Zero-version SPDX ids that share the exact spec-local shape (`MIT-0`, `NTP-0`) are deliberately _not_ chased with an unbounded denylist — the consumer lists that family in `spec.reference_prefixes` (the general escape hatch, since `MIT`/`NTP` are valid reference prefixes). No new config key.
 4. **F3 (width):** _subsumed_, not a feature. Referenced IDs of any width validate because they are skipped entirely; spec-local IDs keep the fixed 3-digit (`MS`=1) contract. There is no per-prefix width setting.
 
 ## Root cause — one missing abstraction
@@ -62,9 +62,22 @@ A token is **skipped** (not recorded in `used_ids`, so it faces none of `SV-ID-F
 
 The dot rule is safe against real IDs: a spec-local ID at a sentence boundary (`…see FR-007.`) is followed by `.`+whitespace, never `.`+digit, so it is never skipped; `MPL-2.0` (`.`+`0`) is. The `BY` entry handles `CC-BY-4.0`, which `ID_TOKEN` tokenizes as `BY-4` (the `CC-` fragment has no adjacent digit). `ADR` is a distinct built-in _reference_ constant, kept separate from `NOT_AN_ID` so the two intents (a non-ID acronym vs. a real ID in another namespace) stay legible.
 
-## Component 3 — Wiring the skip set into the scan
+## Component 3 — Wiring the skip set into every ID-consuming command
 
-The scan needs the config-derived reference prefixes, which `registry.py` (template-only, no config) must not import. Cleanest seam: `parse_document` in `document.py` gains an optional parameter `reference_prefixes: frozenset[str] = frozenset()`. The `validate` and `lint` commands pass the value resolved from `SpecConfig`; `new`'s best-effort corpus parse (which only needs `spec_id`s) passes the default empty set. Inside the scan loop (`document.py:83`), the existing `if pfx in NOT_AN_ID: continue` becomes a single `_skip(pfx, digits, tail)` predicate covering all four rows of the table above. Built-in prefix constants (`NOT_AN_ID`, and a new `BUILTIN_REFERENCE_PREFIXES = frozenset({"ADR"})`) stay in `registry.py` as the zero-config floor; the config layer only _adds_ to them.
+The scan needs the config-derived reference prefixes, which `registry.py` (template-only, no config) must not import. Cleanest seam: `parse_document` in `document.py` gains an optional parameter `reference_prefixes: frozenset[str] = frozenset()`. Inside the scan loop (`document.py:83`), the existing `if pfx in NOT_AN_ID: continue` becomes a single `_skip(pfx, digits, tail)` predicate covering all four rows of the table above. Built-in prefix constants (`NOT_AN_ID`, and a new `BUILTIN_REFERENCE_PREFIXES = frozenset({"ADR"})`) stay in `registry.py` as the zero-config floor; the config layer only _adds_ to them.
+
+**Every command that parses body IDs for command semantics must pass the resolved prefixes — not just `validate`/`lint`.** Otherwise a spec that `validate`s clean could still fail a sibling command, which is exactly the contradiction (a valid spec that cannot `upgrade`) SA-001 flagged. The `parse_document` call sites and their treatment:
+
+| Call site (`cli.py`) | Command | Config today | Change |
+| --- | --- | --- | --- |
+| `_run_setwide` (:87) | `validate`/`lint` | has `--config` | pass resolved prefixes |
+| `_run_new` self-check (:370) | `new` | has `--config` | pass resolved prefixes (generated docs rarely carry refs, but keep it consistent) |
+| `_run_extract` (:111) | `extract` | **none** | add `--config`; pass prefixes so referenced ids aren't extracted as spec-local |
+| `_run_next` (:138) | `next` | **none** | add `--config`; pass prefixes so a referenced id can't skew the next-id computation |
+| `_run_upgrade` source + output (:507, :539) | `upgrade` | **none** | add `--config`; pass prefixes to **both** the source validation and the output self-validation |
+| `collect_existing_spec_ids` (`config.py:96`) | `new` corpus | n/a | **no change** — reads `spec_id` from frontmatter only, never body IDs |
+
+Adding `--config` to `extract`/`next`/`upgrade` reuses the existing `_DEFAULT_CONFIG = Path(".project-standards.yml")` default, so the flag is optional and behavior is unchanged when it is absent.
 
 ## Component 4 — Error message (F2's misleading chain)
 
@@ -74,10 +87,21 @@ Today an undeclared external prefix fires `SV-ID-UNDECLARED` ("used but not in A
 
 `SV-ID-TIER` keeps its meaning (a declared prefix used at the wrong tier) but is no longer reachable by mistaking an external reference for a spec-local ID.
 
+**Machine contract:** `--json` serializes each `Finding` via `dataclasses.asdict` (`cli.py:_findings_payload`), so the human `message` string does appear in the payload, but the stable machine key is the `code` (`SV-ID-UNDECLARED`), which is unchanged. Rewording `message` is therefore not a contract break; tests assert on `code` for the machine contract and on the message text only as human-facing output.
+
 ## Component 5 — Docs & template (F1)
 
-- **Template:** seed the `spec-full-template.md` §8.3 Design-Decisions `ADR` column with a real `adr-0001-…` example value, so the column that today invites the wrong uppercase form models the right one.
-- **Standard docs:** in `standards/project-spec/README.md`, document the **namespace split** explicitly — uppercase `PFX-NNN` are mintable, spec-local IDs (Appendix-A-declared, 3-digit); lowercase `adr-…` and any prefix listed in `spec.reference_prefixes` (plus the built-in `ADR`) are external references, exempt from the ID rules. Document the config key, the built-in `ADR`, and the license-token handling so none of this is discoverable only by reading validator source.
+- **Template (both copies):** seed the §8.3 Design-Decisions `ADR` column with a real `adr-0001-…` example value, so the column that today invites the wrong uppercase form models the right one. This lives in **two byte-identical files** — `src/project_standards/specs/templates/spec-full-template.md` (the runtime template `new`/`upgrade` read) and `standards/project-spec/templates/spec-full-template.md` (the published docs copy). Both must change together; `tests/test_spec_packaging.py::test_bundled_template_is_byte_identical` already enforces parity, so editing only one turns CI red — no new parity test is needed, but the plan must edit both.
+- **Standard docs:** in `standards/project-spec/README.md`, document the **namespace split** explicitly — uppercase `PFX-NNN` are mintable, spec-local IDs (Appendix-A-declared, 3-digit); lowercase `adr-…` and any prefix listed in `spec.reference_prefixes` (plus the built-in `ADR`) are external references, exempt from the ID rules. Include a copy-pasteable `.project-standards.yml` snippet:
+
+  ```yaml
+  spec:
+    include:
+      - 'docs/specs/**/*.md'
+    reference_prefixes: ['RQ', 'GAP', 'ADR'] # external namespaces this repo cites but does not mint
+  ```
+
+  Document the config key, the built-in `ADR`, and the **scoped** license-token handling (common shapes zero-config; exotic SPDX ids like `MIT-0` via `reference_prefixes`) so none of this is discoverable only by reading validator source.
 
 ## Invariants — what must NOT change
 
@@ -93,14 +117,16 @@ Test-driven, per the repo's TDD discipline. Unit:
 - `load_spec_config`: parses `reference_prefixes`; rejects bad shape; rejects a canonical-prefix collision; empty/default when absent.
 - Skip set: a config reference prefix, the built-in `ADR`, each new `NOT_AN_ID` family, and the dot rule each cause the token to be absent from `used_ids`; a normal spec-local ID is still recorded.
 - Boundary: `FR-007.` at a sentence end is _not_ skipped (dot rule only fires on `.`+digit).
-- Message: `SV-ID-UNDECLARED` emits the new text; `SV-ID-TIER` still fires for a real tier violation.
+- License scope: `MPL-2.0`, `LGPL-2.1`, `CC-BY-4.0`, `GPL-3` are skipped zero-config; `MIT-0`/`NTP-0` are **not** skipped zero-config but **are** skipped when `MIT`/`NTP` is in `reference_prefixes` (proves the documented escape hatch, honest about the scope boundary).
+- Message: `SV-ID-UNDECLARED` emits the new text (human output); the finding `code` stays `SV-ID-UNDECLARED` in the `--json` payload (machine contract); `SV-ID-TIER` still fires for a real tier violation.
 
-Integration: a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `MPL-2.0`, and `GPL-3` validates clean; the same spec with `RQ-123` _not_ configured fails with the reworded `SV-ID-UNDECLARED`.
+Integration, all ID-consuming commands (not just `validate`): a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `MPL-2.0`, and `GPL-3` `validate`s clean; the same spec with `RQ-123` _not_ configured fails with the reworded `SV-ID-UNDECLARED`. Add a lower-tier fixture containing a configured external reference (`RQ-123` with `spec.reference_prefixes: ["RQ"]`) that both `validate`s and `upgrade`s cleanly — including the upgrade output's self-validation — plus an `extract`/`next` case confirming the referenced id is neither extracted as spec-local nor counted by next-id.
 
 ## Acceptance criteria
 
 - The issue's minimal repro (`spec validate` over a spec citing an ADR, an external ID, and a license id) exits 0 with the documented config.
-- `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit` all green; branch coverage does not regress.
+- A lower-tier spec containing a configured external reference (`RQ-123`, `spec.reference_prefixes: ["RQ"]`) both `validate`s and `upgrade`s cleanly (source + output self-validation), and `extract`/`next` do not treat `RQ-123` as spec-local.
+- `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit` all green; branch coverage stays at or above the configured `fail_under = 85` threshold (measurable via `coverage report`; not a baseline-delta claim).
 - `uv run validate-frontmatter --config .project-standards.yml` and `spec validate` (dogfood) both pass.
 
 ## Non-goals
@@ -112,4 +138,4 @@ Integration: a full-profile spec citing `adr-0001-…`, `RQ-123` (configured), `
 
 ## Versioning & docs impact
 
-A backward-compatible **loosening** plus additive config: specs that failed on F1–F4 now pass, and nothing that passed regresses. Under the repo's per-standard/semantic versioning that is a **minor bump, v4.0.0 → v4.1.0**. The release must update `CHANGELOG.md` ([4.1.0] with the new config key and behavior), the `standards/project-spec/README.md` namespace-split docs, and the `spec-full-template.md` example row. Downstream `@v4` pins pick it up automatically via the moving `v4` tag.
+A backward-compatible **loosening** plus additive config and additive optional CLI flags: specs that failed on F1–F4 now pass, nothing that passed regresses, and the new `--config` on `extract`/`next`/`upgrade` is optional with an unchanged default. Under the repo's per-standard/semantic versioning that is a **minor bump, v4.0.0 → v4.1.0**. The release must update `CHANGELOG.md` ([4.1.0] with the new config key, the `--config` additions, and the token-hygiene behavior), the `standards/project-spec/README.md` namespace-split docs + config example, and the §8.3 example row in **both** `spec-full-template.md` copies. Downstream `@v4` pins pick it up automatically via the moving `v4` tag.
