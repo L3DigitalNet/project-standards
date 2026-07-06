@@ -6,7 +6,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | draft — awaiting user spec review; enforce Prettier on-by-default (MAJOR `v5`, `@v4` frozen) + repo-local config-coherence gate |
+| Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | codex-converged (spec r5, "no significant findings"); ship opt-in reusable repo-wide Prettier gate (supersedes DEC-9; additive ⇒ MINOR, `markdown_tooling 1.1`, `v4.x`) + repo-local coherence tool — awaiting user spec review |
 | spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | codex-converged (spec r3); plan implemented on `testing` (`1341dc0..84c0054`), **v4.1.0 prepared, release deferred** |
 | spec-validator external references plan | `docs/superpowers/plans/2026-07-06-spec-validator-external-references.md` | codex-converged (plan r2); implemented on `testing`, whole-branch review READY-TO-MERGE |
 | project-spec tooling Spec #1 design | `docs/superpowers/specs/2026-07-04-project-spec-tooling-design.md` | approved (codex r2); plan implemented (`2a6c4c0`) |

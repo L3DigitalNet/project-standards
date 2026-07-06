@@ -13,6 +13,6 @@ Design documents and brainstorming outputs for `project-standards`. Each spec ca
 | 2026-06-08 | [Adopt CLI](2026-06-08-adopt-cli-design.md) | approved | The `project-standards adopt \| list` CLI — packaged scaffolder for materializing standard artifacts into target repos |
 | 2026-06-08 | [Check / Drift Detection](2026-06-08-check-drift-design.md) | approved | The `project-standards check` command — detect drift between adopted artifacts and the canonical bundle |
 | 2026-07-04 | [Project-Spec Tooling — Spec #1](2026-07-04-project-spec-tooling-design.md) | approved | The `project-standards spec validate \| lint \| extract \| next` read-only commands over a shared registry core; retires `check_specs.py` |
-| 2026-07-06 | [Markdown-Tooling Formatter Authority (F5, Spec B)](2026-07-06-markdown-tooling-formatter-authority-design.md) | draft | Enforce Prettier on-by-default in the reusable Markdown gate (MAJOR `v5`, `@v4` frozen), document formatter authority + `proseWrap`, add a repo-local config-coherence tool |
+| 2026-07-06 | [Markdown-Tooling Formatter Authority (F5, Spec B)](2026-07-06-markdown-tooling-formatter-authority-design.md) | codex-converged (r5) | Ship an opt-in reusable repo-wide Prettier gate (`format.yml` + caller), superseding DEC-9; document formatter authority + `proseWrap`; add a repo-local config-coherence tool. Additive ⇒ MINOR (`markdown_tooling 1.1`) |
 
 Implementation plans for these specs live in [`../plans/`](../plans/).
