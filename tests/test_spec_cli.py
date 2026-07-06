@@ -92,3 +92,13 @@ def test_validate_honors_reference_prefixes(tmp_path: Path) -> None:
     assert run(["validate", str(spec)]) == 1
     # With RQ declared as an external reference, the file is clean again.
     assert run(["validate", str(spec), "--config", str(cfg)]) == 0
+
+
+def test_validate_malformed_reference_prefixes_exits_2(tmp_path: Path) -> None:
+    """ConfigError from malformed reference_prefixes maps to exit 2."""
+    spec = tmp_path / "s.md"
+    spec.write_text((_FIX / "valid_light.md").read_text(encoding="utf-8"), encoding="utf-8")
+    cfg = tmp_path / ".project-standards.yml"
+    # FR is a canonical spec-local prefix; listing it raises ConfigError.
+    cfg.write_text("spec:\n  include: ['s.md']\n  reference_prefixes: ['FR']\n", encoding="utf-8")
+    assert run(["validate", str(spec), "--config", str(cfg)]) == 2
