@@ -38,8 +38,9 @@ SPLIT: list[Concern] = [
     Concern(
         "emphasis-style",
         "markdownlint",
-        lambda ml, pr: ml.get("MD049") == {"style": "underscore"}
-        and ml.get("MD050") == {"style": "asterisk"},
+        lambda ml, pr: (
+            ml.get("MD049") == {"style": "underscore"} and ml.get("MD050") == {"style": "asterisk"}
+        ),
         "markdownlint pins _italic_/**bold**; Prettier's defaults agree.",
     ),
     Concern(

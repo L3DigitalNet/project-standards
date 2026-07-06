@@ -1268,8 +1268,9 @@ def test_main_broken_registry_does_not_break_unversioned_runs(
 
 def test_registry_exposes_markdown_tooling() -> None:
     reg = load_registry()
-    assert reg.markdown_tooling_default == "1.0"
+    assert reg.markdown_tooling_default == "1.1"
     assert reg.is_known_markdown_tooling("1.0") is True
+    assert reg.is_known_markdown_tooling("1.1") is True
     assert reg.is_known_markdown_tooling("9.9") is False
 
 
