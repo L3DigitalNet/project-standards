@@ -6,6 +6,8 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
+| spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | codex-converged (spec r3); plan implemented on `testing` (`1341dc0..84c0054`), **v4.1.0 prepared, release deferred** |
+| spec-validator external references plan | `docs/superpowers/plans/2026-07-06-spec-validator-external-references.md` | codex-converged (plan r2); implemented on `testing`, whole-branch review READY-TO-MERGE |
 | project-spec tooling Spec #1 design | `docs/superpowers/specs/2026-07-04-project-spec-tooling-design.md` | approved (codex r2); plan implemented (`2a6c4c0`) |
 | project-spec tooling Spec #2 design (`new` scaffold) | `docs/superpowers/specs/2026-07-04-project-spec-tooling-spec2-design.md` | approved (codex r2); plan implemented (`8d48c22`) |
 | project-spec tooling Spec #3 design (`upgrade` tier promotion) | `docs/superpowers/specs/2026-07-05-project-spec-tooling-spec3-design.md` | approved (codex r3); plan implemented (`testing`) |
