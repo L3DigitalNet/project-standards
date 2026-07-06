@@ -1,0 +1,33 @@
+name: Coherence
+
+# Behavioral proof that the shipped .markdownlint.json and .prettierrc.json are
+# co-satisfiable (markdownlint accepts Prettier's output). Needs Node (the
+# hermetic declaration/pin checks ride the normal `check` job instead).
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  coherence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.6"
+          enable-cache: true
+      - run: uv sync --locked --all-groups
+      - name: Behavioral coherence (Prettier output passes markdownlint)
+        run: uv run pytest tests/coherence -v
