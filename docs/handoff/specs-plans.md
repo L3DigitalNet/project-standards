@@ -1,11 +1,13 @@
 # Specs And Plans
 
-**Last updated:** 2026-07-05
+**Last updated:** 2026-07-07
 
 > **Plan prune (2026-07-05, v4.0.0 prep):** implemented plan docs and the `v1.1.0/` planning archive were deleted — their designs live on as the durable record in `docs/superpowers/specs/`. Only the still-pending `check` drift plan remains under `docs/superpowers/plans/`. Rows below point to the retained specs; each design's implementation status (shipped release / commit) is recorded in `CHANGELOG.md` and `docs/superpowers/specs/README.md`.
 
 | Item | Path | Status |
 | --- | --- | --- |
+| CLI Documentation standard design | `docs/superpowers/specs/2026-07-07-cli-documentation-standard-design.md` | approved (codex r3); plan implemented via SDD, executing on `testing` |
+| CLI Documentation standard plan | `docs/superpowers/plans/2026-07-07-cli-documentation-standard.md` | executing via SDD (Task 12 of 13) |
 | Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | **RELEASED in `v4.2.0`** (opt-in reusable Prettier gate; `markdown_tooling 1.1`; DEC-9→DEC-10) |
 | Markdown-Tooling formatter authority (Spec B) plan | `docs/superpowers/plans/2026-07-06-markdown-tooling-formatter-authority.md` | **RELEASED in `v4.2.0`** — 10-task TDD plan implemented via executing-plans + scoped opus review (0 Critical/Important); + `tests/coherence/` tool |
 | spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | **RELEASED in `v4.1.0`** (`spec.reference_prefixes` + token hygiene) |

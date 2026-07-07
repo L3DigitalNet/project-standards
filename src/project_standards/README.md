@@ -2,6 +2,8 @@
 
 This is the Python package that ships the validator, adopt engine, bundled schemas, and standard bundles for the **project-standards** tool suite.
 
+**Usage reference:** user-facing CLI documentation lives in [`docs/usage.md`](../../docs/usage.md); this file documents implementation internals.
+
 ---
 
 ## Table of Contents
@@ -43,6 +45,8 @@ Console scripts registered by `pyproject.toml`:
 | `validate-id [FLAGS] [FILE …]` | `validate_id.py` | Validate `id` field format per `doc_type` |
 | `validate-references [FLAGS]` | `validate_references.py` | Cross-file checks (id uniqueness, referential integrity, etc.) |
 | `format-frontmatter [FLAGS] [FILE …]` | `format_frontmatter.py` | Reformat frontmatter (canonical key order, quoting, transforms) |
+
+All seven installed console scripts (the five above plus the internal `sync-vscode-colors` and `sync-standards-include` maintenance scripts — see [Module map](#module-map)) support both `--help` and `--version`, the latter via the shared `_version.py` helper. See [`docs/usage.md`](../../docs/usage.md) for the full user-facing usage reference this repo dogfoods under the CLI Documentation standard.
 
 `project-standards validate` is an early-dispatch command that forwards its full argv to `validate_frontmatter.main()`, `validate_id.main()`, and `validate_references.main()` and returns the worst exit code so no validator's errors are masked by another's success. `validate-references` self-gates on `references_enabled` — it exits 0 immediately unless the repo has opted in via `.project-standards.yml`.
 
@@ -279,7 +283,8 @@ src/project_standards/
     ├── adr/                   # ADR standard bundle
     ├── markdown-frontmatter/  # Markdown Frontmatter standard bundle
     ├── markdown-tooling/      # Markdown Tooling standard bundle
-    └── python-tooling/        # Python Tooling standard bundle
+    ├── python-tooling/        # Python Tooling standard bundle
+    └── cli-documentation/     # CLI Documentation standard bundle
 ```
 
 ---
@@ -312,7 +317,7 @@ The registry encodes the two-plane versioning model:
 
 - **Frontmatter** — maps contract version labels (`"1.0"`, `"1.1"`) to bundled schema file names; one label is the `default` used when no version is pinned.
 - **ADR** — each ADR contract version declares `supports_frontmatter: […]`, the Frontmatter versions it is compatible with. The validator enforces this at config load time.
-- **Python Tooling / Markdown Tooling** — flat lists of known label versions; validated as metadata only (never used to select a schema).
+- **Python Tooling / Markdown Tooling / CLI Documentation** — flat lists of known label versions; validated as metadata only (never used to select a schema).
 
 `cli.py` asserts at startup that the set of bundles and the set of registry-tracked standards are identical in both directions (bundle-only or registry-only → exit 2).
 
@@ -349,6 +354,9 @@ python_tooling:
   version: '1.0' # metadata only; validated but not used to select a schema
 
 markdown_tooling:
+  version: '1.0' # metadata only; validated but not used to select a schema
+
+cli_documentation:
   version: '1.0' # metadata only; validated but not used to select a schema
 ```
 

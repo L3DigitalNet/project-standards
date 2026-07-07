@@ -9,6 +9,7 @@ This directory holds the **governing standards** this repository defines. Each s
 | Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
+| CLI Documentation | User-facing CLI usage docs: help text, usage references, man pages, CI drift checks | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | [python-coding/](python-coding/) | — (**in-development draft**, reference-only; not yet released for adoption) |
 
 ## Table of Contents
@@ -27,7 +28,8 @@ standards/<standard-id>/
 ├── README.md      # REQUIRED — the governing standard itself
 ├── adopt.md       # REQUIRED — how to adopt this standard
 ├── templates/     # OPTIONAL — copy-paste scaffolds (placeholders; not frontmatter-validated)
-└── examples/      # OPTIONAL — validated worked examples (real frontmatter; dogfooded)
+├── examples/      # OPTIONAL — validated worked examples (real frontmatter; dogfooded)
+└── resources/     # OPTIONAL — rationale/research notes (validated) — see project-spec/, cli-documentation/
 ```
 
 A standard may be doc-only (`README.md` + `adopt.md`, no `templates/` or `examples/`) — see [markdown-tooling/](markdown-tooling/), or [python-tooling/](python-tooling/) which adds a [`build-backend.md`](python-tooling/build-backend.md) appendix. A standard with no materializeable artifacts and no adoption workflow has only a `README.md` — currently just [python-coding/](python-coding/), which ships as an **in-development draft**: reference-only, unregistered (no contract version), and excluded from frontmatter validation until released.

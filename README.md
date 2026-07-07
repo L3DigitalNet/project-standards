@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling** and **Markdown Tooling** standards by copying their scaffolds (Markdown Tooling adds optional reusable lint and format workflows), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling**, **Markdown Tooling**, and **CLI Documentation** standards by copying their scaffolds (Markdown Tooling adds optional reusable lint and format workflows; CLI Documentation adds a copy-adopted CI drift check), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -16,12 +16,14 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [Python Tooling SSOT Standard](#python-tooling-ssot-standard)
     - [Markdown Tooling Standard](#markdown-tooling-standard)
     - [Project Specification Standard](#project-specification-standard)
+    - [CLI Documentation Standard](#cli-documentation-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
   - [Consuming the standards](#consuming-the-standards)
     - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
     - [Python Tooling SSOT](#python-tooling-ssot)
     - [Markdown Tooling](#markdown-tooling)
     - [Project Specification](#project-specification)
+    - [CLI Documentation](#cli-documentation)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
@@ -38,6 +40,7 @@ project-standards/
 │   ├── python-tooling/        #   standard + adopt (doc-only)
 │   ├── markdown-tooling/      #   standard + adopt (doc-only)
 │   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
+│   ├── cli-documentation/     #   standard + adopt + templates/ + examples/ + resources/
 │   └── python-coding/         #   draft standard (reference-only; README only)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
@@ -94,6 +97,13 @@ Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed I
 - **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
 - **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
 
+### CLI Documentation Standard
+
+User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and the CI checks that catch drift between them. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape, from a single-file script's `--help` + compact README up to per-command generated pages for large multi-command tools. Copy-adopt like Markdown Tooling: seed `docs/usage.md` and the `cli-docs-check.yml` workflow via `project-standards adopt cli-documentation`.
+
+- **Standard:** [`standards/cli-documentation/README.md`](standards/cli-documentation/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/adopt.md)
+
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
@@ -102,7 +112,7 @@ Code-shape and agent-behavior rules for Python — the reference companion to th
 
 ## Consuming the standards
 
-How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, and **Project Specification** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
+How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, **Project Specification**, and **CLI Documentation** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
@@ -133,6 +143,10 @@ Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt in
 ### Project Specification
 
 Add a `spec:` block to `.project-standards.yml` declaring which files are project specs, then optionally call the reusable `validate-specs.yml@v4` workflow (same pinning rules as the Markdown standards). Available from `v4.0.0` onward — no earlier tag carries the standard or its workflow. See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
+
+### CLI Documentation
+
+Copy-adopt like Markdown Tooling: select a profile (Script/Packaged/Packaged-deep), then run `project-standards adopt cli-documentation` to materialize a `docs/usage.md` scaffold and the `cli-docs-check.yml` drift-check workflow, plus a `cli_documentation:` config fragment to paste into `.project-standards.yml`. See [`standards/cli-documentation/adopt.md`](standards/cli-documentation/adopt.md) for profile selection and the full authoring/review checklist.
 
 ### Pin to a release tag, not `main`
 

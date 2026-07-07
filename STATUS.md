@@ -17,6 +17,7 @@ This is the human-facing completion summary for the project. Agents maintain it 
 
 - **Five standards released, latest `v4.2.0`:** Markdown Frontmatter, ADR, Markdown Tooling (now with an opt-in reusable Prettier gate, `markdown_tooling 1.1`), Python Tooling SSOT, and **Project Specification** (a live CLI, `project-standards spec ...`, with its own reusable CI workflow). **Python Coding** remains the sole in-development draft (unregistered, excluded from validation/adopt).
 - `main` and `testing` are in sync at `v4.2.0`; `@v4` (moving) now resolves to `v4.2.0`, with `@v4.2.0`/`@v4.1.0`/`@v4.0.0` frozen; `@v3` stays frozen at `3.0.0`.
+- **Sixth standard, CLI Documentation, integrated on `testing` (2026-07-07):** registry (`cli_documentation` 1.0), adopt engine, dogfooded `docs/usage.md`, `--version` on all seven console scripts, and this session's full docs-surface propagation are all in place on `testing`; not yet on `main` — release decision pending.
 
 ## Recent Changes
 
