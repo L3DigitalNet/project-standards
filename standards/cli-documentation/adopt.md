@@ -9,6 +9,7 @@ created: '2026-07-07'
 updated: '2026-07-07'
 reviewed: null
 owner: ''
+consumer: 'agent'
 tags:
   - 'cli'
   - 'adoption'
