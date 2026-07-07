@@ -366,5 +366,8 @@ cli_documentation:
 
 1. Create `bundles/<standard-id>/` with an `adopt.toml` and the artifact source files.
 2. Add the standard's contract versions to `schemas/registry.json` under the appropriate key.
-3. Add a `_contract_version()` mapping entry in `cli.py` (`_REGISTRY_STANDARD_IDS`).
-4. The registry/bundle parity check in `_assert_registry_bundle_parity()` will catch any mismatch before any command emits output.
+3. Extend `registry.py`: add `<id>_default`/`<id>_versions` constructor params, an `is_known_<id>()` method, and loader parsing plus cross-field default-in-versions validation — mirror the `cli_documentation` precedent.
+4. Extend `validate_frontmatter.py`: add a `<id>_version` field to `ProjectConfig`, its config-parsing block, its term in the `needs_registry` check, and the unknown-version exit-2 gate.
+5. Add a `_contract_version()` mapping entry in `cli.py` (`_REGISTRY_STANDARD_IDS`).
+6. Update test fixtures: raw `Registry(...)` calls and inline registry-JSON fixture strings across the test suite need the new block/kwargs — the `cli_documentation` registration touched six test files.
+7. The registry/bundle parity check in `_assert_registry_bundle_parity()` will catch any mismatch before any command emits output.
