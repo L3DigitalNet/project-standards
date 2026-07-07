@@ -495,7 +495,7 @@ NO_COLOR=1 COLUMNS=100 uv run project-standards spec --help
 - **Standalone commands** — one `` ### `name` `` complete entry per standalone script (`validate-frontmatter`, `validate-id`, `sync-vscode-colors`, `sync-standards-include`, `format-frontmatter`, `validate-references`): NAME line, SYNOPSIS, options, exit codes, cross-reference to the unified equivalent where one exists (`validate-frontmatter` ↔ `project-standards validate`; `format-frontmatter`+`validate-id --fix` ↔ `project-standards fix`)
 - `SEE ALSO` — `standards/cli-documentation/README.md`, `src/project_standards/README.md`
 
-**Option/exit-code parity pass (spec §8, codex SA-NEW-003):** as each entry is written, check its OPTIONS and EXIT STATUS against the Step 1 captures and the module source. Make the evidence durable (codex plan-review note): list every checked command in the commit **body** (one line per command, e.g. `parity: spec validate — options+exit codes vs --help: OK`), and end with the trailer `Parity-pass: all 17 command entries checked against normalized --help; manual assertions: <list or none>`. The commit message is the review artifact — do not keep the raw captures as repo files.
+**Option/exit-code parity pass (spec §8, codex SA-NEW-003):** as each entry is written, check its OPTIONS and EXIT STATUS against the Step 1 captures and the module source. Make the evidence durable (codex plan-review note): list every checked command in the commit **body** (one line per command, e.g. `parity: spec validate — options+exit codes vs --help: OK`), and end with the trailer `Parity-pass: all 18 command entries (root project-standards + 4 top-level leaves + spec overview + 6 spec verbs + 6 standalone) checked against normalized --help; manual assertions: <list or none>`. The commit message is the review artifact — do not keep the raw captures as repo files.
 
 - [ ] **Step 3: Add to include globs** in `.project-standards.yml`:
 
@@ -519,7 +519,7 @@ npx prettier --write docs/usage.md && npx markdownlint-cli2 docs/usage.md
 git add docs/usage.md .project-standards.yml
 git commit -m "feat(cli-docs): dogfood docs/usage.md for the full installed-command set
 
-Parity-pass: all 17 command entries checked against normalized --help; manual assertions: none"
+Parity-pass: all 18 command entries (root project-standards + 4 top-level leaves + spec overview + 6 spec verbs + 6 standalone) checked against normalized --help; manual assertions: none"
 ```
 
 ---
