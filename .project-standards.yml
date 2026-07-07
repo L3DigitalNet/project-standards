@@ -25,6 +25,10 @@ markdown:
       # python-coding is an in-development standard, not yet released for adoption (excluded from
       # `adopt`); its README is a draft, not a managed doc, so it is not frontmatter-validated yet.
       - "standards/python-coding/**"
+      # cli-framework is an untracked research-prose draft mid-integration (TODO Phase 0). INTERIM:
+      # remove this once the governing doc gains canonical frontmatter (TODO Phase 3) so it validates
+      # like every other adoptable bundle. Until then it has no frontmatter, so exclude it.
+      - "standards/cli-framework/**"
       # project-spec's dogfood example is a spec document, not a canonical-frontmatter one — it
       # uses the standard's OWN frontmatter schema (spec_id/status/profile/related), validated by
       # `spec validate` below, not this validator. (Its templates are already covered above.)
