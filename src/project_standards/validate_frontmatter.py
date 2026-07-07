@@ -46,6 +46,7 @@ import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
+from project_standards._version import package_version
 from project_standards.registry import Registry, RegistryError, load_registry
 
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
@@ -691,6 +692,7 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
     parser.add_argument(
         "files",
         nargs="*",

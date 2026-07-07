@@ -60,6 +60,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from project_standards._version import package_version
 from project_standards.id_format import random_token, slugify
 from project_standards.registry import RegistryError, load_registry
 from project_standards.validate_frontmatter import (
@@ -484,6 +485,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
     parser.add_argument(
         "files",
         metavar="FILE",

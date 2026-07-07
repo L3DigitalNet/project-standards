@@ -19,6 +19,7 @@ from project_standards import (
     validate_id,
     validate_references,
 )
+from project_standards._version import package_version
 from project_standards.adopt.engine import build_plan, execute_plan, format_report
 from project_standards.adopt.errors import AdoptError
 from project_standards.adopt.manifest import (
@@ -144,6 +145,10 @@ def main(argv: list[str] | None = None) -> int:
     """
     args_list = list(sys.argv[1:] if argv is None else argv)
 
+    if args_list and args_list[0] == "--version":
+        print(f"project-standards {package_version()}")
+        return 0
+
     # EARLY DISPATCH for `validate`: delegate every trailing arg to all three validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects
     # `validate --config x` as an unrecognized top-level option before REMAINDER can capture it.
@@ -238,6 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         return _spec_run(args_list[1:])
 
     parser = argparse.ArgumentParser(prog="project-standards")
+    parser.add_argument("--version", action="store_true", help="print the package version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
     # Registered only so top-level `--help` advertises it; real handling is the early dispatch above.
     sub.add_parser(

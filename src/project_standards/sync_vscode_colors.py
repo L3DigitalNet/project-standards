@@ -24,6 +24,8 @@ from typing import Any, cast
 
 import yaml
 
+from project_standards._version import package_version
+
 # The folder-colorizer color that marks managed-docs paths in the user's VS Code
 # setup. Cross-file contract: must equal _COLOR in sync_standards_include.py — the
 # two tools are inverse round-trips of the same convention, and a mismatch makes
@@ -106,6 +108,10 @@ def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> 
 
 
 def main() -> None:
+    if "--version" in sys.argv[1:]:
+        print(f"{Path(sys.argv[0]).name} {package_version()}")
+        raise SystemExit(0)
+
     root = _repo_root()
     standards_path = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"
     settings_path = Path(sys.argv[2]) if len(sys.argv) > 2 else root / ".vscode" / "settings.json"

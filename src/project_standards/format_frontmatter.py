@@ -21,6 +21,7 @@ from typing import Any, cast
 
 import yaml
 
+from project_standards._version import package_version
 from project_standards.id_format import random_token, slugify
 
 # Leading frontmatter block; groups: open fence, body (between fences), close fence.
@@ -605,6 +606,7 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
     # Default None, not _DEFAULT_CONFIG: a missing implicit default falls back to
     # defaults, but an operator-typed --config that does not exist must exit 2 —

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+from project_standards._version import package_version
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
@@ -274,6 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
     # Default None so an operator-typed --config that does not exist exits 2; for
     # THIS validator a silently defaulted config is the worst case — references
