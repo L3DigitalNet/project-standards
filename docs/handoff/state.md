@@ -4,8 +4,8 @@
 
 ## State at a glance
 
-- **Sixth standard (cli-documentation) integrated on `testing`** (commits `a09b431..HEAD`): bundle (README/adopt/templates/examples/resources), adopt artifacts (usage scaffold + `cli-docs-check` workflow template + config fragment), `cli_documentation` contract 1.0 registered end-to-end, `--version` on all seven console scripts, `--help` fixed on the two sync commands, dogfood `docs/usage.md`. Full gate green. **Release decision (v4.3.0) pending** — not tagged, not merged to `main`, no version bump yet.
-- v4.1.0 + v4.2.0 RELEASED (2026-07-06); `main` at `6614612` (`v4.1.0@84c0054`, `v4.2.0@6614612`, `v4` moved to `6614612`, GitHub releases live). v4.0.0 `c7c2fd8`; v3 `e69ab6b`, v2 `3ece2c9`, v1 `7450170`.
+- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth), `cli_documentation` contract 1.0, `--version`/`--help` CLI fixes, dogfood `docs/usage.md`. Release commit `74db623`; `main` fast-forwarded from `f1994bb`; signed tags `v4.3.0@74db623`, `v4` moved to `74db623`; GitHub release live (Latest). `main` and `testing` in sync.
+- Prior tags: `v4.2.0@6614612`, `v4.1.0@84c0054`, v4.0.0 `c7c2fd8`; v3 `e69ab6b`, v2 `3ece2c9`, v1 `7450170`.
 
 ## Active incidents
 

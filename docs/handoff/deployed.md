@@ -1,6 +1,6 @@
 # Deployed
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-07
 
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 
@@ -16,5 +16,6 @@ This repo is consumed as a versioned standard: downstream repos pin a `standards
 | `v3` (frozen) | last `3.x` release — `v3.0.0` (commit `e69ab6b`); does **not** advance to 4.0.0 (breaking), so `@v3` trackers stay on 3.0.0 | published on `main` |
 | `v4.0.0` | Project Specification Standard (5th standard: tiered templates, `spec` CLI, `validate-specs.yml` reusable workflow). **BREAKING** — six validator/config strictness bumps (datetime dates, tag pattern, non-string keys, duplicate config keys, unquoted numeric `version`, nonexistent path → exit 2) + `validate-references` semantic corrections (opt-in only) + Python Tooling ruff floor `>=0.14` on re-sync; see `CHANGELOG.md` "Migration from v3" + [`UPGRADING.md`](../../UPGRADING.md). Release commit `c7c2fd8`; GitHub release live. | published on `main` |
 | `v4.1.0` | Project Specification: `spec.reference_prefixes` config key + token hygiene (built-in `ADR` prefix, SPDX/license-token skip), opt-in `spec upgrade --config`. Backward-compatible loosening — **MINOR**; `@v4` inherits. Release commit `84c0054`; GitHub release live. | published on `main` |
-| `v4.2.0` | Markdown Tooling: opt-in reusable Prettier gate (`format.yml` dual-role + adoptable `format.caller.yml`, pinned Prettier `3.8.3`, `prettier: false` opt-out), `markdown_tooling 1.0→1.1`, DEC-9→DEC-10, repo-local coherence tool. Additive/opt-in — **MINOR**. Release commit `6614612`; GitHub release live (Latest). | published on `main` |
-| `v4` (moving) | tracks the newest 4.x release (`v4.2.0`) | published on `main` |
+| `v4.2.0` | Markdown Tooling: opt-in reusable Prettier gate (`format.yml` dual-role + adoptable `format.caller.yml`, pinned Prettier `3.8.3`, `prettier: false` opt-out), `markdown_tooling 1.0→1.1`, DEC-9→DEC-10, repo-local coherence tool. Additive/opt-in — **MINOR**. Release commit `6614612`; GitHub release live. | published on `main` |
+| `v4.3.0` | CLI Documentation Standard (6th standard: `standards/cli-documentation/` bundle, adopt artifacts `docs/usage.md` scaffold + `cli-docs-check.yml` template + config fragment, `cli_documentation` contract `1.0` in `registry.json`), `--version` on all seven console scripts, `--help` fixed on the two sync commands, dogfood `docs/usage.md` + inventory-parity/installed-wrapper tests. Additive — **MINOR**; `@v4` inherits. Release commit `74db623`; GitHub release live (Latest). | published on `main` |
+| `v4` (moving) | tracks the newest 4.x release (`v4.3.0`) | published on `main` |
