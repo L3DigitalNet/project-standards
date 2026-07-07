@@ -18,6 +18,7 @@ This is the human-facing completion summary for the project. Agents maintain it 
 
 - **Six standards released, latest `v4.3.0`:** Markdown Frontmatter, ADR, Markdown Tooling (with the opt-in reusable Prettier gate, `markdown_tooling 1.1`), Python Tooling SSOT, **Project Specification** (a live CLI, `project-standards spec ...`, with its own reusable CI workflow), and **CLI Documentation** (`cli_documentation 1.0`, adopt-materialized usage scaffold + CI template). **Python Coding** remains the sole in-development draft (unregistered, excluded from validation/adopt).
 - `main` and `testing` are in sync at `v4.3.0`; `@v4` (moving) now resolves to `v4.3.0`, with `@v4.3.0`/`@v4.2.0`/`@v4.1.0`/`@v4.0.0` frozen; `@v3` stays frozen at `3.0.0`.
+- **MCP enablement specs ingested (2026-07-07, docs-only, on `testing`):** three draft Full project specs — **SPEC-MT01** (meta-repo readiness prep), **SPEC-RD01** (sequencing roadmap), **SPEC-MS01** (thin local read-only MCP server) — plus a research reference pack, added under `docs/superpowers/`. No implementation: MCP server work stays blocked until SPEC-MT01's readiness gate passes. Required ADR set (→ `docs/adr/`) is backlog-tracked in `TODO.md`.
 
 ## Recent Changes
 
@@ -28,6 +29,7 @@ This is the human-facing completion summary for the project. Agents maintain it 
 - [2026-07-05] **`4.0.0` released on `main`** — pin bumps, `UPGRADING.md` v3→v4, tags `v4.0.0`/`v4`, `v3` frozen, GitHub release; CI fully green. Full gate: 796 tests, 98% coverage.
 - [2026-07-06] **`4.1.0` + `4.2.0` released on `main`** — Spec B (F5) opt-in Prettier gate implemented (executing-plans, 10-task TDD) + reviewed; sequential MINORs, signed tags, `v4`→`v4.2.0`, GitHub releases. Re-signed 6 unsigned prior-session commits to satisfy the new `main` signature ruleset. Full gate: 830 tests, 98% coverage.
 - [2026-07-07] **`4.3.0` released on `main`** — CLI Documentation Standard (sixth) cut as an additive MINOR: `release: prepare` commit `74db623` (version bump + CHANGELOG promotion), `main` fast-forwarded, signed tags `v4.3.0` + `v4`→`74db623`, GitHub release (Latest). Full gate: 868 tests, 98% coverage.
+- [2026-07-07] **MCP enablement specs ingested** (docs-only, `testing`) — SPEC-MT01/RD01/MS01 (Full project specs) + reference pack placed under `docs/superpowers/`, wired into `spec.include`, the spec index, and handoff; ADR backlog recorded. `spec validate`/`lint`, markdownlint, prettier all green.
 
 ## Notes For The Builder
 

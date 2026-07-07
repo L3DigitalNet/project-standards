@@ -72,3 +72,11 @@ cli_documentation:
 spec:
   include:
     - "standards/project-spec/examples/**/*.md"
+    # MCP enablement spec set (SPEC-MT01/RD01/MS01) — real Project Specification
+    # documents that use spec_id/profile frontmatter, so they ARE gated by `spec
+    # validate`/`lint`. Listed by explicit path (not a docs/superpowers/specs/**
+    # glob) on purpose: the other files in that directory are frontmatter-less
+    # brainstorming design docs on a different convention, not project specs.
+    - "docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md"
+    - "docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md"
+    - "docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md"

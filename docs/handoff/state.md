@@ -6,6 +6,7 @@
 
 - **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth), `cli_documentation` contract 1.0, `--version`/`--help` CLI fixes, dogfood `docs/usage.md`. Release commit `74db623`; `main` fast-forwarded from `f1994bb`; signed tags `v4.3.0@74db623`, `v4` moved to `74db623`; GitHub release live (Latest). `main` and `testing` in sync.
 - Prior tags: `v4.2.0@6614612`, `v4.1.0@84c0054`, v4.0.0 `c7c2fd8`; v3 `e69ab6b`, v2 `3ece2c9`, v1 `7450170`.
+- **MCP enablement spec set ingested (2026-07-07, docs-only, `testing`):** `SPEC-MT01` (meta-repo readiness prep) → `SPEC-RD01` (roadmap) → `SPEC-MS01` (thin local read-only MCP server), all **draft**, in `docs/superpowers/specs/`; reference pack in `docs/superpowers/research/`. Standards stay independent packages by default; groups/profiles are recommendations, not hidden hard deps. MCP impl **BLOCKED** until SPEC-MT01's readiness gate passes. ADR backlog → `docs/adr/` (per owner; not yet created), tracked in `TODO.md`. `spec validate`/`lint` + markdownlint/prettier green; no code changes.
 
 ## Active incidents
 

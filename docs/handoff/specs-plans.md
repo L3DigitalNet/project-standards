@@ -6,6 +6,10 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
+| MCP meta-repo readiness prep — **SPEC-MT01** | `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md` | **draft** (Full spec; ingested 2026-07-07). Prerequisite readiness work; establishes the independent-standard-package contract. Blocks SPEC-RD01/MS01. `spec validate`/`lint` green |
+| MCP enablement roadmap — **SPEC-RD01** | `docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md` | **draft** (Full spec; ingested 2026-07-07). Sequencing roadmap; depends on SPEC-MT01; gates MCP impl behind the readiness gate |
+| MCP server implementation — **SPEC-MS01** | `docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md` | **draft** (Full spec; ingested 2026-07-07). Thin/local/read-only-first MCP server. **BLOCKED** until SPEC-MT01 readiness gate passes. Depends on SPEC-MT01 + SPEC-RD01 |
+| MCP specification reference pack | `docs/superpowers/research/2026-07-07-project-standards-mcp-specification-reference-pack.md` | supporting material (`doc_type: research`) for the three MCP specs — **not** an implementation contract. Recheck MCP protocol/SDK versions before SPEC-MS01 MS-0 (REF-OQ-003) |
 | CLI Documentation standard design | `docs/superpowers/specs/2026-07-07-cli-documentation-standard-design.md` | approved (codex r3); **RELEASED in `v4.3.0`** (2026-07-07) |
 | CLI Documentation standard plan | `docs/superpowers/plans/2026-07-07-cli-documentation-standard.md` | implemented via SDD — all 13 tasks complete; **RELEASED in `v4.3.0`** (2026-07-07) |
 | Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | **RELEASED in `v4.2.0`** (opt-in reusable Prettier gate; `markdown_tooling 1.1`; DEC-9→DEC-10) |
@@ -29,5 +33,6 @@
 ## Storage
 
 - Specs and design artifacts: `docs/superpowers/specs/`
+- Research / reference support docs: `docs/superpowers/research/` (chosen 2026-07-07 for the MCP reference pack; `docs/research/` was avoided because its `index.md` is qdev-generated)
 - Implementation plans: `docs/superpowers/plans/` (only the pending `check` drift plan remains after the 2026-07-05 prune)
 - `docs/superpowers/specs/README.md` — human-facing index of the specs directory (own status table, kept separate from this pointer table)
