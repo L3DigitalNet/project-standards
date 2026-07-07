@@ -19,6 +19,7 @@ aliases:
 related:
   - 'standards/cli-documentation/adopt.md'
   - 'standards/cli-documentation/resources/research-notes.md'
+  - 'standards/cli-documentation/examples/usage.example.md'
 source: []
 confidence: 'high'
 visibility: 'public'
