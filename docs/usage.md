@@ -33,13 +33,13 @@ license: null
 ## SYNOPSIS
 
 ```text
-project-standards [--version] <command> [<args>...]
+project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
-project-standards (--version)
+project-standards {--help | --version}
 ```
 
 ## DESCRIPTION
@@ -111,7 +111,7 @@ project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 
 Options:
 
-- **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`, `project-spec`). Required.
+- **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`). Required.
 - **`--dest <dir>`** — Destination directory to write artifacts into. Default: the current directory. Must already exist unless `--dry-run` is given (a non-existent `--dest` without `--dry-run` exits 2).
 - **`--force`** — Overwrite existing files that would otherwise be skipped. Safety: destructive — it replaces on-disk files; prefer `--dry-run` first.
 - **`--dry-run`** — Show what would be written without making any changes. Depends on nothing; when set, a non-existent `--dest` is accepted because nothing is written.

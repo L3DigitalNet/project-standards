@@ -6,8 +6,8 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| CLI Documentation standard design | `docs/superpowers/specs/2026-07-07-cli-documentation-standard-design.md` | approved (codex r3); plan implemented via SDD, executing on `testing` |
-| CLI Documentation standard plan | `docs/superpowers/plans/2026-07-07-cli-documentation-standard.md` | executing via SDD (Task 12 of 13) |
+| CLI Documentation standard design | `docs/superpowers/specs/2026-07-07-cli-documentation-standard-design.md` | approved (codex r3); plan implemented via SDD on `testing` (`7b1bf3a..HEAD`); release decision pending |
+| CLI Documentation standard plan | `docs/superpowers/plans/2026-07-07-cli-documentation-standard.md` | implemented via SDD — all 13 tasks complete on `testing` (`7b1bf3a..HEAD`); release decision pending |
 | Markdown-Tooling formatter authority (issue #3 F5 — Spec B) design | `docs/superpowers/specs/2026-07-06-markdown-tooling-formatter-authority-design.md` | **RELEASED in `v4.2.0`** (opt-in reusable Prettier gate; `markdown_tooling 1.1`; DEC-9→DEC-10) |
 | Markdown-Tooling formatter authority (Spec B) plan | `docs/superpowers/plans/2026-07-06-markdown-tooling-formatter-authority.md` | **RELEASED in `v4.2.0`** — 10-task TDD plan implemented via executing-plans + scoped opus review (0 Critical/Important); + `tests/coherence/` tool |
 | spec-validator external references (issue #3 F1–F4) design | `docs/superpowers/specs/2026-07-06-spec-validator-external-references-design.md` | **RELEASED in `v4.1.0`** (`spec.reference_prefixes` + token hygiene) |

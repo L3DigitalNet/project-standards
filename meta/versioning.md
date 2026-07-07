@@ -77,7 +77,7 @@ Each standard carries its own `major.minor` contract version, selected per stand
 | Markdown Frontmatter | `schema_version` (`1.1`) | `markdown.frontmatter.version` (optional; unset = default) | yes — JSON schema |
 | ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
 | Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
-| Markdown Tooling | `1.0` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
+| Markdown Tooling | `1.1` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
 | Project Specification | none — tracks the installed release | n/a (no selectable version) | yes — `spec:` config + `validate-specs.yml` |
 | CLI Documentation | `1.0` | `cli_documentation.version` (optional) | no — copy-adopted label, metadata only |
 
@@ -93,7 +93,7 @@ The single release version is the only number a consumer pins. Three **component
 
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling contract version** — the `1.0` label in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — is a copy-adopted label: not machine-enforced and not a release version.
-- The **Markdown Tooling contract version** — the `1.0` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
+- The **Markdown Tooling contract version** — the `1.1` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
 
 The **ADR standard** now carries its own ADR contract version (`1.0`) for its body rules and Frontmatter-compatibility; for document _metadata_ it remains a profile over the frontmatter schema, so its docs still declare `schema_version` and its opt-in MADR section check lives in the validator. Each standard's `major.minor` **contract version** (see [Per-standard contract versions](#per-standard-contract-versions)) is distinct from the single **tool release version** on the git tag. There are still no per-standard _release tags_ — every standard ships together under the one repository tag, and a contract version is selected in config, not pinned separately.
 

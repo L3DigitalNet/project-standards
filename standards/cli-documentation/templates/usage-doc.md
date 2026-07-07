@@ -9,7 +9,7 @@
 ```bash
 toolname [OPTIONS] <input>
 toolname <command> [COMMAND OPTIONS] [ARGS]...
-toolname (--help | --version)
+toolname {--help | --version}
 ```
 
 ## DESCRIPTION
