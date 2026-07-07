@@ -386,12 +386,14 @@ Sync `folder-color.pathColors` in `.vscode/settings.json` from the `markdown.fro
 ```text
 sync-vscode-colors [<standards-file>] [<settings-file>]
 sync-vscode-colors --version
+sync-vscode-colors --help
 ```
 
-This command uses raw positional arguments (no option parser); the only flag it recognizes is `--version`. Any other leading token is treated as `<standards-file>`, so `sync-vscode-colors --help` is interpreted as a filename and fails with "not found".
+This command uses raw positional arguments (no option parser); `--help`/`-h` and `--version` are intercepted before any positional is read. Any other leading token is treated as `<standards-file>`.
 
 - **`<standards-file>`** — Project config to read include patterns from. Default: `<repo-root>/.project-standards.yml`. Positional 1.
 - **`<settings-file>`** — VS Code settings file to rewrite. Default: `<repo-root>/.vscode/settings.json`. Positional 2. Safety: this file is rewritten in place.
+- **`-h`, `--help`** — Print a one-paragraph usage summary and exit 0.
 - **`--version`** — Print `sync-vscode-colors <version>` and exit 0.
 
 Must run inside a git repository (defaults resolve against the repository root).
@@ -405,12 +407,14 @@ Sync `markdown.frontmatter.include` in `.project-standards.yml` from the `folder
 ```text
 sync-standards-include [<standards-file>] [<settings-file>]
 sync-standards-include --version
+sync-standards-include --help
 ```
 
-Raw positional arguments, same contract as `sync-vscode-colors`: `--version` is the only recognized flag; any other leading token is read as `<standards-file>`.
+Raw positional arguments, same contract as `sync-vscode-colors`: `--help`/`-h` and `--version` are intercepted before any positional is read; any other leading token is read as `<standards-file>`.
 
 - **`<standards-file>`** — Project config whose include list is rewritten. Default: `<repo-root>/.project-standards.yml`. Positional 1. Safety: rewritten in place.
 - **`<settings-file>`** — VS Code settings file to read colors from. Default: `<repo-root>/.vscode/settings.json`. Positional 2.
+- **`-h`, `--help`** — Print a one-paragraph usage summary and exit 0.
 - **`--version`** — Print `sync-standards-include <version>` and exit 0.
 
 If no project-colored entries are found, the include list is emptied and a warning is printed to standard error. Must run inside a git repository.
@@ -466,7 +470,7 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 - **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `validate`, `fix`, and `spec` are early-dispatched before the top-level parser is built, so a trailing `--version` is handled by the dispatched target: after `validate` it is forwarded to the validators (which print a version and exit 0), while after `adopt` it is an argparse usage error and after `spec` it is an unknown verb — both exit 2. Put `--version` first.
 - **`validate-references` scope.** The cross-file pass is repo-wide by design; scoping it to a subset would let a duplicate id or broken reference in an unselected document slip through. `<file>` / `--glob` are therefore forwarded but ignored by this stage even though `validate-frontmatter` and `validate-id` honor them.
 - **Custom schemas disable id and format work.** When a custom (non-bundled) schema is selected, `validate-id`, `format-frontmatter`, `fix`, and `validate-references` skip their bundled-convention checks and exit 0 with a note — a custom-schema repository owns those conventions itself.
-- **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--version` as a flag; every other leading token is read as the first positional (a file path).
+- **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--help`/`-h` and `--version` as flags (intercepted before any positional is read); every other leading token is read as the first positional (a file path).
 
 ## SEE ALSO
 

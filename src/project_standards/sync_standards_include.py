@@ -106,6 +106,14 @@ def main() -> None:
     if "--version" in sys.argv[1:]:
         print(f"{Path(sys.argv[0]).name} {package_version()}")
         raise SystemExit(0)
+    if "--help" in sys.argv[1:] or "-h" in sys.argv[1:]:
+        print(
+            f"{Path(sys.argv[0]).name} — sync markdown.frontmatter.include in "
+            ".project-standards.yml from the folder-color.pathColors entries in "
+            ".vscode/settings.json.\n"
+            "Usage: sync-standards-include [standards-file] [settings-file]"
+        )
+        raise SystemExit(0)
 
     root = _repo_root()
     standards_path = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"

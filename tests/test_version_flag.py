@@ -54,3 +54,21 @@ def test_sync_mains_version_flag(
         module.main()
     assert exc.value.code == 0
     assert package_version() in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("module", [sync_vscode_colors, sync_standards_include])
+@pytest.mark.parametrize("flag", ["--help", "-h"])
+def test_sync_mains_help_flag(
+    module: ModuleType,
+    flag: str,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # These mains parse raw positionals with no option library, so --help/-h must be
+    # intercepted before the first argv slot is read as <standards-file> — otherwise
+    # it is treated as a filename and the command exits 1 with "not found".
+    monkeypatch.setattr("sys.argv", [module.__name__, flag])
+    with pytest.raises(SystemExit) as exc:
+        module.main()
+    assert exc.value.code == 0
+    assert "Usage:" in capsys.readouterr().out
