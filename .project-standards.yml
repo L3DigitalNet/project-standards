@@ -14,6 +14,7 @@ markdown:
     include:
       - "CHANGELOG.md"
       - "UPGRADING.md"
+      - "docs/usage.md"
       - "standards/**/*.md"
       - "meta/**/*.md"
     exclude:
