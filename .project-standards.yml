@@ -62,6 +62,9 @@ python_tooling:
 markdown_tooling:
   version: "1.1"
 
+cli_documentation:
+  version: "1.0"
+
 # Project Specification Standard: which files `spec validate`/`spec lint` check.
 # This repo's own planning docs (docs/superpowers/specs/) predate this standard and use
 # a different convention — they are not project specs. The dogfood example under

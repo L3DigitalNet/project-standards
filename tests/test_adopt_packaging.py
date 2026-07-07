@@ -35,6 +35,7 @@ def test_wheel_contains_bundles_and_manifests(tmp_path: Path) -> None:
         "project_standards/bundles/python-tooling/check.yml",
         "project_standards/bundles/markdown-frontmatter/project-standards.starter.yml",
         "project_standards/bundles/adr/adr.template.md",
+        "project_standards/bundles/cli-documentation/adopt.toml",
     ]
     for entry in must:
         assert any(n.endswith(entry) for n in names), entry

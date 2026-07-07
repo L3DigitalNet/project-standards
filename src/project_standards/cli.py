@@ -38,6 +38,7 @@ def _contract_version(registry: Registry, standard_id: str) -> str | None:
         "adr": registry.adr_default,
         "python-tooling": registry.python_tooling_default,
         "markdown-tooling": registry.markdown_tooling_default,
+        "cli-documentation": registry.cli_documentation_default,
     }.get(standard_id)
 
 
@@ -47,6 +48,7 @@ _REGISTRY_STANDARD_IDS = (
     "adr",
     "python-tooling",
     "markdown-tooling",
+    "cli-documentation",
 )
 
 

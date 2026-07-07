@@ -458,36 +458,40 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
             "missing frontmatter/adr/python_tooling/markdown_tooling",
         ),
         (
-            '{"frontmatter": {"default": 1, "versions": {}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": 1, "versions": {}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "non-string default",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": []}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": []}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "frontmatter.versions is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": 9}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": 9}}, "adr": {"default": "1.0", "versions": {}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "frontmatter.versions.1.1 is not a string",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": []}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": []}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "adr.versions is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": []}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": []}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "adr.versions.1.0 is not an object",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": 5}}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": 5}}}, "python_tooling": {"default": "1.0", "versions": []}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "supports_frontmatter is not a list",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": {}}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": {}}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "python_tooling.versions is not a list",
         ),
         (
-            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": {}}}',
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": {}}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "markdown_tooling.versions is not a list",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": {}}}',
+            "cli_documentation.versions is not a list",
         ),
     ],
 )
@@ -1080,6 +1084,8 @@ def test_compat_gate_flags_known_incompatible_pair() -> None:
         python_tooling_versions=["1.0"],
         markdown_tooling_default="1.0",
         markdown_tooling_versions=["1.0"],
+        cli_documentation_default="1.0",
+        cli_documentation_versions=["1.0"],
     )
     cfg = _cfg(frontmatter_version="2.0", adr_version="1.0", require_adr_sections=True)
     msg = frontmatter_adr_incompatibility(cfg, reg)
@@ -1214,6 +1220,8 @@ def test_main_incompatible_combo_via_registry_exits_2(
         python_tooling_versions=["1.0"],
         markdown_tooling_default="1.0",
         markdown_tooling_versions=["1.0"],
+        cli_documentation_default="1.0",
+        cli_documentation_versions=["1.0"],
     )
     monkeypatch.setattr(_vf, "load_registry", lambda: fake)
     monkeypatch.chdir(tmp_path)
@@ -1592,6 +1600,8 @@ def test_effective_schema_bundled_name_version_mismatch_is_config_error() -> Non
         python_tooling_versions=["1.0"],
         markdown_tooling_default="1.0",
         markdown_tooling_versions=["1.0"],
+        cli_documentation_default="1.0",
+        cli_documentation_versions=["1.0"],
     )
     cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="2.0")
     with pytest.raises(ConfigError, match="does not match"):
@@ -1612,21 +1622,21 @@ def test_effective_schema_bundled_name_version_agreement_passes() -> None:
             '{"frontmatter": {"default": "1.2", "versions": {"1.1": "markdown-frontmatter"}},'
             ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
             ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
-            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "frontmatter.default '1.2' is not a bundled",
         ),
         (
             '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
             ' "adr": {"default": "2.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
             ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
-            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "adr.default '2.0' is not a bundled",
         ),
         (
             '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
             ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["9.9"]}}},'
             ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
-            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "supports_frontmatter references unbundled",
         ),
     ],
@@ -1679,15 +1689,22 @@ def test_tags_reject_edge_and_double_hyphens(
             '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
             ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
             ' "python_tooling": {"default": "9.9", "versions": ["1.0"]},'
-            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}}',
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "python_tooling.default",
         ),
         (
             '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
             ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
             ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
-            ' "markdown_tooling": {"default": "9.9", "versions": ["1.0"]}}',
+            ' "markdown_tooling": {"default": "9.9", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}}',
             "markdown_tooling.default",
+        ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "9.9", "versions": ["1.0"]}}',
+            "cli_documentation.default",
         ),
     ],
 )

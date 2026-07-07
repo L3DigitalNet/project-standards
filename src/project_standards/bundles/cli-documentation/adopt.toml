@@ -1,0 +1,20 @@
+[standard]
+id = "cli-documentation"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "usage-doc.md"
+dest = "docs/usage.md"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "cli-docs-check.yml"
+dest = ".github/workflows/cli-docs-check.yml"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "config.cli-documentation.yml"
+target = ".project-standards.yml"

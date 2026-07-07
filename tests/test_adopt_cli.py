@@ -20,11 +20,17 @@ from project_standards import validate_frontmatter
 from project_standards.cli import main
 
 
-def test_list_plain_lists_four_standards(capsys: pytest.CaptureFixture[str]) -> None:
+def test_list_plain_lists_five_standards(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["list"])
     out = capsys.readouterr().out
     assert rc == 0
-    for sid in ("markdown-frontmatter", "adr", "markdown-tooling", "python-tooling"):
+    for sid in (
+        "markdown-frontmatter",
+        "adr",
+        "markdown-tooling",
+        "python-tooling",
+        "cli-documentation",
+    ):
         assert sid in out
 
 
@@ -73,6 +79,7 @@ def test_bundle_ids_align_with_registry_contract_versions() -> None:
         "adr": reg.adr_default,
         "python-tooling": reg.python_tooling_default,
         "markdown-tooling": reg.markdown_tooling_default,
+        "cli-documentation": reg.cli_documentation_default,
     }
     assert bundle_ids == set(registry_ids)
     for sid in bundle_ids:

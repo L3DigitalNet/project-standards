@@ -35,6 +35,8 @@ _DOGFOOD = {
     # ADR bundle template ↔ its canonical copy under standards/ (guards silent drift —
     # the project-spec templates have the analogous guard in test_spec_packaging.py).
     "adr/adr.template.md": "standards/adr/templates/adr.md",
+    "cli-documentation/usage-doc.md": "standards/cli-documentation/templates/usage-doc.md",
+    "cli-documentation/cli-docs-check.yml": "standards/cli-documentation/templates/cli-docs-check.yml",
 }
 
 

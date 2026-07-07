@@ -481,6 +481,7 @@ class ProjectConfig:
         adr_version: str | None = None,
         python_tooling_version: str | None = None,
         markdown_tooling_version: str | None = None,
+        cli_documentation_version: str | None = None,
         references_enabled: bool = False,
     ) -> None:
         self.schema = schema
@@ -492,6 +493,7 @@ class ProjectConfig:
         self.adr_version = adr_version
         self.python_tooling_version = python_tooling_version
         self.markdown_tooling_version = markdown_tooling_version
+        self.cli_documentation_version = cli_documentation_version
         self.references_enabled = references_enabled
 
 
@@ -598,6 +600,7 @@ def load_config(path: Path) -> ProjectConfig:
     adr_version: str | None = None
     python_tooling_version: str | None = None
     markdown_tooling_version: str | None = None
+    cli_documentation_version: str | None = None
     references_enabled = False
 
     if path.exists():
@@ -651,6 +654,12 @@ def load_config(path: Path) -> ProjectConfig:
                 markdown_tooling_version = _version_str(
                     mt_dict.get("version"), "markdown_tooling.version"
                 )
+            cli_documentation = raw_dict.get("cli_documentation")
+            if isinstance(cli_documentation, dict):
+                cd_dict = cast("dict[str, Any]", cli_documentation)
+                cli_documentation_version = _version_str(
+                    cd_dict.get("version"), "cli_documentation.version"
+                )
 
     return ProjectConfig(
         schema=schema,
@@ -662,6 +671,7 @@ def load_config(path: Path) -> ProjectConfig:
         adr_version=adr_version,
         python_tooling_version=python_tooling_version,
         markdown_tooling_version=markdown_tooling_version,
+        cli_documentation_version=cli_documentation_version,
         references_enabled=references_enabled,
     )
 
@@ -752,6 +762,7 @@ def main(argv: list[str] | None = None) -> int:
     needs_registry = (
         config.python_tooling_version is not None
         or config.markdown_tooling_version is not None
+        or config.cli_documentation_version is not None
         or config.frontmatter_version is not None
         or config.adr_version is not None
         or config.require_adr_sections
@@ -786,6 +797,18 @@ def main(argv: list[str] | None = None) -> int:
     ):
         print(
             f"error: unknown markdown_tooling.version {config.markdown_tooling_version!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # cli_documentation.version is metadata only: validated if present, never emitted.
+    if (
+        registry is not None
+        and config.cli_documentation_version is not None
+        and not registry.is_known_cli_documentation(config.cli_documentation_version)
+    ):
+        print(
+            f"error: unknown cli_documentation.version {config.cli_documentation_version!r}",
             file=sys.stderr,
         )
         return 2
