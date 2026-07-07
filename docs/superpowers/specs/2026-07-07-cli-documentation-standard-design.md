@@ -1,6 +1,6 @@
 # Design: CLI Documentation Standard
 
-**Date:** 2026-07-07 **Status:** approved (brainstorming complete; awaiting codex spec-review) **Author:** session 2026-07-07
+**Date:** 2026-07-07 **Status:** in codex spec-review (round 1 findings addressed; awaiting round 2) **Author:** session 2026-07-07
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ Task provenance: TODO.md "CLI Documentation Standard — integrate as a fully ad
 1. **Fully adoptable standard, not a reference-only draft** — the sixth registered standard alongside Markdown Frontmatter, ADR, Python Tooling SSOT, Markdown Tooling, and Project Specification (TODO decision 2026-07-07).
 2. **Id = `cli-documentation`** — the content governs CLI usage documentation, not CLI frameworks. Bundle dir renames `standards/cli-framework/` → `standards/cli-documentation/`; registry accessor `cli_documentation_default`; config key `cli_documentation`; adopt CLI arg `cli-documentation`.
 3. **Full bundle explosion** — the monolith splits across `README.md` (normative), `adopt.md` (runbook), `templates/` (scaffolds), `examples/` (dogfooded), `resources/research-notes.md` (parked rationale; precedent `project-spec/resources/tooling-notes.md`). The `[S##]` source register **stays in the README** (house parity with `python-tooling`/`python-coding`); the resources file holds narrative rationale only.
-4. **Three-profile tiered mandate** — Script ⊂ Packaged ⊂ Packaged-deep, selected by distribution shape and subcommand-tree size (§1). Man page is SHOULD-if-practical everywhere: packaging reality (deprecated `data_files`, `sys.prefix`-scoped wheels, no `MANPATH` guarantee) demotes it from a mandate.
+4. **Three-profile tiered mandate** — Script ⊂ Packaged ⊂ Packaged-deep, selected by distribution shape and a **recorded adopter judgment** on usage-reference maintainability, guided by scale signals (§1; revised per codex SA-001 — nesting level alone is a signal, never an automatic trigger). Man page is SHOULD-if-practical everywhere: packaging reality (deprecated `data_files`, `sys.prefix`-scoped wheels, no `MANPATH` guarantee) demotes it from a mandate.
 5. **CI = guidance + copy-adopt template only in 1.0** — the README mandates the checks; `templates/cli-docs-check.yml` ships as a copy-adopt workflow; **no** reusable `workflow_call` surface. Mirrors DEC-9 (Prettier shipped copy-adopt first, gained an opt-in reusable workflow in v4.2.0 once proven).
 6. **Adopt materializes scaffolds + fragment** — `docs/usage.md` scaffold, `.github/workflows/cli-docs-check.yml`, and the `cli_documentation: version: "1.0"` config fragment. The single-file README template stays manual-copy (script repos rarely run `adopt`).
 7. **Full dogfood** — this repo ships a real `docs/usage.md` for the `project-standards` CLI and holds itself to the standard; `examples/usage.example.md` is a trimmed copy of it carrying example frontmatter.
@@ -59,7 +59,7 @@ Task provenance: TODO.md "CLI Documentation Standard — integrate as a fully ad
 | `.project-standards.yml` | Interim `standards/cli-framework/**` exclude (Phase 0, `9c4e0e4`) — to be **deleted** by this work. |
 | `docs/research/2026-07-07-cli-usage-docs-packaged-src-layout-python.md` | Packaged-half research (`bdab8e6`), `confidence: high`. Feeds §1, §2, and the packaged-CLI README section. |
 | Adopt engine | `cli.py:_assert_registry_bundle_parity` hard-fails (exit 2) unless a version-tracked standard has BOTH a registry contract AND a `bundles/<id>/` manifest; `adopt/manifest.py:available_standards` auto-discovers bundle dirs. Registration is therefore all-or-nothing within one change. |
-| CLI surface to dogfood | `project-standards` entry point with `spec` (validate/new/upgrade) and `adopt` subcommand groups; exit codes 0/1/2(/3 where applicable). Under the deep-tree threshold → Packaged profile. |
+| CLI surface to dogfood | `project-standards` entry point with `spec` (validate/lint/extract/next/new/upgrade) and `adopt` subcommand groups (~8 leaf commands, 2 groups); exit codes 0/1/2(/3 where applicable). **No top-level `--version` today** (`src/project_standards/cli.py`) — added by this work (codex SA-002). Profile selection recorded as **Packaged** (§8). |
 
 ## Design
 
@@ -70,10 +70,10 @@ Profiles select by distribution shape; each is a superset of the previous (proje
 | Profile | Selection criterion | MUST | SHOULD / MAY |
 | --- | --- | --- | --- |
 | **Script** | Single-file, run in place, no packaging | `--help` + `--version`; compact README (per template); documented exit codes | usage doc MAY; man page MAY |
-| **Packaged** | Installed via `[project.scripts]` entry points; ≤ ~5–7 top-level subcommands; one nesting level | Script tier **plus**: `docs/usage.md` with the man-style section registry, `NAME`/`SYNOPSIS` keyed to the **entry-point name** (never the module path or filename); CI smoke test of the **installed** entry point | man page SHOULD-if-practical (generated, shipped via build-backend `shared-data`, documented as best-effort — wheels cannot reach the system `MANPATH`) |
-| **Packaged, deep** | Above the subcommand threshold, or any second nesting level (subcommand groups) | Packaged tier, except the usage reference MUST be **generated** per-command (`docs/cli/<command>.md`, pip-style) from parser metadata (sphinx-click / mkdocs-click / sphinxcontrib-typer / sphinx-argparse-cli); hand-maintained per-command pages are prohibited; plus one shared-concepts page (common env vars, exit codes, config) | docs-site hosting MAY (open question, non-blocking) |
+| **Packaged** | Installed via `[project.scripts]` entry points; single-page usage reference remains maintainable (see selection signals below) | Script tier **plus**: `docs/usage.md` with the man-style section registry, covering **every leaf command**, `NAME`/`SYNOPSIS` keyed to the **entry-point name** (never the module path or filename); CI smoke test of the **installed** entry point | man page SHOULD-if-practical (generated, shipped via build-backend `shared-data`, documented as best-effort — wheels cannot reach the system `MANPATH`) |
+| **Packaged, deep** | Adopter selects it when the single-page reference is no longer maintainable (see selection signals below) | Packaged tier, except the usage reference MUST be **generated** per-command (`docs/cli/<command>.md`, pip-style) from parser metadata (sphinx-click / mkdocs-click / sphinxcontrib-typer / sphinx-argparse-cli); hand-maintained per-command pages are prohibited; plus one shared-concepts page (common env vars, exit codes, config) | docs-site hosting MAY (open question, non-blocking) |
 
-The subcommand threshold is stated as guidance ("roughly 5–7 top-level subcommands or any second nesting level"), not a validator-checked number — profile selection is a judgment the adopter records, exactly like project-spec profile choice.
+**Profile selection is a recorded adopter judgment** (exactly like project-spec profile choice), guided by signals, not validator-checked numbers. Signals that Packaged-deep is warranted: more than ~5–7 **top-level** subcommands; **or** a second nesting level **combined with** a leaf-command count large enough that the single page demonstrably drifts or becomes unnavigable. Nesting alone does not force the deep profile (codex SA-001: a small two-group CLI like `project-standards` — 2 groups, ~8 leaf commands — remains Packaged; the mandate that changes at deep is _generated, never hand-maintained_, and that trade-off only pays for itself at scale). The Packaged tier's "every leaf command" MUST is the guard that keeps a shallow profile choice from hiding undocumented commands.
 
 Multi-entry-point packages (several `[project.scripts]` keys in one `pyproject.toml`): one usage-reference page per **installed command name**, shared concepts factored into one cross-referenced page.
 
@@ -141,23 +141,27 @@ Mechanical mirror of `markdown_tooling`:
 - `registry.json` + `src/project_standards/registry.py`: `cli_documentation` contract `1.0`, accessor `cli_documentation_default`, version source.
 - `src/project_standards/cli.py`: id added to `_REGISTRY_STANDARD_IDS` and the `_contract_version` dispatch map.
 - `src/project_standards/bundles/cli-documentation/adopt.toml`: three artifacts — `docs/usage.md` scaffold (`kind = "file"`, source `templates/usage-doc.md`), `.github/workflows/cli-docs-check.yml` (`kind = "file"`), `cli_documentation: version: "1.0"` (`kind = "fragment"`). Bundle copies byte-identical to `standards/` sources (dogfood expectation enforced by existing manifest tests).
-- `.project-standards.yml`: `cli_documentation: version: "1.0"` contract block (self-adoption).
+- `.project-standards.yml`: `cli_documentation: version: "1.0"` contract block (self-adoption) **and** `docs/usage.md` added to the frontmatter include globs (codex SA-003).
 
 **Plan-time verification item:** confirm the adopt engine's behavior when a destination file already exists — a scaffold materialization must not clobber a consumer's real `docs/usage.md`. If the engine overwrites unconditionally, the manifest or engine needs a skip-if-exists mode for scaffold artifacts **before** this bundle ships; that finding would become a plan task, not a silent behavior change.
 
 ### 8. Dogfood
 
-- Real `docs/usage.md` documenting the `project-standards` CLI (Packaged profile): entry-point name, `spec`/`adopt` subcommand groups, exit codes, environment variables (enumerate what the CLI actually reads, if anything — verified during authoring), task-first examples.
-- `examples/usage.example.md` derived from it (trimmed; example frontmatter).
-- Installed-entry-point smoke test in the pytest suite (subprocess `project-standards --help` + one subcommand, `NO_COLOR` set) rather than a new CI workflow — the existing `check` job runs pytest, so the standard's mandated check is satisfied without new workflow surface. (Consumers get the workflow template; this repo's equivalent lives in its test suite.)
-- Frontmatter question resolved at plan time: whether `docs/usage.md` falls under the validator's include globs and therefore carries canonical frontmatter (expected: yes, `doc_type: reference`).
+- **Profile selection (recorded here per §1):** `project-standards` selects **Packaged**. Rationale: 2 command groups, ~8 leaf commands, single-page reference easily maintainable; the deep profile's generated-pages trade-off does not pay for itself at this size (codex SA-001).
+- Real `docs/usage.md` documenting the `project-standards` CLI: entry-point name, **every leaf command** across the `spec`/`adopt` groups, exit codes, environment variables (enumerate what the CLI actually reads, if anything — verified during authoring), task-first examples. Carries canonical frontmatter (`doc_type: reference`) and is **added to the validator's include globs** in `.project-standards.yml` — without that include the acceptance command passes vacuously (codex SA-003).
+- **`project-standards --version` is added to the CLI** (top-level flag, version from package metadata via `importlib.metadata`) — the standard's Script-tier MUST, which the CLI currently violates (codex SA-002).
+- `examples/usage.example.md` derived from the real usage doc (trimmed; example frontmatter).
+- **Installed-wrapper smoke test** (codex SA-005): build the wheel, install it into a throwaway venv, then run `project-standards --help`, `project-standards --version`, and one nested subcommand (e.g. `spec validate --help`) via the **installed wrapper** with `NO_COLOR` set — extending the existing wheel-building idiom in `tests/test_adopt_packaging.py`, not a plain dev-env subprocess (which misses broken entry-point metadata and `prog` drift). Lives in the pytest suite, so the existing `check` job covers it — no new CI workflow surface. (Consumers get the workflow template; this repo's equivalent lives in its test suite.)
 
 ### 9. Tests
 
-- Adopt-manifest test for the new bundle (byte-identical materialization + manifest validation) in `tests/test_adopt_manifest.py` idiom.
+- Adopt-manifest coverage in the `tests/test_adopt_manifest.py` idiom, **including updating its released-standards expectation from four to five**.
+- **Explicit byte-identity mappings** (codex SA-004 — the existing `tests/test_adopt_dogfood.py` `_DOGFOOD` map is hardcoded per standard and will not pick the new bundle up automatically): each shipped artifact (`templates/usage-doc.md`, `templates/cli-docs-check.yml`, and any other bundled copy) mapped to its `src/project_standards/bundles/cli-documentation/` twin.
 - Registry↔bundle parity coverage: the new id present on both sides.
-- Frontmatter validation picks up README, adopt.md, examples, resources (templates excluded).
-- Installed-entry-point smoke test (§8).
+- **Contract-version validator tests** (codex suggestion): known `cli_documentation.version` accepted silently; unknown version exits `2`; non-string version exits `2`; registry default present; the dogfood config selects `1.0`.
+- Frontmatter validation picks up README, adopt.md, examples, resources (templates excluded) **and provably includes `docs/usage.md`** (validated-file count or an explicit-path assertion — codex SA-003).
+- Installed-wrapper smoke test (§8): wheel → throwaway venv → `--help`, `--version`, one nested subcommand.
+- Wheel-content check that the `cli-documentation` bundle files and manifest ship in the wheel (extends `tests/test_adopt_packaging.py`).
 - Existing gate stays green: ruff, basedpyright, pytest + coverage, pip-audit, `tests/coherence` (new prose is part of the lint corpus).
 
 ### 10. Repo touchpoints (multi-file change list)
@@ -165,8 +169,8 @@ Mechanical mirror of `markdown_tooling`:
 | File | Change |
 | --- | --- |
 | `standards/cli-framework/` → `standards/cli-documentation/` | rename + full bundle explosion (§3, §5); draft file consumed |
-| `.project-standards.yml` | delete interim exclude; add `cli_documentation` contract block |
-| `src/project_standards/registry.py`, `registry.json`, `cli.py` | contract registration (§7) |
+| `.project-standards.yml` | delete interim exclude; add `cli_documentation` contract block; add `docs/usage.md` to include globs |
+| `src/project_standards/registry.py`, `registry.json`, `cli.py` | contract registration (§7); top-level `--version` flag (§8) |
 | `src/project_standards/bundles/cli-documentation/` | manifest + artifact copies (§7) |
 | `docs/usage.md` | new dogfood doc (§8) |
 | `tests/` | new coverage (§9) |
@@ -176,14 +180,14 @@ Mechanical mirror of `markdown_tooling`:
 | `docs/handoff/architecture.md` | component graph standards list; backlog item cleared |
 | `docs/handoff/specs-plans.md` | spec + plan pointer rows |
 | `STATUS.md`, `docs/handoff/state.md` | at-a-glance state at release |
-| `CHANGELOG.md`, `UPGRADING.md` | v4.3.0 entry; upgrading note = none required (purely additive) |
+| `CHANGELOG.md`, `UPGRADING.md` | v4.3.0 entry; upgrading note: no action for existing adopters, with one explicit caveat — the validator now recognizes `cli_documentation.version`, so a consumer config that already carried that key with an unrecognized value (previously ignored) would newly exit `2` (codex non-blocking finding; no known such configs) |
 | `TODO.md` | integration phases closed out at release |
 
 ### 11. Acceptance criteria
 
 #### Bundle & docs
 
-- `standards/cli-documentation/` matches §5 exactly; no `cli-framework/` path remains anywhere in the repo (code, config, docs, workflows).
+- `standards/cli-documentation/` matches §5 exactly. No **active** `cli-framework/` reference remains — code, config, bundle manifests, workflows, and current consumer-facing docs (root README, standards index, CLAUDE.md, architecture, state) are clean; **historical provenance references are exempt** (specs, research reports, codex-review audits, TODO phase history, session logs) (codex SA-006). Verification: `rg -n "cli-framework"` sweep, classifying each hit as active-stale (fail) or historical-provenance (pass).
 - `README.md` is normative (requirement language throughout; no Executive Summary / Bottom line / Observation-Inference-Recommendation residue), with `[S##]` register and no orphaned `[n]` markers.
 - Byte-level check: no Unicode private-use-area characters in any bundle file (`grep -P '[\x{E000}-\x{F8FF}]'` clean) — the research-export fingerprint.
 
@@ -193,8 +197,9 @@ Mechanical mirror of `markdown_tooling`:
 
 #### Dogfood
 
-- `docs/usage.md` exists, conforms to the Packaged profile, and `uv run validate-frontmatter --config .project-standards.yml` passes with the interim exclude deleted.
-- The installed-entry-point smoke test passes via the normal pytest gate.
+- `docs/usage.md` exists, conforms to the Packaged profile (every leaf command documented), and `uv run validate-frontmatter --config .project-standards.yml` passes with the interim exclude deleted **and demonstrably validates `docs/usage.md`** (it appears in the validated-file set) (codex SA-003).
+- `project-standards --version` exists, prints the release version, and exits `0` (codex SA-002).
+- The installed-wrapper smoke test (wheel → throwaway venv → `--help`, `--version`, one nested subcommand) passes via the normal pytest gate (codex SA-005).
 
 #### Gate green (repo non-negotiable)
 
@@ -227,4 +232,5 @@ New adoptable standard = **minor** at minimum per `meta/versioning.md` → **v4.
 ## Audit trail
 
 - 2026-07-07 — brainstorming complete: 4 clarifying decisions (profile tiering, CI shipping, adopt set, dogfood depth) + spec shape (one spec, one plan) ratified via bounded questions; design sections A (content) and B (bundle/plumbing/dogfood/release) approved.
+- 2026-07-07 — codex spec-review round 1 (`docs/codex-reviews/2026-07-07-014246-codex-spec-review-round1.md`): verdict "needs major correction", SA-001..SA-006. All six addressed: profile-selection rule rewritten (nesting = signal, not trigger; "every leaf command" guard added; dogfood profile recorded as Packaged with rationale) [SA-001]; `--version` added to CLI scope + acceptance [SA-002]; `docs/usage.md` added to include globs with provable validation [SA-003]; explicit byte-identity test mappings + released-standards count update [SA-004]; smoke test specified as wheel → throwaway venv → installed wrapper [SA-005]; `cli-framework` sweep narrowed to active references with historical-provenance exemption [SA-006]; plus contract-version validator tests and the UPGRADING caveat from the non-blocking notes.
 - Inputs: TODO.md integration phases (scope), `e38678c` editorial cleanup, `bdab8e6` packaged-half research.
