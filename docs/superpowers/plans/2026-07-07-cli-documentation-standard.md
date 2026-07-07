@@ -184,8 +184,10 @@ jobs:
   cli-docs-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      # SHA-pinned per this repo's action-hardening policy (docs/handoff/bugs/001-setup-uv-
+      # v8-tag-withdrawn.md: moving tags broke CI once). Re-verify the pin when copying.
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Build and install the wheel into a clean venv
         run: |
           uv build --wheel --out-dir dist/
@@ -353,15 +355,13 @@ def test_cli_version_flag_prints_and_exits_zero(capsys: pytest.CaptureFixture[st
 
 
 @pytest.mark.parametrize(
-    ("module", "prog"),
-    [
-        (validate_frontmatter, "validate-frontmatter"),
-        (validate_id, "validate-id"),
-        (format_frontmatter, "format-frontmatter"),
-        (validate_references, "validate-references"),
-    ],
+    "module",
+    [validate_frontmatter, validate_id, format_frontmatter, validate_references],
 )
-def test_argparse_mains_version_flag(module, prog, capsys: pytest.CaptureFixture[str]) -> None:
+def test_argparse_mains_version_flag(module, capsys: pytest.CaptureFixture[str]) -> None:
+    # In-process prog varies with sys.argv[0]; the EXACT "<script> <version>" contract
+    # is asserted against the installed wrappers in tests/test_installed_wrappers.py
+    # (codex CR-004) — here we only prove the flag exists and exits 0.
     with pytest.raises(SystemExit) as exc:
         module.main(["--version"])
     assert exc.value.code == 0
@@ -495,7 +495,7 @@ NO_COLOR=1 COLUMNS=100 uv run project-standards spec --help
 - **Standalone commands** — one `` ### `name` `` complete entry per standalone script (`validate-frontmatter`, `validate-id`, `sync-vscode-colors`, `sync-standards-include`, `format-frontmatter`, `validate-references`): NAME line, SYNOPSIS, options, exit codes, cross-reference to the unified equivalent where one exists (`validate-frontmatter` ↔ `project-standards validate`; `format-frontmatter`+`validate-id --fix` ↔ `project-standards fix`)
 - `SEE ALSO` — `standards/cli-documentation/README.md`, `src/project_standards/README.md`
 
-**Option/exit-code parity pass (spec §8, codex SA-NEW-003):** as each entry is written, check its OPTIONS and EXIT STATUS against the Step 1 captures and the module source; record in the commit message trailer `Parity-pass: all 17 command entries checked against normalized --help; manual assertions: <list or none>`.
+**Option/exit-code parity pass (spec §8, codex SA-NEW-003):** as each entry is written, check its OPTIONS and EXIT STATUS against the Step 1 captures and the module source. Make the evidence durable (codex plan-review note): list every checked command in the commit **body** (one line per command, e.g. `parity: spec validate — options+exit codes vs --help: OK`), and end with the trailer `Parity-pass: all 17 command entries checked against normalized --help; manual assertions: <list or none>`. The commit message is the review artifact — do not keep the raw captures as repo files.
 
 - [ ] **Step 3: Add to include globs** in `.project-standards.yml`:
 
@@ -543,8 +543,9 @@ Run: `uv run validate-frontmatter --config .project-standards.yml && npx prettie
 - [ ] **Step 3: Commit**
 
 ```bash
-git add standards/cli-documentation/examples/
+git add standards/cli-documentation/examples/ standards/cli-documentation/README.md
 git commit -m "feat(cli-docs): add validated worked example"
+git status --short   # expect: empty (codex CR-003 — the README related-list edit must not be left dirty)
 ```
 
 ---
@@ -586,12 +587,18 @@ import pytest
 from project_standards.registry import load_registry
 from project_standards import validate_frontmatter
 
+# The include pattern deliberately matches nothing: an EMPTY include list is falsy and
+# falls back to _default_corpus() (validate_frontmatter.py:423-427 `elif include_patterns:`),
+# which would validate the whole repo (codex CR-001). The version gate runs BEFORE path
+# collection, so a no-match run still exercises it; zero files exits 0 with
+# "no files matched" on stderr (validate_frontmatter.py:832-835).
 _CONFIG_KNOWN = """\
 markdown:
   frontmatter:
     version: "1.1"
     schema: "markdown-frontmatter"
-    include: []
+    include:
+      - "no-such-path/**/*.md"
 cli_documentation:
   version: "{version}"
 """
@@ -838,10 +845,15 @@ def test_wrapper_help_exits_zero(installed_venv: Path, script: str) -> None:
 
 
 @pytest.mark.parametrize("script", _SCRIPTS)
-def test_wrapper_version_exits_zero(installed_venv: Path, script: str) -> None:
+def test_wrapper_version_prints_exact_contract(installed_venv: Path, script: str) -> None:
+    # The standard's contract is EXACT "<script-name> <version>" (codex CR-004): the
+    # installed wrapper name is sys.argv[0], so argparse %(prog)s, the sync mains'
+    # Path(sys.argv[0]).name, and cli.py's literal all resolve to the script name here.
+    from project_standards._version import package_version
+
     proc = _run(installed_venv, script, "--version")
     assert proc.returncode == 0, proc.stderr
-    assert any(ch.isdigit() for ch in proc.stdout)
+    assert proc.stdout.strip() == f"{script} {package_version()}"
 
 
 def test_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
@@ -894,6 +906,7 @@ Expected: validator ✓; lint clean; the `rg` sweep returns **no hits** (histori
 ```bash
 git add standards/README.md README.md CLAUDE.md docs/handoff/ src/project_standards/README.md STATUS.md
 git commit -m "docs(cli-docs): register sixth standard across all doc surfaces"
+git status --short   # expect: empty — seven surfaces touched, none left dirty
 ```
 
 ---
@@ -928,4 +941,8 @@ git add CHANGELOG.md UPGRADING.md TODO.md docs/handoff/state.md
 git commit -m "docs(release): stage v4.3.0 notes for cli-documentation standard"
 ```
 
-**Release itself (tagging, `main` merge, GitHub release, `v4` tag move) is NOT part of this plan** — it is a user decision per `docs/handoff/state.md` session instructions.
+- [ ] **Step 7: Clean-tree check**
+
+Run: `git status --short` Expected: empty (also re-check after Task 12 — multi-surface tasks are where files get left dirty).
+
+**Release itself (tagging, `main` merge, GitHub release, `v4` tag move, and the `pyproject.toml`/`uv.lock` version bump to 4.3.0) is NOT part of this plan** — it is a user decision per `docs/handoff/state.md` session instructions and `meta/versioning.md`. Until that release commit, `--version` printing `4.2.0` on `testing` is **expected and correct** (codex note); `docs/usage.md` must therefore not embed a concrete version string in example output.
