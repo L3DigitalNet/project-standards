@@ -46,3 +46,41 @@ This document is the user's visible task list alongside the v3 handoff system. U
     13. MCP capability advertisement policy (SPEC-MS01)
     - Plus (from the specs' §8.3, same backlog): MCP-readiness-before-server-implementation, consumer-config-namespace-registry, agent-summary-vs-canonical-standard split, standard-resource-URIs-and-index, dogfood-consumer-fixtures-for-composition, MCP-server-boundary, MCP-resources-before-tools, MCP-SDK-adapter-boundary, remote-MCP-transport-deferred, manifest-generated-MCP-resources, plan-first-controlled-writes.
     - Note: the specs' own `related.adrs` frontmatter uses placeholder `adr-NNNN` names under `docs/adr/`; assign real zero-padded numbers when authored. The ADR standard now prescribes **`docs/adr/`** as its canonical ADR directory (corrected 2026-07-07 per owner directive; was `docs/decisions/`) — recorded in CHANGELOG `[Unreleased]` (`adr` contract `1.0`→`1.1`). Under the **release freeze**, this ships in **v5.0.0** — the `registry.json`/version-metadata bump happens at that cut, not a separate release.
+
+## 🚀 v5.0.0 Project Tracker — Meta-Repo Standards Platform (DURABLE)
+
+<!-- DO NOT DELETE OR MOVE THIS SECTION, OR ANY COMPLETED ITEM WITHIN IT, UNTIL v5.0.0 IS RELEASED. -->
+
+**Retention rule — this OVERRIDES the "delete completed items" instruction at the top of this file.** This is the durable, user-facing progress log for the **v5.0.0** release. Keep the **full history** here until v5.0.0 ships:
+
+- **Never delete, move, or un-check a completed (`- [x]`) item.** Completed items stay in place, in order, as the release's running history.
+- Add new work as unchecked items; check them off with a date + commit ref when done.
+- Only after v5.0.0 is tagged and released may the owner archive or prune this section.
+
+**Scope:** v5.0.0 = implement the Meta-repo readiness spec (`SPEC-MT01`) + every standards change that lands before the release (per the freeze in `meta/versioning.md`). The MCP _server_ itself (`SPEC-MS01`) is gated after the readiness gate and belongs to a later release, not v5.0.0. Specs + paths: `docs/handoff/specs-plans.md`.
+
+### ✅ Completed — retained history (do not remove)
+
+- [x] **2026-07-07 — MCP enablement specs ingested** (`76b09da`) — SPEC-MT01/RD01/MS01 (Full project specs) + reference pack placed under `docs/superpowers/`, wired into `spec.include`, the spec index, and handoff.
+- [x] **2026-07-07 — ADR standard canonical directory → `docs/adr/`** (`7f12567`) — standards change accruing to v5.0.0; `adr` contract `1.0`→`1.1` (registry bump applied at the release cut).
+- [x] **2026-07-07 — Release-freeze policy set** (`2c76096`) — no interim patch/minor releases; version-affecting changes roll into v5.0.0.
+
+### ⬜ Pending
+
+Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07:
+
+- [ ] **Step 00 — Baseline inventory** of standards, registry, bundles, manifests, validators, tests, and workflows.
+- [ ] **Step 01 — ADR foundation:** author the required ADR set under `docs/adr/` (the 13+ ADRs listed in the MCP program item above).
+- [ ] **Step 02 — Standard Bundle Authoring Standard** (the meta-standard) drafted.
+- [ ] **Step 03 — `standard.toml` manifest** schema/model + valid/invalid fixtures.
+- [ ] **Step 04 — Standards graph validator** (authority / capability / resource / relationship, including hidden-dependency rejection) + CLI.
+- [ ] **Step 05 — Retrofit** every existing standard with a manifest, authorities, and resources.
+- [ ] **Step 06 — Dogfood fixtures** + generated standards index + relationship catalog.
+- [ ] **Step 07 — MCP-readiness gate** passes (no blocking gaps, no hidden hard dependencies, no stale generated indexes).
+
+Release cut (after readiness is complete):
+
+- [ ] Promote CHANGELOG `[Unreleased]` → `## [5.0.0]` with consumer migration notes.
+- [ ] Bump `registry.json` contract versions (incl. `adr 1.1`) + per-standard version metadata + `pyproject` + `uv.lock`.
+- [ ] Run the `meta/versioning.md` release checklist (pin bumps, `UPGRADING.md`, signed `v5.0.0` + moving `v5` tags, GitHub release).
+- [ ] Lift the release freeze in `meta/versioning.md` and `docs/handoff/state.md`.
