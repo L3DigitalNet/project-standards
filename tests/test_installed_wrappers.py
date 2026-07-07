@@ -1,6 +1,7 @@
 """Installed-wrapper smoke (spec §8, codex SA-005 + SA-NEW-001): build the wheel,
-install into a throwaway venv, run every console script via the installed wrapper.
-Slowest test in the suite alongside test_adopt_packaging.
+install into a throwaway venv via the venv's own seeded pip, run every console
+script via the installed wrapper. Slowest test in the suite alongside
+test_adopt_packaging.
 """
 
 from __future__ import annotations
@@ -25,9 +26,9 @@ def installed_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     )
     (wheel,) = tmp.glob("*.whl")
     venv = tmp / "venv"
-    subprocess.run(["uv", "venv", str(venv)], check=True, capture_output=True)
+    subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(
-        ["uv", "pip", "install", "--python", str(venv / "bin" / "python"), str(wheel)],
+        [str(venv / "bin" / "python"), "-m", "pip", "install", "--quiet", str(wheel)],
         check=True,
         capture_output=True,
     )
