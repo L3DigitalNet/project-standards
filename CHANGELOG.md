@@ -35,6 +35,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 - **ADR Standard — canonical ADR directory moved from `docs/decisions/` to `docs/adr/`.** The ADR bundle (`standards/adr/README.md` directory/index convention and `adopt.md`), the adopt manifest (`project-standards adopt adr` now writes `docs/adr/adr.template.md`, previously `docs/decisions/adr.template.md`), and the "exception ADR" location referenced by the Markdown Tooling, Project Specification, and Python Tooling standards — plus the Markdown Frontmatter `concept`/`runbook` examples and the root README pointer — now all prescribe `docs/adr/`. Backward-compatible for existing consumers: the frontmatter validator never enforced ADR location and `adopt adr` is skip-if-exists, so a repo already keeping ADRs under `docs/decisions/` continues to validate — only the recommended path and the freshly-adopted template destination move. **Contract impact: `adr` `1.0` → `1.1` (recommended-path + adopt-dest change); the Markdown Tooling / Project Specification / Python Tooling references are doc-consistency corrections. Bump `registry.json` + the standards' version metadata as part of the v5.0.0 cut, per `meta/versioning.md`.**
 
+### Security
+
+- **Dev-tooling bump: `markdownlint-cli2` `0.22.1` → `0.23.0`** (markdownlint `0.40.0` → `0.41.0`), the reusable `lint-markdown.yml` action `DavidAnson/markdownlint-cli2-action` `v23` → `v24`, and `tests/coherence/test_pins.py` updated so the local pin and the CI-bundled version stay in lock-step. Clears two moderate npm advisories in transitive dev-only dependencies — js-yaml merge-key quadratic DoS (`GHSA-h67p-54hq-rp68`; now `5.2.0`) and markdown-it smartquotes quadratic DoS (`GHSA-6v5v-wf23-fmfq`; now `14.2.0`); `npm audit` reports 0 vulnerabilities. markdownlint 0.41 adds **no new rules** (it refines MD022/MD028/MD035/MD042/MD051/MD060 and removes inline-directive handling), and the repo's 85-file corpus lints clean under it, so consumer-visible risk via the `@v4` reusable workflow is low — the action bump ships with v5.0.0 rather than as a silent interim change.
+
 ## [4.3.0] - 2026-07-07
 
 ### Added

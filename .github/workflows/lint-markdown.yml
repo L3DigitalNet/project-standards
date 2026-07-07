@@ -59,7 +59,7 @@ jobs:
       # so it is passed explicitly. On this repo's push/PR runs `inputs.globs` is
       # empty and the `||` fallback supplies the recursive default.
       - name: Lint Markdown (markdownlint-cli2)
-        uses: DavidAnson/markdownlint-cli2-action@v23
+        uses: DavidAnson/markdownlint-cli2-action@v24
         with:
           globs: ${{ inputs.globs || '**/*.md' }}
           config: ${{ inputs.config }}
