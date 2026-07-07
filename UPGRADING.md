@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for upgrading a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-06'
+updated: '2026-07-07'
 tags:
   - 'migration'
   - 'upgrade'
@@ -51,6 +51,10 @@ Prettier is now a shipped, opt-in gate (contract `markdown_tooling 1.1`, from `v
 4. Not ready yet? Set `prettier: false` in the caller to defer (the whole job skips — a clean pass).
 
 Nothing is required: unchanged consumers keep passing.
+
+## v4.3.0 — CLI Documentation Standard (no action required)
+
+v4.3.0: no action required. Caveat: the validator now recognizes `cli_documentation.version`; a config that already carried that key with an unrecognized value (previously ignored) now exits 2. No known such configs.
 
 ## Before you start
 

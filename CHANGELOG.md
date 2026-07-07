@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-06'
+updated: '2026-07-07'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -26,6 +26,20 @@ license: null
 All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- **CLI Documentation Standard registered — sixth adoptable standard.** A new bundle (`standards/cli-documentation/`: `README.md`, `adopt.md`, `templates/`, `examples/`, `resources/`) governs user-facing CLI usage documentation — the four-artifact model (`--help` / usage doc / man page / README), option-entry and synopsis conventions, and task-first examples. Adopt artifacts: a `docs/usage.md` scaffold and a `cli-docs-check.yml` CI workflow template, plus a `.project-standards.yml` config fragment. Registered end-to-end like the other version-tracked standards: a `cli_documentation` contract (version `1.0`) in `registry.json`, the adopt-engine manifest/parity gate, and the `project-standards adopt cli-documentation` CLI path.
+- **`--version` on all seven installed console scripts**, via a shared helper — previously only some commands reported their version.
+- **`--help` on the two sync-style commands** (`format-frontmatter`, `validate-references`) — previously `--help` was treated as a positional filename argument and produced a confusing per-file error instead of usage text.
+- **`docs/usage.md`** — this repository dogfoods the new standard: a canonical usage document covering its own installed command set (`project-standards`, `validate-frontmatter`, `validate-id`, `validate-references`, `format-frontmatter`, and the `spec`/`adopt` subcommand groups).
+- **Installed-wrapper smoke tests and a usage-doc inventory-parity guard** — new tests confirm the packaged console scripts run correctly once installed (not just in-source) and that `docs/usage.md` enumerates exactly the commands the package ships, so the two surfaces cannot silently drift apart.
+
+### Changed
+
+- **`src/project_standards/README.md` repositioned as an implementation-internals reference** — user-facing CLI usage documentation now lives in `docs/usage.md` (the CLI Documentation Standard's canonical artifact); the source README documents module layout, the adopt engine, and the contract-version registry for contributors. Its "Adding a new standard" checklist is expanded to cover `registry.py`, the validator gate, and bundle/fixture ripple effects, closing gaps a contributor previously had to discover by trial and error.
 
 ## [4.2.0] - 2026-07-06
 
