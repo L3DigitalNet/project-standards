@@ -21,6 +21,11 @@
     - [9. Tests](#9-tests)
     - [10. Repo touchpoints (multi-file change list)](#10-repo-touchpoints-multi-file-change-list)
     - [11. Acceptance criteria](#11-acceptance-criteria)
+      - [Bundle \& docs](#bundle--docs)
+      - [Registration](#registration)
+      - [Dogfood](#dogfood)
+      - [Gate green (repo non-negotiable)](#gate-green-repo-non-negotiable)
+      - [Release](#release)
   - [Versioning & release interplay](#versioning--release-interplay)
   - [Non-goals](#non-goals)
   - [Open questions](#open-questions)
@@ -176,26 +181,26 @@ Mechanical mirror of `markdown_tooling`:
 
 ### 11. Acceptance criteria
 
-**Bundle & docs**
+#### Bundle & docs
 
 - `standards/cli-documentation/` matches §5 exactly; no `cli-framework/` path remains anywhere in the repo (code, config, docs, workflows).
 - `README.md` is normative (requirement language throughout; no Executive Summary / Bottom line / Observation-Inference-Recommendation residue), with `[S##]` register and no orphaned `[n]` markers.
 - Byte-level check: no Unicode private-use-area characters in any bundle file (`grep -P '[\x{E000}-\x{F8FF}]'` clean) — the research-export fingerprint.
 
-**Registration**
+#### Registration
 
 - `project-standards adopt cli-documentation` materializes exactly the three §7 artifacts; `_assert_registry_bundle_parity` passes; unknown `cli_documentation.version` values exit `2`.
 
-**Dogfood**
+#### Dogfood
 
 - `docs/usage.md` exists, conforms to the Packaged profile, and `uv run validate-frontmatter --config .project-standards.yml` passes with the interim exclude deleted.
 - The installed-entry-point smoke test passes via the normal pytest gate.
 
-**Gate green (repo non-negotiable)**
+#### Gate green (repo non-negotiable)
 
 - `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && uv run pytest tests/coherence` all pass; prettier + markdownlint clean.
 
-**Release**
+#### Release
 
 - v4.3.0 tagged and released per `meta/versioning.md`; six doc surfaces updated (§10); `v4` moving tag advanced.
 
