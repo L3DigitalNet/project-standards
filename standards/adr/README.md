@@ -63,7 +63,7 @@ This document separates **source-backed facts** from **project policy decisions*
 
 - Source-backed facts cite source IDs such as `[S01]`.
 - Every source ID is listed in the [Source register](#source-register), with `Last checked: 2026-06-07`.
-- Policy decisions are explicit local choices for this project ecosystem — informed by sources, but not mandated by them. The ADR-specific ones: the `id` embeds the `repo-name` while the filename omits it; ADRs live under `docs/decisions/`; and the MADR body-section check is opt-in and off by default.
+- Policy decisions are explicit local choices for this project ecosystem — informed by sources, but not mandated by them. The ADR-specific ones: the `id` embeds the `repo-name` while the filename omits it; ADRs live under `docs/adr/`; and the MADR body-section check is opt-in and off by default.
 - MADR is the single external authority for body structure and status vocabulary. Re-verify it against [S01] whenever this standard is reviewed — the upstream spec has shifted before (the 3.x→4.0 rename, and the four-→three required-section change).
 
 ---
@@ -162,16 +162,16 @@ Templates for each verbosity level live in [`templates/`](templates/): [`adr.md`
 
 ## Directory and index convention
 
-In a consuming repository, ADRs live together under `docs/decisions/`, with a `README.md` index:
+In a consuming repository, ADRs live together under `docs/adr/`, with a `README.md` index:
 
 ```text
-docs/decisions/
+docs/adr/
 ├── README.md                                       # doc_type: index — links every ADR
 ├── adr-0001-use-netbox-as-source-of-truth.md       # id: adr-0001-homelab-use-netbox-as-source-of-truth
 └── adr-0002-segment-iot-onto-its-own-vlan.md       # id: adr-0002-homelab-segment-iot-onto-its-own-vlan
 ```
 
-The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and title. (This standards repository documents the convention but does not itself host a `docs/decisions/` tree, since it is the source of the standard rather than a consumer of it.)
+The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and title. (This standards repository documents the convention but does not itself host a `docs/adr/` tree, since it is the source of the standard rather than a consumer of it.)
 
 ## Supersession workflow
 

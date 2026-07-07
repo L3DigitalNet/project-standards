@@ -1329,10 +1329,10 @@ A project may deviate from this standard only when the exception is documented.
 
 To adopt this standard, see [`adopt.md`](adopt.md).
 
-Record the exception as a conformant ADR. Create or update a file under `docs/decisions/`, using a zero-padded numeric sequence number for `NNNN`:
+Record the exception as a conformant ADR. Create or update a file under `docs/adr/`, using a zero-padded numeric sequence number for `NNNN`:
 
 ```text
-docs/decisions/adr-NNNN-python-tooling-exception.md
+docs/adr/adr-NNNN-python-tooling-exception.md
 ```
 
 The ADR Standard ([`standards/adr/README.md`](../adr/README.md)) is the authority for the exact ADR shape — `id`, filename, frontmatter, and MADR section structure. Map the exception into MADR's required level-2 sections as follows:

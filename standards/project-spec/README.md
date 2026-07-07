@@ -202,10 +202,10 @@ Three different things get called a "deviation"; the test for a true exception t
 
 **An exception forfeits the machine guarantees — and an ADR does not restore them.** The deterministic tooling ([§5](#5-tooling)) rests on these invariants; a case-3 deviation will make `validate` report the spec as non-conformant and may cause `extract` / `next` / `upgrade` to mis-parse or refuse it. Documenting the exception in an ADR records _why_; it does not teach the tool to accept it. The consumer must **also scope the tooling to exclude the non-conforming spec** (or accept its failures) — the same way this repository excludes files from the frontmatter validator. That cost is deliberate: an exception opts a spec out of the guarantees (G2–G7) that make the standard worth adopting, so prefer tailoring (case 1) wherever it suffices.
 
-When an exception is genuinely warranted, document it as a conformant ADR under `docs/decisions/`, using a zero-padded sequence number for `NNNN`:
+When an exception is genuinely warranted, document it as a conformant ADR under `docs/adr/`, using a zero-padded sequence number for `NNNN`:
 
 ```text
-docs/decisions/adr-NNNN-project-spec-exception.md
+docs/adr/adr-NNNN-project-spec-exception.md
 ```
 
 The [ADR Standard](../adr/README.md) is the authority for the ADR's shape (`id`, filename, frontmatter, MADR sections). State what the standard requires, what the project does instead, **which tooling guarantees are forfeited and how the tool is scoped around them**, and why built-in tailoring does not already cover it.

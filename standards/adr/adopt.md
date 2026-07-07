@@ -38,7 +38,7 @@ uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
   project-standards adopt adr
 ```
 
-This writes the ADR template to `docs/decisions/adr.template.md` (a `*.template.md` path your validation excludes, so its placeholder frontmatter never fails) and **reports** the `.project-standards.yml` additions — the `markdown.adr` block (§3) and the required `**/*.template.md` exclusion — for you to merge by hand (the CLI never edits an existing config in place). Adopt the Frontmatter Standard first (§1); the manual steps below remain the reference.
+This writes the ADR template to `docs/adr/adr.template.md` (a `*.template.md` path your validation excludes, so its placeholder frontmatter never fails) and **reports** the `.project-standards.yml` additions — the `markdown.adr` block (§3) and the required `**/*.template.md` exclusion — for you to merge by hand (the CLI never edits an existing config in place). Adopt the Frontmatter Standard first (§1); the manual steps below remain the reference.
 
 ## 1. Adopt the Frontmatter Standard first
 
@@ -46,7 +46,7 @@ Follow [`../markdown-frontmatter/adopt.md`](../markdown-frontmatter/adopt.md) to
 
 ## 2. Let ADRs validate
 
-Do **not** exclude `docs/adr/**` or `docs/decisions/**` in `.project-standards.yml` — ADRs are managed docs. Each carries frontmatter with `doc_type: adr` and an id like `adr-NNNN-repo-name-short-title` (see [the standard](README.md)). Note the id and the filename diverge: the **`id`** embeds the `repo-name` segment for global uniqueness (`adr-NNNN-repo-name-short-title`), but the **filename** omits it (`adr-NNNN-short-title.md`) — see the standard's "Body structure (MADR)" section.
+Do **not** exclude `docs/adr/**` in `.project-standards.yml` — ADRs are managed docs. Each carries frontmatter with `doc_type: adr` and an id like `adr-NNNN-repo-name-short-title` (see [the standard](README.md)). Note the id and the filename diverge: the **`id`** embeds the `repo-name` segment for global uniqueness (`adr-NNNN-repo-name-short-title`), but the **filename** omits it (`adr-NNNN-short-title.md`) — see the standard's "Body structure (MADR)" section.
 
 ## 3. (Optional) enforce MADR body sections
 

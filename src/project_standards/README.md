@@ -344,7 +344,7 @@ markdown:
     include:
       - 'docs/**/*.md'
     exclude:
-      - 'docs/decisions/**'
+      - 'docs/generated/**' # exclude machine-generated docs; do NOT exclude docs/adr/** (ADRs are managed)
     required: true # fail files that have no frontmatter (default: true)
   adr:
     require_sections: true # enforce the three MADR-required ## headings

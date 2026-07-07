@@ -27,6 +27,12 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **ADR Standard — canonical ADR directory moved from `docs/decisions/` to `docs/adr/`.** The ADR bundle (`standards/adr/README.md` directory/index convention and `adopt.md`), the adopt manifest (`project-standards adopt adr` now writes `docs/adr/adr.template.md`, previously `docs/decisions/adr.template.md`), and the "exception ADR" location referenced by the Markdown Tooling, Project Specification, and Python Tooling standards — plus the Markdown Frontmatter `concept`/`runbook` examples and the root README pointer — now all prescribe `docs/adr/`. Backward-compatible for existing consumers: the frontmatter validator never enforced ADR location and `adopt adr` is skip-if-exists, so a repo already keeping ADRs under `docs/decisions/` continues to validate — only the recommended path and the freshly-adopted template destination move. **Proposed classification (owner to confirm at release): MINOR for the `adr` contract (`1.0` → `1.1`); the Markdown Tooling / Project Specification / Python Tooling references are doc-consistency corrections riding along. Bump `registry.json` + the standards' version metadata during the release cut, per `meta/versioning.md`.**
+
 ## [4.3.0] - 2026-07-07
 
 ### Added

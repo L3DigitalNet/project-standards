@@ -301,13 +301,13 @@ def test_adopt_frontmatter_adr_validates_real_managed_file_and_excludes_template
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # Clean config-less repo: the starter (with its **/*.template.md exclusion) is written,
-    # and the ADR template lands at docs/decisions/adr.template.md. We also drop a REAL managed
+    # and the ADR template lands at docs/adr/adr.template.md. We also drop a REAL managed
     # doc with valid frontmatter (a shipped, dogfooded example) so validation actually processes
     # a file rather than passing vacuously. Validating IN-PROCESS (chdir; the validator runs from
     # this repo's installed env) must return 0 — proving (a) the managed doc passes and (b) the
     # placeholder template's intentional YYYY-MM-DD frontmatter is excluded, not validated.
     main(["adopt", "markdown-frontmatter", "adr", "--dest", str(tmp_path)])
-    assert (tmp_path / "docs/decisions/adr.template.md").is_file()
+    assert (tmp_path / "docs/adr/adr.template.md").is_file()
     example = (
         Path(__file__).resolve().parent.parent
         / "standards/markdown-frontmatter/examples/note.example.md"
@@ -353,7 +353,7 @@ def test_adopt_adr_existing_config_with_exclusion_validates(
         "      - '**/*.template.md'\n"  # the operator-applied exclusion from the ADR report
     )
     main(["adopt", "adr", "--dest", str(tmp_path)])
-    assert (tmp_path / "docs/decisions/adr.template.md").is_file()
+    assert (tmp_path / "docs/adr/adr.template.md").is_file()
     monkeypatch.chdir(tmp_path)
     assert validate_frontmatter.main(["--config", ".project-standards.yml"]) == 0
 

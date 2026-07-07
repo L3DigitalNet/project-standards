@@ -70,7 +70,7 @@ The standard defines **eleven required fields** plus a recommended optional set.
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/README.md`](standards/adr/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/decisions/` conventions, and the supersession workflow.
+- **Standard:** [`standards/adr/README.md`](standards/adr/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
 - **Templates:** [`templates/adr.md`](standards/adr/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
 - **Example:** [`examples/adr.example.md`](standards/adr/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/adopt.md).
 

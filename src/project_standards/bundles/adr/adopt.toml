@@ -5,7 +5,7 @@ id = "adr"
 kind = "file"
 owner = true
 source = "adr.template.md"
-dest = "docs/decisions/adr.template.md"
+dest = "docs/adr/adr.template.md"
 
 [[artifact]]
 kind = "fragment"

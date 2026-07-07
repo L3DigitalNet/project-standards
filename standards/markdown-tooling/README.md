@@ -388,10 +388,10 @@ Policy decision: this is a **per-project add prohibition**, not a workstation un
 
 ## 14. Exceptions process
 
-A project may deviate only when the exception is documented as a conformant ADR. Create or update a file under `docs/decisions/`, using a zero-padded numeric sequence number for `NNNN`:
+A project may deviate only when the exception is documented as a conformant ADR. Create or update a file under `docs/adr/`, using a zero-padded numeric sequence number for `NNNN`:
 
 ```text
-docs/decisions/adr-NNNN-markdown-tooling-exception.md
+docs/adr/adr-NNNN-markdown-tooling-exception.md
 ```
 
 The ADR Standard ([`standards/adr/README.md`](../adr/README.md)) is the authority for the exact ADR shape — `id`, filename, frontmatter, and MADR section structure. Map the exception into MADR's required level-2 sections (Context and Problem Statement, Considered Options, Decision Outcome with a Consequences subsection).
