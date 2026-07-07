@@ -69,7 +69,7 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07:
 
-- [ ] **Step 00 — Baseline inventory** of standards, registry, bundles, manifests, validators, tests, and workflows.
+- [x] **Step 00 — Baseline inventory** of standards, registry, bundles, manifests, validators, tests, and workflows. — done 2026-07-07 (`194637e`); deliverable: `docs/superpowers/research/2026-07-07-spec-mt01-baseline-inventory.md`.
 - [ ] **Step 01 — ADR foundation:** author the required ADR set under `docs/adr/` (the 13+ ADRs listed in the MCP program item above).
 - [ ] **Step 02 — Standard Bundle Authoring Standard** (the meta-standard) drafted.
 - [ ] **Step 03 — `standard.toml` manifest** schema/model + valid/invalid fixtures.
