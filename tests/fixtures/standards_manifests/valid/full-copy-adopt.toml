@@ -1,0 +1,50 @@
+[standard]
+id = "full-copy-adopt"
+name = "Full Copy Adopt"
+status = "active"
+summary = "A fully populated adoptable manifest."
+adoption = "copy-adopt"
+
+[versions]
+supported = ["1.0", "1.1"]
+latest = "1.1"
+
+[config]
+namespaces = ["markdown_tooling", "markdown.frontmatter"]
+
+[capabilities]
+provides = ["markdown.format"]
+consumes_platform = []
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+agent_summary = "agent-summary.md"
+template = "templates/standard.toml"
+rationale = "resources/why.md"
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "physical-formatting"
+owner = "prettier"
+mutates = true
+
+[[providers]]
+operation = "drift-check"
+kind = "python"
+optional = true
+entrypoint = "project_standards.markdown_tooling:check_drift"
+input_schema = "builtin:paths"
+output_schema = "builtin:report"
+
+[[providers]]
+operation = "validate"
+kind = "command"
+optional = false
+entrypoint = "markdownlint"

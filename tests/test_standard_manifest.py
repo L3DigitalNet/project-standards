@@ -338,3 +338,69 @@ def test_committed_schema_is_valid_json_schema() -> None:
     Draft202012Validator.check_schema(  # pyright: ignore[reportUnknownMemberType]
         json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
     )
+
+
+_FIXTURES = Path(__file__).resolve().parent / "fixtures/standards_manifests"
+
+
+@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name)
+def test_valid_fixtures_load(toml_path: Path) -> None:
+    StandardManifest.model_validate(_load_toml(toml_path))
+
+
+@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "invalid").glob("*.toml")), ids=lambda p: p.name)
+def test_invalid_fixtures_reject(toml_path: Path) -> None:
+    with pytest.raises(ValidationError):
+        StandardManifest.model_validate(_load_toml(toml_path))
+
+
+def _load_toml(path: Path) -> dict[str, object]:
+    import tomllib
+
+    return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def test_real_manifest_validates() -> None:
+    real = Path(__file__).resolve().parent.parent / "standards/standard-bundle-authoring/standard.toml"
+    load_standard_manifest(real)
+
+
+# --- schema-vs-fixture semantic tests (the generated schema is a permissive view) ---
+# Invalid fixtures the JSON Schema ALSO rejects. The remaining invalid fixtures are model-only:
+# cross-field or custom-validator rules Pydantic does not emit to JSON Schema (latest-in-supported,
+# reserved/duplicate namespace, adopt-on-none, per-kind entrypoint, path safety, resource-id key
+# syntax). Those still fail the model (test_invalid_fixtures_reject) but pass the raw schema.
+_SCHEMA_ENFORCED = {
+    "bad-adoption.toml",
+    "bad-status.toml",
+    "bad-id.toml",
+    "bad-operation.toml",
+    "malformed-namespace.toml",
+    "unknown-key.toml",
+    "stray-requires.toml",
+    "missing-required.toml",
+    "non-string-resource.toml",
+    "missing-versions-table.toml",
+}
+
+
+def _schema_validator() -> Draft202012Validator:
+    schema = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema)  # pyright: ignore[reportUnknownMemberType]
+
+
+@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name)
+def test_valid_fixtures_pass_generated_schema(toml_path: Path) -> None:
+    _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
+
+
+@pytest.mark.parametrize(
+    "toml_path",
+    sorted(p for p in (_FIXTURES / "invalid").glob("*.toml") if p.name in _SCHEMA_ENFORCED),
+    ids=lambda p: p.name,
+)
+def test_schema_enforced_invalids_fail_generated_schema(toml_path: Path) -> None:
+    from jsonschema import ValidationError as SchemaValidationError
+
+    with pytest.raises(SchemaValidationError):
+        _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]

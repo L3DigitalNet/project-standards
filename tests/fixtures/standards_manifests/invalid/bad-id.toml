@@ -1,0 +1,26 @@
+[standard]
+id = "Not_Kebab"
+name = "Reference None"
+status = "active"
+summary = "Internal reference standard."
+adoption = "none"
+
+[versions]
+supported = []
+latest = ""
+
+[config]
+namespaces = []
+
+[capabilities]
+provides = []
+consumes_platform = []
+
+[resources]
+readme = "README.md"
+template = "templates/standard.toml"
+
+[[providers]]
+operation = "extract"
+kind = "documentation-only"
+optional = true

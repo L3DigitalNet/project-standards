@@ -1,0 +1,29 @@
+[standard]
+id = "reference-none"
+name = "Reference None"
+status = "active"
+summary = "Internal reference standard."
+adoption = "none"
+
+[versions]
+supported = []
+latest = ""
+
+[config]
+namespaces = []
+
+[capabilities]
+provides = []
+consumes_platform = []
+
+[relations]
+requires = ["adr"]
+
+[resources]
+readme = "README.md"
+template = "templates/standard.toml"
+
+[[providers]]
+operation = "extract"
+kind = "documentation-only"
+optional = true
