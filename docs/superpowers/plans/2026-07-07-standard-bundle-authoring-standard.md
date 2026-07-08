@@ -8,7 +8,7 @@
 
 **Tech Stack:** Markdown + YAML frontmatter (Markdown Frontmatter Standard); TOML (`standard.toml`); the repo's own validators (`validate-frontmatter`, `validate-id`, `project-standards spec`), markdownlint, and Prettier. No Python, no new dependencies.
 
-**Source of truth:** `docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md` (SPEC-BA01, rev 0.3). Each task's acceptance is the named FR's acceptance criteria in that spec. The `standard.toml` field shapes follow SPEC-MT01 §9.
+**Source of truth:** `docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md` (SPEC-BA01, rev 0.5 — check the spec's latest Revision History row). Each task's acceptance is the named FR's acceptance criteria in that spec. The `standard.toml` field shapes follow SPEC-MT01 §9.
 
 ## Global Constraints
 
@@ -28,7 +28,7 @@
 - **Create** `standards/standard-bundle-authoring/standard.toml` — the meta-standard's own machine manifest (FR-010 worked example; dogfoods the contract).
 - **Create** `standards/standard-bundle-authoring/templates/standard.toml` — a blank annotated `standard.toml` template for future standard authors.
 - **Modify** `standards/README.md` — add the bundle row (non-adoptable marker) and update the bundle-anatomy text so `adopt.md` is required only for _adoptable_ standards.
-- **Modify** the repo-facing standards maps that would otherwise go stale (CR-004): root `README.md` (directory layout + standards list), `AGENTS.md`, `CLAUDE.md`, and `meta/versioning.md` — mention `standard-bundle-authoring` as an **internal/reference** document, explicitly _not_ one of the six released standards (the same way `python-coding` is listed as an in-development draft). The "six standards ship under one version" count is unchanged — this standard is unregistered and not released.
+- **Modify** the repo-facing standards maps that would otherwise go stale (CR-004): root `README.md` (directory layout + standards list), `AGENTS.md` (whose Repo-Purpose line enumerates the standards), `CLAUDE.md`, `meta/versioning.md`, and `docs/handoff/architecture.md` (its component-graph line lists the standard bundles) — mention `standard-bundle-authoring` as an **internal/reference** document, explicitly _not_ one of the six released standards (the same way `python-coding` is listed as an in-development draft). The "six standards ship under one version" count is unchanged — this standard is unregistered and not released.
 
 No code, schema, `registry.json`, `spec.include`, or `src/project_standards/bundles/` changes — Task 5 verifies this explicitly.
 
@@ -252,14 +252,14 @@ git commit -m "docs(v5): add blank standard.toml template"
 
 - [ ] **Step 3: Reconcile the anatomy text.** Fix the "adopt.md required" claim found in Step 1 (in `standards/README.md`, and `AGENTS.md` if it asserts the same) so it reads, in substance: "every standard has a `README.md` and a `standard.toml`; `adopt.md` is present for every standard released for adoption — including CLI-enforced ones like `project-spec` — while only `adoption = \"none\"` internal standards and unreleased-draft documents carry an explicit non-adoptable marker instead." Keep edits minimal and in each file's voice.
 
-- [ ] **Step 4: Update the repo-facing standards maps (CR-004).** Run: `rg -n "six standards|standards/|python-coding|standard-bundle-authoring" README.md CLAUDE.md meta/versioning.md`. Add `standard-bundle-authoring/` to root `README.md`'s directory-layout tree and its standards list, and a one-line mention in `CLAUDE.md` and `meta/versioning.md` — each framed as an **internal/reference** document, _not_ one of the six released standards (mirror how `python-coding` is described). Do **not** change the "six standards ship under one version" release count; this standard is unregistered and not released.
+- [ ] **Step 4: Update the repo-facing standards maps (CR-004).** Run: `rg -n "five standards|six standards|standards/|python-coding|standard-bundle-authoring|cli-documentation" README.md AGENTS.md CLAUDE.md meta/versioning.md docs/handoff/architecture.md`. Add `standard-bundle-authoring/` to root `README.md`'s directory-layout tree and standards list, to `docs/handoff/architecture.md`'s component-graph line, and a one-line mention in `AGENTS.md` (its Repo-Purpose standards enumeration — note it may also be stale on the standards count/list), `CLAUDE.md`, and `meta/versioning.md` — each framed as an **internal/reference** document, _not_ one of the six released standards (mirror how `python-coding` is described). Do **not** change the "six standards ship under one version" release count; this standard is unregistered and not released.
 
 - [ ] **Step 5: Validate.** Run: `./node_modules/.bin/prettier --write standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md && ./node_modules/.bin/markdownlint-cli2 standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md && uv run validate-frontmatter --config .project-standards.yml` Expected: Prettier clean, markdownlint `0 error(s)`, frontmatter ✓ (`meta/versioning.md` is frontmatter-validated; `standards/README.md`, root `README.md`, `AGENTS.md`, `CLAUDE.md` are frontmatter-excluded).
 
 - [ ] **Step 6: Commit.**
 
 ```bash
-git add standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md
+git add standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md docs/handoff/architecture.md
 git commit -m "docs(v5): index Standard Bundle Authoring; fix adopt.md anatomy + repo-facing maps"
 ```
 
@@ -303,7 +303,7 @@ git commit -m "docs(v5): Step 02 complete — Standard Bundle Authoring Standard
 
 ## Notes for the implementer
 
-- **The spec is the content contract.** Every README section must satisfy the acceptance criteria of its FR in SPEC-BA01 rev 0.3. When in doubt, re-read the FR — do not invent requirements (Appendix B.2).
+- **The spec is the content contract.** Every README section must satisfy the acceptance criteria of its FR in SPEC-BA01 (current revision). When in doubt, re-read the FR — do not invent requirements (Appendix B.2).
 - **Field-name consistency is the top risk.** The README's manifest contract, `standard.toml`, and `templates/standard.toml` must use identical field names. Author Task 1's manifest section first; copy names into Tasks 2–3.
 - **Nothing enters the machine layer.** No `registry.json`, `spec.include`, `src/project_standards/bundles/`, or new Python. If you feel the urge to add a schema, that's Step 03 — stop and record an `OQ-`.
 - **Keep it dogfood-clean throughout** — the meta-standard README is validated by the very standards it sits beside.
