@@ -12,6 +12,7 @@
   - [Components](#components)
   - [Validation rules encoded in the model](#validation-rules-encoded-in-the-model)
   - [Data flow and errors](#data-flow-and-errors)
+  - [Canonical schema generation](#canonical-schema-generation)
   - [Invariants — what must not change](#invariants--what-must-not-change)
   - [Dependency](#dependency)
   - [Non-goals (Step 04 and later)](#non-goals-step-04-and-later)
@@ -58,26 +59,40 @@ The model module is intentionally the one place in the package that **omits `fro
 
 ## Validation rules encoded in the model
 
-Every rule below is a **single-manifest** rule — decidable from one file, no cross-standard context:
+Every rule below is a **single-manifest** rule — decidable from one file, no cross-standard context. Fixed-shape tables forbid unknown keys; the one intentionally open table is `[resources]`.
 
-- **Enums.** `adoption` ∈ {`validator`, `copy-adopt`, `cli`, `reference-only`, `none`}; `status` ∈ {`draft`, `review`, `active`, `deprecated`, `archived`, `superseded`}; provider `kind` ∈ {`python`, `command`, `workflow`, `documentation-only`}; provider `operation` ∈ the known generic operations (`validate`, `fix`, `drift-check`, `id-next`, `extract`, …).
-- **`extra = "forbid"` on every model.** A stray `requires` key (SPEC-BA01 `FR-005` — the reserved-and-invalid field) or any unknown key fails loudly rather than being silently ignored.
-- **Required fields and tuple completeness** (`FR-014` checklist): `[standard]` id/name/status/summary/adoption; `[versions]` supported/latest; `[config]` namespaces; `[capabilities]` provides/consumes_platform; `[resources]` readme; each `[[authority]]` block's full `(domain, target, concern, owner, mutates)`; each `[[providers]]` block's operation/kind/optional (+ entrypoint for executable kinds).
-- **Adoptability linkage (`FR-013`).** `adopt` is present in `[resources]` for adoptable modes and absent for `adoption = "none"`.
-- **Dotted namespaces (`FR-006`).** Each `[config].namespaces` entry matches a dotted-path syntax (segments of config-key characters, dot-separated), no `..`; duplicate paths _within the one manifest_ are rejected. Cross-standard duplicate-owner detection is Step 04.
-- **Path safety, syntactic (`FR-012`).** Resource, `adopt`, and template paths reject `..` segments and absolute paths at the model layer.
-- **Provider entrypoint shape (`FR-012`).** `entrypoint` must look like an import path (`pkg.mod:func`) or a command reference, and is rejected if it looks like a filesystem path.
+- **Enums (closed).** `adoption` ∈ {`validator`, `copy-adopt`, `cli`, `reference-only`, `none`}; `status` ∈ {`draft`, `review`, `active`, `deprecated`, `archived`, `superseded`}; provider `kind` ∈ {`python`, `command`, `workflow`, `documentation-only`}.
+- **Provider `operation` (open vocabulary).** A non-empty lowercase kebab token, **not** a closed enum — SPEC-MT01 lists operations by example (`validate`, `fix`, `drift-check`, `id-next`, `extract`, `semantic-review`, …) and the set is meant to grow, so freezing it here would bake a false contract. The known operations are documented; membership/registry checks are Step 04.
+- **`extra = "forbid"` on fixed-shape models** — `[standard]`, `[versions]`, `[config]`, `[capabilities]`, `[relations]`, and every `[[authority]]` / `[[providers]]` block. A stray `requires` key (SPEC-BA01 `FR-005`, reserved-and-invalid) or any unknown key fails loudly. `[resources]` is exempt (next rule).
+- **`[resources]` is an open URI-safe-ID → path mapping** (`FR-008`, adr-0010): required `readme`; conditional `adopt`; known optional `agent_summary` and `template`; plus **arbitrary URI-safe resource IDs** (lowercase, URI-safe token) whose values are safe bundle-relative paths. Modeled as a constrained `dict`, not a closed submodel, so future resource IDs are not rejected.
+- **Identity (`FR-001` / checklist).** `[standard].id` is **kebab-case** (model-level regex); the loader additionally asserts `id` **equals the parent bundle directory name** (needs the path, so loader-level).
+- **Required fields and tuple completeness** (`FR-014` checklist): `[standard]` id/name/status/summary/adoption; `[versions]` supported/latest; `[config]` namespaces; `[capabilities]` provides/consumes_platform; `[resources]` readme; each `[[authority]]` block's full `(domain, target, concern, owner, mutates)`; each `[[providers]]` block's operation/kind/optional.
+- **Provider fields (`FR-007`).** Optional `input_schema` / `output_schema` are accepted (SPEC-MT01 "Should"). `entrypoint` is **required for executable kinds** (`python`/`command`/`workflow`) and **omitted for `documentation-only`**; it must look like an import path (`pkg.mod:func`) or command reference, and is rejected if it looks like a filesystem path (`FR-012`).
+- **Adoptability linkage (`FR-013`).** `adoption = "none"` **must not** declare an `adopt` resource (enforced). The positive rule — a _released_ adoptable standard has `adopt.md` — depends on `status` plus the file existing on disk, so it is deferred to Step 04; Step 03 enforces only the negative.
+- **Dotted namespaces and reserved meta keys (`FR-006`).** Each `[config].namespaces` entry is a dotted path (config-key segments, dot-separated), no `..`; a **reserved repo-meta key** (`standards_version`) is rejected; duplicate paths _within the one manifest_ are rejected. Cross-standard duplicate-owner detection is Step 04.
+- **`latest` ∈ `supported`.** When both are non-empty, `latest` must be a member of `supported` — a single-manifest consistency check.
+- **Path safety, syntactic (`FR-012`).** All resource / `adopt` / template paths reject `..` segments and absolute paths at the model layer; symlink-escape resolution is loader-level (see [Data flow](#data-flow-and-errors)).
+
+**Not schema-enforceable (policy or deferred).** SPEC-BA01's "providers are first-party" and "no network access by default" are policy statements, not properties a manifest schema can check — they stay documented in the standard, and any mechanical check is deferred. `relations.extends` is validated only for **array shape** in Step 03; the ADR-backed and acyclicity checks are Step 04.
 
 ## Data flow and errors
 
 ```text
-Path -> tomllib.loads(bytes) -> dict
-     -> StandardManifest.model_validate(dict)   # aggregates ALL field errors
-     -> path resolution vs. bundle dir          # catches symlink escape (needs the filesystem)
+Path -> path.read_text(encoding="utf-8") -> tomllib.loads(str) -> dict
+     -> StandardManifest.model_validate(dict)      # aggregates ALL field errors
+     -> loader post-checks: id == bundle dir name; declared paths resolve inside the bundle dir (symlink-safe)
      -> StandardManifest  (typed)   OR   StandardManifestError
 ```
 
-`StandardManifestError` subclasses `ValueError` (like `RegistryError`), wraps Pydantic's aggregated `ValidationError`, and is the type a future Step 04 CLI maps to exit code 2. Symlink-escape containment (the part of `FR-012` that a pure schema cannot see) lives in the **loader**, which knows the manifest's on-disk bundle directory and resolves each declared path against it; the model enforces only the syntactic half (no `..`, not absolute).
+`tomllib.loads` takes a `str`, so the loader reads the file as UTF-8 text first (matching `adopt/manifest.py`); `tomllib.load(fp)` on a binary handle is the equivalent alternative. `StandardManifestError` subclasses `ValueError` (like `RegistryError`) and is the **single** error type the loader raises — it wraps Pydantic's aggregated `ValidationError`, a `tomllib.TOMLDecodeError` (malformed TOML), and `OSError` (missing/unreadable file), so no raw parser or I/O traceback leaks past the boundary. It is the type a future Step 04 CLI maps to exit code 2. Symlink-escape containment (the part of `FR-012` a pure schema cannot see) lives in the loader, which resolves each declared path against the manifest's on-disk bundle directory; the model enforces only the syntactic half (no `..`, not absolute).
+
+## Canonical schema generation
+
+`StandardManifest.model_json_schema()` returns a `dict`, so a single **canonical writer** owns serialization and is used both to write the committed file and inside the drift test:
+
+- inject `$schema` (JSON Schema Draft 2020-12) and `$id`, matching the shape of the existing `markdown-frontmatter.schema.json`;
+- serialize with `json.dumps(schema, indent=2, ensure_ascii=False)` **preserving key order** (Pydantic emits a meaningful order — do **not** `sort_keys`) plus a trailing newline;
+- the drift test regenerates through this same helper and asserts byte-equality with the committed `standard.schema.json`; a second test asserts the file parses as a valid JSON Schema.
 
 ## Invariants — what must not change
 
@@ -99,17 +114,20 @@ Adds **`pydantic>=2`** as a runtime dependency (`uv add pydantic`, `uv.lock` com
 
 ## Acceptance criteria
 
-- `StandardManifest` and `load_standard_manifest` load and validate a `standard.toml`, returning a typed object or raising `StandardManifestError`.
+- `StandardManifest` and `load_standard_manifest` load and validate a `standard.toml`, returning a typed object or raising `StandardManifestError` (never a raw `TOMLDecodeError` / `OSError` / `ValidationError`).
 - Every valid fixture loads; every invalid fixture raises, each targeting exactly one rule from [Validation rules](#validation-rules-encoded-in-the-model).
+- Identity checks hold: a bad-`id` or id/directory-mismatch manifest is rejected; a manifest claiming the reserved `standards_version` namespace is rejected.
 - `standards/standard-bundle-authoring/standard.toml` validates.
-- `src/project_standards/schemas/standard.schema.json` is committed and equals `StandardManifest.model_json_schema()` (drift test green).
+- `src/project_standards/schemas/standard.schema.json` is committed, is produced by the canonical writer, and equals a fresh regeneration byte-for-byte (drift test green); the committed file parses as a JSON Schema.
 - `registry.json`, bundles, and `.project-standards.yml` are unchanged.
 - Full gate green, coverage at the repo bar.
 
 ## Testing
 
-- **Fixture corpus.** Valid manifests covering the adoptable shape (a representative `copy-adopt` standard with authorities + a provider) and the `adoption = "none"` shape (the meta-standard's own minimal manifest). Invalid manifests, one rule each: bad `adoption` value, bad `status`, a stray `requires` key, an unknown key, a missing required field, an incomplete authority tuple, a `..` in a resource path, an absolute resource path, a filesystem-path `entrypoint`, a malformed dotted namespace, and a duplicate namespace within the manifest.
+- **Valid fixtures.** A fully-populated `copy-adopt` manifest (authorities, a provider with `input_schema` / `output_schema`, `agent_summary` + `template` + a bundle-specific resource ID, companions); the `adoption = "none"` minimal shape; and a `documentation-only` provider with no `entrypoint`.
+- **Invalid fixtures, one rule each:** bad `adoption`, bad `status`, a stray `requires` key, an unknown key in a fixed-shape table, a missing required field, an incomplete authority tuple, an executable provider missing `entrypoint`, a `documentation-only` provider _with_ an `entrypoint`, a filesystem-path `entrypoint`, a `..` / absolute resource path, an unsafe path on an arbitrary resource ID, a malformed resource ID, a malformed dotted namespace, the reserved `standards_version` namespace, a duplicate namespace, and `latest` not in `supported`.
+- **Loader / boundary tests** (not just `model_validate` on prebuilt dicts): malformed TOML, a missing file, a non-table root, and an id / parent-directory mismatch each raise `StandardManifestError` with no raw traceback.
 - **Parametrized pass/fail test** over the corpus; invalid cases assert the error names the offending field.
-- **Schema drift test** — regenerate from the model, compare byte-for-byte with the committed schema.
+- **Schema drift + parse tests** — regenerate via the canonical writer, compare byte-for-byte; assert the committed file parses as a JSON Schema.
 - **Real-manifest test** — `standards/standard-bundle-authoring/standard.toml` loads and validates.
-- **Symlink-escape test** — a resource path that resolves (via symlink) outside the bundle dir is rejected by the loader.
+- **Symlink-escape test** — a resource path that resolves via symlink outside the bundle dir is rejected by the loader.
