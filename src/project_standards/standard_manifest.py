@@ -145,8 +145,18 @@ _RESOURCE_ID_RE = re.compile(r"^[a-z0-9]+([_-][a-z0-9]+)*$")
 
 
 def _is_safe_bundle_path(value: str) -> bool:
-    """A bundle-relative path with no traversal, absolute, or Windows-drive/backslash escape."""
-    if not value or "\\" in value or re.match(r"^[A-Za-z]:", value):
+    """A bundle-relative path with no traversal, absolute, Windows-drive/backslash escape, or null byte.
+
+    The null-byte check matters even though `PurePosixPath` is pure string
+    manipulation and would otherwise happily accept it: an embedded null byte
+    passed on to a real filesystem call (`Path.resolve()`, `Path.exists()`, ...)
+    raises a raw `ValueError` from the stdlib, not something this module controls.
+    Rejecting it here, at model-validation time, turns that into a
+    `pydantic.ValidationError` for every `ResourcesTable` consumer, not just the
+    loader's post-check (which also guards its own filesystem calls — see
+    `load_standard_manifest`).
+    """
+    if not value or "\x00" in value or "\\" in value or re.match(r"^[A-Za-z]:", value):
         return False
     p = PurePosixPath(value)
     return not p.is_absolute() and ".." not in p.parts
@@ -291,13 +301,26 @@ def load_standard_manifest(path: Path) -> StandardManifest:
         msg = f"standard id {manifest.standard.id!r} != bundle directory {bundle_dir.name!r}"
         raise StandardManifestError(msg)
 
-    base = bundle_dir.resolve()
-    for key, value in manifest.resources.as_dict().items():
-        target = (bundle_dir / value).resolve()
-        if not target.is_relative_to(base):
-            msg = f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
-            raise StandardManifestError(msg)
-        if not target.exists():
-            msg = f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
-            raise StandardManifestError(msg)
+    # `_is_safe_bundle_path` rejects the shapes we know about (traversal, absolute,
+    # null byte, ...) at model-validation time, but the filesystem calls below can
+    # still raise for reasons that check can't anticipate (broken symlink,
+    # permission denied mid-path, a null byte that slipped through some other
+    # `ResourcesTable` construction path, ...). Wrap the whole post-check block so
+    # any such OSError/ValueError is turned into a StandardManifestError rather than
+    # crossing this function's boundary raw.
+    try:
+        base = bundle_dir.resolve()
+        for key, value in manifest.resources.as_dict().items():
+            target = (bundle_dir / value).resolve()
+            if not target.is_relative_to(base):
+                msg = f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
+                raise StandardManifestError(msg)
+            if not target.exists():
+                msg = f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
+                raise StandardManifestError(msg)
+    except (OSError, ValueError) as exc:
+        if isinstance(exc, StandardManifestError):
+            raise
+        msg = f"{path} resource paths could not be resolved: {exc}"
+        raise StandardManifestError(msg) from exc
     return manifest

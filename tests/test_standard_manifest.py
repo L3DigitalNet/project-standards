@@ -299,3 +299,20 @@ def test_loader_missing_resource_file(tmp_path: Path) -> None:
     (bundle / "standard.toml").write_text(toml, encoding="utf-8")  # MISSING.md deliberately absent
     with pytest.raises(StandardManifestError):
         load_standard_manifest(bundle / "standard.toml")
+
+
+def test_resources_rejects_embedded_null_byte() -> None:
+    with pytest.raises(ValidationError):
+        ResourcesTable.model_validate({"readme": "README.md", "leak": "foo\x00bar.md"})
+
+
+def test_loader_rejects_embedded_null_byte_resource_path(tmp_path: Path) -> None:
+    # \u0000 is a valid TOML basic-string escape; tomllib decodes it to a literal
+    # null byte in the resulting Python str, reproducing the reviewer's repro.
+    toml = _MINIMAL_TOML.replace(
+        'readme = "README.md"', 'readme = "README.md"\nleak = "foo\\u0000bar.md"'
+    )
+    manifest = _write_bundle(tmp_path, "demo", toml)
+    with pytest.raises(StandardManifestError) as exc_info:
+        load_standard_manifest(manifest)
+    assert exc_info.type is StandardManifestError
