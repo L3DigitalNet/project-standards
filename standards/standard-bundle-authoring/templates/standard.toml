@@ -1,0 +1,41 @@
+# standard.toml template — copy into standards/<id>/ and fill in.
+# See ../README.md (Standard Bundle Authoring Standard) for each field's contract.
+
+[standard]
+id = ""                 # kebab-case, matches the directory name
+name = ""               # human-readable
+status = "draft"        # draft | review | active | deprecated | archived
+summary = ""            # one sentence
+adoption = "none"       # validator | copy-adopt | cli | reference-only | none
+
+[versions]
+supported = []          # e.g. ["1.0", "1.1"] for versioned standards; [] otherwise
+latest = ""
+
+[config]
+namespaces = []         # dotted paths this standard owns, e.g. ["markdown.frontmatter"]
+
+[capabilities]
+provides = []           # capabilities this standard provides, e.g. ["markdown.format"]
+consumes_platform = []  # generic platform capabilities consumed (not other standards)
+
+[relations]
+companions = []         # advisory only, never auto-required
+extends = []            # explicit extension only; requires an ADR
+conflicts = []          # exceptional; prefer redesign
+
+[resources]
+readme = "README.md"    # bundle-relative paths only (no .., no absolute, no symlink escape)
+
+# [[authority]]         # one block per owned concern; delete if none
+# domain = ""           # e.g. "markdown"
+# target = ""           # glob within the consumer repo, e.g. "**/*.md"
+# concern = ""          # e.g. "physical-formatting"
+# owner = ""            # the tool, e.g. "prettier"
+# mutates = true
+
+# [[providers]]         # one block per generic operation; delete if none
+# operation = ""        # validate | fix | drift-check | id-next | extract
+# kind = ""             # python | command | workflow | documentation-only
+# entrypoint = ""       # import path or command reference (NOT a filesystem path)
+# optional = true
