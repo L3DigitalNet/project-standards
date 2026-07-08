@@ -17,6 +17,11 @@ markdown:
       - "docs/usage.md"
       - "standards/**/*.md"
       - "meta/**/*.md"
+      # ADRs are managed docs (the ADR standard says never exclude docs/adr/**);
+      # this repo dogfoods that by validating its own architecture decisions. The
+      # opt-in markdown.adr.require_sections check below then enforces the three
+      # MADR sections on every doc_type: adr file here.
+      - "docs/adr/**/*.md"
     exclude:
       # Bundle templates carry intentional placeholders (YYYY-MM-DD, replace-with-stable-id)
       # that do not satisfy the schema's date and id patterns.
