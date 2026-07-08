@@ -12,8 +12,9 @@ them into strings Pydantic must re-resolve (python-coding annotations guidance).
 """
 
 import re
+import tomllib
 from enum import StrEnum
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Annotated
 
 from pydantic import (
@@ -21,6 +22,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -260,3 +262,42 @@ class StandardManifest(_Table):
             msg = 'adoption = "none" must not declare an `adopt` resource'
             raise ValueError(msg)
         return self
+
+
+def load_standard_manifest(path: Path) -> StandardManifest:
+    """Parse and validate one standard.toml, returning the typed model.
+
+    Raises StandardManifestError (only) on read/parse/validation/containment failure —
+    no raw TOMLDecodeError/OSError/ValidationError crosses this boundary.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        msg = f"cannot read {path}: {exc}"
+        raise StandardManifestError(msg) from exc
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        msg = f"{path} is not valid TOML: {exc}"
+        raise StandardManifestError(msg) from exc
+    try:
+        manifest = StandardManifest.model_validate(data)
+    except ValidationError as exc:
+        msg = f"{path} violates the standard.toml contract:\n{exc}"
+        raise StandardManifestError(msg) from exc
+
+    bundle_dir = path.parent
+    if manifest.standard.id != bundle_dir.name:
+        msg = f"standard id {manifest.standard.id!r} != bundle directory {bundle_dir.name!r}"
+        raise StandardManifestError(msg)
+
+    base = bundle_dir.resolve()
+    for key, value in manifest.resources.as_dict().items():
+        target = (bundle_dir / value).resolve()
+        if not target.is_relative_to(base):
+            msg = f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
+            raise StandardManifestError(msg)
+        if not target.exists():
+            msg = f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
+            raise StandardManifestError(msg)
+    return manifest

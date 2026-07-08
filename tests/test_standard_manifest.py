@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -17,6 +19,7 @@ from project_standards.standard_manifest import (
     StandardManifestError,
     StandardTable,
     VersionsTable,
+    load_standard_manifest,
 )
 
 _MINIMAL: dict[str, dict[str, object]] = {
@@ -221,3 +224,78 @@ def test_manifest_adoption_none_forbids_adopt_resource() -> None:
 def test_manifest_rejects_unknown_top_level_table() -> None:
     with pytest.raises(ValidationError):
         StandardManifest.model_validate({**_MINIMAL, "mystery": {}})
+
+
+_MINIMAL_TOML = """
+[standard]
+id = "demo"
+name = "Demo"
+status = "active"
+summary = "x"
+adoption = "none"
+
+[versions]
+supported = []
+latest = ""
+
+[config]
+namespaces = []
+
+[capabilities]
+provides = []
+consumes_platform = []
+
+[resources]
+readme = "README.md"
+"""
+
+
+def _write_bundle(root: Path, dirname: str, toml: str) -> Path:
+    bundle = root / dirname
+    bundle.mkdir(parents=True)
+    manifest = bundle / "standard.toml"
+    manifest.write_text(toml, encoding="utf-8")
+    (bundle / "README.md").write_text("# demo\n", encoding="utf-8")
+    return manifest
+
+
+def test_loader_valid(tmp_path: Path) -> None:
+    manifest = _write_bundle(tmp_path, "demo", _MINIMAL_TOML)
+    m = load_standard_manifest(manifest)
+    assert m.standard.id == "demo"
+
+
+def test_loader_missing_file(tmp_path: Path) -> None:
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(tmp_path / "nope" / "standard.toml")
+
+
+def test_loader_malformed_toml(tmp_path: Path) -> None:
+    manifest = _write_bundle(tmp_path, "demo", "this is = = not toml")
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(manifest)
+
+
+def test_loader_id_must_match_directory(tmp_path: Path) -> None:
+    manifest = _write_bundle(tmp_path, "wrong-dir", _MINIMAL_TOML)  # id is "demo"
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(manifest)
+
+
+def test_loader_rejects_symlink_escape(tmp_path: Path) -> None:
+    outside = tmp_path / "outside.md"
+    outside.write_text("secret\n", encoding="utf-8")
+    toml = _MINIMAL_TOML.replace('readme = "README.md"', 'readme = "README.md"\nleak = "sneaky.md"')
+    manifest = _write_bundle(tmp_path, "demo", toml)
+    (manifest.parent / "sneaky.md").symlink_to(outside)
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(manifest)
+
+
+def test_loader_missing_resource_file(tmp_path: Path) -> None:
+    toml = _MINIMAL_TOML.replace('readme = "README.md"', 'readme = "MISSING.md"')
+    bundle = tmp_path / "demo"
+    bundle.mkdir(parents=True)
+    (bundle / "standard.toml").write_text(toml, encoding="utf-8")  # MISSING.md deliberately absent
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(bundle / "standard.toml")
