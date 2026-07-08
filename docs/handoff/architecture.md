@@ -6,7 +6,7 @@
 
 ```text
 project-standards
-├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling, project-spec, cli-documentation) + python-coding (draft, reference-only, unregistered) + README index
+├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling, project-spec, cli-documentation) + python-coding (draft, reference-only, unregistered) + standard-bundle-authoring (internal/reference meta-standard, adoption=none) + README index
 ├── meta/               -> docs about this repo (versioning); not a governed standard
 ├── src/project_standards/ + tests/ -> Python package: validator (validate_frontmatter.py) + bundled schema; the `project-standards` CLI (cli.py: validate|fix|spec|adopt|list); the spec engine (specs/: commands/ validate|lint|extract|next|new|upgrade over project specs, plus config/document/model/registry/templates); the adopt engine (adopt/); per-standard adopt bundles (bundles/<id>/adopt.toml + templates); pytest suite
 ├── .github/workflows/  -> reusable workflows consumers call (validate, validate-specs, lint-markdown, format)

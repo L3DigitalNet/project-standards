@@ -18,6 +18,7 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [Project Specification Standard](#project-specification-standard)
     - [CLI Documentation Standard](#cli-documentation-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
+    - [Standard Bundle Authoring Standard (internal/reference)](#standard-bundle-authoring-standard-internalreference)
   - [Consuming the standards](#consuming-the-standards)
     - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
     - [Python Tooling SSOT](#python-tooling-ssot)
@@ -41,7 +42,8 @@ project-standards/
 │   ├── markdown-tooling/      #   standard + adopt (doc-only)
 │   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
 │   ├── cli-documentation/     #   standard + adopt + templates/ + examples/ + resources/
-│   └── python-coding/         #   draft standard (reference-only; README only)
+│   ├── python-coding/         #   draft standard (reference-only; README only)
+│   └── standard-bundle-authoring/ # internal/reference meta-standard (README + standard.toml + template)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
 ├── src/project_standards/     # the Python validator + bundled schema
 ├── tests/                     # validator tests
@@ -109,6 +111,12 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
 
 - **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
+
+### Standard Bundle Authoring Standard (internal/reference)
+
+The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` contract version, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The machine schema and graph validator that enforce it are deferred to `SPEC-MT01` Steps 03–04.
+
+- **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
 
 ## Consuming the standards
 

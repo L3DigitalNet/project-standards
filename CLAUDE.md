@@ -2,7 +2,7 @@
 
 **Session startup:** live state is injected by the SessionStart hook (`.claude/hooks/session_start.py`); do not read `docs/handoff/state.md` directly.
 
-**Purpose:** single source of truth for reusable standards — defines six: **Markdown Frontmatter** and **ADR** (enforced by a Python validator downstream repos run via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional reusable `lint-markdown.yml` and `format.yml` workflows), **Python Tooling SSOT** (copy-adopt scaffolds), **Project Specification** (tiered spec format + stable IDs, validator-enforced via the `project-standards spec` CLI + `validate-specs.yml` CI), and **CLI Documentation** (profile-tiered usage-doc standard, adopt-materialized scaffolds + validator-registered `cli_documentation` contract) — plus **Python Coding**, an in-development reference-only draft (unregistered, excluded from validation/adopt).
+**Purpose:** single source of truth for reusable standards — defines six: **Markdown Frontmatter** and **ADR** (validator-enforced via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`/`format.yml`), **Python Tooling SSOT** (copy-adopt scaffolds), **Project Specification** (tiered specs + stable IDs, `project-standards spec` CLI + `validate-specs.yml`), and **CLI Documentation** (usage-doc standard, adopt-materialized scaffolds + `cli_documentation` contract) — plus two unreleased: **Python Coding** (reference-only draft) and **Standard Bundle Authoring** (internal/reference meta-standard, `adoption = "none"`, the `standard.toml` bundle contract).
 
 **Document layout (read on demand):**
 

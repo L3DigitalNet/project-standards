@@ -8,13 +8,13 @@
 
 ## Repo Purpose
 
-This repository is the **single source of truth** for reusable standards shared across projects. It _defines_ five standards: **Markdown Frontmatter**, **ADR**, and **Project Specification** (enforced by a Python validator that downstream repos run via a reusable CI workflow — Project Specification via the `project-standards spec` CLI plus the reusable `validate-specs.yml` workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig scaffolds plus optional reusable `lint-markdown.yml` and `format.yml` workflows), and **Python Tooling SSOT** (copy-adopt scaffolds). A sixth document, **Python Coding** (`standards/python-coding/`), ships as an in-development reference-only draft — unregistered, excluded from validation and the adopt CLI. Other repositories _consume_ the five released standards by config + workflow (the validator-enforced ones: Markdown Frontmatter, ADR, Project Specification) or by copying scaffolds (the copy-adopt ones: Markdown Tooling, Python Tooling SSOT), rather than vendoring copies. See [README.md](README.md) for the full surface.
+This repository is the **single source of truth** for reusable standards shared across projects. It _defines_ six released standards — **Markdown Frontmatter**, **ADR**, and **Project Specification** (validator-enforced: downstream repos run a reusable CI workflow; Project Specification via the `project-standards spec` CLI plus `validate-specs.yml`), plus **Markdown Tooling** (copy-adopt scaffolds + optional reusable `lint-markdown.yml`/`format.yml` workflows), **Python Tooling SSOT**, and **CLI Documentation** (copy-adopt scaffolds). Two documents ship unreleased and outside that count: **Python Coding** (`standards/python-coding/`), an in-development reference-only draft, and **Standard Bundle Authoring** (`standards/standard-bundle-authoring/`), the internal/reference meta-standard (`adoption = "none"`) that defines the `standard.toml` bundle contract. Other repositories _consume_ the six released standards by config + workflow (validator-enforced) or by copying scaffolds (copy-adopt), rather than vendoring copies. See [README.md](README.md) for the full surface.
 
 ## Structure
 
 | Path | Purpose |
 | --- | --- |
-| `standards/<name>/` | per-standard bundles (`README.md` = the standard, `adopt.md`, optional `templates/` + `examples/`); `standards/README.md` is the index |
+| `standards/<name>/` | per-standard bundles (`README.md` = the standard, `standard.toml` manifest, `adopt.md` for adoptable standards, optional `templates/` + `examples/`); `standards/README.md` is the index |
 | `meta/` | repo-meta documents (e.g. `versioning.md`, the release contract) — not governed standards |
 | `src/project_standards/` + `tests/` | the Python validator (with bundled schema) and its tests |
 | `.github/workflows/` | the reusable workflows consumers call |
