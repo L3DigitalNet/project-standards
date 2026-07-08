@@ -5,9 +5,11 @@ from pydantic import ValidationError
 
 from project_standards.standard_manifest import (
     AdoptionMode,
+    CapabilitiesTable,
     ConfigTable,
     LifecycleStatus,
     ProviderKind,
+    RelationsTable,
     StandardManifestError,
     StandardTable,
     VersionsTable,
@@ -103,3 +105,15 @@ def test_config_accepts_dotted_paths() -> None:
 def test_config_rejects(namespaces: list[str]) -> None:
     with pytest.raises(ValidationError):
         ConfigTable.model_validate({"namespaces": namespaces})
+
+
+def test_capabilities_and_relations_defaults() -> None:
+    c = CapabilitiesTable.model_validate({"provides": ["markdown.format"], "consumes_platform": []})
+    assert c.provides == ["markdown.format"]
+    r = RelationsTable.model_validate({})
+    assert r.companions == [] and r.extends == [] and r.conflicts == []
+
+
+def test_relations_rejects_requires_key() -> None:
+    with pytest.raises(ValidationError):
+        RelationsTable.model_validate({"requires": ["adr"]})

@@ -115,3 +115,23 @@ class ConfigTable(_Table):
                 raise ValueError(msg)
             seen.add(ns)
         return value
+
+
+class CapabilitiesTable(_Table):
+    """The `[capabilities]` table: what this standard provides and what platform features it needs."""
+
+    provides: list[str]
+    consumes_platform: list[str]
+
+
+class RelationsTable(_Table):
+    """The `[relations]` table: this standard's ties to other standards.
+
+    All fields are optional lists; a stray `requires` key is rejected by
+    `_Table`'s `extra="forbid"` — dependency requirements are Step 04's
+    standards-graph concern, not a single-manifest field.
+    """
+
+    companions: list[str] = Field(default_factory=list)
+    extends: list[str] = Field(default_factory=list)
+    conflicts: list[str] = Field(default_factory=list)
