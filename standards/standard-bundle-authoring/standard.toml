@@ -1,0 +1,35 @@
+# The machine manifest for the Standard Bundle Authoring Standard.
+# This meta-standard dogfoods the contract it defines. It is internal/reference
+# (adoption = "none"): no consumer config namespace, no authorities over consumer
+# files, no providers. Enforcement of the contract is future graph validation
+# (SPEC-MT01 Step 04), not this bundle.
+
+[standard]
+id = "standard-bundle-authoring"
+name = "Standard Bundle Authoring Standard"
+status = "active"       # draft | review | active | deprecated | archived
+summary = "The contract every standard bundle in this repository must declare."
+adoption = "none"       # validator | copy-adopt | cli | reference-only | none
+
+[versions]
+supported = []          # internal/reference standards carry no consumer contract version
+latest = ""
+
+[config]
+namespaces = []         # claims no key in .project-standards.yml
+
+[capabilities]
+provides = []           # e.g. ["markdown.format"]; this meta-standard provides none
+consumes_platform = []  # generic platform capabilities consumed; none here
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+template = "templates/standard.toml"
+
+# No [[authority]] blocks — governs authoring, not a concern over consumer files.
+# No [[providers]] blocks — reference-only, no executable hooks.
