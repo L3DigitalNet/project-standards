@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-BA01
 title: 'Standard Bundle Authoring Standard'
-status: draft # draft | review | approved | superseded
+status: approved # draft | review | approved | superseded
 profile: light # this is the Light template; see header note for sibling profiles
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -41,6 +41,7 @@ related:
 | 0.4 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r1: clarified OQ-002 — the complete annotated example lives in the README (representative adoptable standard); the meta-standard's own `standard.toml` is minimal-but-conformant, not artificially padded with an authority it does not own |
 | 0.5 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r2: FR-001 + DoD corrected — `adopt.md` presence is independent of adoption mode; CLI-enforced standards (`project-spec`) are adoptable and keep `adopt.md`; only `adoption = "none"` and unreleased drafts use a non-adoptable marker |
 | 0.6 | 2026-07-07 | Chris Purcell / L3DigitalNet | Implemented (executing-plans): bundle authored under `standards/standard-bundle-authoring/` (README contract + worked `standard.toml` + blank template), repo-facing maps updated, full gate green (868 tests). §17.1 DoD ticked; only owner acceptance of the (empty) Deviations Log remains |
+| 0.7 | 2026-07-07 | Chris Purcell / L3DigitalNet | **Owner sign-off:** Deviations Log (DEV-001, no deviations) accepted; final §17.1 DoD item ticked; `status: draft → approved`. Spec is now change-controlled. Step 02 closed |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -137,7 +138,7 @@ The first-release scope is the **written contract plus one worked example** (thi
 - [x] The README carries canonical Markdown frontmatter and passes `validate-frontmatter`, markdownlint, and Prettier; it is listed in `standards/README.md`.
 - [x] This spec passes `spec validate` and `spec lint`.
 - [x] No machine schema, model, or validator is introduced (deferred to Steps 03–04); `registry.json` is unchanged.
-- [ ] Deviations Log reviewed and accepted by owner.
+- [x] Deviations Log reviewed and accepted by owner.
 - [x] No known blocking defects.
 
 ---
@@ -155,9 +156,9 @@ The first-release scope is the **written contract plus one worked example** (thi
 
 ## Deviations Log
 
-| ID      | Spec Reference | Deviation          | Reason        | Approved? |
-| ------- | -------------- | ------------------ | ------------- | --------- |
-| DEV-001 | N/A            | No deviations yet. | Initial draft | Pending   |
+| ID | Spec Reference | Deviation | Reason | Approved? |
+| --- | --- | --- | --- | --- |
+| DEV-001 | N/A | No deviations. | Implemented as specified | Yes (owner, 2026-07-07) |
 
 ---
 
