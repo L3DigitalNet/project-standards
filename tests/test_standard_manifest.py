@@ -26,10 +26,18 @@ from project_standards.standard_manifest import (
     standard_schema_json,
 )
 
-_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "src/project_standards/schemas/standard.schema.json"
+_SCHEMA_PATH = (
+    Path(__file__).resolve().parent.parent / "src/project_standards/schemas/standard.schema.json"
+)
 
 _MINIMAL: dict[str, dict[str, object]] = {
-    "standard": {"id": "demo", "name": "Demo", "status": "active", "summary": "x", "adoption": "none"},
+    "standard": {
+        "id": "demo",
+        "name": "Demo",
+        "status": "active",
+        "summary": "x",
+        "adoption": "none",
+    },
     "versions": {"supported": [], "latest": ""},
     "config": {"namespaces": []},
     "capabilities": {"provides": [], "consumes_platform": []},
@@ -191,23 +199,44 @@ def test_provider_valid_shapes() -> None:
     ProviderBlock.model_validate(
         {"operation": "validate", "kind": "command", "optional": False, "entrypoint": "mytool"}
     )
-    ProviderBlock.model_validate({"operation": "extract", "kind": "documentation-only", "optional": True})
+    ProviderBlock.model_validate(
+        {"operation": "extract", "kind": "documentation-only", "optional": True}
+    )
 
 
 @pytest.mark.parametrize(
     "payload",
     [
-        {"operation": "drift-check", "kind": "python", "optional": True},  # executable missing entrypoint
+        {
+            "operation": "drift-check",
+            "kind": "python",
+            "optional": True,
+        },  # executable missing entrypoint
         {
             "operation": "x",
             "kind": "documentation-only",
             "optional": True,
             "entrypoint": "pkg:fn",
         },  # doc-only with entrypoint
-        {"operation": "x", "kind": "python", "optional": True, "entrypoint": "pkg/mod.py"},  # filesystem path
-        {"operation": "x", "kind": "command", "optional": True, "entrypoint": "do | rm"},  # shell metachars
+        {
+            "operation": "x",
+            "kind": "python",
+            "optional": True,
+            "entrypoint": "pkg/mod.py",
+        },  # filesystem path
+        {
+            "operation": "x",
+            "kind": "command",
+            "optional": True,
+            "entrypoint": "do | rm",
+        },  # shell metachars
         {"operation": "x", "kind": "command", "optional": True, "entrypoint": "../up"},  # traversal
-        {"operation": "Bad-Op", "kind": "command", "optional": True, "entrypoint": "t"},  # non-kebab operation
+        {
+            "operation": "Bad-Op",
+            "kind": "command",
+            "optional": True,
+            "entrypoint": "t",
+        },  # non-kebab operation
     ],
 )
 def test_provider_rejects(payload: dict[str, object]) -> None:
@@ -343,12 +372,16 @@ def test_committed_schema_is_valid_json_schema() -> None:
 _FIXTURES = Path(__file__).resolve().parent / "fixtures/standards_manifests"
 
 
-@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name)
+@pytest.mark.parametrize(
+    "toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name
+)
 def test_valid_fixtures_load(toml_path: Path) -> None:
     StandardManifest.model_validate(_load_toml(toml_path))
 
 
-@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "invalid").glob("*.toml")), ids=lambda p: p.name)
+@pytest.mark.parametrize(
+    "toml_path", sorted((_FIXTURES / "invalid").glob("*.toml")), ids=lambda p: p.name
+)
 def test_invalid_fixtures_reject(toml_path: Path) -> None:
     with pytest.raises(ValidationError):
         StandardManifest.model_validate(_load_toml(toml_path))
@@ -361,7 +394,9 @@ def _load_toml(path: Path) -> dict[str, object]:
 
 
 def test_real_manifest_validates() -> None:
-    real = Path(__file__).resolve().parent.parent / "standards/standard-bundle-authoring/standard.toml"
+    real = (
+        Path(__file__).resolve().parent.parent / "standards/standard-bundle-authoring/standard.toml"
+    )
     load_standard_manifest(real)
 
 
@@ -389,7 +424,9 @@ def _schema_validator() -> Draft202012Validator:
     return Draft202012Validator(schema)  # pyright: ignore[reportUnknownMemberType]
 
 
-@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name)
+@pytest.mark.parametrize(
+    "toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name
+)
 def test_valid_fixtures_pass_generated_schema(toml_path: Path) -> None:
     _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
 

@@ -208,7 +208,9 @@ class AuthorityBlock(_Table):
 
 OperationToken = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
 
-_PY_ENTRYPOINT_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*:[a-zA-Z_][a-zA-Z0-9_]*$")
+_PY_ENTRYPOINT_RE = re.compile(
+    r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*:[a-zA-Z_][a-zA-Z0-9_]*$"
+)
 _TOKEN_ENTRYPOINT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
@@ -335,10 +337,14 @@ def load_standard_manifest(path: Path) -> StandardManifest:
         for key, value in manifest.resources.as_dict().items():
             target = (bundle_dir / value).resolve()
             if not target.is_relative_to(base):
-                msg = f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
+                msg = (
+                    f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
+                )
                 raise StandardManifestError(msg)
             if not target.exists():
-                msg = f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
+                msg = (
+                    f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
+                )
                 raise StandardManifestError(msg)
     except (OSError, ValueError) as exc:
         if isinstance(exc, StandardManifestError):
