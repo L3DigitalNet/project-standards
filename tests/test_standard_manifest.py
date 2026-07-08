@@ -13,10 +13,19 @@ from project_standards.standard_manifest import (
     ProviderKind,
     RelationsTable,
     ResourcesTable,
+    StandardManifest,
     StandardManifestError,
     StandardTable,
     VersionsTable,
 )
+
+_MINIMAL: dict[str, dict[str, object]] = {
+    "standard": {"id": "demo", "name": "Demo", "status": "active", "summary": "x", "adoption": "none"},
+    "versions": {"supported": [], "latest": ""},
+    "config": {"namespaces": []},
+    "capabilities": {"provides": [], "consumes_platform": []},
+    "resources": {"readme": "README.md"},
+}
 
 
 def test_enums_have_contract_values() -> None:
@@ -195,3 +204,20 @@ def test_provider_valid_shapes() -> None:
 def test_provider_rejects(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         ProviderBlock.model_validate(payload)
+
+
+def test_manifest_minimal_valid() -> None:
+    m = StandardManifest.model_validate(_MINIMAL)
+    assert m.standard.id == "demo"
+    assert m.relations.companions == []
+
+
+def test_manifest_adoption_none_forbids_adopt_resource() -> None:
+    payload = {**_MINIMAL, "resources": {"readme": "README.md", "adopt": "adopt.md"}}
+    with pytest.raises(ValidationError):
+        StandardManifest.model_validate(payload)
+
+
+def test_manifest_rejects_unknown_top_level_table() -> None:
+    with pytest.raises(ValidationError):
+        StandardManifest.model_validate({**_MINIMAL, "mystery": {}})

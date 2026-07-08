@@ -235,3 +235,28 @@ class ProviderBlock(_Table):
             raise ValueError(msg)
         _validate_entrypoint(self.kind, self.entrypoint)
         return self
+
+
+class StandardManifest(_Table):
+    """The top-level `standard.toml` document: all required and optional tables.
+
+    Subclasses `_Table` (`extra="forbid"`) so an unrecognized top-level table name
+    is rejected here rather than silently ignored. Field names are load-bearing for
+    Step 04's loader (`manifest.standard.id`, `manifest.resources.as_dict()`).
+    """
+
+    standard: StandardTable
+    versions: VersionsTable
+    config: ConfigTable
+    capabilities: CapabilitiesTable
+    resources: ResourcesTable
+    relations: RelationsTable = Field(default_factory=RelationsTable)
+    authority: list[AuthorityBlock] = Field(default_factory=list)
+    providers: list[ProviderBlock] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _adopt_conditional(self) -> StandardManifest:
+        if self.standard.adoption is AdoptionMode.NONE and "adopt" in self.resources.as_dict():
+            msg = 'adoption = "none" must not declare an `adopt` resource'
+            raise ValueError(msg)
+        return self
