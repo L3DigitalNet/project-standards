@@ -465,9 +465,11 @@ def test_resources_open_mapping() -> None:
         {"readme": "../escape.md"},  # unsafe path
         {"readme": "/abs.md"},  # absolute path
         {"readme": "resources/../../x.md"},  # traversal on arbitrary-ish value
+        {"readme": "README.md", "count": 5},  # non-string extra value (CR-001)
+        {"readme": "README.md", "nested": {"k": "v"}},  # nested table extra
     ],
 )
-def test_resources_rejects(payload: dict[str, str]) -> None:
+def test_resources_rejects(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         ResourcesTable.model_validate(payload)
 ```
@@ -494,7 +496,11 @@ def _is_safe_bundle_path(value: str) -> bool:
 
 
 class ResourcesTable(BaseModel):
+    # Open mapping: `readme` is required; any other key is an arbitrary URI-safe resource
+    # ID. Extras are TYPED as str via __pydantic_extra__ so a non-string TOML value (int,
+    # array, table) is rejected by Pydantic rather than silently coerced (CR-001).
     model_config = ConfigDict(extra="allow")
+    __pydantic_extra__: dict[str, str]
 
     readme: str
 
@@ -510,10 +516,7 @@ class ResourcesTable(BaseModel):
         return self
 
     def as_dict(self) -> dict[str, str]:
-        items: dict[str, str] = {"readme": self.readme}
-        for key, value in (self.model_extra or {}).items():
-            items[key] = value if isinstance(value, str) else str(value)
-        return items
+        return {"readme": self.readme, **self.__pydantic_extra__}
 ```
 
 - [ ] **Step 4: Run — verify pass.**
@@ -807,6 +810,15 @@ def test_loader_rejects_symlink_escape(tmp_path: Path) -> None:
     (manifest.parent / "sneaky.md").symlink_to(outside)
     with pytest.raises(StandardManifestError):
         load_standard_manifest(manifest)
+
+
+def test_loader_missing_resource_file(tmp_path: Path) -> None:
+    toml = _MINIMAL_TOML.replace('readme = "README.md"', 'readme = "MISSING.md"')
+    bundle = tmp_path / "demo"
+    bundle.mkdir(parents=True)
+    (bundle / "standard.toml").write_text(toml, encoding="utf-8")  # MISSING.md deliberately absent
+    with pytest.raises(StandardManifestError):
+        load_standard_manifest(bundle / "standard.toml")
 ```
 
 - [ ] **Step 2: Run — verify fail.**
@@ -855,6 +867,9 @@ def load_standard_manifest(path: Path) -> StandardManifest:
         target = (bundle_dir / value).resolve()
         if not target.is_relative_to(base):
             msg = f"resource {key!r} path {value!r} escapes bundle directory {bundle_dir.name!r}"
+            raise StandardManifestError(msg)
+        if not target.exists():
+            msg = f"resource {key!r} path {value!r} does not exist in bundle {bundle_dir.name!r}"
             raise StandardManifestError(msg)
     return manifest
 ```
@@ -906,7 +921,9 @@ def test_committed_schema_matches_model() -> None:
 
 
 def test_committed_schema_is_valid_json_schema() -> None:
-    Draft202012Validator.check_schema(json.loads(_SCHEMA_PATH.read_text(encoding="utf-8")))
+    Draft202012Validator.check_schema(  # pyright: ignore[reportUnknownMemberType]
+        json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    )
 ```
 
 - [ ] **Step 2: Run — verify fail.**
@@ -1064,23 +1081,29 @@ optional = true
 
 - [ ] **Step 2: Write the invalid fixtures (one rule each).**
 
-Create these files under `tests/fixtures/standards_manifests/invalid/`. Each is a copy of `valid/reference-none.toml` with exactly one rule broken; the filename names the rule.
+Create these files under `tests/fixtures/standards_manifests/invalid/`. Each is a copy of `valid/reference-none.toml` with exactly one rule broken; the filename names the rule. The **Schema?** column records whether the generated JSON Schema _also_ rejects the fixture (Step 3's semantic test asserts this) or the rule is **model-only** — a cross-field or custom-validator rule Pydantic does not emit to JSON Schema.
 
-- `bad-adoption.toml` — `adoption = "package-tooling"`.
-- `bad-status.toml` — `status = "retired"`.
-- `stray-requires.toml` — add `requires = ["adr"]` under `[relations]` (add a `[relations]` table).
-- `unknown-key.toml` — add `mystery = true` under `[standard]`.
-- `missing-required.toml` — delete the `summary` line from `[standard]`.
-- `bad-namespace.toml` — `namespaces = ["standards_version"]` under `[config]`.
-- `duplicate-namespace.toml` — `namespaces = ["spec", "spec"]`.
-- `unsafe-resource-path.toml` — `readme = "../escape.md"`.
-- `bad-resource-id.toml` — add `"bad id" = "x.md"` under `[resources]`.
-- `executable-missing-entrypoint.toml` — a `[[providers]]` block with `kind = "python"` and no `entrypoint`.
-- `doc-only-with-entrypoint.toml` — the `documentation-only` provider given `entrypoint = "pkg:fn"`.
-- `filesystem-entrypoint.toml` — a `python` provider with `entrypoint = "pkg/mod.py"`.
-- `shell-entrypoint.toml` — a `command` provider with `entrypoint = "do | rm"`.
-- `latest-not-supported.toml` — `[versions]` with `supported = ["1.0"]`, `latest = "2.0"`.
-- `adopt-on-none.toml` — add `adopt = "adopt.md"` under `[resources]` while `adoption = "none"`.
+| Fixture | Break | Schema? |
+| --- | --- | --- |
+| `bad-adoption.toml` | `adoption = "package-tooling"` | yes (enum) |
+| `bad-status.toml` | `status = "retired"` | yes (enum) |
+| `bad-id.toml` | `id = "Not_Kebab"` | yes (pattern) |
+| `bad-operation.toml` | provider `operation = "Bad-Op"` | yes (pattern) |
+| `malformed-namespace.toml` | `namespaces = ["markdown..frontmatter"]` | yes (pattern) |
+| `unknown-key.toml` | add `mystery = true` under `[standard]` | yes (additionalProperties) |
+| `stray-requires.toml` | add a `[relations]` table with `requires = ["adr"]` | yes (additionalProperties) |
+| `missing-required.toml` | delete the `summary` line from `[standard]` | yes (required) |
+| `non-string-resource.toml` | add `count = 5` under `[resources]` | yes (extra value type) |
+| `reserved-namespace.toml` | `namespaces = ["standards_version"]` | model-only |
+| `duplicate-namespace.toml` | `namespaces = ["spec", "spec"]` | model-only |
+| `unsafe-resource-path.toml` | `readme = "../escape.md"` | model-only |
+| `bad-resource-id.toml` | add `"bad id" = "x.md"` under `[resources]` | model-only |
+| `executable-missing-entrypoint.toml` | a `[[providers]]` block, `kind = "python"`, no entrypoint | model-only |
+| `doc-only-with-entrypoint.toml` | the doc-only provider given `entrypoint = "pkg:fn"` | model-only |
+| `filesystem-entrypoint.toml` | a `python` provider with `entrypoint = "pkg/mod.py"` | model-only |
+| `shell-entrypoint.toml` | a `command` provider whose entrypoint contains a shell pipe | model-only |
+| `latest-not-supported.toml` | `[versions]` `supported = ["1.0"]`, `latest = "2.0"` | model-only |
+| `adopt-on-none.toml` | add `adopt = "adopt.md"` under `[resources]` (adoption none) | model-only |
 
 - [ ] **Step 3: Write the corpus tests.**
 
@@ -1108,9 +1131,49 @@ def _load_toml(path: Path) -> dict[str, object]:
 def test_real_manifest_validates() -> None:
     real = Path(__file__).resolve().parent.parent / "standards/standard-bundle-authoring/standard.toml"
     load_standard_manifest(real)
+
+
+# --- schema-vs-fixture semantic tests (the generated schema is a permissive view) ---
+# Invalid fixtures the JSON Schema ALSO rejects. The remaining invalid fixtures are model-only:
+# cross-field or custom-validator rules Pydantic does not emit to JSON Schema (latest-in-supported,
+# reserved/duplicate namespace, adopt-on-none, per-kind entrypoint, path safety, resource-id key
+# syntax). Those still fail the model (test_invalid_fixtures_reject) but pass the raw schema.
+_SCHEMA_ENFORCED = {
+    "bad-adoption.toml",
+    "bad-status.toml",
+    "bad-id.toml",
+    "bad-operation.toml",
+    "malformed-namespace.toml",
+    "unknown-key.toml",
+    "stray-requires.toml",
+    "missing-required.toml",
+    "non-string-resource.toml",
+}
+
+
+def _schema_validator() -> Draft202012Validator:
+    schema = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema)  # pyright: ignore[reportUnknownMemberType]
+
+
+@pytest.mark.parametrize("toml_path", sorted((_FIXTURES / "valid").glob("*.toml")), ids=lambda p: p.name)
+def test_valid_fixtures_pass_generated_schema(toml_path: Path) -> None:
+    _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
+
+
+@pytest.mark.parametrize(
+    "toml_path",
+    sorted(p for p in (_FIXTURES / "invalid").glob("*.toml") if p.name in _SCHEMA_ENFORCED),
+    ids=lambda p: p.name,
+)
+def test_schema_enforced_invalids_fail_generated_schema(toml_path: Path) -> None:
+    from jsonschema import ValidationError as SchemaValidationError
+
+    with pytest.raises(SchemaValidationError):
+        _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
 ```
 
-> Note: the valid fixtures are validated with `model_validate` (not the loader), because their `id` deliberately differs from their parent directory and they declare paths that need not exist on disk. The loader's directory/containment checks are covered by Task 8 and the real-manifest test.
+> Note: valid fixtures are validated with `model_validate` (not the loader), because their `id` deliberately differs from their parent directory and they declare paths that need not exist on disk. The loader's directory/containment/existence checks are covered by Task 8 and the real-manifest test. The two semantic tests prove the committed JSON Schema carries the schema-expressible rules and pin the model-only set explicitly (CR-002).
 
 - [ ] **Step 4: Run — verify pass.**
 
@@ -1145,11 +1208,11 @@ uv run coverage run -m pytest && uv run coverage report
 uv run pip-audit
 ```
 
-Expected: ruff clean, basedpyright `0 errors`, all tests pass, coverage at the repo bar, pip-audit clean. Fix any strict-typing findings on `standard_manifest.py` inline (e.g. annotate `model_extra` access) and re-run.
+Expected: ruff clean, basedpyright `0 errors`, all tests pass, coverage at the repo bar, pip-audit clean. Fix any strict-typing findings on `standard_manifest.py` inline (e.g. the `__pydantic_extra__` access) and re-run.
 
-- [ ] **Step 3: Verify the schema ships in the wheel.**
+- [ ] **Step 3: Verify the schema ships in the wheel (build into a temp dir, not `dist/`).**
 
-Run: `uv build && python -c "import zipfile,glob; z=zipfile.ZipFile(sorted(glob.glob('dist/*.whl'))[-1]); print([n for n in z.namelist() if n.endswith('standard.schema.json')])"` Expected: a non-empty list containing `project_standards/schemas/standard.schema.json`. (If empty, add package-data/force-include for `schemas/*.json` and re-check.)
+Run: `tmp=$(mktemp -d) && uv build --wheel --out-dir "$tmp" && python -c "import zipfile,glob,sys; z=zipfile.ZipFile(sorted(glob.glob(sys.argv[1]+'/*.whl'))[-1]); print([n for n in z.namelist() if n.endswith('standard.schema.json')])" "$tmp" && rm -rf "$tmp"` Expected: a non-empty list containing `project_standards/schemas/standard.schema.json`, and no `dist/` artifact left in the worktree. (If empty, add package-data/force-include for `schemas/*.json` and re-check.)
 
 - [ ] **Step 4: Update handoff.** Check `Step 03` in the `TODO.md` v5.0.0 tracker (date + commit range); update `docs/handoff/state.md` (Step 03 done, Next: Step 04) within the 2048-byte cap; flip the `specs-plans.md` Step 03 rows to implemented; add a `sessions/2026-07.md` row; add a `STATUS.md` Recent-Changes line. (Per the handoff-system-v3 skill.)
 

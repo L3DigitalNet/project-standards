@@ -88,7 +88,9 @@ Path -> path.read_text(encoding="utf-8") -> tomllib.loads(str) -> dict
      -> StandardManifest  (typed)   OR   StandardManifestError
 ```
 
-`tomllib.loads` takes a `str`, so the loader reads the file as UTF-8 text first (matching `adopt/manifest.py`); `tomllib.load(fp)` on a binary handle is the equivalent alternative. `StandardManifestError` subclasses `ValueError` (like `RegistryError`) and is the **single** error type the loader raises — it wraps Pydantic's aggregated `ValidationError`, a `tomllib.TOMLDecodeError` (malformed TOML), and `OSError` (missing/unreadable file), so no raw parser or I/O traceback leaks past the boundary. It is the type a future Step 04 CLI maps to exit code 2. Symlink-escape containment (the part of `FR-012` a pure schema cannot see) lives in the loader, which resolves each declared path against the manifest's on-disk bundle directory; the model enforces only the syntactic half (no `..`, not absolute).
+`tomllib.loads` takes a `str`, so the loader reads the file as UTF-8 text first (matching `adopt/manifest.py`); `tomllib.load(fp)` on a binary handle is the equivalent alternative. `StandardManifestError` subclasses `ValueError` (like `RegistryError`) and is the **single** error type the loader raises — it wraps Pydantic's aggregated `ValidationError`, a `tomllib.TOMLDecodeError` (malformed TOML), and `OSError` (missing/unreadable file), so no raw parser or I/O traceback leaks past the boundary. It is the type a future Step 04 CLI maps to exit code 2. Symlink-escape containment (the part of `FR-012` a pure schema cannot see) lives in the loader, which resolves each declared path against the manifest's on-disk bundle directory; the model enforces only the syntactic half (no `..`, not absolute). The loader additionally asserts each declared resource file **exists** within the bundle — SPEC-MT01 requires missing resource paths to fail, and the loader is the on-disk boundary that can see it.
+
+The **generated JSON Schema is a permissive view** of the model: `StringConstraints` patterns, enums, `required`, and `additionalProperties: false` carry over, but Pydantic does **not** emit the cross-field / custom-validator rules (`latest ∈ supported`, reserved / duplicate namespaces, `adoption = "none"` forbids `adopt`, per-kind entrypoint grammar, path safety, resource-ID key syntax). Those are **model-only**; a consumer validating with the raw schema alone gets weaker checks than `load_standard_manifest`. Tests make this split explicit (see [Testing](#testing)).
 
 ## Canonical schema generation
 
@@ -122,7 +124,9 @@ Adds **`pydantic>=2`** as a runtime dependency (`uv add pydantic`, `uv.lock` com
 - Every valid fixture loads; every invalid fixture raises, each targeting exactly one rule from [Validation rules](#validation-rules-encoded-in-the-model).
 - Identity checks hold: a bad-`id` or id/directory-mismatch manifest is rejected; a manifest claiming the reserved `standards_version` namespace is rejected.
 - `standards/standard-bundle-authoring/standard.toml` validates.
+- The loader rejects a manifest declaring a resource file that does not exist within the bundle.
 - `src/project_standards/schemas/standard.schema.json` is committed, is produced by the canonical writer, and equals a fresh regeneration byte-for-byte (drift test green); the committed file parses as a JSON Schema.
+- Every valid fixture also validates against the generated JSON Schema; the schema-expressible invalid fixtures fail it; the model-only invalid fixtures are documented as such.
 - `registry.json`, bundles, and `.project-standards.yml` are unchanged.
 - Full gate green, coverage at the repo bar.
 
@@ -130,8 +134,9 @@ Adds **`pydantic>=2`** as a runtime dependency (`uv add pydantic`, `uv.lock` com
 
 - **Valid fixtures.** A fully-populated `copy-adopt` manifest (authorities; a `python` provider with `module:object` `entrypoint` + `input_schema` / `output_schema`; a second provider with a bare `command` token `entrypoint`; `agent_summary` + `template` + a bundle-specific resource ID; companions); the `adoption = "none"` minimal shape; and a `documentation-only` provider with no `entrypoint`.
 - **Invalid fixtures, one rule each:** bad `adoption`, bad `status`, a stray `requires` key, an unknown key in a fixed-shape table, a missing required field, an incomplete authority tuple, an executable provider missing `entrypoint`, a `documentation-only` provider _with_ an `entrypoint`, a filesystem-path `entrypoint`, a shell-metacharacter / pipeline `entrypoint`, a `..` / absolute resource path, an unsafe path on an arbitrary resource ID, a malformed resource ID, a malformed dotted namespace, the reserved `standards_version` namespace, a duplicate namespace, and `latest` not in `supported`.
-- **Loader / boundary tests** (not just `model_validate` on prebuilt dicts): malformed TOML, a missing file, a non-table root, and an id / parent-directory mismatch each raise `StandardManifestError` with no raw traceback.
+- **Loader / boundary tests** (not just `model_validate` on prebuilt dicts): malformed TOML, a missing manifest file, a non-table root, an id / parent-directory mismatch, and a **declared resource file that does not exist** each raise `StandardManifestError` with no raw traceback.
 - **Parametrized pass/fail test** over the corpus; invalid cases assert the error names the offending field.
 - **Schema drift + parse tests** — regenerate via the canonical writer, compare byte-for-byte; assert the committed file parses as a JSON Schema.
+- **Schema-vs-fixture semantic tests** — every valid fixture validates against the generated JSON Schema; the schema-expressible invalid fixtures (enum, `additionalProperties`, `required`, `pattern`, extra-value type) fail it; an explicit `_MODEL_ONLY` set records the invalid fixtures the schema cannot express (cross-field and custom-validator rules), each still rejected by the model.
 - **Real-manifest test** — `standards/standard-bundle-authoring/standard.toml` loads and validates.
 - **Symlink-escape test** — a resource path that resolves via symlink outside the bundle dir is rejected by the loader.
