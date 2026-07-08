@@ -14,7 +14,14 @@ them into strings Pydantic must re-resolve (python-coding annotations guidance).
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 
 class StandardManifestError(ValueError):
@@ -82,3 +89,29 @@ class VersionsTable(_Table):
             msg = f"latest {self.latest!r} is not in supported {self.supported}"
             raise ValueError(msg)
         return self
+
+
+_RESERVED_NAMESPACES = frozenset({"standards_version"})
+DottedPath = Annotated[
+    str, StringConstraints(pattern=r"^[a-z0-9]+(_[a-z0-9]+)*(\.[a-z0-9]+(_[a-z0-9]+)*)*$")
+]
+
+
+class ConfigTable(_Table):
+    """The `[config]` table: dotted namespaces this standard owns in consumer repo config."""
+
+    namespaces: list[DottedPath]
+
+    @field_validator("namespaces")
+    @classmethod
+    def _no_reserved_or_duplicate(cls, value: list[str]) -> list[str]:
+        seen: set[str] = set()
+        for ns in value:
+            if ns in _RESERVED_NAMESPACES:
+                msg = f"namespace {ns!r} is a reserved repo-meta key, not standard-owned"
+                raise ValueError(msg)
+            if ns in seen:
+                msg = f"duplicate namespace {ns!r} within manifest"
+                raise ValueError(msg)
+            seen.add(ns)
+        return value

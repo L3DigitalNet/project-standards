@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from project_standards.standard_manifest import (
     AdoptionMode,
+    ConfigTable,
     LifecycleStatus,
     ProviderKind,
     StandardManifestError,
@@ -81,3 +82,24 @@ def test_versions_latest_must_be_in_supported() -> None:
     VersionsTable.model_validate({"supported": [], "latest": ""})
     with pytest.raises(ValidationError):
         VersionsTable.model_validate({"supported": ["1.0"], "latest": "2.0"})
+
+
+def test_config_accepts_dotted_paths() -> None:
+    t = ConfigTable.model_validate({"namespaces": ["markdown.frontmatter", "markdown_tooling"]})
+    assert t.namespaces == ["markdown.frontmatter", "markdown_tooling"]
+    ConfigTable.model_validate({"namespaces": []})
+
+
+@pytest.mark.parametrize(
+    "namespaces",
+    [
+        ["standards_version"],  # reserved meta key
+        ["markdown..frontmatter"],  # empty segment / bad dotted path
+        [".markdown"],  # leading dot
+        ["Markdown"],  # uppercase not allowed
+        ["spec", "spec"],  # duplicate within manifest
+    ],
+)
+def test_config_rejects(namespaces: list[str]) -> None:
+    with pytest.raises(ValidationError):
+        ConfigTable.model_validate({"namespaces": namespaces})
