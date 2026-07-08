@@ -28,8 +28,9 @@
 - **Create** `standards/standard-bundle-authoring/standard.toml` — the meta-standard's own machine manifest (FR-010 worked example; dogfoods the contract).
 - **Create** `standards/standard-bundle-authoring/templates/standard.toml` — a blank annotated `standard.toml` template for future standard authors.
 - **Modify** `standards/README.md` — add the bundle row (non-adoptable marker) and update the bundle-anatomy text so `adopt.md` is required only for _adoptable_ standards.
+- **Modify** the repo-facing standards maps that would otherwise go stale (CR-004): root `README.md` (directory layout + standards list), `AGENTS.md`, `CLAUDE.md`, and `meta/versioning.md` — mention `standard-bundle-authoring` as an **internal/reference** document, explicitly _not_ one of the six released standards (the same way `python-coding` is listed as an in-development draft). The "six standards ship under one version" count is unchanged — this standard is unregistered and not released.
 
-No other files change. (If a "adopt.md is required for every standard" anatomy claim also lives outside `standards/README.md` — e.g. `AGENTS.md` — Task 4 greps for it and reconciles it too.)
+No code, schema, `registry.json`, `spec.include`, or `src/project_standards/bundles/` changes — Task 5 verifies this explicitly.
 
 ---
 
@@ -78,7 +79,7 @@ related:
 - [ ] **Step 3: Author the body sections.** One `##` section per contract area; each satisfies the named FR's acceptance criteria (write real prose, not placeholders — the spec's acceptance text is the checklist):
   - **Purpose & Status** — the "standard for standards"; internal/reference, `adoption = "none"`, no `adopt.md`.
   - **Bundle anatomy** (FR-001) — a table of required vs optional files (`README.md` required; `standard.toml` required; `adopt.md` required **only for adoptable standards**, otherwise an explicit non-adoptable marker; optional `templates/`, `examples/`, `resources/`, `agent-summary.md`).
-  - **The `standard.toml` manifest** (FR-002) — an annotated fenced `toml` example showing **every** field with a comment marking required vs optional, using SPEC-MT01 §9 as the shape (`[standard]` id/name/status/summary/adoption; `[versions]`; `[config]` namespaces; `[relations]`; `[resources]`; `[[authority]]`; `[[providers]]`). Use a representative adoptable standard (e.g. `markdown-tooling`) for the example so authorities/providers are non-empty and realistic.
+  - **The `standard.toml` manifest** (FR-002) — an annotated fenced `toml` example showing **every** field with a comment marking required vs optional, using SPEC-MT01 §9 as the shape (`[standard]` id/name/status/summary/adoption; `[versions]`; `[config]` namespaces; `[capabilities]` provides/consumes_platform; `[relations]` companions/extends/conflicts; `[resources]`; `[[authority]]`; `[[providers]]`). Use a representative adoptable standard (e.g. `markdown-tooling`) for the example so capabilities/authorities/providers are non-empty and realistic.
   - **Adoption modes** (FR-003) — the five-value enum and the mapping table for all seven current standards (see Global Constraints).
   - **Authorities** (FR-004) — the tuple `(domain, target, concern, owner, mutates)` and the conflict rule (two mutating authorities over the same concern + overlapping target with different owners conflict unless an ADR-backed `extends` relation exists).
   - **Relationships** (FR-005) — `independent | companion | extends | conflicts | consumes_platform`, `independent` as default, no hidden `requires`.
@@ -113,7 +114,7 @@ git commit -m "docs(v5): author Standard Bundle Authoring Standard (SPEC-BA01 FR
 - Consumes: the field names defined in Task 1's manifest contract — this file must use exactly those keys.
 - Produces: the first real `standard.toml` in the repo; the Step 03 schema (later) must accept it or record a deliberate supersession.
 
-- [ ] **Step 1: Write the manifest.** Being internal/reference with `adoption = "none"`, it declares no consumer namespace, no authorities over consumer files, and no providers:
+- [ ] **Step 1: Write the manifest.** Being internal/reference with `adoption = "none"`, it declares no consumer namespace, no provided capabilities, no authorities over consumer files, and no providers:
 
 ```toml
 # The machine manifest for the Standard Bundle Authoring Standard.
@@ -136,11 +137,14 @@ latest = ""
 [config]
 namespaces = []         # claims no key in .project-standards.yml
 
+[capabilities]
+provides = []           # e.g. ["markdown.format"]; this meta-standard provides none
+consumes_platform = []  # generic platform capabilities consumed; none here
+
 [relations]
 companions = []
 extends = []
 conflicts = []
-consumes_platform = []
 
 [resources]
 readme = "README.md"
@@ -150,7 +154,7 @@ template = "templates/standard.toml"
 # No [[providers]] blocks — reference-only, no executable hooks.
 ```
 
-> **Decision (record if it diverges from OQ-002):** SPEC-BA01 OQ-002 assumed the meta-standard's own `standard.toml` would be the full annotated example including an authority. A `none`-adoption reference standard genuinely owns no authority, so the **comprehensive** annotated example lives in the README (Task 1, using a representative adoptable standard) while this file is the meta-standard's real minimal manifest. If you keep this split, add a `DEV-001` row to SPEC-BA01's Deviations Log noting it, and confirm the README's manifest field names match this file exactly.
+> **This matches SPEC-BA01 OQ-002 (rev 0.4):** the comprehensive annotated example lives in the README (Task 1, using a representative adoptable standard so capabilities/authorities/providers are realistic); this file is the meta-standard's real minimal-but-conformant manifest. It is the intended design, **not** a deviation — no Deviations Log entry is needed. Confirm the README's manifest field names (including `[capabilities]`) match this file exactly.
 
 - [ ] **Step 2: Verify against the conformance checklist.** Walk the README's manual conformance checklist (FR-014): every **required** field present. Confirm the TOML parses: `uv run python -c "import tomllib,pathlib; tomllib.loads(pathlib.Path('standards/standard-bundle-authoring/standard.toml').read_text()); print('toml ok')"` Expected: `toml ok`.
 
@@ -195,11 +199,14 @@ latest = ""
 [config]
 namespaces = []         # dotted paths this standard owns, e.g. ["markdown.frontmatter"]
 
+[capabilities]
+provides = []           # capabilities this standard provides, e.g. ["markdown.format"]
+consumes_platform = []  # generic platform capabilities consumed (not other standards)
+
 [relations]
 companions = []         # advisory only, never auto-required
 extends = []            # explicit extension only; requires an ADR
 conflicts = []          # exceptional; prefer redesign
-consumes_platform = []  # generic platform capabilities, not other standards
 
 [resources]
 readme = "README.md"    # bundle-relative paths only (no .., no absolute, no symlink escape)
@@ -229,11 +236,11 @@ git commit -m "docs(v5): add blank standard.toml template"
 
 ---
 
-### Task 4: Update the standards index + bundle-anatomy text
+### Task 4: Update the standards index, bundle-anatomy text, and repo-facing maps
 
 **Files:**
 
-- Modify: `standards/README.md`
+- Modify: `standards/README.md`, root `README.md`, `AGENTS.md`, `CLAUDE.md`, `meta/versioning.md`
 
 - [ ] **Step 1: Find every "adopt.md required" anatomy claim.** Run: `rg -n "adopt\.md" standards/README.md AGENTS.md` and read the hits. The bundle-anatomy description must be reconciled so `adopt.md` is required only for _adoptable_ standards; internal/reference/cli standards use an explicit non-adoptable marker instead (this is SPEC-BA01's SA-005 DoD item).
 
@@ -243,15 +250,17 @@ git commit -m "docs(v5): add blank standard.toml template"
 | Standard Bundle Authoring | The contract every standard bundle must declare (`standard.toml`, authorities, relationships, namespaces) | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs how this repo authors standards, not consumer-adopted) |
 ```
 
-- [ ] **Step 3: Reconcile the anatomy text** found in Step 1 (in `standards/README.md`, and `AGENTS.md` if it asserts the same) so it reads, in substance: "every standard has a `README.md` and a `standard.toml`; `adopt.md` is present only for adoptable standards — internal/reference and CLI-enforced standards carry an explicit non-adoptable marker instead." Keep edits minimal and in the file's existing voice.
+- [ ] **Step 3: Reconcile the anatomy text.** Fix the "adopt.md required" claim found in Step 1 (in `standards/README.md`, and `AGENTS.md` if it asserts the same) so it reads, in substance: "every standard has a `README.md` and a `standard.toml`; `adopt.md` is present only for adoptable standards — internal/reference and CLI-enforced standards carry an explicit non-adoptable marker instead." Keep edits minimal and in each file's voice.
 
-- [ ] **Step 4: Validate.** Run: `./node_modules/.bin/prettier --write standards/README.md AGENTS.md && ./node_modules/.bin/markdownlint-cli2 standards/README.md AGENTS.md` Expected: Prettier clean, markdownlint `0 error(s)`. (`standards/README.md` and `AGENTS.md` are frontmatter-excluded — do not run `validate-frontmatter` expecting them.)
+- [ ] **Step 4: Update the repo-facing standards maps (CR-004).** Run: `rg -n "six standards|standards/|python-coding|standard-bundle-authoring" README.md CLAUDE.md meta/versioning.md`. Add `standard-bundle-authoring/` to root `README.md`'s directory-layout tree and its standards list, and a one-line mention in `CLAUDE.md` and `meta/versioning.md` — each framed as an **internal/reference** document, _not_ one of the six released standards (mirror how `python-coding` is described). Do **not** change the "six standards ship under one version" release count; this standard is unregistered and not released.
 
-- [ ] **Step 5: Commit.**
+- [ ] **Step 5: Validate.** Run: `./node_modules/.bin/prettier --write standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md && ./node_modules/.bin/markdownlint-cli2 standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md && uv run validate-frontmatter --config .project-standards.yml` Expected: Prettier clean, markdownlint `0 error(s)`, frontmatter ✓ (`meta/versioning.md` is frontmatter-validated; `standards/README.md`, root `README.md`, `AGENTS.md`, `CLAUDE.md` are frontmatter-excluded).
+
+- [ ] **Step 6: Commit.**
 
 ```bash
-git add standards/README.md AGENTS.md
-git commit -m "docs(v5): list Standard Bundle Authoring in the standards index; fix adopt.md anatomy"
+git add standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md
+git commit -m "docs(v5): index Standard Bundle Authoring; fix adopt.md anatomy + repo-facing maps"
 ```
 
 ---
@@ -261,28 +270,29 @@ git commit -m "docs(v5): list Standard Bundle Authoring in the standards index; 
 **Files:**
 
 - Modify: `TODO.md` (check Step 02), `docs/handoff/specs-plans.md`, `docs/handoff/sessions/2026-07.md`, `STATUS.md`
-- Modify (if the Task 2 split was taken): `docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md` (add the `DEV-001` row)
 
-- [ ] **Step 1: Run the full repo gate.**
+- [ ] **Step 1: Verify no machine-layer drift (CR-004).** Run: `git diff --stat && git status --short` and confirm the only new/changed files are under `standards/standard-bundle-authoring/`, `standards/README.md`, the four repo-facing maps, and the handoff docs. Then run `git diff -- src/project_standards/schemas/registry.json src/project_standards/bundles .project-standards.yml` and confirm it is **empty** — no registry, bundled-adopt-artifact, or `spec.include` changes leaked in.
 
-Run:
+- [ ] **Step 2: Run the full repo gate** (each command on its own line so no failure is masked; Prettier does not support TOML — validate TOML with `tomllib`):
 
 ```bash
 uv run validate-frontmatter --config .project-standards.yml
 uv run validate-id --config .project-standards.yml
 uv run project-standards spec validate --config .project-standards.yml
 uv run project-standards spec lint --config .project-standards.yml
-./node_modules/.bin/prettier --check "standards/**/*.md" "standards/**/*.toml" 2>/dev/null; ./node_modules/.bin/markdownlint-cli2
+uv run python -c "import tomllib,pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path('standards/standard-bundle-authoring').rglob('*.toml')]; print('toml ok')"
+./node_modules/.bin/prettier --check "standards/**/*.md" "docs/superpowers/**/*.md"
+./node_modules/.bin/markdownlint-cli2
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run pytest -q
 ```
 
-Expected: frontmatter ✓ (one more file than before), id ✓, spec validate/lint OK, markdownlint 0, Prettier clean, ruff/basedpyright/pytest green (no Python changed, so 868 tests unchanged). If any FR is unmet, fix the doc and re-run — the spec's DoD is the gate.
+Expected: frontmatter ✓ (one more file than before), id ✓, spec validate/lint OK, `toml ok`, Prettier clean, markdownlint 0, ruff/basedpyright/pytest green (no Python changed, so 868 tests unchanged). If any FR is unmet, fix the doc and re-run — the spec's DoD is the gate.
 
-- [ ] **Step 2: Tick SPEC-BA01's DoD** in the spec file against the finished bundle (or leave for owner acceptance per the DoD's owner-review line). Add the `DEV-001` Deviations row if Task 2's split was taken.
+- [ ] **Step 3: Tick SPEC-BA01's DoD** in the spec file against the finished bundle (or leave the owner-acceptance checkbox for the owner). No Deviations row is expected — the OQ-002 split is the intended design per spec rev 0.4.
 
-- [ ] **Step 3: Update handoff.** Check `Step 02` in the `TODO.md` v5.0.0 tracker (with date + commit); flip the `specs-plans.md` Step 02 row to "authored + validated"; add a `sessions/2026-07.md` row; add a `STATUS.md` Recent-Changes line. (Per the handoff-system-v3 skill.)
+- [ ] **Step 4: Update handoff.** Check `Step 02` in the `TODO.md` v5.0.0 tracker (with date + commit); flip the `specs-plans.md` Step 02 row to "authored + validated"; add a `sessions/2026-07.md` row; add a `STATUS.md` Recent-Changes line. (Per the handoff-system-v3 skill.)
 
-- [ ] **Step 4: Commit.**
+- [ ] **Step 5: Commit.**
 
 ```bash
 git add TODO.md docs/handoff/specs-plans.md docs/handoff/sessions/2026-07.md STATUS.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md

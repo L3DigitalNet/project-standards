@@ -38,6 +38,7 @@ related:
 | 0.1 | 2026-07-07 | Chris Purcell / L3DigitalNet | Initial draft |
 | 0.2 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex spec-review r1: dotted/nested namespace model; added manifest-safety, adopt.toml-linkage, and manual-conformance-checklist FRs; standards-index anatomy DoD; OQ-001/002 resolved |
 | 0.3 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex spec-review r2: FR-012 resource/template paths made bundle-relative and contained (adr-0010), provider entrypoint clarified vs filesystem paths — last non-blocking finding; converged |
+| 0.4 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r1: clarified OQ-002 — the complete annotated example lives in the README (representative adoptable standard); the meta-standard's own `standard.toml` is minimal-but-conformant, not artificially padded with an authority it does not own |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -146,7 +147,7 @@ The first-release scope is the **written contract plus one worked example** (thi
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | OQ-001 | Should `project-spec`'s adoption mode be named `cli` or a broader `package-tooling`? | **Decided: `cli`.** It names how the standard is actually enforced today; broaden to `package-tooling` only via a spec revision if a second CLI-enforced standard appears. Not schema-binding until Step 03. | No | Owner | Step 03 schema | Answered |
-| OQ-002 | Should the meta-standard's own `standard.toml` be a full annotated example or a minimal identity-only one? | **Decided: a complete annotated example** (identity + config namespace + at least one authority + `adoption = "none"`), so it doubles as documentation; the manual conformance checklist (FR-014) maps each required field to it. | No | Owner | Authoring | Answered |
+| OQ-002 | Should the meta-standard's own `standard.toml` be a full annotated example or a minimal identity-only one? | **Decided:** the **README carries a complete annotated example** using a representative _adoptable_ standard (so capabilities/authorities/providers are realistic — FR-002); the meta-standard's **own `standard.toml` is its real, minimal-but-conformant manifest** (`adoption = "none"`; it honestly owns no consumer namespace or authority). FR-010's conformance is met by the own manifest + the FR-014 checklist over required fields — not by forcing artificial data into it. | No | Owner | Authoring | Answered |
 
 ---
 
