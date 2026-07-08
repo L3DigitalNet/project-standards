@@ -1,11 +1,11 @@
 # State
 
-**Last updated:** 2026-07-07
+**Last updated:** 2026-07-08
 
 ## State at a glance
 
 - **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth); tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is now **ahead of `main`** by the v5 work below (docs-only, unreleased). Full release detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`, docs-only):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–01 done; **Step 02 `SPEC-BA01` authored, full gate green** — `standards/standard-bundle-authoring/` bundle (README + `standard.toml` + template); **approved** (rev 0.7, owner sign-off). **Next: Step 03** (schema/model). Detail: `TODO.md` v5 tracker.
+- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–02 done. **Step 03 done 2026-07-08** — `standard.toml` Pydantic model + loader + generated schema + fixtures (`89464ea..95977f8`, subagent-driven; adds `pydantic` dep). **Next: Step 04** (graph validator). Detail: `TODO.md` v5 tracker.
 
 ## Active incidents
 
