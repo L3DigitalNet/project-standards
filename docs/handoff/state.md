@@ -4,8 +4,8 @@
 
 ## State at a glance
 
-- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth), `cli_documentation` contract 1.0, `--version`/`--help` CLI fixes, dogfood `docs/usage.md`. Release commit `74db623`; `main` fast-forwarded from `f1994bb`; signed tags `v4.3.0@74db623`, `v4` moved to `74db623`; GitHub release live (Latest). `main` and `testing` in sync.
-- **MCP specs ingested + v5 begun (2026-07-07, docs-only):** draft `SPEC-MT01→RD01→MS01` in `docs/superpowers/specs/`; MCP impl **BLOCKED** until SPEC-MT01 readiness gate. Step 00 inventory + ADR foundation underway. Detail: `specs-plans.md`, `architecture.md`, `TODO.md` v5 tracker.
+- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth); tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is now **ahead of `main`** by the v5 work below (docs-only, unreleased). Full release detail: `deployed.md`.
+- **v5.0.0 build-out active (`testing`, docs-only):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; MCP impl **BLOCKED** until MT01 readiness gate). Step 00 inventory + Step 01 (13 ADRs, accepted) done; **Step 02** meta-standard (`SPEC-BA01`) spec+plan **Codex-converged, ready to execute** (5-task doc plan); Dependabot bump done. Detail: `TODO.md` v5 tracker, `specs-plans.md`, `architecture.md`.
 
 ## Active incidents
 
