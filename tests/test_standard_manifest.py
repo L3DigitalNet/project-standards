@@ -10,6 +10,7 @@ from project_standards.standard_manifest import (
     LifecycleStatus,
     ProviderKind,
     RelationsTable,
+    ResourcesTable,
     StandardManifestError,
     StandardTable,
     VersionsTable,
@@ -117,3 +118,33 @@ def test_capabilities_and_relations_defaults() -> None:
 def test_relations_rejects_requires_key() -> None:
     with pytest.raises(ValidationError):
         RelationsTable.model_validate({"requires": ["adr"]})
+
+
+def test_resources_open_mapping() -> None:
+    t = ResourcesTable.model_validate(
+        {
+            "readme": "README.md",
+            "adopt": "adopt.md",
+            "agent_summary": "agent-summary.md",
+            "template": "templates/standard.toml",
+            "rationale": "resources/why.md",  # arbitrary URI-safe id
+        }
+    )
+    assert t.as_dict()["rationale"] == "resources/why.md"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},  # readme missing
+        {"readme": "README.md", "bad id": "x.md"},  # malformed resource id
+        {"readme": "../escape.md"},  # unsafe path
+        {"readme": "/abs.md"},  # absolute path
+        {"readme": "resources/../../x.md"},  # traversal on arbitrary-ish value
+        {"readme": "README.md", "count": 5},  # non-string extra value (CR-001)
+        {"readme": "README.md", "nested": {"k": "v"}},  # nested table extra
+    ],
+)
+def test_resources_rejects(payload: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        ResourcesTable.model_validate(payload)

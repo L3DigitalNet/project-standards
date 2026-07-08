@@ -11,7 +11,9 @@ annotations are resolved at runtime by Pydantic, and the future import would tur
 them into strings Pydantic must re-resolve (python-coding annotations guidance).
 """
 
+import re
 from enum import StrEnum
+from pathlib import PurePosixPath
 from typing import Annotated
 
 from pydantic import (
@@ -135,3 +137,47 @@ class RelationsTable(_Table):
     companions: list[str] = Field(default_factory=list)
     extends: list[str] = Field(default_factory=list)
     conflicts: list[str] = Field(default_factory=list)
+
+
+_RESOURCE_ID_RE = re.compile(r"^[a-z0-9]+([_-][a-z0-9]+)*$")
+
+
+def _is_safe_bundle_path(value: str) -> bool:
+    """A bundle-relative path with no traversal, absolute, or Windows-drive/backslash escape."""
+    if not value or "\\" in value or re.match(r"^[A-Za-z]:", value):
+        return False
+    p = PurePosixPath(value)
+    return not p.is_absolute() and ".." not in p.parts
+
+
+class ResourcesTable(BaseModel):
+    """The `[resources]` table: the ONE intentionally open mapping (not a `_Table`).
+
+    `readme` is required; any other key is an arbitrary URI-safe resource ID whose
+    value is a bundle-relative path. Extras are TYPED as str via `__pydantic_extra__`
+    so a non-string TOML value (int, array, table) is rejected by Pydantic rather
+    than silently coerced (Codex review CR-001) — do not revert to `str(value)`.
+    """
+
+    model_config = ConfigDict(extra="allow")
+    # BaseModel declares `Dict[str, Any] | None`; pydantic's documented pattern for
+    # typed extras narrows this, which basedpyright strict flags as an incompatible
+    # override (dict is invariant). The narrowing is intentional (see class
+    # docstring), so the override warning is expected, not a bug.
+    __pydantic_extra__: dict[str, str]  # pyright: ignore[reportIncompatibleVariableOverride]
+
+    readme: str
+
+    @model_validator(mode="after")
+    def _validate_ids_and_paths(self) -> ResourcesTable:
+        for key, value in self.as_dict().items():
+            if not _RESOURCE_ID_RE.match(key):
+                msg = f"resource id {key!r} is not a URI-safe token"
+                raise ValueError(msg)
+            if not _is_safe_bundle_path(value):
+                msg = f"resource {key!r} path {value!r} is not a safe bundle-relative path"
+                raise ValueError(msg)
+        return self
+
+    def as_dict(self) -> dict[str, str]:
+        return {"readme": self.readme, **self.__pydantic_extra__}
