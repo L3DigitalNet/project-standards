@@ -11,6 +11,7 @@ annotations are resolved at runtime by Pydantic, and the future import would tur
 them into strings Pydantic must re-resolve (python-coding annotations guidance).
 """
 
+import json
 import re
 import tomllib
 from enum import StrEnum
@@ -272,6 +273,27 @@ class StandardManifest(_Table):
             msg = 'adoption = "none" must not declare an `adopt` resource'
             raise ValueError(msg)
         return self
+
+
+_SCHEMA_ID = (
+    "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main"
+    "/src/project_standards/schemas/standard.schema.json"
+)
+
+
+def standard_schema() -> dict[str, object]:
+    """The JSON Schema for standard.toml, generated from StandardManifest."""
+    body = StandardManifest.model_json_schema()
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": _SCHEMA_ID,
+        **body,
+    }
+
+
+def standard_schema_json() -> str:
+    """Canonical serialization: preserve key order (no sort_keys), 2-space indent, trailing newline."""
+    return json.dumps(standard_schema(), indent=2, ensure_ascii=False) + "\n"
 
 
 def load_standard_manifest(path: Path) -> StandardManifest:

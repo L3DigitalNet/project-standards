@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/standard.schema.json",
+  "$defs": {
+    "AdoptionMode": {
+      "enum": [
+        "validator",
+        "copy-adopt",
+        "cli",
+        "reference-only",
+        "none"
+      ],
+      "title": "AdoptionMode",
+      "type": "string"
+    },
+    "AuthorityBlock": {
+      "additionalProperties": false,
+      "description": "One `[[authority]]` entry: an owner's exclusive claim over a target/concern pair.",
+      "properties": {
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "target": {
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        },
+        "concern": {
+          "minLength": 1,
+          "title": "Concern",
+          "type": "string"
+        },
+        "owner": {
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "mutates": {
+          "title": "Mutates",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "domain",
+        "target",
+        "concern",
+        "owner",
+        "mutates"
+      ],
+      "title": "AuthorityBlock",
+      "type": "object"
+    },
+    "CapabilitiesTable": {
+      "additionalProperties": false,
+      "description": "The `[capabilities]` table: what this standard provides and what platform features it needs.",
+      "properties": {
+        "provides": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provides",
+          "type": "array"
+        },
+        "consumes_platform": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Consumes Platform",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provides",
+        "consumes_platform"
+      ],
+      "title": "CapabilitiesTable",
+      "type": "object"
+    },
+    "ConfigTable": {
+      "additionalProperties": false,
+      "description": "The `[config]` table: dotted namespaces this standard owns in consumer repo config.",
+      "properties": {
+        "namespaces": {
+          "items": {
+            "pattern": "^[a-z0-9]+(_[a-z0-9]+)*(\\.[a-z0-9]+(_[a-z0-9]+)*)*$",
+            "type": "string"
+          },
+          "title": "Namespaces",
+          "type": "array"
+        }
+      },
+      "required": [
+        "namespaces"
+      ],
+      "title": "ConfigTable",
+      "type": "object"
+    },
+    "LifecycleStatus": {
+      "enum": [
+        "draft",
+        "review",
+        "active",
+        "deprecated",
+        "archived",
+        "superseded"
+      ],
+      "title": "LifecycleStatus",
+      "type": "string"
+    },
+    "ProviderBlock": {
+      "additionalProperties": false,
+      "description": "One `[[providers]]` entry: an operation this standard mechanizes, and how to invoke it.",
+      "properties": {
+        "operation": {
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "title": "Operation",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProviderKind"
+        },
+        "optional": {
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "entrypoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entrypoint"
+        },
+        "input_schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Schema"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Schema"
+        }
+      },
+      "required": [
+        "operation",
+        "kind",
+        "optional"
+      ],
+      "title": "ProviderBlock",
+      "type": "object"
+    },
+    "ProviderKind": {
+      "enum": [
+        "python",
+        "command",
+        "workflow",
+        "documentation-only"
+      ],
+      "title": "ProviderKind",
+      "type": "string"
+    },
+    "RelationsTable": {
+      "additionalProperties": false,
+      "description": "The `[relations]` table: this standard's ties to other standards.\n\nAll fields are optional lists; a stray `requires` key is rejected by\n`_Table`'s `extra=\"forbid\"` — dependency requirements are Step 04's\nstandards-graph concern, not a single-manifest field.",
+      "properties": {
+        "companions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Companions",
+          "type": "array"
+        },
+        "extends": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Extends",
+          "type": "array"
+        },
+        "conflicts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        }
+      },
+      "title": "RelationsTable",
+      "type": "object"
+    },
+    "ResourcesTable": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "The `[resources]` table: the ONE intentionally open mapping (not a `_Table`).\n\n`readme` is required; any other key is an arbitrary URI-safe resource ID whose\nvalue is a bundle-relative path. Extras are TYPED as str via `__pydantic_extra__`\nso a non-string TOML value (int, array, table) is rejected by Pydantic rather\nthan silently coerced (Codex review CR-001) — do not revert to `str(value)`.",
+      "properties": {
+        "readme": {
+          "title": "Readme",
+          "type": "string"
+        }
+      },
+      "required": [
+        "readme"
+      ],
+      "title": "ResourcesTable",
+      "type": "object"
+    },
+    "StandardTable": {
+      "additionalProperties": false,
+      "description": "The `[standard]` table: a manifest's identity and lifecycle status.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/LifecycleStatus"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "adoption": {
+          "$ref": "#/$defs/AdoptionMode"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "summary",
+        "adoption"
+      ],
+      "title": "StandardTable",
+      "type": "object"
+    },
+    "VersionsTable": {
+      "additionalProperties": false,
+      "description": "The `[versions]` table: supported version list plus the currently-latest one.",
+      "properties": {
+        "supported": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supported",
+          "type": "array"
+        },
+        "latest": {
+          "title": "Latest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "supported",
+        "latest"
+      ],
+      "title": "VersionsTable",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The top-level `standard.toml` document: all required and optional tables.\n\nSubclasses `_Table` (`extra=\"forbid\"`) so an unrecognized top-level table name\nis rejected here rather than silently ignored. Field names are load-bearing for\nStep 04's loader (`manifest.standard.id`, `manifest.resources.as_dict()`).",
+  "properties": {
+    "standard": {
+      "$ref": "#/$defs/StandardTable"
+    },
+    "versions": {
+      "$ref": "#/$defs/VersionsTable"
+    },
+    "config": {
+      "$ref": "#/$defs/ConfigTable"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/CapabilitiesTable"
+    },
+    "resources": {
+      "$ref": "#/$defs/ResourcesTable"
+    },
+    "relations": {
+      "$ref": "#/$defs/RelationsTable"
+    },
+    "authority": {
+      "items": {
+        "$ref": "#/$defs/AuthorityBlock"
+      },
+      "title": "Authority",
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/$defs/ProviderBlock"
+      },
+      "title": "Providers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "standard",
+    "versions",
+    "config",
+    "capabilities",
+    "resources"
+  ],
+  "title": "StandardManifest",
+  "type": "object"
+}

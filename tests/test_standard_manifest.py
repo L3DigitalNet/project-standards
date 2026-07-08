@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from project_standards.standard_manifest import (
@@ -20,7 +22,11 @@ from project_standards.standard_manifest import (
     StandardTable,
     VersionsTable,
     load_standard_manifest,
+    standard_schema,
+    standard_schema_json,
 )
+
+_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "src/project_standards/schemas/standard.schema.json"
 
 _MINIMAL: dict[str, dict[str, object]] = {
     "standard": {"id": "demo", "name": "Demo", "status": "active", "summary": "x", "adoption": "none"},
@@ -316,3 +322,19 @@ def test_loader_rejects_embedded_null_byte_resource_path(tmp_path: Path) -> None
     with pytest.raises(StandardManifestError) as exc_info:
         load_standard_manifest(manifest)
     assert exc_info.type is StandardManifestError
+
+
+def test_schema_has_metadata() -> None:
+    schema = standard_schema()
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert str(schema["$id"]).endswith("/schemas/standard.schema.json")
+
+
+def test_committed_schema_matches_model() -> None:
+    assert _SCHEMA_PATH.read_text(encoding="utf-8") == standard_schema_json()
+
+
+def test_committed_schema_is_valid_json_schema() -> None:
+    Draft202012Validator.check_schema(  # pyright: ignore[reportUnknownMemberType]
+        json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    )
