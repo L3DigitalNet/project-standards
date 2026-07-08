@@ -5,7 +5,7 @@
 ## State at a glance
 
 - **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth); tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is now **ahead of `main`** by the v5 work below (docs-only, unreleased). Full release detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`, docs-only):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; MCP impl **BLOCKED** until MT01 readiness gate). Step 00 inventory + Step 01 (13 ADRs, accepted) done; **Step 02** meta-standard (`SPEC-BA01`) spec+plan **Codex-converged, ready to execute** (5-task doc plan); Dependabot bump done. Detail: `TODO.md` v5 tracker, `specs-plans.md`, `architecture.md`.
+- **v5.0.0 build-out active (`testing`, docs-only):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–01 done; **Step 02 `SPEC-BA01` authored, full gate green** — `standards/standard-bundle-authoring/` bundle (README + `standard.toml` + template); DoD ticked, owner acceptance pending. **Next: Step 03** (schema/model). Detail: `TODO.md` v5 tracker.
 
 ## Active incidents
 

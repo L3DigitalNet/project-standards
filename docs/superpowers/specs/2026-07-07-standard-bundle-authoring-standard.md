@@ -40,6 +40,7 @@ related:
 | 0.3 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex spec-review r2: FR-012 resource/template paths made bundle-relative and contained (adr-0010), provider entrypoint clarified vs filesystem paths — last non-blocking finding; converged |
 | 0.4 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r1: clarified OQ-002 — the complete annotated example lives in the README (representative adoptable standard); the meta-standard's own `standard.toml` is minimal-but-conformant, not artificially padded with an authority it does not own |
 | 0.5 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r2: FR-001 + DoD corrected — `adopt.md` presence is independent of adoption mode; CLI-enforced standards (`project-spec`) are adoptable and keep `adopt.md`; only `adoption = "none"` and unreleased drafts use a non-adoptable marker |
+| 0.6 | 2026-07-07 | Chris Purcell / L3DigitalNet | Implemented (executing-plans): bundle authored under `standards/standard-bundle-authoring/` (README contract + worked `standard.toml` + blank template), repo-facing maps updated, full gate green (868 tests). §17.1 DoD ticked; only owner acceptance of the (empty) Deviations Log remains |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -126,18 +127,18 @@ The first-release scope is the **written contract plus one worked example** (thi
 
 ### 17.1 Definition of Done
 
-- [ ] `standards/standard-bundle-authoring/README.md` defines the full bundle contract (FR-001…FR-014) with one annotated `standard.toml` example.
-- [ ] The `adoption`-mode vocabulary classifies every current standard, including `project-spec` (`cli`) and `python-coding` (`reference-only`, draft).
-- [ ] The config-namespace model (FR-006) represents `markdown.frontmatter`, `markdown.adr`, `spec`, and `standards_version` without duplicate-owner ambiguity.
-- [ ] Manifest path/provider safety rules (FR-012) and the `adopt.toml` linkage / non-adoptability marker (FR-013) are documented.
-- [ ] `standards/standard-bundle-authoring/standard.toml` exists and passes the manual conformance checklist (FR-014); a blank `templates/standard.toml` ships.
-- [ ] `standards/README.md`'s bundle-anatomy text is updated so `adopt.md` is present for standards released for adoption (only `adoption = "none"` and unreleased-draft standards use an explicit non-adoptable marker; CLI-enforced standards like `project-spec` keep `adopt.md`) — not merely a new table row.
-- [ ] OQ-001 (adoption-mode name) and OQ-002 (worked-example completeness) are resolved in §21.
-- [ ] The README carries canonical Markdown frontmatter and passes `validate-frontmatter`, markdownlint, and Prettier; it is listed in `standards/README.md`.
-- [ ] This spec passes `spec validate` and `spec lint`.
-- [ ] No machine schema, model, or validator is introduced (deferred to Steps 03–04); `registry.json` is unchanged.
+- [x] `standards/standard-bundle-authoring/README.md` defines the full bundle contract (FR-001…FR-014) with one annotated `standard.toml` example.
+- [x] The `adoption`-mode vocabulary classifies every current standard, including `project-spec` (`cli`) and `python-coding` (`reference-only`, draft).
+- [x] The config-namespace model (FR-006) represents `markdown.frontmatter`, `markdown.adr`, `spec`, and `standards_version` without duplicate-owner ambiguity.
+- [x] Manifest path/provider safety rules (FR-012) and the `adopt.toml` linkage / non-adoptability marker (FR-013) are documented.
+- [x] `standards/standard-bundle-authoring/standard.toml` exists and passes the manual conformance checklist (FR-014); a blank `templates/standard.toml` ships.
+- [x] `standards/README.md`'s bundle-anatomy text is updated so `adopt.md` is present for standards released for adoption (only `adoption = "none"` and unreleased-draft standards use an explicit non-adoptable marker; CLI-enforced standards like `project-spec` keep `adopt.md`) — not merely a new table row.
+- [x] OQ-001 (adoption-mode name) and OQ-002 (worked-example completeness) are resolved in §21.
+- [x] The README carries canonical Markdown frontmatter and passes `validate-frontmatter`, markdownlint, and Prettier; it is listed in `standards/README.md`.
+- [x] This spec passes `spec validate` and `spec lint`.
+- [x] No machine schema, model, or validator is introduced (deferred to Steps 03–04); `registry.json` is unchanged.
 - [ ] Deviations Log reviewed and accepted by owner.
-- [ ] No known blocking defects.
+- [x] No known blocking defects.
 
 ---
 
