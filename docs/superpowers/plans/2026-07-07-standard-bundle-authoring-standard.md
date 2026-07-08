@@ -78,7 +78,7 @@ related:
 
 - [ ] **Step 3: Author the body sections.** One `##` section per contract area; each satisfies the named FR's acceptance criteria (write real prose, not placeholders — the spec's acceptance text is the checklist):
   - **Purpose & Status** — the "standard for standards"; internal/reference, `adoption = "none"`, no `adopt.md`.
-  - **Bundle anatomy** (FR-001) — a table of required vs optional files (`README.md` required; `standard.toml` required; `adopt.md` required **only for adoptable standards**, otherwise an explicit non-adoptable marker; optional `templates/`, `examples/`, `resources/`, `agent-summary.md`).
+  - **Bundle anatomy** (FR-001) — a table of required vs optional files (`README.md` required; `standard.toml` required; `adopt.md` present for standards **released for adoption** — `validator`/`copy-adopt`/`cli` alike, since `adopt.md` presence is independent of adoption mode — while `adoption = "none"` and unreleased-draft standards carry an explicit non-adoptable marker instead; optional `templates/`, `examples/`, `resources/`, `agent-summary.md`).
   - **The `standard.toml` manifest** (FR-002) — an annotated fenced `toml` example showing **every** field with a comment marking required vs optional, using SPEC-MT01 §9 as the shape (`[standard]` id/name/status/summary/adoption; `[versions]`; `[config]` namespaces; `[capabilities]` provides/consumes_platform; `[relations]` companions/extends/conflicts; `[resources]`; `[[authority]]`; `[[providers]]`). Use a representative adoptable standard (e.g. `markdown-tooling`) for the example so capabilities/authorities/providers are non-empty and realistic.
   - **Adoption modes** (FR-003) — the five-value enum and the mapping table for all seven current standards (see Global Constraints).
   - **Authorities** (FR-004) — the tuple `(domain, target, concern, owner, mutates)` and the conflict rule (two mutating authorities over the same concern + overlapping target with different owners conflict unless an ADR-backed `extends` relation exists).
@@ -242,7 +242,7 @@ git commit -m "docs(v5): add blank standard.toml template"
 
 - Modify: `standards/README.md`, root `README.md`, `AGENTS.md`, `CLAUDE.md`, `meta/versioning.md`
 
-- [ ] **Step 1: Find every "adopt.md required" anatomy claim.** Run: `rg -n "adopt\.md" standards/README.md AGENTS.md` and read the hits. The bundle-anatomy description must be reconciled so `adopt.md` is required only for _adoptable_ standards; internal/reference/cli standards use an explicit non-adoptable marker instead (this is SPEC-BA01's SA-005 DoD item).
+- [ ] **Step 1: Find every "adopt.md required" anatomy claim.** Run: `rg -n "adopt\.md" standards/README.md AGENTS.md` and read the hits. The bundle-anatomy description must be reconciled so `adopt.md` is present for standards released for adoption; only `adoption = "none"` (internal) and unreleased-draft standards use an explicit non-adoptable marker — CLI-enforced standards like `project-spec` keep their `adopt.md` (this is SPEC-BA01's SA-005 DoD item).
 
 - [ ] **Step 2: Add the index row.** In the `standards/README.md` table, add a row after the `Python Coding` row, matching the non-adoptable marker style already used there:
 
@@ -250,7 +250,7 @@ git commit -m "docs(v5): add blank standard.toml template"
 | Standard Bundle Authoring | The contract every standard bundle must declare (`standard.toml`, authorities, relationships, namespaces) | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs how this repo authors standards, not consumer-adopted) |
 ```
 
-- [ ] **Step 3: Reconcile the anatomy text.** Fix the "adopt.md required" claim found in Step 1 (in `standards/README.md`, and `AGENTS.md` if it asserts the same) so it reads, in substance: "every standard has a `README.md` and a `standard.toml`; `adopt.md` is present only for adoptable standards — internal/reference and CLI-enforced standards carry an explicit non-adoptable marker instead." Keep edits minimal and in each file's voice.
+- [ ] **Step 3: Reconcile the anatomy text.** Fix the "adopt.md required" claim found in Step 1 (in `standards/README.md`, and `AGENTS.md` if it asserts the same) so it reads, in substance: "every standard has a `README.md` and a `standard.toml`; `adopt.md` is present for every standard released for adoption — including CLI-enforced ones like `project-spec` — while only `adoption = \"none\"` internal standards and unreleased-draft documents carry an explicit non-adoptable marker instead." Keep edits minimal and in each file's voice.
 
 - [ ] **Step 4: Update the repo-facing standards maps (CR-004).** Run: `rg -n "six standards|standards/|python-coding|standard-bundle-authoring" README.md CLAUDE.md meta/versioning.md`. Add `standard-bundle-authoring/` to root `README.md`'s directory-layout tree and its standards list, and a one-line mention in `CLAUDE.md` and `meta/versioning.md` — each framed as an **internal/reference** document, _not_ one of the six released standards (mirror how `python-coding` is described). Do **not** change the "six standards ship under one version" release count; this standard is unregistered and not released.
 
