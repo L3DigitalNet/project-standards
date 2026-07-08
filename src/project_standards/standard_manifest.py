@@ -181,3 +181,57 @@ class ResourcesTable(BaseModel):
 
     def as_dict(self) -> dict[str, str]:
         return {"readme": self.readme, **self.__pydantic_extra__}
+
+
+class AuthorityBlock(_Table):
+    """One `[[authority]]` entry: an owner's exclusive claim over a target/concern pair."""
+
+    domain: str = Field(min_length=1)
+    target: str = Field(min_length=1)
+    concern: str = Field(min_length=1)
+    owner: str = Field(min_length=1)
+    mutates: bool
+
+
+OperationToken = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
+
+_PY_ENTRYPOINT_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*:[a-zA-Z_][a-zA-Z0-9_]*$")
+_TOKEN_ENTRYPOINT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _validate_entrypoint(kind: ProviderKind, value: str) -> None:
+    """Per-kind entrypoint grammar: reject filesystem-path shapes, then check the kind's token form."""
+    if "/" in value or "\\" in value or ".." in value or re.match(r"^[A-Za-z]:", value):
+        msg = f"entrypoint {value!r} looks like a filesystem path"
+        raise ValueError(msg)
+    if kind is ProviderKind.PYTHON:
+        if not _PY_ENTRYPOINT_RE.match(value):
+            msg = f"python entrypoint {value!r} must be module.path:object"
+            raise ValueError(msg)
+    elif not _TOKEN_ENTRYPOINT_RE.match(value):
+        msg = f"{kind.value} entrypoint {value!r} must be a bare safe token"
+        raise ValueError(msg)
+
+
+class ProviderBlock(_Table):
+    """One `[[providers]]` entry: an operation this standard mechanizes, and how to invoke it."""
+
+    operation: OperationToken
+    kind: ProviderKind
+    optional: bool
+    entrypoint: str | None = None
+    input_schema: str | None = None
+    output_schema: str | None = None
+
+    @model_validator(mode="after")
+    def _entrypoint_by_kind(self) -> ProviderBlock:
+        if self.kind is ProviderKind.DOCUMENTATION_ONLY:
+            if self.entrypoint is not None:
+                msg = "documentation-only provider must not declare an entrypoint"
+                raise ValueError(msg)
+            return self
+        if not self.entrypoint:
+            msg = f"{self.kind.value} provider requires an entrypoint"
+            raise ValueError(msg)
+        _validate_entrypoint(self.kind, self.entrypoint)
+        return self

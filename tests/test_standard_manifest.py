@@ -5,9 +5,11 @@ from pydantic import ValidationError
 
 from project_standards.standard_manifest import (
     AdoptionMode,
+    AuthorityBlock,
     CapabilitiesTable,
     ConfigTable,
     LifecycleStatus,
+    ProviderBlock,
     ProviderKind,
     RelationsTable,
     ResourcesTable,
@@ -148,3 +150,48 @@ def test_resources_open_mapping() -> None:
 def test_resources_rejects(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         ResourcesTable.model_validate(payload)
+
+
+def test_authority_requires_full_tuple() -> None:
+    AuthorityBlock.model_validate(
+        {
+            "domain": "markdown",
+            "target": "**/*.md",
+            "concern": "physical-formatting",
+            "owner": "prettier",
+            "mutates": True,
+        }
+    )
+    with pytest.raises(ValidationError):
+        AuthorityBlock.model_validate({"domain": "markdown", "target": "**/*.md"})
+
+
+def test_provider_valid_shapes() -> None:
+    ProviderBlock.model_validate(
+        {"operation": "drift-check", "kind": "python", "optional": True, "entrypoint": "pkg.mod:fn"}
+    )
+    ProviderBlock.model_validate(
+        {"operation": "validate", "kind": "command", "optional": False, "entrypoint": "mytool"}
+    )
+    ProviderBlock.model_validate({"operation": "extract", "kind": "documentation-only", "optional": True})
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"operation": "drift-check", "kind": "python", "optional": True},  # executable missing entrypoint
+        {
+            "operation": "x",
+            "kind": "documentation-only",
+            "optional": True,
+            "entrypoint": "pkg:fn",
+        },  # doc-only with entrypoint
+        {"operation": "x", "kind": "python", "optional": True, "entrypoint": "pkg/mod.py"},  # filesystem path
+        {"operation": "x", "kind": "command", "optional": True, "entrypoint": "do | rm"},  # shell metachars
+        {"operation": "x", "kind": "command", "optional": True, "entrypoint": "../up"},  # traversal
+        {"operation": "Bad-Op", "kind": "command", "optional": True, "entrypoint": "t"},  # non-kebab operation
+    ],
+)
+def test_provider_rejects(payload: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        ProviderBlock.model_validate(payload)
