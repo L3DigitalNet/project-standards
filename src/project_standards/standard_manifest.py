@@ -306,7 +306,7 @@ def load_standard_manifest(path: Path) -> StandardManifest:
     """
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         msg = f"cannot read {path}: {exc}"
         raise StandardManifestError(msg) from exc
     try:

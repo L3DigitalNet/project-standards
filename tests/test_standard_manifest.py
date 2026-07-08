@@ -361,6 +361,21 @@ def test_loader_rejects_embedded_null_byte_resource_path(tmp_path: Path) -> None
     assert exc_info.type is StandardManifestError
 
 
+def test_loader_rejects_invalid_utf8(tmp_path: Path) -> None:
+    # UnicodeDecodeError subclasses ValueError, not OSError — the read-path
+    # exception handler must catch it explicitly or it escapes the loader
+    # boundary raw, violating "StandardManifestError is the only exception
+    # load_standard_manifest may raise" (sibling of the null-byte escape fix).
+    bundle = tmp_path / "demo"
+    bundle.mkdir(parents=True)
+    (bundle / "README.md").write_text("# demo\n", encoding="utf-8")
+    manifest = bundle / "standard.toml"
+    manifest.write_bytes(b"\xff\xfe" + _MINIMAL_TOML.encode("utf-8"))
+    with pytest.raises(StandardManifestError) as exc_info:
+        load_standard_manifest(manifest)
+    assert exc_info.type is StandardManifestError
+
+
 def test_schema_has_metadata() -> None:
     schema = standard_schema()
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
@@ -449,3 +464,17 @@ def test_schema_enforced_invalids_fail_generated_schema(toml_path: Path) -> None
 
     with pytest.raises(SchemaValidationError):
         _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
+
+
+@pytest.mark.parametrize(
+    "toml_path",
+    sorted(p for p in (_FIXTURES / "invalid").glob("*.toml") if p.name not in _SCHEMA_ENFORCED),
+    ids=lambda p: p.name,
+)
+def test_model_only_invalids_pass_generated_schema(toml_path: Path) -> None:
+    # Symmetric guard to test_schema_enforced_invalids_fail_generated_schema: every
+    # invalid fixture NOT in _SCHEMA_ENFORCED is model-only (cross-field/custom-
+    # validator rules Pydantic doesn't emit to JSON Schema). The raw generated
+    # schema must NOT reject it — locking the enforced-vs-model-only split against
+    # future schema drift (e.g. a schema change that starts rejecting one of these).
+    _schema_validator().validate(_load_toml(toml_path))  # pyright: ignore[reportUnknownMemberType]
