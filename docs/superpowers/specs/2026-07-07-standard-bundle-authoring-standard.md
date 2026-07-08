@@ -33,9 +33,11 @@ related:
 
 ## Revision History
 
-| Version | Date       | Author                       | Change        |
-| ------- | ---------- | ---------------------------- | ------------- |
-| 0.1     | 2026-07-07 | Chris Purcell / L3DigitalNet | Initial draft |
+| Version | Date | Author | Change |
+| --- | --- | --- | --- |
+| 0.1 | 2026-07-07 | Chris Purcell / L3DigitalNet | Initial draft |
+| 0.2 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex spec-review r1: dotted/nested namespace model; added manifest-safety, adopt.toml-linkage, and manual-conformance-checklist FRs; standards-index anatomy DoD; OQ-001/002 resolved |
+| 0.3 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex spec-review r2: FR-012 resource/template paths made bundle-relative and contained (adr-0010), provider entrypoint clarified vs filesystem paths — last non-blocking finding; converged |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -104,12 +106,15 @@ The first-release scope is the **written contract plus one worked example** (thi
 | FR-003 | The standard shall define an `adoption` mode vocabulary that classifies every one of the seven current standards. | Today's outliers (`project-spec` CLI-enforced, `python-coding` draft) must be first-class, not special cases. | The enum includes at least `validator`, `copy-adopt`, `cli`, `reference-only`, and `none`, and the README maps each current standard to a mode. | Must |
 | FR-004 | The standard shall define authority-tuple declarations and the mutating-conflict rule. | Conflict-free composition cannot be proven from prose alone (adr-0004). | The README defines the tuple `(domain, target, concern, owner, mutates)` and states that two mutating authorities over the same concern and overlapping target with different owners conflict unless an ADR-backed `extends` relation exists. | Must |
 | FR-005 | The standard shall define the relationship taxonomy and the independent-package default. | Hidden hard dependencies break arbitrary adoption (adr-0013). | The README defines `independent`, `companion`, `extends`, `conflicts`, and `consumes_platform`; declares `independent` the default; and forbids a hidden `requires` edge. | Must |
-| FR-006 | The standard shall define config-namespace ownership rules. | `.project-standards.yml` must not become collision-prone (adr-0008). | The README requires each standard to declare its owning top-level config namespace and states that duplicate or undeclared namespaces are invalid. | Must |
+| FR-006 | The standard shall define config-namespace ownership as **dotted namespace paths**, supporting both top-level and nested ownership with parent delegation, and shall reserve non-standard meta keys. | `.project-standards.yml` already nests ownership (`markdown.frontmatter` vs `markdown.adr` under one `markdown` key) and carries meta keys, so top-level-only ownership cannot model the repo (adr-0008). | The README defines a namespace as a dotted path; states that a parent namespace (e.g. `markdown`) may be a shared container whose child paths are owned by different standards; reserves meta keys (`standards_version`) as repo-owned, not standard-owned; and declares duplicate ownership of the _same_ path invalid. The model must represent `markdown.frontmatter` (markdown-frontmatter), `markdown.adr` (adr), `spec` (project-spec), and `standards_version` (meta) without duplicate-owner ambiguity. | Must |
 | FR-007 | The standard shall define provider-hook declarations for generic operations. | Standard-specific behavior must be pluggable, not hardcoded (adr-0006). | The README documents a provider declaration (operation, kind, entrypoint, optional) covering validate, fix, drift-check, id generation, and extraction. | Should |
 | FR-008 | The standard shall define resource descriptors for lazy-loadable bundle content. | Future resource/MCP consumers must reference stable identifiers (adr-0010). | The README documents URI-safe resource IDs that map to bundle file paths. | Should |
 | FR-009 | The standard shall define the lifecycle states and the ADR-backed exception process. | Tooling must know draft/active/deprecated status; deviations need auditability. | The README documents `draft → review → active → deprecated → archived` (plus `superseded`) and requires exceptions to be recorded as ADRs. | Should |
 | FR-010 | The standard shall ship its own `standard.toml` as a worked example plus a blank `templates/standard.toml`. | The repository dogfoods the contract it defines. | `standards/standard-bundle-authoring/standard.toml` exists and conforms to the contract; a blank `templates/standard.toml` ships. | Must |
 | FR-011 | The standard document shall itself conform to the repository's Markdown Frontmatter, Markdown Tooling, and Project Specification standards. | Dogfooding — the meta-standard must meet the bar it sets. | The README carries canonical frontmatter and passes `validate-frontmatter`, markdownlint, and Prettier; this spec passes `spec validate` and `spec lint`. | Must |
+| FR-012 | The standard shall require manifest-declared paths to be safe and bundle-contained, and providers to be first-party and local. | Future tooling trusts manifest resources and providers; standard resources are bundle resources (adr-0010), a path outside the bundle must fail per `SPEC-MT01`, and the adopt engine already enforces bundle-relative containment. | The README requires resource and template paths to be **bundle-relative and contained within the declaring standard's own directory** (no `..`, no absolute paths, no symlink escape), permitting cross-bundle sharing only through the explicit shared-artifact (`_shared`) mechanism; treats a provider `entrypoint` as an import path or command reference, not a filesystem path; requires providers to be first-party and to perform no network access by default; and requires a missing optional provider to be declared explicitly rather than inferred. | Must |
+| FR-013 | The standard shall define how `standard.toml` links to the artifact plane. | Step 04 graph validation must reason about artifact ownership and collisions without re-inventing the adopt engine (adr-0003). | The README requires each `standard.toml` to either reference its `adopt.toml` artifact manifest or explicitly declare non-adoptability, and states that artifact ownership, shared artifacts (`_shared`), and destination-collision semantics remain delegated to the artifact plane. | Must |
+| FR-014 | The standard shall include a manual `standard.toml` conformance checklist, pending the Step 03 schema. | With no schema yet, "conforms to the contract" (FR-010) is otherwise circular; a checklist makes conformance objectively decidable and gives Step 03 an explicit baseline to preserve or supersede. | The README maps every required `standard.toml` field to the worked example; the checklist is owner-acceptable; and Step 03 must preserve it or record a deliberate supersession. | Must |
 
 ---
 
@@ -119,9 +124,13 @@ The first-release scope is the **written contract plus one worked example** (thi
 
 ### 17.1 Definition of Done
 
-- [ ] `standards/standard-bundle-authoring/README.md` defines the full bundle contract (FR-001…FR-009) with one annotated `standard.toml` example.
+- [ ] `standards/standard-bundle-authoring/README.md` defines the full bundle contract (FR-001…FR-014) with one annotated `standard.toml` example.
 - [ ] The `adoption`-mode vocabulary classifies every current standard, including `project-spec` (`cli`) and `python-coding` (`reference-only`, draft).
-- [ ] `standards/standard-bundle-authoring/standard.toml` exists and conforms to the contract; a blank `templates/standard.toml` ships.
+- [ ] The config-namespace model (FR-006) represents `markdown.frontmatter`, `markdown.adr`, `spec`, and `standards_version` without duplicate-owner ambiguity.
+- [ ] Manifest path/provider safety rules (FR-012) and the `adopt.toml` linkage / non-adoptability marker (FR-013) are documented.
+- [ ] `standards/standard-bundle-authoring/standard.toml` exists and passes the manual conformance checklist (FR-014); a blank `templates/standard.toml` ships.
+- [ ] `standards/README.md`'s bundle-anatomy text is updated so `adopt.md` is required only for _adoptable_ standards (internal/reference/cli standards use an explicit non-adoptable marker) — not merely a new table row.
+- [ ] OQ-001 (adoption-mode name) and OQ-002 (worked-example completeness) are resolved in §21.
 - [ ] The README carries canonical Markdown frontmatter and passes `validate-frontmatter`, markdownlint, and Prettier; it is listed in `standards/README.md`.
 - [ ] This spec passes `spec validate` and `spec lint`.
 - [ ] No machine schema, model, or validator is introduced (deferred to Steps 03–04); `registry.json` is unchanged.
@@ -136,8 +145,8 @@ The first-release scope is the **written contract plus one worked example** (thi
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Should `project-spec`'s adoption mode be named `cli` or a broader `package-tooling`? | Use `cli` — it names how the standard is actually enforced today; broaden only if a second CLI-enforced standard appears. | No | Owner | Step 03 schema | Open |
-| OQ-002 | Should the meta-standard's own `standard.toml` be a full annotated example or a minimal identity-only one? | A complete annotated example (identity + config namespace + one authority + `adoption = "none"`), so it doubles as documentation. | No | Owner | Authoring | Open |
+| OQ-001 | Should `project-spec`'s adoption mode be named `cli` or a broader `package-tooling`? | **Decided: `cli`.** It names how the standard is actually enforced today; broaden to `package-tooling` only via a spec revision if a second CLI-enforced standard appears. Not schema-binding until Step 03. | No | Owner | Step 03 schema | Answered |
+| OQ-002 | Should the meta-standard's own `standard.toml` be a full annotated example or a minimal identity-only one? | **Decided: a complete annotated example** (identity + config namespace + at least one authority + `adoption = "none"`), so it doubles as documentation; the manual conformance checklist (FR-014) maps each required field to it. | No | Owner | Authoring | Answered |
 
 ---
 
