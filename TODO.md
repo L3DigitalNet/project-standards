@@ -58,7 +58,7 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 **Scope:** v5.0.0 = implement the Meta-repo readiness spec (`SPEC-MT01`) + every standards change that lands before the release (per the freeze in `meta/versioning.md`). The MCP _server_ itself (`SPEC-MS01`) is gated after the readiness gate and belongs to a later release, not v5.0.0. Specs + paths: `docs/handoff/specs-plans.md`.
 
-**Working permissions (owner-granted 2026-07-07, active until v5.0.0 releases):** agent teams, subagents, and headless Codex may be used freely for this build-out without asking each time — models **Sonnet** (mechanical/parallel) or **Opus** (complex) by task complexity, **never Fable or Haiku**. This permission expires at the v5.0.0 release.
+**Working permissions (updated 2026-07-08, standing):** individual sub-agents and headless Codex may be used freely without asking each time; **agent teams / `Workflow` multi-agent orchestration are NOT pre-authorized — ask first with a cost sketch** (owner rescinded the blanket team permission on cost / token grounds). Models: **never Fable**; Haiku OK for trivial / mechanical tasks; **Sonnet** (mechanical) or **Opus** (complex) by task complexity. Does not expire at v5.0.0.
 
 ### ✅ Completed — retained history (do not remove)
 

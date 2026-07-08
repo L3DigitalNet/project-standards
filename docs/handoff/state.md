@@ -14,7 +14,7 @@
 ## Ops notes
 
 - **RELEASE FREEZE until v5.0.0 (set 2026-07-07).** Next release is **v5.0.0** (Meta-repo/MCP-readiness + all accrued standards changes). **No interim PATCH/MINOR** — version-affecting changes accumulate under CHANGELOG `[Unreleased]` and ship together at v5.0.0. Keep classifying; don't tag. Canonical: `meta/versioning.md`.
-- **v5 build-out: agent teams pre-authorized** (until v5.0.0 releases) — subagents/teams/headless Codex OK without asking; **Sonnet or Opus** by complexity, **never Fable/Haiku**. Details in `AGENTS.md`.
+- **Sub-agent policy (2026-07-08):** individual sub-agents + headless Codex OK unasked; **agent teams / `Workflow` fan-out need ask-first + cost sketch**. Never Fable; Haiku OK for trivial. Detail: `AGENTS.md`.
 - **Repo rulesets (active):** `main` requires signed commits + blocks force-push/deletion (no PR/status-check rule). `v*.*.*` tags block deletion + non-fast-forward. `commit.gpgsign`/`tag.gpgsign` are on (key `9375AFEFA6F841B0`) — unsigned commits will be rejected by `main`.
 
 ## Session instructions
