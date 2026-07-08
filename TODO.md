@@ -74,7 +74,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [x] **Step 00 — Baseline inventory** of standards, registry, bundles, manifests, validators, tests, and workflows. — done 2026-07-07 (`194637e`); deliverable: `docs/superpowers/research/2026-07-07-spec-mt01-baseline-inventory.md`.
 - [x] **Step 01 — ADR foundation:** author the required ADR set under `docs/adr/` (the 13+ ADRs listed in the MCP program item above). — done 2026-07-07 (`ee98d0f`): the **13 SPEC-MT01 ADRs** (`adr-0001`…`adr-0013`) authored as **proposed** (`status: review`) + an index README; `docs/adr/**` dogfood-wired into frontmatter/id/section validation. **Accepted 2026-07-07** (owner batch-accept; all 13 now `status: active`). The SPEC-MS01 _server_ ADRs (stdio transport, roots, capability advertisement, etc.) are deferred to the server phase, post-readiness-gate — not part of the v5.0.0 meta-repo set.
-- [ ] **Step 02 — Standard Bundle Authoring Standard** (the meta-standard) drafted.
+- [ ] **Step 02 — Standard Bundle Authoring Standard** (the meta-standard) drafted. — **design spec written** 2026-07-07 (`SPEC-BA01`, Light project spec, validated) via brainstorm; decisions: internal/reference audience, doc-only scope, `adoption`-mode enum for the outliers. **Awaiting owner spec-review**, then writing-plans → author the standard bundle. Box stays unchecked until the standard itself ships.
 - [ ] **Step 03 — `standard.toml` manifest** schema/model + valid/invalid fixtures.
 - [ ] **Step 04 — Standards graph validator** (authority / capability / resource / relationship, including hidden-dependency rejection) + CLI.
 - [ ] **Step 05 — Retrofit** every existing standard with a manifest, authorities, and resources.

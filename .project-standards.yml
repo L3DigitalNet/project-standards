@@ -85,3 +85,5 @@ spec:
     - "docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md"
     - "docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md"
     - "docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md"
+    # v5 Step 02 design (SPEC-BA01) — the Standard Bundle Authoring meta-standard.
+    - "docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md"
