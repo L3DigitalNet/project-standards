@@ -4,10 +4,10 @@ id: 'adr-0003-project-standards-separate-standard-and-artifact-manifests'
 title: 'ADR 0003: Separate Standard and Artifact Manifests'
 description: 'Records the decision to keep the existing artifact-focused adopt.toml and reference it from standard.toml rather than merging everything into one manifest.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,7 +34,7 @@ project:
 
 # ADR 0003: Separate Standard and Artifact Manifests
 
-MADR status: **proposed**. Records decision D-003 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-003 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

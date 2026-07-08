@@ -4,10 +4,10 @@ id: 'adr-0013-project-standards-independent-standard-packages-and-relationship-t
 title: 'ADR 0013: Independent Standard Packages and Relationship Taxonomy'
 description: 'Records the decision to treat standards as independently adoptable packages by default, with explicit companion and extension relationships and groups as non-binding recommendation profiles.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,7 +34,7 @@ project:
 
 # ADR 0013: Independent Standard Packages and Relationship Taxonomy
 
-MADR status: **proposed**. Records decision D-013 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-013 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

@@ -4,10 +4,10 @@ id: 'adr-0008-project-standards-consumer-config-namespace-registry'
 title: 'ADR 0008: Consumer Config Namespace Registry'
 description: 'Records the decision to require declared ownership of top-level project-standards.yml config namespaces so standards cannot collide.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,7 +33,7 @@ project:
 
 # ADR 0008: Consumer Config Namespace Registry
 
-MADR status: **proposed**. Records decision D-008 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-008 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

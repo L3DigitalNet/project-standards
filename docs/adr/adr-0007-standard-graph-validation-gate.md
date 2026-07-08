@@ -4,10 +4,10 @@ id: 'adr-0007-project-standards-standard-graph-validation-gate'
 title: 'ADR 0007: Standard Graph Validation Gate'
 description: 'Records the decision to run standards-graph validation as part of the normal verification gate so manifest and composition drift fails CI.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,7 +34,7 @@ project:
 
 # ADR 0007: Standard Graph Validation Gate
 
-MADR status: **proposed**. Records decision D-007 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-007 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

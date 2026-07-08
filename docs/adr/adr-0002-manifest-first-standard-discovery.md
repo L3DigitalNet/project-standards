@@ -4,10 +4,10 @@ id: 'adr-0002-project-standards-manifest-first-standard-discovery'
 title: 'ADR 0002: Manifest-First Standard Discovery'
 description: 'Records the decision to make standard.toml the primary machine-readable manifest for standard metadata so tooling discovers standards without parsing prose.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,7 +33,7 @@ project:
 
 # ADR 0002: Manifest-First Standard Discovery
 
-MADR status: **proposed**. Records decision D-002 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-002 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

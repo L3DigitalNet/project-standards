@@ -4,10 +4,10 @@ id: 'adr-0004-project-standards-authority-map-and-conflict-free-composition'
 title: 'ADR 0004: Authority Map and Conflict-Free Composition'
 description: 'Records the decision to model standard ownership as authority tuples so arbitrary standards can be co-adopted without silent tooling conflicts.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,7 +34,7 @@ project:
 
 # ADR 0004: Authority Map and Conflict-Free Composition
 
-MADR status: **proposed**. Records decision D-004 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-004 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

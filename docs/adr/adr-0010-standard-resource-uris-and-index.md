@@ -4,10 +4,10 @@ id: 'adr-0010-project-standards-standard-resource-uris-and-index'
 title: 'ADR 0010: Standard Resource URIs and Index'
 description: 'Records the decision to treat standard resources as lazy-loadable, URI-addressable assets declared in manifests and surfaced through a generated index.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,7 +33,7 @@ project:
 
 # ADR 0010: Standard Resource URIs and Index
 
-MADR status: **proposed**. Records decision D-010 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-010 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

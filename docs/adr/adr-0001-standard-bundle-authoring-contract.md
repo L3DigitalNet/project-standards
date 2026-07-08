@@ -4,10 +4,10 @@ id: 'adr-0001-project-standards-standard-bundle-authoring-contract'
 title: 'ADR 0001: Standard Bundle Authoring Contract'
 description: 'Records the decision to govern how standards are authored in this repository with a dedicated meta-standard (the Standard Bundle Authoring Standard).'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,7 +33,7 @@ project:
 
 # ADR 0001: Standard Bundle Authoring Contract
 
-MADR status: **proposed**. Records decision D-001 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-001 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

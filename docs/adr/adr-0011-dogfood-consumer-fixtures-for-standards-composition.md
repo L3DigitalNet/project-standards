@@ -4,10 +4,10 @@ id: 'adr-0011-project-standards-dogfood-consumer-fixtures-for-standards-composit
 title: 'ADR 0011: Dogfood Consumer Fixtures for Standards Composition'
 description: 'Records the decision to require dogfood consumer-repo fixtures that exercise standard composition, not just per-standard unit tests.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,7 +34,7 @@ project:
 
 # ADR 0011: Dogfood Consumer Fixtures for Standards Composition
 
-MADR status: **proposed**. Records decision D-011 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-011 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

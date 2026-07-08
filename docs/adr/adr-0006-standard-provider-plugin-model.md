@@ -4,10 +4,10 @@ id: 'adr-0006-project-standards-standard-provider-plugin-model'
 title: 'ADR 0006: Standard Provider and Plugin Model'
 description: 'Records the decision to bind generic operations to standards through a provider registry instead of central switch statements.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-07'
 updated: '2026-07-07'
-reviewed: null
+reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,7 +33,7 @@ project:
 
 # ADR 0006: Standard Provider and Plugin Model
 
-MADR status: **proposed**. Records decision D-006 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-006 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 
