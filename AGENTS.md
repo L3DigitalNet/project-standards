@@ -23,6 +23,7 @@ This repository is the **single source of truth** for reusable standards shared 
 
 ## Working Rules
 
+- **v5 build-out — agent teams pre-authorized (until v5.0.0 releases).** For the Meta-repo / MCP-readiness effort you may use subagents, agent teams, and headless Codex **without asking each time**. Spawn only **Sonnet** (mechanical / parallel-breadth / transcription) or **Opus** (complex reasoning, design, review) by task complexity — **never Fable or Haiku**. Reverts to ask-first once v5.0.0 is cut. See `docs/handoff/state.md` (Ops notes) + the v5.0.0 tracker in `TODO.md`.
 - **Conventions-source self-containment.** This repo defines conventions, so it does **not** import other external/global agent conventions. The single sanctioned exception is the workstation **v3 handoff system**, adopted 2026-06-05 (`docs/handoff/` + the SessionStart hook). Do not layer further global/workstation conventions on top of it.
 - **Dogfood the standards.** Managed Markdown (`standards/**`, `meta/**`, `CHANGELOG.md` (per-standard `templates/` and the `standards/README.md` index excluded)) must validate: `uv run validate-frontmatter --config .project-standards.yml`.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.

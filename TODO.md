@@ -58,6 +58,8 @@ This document is the user's visible task list alongside the v3 handoff system. U
 
 **Scope:** v5.0.0 = implement the Meta-repo readiness spec (`SPEC-MT01`) + every standards change that lands before the release (per the freeze in `meta/versioning.md`). The MCP _server_ itself (`SPEC-MS01`) is gated after the readiness gate and belongs to a later release, not v5.0.0. Specs + paths: `docs/handoff/specs-plans.md`.
 
+**Working permissions (owner-granted 2026-07-07, active until v5.0.0 releases):** agent teams, subagents, and headless Codex may be used freely for this build-out without asking each time — models **Sonnet** (mechanical/parallel) or **Opus** (complex) by task complexity, **never Fable or Haiku**. This permission expires at the v5.0.0 release.
+
 ### ✅ Completed — retained history (do not remove)
 
 - [x] **2026-07-07 — MCP enablement specs ingested** (`76b09da`) — SPEC-MT01/RD01/MS01 (Full project specs) + reference pack placed under `docs/superpowers/`, wired into `spec.include`, the spec index, and handoff.
