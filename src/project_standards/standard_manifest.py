@@ -216,7 +216,7 @@ _TOKEN_ENTRYPOINT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 def _validate_entrypoint(kind: ProviderKind, value: str) -> None:
     """Per-kind entrypoint grammar: reject filesystem-path shapes, then check the kind's token form."""
-    if "/" in value or "\\" in value or ".." in value or re.match(r"^[A-Za-z]:", value):
+    if "/" in value or "\\" in value or ".." in value or re.match(r"^[A-Za-z]:[\\/]", value):
         msg = f"entrypoint {value!r} looks like a filesystem path"
         raise ValueError(msg)
     if kind is ProviderKind.PYTHON:

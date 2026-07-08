@@ -204,6 +204,14 @@ def test_provider_valid_shapes() -> None:
     )
 
 
+def test_provider_python_single_letter_module_entrypoint() -> None:
+    # "a:main" is a legitimate module:object entrypoint (module `a`), not a Windows
+    # drive-letter path — the drive check must require a separator after the colon.
+    ProviderBlock.model_validate(
+        {"operation": "drift-check", "kind": "python", "optional": True, "entrypoint": "a:main"}
+    )
+
+
 @pytest.mark.parametrize(
     "payload",
     [
