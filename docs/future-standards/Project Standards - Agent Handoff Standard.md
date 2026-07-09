@@ -1,13 +1,13 @@
 ---
-title: "Project Standards - Agent Handoff Standard"
-source: "https://chatgpt.com/g/g-p-6a24ec06cda08191be0c41f4bfaefada/c/6a4d9ebd-cb48-83ea-bb7f-e4e32d7dc318"
+title: 'Project Standards - Agent Handoff Standard'
+source: 'https://chatgpt.com/g/g-p-6a24ec06cda08191be0c41f4bfaefada/c/6a4d9ebd-cb48-83ea-bb7f-e4e32d7dc318'
 ---
 
 **You:**
 
 GitHub see my agent handoff system, V3 repository. I want to formalize this into a published standard.
 
-* * *
+---
 
 **ChatGPT:**
 
@@ -202,12 +202,12 @@ The V3 implementation already has `validate-layout.sh` and `validate-globals.sh`
 
 Move these out of `README.md` and into `resources/implementation-profile-agent-handoff-v3.md` or changelog material:
 
-* V3.0/V3.1/V3.2/V3.3/V3.4 changelog entries.
-* Specific bug IDs and issue references unless they justify a rule.
-* Local implementation archaeology.
-* Engine repo bootstrapping details that only apply to `chrisdpurcell/agent-handoff-v3`.
-* Personal/global instruction-file language.
-* Any statement that assumes Claude/Codex are the only possible harnesses.
+- V3.0/V3.1/V3.2/V3.3/V3.4 changelog entries.
+- Specific bug IDs and issue references unless they justify a rule.
+- Local implementation archaeology.
+- Engine repo bootstrapping details that only apply to `chrisdpurcell/agent-handoff-v3`.
+- Personal/global instruction-file language.
+- Any statement that assumes Claude/Codex are the only possible harnesses.
 
 Keep the concrete Claude/Codex details, but mark them as the **V3 reference implementation profile**.
 
@@ -323,13 +323,13 @@ Reference standards:
 
 Publish it as a **standardized contract with a reference implementation**, not as “the V3 repo but moved.” The V3 repo already proves the design; `project-standards` should define the portable rules, adoption contract, templates, and versioning surface.
 
-* * *
+---
 
 **You:**
 
-i very frequently observe agents using the handoff system requiring multiple attempts to reduce the size of the documents that have explicit caps in size. It seems like they’re randomly guessing that their efforts to reduce size will bring it under the limit and then they test after the fact and realize it’s not and have to go back and try fixing it again. This seems inefficient and a waste of time and a waste of tokens.  What sort of options do I have that I could bake into this standard which would help the agents use it more effectively and efficiently
+i very frequently observe agents using the handoff system requiring multiple attempts to reduce the size of the documents that have explicit caps in size. It seems like they’re randomly guessing that their efforts to reduce size will bring it under the limit and then they test after the fact and realize it’s not and have to go back and try fixing it again. This seems inefficient and a waste of time and a waste of tokens. What sort of options do I have that I could bake into this standard which would help the agents use it more effectively and efficiently
 
-* * *
+---
 
 **ChatGPT:**
 
@@ -586,13 +586,13 @@ For capped handoff files, agents MUST target a working size below the cap, not m
 
 Use **85% of cap** as the default working target. For a 2048-byte file, that is about **1740 bytes**. This gives enough slack that the next session update can add a line without immediately triggering another reduction cycle.
 
-* * *
+---
 
 **You:**
 
 That’s the other thing I would like to solve, overly verbose comments. I would like stricter controls, preferably, deterministic, mechanical controls over what the agent writes the format and the length this would vary by document what would be useful in all documents, even though that aren’t strictly limited in size.
 
-* * *
+---
 
 **ChatGPT:**
 
@@ -1028,25 +1028,25 @@ A conforming implementation MUST provide a non-mutating shape validator that che
 
 Do this in phases:
 
-| Phase | Add | Enforcement |
-| --- | --- | --- |
-| 1 | Standard prose + templates | Agent behavior improves immediately |
-| 2 | `size-report.sh` / `shape-report.sh` | Deterministic feedback |
-| 3 | `docs/handoff/policy.yml` | Per-file customization |
-| 4 | CI shape validation | Prevents drift |
-| 5 | JSON output | Lets agents plan edits mechanically |
+| Phase | Add                                  | Enforcement                         |
+| ----- | ------------------------------------ | ----------------------------------- |
+| 1     | Standard prose + templates           | Agent behavior improves immediately |
+| 2     | `size-report.sh` / `shape-report.sh` | Deterministic feedback              |
+| 3     | `docs/handoff/policy.yml`            | Per-file customization              |
+| 4     | CI shape validation                  | Prevents drift                      |
+| 5     | JSON output                          | Lets agents plan edits mechanically |
 
 The key design choice: **hard caps for eager files, shape limits for all handoff files, advisory targets for lazy reference files.**
 
 That gives you deterministic control without making every useful reference doc artificially tiny.
 
-* * *
+---
 
 **You:**
 
 See the prior conversation in this project regarding creating an MCP server for the project standards Meta repository. Would the agent handoff standard be able to make use of this MCP server for operating within and handling the files in the handoff system? Would it be better to have its own MCP server that completely separate and scoped to this particular standard? Or is an MCP server not offering any benefit please advise.
 
-* * *
+---
 
 **ChatGPT:**
 

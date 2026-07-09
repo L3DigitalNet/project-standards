@@ -16,13 +16,14 @@ related:
     - 'L3DigitalNet/project-standards'
   prior_specs: []
 ---
+
 # Usage Documentation Site Compatibility and Migration — Specification (Standard)
 
 ## Revision History
 
-| Version | Date | Author | Change |
-| ------- | ---- | ------ | ------ |
-| 0.1 | 2026-07-08 | ChatGPT | Initial conformant Project Specification draft |
+| Version | Date       | Author  | Change                                         |
+| ------- | ---------- | ------- | ---------------------------------------------- |
+| 0.1     | 2026-07-08 | ChatGPT | Initial conformant Project Specification draft |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the Deviations Log, not silently patched into requirements.
 
@@ -49,27 +50,27 @@ Define the compatibility amendments and migration steps required so `usage-docum
 
 ### 2.2 Out of Scope (Non-Goals — never)
 
-| ID     | Non-Goal                                                                   | Reason                                                                  |
-| ------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| ID | Non-Goal | Reason |
+| --- | --- | --- |
 | NG-001 | Replacing developer documentation, ADRs, project specs, or handoff systems | The new standard is strictly for user-facing usage documentation sites. |
-| NG-002 | Creating a hosted public documentation platform                            | The standard governs repo-local local-browser sites only.               |
-| NG-003 | Rewriting unrelated standards wholesale                                    | Only compatibility amendments needed for this standard should be made.  |
+| NG-002 | Creating a hosted public documentation platform | The standard governs repo-local local-browser sites only. |
+| NG-003 | Rewriting unrelated standards wholesale | Only compatibility amendments needed for this standard should be made. |
 
 ### 2.3 Won't Have in v1 (deferred — not never)
 
-| ID     | Deferred Capability                                               | Why Deferred                                         | Revisit When                                    |
-| ------ | ----------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| WH-001 | Full prose-style linting with Vale                                | Useful but subjective and likely noisy in v1         | Repeated content-quality drift appears          |
-| WH-002 | External link checking as a required gate                         | Network checks are flaky in CI                       | A stable allowlist and retry policy exists      |
+| ID | Deferred Capability | Why Deferred | Revisit When |
+| --- | --- | --- | --- |
+| WH-001 | Full prose-style linting with Vale | Useful but subjective and likely noisy in v1 | Repeated content-quality drift appears |
+| WH-002 | External link checking as a required gate | Network checks are flaky in CI | A stable allowlist and retry policy exists |
 | WH-003 | Immediate removal of `docs/usage.md` without compatibility window | Existing CLI docs standard and examples reference it | Migration path is approved and examples updated |
 
 ### 2.4 Boundaries
 
-| Boundary               | Description                                                                                                      |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Distributor owns       | `project-standards` standard text, templates, schemas, validators, registry entries, tests, and dogfood example. |
-| Consuming repo owns    | Actual tool-specific usage content and local adoption ADRs.                                                      |
-| External platform owns | GitHub Issues UI and permissions; MkDocs and Material runtime behavior.                                          |
+| Boundary | Description |
+| --- | --- |
+| Distributor owns | `project-standards` standard text, templates, schemas, validators, registry entries, tests, and dogfood example. |
+| Consuming repo owns | Actual tool-specific usage content and local adoption ADRs. |
+| External platform owns | GitHub Issues UI and permissions; MkDocs and Material runtime behavior. |
 
 ---
 
@@ -85,28 +86,28 @@ Every affected standard states a non-conflicting relationship to the new usage-s
 
 ### 3.3 Assumptions
 
-| ID    | Assumption                                                                                 | Impact if False                                                                        |
-| ----- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| A-001 | Consuming repositories can install MkDocs and Material as development dependencies.        | Adoption must document a non-Python invocation equivalent.                             |
+| ID | Assumption | Impact if False |
+| --- | --- | --- |
+| A-001 | Consuming repositories can install MkDocs and Material as development dependencies. | Adoption must document a non-Python invocation equivalent. |
 | A-002 | GitHub issue forms are acceptable feedback intake for repositories that use GitHub Issues. | The feedback mechanism must be optional or repo-local alternatives must be documented. |
 
 ### 3.4 Constraints
 
-| ID    | Constraint                                                                       | Source                        |
-| ----- | -------------------------------------------------------------------------------- | ----------------------------- |
-| C-001 | Do not conflict with Markdown Frontmatter validation.                            | Markdown Frontmatter Standard |
-| C-002 | Do not conflict with `docs/usage.md` in the existing CLI Documentation Standard. | CLI Documentation Standard    |
-| C-003 | Every governed standard must be dogfooded by the distributor repository.         | Owner decision in this task   |
+| ID | Constraint | Source |
+| --- | --- | --- |
+| C-001 | Do not conflict with Markdown Frontmatter validation. | Markdown Frontmatter Standard |
+| C-002 | Do not conflict with `docs/usage.md` in the existing CLI Documentation Standard. | CLI Documentation Standard |
+| C-003 | Every governed standard must be dogfooded by the distributor repository. | Owner decision in this task |
 
 ---
 
 ## 4. Goals
 
-| ID    | Goal                                           | Success Signal                                                      | Achieved By            |
-| ----- | ---------------------------------------------- | ------------------------------------------------------------------- | ---------------------- |
-| G-001 | Resolve all standards conflicts before release | Compatibility checklist has no unresolved blockers                  | FR-001, FR-002, FR-003 |
-| G-002 | Preserve existing content contracts            | CLI command documentation remains complete after migration          | FR-004                 |
-| G-003 | Prove dogfood migration                        | Distributor usage site builds and old path is handled intentionally | FR-006                 |
+| ID | Goal | Success Signal | Achieved By |
+| --- | --- | --- | --- |
+| G-001 | Resolve all standards conflicts before release | Compatibility checklist has no unresolved blockers | FR-001, FR-002, FR-003 |
+| G-002 | Preserve existing content contracts | CLI command documentation remains complete after migration | FR-004 |
+| G-003 | Prove dogfood migration | Distributor usage site builds and old path is handled intentionally | FR-006 |
 
 ---
 
@@ -114,13 +115,13 @@ Every affected standard states a non-conflicting relationship to the new usage-s
 
 ## 6. Glossary
 
-| Term                     | Definition                                                                                  | Notes                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------- |
-| Distributor repository   | `L3DigitalNet/project-standards`, the source of truth for standards and adoption artifacts. | Not the same as a consuming repository. |
-| Consuming repository     | A repository that adopts one or more standards from `project-standards`.                    | Owns its local content and deviations.  |
-| Usage documentation site | A repo-local MkDocs and Material site for user-facing instructions about using tools.       | Not developer documentation.            |
-| Dogfood adoption         | The distributor repository adopts and validates the standard it governs.                    | Required as interoperability proof.     |
-| Canonical usage surface  | The documentation location considered authoritative for user-facing usage content.          | Must not be ambiguous.                  |
+| Term | Definition | Notes |
+| --- | --- | --- |
+| Distributor repository | `L3DigitalNet/project-standards`, the source of truth for standards and adoption artifacts. | Not the same as a consuming repository. |
+| Consuming repository | A repository that adopts one or more standards from `project-standards`. | Owns its local content and deviations. |
+| Usage documentation site | A repo-local MkDocs and Material site for user-facing instructions about using tools. | Not developer documentation. |
+| Dogfood adoption | The distributor repository adopts and validates the standard it governs. | Required as interoperability proof. |
+| Canonical usage surface | The documentation location considered authoritative for user-facing usage content. | Must not be ambiguous. |
 
 ---
 
@@ -128,39 +129,39 @@ Every affected standard states a non-conflicting relationship to the new usage-s
 
 ### 7.1 Functional Requirements
 
-| ID     | Requirement                                                                                                                  | Rationale                                     | Acceptance Criteria                                                                   | Priority |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------- | -------- |
-| FR-001 | The implementation shall amend CLI Documentation to allow site-contained CLI usage references when this standard is adopted. | Avoids conflict with `docs/usage.md`.         | CLI Documentation contains compatibility text.                                        | Must     |
-| FR-002 | The implementation shall keep Markdown Frontmatter as metadata authority for rendered usage pages.                           | Avoids a parallel metadata schema.            | Usage pages validate with canonical frontmatter.                                      | Must     |
-| FR-003 | The implementation shall keep Markdown Tooling as Markdown body and structured-text formatting authority.                    | Avoids duplicate formatter/linter rules.      | No usage-site rule contradicts Prettier or markdownlint defaults.                     | Must     |
-| FR-004 | The implementation shall integrate usage-site checks with Python Tooling verification rather than replacing that gate.       | Python repos need one obvious aggregate gate. | Dogfood check command includes usage-site validation or documents separate docs gate. | Must     |
-| FR-005 | The implementation shall keep local adoption ADRs under `docs/decisions/`.                                                   | ADR Standard owns adoption-decision storage.  | Adoption runbook and dogfood plan use `docs/decisions/`.                              | Must     |
-| FR-006 | The implementation shall choose and document the distributor migration strategy for existing `docs/usage.md`.                | Dogfooding makes path ambiguity visible.      | Strategy is merged and validation passes.                                             | Must     |
+| ID | Requirement | Rationale | Acceptance Criteria | Priority |
+| --- | --- | --- | --- | --- |
+| FR-001 | The implementation shall amend CLI Documentation to allow site-contained CLI usage references when this standard is adopted. | Avoids conflict with `docs/usage.md`. | CLI Documentation contains compatibility text. | Must |
+| FR-002 | The implementation shall keep Markdown Frontmatter as metadata authority for rendered usage pages. | Avoids a parallel metadata schema. | Usage pages validate with canonical frontmatter. | Must |
+| FR-003 | The implementation shall keep Markdown Tooling as Markdown body and structured-text formatting authority. | Avoids duplicate formatter/linter rules. | No usage-site rule contradicts Prettier or markdownlint defaults. | Must |
+| FR-004 | The implementation shall integrate usage-site checks with Python Tooling verification rather than replacing that gate. | Python repos need one obvious aggregate gate. | Dogfood check command includes usage-site validation or documents separate docs gate. | Must |
+| FR-005 | The implementation shall keep local adoption ADRs under `docs/decisions/`. | ADR Standard owns adoption-decision storage. | Adoption runbook and dogfood plan use `docs/decisions/`. | Must |
+| FR-006 | The implementation shall choose and document the distributor migration strategy for existing `docs/usage.md`. | Dogfooding makes path ambiguity visible. | Strategy is merged and validation passes. | Must |
 
 ### 7.2 Non-Functional Requirements
 
-| ID      | Category         | Requirement                                                                                         | Measurement / Acceptance Criteria                      | Priority |
-| ------- | ---------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------- |
-| NFR-001 | Maintainability  | The implementation shall avoid creating parallel governance, validation, or instruction systems.    | Review confirms reuse of existing standards patterns.  | Must     |
-| NFR-002 | Interoperability | The implementation shall pass alongside all other governed standards in the distributor repository. | Full repository validation gate passes.                | Must     |
-| NFR-003 | Usability        | The adopted site shall be viewable in a local browser with one documented command.                  | `mkdocs serve` command works from the repository root. | Must     |
+| ID | Category | Requirement | Measurement / Acceptance Criteria | Priority |
+| --- | --- | --- | --- | --- |
+| NFR-001 | Maintainability | The implementation shall avoid creating parallel governance, validation, or instruction systems. | Review confirms reuse of existing standards patterns. | Must |
+| NFR-002 | Interoperability | The implementation shall pass alongside all other governed standards in the distributor repository. | Full repository validation gate passes. | Must |
+| NFR-003 | Usability | The adopted site shall be viewable in a local browser with one documented command. | `mkdocs serve` command works from the repository root. | Must |
 
 ### 7.3 Interface Requirements
 
-| ID     | Interface             | Requirement                                                                                                                                    | Contract / Format               | Acceptance Criteria                             |
-| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------- |
-| IR-001 | project-standards CLI | The system shall expose the standard through `project-standards list` and adoption through `project-standards adopt usage-documentation-site`. | Existing adopt/list conventions | Commands return expected output.                |
-| IR-002 | MkDocs site           | The system shall expose a local browser-readable documentation site from `docs/usage/mkdocs.yml`.                                              | MkDocs config contract          | Strict build passes.                            |
-| IR-003 | GitHub issue form     | The system shall expose section feedback through `.github/ISSUE_TEMPLATE/tool-feedback.yml`.                                                   | GitHub issue-form contract      | Prefilled fields match the JavaScript contract. |
+| ID | Interface | Requirement | Contract / Format | Acceptance Criteria |
+| --- | --- | --- | --- | --- |
+| IR-001 | project-standards CLI | The system shall expose the standard through `project-standards list` and adoption through `project-standards adopt usage-documentation-site`. | Existing adopt/list conventions | Commands return expected output. |
+| IR-002 | MkDocs site | The system shall expose a local browser-readable documentation site from `docs/usage/mkdocs.yml`. | MkDocs config contract | Strict build passes. |
+| IR-003 | GitHub issue form | The system shall expose section feedback through `.github/ISSUE_TEMPLATE/tool-feedback.yml`. | GitHub issue-form contract | Prefilled fields match the JavaScript contract. |
 
 ### 7.4 Data Requirements
 
-| ID     | Data Entity                  | Requirement                                                                                                                            | Validation Rules                                 | Ownership                                  |
-| ------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------ |
-| DR-001 | Standard bundle files        | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy.                      | Distributor repository                     |
-| DR-002 | Adopt bundle files           | The system shall store copy-adopt artifacts under the packaged adopt bundle.                                                           | Manifest paths resolve and tests pass.           | Distributor repository                     |
-| DR-003 | Usage site files             | The system shall store dogfood and consumer site files under `docs/usage/`.                                                            | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
-| DR-004 | Existing CLI usage reference | The system shall migrate or preserve `docs/usage.md` according to an explicit compatibility plan.                                      | No ambiguous canonical usage surface remains.    | Distributor repository                     |
+| ID | Data Entity | Requirement | Validation Rules | Ownership |
+| --- | --- | --- | --- | --- |
+| DR-001 | Standard bundle files | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy. | Distributor repository |
+| DR-002 | Adopt bundle files | The system shall store copy-adopt artifacts under the packaged adopt bundle. | Manifest paths resolve and tests pass. | Distributor repository |
+| DR-003 | Usage site files | The system shall store dogfood and consumer site files under `docs/usage/`. | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
+| DR-004 | Existing CLI usage reference | The system shall migrate or preserve `docs/usage.md` according to an explicit compatibility plan. | No ambiguous canonical usage surface remains. | Distributor repository |
 
 ---
 
@@ -197,18 +198,18 @@ flowchart LR
 
 #### 8.2.3 Component View
 
-| Component                   | Responsibility                               | Interfaces                                 | Notes                              |
-| --------------------------- | -------------------------------------------- | ------------------------------------------ | ---------------------------------- |
-| CLI Documentation amendment | Explains site-aware usage-reference location | Standard README and adopt runbook          | Prevents `docs/usage.md` ambiguity |
-| Frontmatter alignment       | Usage pages use canonical metadata           | Usage page templates                       | Prevents validation conflict       |
-| Dogfood migration           | Moves or cross-links existing CLI reference  | `docs/usage/` and possibly `docs/usage.md` | Proves interoperability            |
+| Component | Responsibility | Interfaces | Notes |
+| --- | --- | --- | --- |
+| CLI Documentation amendment | Explains site-aware usage-reference location | Standard README and adopt runbook | Prevents `docs/usage.md` ambiguity |
+| Frontmatter alignment | Usage pages use canonical metadata | Usage page templates | Prevents validation conflict |
+| Dogfood migration | Moves or cross-links existing CLI reference | `docs/usage/` and possibly `docs/usage.md` | Proves interoperability |
 
 ### 8.3 Design Decisions
 
-| ID    | Decision                                                                   | Rationale                                                | Alternatives Considered                                   | ADR           |
-| ----- | -------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------- | ------------- |
+| ID | Decision | Rationale | Alternatives Considered | ADR |
+| --- | --- | --- | --- | --- |
 | D-001 | Site standard owns location; CLI Documentation owns CLI content substance. | This separates site UX from command-reference semantics. | Make one standard supersede the other entirely; rejected. | TBD local ADR |
-| D-002 | Local adoption ADRs remain in `docs/decisions/`.                           | ADR Standard already owns that convention.               | Place governance under `docs/usage/`; rejected.           | TBD local ADR |
+| D-002 | Local adoption ADRs remain in `docs/decisions/`. | ADR Standard already owns that convention. | Place governance under `docs/usage/`; rejected. | TBD local ADR |
 
 > **§8.4 (Solution Alternatives Considered) is Full-tier** and is intentionally omitted at the Standard profile.
 
@@ -226,12 +227,12 @@ flowchart LR
 
 The system owns repository files, configuration keys, schema files, and validation findings rather than runtime application data. Persistent state is Git history and the files committed to the distributor or consuming repository.
 
-| ID     | Data Entity                  | Requirement                                                                                                                            | Validation Rules                                 | Ownership                                  |
-| ------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------ |
-| DR-001 | Standard bundle files        | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy.                      | Distributor repository                     |
-| DR-002 | Adopt bundle files           | The system shall store copy-adopt artifacts under the packaged adopt bundle.                                                           | Manifest paths resolve and tests pass.           | Distributor repository                     |
-| DR-003 | Usage site files             | The system shall store dogfood and consumer site files under `docs/usage/`.                                                            | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
-| DR-004 | Existing CLI usage reference | The system shall migrate or preserve `docs/usage.md` according to an explicit compatibility plan.                                      | No ambiguous canonical usage surface remains.    | Distributor repository                     |
+| ID | Data Entity | Requirement | Validation Rules | Ownership |
+| --- | --- | --- | --- | --- |
+| DR-001 | Standard bundle files | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy. | Distributor repository |
+| DR-002 | Adopt bundle files | The system shall store copy-adopt artifacts under the packaged adopt bundle. | Manifest paths resolve and tests pass. | Distributor repository |
+| DR-003 | Usage site files | The system shall store dogfood and consumer site files under `docs/usage/`. | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
+| DR-004 | Existing CLI usage reference | The system shall migrate or preserve `docs/usage.md` according to an explicit compatibility plan. | No ambiguous canonical usage surface remains. | Distributor repository |
 
 ---
 
@@ -266,25 +267,25 @@ Expected result:
 
 ### 10.2 Alternate Workflows
 
-| ID     | Trigger                                         | Behavior                                            | Expected Result                                           |
-| ------ | ----------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
-| AW-001 | Keep two canonical usage surfaces               | Leave `docs/usage.md` and `docs/usage/` both active | Rejected because authority is ambiguous                   |
-| AW-002 | Exclude usage pages from frontmatter validation | Avoid canonical metadata work                       | Rejected because governed docs should validate by default |
+| ID | Trigger | Behavior | Expected Result |
+| --- | --- | --- | --- |
+| AW-001 | Keep two canonical usage surfaces | Leave `docs/usage.md` and `docs/usage/` both active | Rejected because authority is ambiguous |
+| AW-002 | Exclude usage pages from frontmatter validation | Avoid canonical metadata work | Rejected because governed docs should validate by default |
 
 ### 10.3 Edge Cases
 
-| ID     | Edge Case                                       | Expected Behavior                                                      |
-| ------ | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| EC-001 | Existing consumers use `cli-documentation` only | They continue using `docs/usage.md` under current contract             |
-| EC-002 | Consumers adopt both standards                  | Site layout becomes allowed canonical location for CLI usage reference |
+| ID | Edge Case | Expected Behavior |
+| --- | --- | --- |
+| EC-001 | Existing consumers use `cli-documentation` only | They continue using `docs/usage.md` under current contract |
+| EC-002 | Consumers adopt both standards | Site layout becomes allowed canonical location for CLI usage reference |
 
 ### 10.4 State Transitions
 
-| State          | Meaning                              | Entry Condition                        | Exit Condition |
-| -------------- | ------------------------------------ | -------------------------------------- | -------------- |
-| Legacy         | Only `docs/usage.md` exists          | Site standard adopted                  | Dual           |
-| Dual           | Both surfaces exist during migration | Canonical decision made                | Site Canonical |
-| Site Canonical | `docs/usage/` is authoritative       | Old reference deprecated or redirected | Maintained     |
+| State | Meaning | Entry Condition | Exit Condition |
+| --- | --- | --- | --- |
+| Legacy | Only `docs/usage.md` exists | Site standard adopted | Dual |
+| Dual | Both surfaces exist during migration | Canonical decision made | Site Canonical |
+| Site Canonical | `docs/usage/` is authoritative | Old reference deprecated or redirected | Maintained |
 
 ---
 
@@ -292,10 +293,10 @@ Expected result:
 
 This work has no hosted UI or API surface. The relevant user surfaces are local MkDocs pages, GitHub issue forms, and CLI commands.
 
-| Page or Endpoint   | Purpose                   | Key Actions                | Authorization      |
-| ------------------ | ------------------------- | -------------------------- | ------------------ |
-| Standards README   | Compatibility explanation | Read sibling relationships | Maintainer         |
-| Dogfood usage site | Proof of interoperability | Browse local site          | User or maintainer |
+| Page or Endpoint | Purpose | Key Actions | Authorization |
+| --- | --- | --- | --- |
+| Standards README | Compatibility explanation | Read sibling relationships | Maintainer |
+| Dogfood usage site | Proof of interoperability | Browse local site | User or maintainer |
 
 **Accessibility & i18n:** v1 targets readable local-browser documentation in English. Formal localization is out of scope, but the content must avoid encoding implementation-only jargon into user-facing pages.
 
@@ -305,10 +306,10 @@ This work has no hosted UI or API surface. The relevant user surfaces are local 
 
 ### 12.1 Expected Failures
 
-| ID      | Failure Mode                    | User/System Behavior                  | Logging / Observability               | Recovery                                      |
-| ------- | ------------------------------- | ------------------------------------- | ------------------------------------- | --------------------------------------------- |
-| ERR-001 | Canonical path ambiguity        | Users and agents update the wrong doc | Review flags duplicate usage surfaces | Declare canonical path and migrate            |
-| ERR-002 | Frontmatter validation conflict | Usage pages fail canonical validator  | Validation output names missing keys  | Use canonical frontmatter or exclude with ADR |
+| ID | Failure Mode | User/System Behavior | Logging / Observability | Recovery |
+| --- | --- | --- | --- | --- |
+| ERR-001 | Canonical path ambiguity | Users and agents update the wrong doc | Review flags duplicate usage surfaces | Declare canonical path and migrate |
+| ERR-002 | Frontmatter validation conflict | Usage pages fail canonical validator | Validation output names missing keys | Use canonical frontmatter or exclude with ADR |
 
 ### 12.2 Retry and Idempotency
 
@@ -328,29 +329,29 @@ GitHub authentication is required only for repository writes and issue creation 
 
 ### 13.2 Authorization
 
-| Actor / Role        | Allowed Actions                                  | Denied Actions                                          |
-| ------------------- | ------------------------------------------------ | ------------------------------------------------------- |
-| Maintainer          | Create and merge standard implementation changes | Bypass required validation without documented deviation |
-| Consuming repo user | Read and use docs, submit feedback issues        | Change distributor standard unless authorized           |
+| Actor / Role | Allowed Actions | Denied Actions |
+| --- | --- | --- |
+| Maintainer | Create and merge standard implementation changes | Bypass required validation without documented deviation |
+| Consuming repo user | Read and use docs, submit feedback issues | Change distributor standard unless authorized |
 
 ### 13.3 Secrets
 
-| Secret              | Storage Location                   | Access Pattern | Rotation / Notes                                              |
-| ------------------- | ---------------------------------- | -------------- | ------------------------------------------------------------- |
-| GitHub token for CI | GitHub Actions secret or app token | Workflow only  | Managed by repository policy; never documented in usage pages |
+| Secret | Storage Location | Access Pattern | Rotation / Notes |
+| --- | --- | --- | --- |
+| GitHub token for CI | GitHub Actions secret or app token | Workflow only | Managed by repository policy; never documented in usage pages |
 
 ### 13.4 Sensitive Data
 
-| Data                   | Classification                       | Storage       | Transmission   | Retention               |
-| ---------------------- | ------------------------------------ | ------------- | -------------- | ----------------------- |
+| Data | Classification | Storage | Transmission | Retention |
+| --- | --- | --- | --- | --- |
 | Issue feedback content | Internal or public depending on repo | GitHub Issues | GitHub web/API | Repository issue policy |
 
 ### 13.5 Threats and Mitigations
 
-| Threat                                         | Impact                                                                 | Mitigation                                                                                    |
-| ---------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Prompt injection through docs or issue content | Future agents may treat user-facing prose or feedback as instructions. | Agent-instruction fragments must classify docs and issues as data, not authority.             |
-| Private repository feedback leakage            | Prefilled local URLs or issue content may expose internal context.     | Only path, section, anchor, URL, and user-provided fields are captured; no secrets are added. |
+| Threat | Impact | Mitigation |
+| --- | --- | --- |
+| Prompt injection through docs or issue content | Future agents may treat user-facing prose or feedback as instructions. | Agent-instruction fragments must classify docs and issues as data, not authority. |
+| Private repository feedback leakage | Prefilled local URLs or issue content may expose internal context. | Only path, section, anchor, URL, and user-provided fields are captured; no secrets are added. |
 
 ### 13.6 Hardening Checklist
 
@@ -376,23 +377,23 @@ GitHub authentication is required only for repository writes and issue creation 
 
 ### 17.2 Test Strategy
 
-| Layer                 | Scope                                                  | Required Coverage                             | Required? |
-| --------------------- | ------------------------------------------------------ | --------------------------------------------- | --------- |
-| Unit / domain         | registry, manifest, schema helper, and validator logic | success and failure cases                     | Yes       |
-| Integration / adapter | adopt dry-run and scratch-repo adoption                | expected artifacts and idempotency            | Yes       |
-| Snapshot / contract   | template and schema fixtures                           | controlled output diff reviewed intentionally | Yes       |
-| End-to-end            | dogfood MkDocs strict build                            | site builds and feedback assets are present   | Yes       |
+| Layer | Scope | Required Coverage | Required? |
+| --- | --- | --- | --- |
+| Unit / domain | registry, manifest, schema helper, and validator logic | success and failure cases | Yes |
+| Integration / adapter | adopt dry-run and scratch-repo adoption | expected artifacts and idempotency | Yes |
+| Snapshot / contract | template and schema fixtures | controlled output diff reviewed intentionally | Yes |
+| End-to-end | dogfood MkDocs strict build | site builds and feedback assets are present | Yes |
 
 ### 17.3 Requirement-to-Test Traceability
 
-| Requirement ID | Test / Verification Method                                | Status      |
-| -------------- | --------------------------------------------------------- | ----------- |
-| FR-001         | CLI Documentation compatibility text review               | Not Started |
-| FR-002         | Usage pages pass frontmatter validation                   | Not Started |
-| FR-003         | Markdown Tooling passes over usage content                | Not Started |
-| FR-004         | Aggregate check or docs gate includes MkDocs strict build | Not Started |
-| FR-005         | Dogfood adoption ADR path review                          | Not Started |
-| FR-006         | `docs/usage.md` migration test or review                  | Not Started |
+| Requirement ID | Test / Verification Method | Status |
+| --- | --- | --- |
+| FR-001 | CLI Documentation compatibility text review | Not Started |
+| FR-002 | Usage pages pass frontmatter validation | Not Started |
+| FR-003 | Markdown Tooling passes over usage content | Not Started |
+| FR-004 | Aggregate check or docs gate includes MkDocs strict build | Not Started |
+| FR-005 | Dogfood adoption ADR path review | Not Started |
+| FR-006 | `docs/usage.md` migration test or review | Not Started |
 
 ---
 
@@ -400,32 +401,32 @@ GitHub authentication is required only for repository writes and issue creation 
 
 ### 18.1 Runtime Environment
 
-| Item              | Value                                                                 |
-| ----------------- | --------------------------------------------------------------------- |
-| Runtime           | Python package plus Node-free MkDocs runtime from Python dependencies |
-| OS / Platform     | Linux CI and local developer machines                                 |
-| Datastore         | Git repository files only                                             |
-| External services | GitHub Issues for feedback intake                                     |
+| Item | Value |
+| --- | --- |
+| Runtime | Python package plus Node-free MkDocs runtime from Python dependencies |
+| OS / Platform | Linux CI and local developer machines |
+| Datastore | Git repository files only |
+| External services | GitHub Issues for feedback intake |
 
 Runtime services:
 
-| Service             | Purpose                    | Start Mode       | Health Signal                           |
-| ------------------- | -------------------------- | ---------------- | --------------------------------------- |
-| MkDocs local server | Preview usage docs locally | Manual command   | Browser loads local site                |
-| GitHub Issues       | Capture section feedback   | Hosted by GitHub | Issue form opens with prefilled context |
+| Service | Purpose | Start Mode | Health Signal |
+| --- | --- | --- | --- |
+| MkDocs local server | Preview usage docs locally | Manual command | Browser loads local site |
+| GitHub Issues | Capture section feedback | Hosted by GitHub | Issue form opens with prefilled context |
 
 ### 18.2 Configuration
 
-| Setting                          | Required? | Default              | Description                                 |
-| -------------------------------- | --------- | -------------------- | ------------------------------------------- |
-| usage_documentation_site.version | Yes       | 1.0                  | Contract marker in `.project-standards.yml` |
-| docs/usage/mkdocs.yml            | Yes       | provided by template | MkDocs site configuration                   |
-| tool-feedback.yml                | Yes       | provided by template | GitHub issue-form contract                  |
+| Setting | Required? | Default | Description |
+| --- | --- | --- | --- |
+| usage_documentation_site.version | Yes | 1.0 | Contract marker in `.project-standards.yml` |
+| docs/usage/mkdocs.yml | Yes | provided by template | MkDocs site configuration |
+| tool-feedback.yml | Yes | provided by template | GitHub issue-form contract |
 
 **Environment matrix** — differences between environments:
 
-| Aspect                                | Dev                | Staging                   | Prod                                |
-| ------------------------------------- | ------------------ | ------------------------- | ----------------------------------- |
+| Aspect | Dev | Staging | Prod |
+| --- | --- | --- | --- |
 | Secrets source / auth / external APIs | Local Git checkout | GitHub repository with CI | GitHub repository with released tag |
 
 ### 18.3 Deployment Flow
@@ -450,9 +451,9 @@ Minimum signals:
 - `project-standards spec validate --config .project-standards.yml` passes for these specs when included.
 - `mkdocs build --strict -f docs/usage/mkdocs.yml` passes after dogfood adoption.
 
-| Alert                         | Trigger                             | Severity | Owner / Action                                        |
-| ----------------------------- | ----------------------------------- | -------- | ----------------------------------------------------- |
-| Usage-site validation failure | A required validation command fails | Warning  | Fix the standard or record a deviation before release |
+| Alert | Trigger | Severity | Owner / Action |
+| --- | --- | --- | --- |
+| Usage-site validation failure | A required validation command fails | Warning | Fix the standard or record a deviation before release |
 
 ### 18.6 Backup and Disaster Recovery
 
@@ -474,14 +475,17 @@ Checklist tied to the DoD:
 
 1. Compatibility conflicts listed.
 2. Owner resolves blockers.
+
 ### MS-1 — Amend
 
 1. Sibling standards updated.
 2. No contradictory canonical paths remain.
+
 ### MS-2 — Migrate
 
 1. Dogfood usage content moved or cross-linked.
 2. Strict build and CLI docs checks pass.
+
 ### MS-3 — Release
 
 1. Versioning and changelog updated.
@@ -489,12 +493,12 @@ Checklist tied to the DoD:
 
 ### Milestone Summary
 
-| Milestone    | Deliverable                                 | Exit Criteria                           |
-| ------------ | ------------------------------------------- | --------------------------------------- |
-| MS-0 Audit   | Compatibility conflicts listed              | Owner resolves blockers                 |
-| MS-1 Amend   | Sibling standards updated                   | No contradictory canonical paths remain |
-| MS-2 Migrate | Dogfood usage content moved or cross-linked | Strict build and CLI docs checks pass   |
-| MS-3 Release | Versioning and changelog updated            | Consumers can adopt safely              |
+| Milestone | Deliverable | Exit Criteria |
+| --- | --- | --- |
+| MS-0 Audit | Compatibility conflicts listed | Owner resolves blockers |
+| MS-1 Amend | Sibling standards updated | No contradictory canonical paths remain |
+| MS-2 Migrate | Dogfood usage content moved or cross-linked | Strict build and CLI docs checks pass |
+| MS-3 Release | Versioning and changelog updated | Consumers can adopt safely |
 
 ---
 
@@ -502,9 +506,9 @@ Checklist tied to the DoD:
 
 ## 21. Open Questions and Decisions
 
-| ID     | Question                                                                 | Current Assumption                                                                        | Blocking? | Owner | Needed By | Status |
-| ------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | --------- | ----- | --------- | ------ |
-| OQ-001 | Should `docs/usage.md` be retained as a redirect/index during migration? | Retain temporarily with a clear pointer to the MkDocs site if deletion is too disruptive. | No        | Owner | MS-2      | Open   |
+| ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| OQ-001 | Should `docs/usage.md` be retained as a redirect/index during migration? | Retain temporarily with a clear pointer to the MkDocs site if deletion is too disruptive. | No | Owner | MS-2 | Open |
 
 ---
 
@@ -540,27 +544,26 @@ Checklist tied to the DoD:
 
 Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments. Section numbers match the Project Specification Standard's Standard profile.
 
-| Prefix | Meaning | Defined In |
-| ------ | ------- | ---------- |
-| `G-` | Goal | §4 |
-| `NG-` | Non-goal (never) | §2.2 |
-| `WH-` | Won't have in v1 (deferred) | §2.3 |
-| `A-` | Assumption | §3.3 |
-| `C-` | Constraint | §3.4 |
-| `FR-` | Functional requirement | §7.1 |
-| `NFR-` | Non-functional requirement | §7.2 |
-| `IR-` | Interface requirement | §7.3 |
-| `DR-` | Data requirement | §7.4 |
-| `D-` | Design decision | §8.3 |
-| `AW-` | Alternate workflow | §10.2 |
-| `EC-` | Edge case | §10.3 |
-| `ERR-` | Error-handling requirement | §12.1 |
-| `MS-` | Milestone | §19 |
-| `OQ-` | Open question | §21 |
-| `DEV-` | Deviation | Deviations Log |
+| Prefix | Meaning                     | Defined In     |
+| ------ | --------------------------- | -------------- |
+| `G-`   | Goal                        | §4             |
+| `NG-`  | Non-goal (never)            | §2.2           |
+| `WH-`  | Won't have in v1 (deferred) | §2.3           |
+| `A-`   | Assumption                  | §3.3           |
+| `C-`   | Constraint                  | §3.4           |
+| `FR-`  | Functional requirement      | §7.1           |
+| `NFR-` | Non-functional requirement  | §7.2           |
+| `IR-`  | Interface requirement       | §7.3           |
+| `DR-`  | Data requirement            | §7.4           |
+| `D-`   | Design decision             | §8.3           |
+| `AW-`  | Alternate workflow          | §10.2          |
+| `EC-`  | Edge case                   | §10.3          |
+| `ERR-` | Error-handling requirement  | §12.1          |
+| `MS-`  | Milestone                   | §19            |
+| `OQ-`  | Open question               | §21            |
+| `DEV-` | Deviation                   | Deviations Log |
 
 The `R-` prefix is Full-tier and is not used at the Standard profile. Priority values are column values, not ID prefixes; IDs never change when priorities do.
-
 
 ---
 
@@ -609,7 +612,6 @@ At completion, provide:
 
 For multi-session implementations, record current milestone, in-progress requirement IDs, and unresolved open questions or deviations in the repository's session-state or handoff documents according to repository convention.
 
-
 ---
 
 > **Appendix C (Optional Modules) is Full-tier** and is intentionally omitted at the Standard profile.
@@ -625,4 +627,3 @@ This specification uses the Standard profile because the change spans one reposi
 | Full | Multi-service systems, durable data, or external integrations | Not required for this change. |
 
 Upgrade to Full only if the implementation introduces a durable service, external integration, release orchestration system, or substantial runtime data model beyond standard repository files.
-

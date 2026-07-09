@@ -1,13 +1,13 @@
 ---
-title: "Project Standards - Template Repo Autopopulate"
-source: "https://chatgpt.com/g/g-p-6a24ec06cda08191be0c41f4bfaefada/c/6a4da2ee-b768-83ea-98bf-d72e4689e6b5"
+title: 'Project Standards - Template Repo Autopopulate'
+source: 'https://chatgpt.com/g/g-p-6a24ec06cda08191be0c41f4bfaefada/c/6a4da2ee-b768-83ea-98bf-d72e4689e6b5'
 ---
 
 **You:**
 
-I want to create a template repository that is a fully populated repository with all of the project standards. That way any new project can just start off with the template and there will be minimal effort for adoption. The problem I have to solve is how to remove the exposure of drift between the standard versions and the actual temple implementation.  I need a mechanism to automate updating the template repo every time a version of a standard is published or released.  This needs to be automatic.  Please help me brainstorm options and strategies.
+I want to create a template repository that is a fully populated repository with all of the project standards. That way any new project can just start off with the template and there will be minimal effort for adoption. The problem I have to solve is how to remove the exposure of drift between the standard versions and the actual temple implementation. I need a mechanism to automate updating the template repo every time a version of a standard is published or released. This needs to be automatic. Please help me brainstorm options and strategies.
 
-* * *
+---
 
 **ChatGPT:**
 
@@ -37,7 +37,7 @@ new project repos
 
 Your existing standards already point in this direction: the Python coding standard says canonical standards should live in the standards repo and be referenced from project templates, while compact agent summaries must not weaken the canonical standard.
 
-* * *
+---
 
 ## Recommended strategy: generated template repo with a release sync workflow
 
@@ -115,7 +115,7 @@ fail CI if there is any diff in managed paths
 
 That makes drift mechanically visible. If someone edits the template repo by hand, the next check fails.
 
-* * *
+---
 
 ## Automation flow
 
@@ -159,7 +159,7 @@ GitHub Actions supports `repository_dispatch` for activity outside GitHub Action
 
 I would prefer **Pattern A** for your setup because the standards repo is the authority. The update logic belongs beside the release logic.
 
-* * *
+---
 
 ## Option comparison
 
@@ -173,7 +173,7 @@ I would prefer **Pattern A** for your setup because the standards repo is the au
 | **GitHub template repo only** | Manually maintain template repo | High | Low | Not enough |
 | **Direct edits by agents** | Agent updates template when standards change | Very high | Low | Do not use as the control mechanism |
 
-* * *
+---
 
 ## Copier/Cruft angle
 
@@ -188,7 +188,7 @@ Cruft is similar for Cookiecutter templates: it stores template commit/context i
 
 My read: **use Copier only if templating variables matter**. For your immediate “standards → official template repo” problem, a purpose-built generator is simpler and more deterministic. Copier becomes more attractive once you want to propagate template changes into dozens of already-created repos.
 
-* * *
+---
 
 ## Reduce copied surface area
 
@@ -212,7 +212,7 @@ jobs:
 
 GitHub reusable workflows are called with `jobs.<job_id>.uses`, and external reusable workflow refs can be a SHA, release tag, or branch; GitHub says commit SHA is safest for stability/security. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
 
-* * *
+---
 
 ## Drift controls to build in from day one
 
@@ -287,7 +287,7 @@ Not in:
 project-template/
 ```
 
-* * *
+---
 
 ## Versioning policy
 
@@ -304,7 +304,7 @@ Your standards already distinguish schema/contract versions from repository rele
 
 For Python tooling specifically, your standard already treats raising the Python baseline as a major-level change for copy-adopting consumers. That is exactly the kind of thing the template sync should label clearly.
 
-* * *
+---
 
 ## GitHub permissions note
 
@@ -312,7 +312,7 @@ If you rely on a workflow inside the **template repo** using `GITHUB_TOKEN` to c
 
 To avoid that fragility, use a GitHub App installed on both repos and give it only the permissions it needs. For writing workflow files under `.github/workflows`, GitHub’s GitHub App permission docs say the app needs `Workflows` permission in addition to `Contents`. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app)
 
-* * *
+---
 
 ## What I would build first
 
@@ -346,13 +346,13 @@ on release published:
 
 That gives you automatic updates, an audit trail, and a hard drift detector without depending on agents to remember the standard. Later, add Copier only if you want this same update machinery to maintain existing downstream repos, not just the official template repo.
 
-* * *
+---
 
 **You:**
 
-i very frequently observe agents using the handoff system requiring multiple attempts to reduce the size of the documents that have explicit caps in size. It seems like they’re randomly guessing that their efforts to reduce size will bring it under the limit and then they test after the fact and realize it’s not and have to go back and try fixing it again. This seems inefficient and a waste of time and a waste of tokens.  What sort of options do I have that I could bake into this standard which would help the agents use it more effectively and efficiently
+i very frequently observe agents using the handoff system requiring multiple attempts to reduce the size of the documents that have explicit caps in size. It seems like they’re randomly guessing that their efforts to reduce size will bring it under the limit and then they test after the fact and realize it’s not and have to go back and try fixing it again. This seems inefficient and a waste of time and a waste of tokens. What sort of options do I have that I could bake into this standard which would help the agents use it more effectively and efficiently
 
-* * *
+---
 
 **ChatGPT:**
 
@@ -364,7 +364,7 @@ Bake in a **budgeted handoff contract** plus a **machine validator**. Agents are
 
 This fits your existing standards direction: you already treat agent workflows as something that should have a verification gate and should not be considered complete until checks pass. The same idea should apply to handoff size.
 
-* * *
+---
 
 ## 1. Add a handoff size validator
 
@@ -407,7 +407,7 @@ recommended compression profile:
 
 This is the single highest-leverage fix.
 
-* * *
+---
 
 ## 2. Require budget-first authoring
 
@@ -447,7 +447,7 @@ Budget:
 
 This changes the agent’s job from “try shorter” to “fit this allocation.”
 
-* * *
+---
 
 ## 3. Use hard section budgets, not only document budgets
 
@@ -484,7 +484,7 @@ handoff:
 
 This prevents the common agent failure mode where it preserves the wrong thing: a rich narrative history, while squeezing out the actual next action.
 
-* * *
+---
 
 ## 4. Split handoff into tiers
 
@@ -503,17 +503,17 @@ handoff/
 
 The active handoff should be a **resume point**, not a memoir.
 
-| File | Cap | Purpose |
-| --- | --- | --- |
-| `handoff/index.md` | 1–2 KB | where to start |
-| `handoff/current.md` | 6–10 KB | current agent resume state |
-| `handoff/archive/*.md` | larger | durable history and detail |
-| `docs/decisions/*.md` | normal docs cap | decisions worth preserving |
-| issue / PR comments | external context | discussion, review, traceability |
+| File                   | Cap              | Purpose                          |
+| ---------------------- | ---------------- | -------------------------------- |
+| `handoff/index.md`     | 1–2 KB           | where to start                   |
+| `handoff/current.md`   | 6–10 KB          | current agent resume state       |
+| `handoff/archive/*.md` | larger           | durable history and detail       |
+| `docs/decisions/*.md`  | normal docs cap  | decisions worth preserving       |
+| issue / PR comments    | external context | discussion, review, traceability |
 
 Your Python coding standard already recommends compact agent summaries for routine work while keeping full rationale discoverable elsewhere. Apply the same pattern to handoff: compact active context, linked durable detail.
 
-* * *
+---
 
 ## 5. Define content priority rules
 
@@ -543,7 +543,7 @@ Agents need to know what to delete first. Add a deterministic retention order.
 
 This is important because LLMs often compress the wrong material. They preserve fluent story and delete operational state.
 
-* * *
+---
 
 ## 6. Make compression deterministic
 
@@ -566,7 +566,7 @@ If handoff/current.md exceeds its cap, apply these reductions in order:
 
 This avoids iterative “try again” behavior because the agent has a known sequence of transformations.
 
-* * *
+---
 
 ## 7. Add a size report command agents must run before editing
 
@@ -600,7 +600,7 @@ Example JSON:
 
 Agents are much better when they can use numbers. Do not make them estimate.
 
-* * *
+---
 
 ## 8. Add “must not start by rewriting” rule
 
@@ -614,7 +614,7 @@ They MUST first produce or inspect a size report, identify the over-budget secti
 
 Without this, agents repeatedly rewrite everything, often making some sections longer while shortening others.
 
-* * *
+---
 
 ## 9. Use a template that is hard to bloat
 
@@ -668,7 +668,7 @@ Constrain each section in comments or generated metadata:
 
 The Markdown frontmatter standard already treats `description` as a retrieval hint for agents and caps it at 280 characters as an authoring convention. That same philosophy should be extended from metadata to handoff sections.
 
-* * *
+---
 
 ## 10. Consider machine-enforced frontmatter or sidecar metadata
 
@@ -702,7 +702,7 @@ handoffs:
 
 I prefer sidecar config for enforcement because the validator can own it. Frontmatter is fine for human readability, but sidecar config is cleaner if the handoff system is a tool rather than just Markdown.
 
-* * *
+---
 
 ## 11. Prefer character or byte caps over token caps
 
@@ -725,7 +725,7 @@ advisory_token_estimate: 2000
 
 The validator should enforce the exact cap and optionally report the estimate. Do not make exact correctness depend on tokenizer availability unless you intentionally pin a tokenizer package and model profile.
 
-* * *
+---
 
 ## 12. Add golden tests for agent behavior
 
@@ -740,16 +740,16 @@ tests/fixtures/handoff/valid_current.md
 
 Test that the tool:
 
-* identifies over-cap sections,
-* reports exact overage,
-* rejects missing required sections,
-* accepts a compact valid handoff,
-* catches pasted logs,
-* catches duplicate sections.
+- identifies over-cap sections,
+- reports exact overage,
+- rejects missing required sections,
+- accepts a compact valid handoff,
+- catches pasted logs,
+- catches duplicate sections.
 
 This is how you turn “agents should be better” into an enforceable standard.
 
-* * *
+---
 
 ## 13. Add a required final report format
 
@@ -767,7 +767,7 @@ Handoff update report:
 
 This mirrors your existing pattern where agents must not claim completion when checks were not run or failed.
 
-* * *
+---
 
 ## Recommended standard language
 
@@ -798,7 +798,7 @@ Agents SHOULD move overflow detail to an archive or durable project document and
 Before reporting completion, agents MUST run the handoff validator. Final reports MUST include the final size, hard cap, remaining margin, and validator result.
 ```
 
-* * *
+---
 
 ## My recommended design choice
 
