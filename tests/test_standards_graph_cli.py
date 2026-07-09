@@ -136,7 +136,7 @@ def test_current_repo_validate_graph_default_allows_pre_retrofit(
     assert "OK standards graph" in capsys.readouterr().out
 
 
-def test_current_repo_validate_graph_require_all_manifests_reports_step05_gap(
+def test_current_repo_validate_graph_require_all_manifests_passes_after_retrofit(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = Path(__file__).resolve().parent.parent
@@ -146,5 +146,6 @@ def test_current_repo_validate_graph_require_all_manifests_reports_step05_gap(
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert rc == 1
-    assert any(f["code"] == "SG-MANIFEST-MISSING" for f in payload["findings"])
+    assert rc == 0
+    assert payload["ok"] is True
+    assert payload["findings"] == []

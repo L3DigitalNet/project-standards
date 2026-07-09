@@ -416,10 +416,13 @@ def _load_toml(path: Path) -> dict[str, object]:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
-def test_real_manifest_validates() -> None:
-    real = (
-        Path(__file__).resolve().parent.parent / "standards/standard-bundle-authoring/standard.toml"
-    )
+_REAL_MANIFESTS = sorted(
+    (Path(__file__).resolve().parent.parent / "standards").glob("*/standard.toml")
+)
+
+
+@pytest.mark.parametrize("real", _REAL_MANIFESTS, ids=lambda p: p.parent.name)
+def test_real_manifests_validate(real: Path) -> None:
     load_standard_manifest(real)
 
 

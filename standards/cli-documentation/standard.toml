@@ -1,0 +1,65 @@
+# Machine manifest for the CLI Documentation Standard.
+
+[standard]
+id = "cli-documentation"
+name = "CLI Documentation Standard"
+status = "active"
+summary = "Profile-based user-facing CLI help, usage-reference, man-page, and drift-check documentation."
+adoption = "copy-adopt"
+
+[versions]
+supported = ["1.0"]
+latest = "1.0"
+
+[config]
+namespaces = ["cli_documentation"]
+
+[capabilities]
+provides = ["cli.docs.usage", "cli.docs.drift-check", "cli.docs.templates"]
+consumes_platform = []
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+research_notes = "resources/research-notes.md"
+usage_example = "examples/usage.example.md"
+usage_template = "templates/usage-doc.md"
+readme_single_file_template = "templates/readme-single-file.md"
+workflow_template = "templates/cli-docs-check.yml"
+
+[[authority]]
+domain = "cli"
+target = "docs/usage.md"
+concern = "usage-documentation"
+owner = "cli-documentation"
+mutates = true
+
+[[authority]]
+domain = "cli"
+target = "README.md"
+concern = "command-reference"
+owner = "cli-documentation"
+mutates = false
+
+[[authority]]
+domain = "github-actions"
+target = ".github/workflows/cli-docs-check.yml"
+concern = "cli-docs-drift-check"
+owner = "github-actions"
+mutates = true
+
+[[providers]]
+operation = "cli-docs-check"
+kind = "workflow"
+entrypoint = "cli-docs-check"
+optional = false
+
+[[providers]]
+operation = "drift-check"
+kind = "documentation-only"
+optional = true

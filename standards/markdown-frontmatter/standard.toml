@@ -1,0 +1,95 @@
+# Machine manifest for the Markdown Frontmatter Standard.
+
+[standard]
+id = "markdown-frontmatter"
+name = "Markdown Frontmatter Standard"
+status = "active"
+summary = "Canonical metadata, ID, and reference validation for managed Markdown documents."
+adoption = "validator"
+
+[versions]
+supported = ["1.1"]
+latest = "1.1"
+
+[config]
+namespaces = ["markdown.frontmatter"]
+
+[capabilities]
+provides = [
+  "markdown.frontmatter.schema",
+  "markdown.frontmatter.format",
+  "markdown.id.validate",
+  "markdown.references.validate",
+]
+consumes_platform = []
+
+[relations]
+companions = ["adr", "markdown-tooling"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+template_standard = "templates/frontmatter-standard.yml"
+template_minimal = "templates/frontmatter-minimal.yml"
+template_note = "templates/note.md"
+template_concept = "templates/concept.md"
+template_research = "templates/research.md"
+template_runbook = "templates/runbook.md"
+template_spec = "templates/spec.md"
+example_note = "examples/note.example.md"
+example_concept = "examples/concept.example.md"
+example_runbook = "examples/runbook.example.md"
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "frontmatter-schema"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "document-id-format"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "cross-reference-integrity"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "frontmatter-format"
+owner = "format-frontmatter"
+mutates = true
+
+[[providers]]
+operation = "validate-frontmatter"
+kind = "python"
+entrypoint = "project_standards.validate_frontmatter:main"
+optional = false
+
+[[providers]]
+operation = "validate-id"
+kind = "python"
+entrypoint = "project_standards.validate_id:main"
+optional = false
+
+[[providers]]
+operation = "validate-references"
+kind = "python"
+entrypoint = "project_standards.validate_references:main"
+optional = true
+
+[[providers]]
+operation = "format-frontmatter"
+kind = "python"
+entrypoint = "project_standards.format_frontmatter:main"
+optional = true

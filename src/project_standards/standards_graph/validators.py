@@ -24,6 +24,9 @@ _PLATFORM_CAPABILITIES = frozenset(
         "project-standards.render",
     }
 )
+_ADOPT_RESOURCE_REQUIRED_MODES = frozenset(
+    {AdoptionMode.VALIDATOR, AdoptionMode.COPY_ADOPT, AdoptionMode.CLI}
+)
 
 
 def _rel(path: object) -> str:
@@ -93,14 +96,17 @@ def _validate_resources_and_providers(graph: StandardsGraph) -> list[GraphFindin
     findings: list[GraphFinding] = []
     for node in graph.standards:
         resources = node.manifest.resources.as_dict()
-        if node.manifest.standard.adoption is not AdoptionMode.NONE and "adopt" not in resources:
+        if (
+            node.manifest.standard.adoption in _ADOPT_RESOURCE_REQUIRED_MODES
+            and "adopt" not in resources
+        ):
             findings.append(
                 _finding(
                     "SG-RESOURCE-ADOPT-MISSING",
                     node,
                     _rel(node.manifest_path),
                     f"{node.standard_id} is adoptable but has no 'adopt' resource",
-                    'add adopt = "adopt.md" to [resources] or change adoption to none',
+                    'add adopt = "adopt.md" to [resources] or use a non-adoptable adoption mode',
                 )
             )
         for provider in node.manifest.providers:

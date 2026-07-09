@@ -1,0 +1,87 @@
+# Machine manifest for the Markdown Tooling Standard.
+
+[standard]
+id = "markdown-tooling"
+name = "Markdown Tooling Standard"
+status = "active"
+summary = "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and adjacent structured text."
+adoption = "copy-adopt"
+
+[versions]
+supported = ["1.0", "1.1"]
+latest = "1.1"
+
+[config]
+namespaces = ["markdown_tooling"]
+
+[capabilities]
+provides = ["markdown.format", "markdown.lint.structure", "yaml.format", "json.format"]
+consumes_platform = []
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "physical-formatting"
+owner = "prettier"
+mutates = true
+
+[[authority]]
+domain = "markdown"
+target = "**/*.md"
+concern = "structure-lint"
+owner = "markdownlint"
+mutates = false
+
+[[authority]]
+domain = "yaml"
+target = "**/*.yml"
+concern = "physical-formatting"
+owner = "prettier"
+mutates = true
+
+[[authority]]
+domain = "yaml"
+target = "**/*.yaml"
+concern = "physical-formatting"
+owner = "prettier"
+mutates = true
+
+[[authority]]
+domain = "json"
+target = "**/*.json"
+concern = "physical-formatting"
+owner = "prettier"
+mutates = true
+
+[[authority]]
+domain = "editorconfig"
+target = ".editorconfig"
+concern = "physical-formatting"
+owner = "editorconfig"
+mutates = true
+
+[[providers]]
+operation = "lint-markdown"
+kind = "workflow"
+entrypoint = "lint-markdown"
+optional = false
+
+[[providers]]
+operation = "format"
+kind = "workflow"
+entrypoint = "format"
+optional = true
+
+[[providers]]
+operation = "drift-check"
+kind = "documentation-only"
+optional = true

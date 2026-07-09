@@ -1,0 +1,97 @@
+# Machine manifest for the Python Tooling SSOT Standard.
+
+[standard]
+id = "python-tooling"
+name = "Python Tooling SSOT Standard"
+status = "active"
+summary = "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects."
+adoption = "copy-adopt"
+
+[versions]
+supported = ["1.0"]
+latest = "1.0"
+
+[config]
+namespaces = ["python_tooling"]
+
+[capabilities]
+provides = [
+  "python.tooling",
+  "python.format",
+  "python.lint",
+  "python.typecheck",
+  "python.test",
+  "python.audit",
+  "agent.instructions",
+]
+consumes_platform = []
+
+[relations]
+companions = ["python-coding"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+build_backend = "build-backend.md"
+
+[[authority]]
+domain = "python"
+target = "**/*.py"
+concern = "code-formatting"
+owner = "ruff"
+mutates = true
+
+[[authority]]
+domain = "python"
+target = "**/*.py"
+concern = "lint"
+owner = "ruff"
+mutates = false
+
+[[authority]]
+domain = "python"
+target = "**/*.py"
+concern = "type-check"
+owner = "basedpyright"
+mutates = false
+
+[[authority]]
+domain = "python"
+target = "tests/**/*.py"
+concern = "test-execution"
+owner = "pytest"
+mutates = false
+
+[[authority]]
+domain = "python"
+target = "pyproject.toml"
+concern = "package-tooling"
+owner = "uv"
+mutates = true
+
+[[authority]]
+domain = "security"
+target = "uv.lock"
+concern = "dependency-audit"
+owner = "pip-audit"
+mutates = false
+
+[[authority]]
+domain = "agent"
+target = "AGENTS.md"
+concern = "python-agent-instructions"
+owner = "python-tooling"
+mutates = true
+
+[[providers]]
+operation = "check"
+kind = "workflow"
+entrypoint = "check"
+optional = false
+
+[[providers]]
+operation = "drift-check"
+kind = "documentation-only"
+optional = true

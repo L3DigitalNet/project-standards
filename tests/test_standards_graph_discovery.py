@@ -60,11 +60,12 @@ def test_requires_field_is_rejected_as_hidden_dependency(tmp_path: Path) -> None
 
 def test_real_repo_graph_loads_manifest_backed_standards() -> None:
     root = Path(__file__).resolve().parent.parent
+    standard_ids = {path.name for path in discover_standard_dirs(root)}
 
     graph = build_graph(root)
 
-    assert graph.ids == frozenset({"standard-bundle-authoring"})
-    assert any(path.name == "markdown-frontmatter" for path in graph.missing_manifest_dirs)
+    assert graph.ids == standard_ids
+    assert graph.missing_manifest_dirs == ()
 
 
 def test_build_graph_requires_existing_standards_directory(tmp_path: Path) -> None:

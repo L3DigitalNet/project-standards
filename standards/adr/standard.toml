@@ -1,0 +1,65 @@
+# Machine manifest for the Architecture Decision Record (ADR) Standard.
+
+[standard]
+id = "adr"
+name = "Architecture Decision Record (ADR) Standard"
+status = "active"
+summary = "MADR-based architecture decision records with project-standard frontmatter and optional section validation."
+adoption = "validator"
+
+[versions]
+supported = ["1.0"]
+latest = "1.0"
+
+[config]
+namespaces = ["markdown.adr"]
+
+[capabilities]
+provides = ["adr.frontmatter", "adr.section-validation", "adr.template"]
+consumes_platform = []
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+template = "templates/adr.md"
+template_bare = "templates/adr-bare.md"
+template_minimal = "templates/adr-minimal.md"
+example = "examples/adr.example.md"
+
+[[authority]]
+domain = "adr"
+target = "docs/adr/**/*.md"
+concern = "record-structure"
+owner = "madr"
+mutates = false
+
+[[authority]]
+domain = "adr"
+target = "docs/adr/**/*.md"
+concern = "section-validation"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "adr"
+target = "docs/adr/adr.template.md"
+concern = "template-scaffold"
+owner = "project-standards-adopt"
+mutates = true
+
+[[providers]]
+operation = "validate-adr"
+kind = "python"
+entrypoint = "project_standards.validate_frontmatter:main"
+optional = false
+
+[[providers]]
+operation = "validate-id"
+kind = "python"
+entrypoint = "project_standards.validate_id:main"
+optional = false

@@ -1,0 +1,111 @@
+# Machine manifest for the Project Specification Standard.
+
+[standard]
+id = "project-spec"
+name = "Project Specification Standard"
+status = "active"
+summary = "Tiered, stable-ID, CLI-validated project specification format and tooling."
+adoption = "cli"
+
+[versions]
+supported = []
+latest = ""
+
+[config]
+namespaces = ["spec"]
+
+[capabilities]
+provides = [
+  "spec.validate",
+  "spec.lint",
+  "spec.extract",
+  "spec.id-next",
+  "spec.scaffold",
+  "spec.upgrade",
+]
+consumes_platform = []
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
+tooling_notes = "resources/tooling-notes.md"
+example = "examples/spec.example.md"
+template_light = "templates/spec-light-template.md"
+template_standard = "templates/spec-standard-template.md"
+template_full = "templates/spec-full-template.md"
+
+[[authority]]
+domain = "spec"
+target = "docs/specs/**/*.md"
+concern = "structural-validation"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "spec"
+target = "docs/specs/**/*.md"
+concern = "authoring-lint"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "spec"
+target = "docs/specs/**/*.md"
+concern = "id-allocation"
+owner = "project-standards"
+mutates = false
+
+[[authority]]
+domain = "spec"
+target = "docs/specs/**/*.md"
+concern = "scaffold-generation"
+owner = "project-standards"
+mutates = true
+
+[[authority]]
+domain = "spec"
+target = "docs/specs/**/*.md"
+concern = "tier-upgrade"
+owner = "project-standards"
+mutates = true
+
+[[providers]]
+operation = "validate"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false
+
+[[providers]]
+operation = "lint"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false
+
+[[providers]]
+operation = "extract"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false
+
+[[providers]]
+operation = "id-next"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false
+
+[[providers]]
+operation = "scaffold"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false
+
+[[providers]]
+operation = "upgrade"
+kind = "python"
+entrypoint = "project_standards.specs.cli:run"
+optional = false

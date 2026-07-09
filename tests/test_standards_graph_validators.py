@@ -58,6 +58,12 @@ def test_adoptable_standard_requires_adopt_resource(tmp_path: Path) -> None:
     assert "SG-RESOURCE-ADOPT-MISSING" in _codes(tmp_path)
 
 
+def test_reference_only_standard_does_not_require_adopt_resource(tmp_path: Path) -> None:
+    write_standard(tmp_path, "python-coding", adoption="reference-only")
+
+    assert "SG-RESOURCE-ADOPT-MISSING" not in _codes(tmp_path)
+
+
 def test_provider_schema_resources_must_exist_when_declared(tmp_path: Path) -> None:
     write_standard(
         tmp_path,

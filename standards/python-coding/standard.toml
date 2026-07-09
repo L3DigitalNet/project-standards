@@ -1,0 +1,53 @@
+# Machine manifest for the draft Python Coding Standard.
+
+[standard]
+id = "python-coding"
+name = "Python Coding Standard"
+status = "draft"
+summary = "Reference guidance for Python code shape, boundaries, typing, tests, and agent behavior."
+adoption = "reference-only"
+
+[versions]
+supported = []
+latest = "0.4"
+
+[config]
+namespaces = []
+
+[capabilities]
+provides = ["python.coding.guidance", "python.testing.guidance", "python.agent-guidance"]
+consumes_platform = []
+
+[relations]
+companions = ["python-tooling"]
+extends = []
+conflicts = []
+
+[resources]
+readme = "README.md"
+
+[[authority]]
+domain = "python"
+target = "**/*.py"
+concern = "code-design-guidance"
+owner = "python-coding"
+mutates = false
+
+[[authority]]
+domain = "python"
+target = "tests/**/*.py"
+concern = "testing-guidance"
+owner = "python-coding"
+mutates = false
+
+[[authority]]
+domain = "agent"
+target = "AGENTS.md"
+concern = "python-behavior-guidance"
+owner = "python-coding"
+mutates = false
+
+[[providers]]
+operation = "semantic-review"
+kind = "documentation-only"
+optional = true
