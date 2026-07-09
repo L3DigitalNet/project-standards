@@ -32,6 +32,9 @@ usage_template = "templates/usage-doc.md"
 readme_single_file_template = "templates/readme-single-file.md"
 workflow_template = "templates/cli-docs-check.yml"
 
+[artifacts]
+manifest = "src/project_standards/bundles/cli-documentation/adopt.toml"
+
 [[authority]]
 domain = "cli"
 target = "docs/usage.md"

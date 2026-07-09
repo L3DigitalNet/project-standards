@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.adopt.errors import ManifestError
-from project_standards.adopt.manifest import available_standards, load_manifest
+from project_standards.adopt.manifest import ArtifactProvenance, available_standards, load_manifest
 
 
 def test_available_standards_lists_released_adoptable_standards_excludes_shared() -> None:
@@ -39,9 +39,64 @@ def test_load_manifest_parses_artifacts() -> None:
 def test_load_manifest_parses_octal_artifact_mode(tmp_path: Path) -> None:
     _manifest(
         tmp_path,
-        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nmode = "0755"\n',
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nprovenance = "package-owned"\nmode = "0755"\n',
     )
     assert load_manifest("x", bundles_dir=tmp_path).artifacts[0].mode == 0o755
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        (
+            'source = "s"\ncanonical = "standards/x/s"\nprovenance = "source-owned"',
+            ArtifactProvenance.SOURCE_OWNED,
+        ),
+        (
+            'source = "s"\ncanonical = "standards/x/s"\ntransform = "render-s"\nprovenance = "generated"',
+            ArtifactProvenance.GENERATED,
+        ),
+        ('source = "s"\nprovenance = "package-owned"', ArtifactProvenance.PACKAGE_OWNED),
+        ('shared = "_shared/s"\nprovenance = "external-owned"', ArtifactProvenance.EXTERNAL_OWNED),
+    ],
+)
+def test_load_manifest_parses_artifact_provenance(
+    tmp_path: Path, fields: str, expected: ArtifactProvenance
+) -> None:
+    _manifest(
+        tmp_path,
+        f'[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n{fields}\ndest = "d"\n',
+    )
+
+    assert load_manifest("x", bundles_dir=tmp_path).artifacts[0].provenance is expected
+
+
+@pytest.mark.parametrize(
+    ("fields", "match"),
+    [
+        ('source = "s"', "requires provenance"),
+        ('source = "s"\nprovenance = "source-owned"', "requires canonical"),
+        (
+            'source = "s"\ncanonical = "standards/x/s"\nprovenance = "generated"',
+            "requires transform",
+        ),
+        (
+            'source = "s"\ncanonical = "standards/x/s"\nprovenance = "package-owned"',
+            "must not declare canonical",
+        ),
+        ('source = "s"\nprovenance = "external-owned"', "must use shared"),
+        ('shared = "_shared/s"\nprovenance = "package-owned"', "requires external-owned"),
+    ],
+)
+def test_load_manifest_rejects_invalid_artifact_provenance(
+    tmp_path: Path, fields: str, match: str
+) -> None:
+    _manifest(
+        tmp_path,
+        f'[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n{fields}\ndest = "d"\n',
+    )
+
+    with pytest.raises(ManifestError, match=match):
+        load_manifest("x", bundles_dir=tmp_path)
 
 
 def test_load_manifest_unknown_raises_manifesterror() -> None:

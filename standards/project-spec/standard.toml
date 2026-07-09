@@ -39,6 +39,9 @@ template_light = "templates/spec-light-template.md"
 template_standard = "templates/spec-standard-template.md"
 template_full = "templates/spec-full-template.md"
 
+[artifacts]
+manifest = "src/project_standards/bundles/project-spec/adopt.toml"
+
 [[authority]]
 domain = "spec"
 target = "docs/specs/**/*.md"

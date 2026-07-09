@@ -61,6 +61,9 @@ readme = "README.md"          # required — bundle-relative, contained
 adopt = "adopt.md"            # required for validator/copy-adopt/cli; omit for reference-only/none
 agent_summary = "agent-summary.md" # optional — condensed agent view
 
+[artifacts]
+manifest = "src/project_standards/bundles/markdown-tooling/adopt.toml" # optional — required when packaged artifacts exist
+
 [[authority]]                 # optional — one block per owned concern
 domain = "markdown"
 target = "**/*.md"
@@ -186,12 +189,12 @@ Future tooling trusts manifest-declared paths and providers, so the contract con
 
 ## Adoption resources and artifact linkage
 
-The `standard.toml` manifest describes the standard; the **artifact plane** (`adopt.toml`) describes what an adopting repository receives. They stay separate ([adr-0003](../../docs/adr/adr-0003-separate-standard-and-artifact-manifests.md)). Each `standard.toml` therefore either:
+The `standard.toml` manifest describes the standard; the **artifact plane** (`adopt.toml`) describes what an adopting repository receives. They stay separate ([adr-0003](../../docs/adr/adr-0003-separate-standard-and-artifact-manifests.md)). A standard that ships packaged artifacts links the repository-relative manifest through `[artifacts].manifest`; graph validation rejects missing and orphan links. Each `standard.toml` also either:
 
 - **references its `adopt.md` adoption guide** through the `adopt` resource when `adoption` is `validator`, `copy-adopt`, or `cli`, or
 - **explicitly declares non-adoptability** (`adoption = "reference-only"` or `adoption = "none"`, no `adopt` resource).
 
-Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior. This standard does not re-invent the adopt engine; graph validation enforces each adoptable standard's `adopt` guide resource, and package tests verify that packaged `adopt.toml` manifests resolve their artifact sources.
+Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Every `[[artifact]]` declares provenance: `source-owned` with a byte-identical repository-relative `canonical` source; `generated` with `canonical` plus a deterministic `transform`; `package-owned` for installed-tooling-only files; or `external-owned` for explicit `_shared` artifacts. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior. Standard-packaged skills install only under `.agents/skills/<skill-id>/`. Graph validation checks linkage, provenance parity, and the project-local skill boundary without re-inventing the adopt engine.
 
 ## Lifecycle & exceptions
 
@@ -212,6 +215,7 @@ The machine schema and graph validator are authoritative, but this checklist is 
 - [ ] `[config]` — `namespaces` present (array of dotted paths, may be empty); no path duplicates another standard's; no reserved meta key claimed.
 - [ ] `[capabilities]` — `provides` and `consumes_platform` both present (arrays, may be empty).
 - [ ] `[resources]` — `readme` present; `adopt` present **iff** `adoption` is `validator`, `copy-adopt`, or `cli`.
+- [ ] `[artifacts]` — present when a packaged `adopt.toml` exists; `manifest` names its safe repository-relative path; every artifact declares valid provenance.
 - [ ] `[relations]` — any of `companions` / `extends` / `conflicts` present are arrays; no `requires` field; every `extends` is ADR-backed.
 - [ ] `[[authority]]` — each block (if any) declares `domain`, `target`, `concern`, `owner`, `mutates`; no mutating conflict per the [conflict rule](#authorities).
 - [ ] `[[providers]]` — each block (if any) declares `operation`, `kind`, `optional`, and an `entrypoint` for executable kinds; `entrypoint` is an import path or command, not a filesystem path.

@@ -45,7 +45,7 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes eleven leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), the `standards validate-graph` manifest-graph operation, and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes twelve leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), two `standards` operations (`validate-graph`, `render-catalog`), and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
@@ -135,10 +135,10 @@ Exit status: `0` success · `2` registry/bundle drift.
 
 ### `standards`
 
-Command group: `validate-graph` over standard manifests (`standards/**/standard.toml`). Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
+Command group for graph validation and the manifest-generated standards catalog. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
 
 ```text
-project-standards standards {validate-graph} [<args>...]
+project-standards standards {validate-graph | render-catalog} [<args>...]
 ```
 
 There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
@@ -158,6 +158,22 @@ Options:
 - **`--require-all-manifests`** — Fail when any `standards/<id>/` directory lacks a `standard.toml`. Default: off, so partial retrofit checks can still run.
 
 Exit status: `0` graph clean · `1` graph findings present · `2` invalid invocation or graph-load error.
+
+### `standards render-catalog`
+
+Render the manifest-derived standards catalog, or verify that its checked-in copy is current. Rendering first requires a clean graph with every standard manifest present.
+
+```text
+project-standards standards render-catalog [--root <path>] [--output <path>] [--check]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root to inspect. Default: the current directory.
+- **`--output <path>`** — Catalog path inside the repository root. Default: `standards/catalog.md`.
+- **`--check`** — Compare the output file with a fresh render without writing it. Default: off.
+
+Exit status: `0` catalog written or fresh · `1` graph findings or stale output · `2` invalid invocation, unsafe output path, or load/write error.
 
 ### `spec`
 

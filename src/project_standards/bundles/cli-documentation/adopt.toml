@@ -5,16 +5,21 @@ id = "cli-documentation"
 kind = "file"
 owner = true
 source = "usage-doc.md"
+provenance = "source-owned"
+canonical = "standards/cli-documentation/templates/usage-doc.md"
 dest = "docs/usage.md"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "cli-docs-check.yml"
+provenance = "source-owned"
+canonical = "standards/cli-documentation/templates/cli-docs-check.yml"
 dest = ".github/workflows/cli-docs-check.yml"
 
 [[artifact]]
 kind = "fragment"
 owner = true
 source = "config.cli-documentation.yml"
+provenance = "package-owned"
 target = ".project-standards.yml"

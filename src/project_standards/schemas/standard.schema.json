@@ -13,6 +13,21 @@
       "title": "AdoptionMode",
       "type": "string"
     },
+    "ArtifactsTable": {
+      "additionalProperties": false,
+      "description": "The optional link from standard metadata to its repository artifact manifest.",
+      "properties": {
+        "manifest": {
+          "title": "Manifest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "manifest"
+      ],
+      "title": "ArtifactsTable",
+      "type": "object"
+    },
     "AuthorityBlock": {
       "additionalProperties": false,
       "description": "One `[[authority]]` entry: an owner's exclusive claim over a target/concern pair.",
@@ -319,6 +334,17 @@
     },
     "resources": {
       "$ref": "#/$defs/ResourcesTable"
+    },
+    "artifacts": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactsTable"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "relations": {
       "$ref": "#/$defs/RelationsTable"

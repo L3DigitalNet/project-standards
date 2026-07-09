@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from project_standards.standard_manifest import (
     AdoptionMode,
+    ArtifactsTable,
     AuthorityBlock,
     CapabilitiesTable,
     ConfigTable,
@@ -201,6 +202,23 @@ def test_resources_open_mapping() -> None:
 def test_resources_rejects(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         ResourcesTable.model_validate(payload)
+
+
+def test_artifacts_table_accepts_safe_repository_relative_manifest() -> None:
+    table = ArtifactsTable.model_validate(
+        {"manifest": "src/project_standards/bundles/demo/adopt.toml"}
+    )
+
+    assert table.manifest.endswith("/demo/adopt.toml")
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    ["../adopt.toml", "/tmp/adopt.toml", "C:\\adopt.toml", "src/../adopt.toml"],
+)
+def test_artifacts_table_rejects_unsafe_manifest_path(manifest: str) -> None:
+    with pytest.raises(ValidationError):
+        ArtifactsTable.model_validate({"manifest": manifest})
 
 
 def test_authority_requires_full_tuple() -> None:

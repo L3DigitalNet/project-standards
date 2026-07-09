@@ -209,6 +209,20 @@ class ResourcesTable(BaseModel):
         return {"readme": self.readme, **self.__pydantic_extra__}
 
 
+class ArtifactsTable(_Table):
+    """The optional link from standard metadata to its repository artifact manifest."""
+
+    manifest: str
+
+    @field_validator("manifest")
+    @classmethod
+    def _safe_repository_path(cls, value: str) -> str:
+        if not _is_safe_bundle_path(value):
+            msg = f"artifact manifest path {value!r} is not a safe repository-relative path"
+            raise ValueError(msg)
+        return value
+
+
 class AuthorityBlock(_Table):
     """One `[[authority]]` entry: an owner's exclusive claim over a target/concern pair."""
 
@@ -276,6 +290,7 @@ class StandardManifest(_Table):
     config: ConfigTable
     capabilities: CapabilitiesTable
     resources: ResourcesTable
+    artifacts: ArtifactsTable | None = None
     relations: RelationsTable = Field(default_factory=RelationsTable)
     authority: list[AuthorityBlock] = Field(default_factory=list)
     providers: list[ProviderBlock] = Field(default_factory=list)

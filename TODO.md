@@ -76,9 +76,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 - [x] Step 03 - `standard.toml` manifest schema and fixtures implemented.
 - [x] Step 04 - Standards graph validator implemented (`8d23a0c`).
 - [x] Step 05 - Existing standards retrofitted with manifests.
-- [ ] Step 06 - Dogfood fixtures, indexes, relationship catalog, and `adopt.toml` linkage.
+- [x] 2026-07-09 - Step 06 dogfood fixtures, generated catalog, relationship catalog, and `adopt.toml` linkage implemented (this closeout).
 
-  Step 06 now treats adoption-mode parity, package versions, artifact provenance, and repo-local skill installs as baseline graph/index facts.
+  Adoption-mode parity, package versions, artifact provenance, and repo-local skill installs are now baseline graph/catalog facts.
 
 - [ ] Step 07 - MCP-readiness gate passes.
 

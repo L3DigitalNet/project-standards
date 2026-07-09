@@ -5,7 +5,11 @@ from __future__ import annotations
 import fnmatch
 from collections import defaultdict
 from itertools import combinations
+from pathlib import Path
 
+from project_standards.adopt.engine import resolve_source
+from project_standards.adopt.errors import ManifestError
+from project_standards.adopt.manifest import ArtifactProvenance
 from project_standards.standard_manifest import AdoptionMode
 from project_standards.standards_graph.model import (
     GraphFinding,
@@ -89,6 +93,145 @@ def _validate_namespaces(graph: StandardsGraph) -> list[GraphFinding]:
                     f"choose one owning standard for namespace {namespace!r}",
                 )
             )
+    return findings
+
+
+def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
+    findings = [
+        GraphFinding(
+            code="SG-ARTIFACT-MANIFEST-ORPHAN",
+            severity="error",
+            standard_id=path.parent.name,
+            path=_rel(path),
+            message=f"packaged artifact manifest for {path.parent.name!r} is not linked",
+            hint="add [artifacts].manifest to the standard.toml or remove the orphan manifest",
+        )
+        for path in graph.orphan_artifact_manifests
+    ]
+    for node in graph.standards:
+        artifact_link = node.manifest.artifacts
+        declared = artifact_link is not None
+        if artifact_link is not None:
+            assert node.artifact_manifest_path is not None
+            expected = (
+                graph.root
+                / "src"
+                / "project_standards"
+                / "bundles"
+                / node.standard_id
+                / "adopt.toml"
+            )
+            if not node.artifact_manifest_path.is_relative_to(graph.root):
+                findings.append(
+                    _finding(
+                        "SG-ARTIFACT-MANIFEST-ESCAPE",
+                        node,
+                        artifact_link.manifest,
+                        f"{node.standard_id} artifact manifest resolves outside the repository",
+                        "link the standard's packaged adopt.toml inside the repository bundle tree",
+                    )
+                )
+            elif node.artifact_manifest_path != expected:
+                findings.append(
+                    _finding(
+                        "SG-ARTIFACT-MANIFEST-MISMATCH",
+                        node,
+                        artifact_link.manifest,
+                        f"{node.standard_id} artifact link does not name its own packaged manifest",
+                        f"set manifest to src/project_standards/bundles/{node.standard_id}/adopt.toml",
+                    )
+                )
+        if declared and node.artifact_manifest is None:
+            assert node.artifact_manifest_path is not None
+            findings.append(
+                _finding(
+                    "SG-ARTIFACT-MANIFEST-MISSING",
+                    node,
+                    _rel(node.artifact_manifest_path),
+                    f"{node.standard_id} links an artifact manifest that does not exist",
+                    "create the linked adopt.toml or remove the [artifacts] table",
+                )
+            )
+            continue
+        if declared and node.manifest.standard.adoption in {
+            AdoptionMode.NONE,
+            AdoptionMode.REFERENCE_ONLY,
+        }:
+            findings.append(
+                _finding(
+                    "SG-ARTIFACT-NONADOPTABLE",
+                    node,
+                    _rel(node.manifest_path),
+                    f"{node.standard_id} is non-adoptable but links packaged artifacts",
+                    "remove the artifact link or choose an adoptable mode",
+                )
+            )
+        artifact_manifest = node.artifact_manifest
+        if artifact_manifest is None or node.artifact_manifest_path is None:
+            continue
+        bundles_dir = node.artifact_manifest_path.parent.parent
+        for artifact in artifact_manifest.artifacts:
+            try:
+                packaged = resolve_source(artifact, node.standard_id, bundles_dir)
+            except ManifestError as exc:
+                findings.append(
+                    _finding(
+                        "SG-ARTIFACT-SOURCE-MISSING",
+                        node,
+                        _rel(node.artifact_manifest_path),
+                        str(exc),
+                        "restore the packaged source or correct the artifact declaration",
+                    )
+                )
+                continue
+            if artifact.provenance in {
+                ArtifactProvenance.SOURCE_OWNED,
+                ArtifactProvenance.GENERATED,
+            }:
+                assert artifact.canonical is not None
+                canonical_rel = Path(artifact.canonical)
+                canonical = (graph.root / canonical_rel).resolve()
+                if (
+                    canonical_rel.is_absolute()
+                    or ".." in canonical_rel.parts
+                    or not canonical.is_relative_to(graph.root)
+                    or not canonical.is_file()
+                ):
+                    findings.append(
+                        _finding(
+                            "SG-ARTIFACT-CANONICAL-MISSING",
+                            node,
+                            artifact.canonical,
+                            f"canonical source for {packaged.name!r} is missing or unsafe",
+                            "declare an existing repository-relative canonical source",
+                        )
+                    )
+                elif (
+                    artifact.provenance is ArtifactProvenance.SOURCE_OWNED
+                    and packaged.read_bytes() != canonical.read_bytes()
+                ):
+                    findings.append(
+                        _finding(
+                            "SG-ARTIFACT-PARITY",
+                            node,
+                            artifact.canonical,
+                            f"packaged artifact {packaged.name!r} differs from its canonical source",
+                            "refresh the packaged mirror from the canonical source",
+                        )
+                    )
+            source_rel = artifact.source or ""
+            if (source_rel.startswith("skills/") or "/skills/" in source_rel) and (
+                artifact.dest is None or not artifact.dest.startswith(".agents/skills/")
+            ):
+                findings.append(
+                    _finding(
+                        "SG-ARTIFACT-SKILL-DEST",
+                        node,
+                        _rel(node.artifact_manifest_path),
+                        f"standard-packaged skill installs outside .agents/skills: {artifact.dest!r}",
+                        "install standard-owned skills under .agents/skills/<skill-id>/",
+                    )
+                )
     return findings
 
 
@@ -314,6 +457,7 @@ def validate_graph(
     """Return deterministic graph validation findings."""
     findings: list[GraphFinding] = []
     findings.extend(_validate_missing_manifests(graph, require_all_manifests))
+    findings.extend(_validate_artifact_manifests(graph))
     findings.extend(_validate_namespaces(graph))
     findings.extend(_validate_resources_and_providers(graph))
     findings.extend(_validate_authorities(graph))

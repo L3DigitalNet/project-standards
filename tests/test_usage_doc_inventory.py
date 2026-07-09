@@ -14,7 +14,7 @@ _USAGE = Path("docs/usage.md").read_text(encoding="utf-8")
 
 # Top-level leaves are argparse-registered in cli.py; keep in sync with the parser.
 _TOP_LEVEL_LEAVES = ("validate", "fix", "adopt", "list", "standards")
-_STANDARDS_VERBS = ("validate-graph",)
+_STANDARDS_VERBS = ("validate-graph", "render-catalog")
 
 # docs/usage.md documents the root `project-standards` script under a `## NAME`
 # section (it IS the page, not a `###` subsection); every other console script

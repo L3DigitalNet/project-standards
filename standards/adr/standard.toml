@@ -32,6 +32,9 @@ template_bare_minimal = "templates/adr-bare-minimal.md"
 template_minimal = "templates/adr-minimal.md"
 example = "examples/adr.example.md"
 
+[artifacts]
+manifest = "src/project_standards/bundles/adr/adopt.toml"
+
 [[authority]]
 domain = "adr"
 target = "docs/adr/**/*.md"

@@ -29,6 +29,9 @@ readme = "README.md"    # bundle-relative paths only (no .., no absolute, no sym
 # adopt = "adopt.md"    # required when adoption is validator, copy-adopt, or cli
 # skill = "skills/<skill-name>/SKILL.md"  # optional: standard-owned agent skill entrypoint
 
+# [artifacts]  # include only when this standard ships a packaged adopt.toml
+# manifest = "src/project_standards/bundles/<id>/adopt.toml"
+
 # [[authority]]         # one block per owned concern; delete if none
 # domain = ""           # e.g. "markdown"
 # target = ""           # glob within the consumer repo, e.g. "**/*.md"

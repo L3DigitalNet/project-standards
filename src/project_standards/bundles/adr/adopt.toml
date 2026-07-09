@@ -5,10 +5,13 @@ id = "adr"
 kind = "file"
 owner = true
 source = "adr.template.md"
+provenance = "source-owned"
+canonical = "standards/adr/templates/adr.md"
 dest = "docs/adr/adr.template.md"
 
 [[artifact]]
 kind = "fragment"
 owner = true
 source = "project-standards.adr-fragment.yml"
+provenance = "package-owned"
 target = ".project-standards.yml"

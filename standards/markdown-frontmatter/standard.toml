@@ -49,6 +49,9 @@ skill = "skills/markdown-frontmatter/SKILL.md"
 skill_openai = "skills/markdown-frontmatter/agents/openai.yaml"
 skill_new_doc_id = "skills/markdown-frontmatter/scripts/new-doc-id"
 
+[artifacts]
+manifest = "src/project_standards/bundles/markdown-frontmatter/adopt.toml"
+
 [[authority]]
 domain = "markdown"
 target = "**/*.md"

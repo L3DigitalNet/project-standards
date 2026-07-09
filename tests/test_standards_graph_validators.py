@@ -64,6 +64,167 @@ def test_reference_only_standard_does_not_require_adopt_resource(tmp_path: Path)
     assert "SG-RESOURCE-ADOPT-MISSING" not in _codes(tmp_path)
 
 
+def _write_artifact_manifest(root: Path, standard_id: str, body: str = "") -> str:
+    relative = f"src/project_standards/bundles/{standard_id}/adopt.toml"
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f'[standard]\nid = "{standard_id}"\n{body}', encoding="utf-8")
+    return relative
+
+
+def test_packaged_artifact_manifest_requires_standard_manifest_link(tmp_path: Path) -> None:
+    write_standard(tmp_path, "alpha", adoption="copy-adopt", resources={"adopt": "adopt.md"})
+    _write_artifact_manifest(tmp_path, "alpha")
+
+    assert "SG-ARTIFACT-MANIFEST-ORPHAN" in _codes(tmp_path)
+
+
+def test_declared_artifact_manifest_must_exist(tmp_path: Path) -> None:
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest="src/project_standards/bundles/alpha/adopt.toml",
+    )
+
+    assert "SG-ARTIFACT-MANIFEST-MISSING" in _codes(tmp_path)
+
+
+def test_artifact_manifest_link_must_name_own_bundle(tmp_path: Path) -> None:
+    alpha = _write_artifact_manifest(tmp_path, "alpha")
+    beta = _write_artifact_manifest(tmp_path, "beta")
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=beta,
+    )
+    write_standard(
+        tmp_path,
+        "beta",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=alpha,
+    )
+
+    assert "SG-ARTIFACT-MANIFEST-MISMATCH" in _codes(tmp_path)
+
+
+def test_artifact_manifest_link_must_not_escape_through_symlink(tmp_path: Path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    packaged = outside / "bundles/alpha/adopt.toml"
+    packaged.parent.mkdir(parents=True)
+    packaged.write_text('[standard]\nid = "alpha"\n', encoding="utf-8")
+    link = tmp_path / "src/project_standards/bundles/alpha"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(packaged.parent, target_is_directory=True)
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest="src/project_standards/bundles/alpha/adopt.toml",
+    )
+
+    assert "SG-ARTIFACT-MANIFEST-ESCAPE" in _codes(tmp_path)
+
+
+def test_non_adoptable_standard_must_not_link_artifact_manifest(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(tmp_path, "alpha")
+    write_standard(tmp_path, "alpha", adoption="none", artifact_manifest=relative)
+
+    assert "SG-ARTIFACT-NONADOPTABLE" in _codes(tmp_path)
+
+
+def test_source_owned_artifact_must_match_canonical_source(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "seed.txt"\ndest = "seed.txt"\n'
+        'provenance = "source-owned"\ncanonical = "standards/alpha/seed.txt"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    (tmp_path / "src/project_standards/bundles/alpha/seed.txt").write_text(
+        "packaged\n", encoding="utf-8"
+    )
+    (tmp_path / "standards/alpha/seed.txt").write_text("canonical\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-PARITY" in _codes(tmp_path)
+
+
+def test_source_owned_canonical_must_not_escape_through_symlink(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "seed.txt"\ndest = "seed.txt"\n'
+        'provenance = "source-owned"\ncanonical = "standards/alpha/seed.txt"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    source = tmp_path / "src/project_standards/bundles/alpha/seed.txt"
+    source.write_text("same\n", encoding="utf-8")
+    outside = tmp_path.parent / f"{tmp_path.name}-canonical.txt"
+    outside.write_text("same\n", encoding="utf-8")
+    (tmp_path / "standards/alpha/seed.txt").symlink_to(outside)
+
+    assert "SG-ARTIFACT-CANONICAL-MISSING" in _codes(tmp_path)
+
+
+def test_generated_artifact_requires_safe_existing_canonical_source(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "generated.txt"\ndest = "generated.txt"\n'
+        'provenance = "generated"\ncanonical = "../outside.txt"\ntransform = "render"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    (tmp_path / "src/project_standards/bundles/alpha/generated.txt").write_text(
+        "generated\n", encoding="utf-8"
+    )
+
+    assert "SG-ARTIFACT-CANONICAL-MISSING" in _codes(tmp_path)
+
+
+def test_standard_packaged_skill_must_install_project_locally(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "skills/demo/SKILL.md"\n'
+        'dest = ".codex/skills/demo/SKILL.md"\nprovenance = "package-owned"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    skill = tmp_path / "src/project_standards/bundles/alpha/skills/demo/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("# demo\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-SKILL-DEST" in _codes(tmp_path)
+
+
 def test_provider_schema_resources_must_exist_when_declared(tmp_path: Path) -> None:
     write_standard(
         tmp_path,

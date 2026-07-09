@@ -1,7 +1,9 @@
 """Standards graph loading and validation APIs."""
 
+from project_standards.standards_graph.catalog import load_contract_defaults, render_catalog
 from project_standards.standards_graph.discovery import (
     build_graph,
+    discover_artifact_manifest_paths,
     discover_manifest_paths,
     discover_standard_dirs,
 )
@@ -21,11 +23,14 @@ __all__ = [
     "StandardNode",
     "StandardsGraph",
     "build_graph",
+    "discover_artifact_manifest_paths",
     "discover_manifest_paths",
     "discover_standard_dirs",
     "finding_sort_key",
     "findings_to_jsonable",
     "format_findings",
+    "load_contract_defaults",
+    "render_catalog",
     "sort_findings",
     "validate_graph",
 ]

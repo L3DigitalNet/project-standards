@@ -27,6 +27,9 @@ conflicts = []
 readme = "README.md"
 adopt = "adopt.md"
 
+[artifacts]
+manifest = "src/project_standards/bundles/markdown-tooling/adopt.toml"
+
 [[authority]]
 domain = "markdown"
 target = "**/*.md"

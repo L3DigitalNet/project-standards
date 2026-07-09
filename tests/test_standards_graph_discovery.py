@@ -46,6 +46,27 @@ def test_build_graph_loads_manifest_nodes_and_missing_dirs(tmp_path: Path) -> No
     assert graph.missing_manifest_dirs == (missing,)
 
 
+def test_build_graph_loads_linked_artifact_manifest(tmp_path: Path) -> None:
+    artifact_path = "src/project_standards/bundles/alpha/adopt.toml"
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="copy-adopt",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=artifact_path,
+    )
+    packaged = tmp_path / artifact_path
+    packaged.parent.mkdir(parents=True)
+    packaged.write_text('[standard]\nid = "alpha"\n', encoding="utf-8")
+
+    graph = build_graph(tmp_path)
+    node = graph.by_id["alpha"]
+
+    assert node.artifact_manifest_path == packaged
+    assert node.artifact_manifest is not None
+    assert node.artifact_manifest.id == "alpha"
+
+
 def test_requires_field_is_rejected_as_hidden_dependency(tmp_path: Path) -> None:
     bundle = write_standard(tmp_path, "alpha", relation_extras={"requires": ["beta"]})
 

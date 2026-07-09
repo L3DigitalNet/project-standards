@@ -36,6 +36,9 @@ readme = "README.md"
 adopt = "adopt.md"
 build_backend = "build-backend.md"
 
+[artifacts]
+manifest = "src/project_standards/bundles/python-tooling/adopt.toml"
+
 [[authority]]
 domain = "python"
 target = "**/*.py"

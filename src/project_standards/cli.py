@@ -103,7 +103,11 @@ def _assert_registry_bundle_parity(registry: Registry) -> None:
 
 
 def _artifact_entry(a: Artifact) -> dict[str, object]:
-    entry: dict[str, object] = {"kind": a.kind, "owner": a.owner}
+    entry: dict[str, object] = {
+        "kind": a.kind,
+        "owner": a.owner,
+        "provenance": a.provenance.value,
+    }
     if a.kind == "fragment":
         entry["target"] = a.target
     else:
@@ -114,6 +118,10 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
         entry["shared"] = a.shared
     if a.mode is not None:
         entry["mode"] = f"{a.mode:04o}"
+    if a.canonical is not None:
+        entry["canonical"] = a.canonical
+    if a.transform is not None:
+        entry["transform"] = a.transform
     return entry
 
 

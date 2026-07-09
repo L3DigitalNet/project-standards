@@ -2,6 +2,8 @@
 
 This directory holds the **governing standards** this repository defines. Each standard is a self-contained **bundle** — open its folder and the standard renders.
 
+The generated [standards catalog](catalog.md) exposes manifest-derived lifecycle, version, capability, relationship, resource, provider, artifact-provenance, and repo-local skill facts. Regenerate it with `uv run project-standards standards render-catalog --root .`; use `--check` in verification to detect drift.
+
 | Standard | What it governs | Bundle | Adopt |
 | --- | --- | --- | --- |
 | Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |

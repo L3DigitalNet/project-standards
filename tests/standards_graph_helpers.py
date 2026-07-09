@@ -18,6 +18,10 @@ def write_standard(
     authorities: list[dict[str, object]] | None = None,
     providers: list[dict[str, object]] | None = None,
     adoption: str = "none",
+    status: str = "active",
+    supported_versions: list[str] | None = None,
+    latest_version: str = "1.0",
+    artifact_manifest: str | None = None,
     extra_toml: str = "",
 ) -> Path:
     bundle = root / "standards" / standard_id
@@ -36,13 +40,13 @@ def write_standard(
     text = f"""[standard]
 id = "{standard_id}"
 name = "{standard_id.title()}"
-status = "active"
+status = "{status}"
 summary = "Example standard."
 adoption = "{adoption}"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = {_array(supported_versions or [latest_version])}
+latest = "{latest_version}"
 
 [config]
 namespaces = {_array(namespaces)}
@@ -81,6 +85,8 @@ conflicts = {_array(conflicts)}
         if provider.get("output_schema") is not None:
             text += f'output_schema = "{provider["output_schema"]}"\n'
         text += f"optional = {str(provider['optional']).lower()}\n"
+    if artifact_manifest is not None:
+        text += f'\n[artifacts]\nmanifest = "{artifact_manifest}"\n'
     text += extra_toml
 
     manifest = bundle / "standard.toml"

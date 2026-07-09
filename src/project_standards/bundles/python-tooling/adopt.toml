@@ -5,56 +5,69 @@ id = "python-tooling"
 kind = "fragment"
 owner = true
 source = "pyproject.python-tooling.toml"
+provenance = "package-owned"
 target = "pyproject.toml"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "python-version"
+provenance = "source-owned"
+canonical = ".python-version"
 dest = ".python-version"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "check.yml"
+provenance = "source-owned"
+canonical = ".github/workflows/check.yml"
 dest = ".github/workflows/check.yml"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "check.py"
+provenance = "source-owned"
+canonical = "scripts/check.py"
 dest = "scripts/check.py"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "AGENTS.md"
+provenance = "package-owned"
 dest = "AGENTS.md"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "CLAUDE.md"
+provenance = "package-owned"
 dest = "CLAUDE.md"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "vscode-settings.json"
+provenance = "package-owned"
 dest = ".vscode/settings.json"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "vscode-tasks.json"
+provenance = "package-owned"
 dest = ".vscode/tasks.json"
 
 [[artifact]]
 kind = "file"
 shared = "_shared/editorconfig"
+provenance = "external-owned"
 dest = ".editorconfig"
 
 [[artifact]]
 kind = "file"
 shared = "_shared/vscode-extensions.json"
+provenance = "external-owned"
 dest = ".vscode/extensions.json"

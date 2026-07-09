@@ -19,3 +19,7 @@ tests/fixtures/specs/
 # short arrays) diverges from that, so letting Prettier own it would create a
 # two-master conflict with the drift test. Hand-authored schemas stay gated.
 src/project_standards/schemas/standard.schema.json
+
+# Manifest-generated catalog: the Python renderer and its checked-in freshness
+# test own the exact bytes, so formatting it would create a second generator.
+standards/catalog.md

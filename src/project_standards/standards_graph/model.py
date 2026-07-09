@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from project_standards.adopt.manifest import Manifest as ArtifactManifest
 from project_standards.standard_manifest import StandardManifest
 
 Severity = Literal["error", "warning"]
@@ -32,6 +33,8 @@ class StandardNode:
     bundle_dir: Path
     manifest_path: Path
     manifest: StandardManifest
+    artifact_manifest_path: Path | None = None
+    artifact_manifest: ArtifactManifest | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,7 @@ class StandardsGraph:
     root: Path
     standards: tuple[StandardNode, ...]
     missing_manifest_dirs: tuple[Path, ...]
+    orphan_artifact_manifests: tuple[Path, ...] = ()
 
     @property
     def ids(self) -> frozenset[str]:

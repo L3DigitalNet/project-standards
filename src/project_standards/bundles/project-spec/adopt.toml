@@ -5,10 +5,12 @@ id = "project-spec"
 kind = "fragment"
 owner = true
 source = "project-standards.spec-fragment.yml"
+provenance = "package-owned"
 target = ".project-standards.yml"
 
 [[artifact]]
 kind = "workflow-caller"
 owner = true
 source = "validate-specs.caller.yml"
+provenance = "package-owned"
 dest = ".github/workflows/validate-specs.yml"

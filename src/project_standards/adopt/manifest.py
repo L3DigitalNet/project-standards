@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import tomllib
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
@@ -19,6 +20,15 @@ from project_standards.adopt.errors import ManifestError
 BUNDLES_DIR = Path(__file__).resolve().parent.parent / "bundles"
 
 _KNOWN_KINDS = frozenset({"file", "workflow-caller", "fragment"})
+
+
+class ArtifactProvenance(StrEnum):
+    """How a packaged artifact relates to its canonical source."""
+
+    SOURCE_OWNED = "source-owned"
+    GENERATED = "generated"
+    PACKAGE_OWNED = "package-owned"
+    EXTERNAL_OWNED = "external-owned"
 
 
 @dataclass(frozen=True)
@@ -32,6 +42,9 @@ class Artifact:
     dest: str | None  # file/workflow-caller destination, relative to --dest
     target: str | None  # fragment target, relative to --dest
     mode: int | None = None  # optional POSIX permissions for written artifacts
+    provenance: ArtifactProvenance = ArtifactProvenance.PACKAGE_OWNED
+    canonical: str | None = None  # repository-relative source for parity/transform checks
+    transform: str | None = None  # deterministic transform identifier for generated artifacts
 
 
 @dataclass(frozen=True)
@@ -107,7 +120,7 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
         kind = a.get("kind")
         if kind not in _KNOWN_KINDS:
             raise ManifestError(f"manifest {path} artifact {i} has unknown kind {kind!r}")
-        for fld in ("source", "shared", "dest", "target"):
+        for fld in ("source", "shared", "dest", "target", "provenance", "canonical", "transform"):
             val = a.get(fld)
             if val is not None and not isinstance(val, str):
                 raise ManifestError(
@@ -129,6 +142,45 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
             raise ManifestError(f"manifest {path} {kind} artifact {i} needs a dest")
         if kind == "fragment" and mode is not None:
             raise ManifestError(f"manifest {path} fragment artifact {i} cannot set mode")
+        provenance_raw = a.get("provenance")
+        if provenance_raw is None:
+            raise ManifestError(f"manifest {path} artifact {i} requires provenance")
+        try:
+            provenance = ArtifactProvenance(cast("str", provenance_raw))
+        except ValueError as exc:
+            raise ManifestError(
+                f"manifest {path} artifact {i} has unknown provenance {provenance_raw!r}"
+            ) from exc
+        canonical = cast("str | None", a.get("canonical"))
+        transform = cast("str | None", a.get("transform"))
+        if provenance in {ArtifactProvenance.SOURCE_OWNED, ArtifactProvenance.GENERATED}:
+            if canonical is None:
+                raise ManifestError(
+                    f"manifest {path} artifact {i} provenance {provenance.value} requires canonical"
+                )
+        elif canonical is not None:
+            raise ManifestError(
+                f"manifest {path} artifact {i} provenance {provenance.value} "
+                "must not declare canonical"
+            )
+        if provenance is ArtifactProvenance.GENERATED:
+            if transform is None:
+                raise ManifestError(
+                    f"manifest {path} artifact {i} provenance generated requires transform"
+                )
+        elif transform is not None:
+            raise ManifestError(
+                f"manifest {path} artifact {i} provenance {provenance.value} "
+                "must not declare transform"
+            )
+        if provenance is ArtifactProvenance.EXTERNAL_OWNED and shared is None:
+            raise ManifestError(
+                f"manifest {path} artifact {i} provenance external-owned must use shared"
+            )
+        if shared is not None and provenance is not ArtifactProvenance.EXTERNAL_OWNED:
+            raise ManifestError(
+                f"manifest {path} artifact {i} shared source requires external-owned provenance"
+            )
         artifacts.append(
             Artifact(
                 kind=cast("str", kind),
@@ -138,6 +190,9 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
                 dest=cast("str | None", dest),
                 target=cast("str | None", target),
                 mode=mode,
+                provenance=provenance,
+                canonical=canonical,
+                transform=transform,
             )
         )
     return Manifest(id=standard_id, artifacts=tuple(artifacts))

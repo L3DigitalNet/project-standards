@@ -125,6 +125,40 @@ def test_top_level_help_advertises_standards(capsys: pytest.CaptureFixture[str])
     assert "standards" in capsys.readouterr().out
 
 
+def test_render_catalog_write_and_freshness_check(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_standard(tmp_path, "alpha")
+    output = tmp_path / "standards" / "catalog.md"
+
+    assert run(["render-catalog", "--root", str(tmp_path)]) == 0
+    assert output.is_file()
+    assert run(["render-catalog", "--root", str(tmp_path), "--check"]) == 0
+    output.write_text("stale\n", encoding="utf-8")
+    assert run(["render-catalog", "--root", str(tmp_path), "--check"]) == 1
+    assert "stale" in capsys.readouterr().err
+
+
+def test_render_catalog_nondefault_output_keeps_standard_links_valid(tmp_path: Path) -> None:
+    write_standard(tmp_path, "alpha")
+    output = tmp_path / "docs" / "catalog.md"
+
+    assert (
+        run(
+            [
+                "render-catalog",
+                "--root",
+                str(tmp_path),
+                "--output",
+                "docs/catalog.md",
+            ]
+        )
+        == 0
+    )
+
+    assert "[`alpha`](../standards/alpha/README.md)" in output.read_text(encoding="utf-8")
+
+
 def test_current_repo_validate_graph_default_allows_pre_retrofit(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

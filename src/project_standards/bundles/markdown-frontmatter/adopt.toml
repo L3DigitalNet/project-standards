@@ -5,6 +5,7 @@ id = "markdown-frontmatter"
 kind = "file"
 owner = true
 source = "project-standards.starter.yml"
+provenance = "package-owned"
 dest = ".project-standards.yml"
 
 [[artifact]]
@@ -13,23 +14,30 @@ owner = true
 # dest is the consumer's caller filename (distinct from the reusable workflow it
 # calls, .../validate-markdown-frontmatter.yml); matches the adopt.md/README prose.
 source = "validate-markdown-frontmatter.caller.yml"
+provenance = "package-owned"
 dest = ".github/workflows/validate-standards.yml"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "skills/markdown-frontmatter/SKILL.md"
+provenance = "source-owned"
+canonical = "standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md"
 dest = ".agents/skills/markdown-frontmatter/SKILL.md"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "skills/markdown-frontmatter/agents/openai.yaml"
+provenance = "source-owned"
+canonical = "standards/markdown-frontmatter/skills/markdown-frontmatter/agents/openai.yaml"
 dest = ".agents/skills/markdown-frontmatter/agents/openai.yaml"
 
 [[artifact]]
 kind = "file"
 owner = true
 source = "skills/markdown-frontmatter/scripts/new-doc-id"
+provenance = "source-owned"
+canonical = "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id"
 dest = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
 mode = "0755"
