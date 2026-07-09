@@ -5,11 +5,11 @@
 ## State at a glance
 
 - **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard; tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is **ahead of `main`** by unreleased v5 work. Full detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–04 done (`8d23a0c`): standards graph loader/validators + `project-standards standards validate-graph`. Next: Step 05 retrofit existing standards with manifests. Detail: `TODO.md`.
+- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–05 done (`82d1978`): every standard bundle now has a graph-validated `standard.toml`. Next: Step 06 dogfood fixtures + generated index/catalog. Detail: `TODO.md`.
 
 ## Active incidents
 
-- _None known._ Step 04 Python/spec/frontmatter gates green; full Prettier/markdownlint still hit pre-existing `docs/future-standards/**` backlog files unrelated to Step 04.
+- _None known._ Step 05 graph/Python/spec/frontmatter gates green; full markdownlint still hits pre-existing `docs/future-standards/**` backlog files unrelated to Step 05.
 
 ## Ops notes
 
