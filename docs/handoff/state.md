@@ -5,7 +5,7 @@
 ## State at a glance
 
 - **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard; tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is **ahead of `main`** by unreleased v5 work. Full detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–05 done (`82d1978`): every standard bundle now has a graph-validated `standard.toml`. Next: Step 06 dogfood fixtures + generated index/catalog. Detail: `TODO.md`.
+- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–05 done through subagent-review fix (`ce11a54`): all standards have graph-validated `standard.toml` with generic provider operations. Next: Step 06 dogfood fixtures/index/catalog + `adopt.toml` linkage. Detail: `TODO.md`.
 
 ## Active incidents
 
