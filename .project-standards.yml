@@ -76,3 +76,5 @@ spec:
     - "docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md"
     # v5 Step 02 design (SPEC-BA01) — the Standard Bundle Authoring meta-standard.
     - "docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md"
+    # Agent Handoff v1 standards-package ingestion (SPEC-DPEY).
+    - "docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md"

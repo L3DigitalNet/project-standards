@@ -6,12 +6,13 @@
 
 - `testing` carries unreleased v5.0.0 work; `main` remains released v4.3.0 (`v4.3.0@74db623`).
 - Release freeze holds until v5.0.0; Steps 00-06 and package ADRs 0017-0021 are complete.
-- Handoff v3.5 migration is applied; layout and fatal shape checks pass.
-- Shape advisories remain only for historical session rows and generated bug index.
+- `SPEC-DPEY` defines the new `agent-handoff` v1 standards package and awaits owner review.
+- Handoff v3.5 migration is applied; fatal checks pass, with advisories only in historical session rows and the generated bug index.
 
 ## Next
 
-- Run SPEC-MT01 Step 07: produce the MCP-readiness report and close blocking traceability gaps.
+- Review `SPEC-DPEY`; after approval, write its implementation plan.
+- SPEC-MT01 Step 07 remains queued: produce the MCP-readiness report and close blocking traceability gaps.
 
 ## Blockers
 
