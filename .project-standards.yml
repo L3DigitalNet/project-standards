@@ -2,7 +2,7 @@
 # Consumed by src/project_standards/validate_frontmatter.py and the CI workflow.
 # This is also the canonical example of the downstream config shape.
 
-standards_version: "v3.0.0"
+standards_version: "v4"
 
 markdown:
   frontmatter:
@@ -15,7 +15,6 @@ markdown:
       - "CHANGELOG.md"
       - "UPGRADING.md"
       - "docs/usage.md"
-      - "standards/**/*.md"
       - "meta/**/*.md"
       # ADRs are managed docs (the ADR standard says never exclude docs/adr/**);
       # this repo dogfoods that by validating its own architecture decisions. The
@@ -23,18 +22,9 @@ markdown:
       # MADR sections on every doc_type: adr file here.
       - "docs/adr/**/*.md"
     exclude:
-      # Bundle templates carry intentional placeholders (YYYY-MM-DD, replace-with-stable-id)
-      # that do not satisfy the schema's date and id patterns.
-      - "standards/**/templates/**"
-      # The standards index is a navigation landing page (like the root README), not a managed doc.
-      - "standards/README.md"
-      # python-coding is an in-development standard, not yet released for adoption (excluded from
-      # `adopt`); its README is a draft, not a managed doc, so it is not frontmatter-validated yet.
-      - "standards/python-coding/**"
-      # project-spec's dogfood example is a spec document, not a canonical-frontmatter one — it
-      # uses the standard's OWN frontmatter schema (spec_id/status/profile/related), validated by
-      # `spec validate` below, not this validator. (Its templates are already covered above.)
-      - "standards/project-spec/examples/**"
+      # Standard bundles are published/consumed content, not this repo's local managed-document corpus.
+      # ADR 0015 keeps standards/** out of markdown-frontmatter so repo-local metadata is never required there.
+      - "standards/**"
       # README.md is the human-facing landing page; GitHub renders frontmatter as a
       # table there. Downstream repos may still include their README — that is their call.
       - "README.md"

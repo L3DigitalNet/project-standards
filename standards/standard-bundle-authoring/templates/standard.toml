@@ -4,7 +4,7 @@
 [standard]
 id = ""                 # kebab-case, matches the directory name
 name = ""               # human-readable
-status = "draft"        # draft | review | active | deprecated | archived
+status = "draft"        # draft | review | active | deprecated | archived | superseded
 summary = ""            # one sentence
 adoption = "none"       # validator | copy-adopt | cli | reference-only | none
 
@@ -26,6 +26,8 @@ conflicts = []          # exceptional; prefer redesign
 
 [resources]
 readme = "README.md"    # bundle-relative paths only (no .., no absolute, no symlink escape)
+# adopt = "adopt.md"    # required when adoption is validator, copy-adopt, or cli
+# skill = "skills/<skill-name>/SKILL.md"  # optional: standard-owned agent skill entrypoint
 
 # [[authority]]         # one block per owned concern; delete if none
 # domain = ""           # e.g. "markdown"
@@ -35,7 +37,7 @@ readme = "README.md"    # bundle-relative paths only (no .., no absolute, no sym
 # mutates = true
 
 # [[providers]]         # one block per generic operation; delete if none
-# operation = ""        # validate | fix | drift-check | id-next | extract
+# operation = ""        # validate | fix | lint | drift-check | id-next | extract | render | scaffold | upgrade | semantic-review
 # kind = ""             # python | command | workflow | documentation-only
 # entrypoint = ""       # import path or command reference (NOT a filesystem path)
 # optional = true

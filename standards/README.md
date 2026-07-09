@@ -29,12 +29,13 @@ standards/<standard-id>/
 ├── README.md      # REQUIRED — the governing standard itself
 ├── standard.toml  # REQUIRED — the machine manifest (see standard-bundle-authoring/)
 ├── adopt.md       # REQUIRED for adoptable standards — how to adopt (internal/draft: a non-adoptable marker instead)
-├── templates/     # OPTIONAL — copy-paste scaffolds (placeholders; not frontmatter-validated)
-├── examples/      # OPTIONAL — validated worked examples (real frontmatter; dogfooded)
-└── resources/     # OPTIONAL — rationale/research notes (validated) — see project-spec/, cli-documentation/
+├── templates/     # OPTIONAL — copy-paste scaffolds, including placeholder frontmatter when teaching it
+├── examples/      # OPTIONAL — worked examples that may carry standard-specific frontmatter
+├── skills/        # OPTIONAL — standard-owned agent skills installed by adoption
+└── resources/     # OPTIONAL — rationale/research notes — see project-spec/, cli-documentation/
 ```
 
-Every standard ships a `README.md` and — per the [Standard Bundle Authoring Standard](standard-bundle-authoring/) — a `standard.toml` machine manifest; the existing bundles are retrofitted with theirs in `SPEC-MT01` Step 05. `adopt.md` is present for every standard **released for adoption** — including CLI-enforced ones like [project-spec/](project-spec/) — while only internal (`adoption = "none"`) standards like [standard-bundle-authoring/](standard-bundle-authoring/) and unreleased-draft documents like [python-coding/](python-coding/) carry an explicit non-adoptable marker instead. Beyond those, a standard may be doc-only (no `templates/` or `examples/`) — see [markdown-tooling/](markdown-tooling/), or [python-tooling/](python-tooling/) which adds a [`build-backend.md`](python-tooling/build-backend.md) appendix; [python-coding/](python-coding/) ships as an **in-development draft** (reference-only, unregistered, excluded from frontmatter validation until released).
+Every standard ships a `README.md` and — per the [Standard Bundle Authoring Standard](standard-bundle-authoring/) — a `standard.toml` machine manifest; the existing bundles are retrofitted with theirs in `SPEC-MT01` Step 05. `adopt.md` is present for every standard **released for adoption** — including CLI-enforced ones like [project-spec/](project-spec/) — while only internal (`adoption = "none"`) standards like [standard-bundle-authoring/](standard-bundle-authoring/) and unreleased-draft documents like [python-coding/](python-coding/) carry an explicit non-adoptable marker instead. Beyond those, a standard may be doc-only (no `templates/` or `examples/`) — see [markdown-tooling/](markdown-tooling/), may ship standard-owned skills — see [markdown-frontmatter/](markdown-frontmatter/), or may add appendices such as [python-tooling/](python-tooling/)'s [`build-backend.md`](python-tooling/build-backend.md). Standard-package docs under `standards/**` are excluded from this repository's local markdown-frontmatter corpus by ADR 0015; [python-coding/](python-coding/) additionally ships as an **in-development draft** (reference-only and unregistered).
 
 ## Not a governed standard
 

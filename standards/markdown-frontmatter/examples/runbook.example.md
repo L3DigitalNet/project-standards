@@ -6,13 +6,14 @@ description: 'Procedure to safely reload netbox after editing its configuration.
 doc_type: 'runbook'
 status: 'active'
 created: '2026-03-10'
-updated: '2026-06-06'
+updated: '2026-07-09'
 reviewed: '2026-06-02'
 owner: 'platform-team'
 consumer: 'user'
 tags:
-  - 'netbox'
-  - 'restart'
+  - 'infrastructure'
+  - 'operations'
+  - 'runbook'
 aliases:
   - 'netbox-restart'
 related:

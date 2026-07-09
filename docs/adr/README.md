@@ -6,24 +6,26 @@ description: 'Index of the project-standards Architecture Decision Records, incl
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: null
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
   - 'adr'
   - 'index'
-  - 'decisions'
+  - 'decision'
 aliases: []
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'standards/markdown-frontmatter/field-values.md'
+  - '.project-standards.yml'
 ---
 
 # Architecture Decision Records
 
 Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR standard](../../standards/adr/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
 
-ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were **accepted** on 2026-07-07 (`status: active`, MADR `accepted`); changing one now requires a superseding ADR. The MCP-server decisions (SPEC-MS01 §8.3) are deferred to a later release and are not yet recorded here.
+ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were **accepted** on 2026-07-07 (`status: active`, MADR `accepted`); changing one now requires a superseding ADR. ADR **0014** records the repository's own Markdown frontmatter field-value policy, ADR **0015** excludes `standards/**` from that local frontmatter scope, and ADR **0016** records Markdown Frontmatter skill ownership. The MCP-server decisions (SPEC-MS01 §8.3) are deferred to a later release and are not yet recorded here.
 
 | ADR | Title | Decision | Status |
 | --- | --- | --- | --- |
@@ -40,3 +42,6 @@ ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-
 | [0011](adr-0011-dogfood-consumer-fixtures-for-standards-composition.md) | Dogfood Consumer Fixtures for Standards Composition | D-011 | active |
 | [0012](adr-0012-mcp-readiness-before-server-implementation.md) | MCP Readiness Before Server Implementation | D-012 | active |
 | [0013](adr-0013-independent-standard-packages-and-relationship-taxonomy.md) | Independent Standard Packages and Relationship Taxonomy | D-013 | active |
+| [0014](adr-0014-markdown-frontmatter-field-value-policy.md) | Markdown Frontmatter Field Value Policy | local | active |
+| [0015](adr-0015-exclude-standards-from-local-frontmatter-scope.md) | Exclude Standards from Local Frontmatter Scope | local | active |
+| [0016](adr-0016-package-markdown-frontmatter-skill-with-standard.md) | Package Markdown Frontmatter Skill with Standard | local | active |

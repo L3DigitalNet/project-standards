@@ -6,15 +6,21 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: null
-owner: ''
+owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
   - 'changelog'
 aliases: []
 related:
   - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-frontmatter/structure.md'
+  - 'standards/markdown-frontmatter/field-values.md'
+  - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
+  - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
+  - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
+  - '.project-standards.yml'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -33,6 +39,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Changed
 
+- **Markdown Frontmatter Standard split into structure and field-value guidance.** The canonical entry point now links to separate structure/schema rules (`structure.md`) and semantic field-value policy (`field-values.md`), plus a new repository-frontmatter ADR template for consumers that need to document governed scope, owner roles, lifecycle triggers, canonical tags, and repo-local extensions, including baseline IT, network, infrastructure, and deployment tags. This repo dogfoods the guidance with ADR 0014 and records ADR 0015 to exclude `standards/**` from the local markdown-frontmatter corpus so published standard content is not required to carry repo-local metadata. No schema fields, enum values, validator behavior, or `schema_version` changed; new documents still use `schema_version: '1.1'`.
+- **Markdown Frontmatter Standard now owns and ships the `markdown-frontmatter` skill.** The standard bundle carries the canonical skill under `standards/markdown-frontmatter/skills/markdown-frontmatter/`; the packaged adopt bundle installs it repo-local at `.agents/skills/markdown-frontmatter/` for Claude Code and Codex CLI, including the executable `new-doc-id` helper. The adopt engine now supports an explicit artifact `mode` for installed scripts so fresh adopters receive executable helper files. ADR 0016 records the ownership decision, and the old `agent-configs` source copy is retired. This is an adoption-surface addition only: no schema fields, enum values, validator behavior, or `schema_version` changed.
 - **ADR Standard — canonical ADR directory moved from `docs/decisions/` to `docs/adr/`.** The ADR bundle (`standards/adr/README.md` directory/index convention and `adopt.md`), the adopt manifest (`project-standards adopt adr` now writes `docs/adr/adr.template.md`, previously `docs/decisions/adr.template.md`), and the "exception ADR" location referenced by the Markdown Tooling, Project Specification, and Python Tooling standards — plus the Markdown Frontmatter `concept`/`runbook` examples and the root README pointer — now all prescribe `docs/adr/`. Backward-compatible for existing consumers: the frontmatter validator never enforced ADR location and `adopt adr` is skip-if-exists, so a repo already keeping ADRs under `docs/decisions/` continues to validate — only the recommended path and the freshly-adopted template destination move. **Contract impact: `adr` `1.0` → `1.1` (recommended-path + adopt-dest change); the Markdown Tooling / Project Specification / Python Tooling references are doc-consistency corrections. Bump `registry.json` + the standards' version metadata as part of the v5.0.0 cut, per `meta/versioning.md`.**
 
 ### Security

@@ -14,7 +14,7 @@
 - **`markdownlint-cli2` pin = `0.22.1`** (bundled by `markdownlint-cli2-action@v23`). Added to `package.json` devDeps + `package-lock.json`.
 - **`proseWrap: "never"`** and every `.markdownlint.json` / `.prettierrc.json` value stay **unchanged** — no config-value edits.
 - **Opt-in/additive only:** never modify `lint-markdown.yml`, `validate-markdown-frontmatter.yml`, or move `@v4`. No existing consumer may newly fail.
-- **Never add frontmatter** to `CLAUDE.md`, `AGENTS.md`, `.claude/**` (repo rule). CHANGELOG/UPGRADING/standards/\*\* are frontmatter-validated (`.project-standards.yml` `include`).
+- **Never add frontmatter** to `CLAUDE.md`, `AGENTS.md`, `.claude/**` (repo rule). Historical note: this plan predated ADR 0015; `standards/**` is now excluded from this repo's local frontmatter validation scope, while `CHANGELOG.md` and configured repo docs remain managed.
 - **Green-gate before finishing (run `npm ci` first so Node behavioral tests don't skip — CR-004):** `npm ci && uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && uv run validate-frontmatter --config .project-standards.yml && uv run pytest tests/coherence -v`, plus `npx prettier@3.8.3 --check .` and `npx markdownlint-cli2 '**/*.md'`.
 - **Commit style:** Conventional Commits; commit after each task. Branch `testing` (do not merge to `main`).
 - **Doc edits are Prettier-gated:** after editing any tracked `.md`, run `npx prettier@3.8.3 --write <file>` before committing (docs under `docs/handoff/**` are Prettier-ignored).

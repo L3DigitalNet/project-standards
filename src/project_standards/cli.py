@@ -92,11 +92,13 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
         entry["source"] = a.source
     else:
         entry["shared"] = a.shared
+    if a.mode is not None:
+        entry["mode"] = f"{a.mode:04o}"
     return entry
 
 
 def _cmd_list(as_json: bool) -> int:
-    """List adoptable standards; fail cleanly on registry/bundle drift before emitting output."""
+    """List standards with packaged adopt artifacts; fail cleanly on drift before output."""
     registry = load_registry()
     _assert_registry_bundle_parity(registry)  # fail cleanly on drift before emitting anything
     entries: list[tuple[str, str | None, Manifest]] = [
@@ -289,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
         help="show what would be written without making any changes",
     )
 
-    p_list = sub.add_parser("list", help="list adoptable standards and their artifacts")
+    p_list = sub.add_parser("list", help="list standards with packaged adopt artifacts")
     p_list.add_argument("--json", action="store_true")
 
     args = parser.parse_args(args_list)

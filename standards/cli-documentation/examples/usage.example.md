@@ -30,7 +30,7 @@ _This is a trimmed worked example of the [CLI Documentation Standard](../README.
 
 ## NAME
 
-`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, and adopt the repository's copy-adopt standards.
+`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, and materialize packaged standard artifacts.
 
 ## SYNOPSIS
 
@@ -117,7 +117,7 @@ Exit status: `0` success · `1` a file write failed · `2` invalid invocation, n
 
 ### `list`
 
-List the adoptable standards and their artifacts. Applies the same registry/bundle parity guard as `adopt` before emitting anything.
+List standards that have packaged adopt artifacts. Applies the same registry/bundle parity guard as `adopt` before emitting anything.
 
 ```text
 project-standards list [--json]

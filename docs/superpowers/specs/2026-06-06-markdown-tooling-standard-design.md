@@ -76,7 +76,7 @@ standards/markdown-tooling/
 └── adopt.md       # adoption runbook (doc_type: runbook)
 ```
 
-Both files carry conformant frontmatter (`doc_type: reference` for README, `runbook` for adopt) because they fall under the validator's `standards/**/*.md` include. The contract-version support (decision 4) lives in `src/`, not the bundle.
+Current policy note (2026-07-09): ADR 0015 supersedes this original assumption. Standard-package docs under `standards/**` no longer carry repo-local frontmatter; intentional frontmatter artifacts live only in templates/examples/skill metadata. The contract-version support (decision 4) lives in `src/`, not the bundle.
 
 ### 2. The spine — formatter + linter + floor, and the published/repo-local asymmetry
 
@@ -179,7 +179,7 @@ The dated Source register requires a live recheck of current official docs. Anti
 
 #### Bundle & docs
 
-- `standards/markdown-tooling/{README.md,adopt.md}` exist, carry conformant frontmatter, and pass `uv run validate-frontmatter --config .project-standards.yml`.
+- `standards/markdown-tooling/{README.md,adopt.md}` exist and pass the current Markdown body/tooling gates. ADR 0015 later removed `standards/**` from this repo's local frontmatter validation scope.
 - `standards/README.md` and root `README.md` both list the new standard (standards table + consuming section).
 - `standards/markdown-frontmatter/README.md` links to the new standard via `related:` and an in-body reference.
 

@@ -1,12 +1,12 @@
 ---
 schema_version: '1.0'
-id: research-index
+id: 'index-rs0001-research-index'
 title: Research Index
-description: Generated index of qdev research reports. Do not edit by hand.
+description: Index of research reports maintained with the research corpus.
 doc_type: index
 status: active
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 tags:
   - research
   - index

@@ -34,6 +34,9 @@ def test_wheel_contains_bundles_and_manifests(tmp_path: Path) -> None:
         "project_standards/bundles/markdown-tooling/format.caller.yml",
         "project_standards/bundles/python-tooling/check.yml",
         "project_standards/bundles/markdown-frontmatter/project-standards.starter.yml",
+        "project_standards/bundles/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md",
+        "project_standards/bundles/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id",
+        "project_standards/bundles/markdown-frontmatter/skills/markdown-frontmatter/agents/openai.yaml",
         "project_standards/bundles/adr/adr.template.md",
         "project_standards/bundles/cli-documentation/adopt.toml",
     ]

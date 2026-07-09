@@ -37,7 +37,7 @@ Console scripts registered by `pyproject.toml`:
 | Command | Module | Purpose |
 | --- | --- | --- |
 | `project-standards adopt STANDARD …` | `cli.py` | Materialize a standard's files into a target repo |
-| `project-standards list [--json]` | `cli.py` | List adoptable standards and their artifacts |
+| `project-standards list [--json]` | `cli.py` | List standards with packaged adopt artifacts |
 | `project-standards validate [FLAGS] [FILE …]` | `cli.py` | Run all three validators (schema + id + references) in one pass |
 | `project-standards fix [FLAGS] [FILE …]` | `cli.py` | Format frontmatter, fix ids, then re-validate (bundled schema only) |
 | `project-standards spec {validate\|lint\|extract\|next\|new\|upgrade} …` | `specs/cli.py` | Nested command group over project specs — see [project-standards spec (nested command group)](#project-standards-spec-nested-command-group) |
@@ -67,7 +67,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 - The file has a frontmatter block (`---…---`) — unless `--no-require-frontmatter` or `required: false` in config.
 - The YAML block is valid and parses without error.
 - Every field matches the JSON Schema (required fields present, types correct, enum values valid, date formats correct, etc.).
-- The `schema_version` matches the configured contract version if `version:` is pinned.
+- The configured `version:` selects the bundled schema; the document's `schema_version` must be allowed by that schema.
 - For ADR docs (`doc_type: adr`), when `require_sections: true`, enforces the three required `##` headings: `## Context and Problem Statement`, `## Considered Options`, `## Decision Outcome` (MADR 4.0).
 
 **Key flags:**
@@ -281,7 +281,7 @@ src/project_standards/
     │   ├── editorconfig
     │   └── vscode-extensions.json
     ├── adr/                   # ADR standard bundle
-    ├── markdown-frontmatter/  # Markdown Frontmatter standard bundle
+    ├── markdown-frontmatter/  # Markdown Frontmatter bundle + repo-local skill artifacts
     ├── markdown-tooling/      # Markdown Tooling standard bundle
     ├── python-tooling/        # Python Tooling standard bundle
     └── cli-documentation/     # CLI Documentation standard bundle
@@ -295,7 +295,7 @@ The engine follows a **plan-then-execute** model:
 
 1. **`build_plan(standard_ids)`** — reads each bundle's `adopt.toml`, resolves source paths, deduplicates shared artifacts, and raises `UsageError` on unknown standards or destination collisions between owned artifacts.
 
-2. **`execute_plan(plan, dest_root, …)`** — classifies each action (create / skip / overwrite / symlink-skip), substitutes `{{ref}}` in workflow-caller files with the installed package's major ref (e.g. `v2`), and writes atomically via a temp-file + `os.replace`. Fragments are never written — they are collected in `Report.fragments` and printed so the operator can paste them in manually.
+2. **`execute_plan(plan, dest_root, …)`** — classifies each action (create / skip / overwrite / symlink-skip), substitutes `{{ref}}` in workflow-caller files with the installed package's major ref (e.g. `v2`), applies any explicit artifact `mode`, and writes atomically via a temp-file + `os.replace`. Fragments are never written — they are collected in `Report.fragments` and printed so the operator can paste them in manually.
 
 ### Artifact kinds
 
@@ -308,6 +308,8 @@ The engine follows a **plan-then-execute** model:
 ### Ownership and deduplication
 
 Each artifact declares `owner = true/false`. Shared artifacts (e.g. `.editorconfig`) reference a path under `bundles/_shared/` via `shared =` instead of `source =`. When two standards share the same source file, `build_plan` collapses them to one action. Two _different_ sources targeting the same destination is a manifest authoring bug and raises `UsageError` (exit 2).
+
+Written artifacts may declare `mode = "0755"` (octal string) when the installed file must be executable, such as a helper script. Omit `mode` for normal documents and configs; new files then use a umask-respecting `0666` baseline, and overwrites preserve the existing target mode.
 
 ---
 

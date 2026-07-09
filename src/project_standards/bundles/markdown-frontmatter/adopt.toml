@@ -14,3 +14,22 @@ owner = true
 # calls, .../validate-markdown-frontmatter.yml); matches the adopt.md/README prose.
 source = "validate-markdown-frontmatter.caller.yml"
 dest = ".github/workflows/validate-standards.yml"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "skills/markdown-frontmatter/SKILL.md"
+dest = ".agents/skills/markdown-frontmatter/SKILL.md"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "skills/markdown-frontmatter/agents/openai.yaml"
+dest = ".agents/skills/markdown-frontmatter/agents/openai.yaml"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "skills/markdown-frontmatter/scripts/new-doc-id"
+dest = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
+mode = "0755"

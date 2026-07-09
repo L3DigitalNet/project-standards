@@ -1,40 +1,10 @@
----
-schema_version: '1.1'
-id: 'runbook-s87fvu-standards-adoption-compliance-procedure'
-title: 'Standards Adoption & Compliance Procedure'
-description: 'Step-by-step procedure for an agent to adopt the project-standards Markdown Frontmatter Standard in a consuming repository and bring it into compliance.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-06-03'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'mix'
-tags:
-  - 'adoption'
-  - 'onboarding'
-  - 'compliance'
-  - 'frontmatter'
-aliases:
-  - 'Adoption Procedure'
-  - 'Onboarding Procedure'
-related:
-  - 'standards/markdown-frontmatter/README.md'
-  - 'meta/versioning.md'
-  - 'README.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Standards Adoption & Compliance Procedure
 
 > **You are an agent adopting this standard in another ("consuming") repository.** Follow this procedure end to end. It is self-contained: everything you need to make the changes is here. Where you want the authoritative source, the links in [§8](#8-authoritative-references-pinned) point at the pinned release.
 >
-> **Target release:** `project-standards` **v4.0.0** — pin the moving major tag **`@v4`** (it receives only backward-compatible updates; see [§7](#7-versioning--staying-in-compliance)). **Owner repo:** `github.com/L3DigitalNet/project-standards`.
+> **Release note:** this source branch is accruing unreleased **v5.0.0** changes under the repository's release freeze. Snippets remain pinned to the current package major (`@v4`) until the release checklist bumps them. The repo-local skill install described here ships with v5.0.0 and is **not** present in released `@v4.3.0`. **Owner repo:** `github.com/L3DigitalNet/project-standards`.
 >
-> **Quick path (v3+).** The packaged CLI scaffolds this in one step — `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' project-standards adopt markdown-frontmatter` writes a starter `.project-standards.yml` (only when absent) and the validator workflow caller, both pinned to the current major. The detailed procedure below is the manual reference and remains the source of truth for the frontmatter rules.
+> **Quick path.** The packaged CLI scaffolds this in one step — `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' project-standards adopt markdown-frontmatter` writes a starter `.project-standards.yml` (only when absent) and the validator workflow caller, both pinned to the current major. Starting with v5.0.0, the same adoption also writes the repo-local Markdown Frontmatter skill under `.agents/skills/markdown-frontmatter`. The detailed procedure below is the manual reference and remains the source of truth for the frontmatter rules.
 
 ## 0. What you are doing — definition of done
 
@@ -42,10 +12,11 @@ A repository is **compliant** when:
 
 1. It has a `.project-standards.yml` config declaring which Markdown files are managed.
 2. It has a CI workflow that calls the reusable validator, pinned to `@v4` **for both the workflow and the validator/schema**.
-3. Every **managed** Markdown file carries conformant frontmatter (this section's rules), and every **excluded** file (templates, agent-instruction files) carries none.
-4. `uv run project-standards validate --config .project-standards.yml` exits `0` locally and in CI — this runs all three validators the installed workflow runs (schema, id format, references; see [§5](#5-validate-locally)).
+3. It has the standard-owned skill installed at `.agents/skills/markdown-frontmatter` so Claude Code and Codex CLI use the same operating layer. This is a v5.0.0+ adoption requirement.
+4. Every **managed** Markdown file carries conformant frontmatter (this section's rules), and every **excluded** file (templates, agent-instruction files, agent-skill files) carries no managed-document frontmatter.
+5. `uv run project-standards validate --config .project-standards.yml` exits `0` locally and in CI — this runs all three validators the installed workflow runs (schema, id format, references; see [§5](#5-validate-locally)).
 
-Do not modify any file under `.claude/`, `.agents/`, `.codex/`, or the repo's `CLAUDE.md` / `AGENTS.md` — see [§4.1](#41-which-files-are-managed). Do not invent new top-level frontmatter fields — see [§4.4](#44-controlled-values--formatting-rules).
+Do not modify any file under `.claude/`, `.codex/`, or the repo's `CLAUDE.md` / `AGENTS.md`. The only standard-owned `.agents/` write is the installed skill at `.agents/skills/markdown-frontmatter`; do not add managed-document frontmatter to it. See [§4.1](#41-which-files-are-managed). Do not invent new top-level frontmatter fields — see [§4.4](#44-controlled-values--formatting-rules).
 
 ## 1. Prerequisites
 
@@ -63,7 +34,7 @@ project-standards.starter.yml — the file `adopt markdown-frontmatter` writes a
 prettier-ignore keeps Prettier's embedded formatting from rewriting its quote style. -->
 <!-- prettier-ignore -->
 ```yaml
-standards_version: "v3"
+standards_version: "v4"
 
 markdown:
   frontmatter:
@@ -99,7 +70,7 @@ markdown:
 **How to choose `include` / `exclude` for this repo:**
 
 - `include` the directories that hold real, maintained documentation. Start narrow (`README.md`, `docs/**/*.md`) and widen later.
-- Always `exclude` agent-instruction files (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) — adding frontmatter to them is forbidden.
+- Always `exclude` agent-instruction and agent-skill files (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) — adding managed-document frontmatter to them is forbidden. The Markdown Frontmatter skill installs under `.agents/**`, so this exclusion is required.
 - `exclude` template files with intentional placeholders (the starter's `**/*.template.md` covers the ADR template — keep it), generated output, vendored/third-party Markdown, and tool-owned trees your repo carries (e.g. `.obsidian/**`).
 - Cross-file reference checks are opt-in: uncomment the `references:` block and set `enabled: true` (see [§3](#3-step-2--add-the-ci-workflow)).
 - The root `README.md` is a managed document by default, but you may `exclude` it if the repo prefers no frontmatter table on its landing page.
@@ -163,7 +134,7 @@ The standards repo ships six pre-commit hooks that consumers can run locally as 
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v3 # pin to the same major as your CI workflow
+    rev: v4 # pin to the same major as your CI workflow
     hooks:
       - id: format-frontmatter-fix # auto-formats frontmatter (writes)
       # - id: format-frontmatter-check # read-only alternative
@@ -174,12 +145,22 @@ repos:
 
 `validate-references` runs over the whole repo (`pass_filenames: false`) and is a no-op until you set `references.enabled: true` in your `.project-standards.yml`. All hooks require **Python 3.14+** to be available to pre-commit (matching the `requires-python` of the package).
 
+### Also — repo-local agent skill
+
+The Markdown Frontmatter skill is owned by this standard and must be installed in each adopting repository at `.agents/skills/markdown-frontmatter`. Starting with v5.0.0, the packaged `project-standards adopt markdown-frontmatter` command writes:
+
+- `.agents/skills/markdown-frontmatter/SKILL.md`
+- `.agents/skills/markdown-frontmatter/agents/openai.yaml`
+- `.agents/skills/markdown-frontmatter/scripts/new-doc-id`
+
+If adopting manually, copy that directory from the pinned standard release. Do not install the canonical skill globally as the source of truth, and do not move it to `.claude/` or `.codex/`; the `.agents/` path is the shared repo-local discovery path for both Claude Code and Codex CLI. The starter config excludes `.agents/**`, so the skill's own skill metadata is never treated as managed document frontmatter.
+
 ## 4. Step 3 — bring documents into compliance
 
 ### 4.1 Which files are managed
 
 - **Managed** = matches `include` and not `exclude`. Each must carry one conformant frontmatter block (the rules below).
-- **Never carries frontmatter:** `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. These are harness configuration. Exclude them; do not add metadata.
+- **Never carries managed-document frontmatter:** `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. These are harness configuration or agent-skill files. Exclude them; do not add document metadata. The installed `.agents/skills/markdown-frontmatter/SKILL.md` has skill metadata, not this standard's document frontmatter.
 
 ### 4.2 Required fields (the eleven)
 
@@ -211,8 +192,8 @@ For most documents, add these too. Place them in canonical order (see [§4.4](#4
 
 ```yaml
 reviewed: null # date string or null — last correctness review
-owner: '' # person, team, repo, or role
-consumer: 'unknown' # intended reader: user | agent | mix | unknown
+owner: 'repo-maintainers' # person, team, repo, or role
+consumer: 'mix' # intended reader: user | agent | mix | unknown
 source: [] # array of sources (URLs/paths)
 confidence: 'unknown' # high | medium | low | unknown
 visibility: 'internal' # private | internal | public
@@ -273,8 +254,9 @@ reviewed: '2026-06-03'
 owner: 'platform-team'
 consumer: 'user'
 tags:
-  - 'netbox'
-  - 'restart'
+  - 'infrastructure'
+  - 'operations'
+  - 'runbook'
 aliases:
   - 'netbox-restart'
 related:
@@ -313,7 +295,7 @@ This runs all three validators — schema (`validate-frontmatter`), id format (`
 
 **Auto-fix mode:** run `project-standards fix` (same flags) to format frontmatter, regenerate non-compliant ids, and then re-validate. This reduces the manual fixup burden when adopting the standard on an existing codebase. Skips entirely under a custom schema.
 
-**Exit codes:** `0` = all matched files valid (or none matched); `1` = one or more documents failed (each error then a summary prints to stderr); `2` = configuration or schema error (config/schema missing or invalid). Useful flags: `--glob PATTERN` to add files, positional `FILE` args to check specific files, `--quiet` to suppress success output, `--no-require-frontmatter` to not fail files lacking a block.
+**Exit codes:** `0` = all matched files valid (or none matched); `1` = one or more documents failed (each error then a summary prints to stderr); `2` = configuration or schema error (config/schema missing or invalid). Useful flags: `--glob PATTERN` to validate a replacement glob instead of the configured include list, positional `FILE` args to check specific files, `--quiet` to suppress success output, `--no-require-frontmatter` to not fail files lacking a block.
 
 Compliance is reached when this exits `0`.
 
@@ -321,8 +303,9 @@ Compliance is reached when this exits `0`.
 
 - [ ] `.project-standards.yml` exists at the repo root with `schema: 'markdown-frontmatter'`, `required: true`, and accurate `include`/`exclude`.
 - [ ] `.github/workflows/validate-standards.yml` calls the reusable workflow with **both** `@v4` (on `uses:`) and `standards-ref: 'v4'`.
+- [ ] `.agents/skills/markdown-frontmatter/` exists and contains the standard-owned `SKILL.md`, `agents/openai.yaml`, and `scripts/new-doc-id` (v5.0.0+ adoption).
 - [ ] Every managed Markdown file has a conformant frontmatter block (required fields present, controlled values valid, strings/dates quoted, no unknown top-level keys, canonical key order).
-- [ ] No agent-instruction file (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) carries frontmatter, and all are excluded.
+- [ ] No agent-instruction or agent-skill file (`CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`) carries managed-document frontmatter, and all are excluded.
 - [ ] Links in frontmatter use repo-root-relative paths (convention).
 - [ ] `project-standards validate --config .project-standards.yml` exits `0` locally.
 - [ ] CI runs the workflow on PRs and `main`.
@@ -335,9 +318,10 @@ Compliance is reached when this exits `0`.
 
 ## 8. Authoritative references (pinned)
 
-The governing documents at the current release (replace `v4` with `v4.0.0` for an immutable read):
+The governing documents at the current release (replace `v4` with `v4.0.0` for an immutable read). The standard-owned skill is staged in this source branch and becomes a pinned release reference at v5.0.0; released `@v4` has no skill artifact.
 
 - **The standard** — [`standards/markdown-frontmatter/README.md@v4`](https://github.com/L3DigitalNet/project-standards/blob/v4/standards/markdown-frontmatter/README.md)
+- **The standard-owned skill** (v5.0.0+) — [`standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md`](skills/markdown-frontmatter/SKILL.md)
 - **The JSON Schema** (authoritative contract) — [`src/project_standards/schemas/markdown-frontmatter.schema.json@v4`](https://github.com/L3DigitalNet/project-standards/blob/v4/src/project_standards/schemas/markdown-frontmatter.schema.json)
 - **Versioning Standard** — [`meta/versioning.md@v4`](https://github.com/L3DigitalNet/project-standards/blob/v4/meta/versioning.md)
 - **ADR Standard** (if adopting ADRs) — [`standards/adr/README.md@v4`](https://github.com/L3DigitalNet/project-standards/blob/v4/standards/adr/README.md)

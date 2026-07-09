@@ -1009,6 +1009,19 @@ EXAMPLE_FILES = sorted(
 )
 
 
+def test_standard_docs_do_not_ship_repo_local_frontmatter() -> None:
+    def intentional_frontmatter_artifact(path: Path) -> bool:
+        return any(part in {"examples", "templates", "skills"} for part in path.parts)
+
+    offenders = [
+        str(path.relative_to(_REPO_ROOT))
+        for path in _REPO_ROOT.glob("standards/**/*.md")
+        if not intentional_frontmatter_artifact(path)
+        and path.read_text(encoding="utf-8").startswith("---\n")
+    ]
+    assert offenders == []
+
+
 def test_examples_directory_is_not_empty() -> None:
     # Guard the parametrization below: an empty glob would make the dogfood test
     # vacuously pass, hiding a missing examples/ directory.

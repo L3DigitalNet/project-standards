@@ -1,30 +1,3 @@
----
-schema_version: '1.1'
-id: 'runbook-5ax5n4-adopt-the-adr-standard'
-title: 'Adopt the ADR Standard'
-description: 'How to adopt the ADR Standard in a consuming repository; it rides the frontmatter validator.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-06-06'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'adoption'
-  - 'adr'
-  - 'runbook'
-aliases: []
-related:
-  - 'standards/adr/README.md'
-  - 'standards/adr/examples/adr.example.md'
-  - 'standards/markdown-frontmatter/adopt.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Adopt the ADR Standard
 
 ADRs are **managed Markdown documents**: they carry full frontmatter and are validated by the same tooling as every other doc. There is **no separate ADR workflow**.

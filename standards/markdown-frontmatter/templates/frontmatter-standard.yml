@@ -8,8 +8,8 @@ status: "draft"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 reviewed: null
-owner: ""
-consumer: "unknown"
+owner: "repo-maintainers"
+consumer: "mix"
 tags: []
 aliases: []
 related: []

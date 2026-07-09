@@ -8,7 +8,7 @@ summary = "Canonical metadata, ID, and reference validation for managed Markdown
 adoption = "validator"
 
 [versions]
-supported = ["1.1"]
+supported = ["1.0", "1.1"]
 latest = "1.1"
 
 [config]
@@ -31,8 +31,11 @@ conflicts = []
 [resources]
 readme = "README.md"
 adopt = "adopt.md"
+structure = "structure.md"
+field_values = "field-values.md"
 template_standard = "templates/frontmatter-standard.yml"
 template_minimal = "templates/frontmatter-minimal.yml"
+template_repository_frontmatter_adr = "templates/repository-frontmatter-adr.md"
 template_note = "templates/note.md"
 template_concept = "templates/concept.md"
 template_research = "templates/research.md"
@@ -42,6 +45,9 @@ template_repo_pages = "templates/repo-pages/README.directory.template.md"
 example_note = "examples/note.example.md"
 example_concept = "examples/concept.example.md"
 example_runbook = "examples/runbook.example.md"
+skill = "skills/markdown-frontmatter/SKILL.md"
+skill_openai = "skills/markdown-frontmatter/agents/openai.yaml"
+skill_new_doc_id = "skills/markdown-frontmatter/scripts/new-doc-id"
 
 [[authority]]
 domain = "markdown"

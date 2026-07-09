@@ -1,28 +1,3 @@
----
-schema_version: '1.1'
-id: 'runbook-b07x48-adopt-the-python-tooling-ssot-standard'
-title: 'Adopt the Python Tooling SSOT Standard'
-description: 'How to adopt the Python Tooling SSOT Standard: copy the in-doc scaffolds and run the verification gate; there is no reusable workflow.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-06-06'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'adoption'
-  - 'python'
-  - 'tooling'
-aliases: []
-related:
-  - 'standards/python-tooling/README.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Adopt the Python Tooling SSOT Standard
 
 Unlike the Markdown standards, this one is **not** enforced by the shared validator and ships **no reusable workflow**. Adoption is copy-the-scaffolds plus run-the-gate. The scaffolds live inline in [the standard](README.md).

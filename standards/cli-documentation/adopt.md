@@ -1,28 +1,3 @@
----
-schema_version: '1.1'
-id: 'runbook-m2x8fp-adopt-cli-documentation'
-title: 'Adopt the CLI Documentation Standard'
-description: 'How to adopt the CLI Documentation Standard: choose a profile, materialize the usage-doc and CI scaffolds, fill in the option contract, and run the authoring checklist.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-07-07'
-updated: '2026-07-07'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'cli'
-  - 'adoption'
-  - 'documentation'
-aliases: []
-related:
-  - 'standards/cli-documentation/README.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Adopt the CLI Documentation Standard
 
 This procedure walks an adopter from profile selection to a passing CI drift check. It assumes the standard itself ([`README.md`](README.md)) has already been read for the rules; this document is the runbook for applying them.

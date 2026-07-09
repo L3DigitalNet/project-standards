@@ -282,8 +282,13 @@ class StandardManifest(_Table):
 
     @model_validator(mode="after")
     def _adopt_conditional(self) -> StandardManifest:
-        if self.standard.adoption is AdoptionMode.NONE and "adopt" in self.resources.as_dict():
-            msg = 'adoption = "none" must not declare an `adopt` resource'
+        if (
+            self.standard.adoption in {AdoptionMode.NONE, AdoptionMode.REFERENCE_ONLY}
+            and "adopt" in self.resources.as_dict()
+        ):
+            msg = (
+                f'adoption = "{self.standard.adoption.value}" must not declare an `adopt` resource'
+            )
             raise ValueError(msg)
         return self
 

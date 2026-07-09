@@ -1,29 +1,3 @@
----
-schema_version: '1.1'
-id: 'runbook-uw0j7m-adopt-the-markdown-tooling-standard'
-title: 'Adopt the Markdown Tooling Standard'
-description: 'How to adopt the Markdown Tooling Standard: seed the markdownlint rule set and EditorConfig, copy the Prettier config, and wire the reusable lint workflow.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-06-07'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'adoption'
-  - 'markdown'
-  - 'linting'
-  - 'formatting'
-aliases: []
-related:
-  - 'standards/markdown-tooling/README.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Adopt the Markdown Tooling Standard
 
 The **linter** half ships a reusable workflow and a seedable rule set; the **formatter** half (Prettier) now also ships a reusable opt-in workflow alongside its copy-adopt config (DEC-10). The contract version is a validated label, not a body gate.

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import re
+import stat
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -37,6 +39,15 @@ _DOGFOOD = {
     "adr/adr.template.md": "standards/adr/templates/adr.md",
     "cli-documentation/usage-doc.md": "standards/cli-documentation/templates/usage-doc.md",
     "cli-documentation/cli-docs-check.yml": "standards/cli-documentation/templates/cli-docs-check.yml",
+    "markdown-frontmatter/skills/markdown-frontmatter/SKILL.md": (
+        "standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md"
+    ),
+    "markdown-frontmatter/skills/markdown-frontmatter/agents/openai.yaml": (
+        "standards/markdown-frontmatter/skills/markdown-frontmatter/agents/openai.yaml"
+    ),
+    "markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id": (
+        "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id"
+    ),
 }
 
 
@@ -118,10 +129,10 @@ def test_standard_doc_pyproject_block_matches_bundle_fragment() -> None:
 
 
 def test_frontmatter_adopt_doc_fences_match_bundle_artifacts() -> None:
-    # adopt.md §2/§3 instruct manual adopters to create the same two files the CLI
-    # delivers (.project-standards.yml, validate-standards.yml) — one artifact, two
-    # representations, byte-locked like the python-tooling §15 block. The caller is
-    # compared at the CURRENT major so a v4 bump forces the doc to follow.
+    # adopt.md §2/§3 instruct manual adopters to create the same config/workflow
+    # artifacts the CLI delivers (.project-standards.yml, validate-standards.yml) —
+    # one artifact, two representations, byte-locked like the python-tooling §15 block.
+    # The caller is compared at the CURRENT major so a v4 bump forces the doc to follow.
     doc = (_REPO / "standards" / "markdown-frontmatter" / "adopt.md").read_text()
     fences = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
     starter = (_BUNDLES / "markdown-frontmatter" / "project-standards.starter.yml").read_text()
@@ -206,6 +217,43 @@ def test_starter_config_is_generic_consumer_scope(tmp_path: Path) -> None:
     assert "README.md" in include and "docs/**/*.md" in include
     assert not any("standards/**" in p or "meta/**" in p for p in include)
     assert "**/*.template.md" in exclude  # ADR-template safety
+
+
+def test_adopt_markdown_frontmatter_delivers_repo_local_skill(tmp_path: Path) -> None:
+    from project_standards.cli import main
+
+    main(["adopt", "markdown-frontmatter", "--dest", str(tmp_path)])
+    skill_root = tmp_path / ".agents" / "skills" / "markdown-frontmatter"
+    assert (skill_root / "SKILL.md").is_file()
+    assert (skill_root / "agents" / "openai.yaml").is_file()
+    script = skill_root / "scripts" / "new-doc-id"
+    assert script.is_file()
+    assert stat.S_IMODE(script.stat().st_mode) & stat.S_IXUSR
+    result = subprocess.run(
+        [
+            str(script),
+            "--doc-type",
+            "runbook",
+            "--status",
+            "draft",
+            "Router Upgrade",
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert re.fullmatch(r"runbook-[0-9a-z]{6}-router-upgrade", result.stdout.strip())
+
+
+def test_markdown_frontmatter_skill_script_mode_is_manifest_explicit() -> None:
+    manifest = load_manifest("markdown-frontmatter")
+    script = next(
+        a
+        for a in manifest.artifacts
+        if a.dest == ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
+    )
+    assert script.mode == 0o755
 
 
 def test_agent_stub_is_generic_no_handoff_content(tmp_path: Path) -> None:

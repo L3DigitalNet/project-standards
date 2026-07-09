@@ -6,7 +6,7 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -28,7 +28,7 @@ license: null
 
 ## NAME
 
-`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, and adopt the repository's copy-adopt standards.
+`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, and materialize packaged standard artifacts.
 
 ## SYNOPSIS
 
@@ -39,20 +39,21 @@ project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
+project-standards standards <verb> [<args>...]
 project-standards {--help | --version}
 ```
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes ten leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes eleven leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), the `standards validate-graph` manifest-graph operation, and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 10 leaf commands plus the `spec` group overview, documented on this single page because the two-group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 11 leaf commands plus the `spec` and `standards` group overviews, documented on this single page because the two-group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
-`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, and `spec` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
+`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, `spec`, and `standards` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
 
 ## OPTIONS
 
@@ -120,7 +121,7 @@ Exit status: `0` success · `1` a file write failed · `2` invalid invocation, n
 
 ### `list`
 
-List the adoptable standards and their artifacts. Applies the same registry/bundle parity guard as `adopt` before emitting anything.
+List standards that have packaged adopt artifacts. Applies the same registry/bundle parity guard as `adopt` before emitting anything.
 
 ```text
 project-standards list [--json]
@@ -131,6 +132,32 @@ Options:
 - **`--json`** — Emit the standards, their contract versions, and their artifacts as a JSON array instead of the default human-readable listing. Default: off (text).
 
 Exit status: `0` success · `2` registry/bundle drift.
+
+### `standards`
+
+Command group: `validate-graph` over standard manifests (`standards/**/standard.toml`). Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
+
+```text
+project-standards standards {validate-graph} [<args>...]
+```
+
+There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
+
+### `standards validate-graph`
+
+Validate the standard-manifest graph: resource containment, config namespace ownership, provider shape, authority conflicts, relationships, capabilities, and hidden-dependency rules.
+
+```text
+project-standards standards validate-graph [--root <path>] [--json] [--require-all-manifests]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root to inspect. Default: the current directory.
+- **`--json`** — Emit `{ok, findings}` as JSON instead of text. Default: off.
+- **`--require-all-manifests`** — Fail when any `standards/<id>/` directory lacks a `standard.toml`. Default: off, so partial retrofit checks can still run.
+
+Exit status: `0` graph clean · `1` graph findings present · `2` invalid invocation or graph-load error.
 
 ### `spec`
 
@@ -311,7 +338,7 @@ uv run project-standards adopt markdown-tooling --dry-run
 uv run project-standards adopt markdown-frontmatter python-tooling --dest ../my-repo
 ```
 
-### List adoptable standards as JSON
+### List standards with packaged adopt artifacts as JSON
 
 ```bash
 uv run project-standards list --json
@@ -467,7 +494,7 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## NOTES
 
-- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `validate`, `fix`, and `spec` are early-dispatched before the top-level parser is built, so a trailing `--version` is handled by the dispatched target: after `validate` it is forwarded to the validators (which print a version and exit 0), while after `adopt` it is an argparse usage error and after `spec` it is an unknown verb — both exit 2. Put `--version` first.
+- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `validate`, `fix`, `spec`, and `standards` are early-dispatched before the top-level parser is built, so a trailing `--version` is handled by the dispatched target: after `validate` it is forwarded to the validators (which print a version and exit 0), while after `adopt` it is an argparse usage error and after `spec` or `standards` it is an unknown verb — both exit 2. Put `--version` first.
 - **`validate-references` scope.** The cross-file pass is repo-wide by design; scoping it to a subset would let a duplicate id or broken reference in an unselected document slip through. `<file>` / `--glob` are therefore forwarded but ignored by this stage even though `validate-frontmatter` and `validate-id` honor them.
 - **Custom schemas disable id and format work.** When a custom (non-bundled) schema is selected, `validate-id`, `format-frontmatter`, `fix`, and `validate-references` skip their bundled-convention checks and exit 0 with a note — a custom-schema repository owns those conventions itself.
 - **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--help`/`-h` and `--version` as flags (intercepted before any positional is read); every other leading token is read as the first positional (a file path).

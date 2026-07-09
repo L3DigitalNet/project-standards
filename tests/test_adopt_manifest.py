@@ -35,6 +35,14 @@ def test_load_manifest_parses_artifacts() -> None:
     assert any(a.shared == "_shared/editorconfig" for a in shared)
 
 
+def test_load_manifest_parses_octal_artifact_mode(tmp_path: Path) -> None:
+    _manifest(
+        tmp_path,
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nmode = "0755"\n',
+    )
+    assert load_manifest("x", bundles_dir=tmp_path).artifacts[0].mode == 0o755
+
+
 def test_load_manifest_unknown_raises_manifesterror() -> None:
     with pytest.raises(ManifestError):
         load_manifest("does-not-exist")
@@ -127,6 +135,18 @@ def test_load_manifest_non_table_payload_raises(
         (
             '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\n',
             "needs a dest",
+        ),
+        (
+            '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nmode = "888"\n',
+            "must be octal",
+        ),
+        (
+            '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nmode = 755\n',
+            "must be an octal string or TOML integer",
+        ),
+        (
+            '[standard]\nid = "x"\n\n[[artifact]]\nkind = "fragment"\nsource = "s"\ntarget = "pyproject.toml"\nmode = "0755"\n',
+            "cannot set mode",
         ),
     ],
 )

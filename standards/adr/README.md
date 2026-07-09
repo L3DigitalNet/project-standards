@@ -1,35 +1,3 @@
----
-schema_version: '1.1'
-id: 'reference-ed2nmw-architecture-decision-record-adr-standard'
-title: 'Architecture Decision Record (ADR) Standard'
-description: 'How to write Architecture Decision Records using the MADR format with canonical frontmatter.'
-doc_type: 'reference'
-status: 'active'
-created: '2026-06-02'
-updated: '2026-07-01'
-reviewed: null
-owner: ''
-consumer: 'mix'
-tags:
-  - 'adr'
-  - 'decisions'
-  - 'madr'
-  - 'standard'
-aliases:
-  - 'madr-standard'
-related:
-  - 'standards/markdown-frontmatter/README.md'
-  - 'standards/adr/adopt.md'
-  - 'standards/adr/templates/adr.md'
-  - 'standards/adr/examples/adr.example.md'
-source:
-  - 'https://adr.github.io/madr/'
-  - 'https://adr.github.io/'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # Architecture Decision Record (ADR) Standard
 
 - **Status:** Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions))
@@ -93,7 +61,7 @@ status: 'active'
 created: '2026-06-02'
 updated: '2026-06-02'
 reviewed: null
-owner: ''
+owner: 'repo-maintainers'
 tags: []
 aliases: []
 related: []

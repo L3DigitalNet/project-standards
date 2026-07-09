@@ -1,31 +1,3 @@
----
-schema_version: '1.1'
-id: 'reference-c35n6z-project-specification-standard'
-title: 'Project Specification Standard'
-description: 'Tiered format, stable IDs, and CLI tooling for machine-checkable project specifications.'
-doc_type: 'reference'
-status: 'active'
-created: '2026-07-04'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'mix'
-tags:
-  - 'project-spec'
-  - 'specification'
-  - 'standard'
-aliases:
-  - 'project-spec-standard'
-related:
-  - 'standards/project-spec/adopt.md'
-  - 'standards/project-spec/resources/tooling-notes.md'
-  - 'standards/project-spec/examples/spec.example.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Project Specification Standard
 
 - **Status:** Active — registered for adoption; validated via `project-standards spec validate`. No selectable contract version yet (unlike Frontmatter/ADR) — the templates and tooling always track the installed `project-standards` release; see [`meta/versioning.md`](../../meta/versioning.md).
@@ -188,7 +160,7 @@ Reference prefixes are exempt from the Appendix-A, width, and tier checks. A pre
 
 ## 6. Adoption
 
-Unlike the copy-adopt standards ([Markdown Frontmatter](../markdown-frontmatter/README.md), [Python Tooling SSOT](../python-tooling/README.md)), there are no files to seed into a consuming repository first: installing `project-standards` gives every command in [§5](#5-tooling) directly, and `new` scaffolds straight from the package's bundled templates. The only thing a consumer adds is a `spec:` block in `.project-standards.yml` and, optionally, a CI workflow calling the bundled reusable validator. The full procedure — prerequisites, choosing a template, wiring the config, and CI/local validation — is in [`adopt.md`](adopt.md); it is not repeated here.
+Unlike artifact-bundled standards such as [Markdown Frontmatter](../markdown-frontmatter/README.md) and [Python Tooling SSOT](../python-tooling/README.md), there are no files to seed into a consuming repository first: installing `project-standards` gives every command in [§5](#5-tooling) directly, and `new` scaffolds straight from the package's bundled templates. The only thing a consumer adds is a `spec:` block in `.project-standards.yml` and, optionally, a CI workflow calling the bundled reusable validator. The full procedure — prerequisites, choosing a template, wiring the config, and CI/local validation — is in [`adopt.md`](adopt.md); it is not repeated here.
 
 ---
 

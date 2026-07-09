@@ -36,7 +36,7 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
 project-standards/
 ├── standards/                 # governing standards — one self-contained bundle per standard
 │   ├── README.md              #   index + bundle anatomy
-│   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/
+│   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/ + skills/
 │   ├── adr/                   #   standard + adopt + templates/ + examples/
 │   ├── python-tooling/        #   standard + adopt (doc-only)
 │   ├── markdown-tooling/      #   standard + adopt (doc-only)
@@ -63,10 +63,12 @@ The standards this repository defines. Each lives in its own bundle under [`stan
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
 - **Standard:** [`standards/markdown-frontmatter/README.md`](standards/markdown-frontmatter/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/field-values.md)
 - **Schema:** [`src/project_standards/schemas/markdown-frontmatter.schema.json`](src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
 - **Templates:** [`templates/`](standards/markdown-frontmatter/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [standard](standards/markdown-frontmatter/README.md) gives the full field definitions and the controlled values for `doc_type`, `status`, `confidence`, `visibility`, and `consumer`.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -94,7 +96,7 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 
 ### Project Specification Standard
 
-Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Unlike the copy-adopt standards, there is nothing to seed into a consumer repo besides a `spec:` config block — installing `project-standards` gives the full tool surface directly, and `new` scaffolds from the package's bundled templates.
+Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Unlike standards that seed artifacts into a consumer repo, there is nothing to copy besides a `spec:` config block — installing `project-standards` gives the full tool surface directly, and `new` scaffolds from the package's bundled templates.
 
 - **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
 - **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
@@ -108,13 +110,13 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 ### Python Coding Standard (draft)
 
-Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), excluded from frontmatter validation, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
+Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), and not adoptable via the CLI. It ships in the repository for review and early reference until released.
 
 - **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` contract version, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The machine schema and graph validator that enforce it are deferred to `SPEC-MT01` Steps 03–04.
+The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` contract version, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
 
 - **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
 
@@ -126,10 +128,11 @@ How a repository adopts each standard. The two **Markdown frontmatter standards*
 
 ### Markdown standards (Frontmatter + ADR)
 
-Add two files, pinned to a major tag:
+Add two files pinned to a major tag; starting with v5.0.0, Frontmatter adoption also installs the repo-local skill:
 
 1. **`.project-standards.yml`** at the repo root — declares which Markdown files are managed.
 2. **`.github/workflows/validate-standards.yml`** — calls the reusable `validate-markdown-frontmatter.yml@v4` workflow, with `standards-ref` pinned to the same major.
+3. **`.agents/skills/markdown-frontmatter/`** (v5.0.0+) — installs the standard-owned skill for both Claude Code and Codex CLI; the starter config excludes `.agents/**` from managed-document frontmatter.
 
 ADR enforcement (managed ADR docs, plus the opt-in MADR section check) rides the **same** workflow — no extra job. Optional Markdown _body_ linting is a separate opt-in workflow (`lint-markdown.yml`).
 

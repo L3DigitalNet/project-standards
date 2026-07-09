@@ -67,6 +67,7 @@ This document is the user's visible task list alongside the v3 handoff system. U
 - [x] **2026-07-07 — Release-freeze policy set** (`2c76096`) — no interim patch/minor releases; version-affecting changes roll into v5.0.0.
 - [x] **2026-07-07 — Dependabot security bump** (`abc44bf`) — `markdownlint-cli2` `0.22.1`→`0.23.0` (markdownlint `0.41.0`) + reusable-workflow action `v23`→`v24` + `test_pins.py`. Cleared 2 moderate npm DoS alerts (js-yaml→`5.2.0`, markdown-it→`14.2.0`); `npm audit` 0 vulns; 85-file corpus lints clean under 0.41; coherence 8/8, 868 tests green.
 - [x] **2026-07-07 — SPEC-MT01 ADR foundation** (`ee98d0f`) — 13 ADRs (`adr-0001`…`adr-0013`) authored as **proposed** under `docs/adr/` + index; `docs/adr/**` dogfood-wired into validation. Authored via 3 parallel Sonnet subagents (first use of the v5 agent-team permission), then **accepted 2026-07-07** (owner batch-accept; all 13 `status: review`→`active`, MADR accepted). Gate: frontmatter/id 38, markdownlint 0, prettier, 868 tests.
+- [x] **2026-07-09 — Markdown Frontmatter value guidance + skill ownership** (this closeout) — split the standard into README/structure/field-values pages, added a repository-frontmatter ADR template, baseline IT/network/infrastructure tags, ADRs 0014–0016, `standards/**` local-frontmatter exclusion, and standard-owned repo-local skill/adopt artifacts with an executable `new-doc-id` helper.
 
 ### ⬜ Pending
 

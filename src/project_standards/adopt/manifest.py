@@ -6,6 +6,7 @@ this module's location, so they work identically from a source checkout and a wh
 
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,7 @@ class Artifact:
     shared: str | None  # path relative to bundles/ (shared artifact, e.g. "_shared/editorconfig")
     dest: str | None  # file/workflow-caller destination, relative to --dest
     target: str | None  # fragment target, relative to --dest
+    mode: int | None = None  # optional POSIX permissions for written artifacts
 
 
 @dataclass(frozen=True)
@@ -51,6 +53,25 @@ def available_standards(bundles_dir: Path = BUNDLES_DIR) -> list[str]:
         if (child / "adopt.toml").is_file():
             out.append(child.name)
     return out
+
+
+def _parse_mode(raw_mode: object, path: Path, artifact_index: int) -> int | None:
+    """Parse an optional artifact mode from octal string or TOML integer notation."""
+    if raw_mode is None:
+        return None
+    if isinstance(raw_mode, str):
+        if re.fullmatch(r"0?[0-7]{3}", raw_mode) is None:
+            raise ManifestError(
+                f"manifest {path} artifact {artifact_index} field 'mode' must be octal, "
+                f"got {raw_mode!r}"
+            )
+        return int(raw_mode, 8)
+    if isinstance(raw_mode, int) and 0 <= raw_mode <= 0o777:
+        return raw_mode
+    raise ManifestError(
+        f"manifest {path} artifact {artifact_index} field 'mode' must be an octal "
+        "string or TOML integer between 0o000 and 0o777"
+    )
 
 
 def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest:
@@ -101,10 +122,13 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
             )
         dest = a.get("dest")
         target = a.get("target")
+        mode = _parse_mode(a.get("mode"), path, i)
         if kind == "fragment" and target is None:
             raise ManifestError(f"manifest {path} fragment artifact {i} needs a target")
         if kind != "fragment" and dest is None:
             raise ManifestError(f"manifest {path} {kind} artifact {i} needs a dest")
+        if kind == "fragment" and mode is not None:
+            raise ManifestError(f"manifest {path} fragment artifact {i} cannot set mode")
         artifacts.append(
             Artifact(
                 kind=cast("str", kind),
@@ -113,6 +137,7 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
                 shared=cast("str | None", shared),
                 dest=cast("str | None", dest),
                 target=cast("str | None", target),
+                mode=mode,
             )
         )
     return Manifest(id=standard_id, artifacts=tuple(artifacts))

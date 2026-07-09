@@ -1,37 +1,3 @@
----
-schema_version: '1.1'
-id: 'reference-qz8r4w-build-backend'
-title: 'Build Backend Mechanics'
-description: 'How a PEP 517 build backend (uv_build) turns a src/ tree into installable console-script tooling, with project-standards as the worked example.'
-doc_type: 'reference'
-status: 'active'
-created: '2026-06-09'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'mix'
-tags:
-  - 'python'
-  - 'packaging'
-  - 'uv'
-  - 'build-backend'
-  - 'release'
-aliases:
-  - 'uv-build-backend'
-related:
-  - 'meta/versioning.md'
-  - 'standards/python-tooling/README.md'
-source:
-  - 'https://peps.python.org/pep-0517/'
-  - 'https://peps.python.org/pep-0518/'
-  - 'https://peps.python.org/pep-0621/'
-  - 'https://docs.astral.sh/uv/concepts/build-backend/'
-  - 'https://packaging.python.org/en/latest/specifications/entry-points/'
-confidence: 'high'
-visibility: 'internal'
-license: null
----
-
 # Build Backend Mechanics
 
 The [Python Tooling SSOT Standard](README.md) names `uv_build` as the default build backend (§3, §6) but does not explain what a build backend _does_. This reference fills that gap: it traces how four lines of `[build-system]` turn a `src/` tree into a command a user can type, using this repository as the worked example.

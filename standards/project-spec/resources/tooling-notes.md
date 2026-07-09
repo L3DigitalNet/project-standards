@@ -1,27 +1,3 @@
----
-schema_version: '1.1'
-id: 'reference-8oze1f-spec-template-tooling-notes'
-title: 'Spec Template Tooling Notes'
-description: 'Design notes for building programmatic tooling over the three project-spec templates.'
-doc_type: 'reference'
-status: 'active'
-created: '2026-07-04'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'project-spec'
-  - 'tooling'
-aliases: []
-related:
-  - 'standards/project-spec/README.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Spec Template Tooling Notes
 
 Reference for building programmatic tooling (validators, generators, spec managers, CI checks) over the three specification templates:

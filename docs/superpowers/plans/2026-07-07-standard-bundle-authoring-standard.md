@@ -17,7 +17,7 @@
 - **Adoption-mode enum (FR-003):** exactly `validator | copy-adopt | cli | reference-only | none`. The seven current standards map: markdown-frontmatter/adr → `validator`; python-tooling/markdown-tooling/cli-documentation → `copy-adopt`; project-spec → `cli`; python-coding → `reference-only` (draft); this meta-standard → `none`.
 - **Config namespaces are dotted paths (FR-006):** a parent (e.g. `markdown`) may be a shared container whose child paths (`markdown.frontmatter`, `markdown.adr`) are owned by different standards; meta keys (`standards_version`) are repo-owned, not standard-owned; duplicate ownership of the same path is invalid.
 - **Manifest paths are bundle-relative and contained (FR-012):** resource/template paths must stay inside the declaring standard's own directory (no `..`, no absolute, no symlink escape); cross-bundle sharing only via the explicit `_shared` mechanism; a provider `entrypoint` is an import path or command reference, not a filesystem path.
-- **Everything must stay green:** `standards/standard-bundle-authoring/README.md` is under `standards/**/*.md`, so it is frontmatter- and id-validated **and** markdownlint/Prettier-gated. `standards/README.md` is frontmatter-excluded but markdownlint/Prettier-gated. SPEC-BA01 must still pass `spec validate`/`lint`.
+- **Everything must stay green:** this plan originally treated `standards/**/*.md` as frontmatter-managed. ADR 0015 superseded that on 2026-07-09: `standards/**` standard-package docs are now excluded from this repo's local frontmatter scope, while Markdown body/tooling gates and SPEC-BA01 `spec validate`/`lint` still apply.
 - **Branch `testing`; release freeze** — this change accrues to v5.0.0, no release cut. Commit style: `docs(v5): …`.
 
 ---

@@ -6,14 +6,14 @@ description: 'A working note on why a Tailscale ACL rule silently failed until t
 doc_type: 'note'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-06-06'
+updated: '2026-07-09'
 reviewed: null
-owner: ''
+owner: 'platform-team'
 consumer: 'agent'
 tags:
-  - 'tailscale'
-  - 'networking'
-  - 'gotcha'
+  - 'network'
+  - 'config'
+  - 'operations'
 aliases: []
 related:
   - 'docs/concepts/immutable-infrastructure.md'

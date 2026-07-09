@@ -57,6 +57,7 @@ class Action:
     dest: str | None  # relative dest for file/workflow-caller
     target: str | None  # relative target for fragment
     standards: tuple[str, ...]  # contributing standard ids (for reporting)
+    mode: int | None = None  # optional POSIX permissions for written artifacts
 
 
 def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> list[Action]:
@@ -99,12 +100,18 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                         f"destination collision at {art.dest!r}: "
                         f"{existing.standards[0]} and {sid} supply different sources"
                     )
+                if existing.mode != art.mode:
+                    raise UsageError(
+                        f"destination collision at {art.dest!r}: "
+                        f"{existing.standards[0]} and {sid} use different modes"
+                    )
                 write_actions[art.dest] = Action(
                     kind=existing.kind,
                     source_path=existing.source_path,
                     dest=existing.dest,
                     target=None,
                     standards=(*existing.standards, sid),
+                    mode=existing.mode,
                 )
                 continue
             write_actions[art.dest] = Action(
@@ -113,6 +120,7 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                 dest=art.dest,
                 target=None,
                 standards=(sid,),
+                mode=art.mode,
             )
     return list(write_actions.values()) + fragment_actions
 
@@ -191,7 +199,7 @@ def _render(action: Action, ref: str) -> bytes:
     return data
 
 
-def _atomic_write(target: Path, data: bytes) -> None:
+def _atomic_write(target: Path, data: bytes, mode: int | None = None) -> None:
     """Write to a temp file in the target's directory, then os.replace into place.
 
     EVERY filesystem step (mkdir, mkstemp, write, replace) is inside the guard so a
@@ -210,7 +218,10 @@ def _atomic_write(target: Path, data: bytes) -> None:
         tmp = Path(tmp_name)
         # Set permissions BEFORE writing data so the file never exists world-readable
         # with content, but also never stays at 0600 after the write.
-        if target.exists():
+        if mode is not None:
+            with contextlib.suppress(OSError):
+                tmp.chmod(stat.S_IMODE(mode))
+        elif target.exists():
             # Preserve the existing file's mode (copy-on-overwrite).
             with contextlib.suppress(OSError):
                 tmp.chmod(target.stat().st_mode & 0o777)
@@ -262,7 +273,7 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
             continue
         rendered = _render(action, ref)  # may raise WriteError on unreadable source
         if not dry_run:
-            _atomic_write(abs_dest, rendered)
+            _atomic_write(abs_dest, rendered, action.mode)
         (report.overwritten if exists else report.created).append(action.dest)
     return report
 

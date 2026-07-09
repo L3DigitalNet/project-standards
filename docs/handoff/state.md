@@ -4,18 +4,19 @@
 
 ## State at a glance
 
-- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard; tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is **ahead of `main`** by unreleased v5 work. Full detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–05 done through subagent-review fix (`ce11a54`): all standards have graph-validated `standard.toml` with generic provider operations. Next: Step 06 dogfood fixtures/index/catalog + `adopt.toml` linkage. Detail: `TODO.md`.
+- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard; tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is **ahead of `main`** with unreleased v5 work. Detail: `deployed.md`.
+- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–05 + Markdown Frontmatter value/skill ownership work are done through this closeout; next is Step 06 dogfood fixtures/index/catalog + `adopt.toml` linkage. Detail: `TODO.md`.
+- **Latest change:** Markdown Frontmatter now has split structure/value pages, a repo-frontmatter ADR template, baseline IT/network/infrastructure tags, ADR 0014/0015/0016, `standards/**` local-frontmatter exclusion, and standard-owned repo-local skill/adopt artifacts. Full gate + convergence review green.
 
 ## Active incidents
 
-- _None known._ Step 05 graph/Python/spec/frontmatter gates green; full markdownlint still hits pre-existing `docs/future-standards/**` backlog files unrelated to Step 05.
+- _None known._ Full markdownlint still has a pre-existing `docs/future-standards/**` backlog outside the touched docs.
 
 ## Ops notes
 
-- **RELEASE FREEZE until v5.0.0 (set 2026-07-07).** Next release is **v5.0.0** (Meta-repo/MCP-readiness + all accrued standards changes). **No interim PATCH/MINOR** — version-affecting changes accumulate under CHANGELOG `[Unreleased]` and ship together at v5.0.0. Keep classifying; don't tag. Canonical: `meta/versioning.md`.
-- **Sub-agent policy (2026-07-08):** individual sub-agents + headless Codex OK unasked; **agent teams / `Workflow` fan-out need ask-first + cost sketch**. Never Fable; Haiku OK for trivial. Detail: `AGENTS.md`.
-- **Repo rulesets (active):** `main` requires signed commits + blocks force-push/deletion (no PR/status-check rule). `v*.*.*` tags block deletion + non-fast-forward. `commit.gpgsign`/`tag.gpgsign` are on (key `9375AFEFA6F841B0`) — unsigned commits will be rejected by `main`.
+- **RELEASE FREEZE until v5.0.0.** No interim PATCH/MINOR; changes accumulate under CHANGELOG `[Unreleased]`. Keep classifying; don't tag. Canonical: `meta/versioning.md`.
+- **Sub-agent policy:** individual sub-agents + headless Codex OK unasked; agent teams / `Workflow` fan-out need ask-first + cost sketch. Never Fable. Detail: `AGENTS.md`.
+- **Repo rulesets:** `main` requires signed commits + blocks force-push/deletion; `v*.*.*` tags block deletion + non-fast-forward. Unsigned commits will be rejected by `main`.
 
 ## Session instructions
 

@@ -20,7 +20,9 @@ from project_standards import validate_frontmatter
 from project_standards.cli import main
 
 
-def test_list_plain_lists_five_standards(capsys: pytest.CaptureFixture[str]) -> None:
+def test_list_plain_lists_five_packaged_adopt_standards(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     rc = main(["list"])
     out = capsys.readouterr().out
     assert rc == 0
@@ -45,6 +47,13 @@ def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:
         assert "contract_version" in s
     py = next(s for s in data if s["id"] == "python-tooling")
     assert any(a["kind"] == "fragment" and a["target"] == "pyproject.toml" for a in py["artifacts"])
+    mf = next(s for s in data if s["id"] == "markdown-frontmatter")
+    script = next(
+        a
+        for a in mf["artifacts"]
+        if a["dest"] == ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
+    )
+    assert script["mode"] == "0755"
 
 
 def test_list_on_broken_manifest_exits_clean(

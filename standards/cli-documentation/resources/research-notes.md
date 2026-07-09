@@ -1,29 +1,3 @@
----
-schema_version: '1.1'
-id: 'reference-p4n9tk-cli-documentation-research-notes'
-title: 'CLI Documentation Standard — Research Notes'
-description: 'Rationale record behind the CLI Documentation Standard: the standards landscape, tooling comparisons, the localization/versioning/accessibility reasoning, and open questions. Not the normative contract — see README.md.'
-doc_type: 'reference'
-status: 'active'
-created: '2026-07-07'
-updated: '2026-07-07'
-reviewed: null
-owner: ''
-consumer: 'agent'
-tags:
-  - 'cli'
-  - 'documentation'
-  - 'research'
-aliases: []
-related:
-  - 'standards/cli-documentation/README.md'
-  - 'docs/research/2026-07-07-cli-usage-docs-packaged-src-layout-python.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # CLI Documentation Standard — Research Notes
 
 This document is **rationale, not rules**. It carries the argumentative background behind the CLI Documentation Standard — why the requirements in [`../README.md`](../README.md) look the way they do. Where a claim traces to an external source, it cites the same `[S##]` IDs as the README's [source register](../README.md#15-source-register); nothing here overrides or restates a requirement, and nothing here should be read as adding one.

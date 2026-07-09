@@ -281,8 +281,13 @@ def test_manifest_minimal_valid() -> None:
     assert m.relations.companions == []
 
 
-def test_manifest_adoption_none_forbids_adopt_resource() -> None:
-    payload = {**_MINIMAL, "resources": {"readme": "README.md", "adopt": "adopt.md"}}
+@pytest.mark.parametrize("adoption", ["none", "reference-only"])
+def test_manifest_non_adoptable_modes_forbid_adopt_resource(adoption: str) -> None:
+    payload = {
+        **_MINIMAL,
+        "standard": {**_MINIMAL["standard"], "adoption": adoption},
+        "resources": {"readme": "README.md", "adopt": "adopt.md"},
+    }
     with pytest.raises(ValidationError):
         StandardManifest.model_validate(payload)
 

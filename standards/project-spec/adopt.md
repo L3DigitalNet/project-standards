@@ -1,31 +1,3 @@
----
-schema_version: '1.1'
-id: 'runbook-w3lxzf-project-specification-standard-adoption-procedure'
-title: 'Project Specification Standard — Adoption Procedure'
-description: 'Step-by-step procedure for an agent to adopt the Project Specification Standard in a consuming repository.'
-doc_type: 'runbook'
-status: 'active'
-created: '2026-07-04'
-updated: '2026-07-05'
-reviewed: null
-owner: ''
-consumer: 'mix'
-tags:
-  - 'project-spec'
-  - 'adoption'
-  - 'onboarding'
-aliases:
-  - 'project-spec-adoption-procedure'
-related:
-  - 'standards/project-spec/README.md'
-  - 'standards/markdown-frontmatter/adopt.md'
-  - 'meta/versioning.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
-
 # Adopt the Project Specification Standard
 
 > **Target release:** `project-standards` **v4.0.0** — pin the moving major tag `@v4` (see [§5](#5-versioning--staying-in-compliance)). **The Project Specification Standard is available only from `v4.0.0` onward**: it first ships at the `v4.0.0` release, so no earlier tag (`v3` and below) carries the standard, its CLI, or the `validate-specs.yml` workflow — never pin this standard to a pre-v4 ref.
@@ -39,7 +11,7 @@ A repository has adopted this standard when:
 3. CI runs that same validation on every push/PR, pinned to a release tag.
 4. Anyone authoring or extending a spec uses the CLI (`new`, `upgrade`, `next`) rather than hand-editing structure, so the guarantees in [§3](README.md#3-features) hold.
 
-Unlike the copy-adopt standards (Markdown Frontmatter, Python Tooling SSOT), there is no separate "quick path" command here — installing `project-standards` already gives you the full tool surface, and `new` scaffolds directly from the package's bundled templates. There is nothing to seed into the consuming repo except the config block below.
+Unlike artifact-bundled standards such as Markdown Frontmatter and Python Tooling SSOT, there is no separate "quick path" command here — installing `project-standards` already gives you the full tool surface, and `new` scaffolds directly from the package's bundled templates. There is nothing to seed into the consuming repo except the config block below.
 
 ## 1. Prerequisites
 

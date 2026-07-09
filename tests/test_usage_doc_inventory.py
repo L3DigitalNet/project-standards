@@ -13,7 +13,8 @@ from project_standards.specs.cli import (
 _USAGE = Path("docs/usage.md").read_text(encoding="utf-8")
 
 # Top-level leaves are argparse-registered in cli.py; keep in sync with the parser.
-_TOP_LEVEL_LEAVES = ("validate", "fix", "adopt", "list")
+_TOP_LEVEL_LEAVES = ("validate", "fix", "adopt", "list", "standards")
+_STANDARDS_VERBS = ("validate-graph",)
 
 # docs/usage.md documents the root `project-standards` script under a `## NAME`
 # section (it IS the page, not a `###` subsection); every other console script
@@ -44,3 +45,9 @@ def test_spec_group_and_every_verb_documented() -> None:
     assert _has_entry("spec"), "spec group overview missing"
     missing = [v for v in _VERBS if not _has_entry(f"spec {v}")]
     assert not missing, f"spec verbs missing from docs/usage.md: {missing}"
+
+
+def test_standards_group_and_every_verb_documented() -> None:
+    assert _has_entry("standards"), "standards group overview missing"
+    missing = [v for v in _STANDARDS_VERBS if not _has_entry(f"standards {v}")]
+    assert not missing, f"standards verbs missing from docs/usage.md: {missing}"
