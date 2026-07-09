@@ -39,16 +39,30 @@ def _contract_version(registry: Registry, standard_id: str) -> str | None:
         "python-tooling": registry.python_tooling_default,
         "markdown-tooling": registry.markdown_tooling_default,
         "cli-documentation": registry.cli_documentation_default,
+        "project-spec": registry.project_spec_default,
     }.get(standard_id)
 
 
-# The registry's version-tracked standards (hyphenated ids), the single source for drift checks.
-_REGISTRY_STANDARD_IDS = (
+# Standards with packaged adoption artifacts. Version tracking is a separate registry
+# contract so the drift guard can check both surfaces explicitly.
+_ADOPTABLE_STANDARD_IDS = (
     "markdown-frontmatter",
     "adr",
     "python-tooling",
     "markdown-tooling",
     "cli-documentation",
+    "project-spec",
+)
+
+# The registry's version-tracked standards (hyphenated ids), the single source for
+# contract-version drift checks.
+_VERSION_TRACKED_STANDARD_IDS = (
+    "markdown-frontmatter",
+    "adr",
+    "python-tooling",
+    "markdown-tooling",
+    "cli-documentation",
+    "project-spec",
 )
 
 
@@ -68,17 +82,23 @@ def _has_schema_flag(args: list[str]) -> bool:
 
 
 def _assert_registry_bundle_parity(registry: Registry) -> None:
-    """Bundles and the registry's version-tracked standards must agree in BOTH directions.
+    """Adoptable bundles and version-tracked registry entries must agree.
 
-    Catches a bundle with no registry contract (would emit `contract_version: null`) AND a
-    registry-known standard with no bundle (silently un-adoptable). Either way -> clean exit 2.
+    Catches a missing adopt bundle or unexpected package bundle, while still allowing
+    standards to be adoptable only when their packaged artifacts are present.
     """
     bundles = set(available_standards())
-    registry_ids = {s for s in _REGISTRY_STANDARD_IDS if _contract_version(registry, s) is not None}
-    if bundles != registry_ids:
+    adoptable_ids = set(_ADOPTABLE_STANDARD_IDS)
+    if bundles != adoptable_ids:
         raise RegistryError(
-            f"registry/bundle drift — registry-only: {sorted(registry_ids - bundles)}, "
-            f"bundle-only: {sorted(bundles - registry_ids)}"
+            f"registry/bundle drift — expected-only: {sorted(adoptable_ids - bundles)}, "
+            f"bundle-only: {sorted(bundles - adoptable_ids)}"
+        )
+    versioned = {s for s in _VERSION_TRACKED_STANDARD_IDS if _contract_version(registry, s)}
+    if versioned != set(_VERSION_TRACKED_STANDARD_IDS):
+        raise RegistryError(
+            "registry/bundle drift — version-tracked standards without registry contracts: "
+            f"{sorted(set(_VERSION_TRACKED_STANDARD_IDS) - versioned)}"
         )
 
 
@@ -116,7 +136,8 @@ def _cmd_list(as_json: bool) -> int:
         print(json.dumps(payload, indent=2))
         return 0
     for sid, contract, manifest in entries:
-        print(f"{sid} (contract {contract})")
+        label = contract if contract is not None else "unversioned"
+        print(f"{sid} (contract {label})")
         for a in manifest.artifacts:
             where = a.target if a.kind == "fragment" else a.dest
             print(f"  {a.kind:<16} {where}")

@@ -6,7 +6,7 @@ description: 'Records the decision to bind generic operations to standards throu
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -18,6 +18,9 @@ aliases:
   - 'standard-provider-plugin-model'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
+  - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
+  - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
 supersedes: []
 superseded_by: null
 source: []

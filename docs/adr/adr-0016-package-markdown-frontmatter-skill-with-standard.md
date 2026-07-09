@@ -20,14 +20,20 @@ aliases:
   - 'Markdown Frontmatter skill ownership'
 related:
   - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-frontmatter/field-values.md'
   - 'standards/markdown-frontmatter/adopt.md'
   - 'standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md'
   - 'src/project_standards/bundles/markdown-frontmatter/adopt.toml'
+  - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
+  - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
 supersedes: []
 superseded_by: null
 source:
   - 'standards/markdown-frontmatter/README.md'
+  - 'standards/markdown-frontmatter/field-values.md'
   - 'standards/markdown-frontmatter/adopt.md'
+  - 'standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md'
   - 'src/project_standards/bundles/markdown-frontmatter/adopt.toml'
 confidence: 'high'
 visibility: 'internal'

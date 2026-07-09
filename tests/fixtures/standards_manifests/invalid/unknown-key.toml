@@ -7,8 +7,8 @@ adoption = "none"
 mystery = true
 
 [versions]
-supported = []
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = []

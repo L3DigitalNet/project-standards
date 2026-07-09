@@ -9,8 +9,8 @@ summary = ""            # one sentence
 adoption = "none"       # validator | copy-adopt | cli | reference-only | none
 
 [versions]
-supported = []          # e.g. ["1.0", "1.1"] for versioned standards; [] otherwise
-latest = ""
+supported = ["0.1"]     # every package declares at least one package/contract version
+latest = "0.1"          # must be one of supported
 
 [config]
 namespaces = []         # dotted paths this standard owns, e.g. ["markdown.frontmatter"]

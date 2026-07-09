@@ -1,6 +1,6 @@
 # Project Specification Standard
 
-- **Status:** Active — registered for adoption; validated via `project-standards spec validate`. No selectable contract version yet (unlike Frontmatter/ADR) — the templates and tooling always track the installed `project-standards` release; see [`meta/versioning.md`](../../meta/versioning.md).
+- **Status:** Active — registered for adoption; contract version `1.0`, selected with `spec.version` and validated via `project-standards spec validate`; see [`meta/versioning.md`](../../meta/versioning.md).
 - **Owner:** Project standards / repository template
 - **Last updated:** 2026-07-05
 - **Last source check:** _TBD_
@@ -149,6 +149,7 @@ Uppercase `PFX-NNN` tokens are **spec-local IDs** you mint — they must be decl
 
 ```yaml
 spec:
+  version: '1.0'
   include:
     - 'docs/specs/**/*.md'
   reference_prefixes: ['RQ', 'GAP', 'MIT'] # cited, not minted here
@@ -160,7 +161,7 @@ Reference prefixes are exempt from the Appendix-A, width, and tier checks. A pre
 
 ## 6. Adoption
 
-Unlike artifact-bundled standards such as [Markdown Frontmatter](../markdown-frontmatter/README.md) and [Python Tooling SSOT](../python-tooling/README.md), there are no files to seed into a consuming repository first: installing `project-standards` gives every command in [§5](#5-tooling) directly, and `new` scaffolds straight from the package's bundled templates. The only thing a consumer adds is a `spec:` block in `.project-standards.yml` and, optionally, a CI workflow calling the bundled reusable validator. The full procedure — prerequisites, choosing a template, wiring the config, and CI/local validation — is in [`adopt.md`](adopt.md); it is not repeated here.
+Adoption seeds only the support scaffolding: a `spec:` config fragment for `.project-standards.yml` and an optional reusable `validate-specs.yml` workflow caller. Installing `project-standards` gives every command in [§5](#5-tooling), and `new` scaffolds real spec documents from the package's bundled templates. The full procedure — prerequisites, choosing a template, wiring the config, and CI/local validation — is in [`adopt.md`](adopt.md); it is not repeated here.
 
 ---
 

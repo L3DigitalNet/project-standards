@@ -6,17 +6,22 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-07'
+last_reviewed: '2026-07-09'
 supersedes: null
 superseded_by: null
 related:
   adrs:
-    - 'docs/adr/adr-NNNN-mcp-readiness-before-server-implementation.md'
-    - 'docs/adr/adr-NNNN-stable-generic-agent-tooling-interface.md'
+    - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
+    - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
     - 'docs/adr/adr-NNNN-local-stdio-first-mcp-transport.md'
     - 'docs/adr/adr-NNNN-read-only-first-controlled-write-later.md'
     - 'docs/adr/adr-NNNN-defer-remote-mcp-transport.md'
-    - 'docs/adr/adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+    - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
+    - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+    - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
     - 'docs/adr/adr-NNNN-mcp-protocol-and-sdk-version-selection.md'
 
   tickets: []
@@ -32,6 +37,8 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.5 | 2026-07-09 | Coding agent | Added package-methodology ADR references so future MCP phases inherit adoption, lifecycle, provenance, versioning, and skill-installation policy. |
+| 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: aligned sequencing with independent-standard-package validation, SDK caution, and tool/resource safety constraints. |
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
@@ -313,14 +320,14 @@ flowchart TB
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | Complete `SPEC-MT01` before MCP implementation. | Prevents hardcoded server assumptions. | Start MCP now and refactor later. | `adr-NNNN-mcp-readiness-before-server-implementation.md` |
+| D-001 | Complete `SPEC-MT01` before MCP implementation. | Prevents hardcoded server assumptions. | Start MCP now and refactor later. | `adr-0012-mcp-readiness-before-server-implementation.md` |
 | D-002 | Local stdio first for MCP. | Simplest local agent integration and lowest security surface. | Streamable HTTP first. | `adr-NNNN-local-stdio-first-mcp-transport.md` |
 | D-003 | Read-only MCP first. | Early value without mutation risk. | Start with adoption apply/write tools. | `adr-NNNN-read-only-first-mcp-scope.md` |
-| D-004 | Generic tools only. | Stable tool surface as standards grow. | Per-standard tools. | `adr-NNNN-stable-generic-agent-tooling-interface.md` |
+| D-004 | Generic tools only. | Stable tool surface as standards grow. | Per-standard tools. | `adr-0005-stable-generic-agent-tooling-interface.md` |
 | D-005 | Manifest-generated resources. | New standards become visible automatically. | Hardcoded resource list. | `adr-NNNN-manifest-generated-mcp-resources.md` |
 | D-006 | Plan-first controlled writes. | Mutations need reviewable intent and replay protection. | Direct apply commands from agent request. | `adr-NNNN-plan-first-controlled-mcp-writes.md` |
 | D-007 | Remote transport deferred. | HTTP transport requires auth/origin/security design. | Remote server first. | `adr-NNNN-defer-remote-mcp-transport.md` |
-| D-008 | Independent-standard-package validation gates MCP implementation. | MCP must consume a composable graph, not repair dependency problems at runtime. | Let MCP auto-adopt or auto-require standards; rejected. | `adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md` |
+| D-008 | Independent-standard-package validation gates MCP implementation. | MCP must consume a composable graph, not repair dependency problems at runtime. | Let MCP auto-adopt or auto-require standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
 | D-009 | Recheck MCP spec/SDK before implementation starts. | MCP SDK and protocol releases are active; dependency decisions can stale quickly. | Freeze July 2026 research as final; rejected. | `adr-NNNN-mcp-protocol-and-sdk-version-selection.md` |
 
 ### 8.4 Solution Alternatives Considered

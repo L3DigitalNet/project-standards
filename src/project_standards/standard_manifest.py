@@ -98,12 +98,12 @@ class StandardTable(_Table):
 class VersionsTable(_Table):
     """The `[versions]` table: supported version list plus the currently-latest one."""
 
-    supported: list[str]
-    latest: str
+    supported: list[str] = Field(min_length=1)
+    latest: str = Field(min_length=1)
 
     @model_validator(mode="after")
     def _latest_in_supported(self) -> VersionsTable:
-        if self.supported and self.latest and self.latest not in self.supported:
+        if self.latest not in self.supported:
             msg = f"latest {self.latest!r} is not in supported {self.supported}"
             raise ValueError(msg)
         return self

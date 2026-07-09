@@ -6,7 +6,7 @@ description: 'Records the decision to keep future agent and MCP tools generic ov
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -18,6 +18,9 @@ aliases:
   - 'stable-generic-agent-tooling-interface'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
+  - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
 supersedes: []
 superseded_by: null
 source: []

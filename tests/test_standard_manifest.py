@@ -39,7 +39,7 @@ _MINIMAL: dict[str, dict[str, object]] = {
         "summary": "x",
         "adoption": "none",
     },
-    "versions": {"supported": [], "latest": ""},
+    "versions": {"supported": ["1.0"], "latest": "1.0"},
     "config": {"namespaces": []},
     "capabilities": {"provides": [], "consumes_platform": []},
     "resources": {"readme": "README.md"},
@@ -123,9 +123,21 @@ def test_standard_table_rejects(override: dict[str, str]) -> None:
 
 def test_versions_latest_must_be_in_supported() -> None:
     VersionsTable.model_validate({"supported": ["1.0", "1.1"], "latest": "1.1"})
-    VersionsTable.model_validate({"supported": [], "latest": ""})
     with pytest.raises(ValidationError):
         VersionsTable.model_validate({"supported": ["1.0"], "latest": "2.0"})
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"supported": [], "latest": ""},
+        {"supported": [], "latest": "0.4"},
+        {"supported": ["1.0"], "latest": ""},
+    ],
+)
+def test_versions_require_declared_package_version(payload: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        VersionsTable.model_validate(payload)
 
 
 def test_config_accepts_dotted_paths() -> None:
@@ -306,8 +318,8 @@ summary = "x"
 adoption = "none"
 
 [versions]
-supported = []
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = []
@@ -470,6 +482,7 @@ _SCHEMA_ENFORCED = {
     "missing-required.toml",
     "non-string-resource.toml",
     "missing-versions-table.toml",
+    "empty-supported-version.toml",
 }
 
 

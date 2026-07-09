@@ -22,7 +22,7 @@ aliases:
   - console_scripts documentation standard
   - installable CLI docs
 related:
-  - standards/cli-framework/cli-documentation-standards.md
+  - standards/cli-documentation/README.md
 source:
   - https://pip.pypa.io/en/stable/cli/pip_install
   - https://docs.astral.sh/uv/reference/cli
@@ -44,7 +44,7 @@ license: Apache-2.0
 
 # CLI Usage Documentation for Packaged src/-Layout Python Projects
 
-Extends the single-file-script CLI documentation framework in `standards/cli-framework/cli-documentation-standards.md` with the packaged/installable half: `src/` layout, `[project.scripts]` entry points, and consumers of the Python Tooling SSOT standard (uv, Ruff, BasedPyright, pytest).
+Extends the single-file-script CLI documentation framework now published as `standards/cli-documentation/README.md` with the packaged/installable half: `src/` layout, `[project.scripts]` entry points, and consumers of the Python Tooling SSOT standard (uv, Ruff, BasedPyright, pytest).
 
 ## Summary
 
@@ -161,7 +161,7 @@ None of these individually cover the full packaged-CLI documentation lifecycle e
 
 Persisted at `docs/research/2026-07-07-cli-usage-docs-packaged-src-layout-python.md`. Downstream skills that may consume it:
 
-- `superpowers:brainstorming` — feed the two Open Questions and the §1/§5 doc-layout tradeoffs into a design conversation before drafting the packaged-CLI half of `standards/cli-framework/cli-documentation-standards.md`.
+- `superpowers:brainstorming` — feed the two Open Questions and the §1/§5 doc-layout tradeoffs into a design conversation before drafting future packaged-CLI refinements to `standards/cli-documentation/README.md`.
 - `feature-dev:feature-dev` — start the packaged-CLI documentation-standard authoring work with this background, including the CI-drift-check requirement from §6.
 
 ## Sources

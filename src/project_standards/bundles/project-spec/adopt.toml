@@ -1,0 +1,14 @@
+[standard]
+id = "project-spec"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "project-standards.spec-fragment.yml"
+target = ".project-standards.yml"
+
+[[artifact]]
+kind = "workflow-caller"
+owner = true
+source = "validate-specs.caller.yml"
+dest = ".github/workflows/validate-specs.yml"

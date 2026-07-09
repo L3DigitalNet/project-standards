@@ -14,7 +14,7 @@ from project_standards.adopt.errors import ManifestError
 from project_standards.adopt.manifest import available_standards, load_manifest
 
 
-def test_available_standards_lists_five_released_excludes_shared() -> None:
+def test_available_standards_lists_released_adoptable_standards_excludes_shared() -> None:
     ids = available_standards()
     assert set(ids) == {
         "markdown-frontmatter",
@@ -22,6 +22,7 @@ def test_available_standards_lists_five_released_excludes_shared() -> None:
         "markdown-tooling",
         "python-tooling",
         "cli-documentation",
+        "project-spec",
     }
     assert "_shared" not in ids
 

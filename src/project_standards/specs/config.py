@@ -9,8 +9,10 @@ from typing import Any, cast
 
 import yaml
 
+from project_standards.registry import RegistryError
+from project_standards.registry import load_registry as load_contract_registry
 from project_standards.specs.document import SpecParseError, parse_document
-from project_standards.specs.registry import load_registry
+from project_standards.specs.registry import load_registry as load_spec_registry
 from project_standards.validate_frontmatter import ConfigError, collect_paths
 
 
@@ -23,6 +25,7 @@ class SpecConfig:
     include: list[str]
     exclude: list[str]
     present: bool
+    version: str | None = None
     reference_prefixes: list[str] = field(default_factory=list)
 
 
@@ -38,6 +41,17 @@ def _str_list(value: Any) -> list[str]:
     raise ConfigError("spec.include/spec.exclude must be strings or lists of strings")
 
 
+def _version_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ConfigError(
+            f"spec.version must be a quoted string (got {value!r}); "
+            f"unquoted version numbers lose precision (1.10 parses as 1.1)"
+        )
+    return value
+
+
 _PREFIX_RE = re.compile(r"^[A-Z]{1,4}$")
 
 
@@ -47,7 +61,7 @@ def _validate_reference_prefixes(prefixes: list[str]) -> list[str]:
     A canonical collision (e.g. listing 'FR') would silently disable validation of the
     consumer's own requirement IDs, so it is a hard error, not a warning.
     """
-    canonical = set(load_registry().prefix_defined_in)
+    canonical = set(load_spec_registry().prefix_defined_in)
     for pfx in prefixes:
         if not _PREFIX_RE.match(pfx):
             raise ConfigError(
@@ -66,6 +80,7 @@ def load_spec_config(path: Path) -> SpecConfig:
     include: list[str] = []
     exclude: list[str] = []
     reference_prefixes: list[str] = []
+    version: str | None = None
     present = False
     if path.exists():
         try:
@@ -79,13 +94,25 @@ def load_spec_config(path: Path) -> SpecConfig:
             if isinstance(block, dict):
                 present = True
                 b = cast("dict[str, Any]", block)
+                version = _version_str(b.get("version"))
+                if version is not None:
+                    try:
+                        registry = load_contract_registry()
+                    except RegistryError as exc:
+                        raise ConfigError(str(exc)) from exc
+                    if not registry.is_known_project_spec(version):
+                        raise ConfigError(f"unknown spec.version {version!r}")
                 include = _str_list(b.get("include"))
                 exclude = _str_list(b.get("exclude"))
                 reference_prefixes = _validate_reference_prefixes(
                     _str_list(b.get("reference_prefixes"))
                 )
     return SpecConfig(
-        include=include, exclude=exclude, present=present, reference_prefixes=reference_prefixes
+        include=include,
+        exclude=exclude,
+        present=present,
+        version=version,
+        reference_prefixes=reference_prefixes,
     )
 
 

@@ -17,6 +17,8 @@ tags:
 aliases: []
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'standards/adr/README.md'
+  - 'standards/standard-bundle-authoring/README.md'
   - 'standards/markdown-frontmatter/field-values.md'
   - '.project-standards.yml'
 ---
@@ -25,7 +27,7 @@ related:
 
 Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR standard](../../standards/adr/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
 
-ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were **accepted** on 2026-07-07 (`status: active`, MADR `accepted`); changing one now requires a superseding ADR. ADR **0014** records the repository's own Markdown frontmatter field-value policy, ADR **0015** excludes `standards/**` from that local frontmatter scope, and ADR **0016** records Markdown Frontmatter skill ownership. The MCP-server decisions (SPEC-MS01 §8.3) are deferred to a later release and are not yet recorded here.
+ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were **accepted** on 2026-07-07 (`status: active`, MADR `accepted`); changing one now requires a superseding ADR. ADR **0014** records the repository's own Markdown frontmatter field-value policy, ADR **0015** excludes `standards/**` from that local frontmatter scope, ADR **0016** records Markdown Frontmatter skill ownership, ADR **0017** records a unified adoption methodology for standards, ADR **0018** records standard package lifecycle methodology, ADR **0019** records packaged artifact parity and provenance, ADR **0020** records standard package versioning methodology, and ADR **0021** records standard-packaged skill installation methodology. The MCP-server decisions (SPEC-MS01 §8.3) are deferred to a later release and are not yet recorded here.
 
 | ADR | Title | Decision | Status |
 | --- | --- | --- | --- |
@@ -45,3 +47,8 @@ ADRs **0001–0013** capture the meta-repository readiness decisions from [SPEC-
 | [0014](adr-0014-markdown-frontmatter-field-value-policy.md) | Markdown Frontmatter Field Value Policy | local | active |
 | [0015](adr-0015-exclude-standards-from-local-frontmatter-scope.md) | Exclude Standards from Local Frontmatter Scope | local | active |
 | [0016](adr-0016-package-markdown-frontmatter-skill-with-standard.md) | Package Markdown Frontmatter Skill with Standard | local | active |
+| [0017](adr-0017-unified-standard-adoption-methodology.md) | Unified Standard Adoption Methodology | local | active |
+| [0018](adr-0018-standard-package-lifecycle-methodology.md) | Standard Package Lifecycle Methodology | local | active |
+| [0019](adr-0019-packaged-artifact-parity-and-provenance.md) | Packaged Artifact Parity and Provenance | local | active |
+| [0020](adr-0020-standard-package-versioning-methodology.md) | Standard Package Versioning Methodology | local | active |
+| [0021](adr-0021-standard-packaged-skill-installation-methodology.md) | Standard-Packaged Skill Installation Methodology | local | active |

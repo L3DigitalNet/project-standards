@@ -21,6 +21,8 @@ aliases:
 related:
   - '.project-standards.yml'
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
+  - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/README.md'
 supersedes: []
 superseded_by: null

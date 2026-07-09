@@ -46,11 +46,9 @@ markdown:
     version: "1.0"
     require_sections: true
 
-# Contract-version selections for the copy-adopted standards this repo defines.
-# Both are validated-if-present metadata only (a known version => no output, no
-# behaviour change; an unknown version => exit 2). Selected here to dogfood every
-# standard the repo ships. python_tooling enforcement is the verification gate;
-# markdown_tooling enforcement is the lint-markdown workflow.
+# Contract-version selections for the standards this repo defines. Metadata-only
+# selections produce no output when known and exit 2 when unknown; validator-backed
+# selections also choose the bundled contract the validator enforces.
 python_tooling:
   version: "1.0"
 
@@ -65,6 +63,7 @@ cli_documentation:
 # a different convention — they are not project specs. The dogfood example under
 # standards/project-spec/examples/ is what's validated here, per standards/project-spec/adopt.md.
 spec:
+  version: "1.0"
   include:
     - "standards/project-spec/examples/**/*.md"
     # MCP enablement spec set (SPEC-MT01/RD01/MS01) — real Project Specification

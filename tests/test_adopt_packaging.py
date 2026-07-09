@@ -39,6 +39,9 @@ def test_wheel_contains_bundles_and_manifests(tmp_path: Path) -> None:
         "project_standards/bundles/markdown-frontmatter/skills/markdown-frontmatter/agents/openai.yaml",
         "project_standards/bundles/adr/adr.template.md",
         "project_standards/bundles/cli-documentation/adopt.toml",
+        "project_standards/bundles/project-spec/adopt.toml",
+        "project_standards/bundles/project-spec/project-standards.spec-fragment.yml",
+        "project_standards/bundles/project-spec/validate-specs.caller.yml",
     ]
     for entry in must:
         assert any(n.endswith(entry) for n in names), entry

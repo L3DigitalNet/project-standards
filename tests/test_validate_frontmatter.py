@@ -415,6 +415,12 @@ def test_find_bundled_schema_missing_returns_canonical_path() -> None:
 
 from project_standards.registry import RegistryError, load_registry  # noqa: E402
 
+_PROJECT_SPEC_REGISTRY_BLOCK = ', "project_spec": {"default": "1.0", "versions": ["1.0"]}'
+
+
+def _with_project_spec_registry_block(payload: str) -> str:
+    return payload[:-1] + _PROJECT_SPEC_REGISTRY_BLOCK + "}"
+
 
 def test_load_registry_real_file() -> None:
     reg = load_registry()
@@ -424,6 +430,9 @@ def test_load_registry_real_file() -> None:
     assert reg.adr_supported_frontmatter("1.0") == ["1.1"]
     assert reg.is_known_python_tooling("1.0") is True
     assert reg.is_known_python_tooling("9.9") is False
+    assert reg.project_spec_default == "1.0"
+    assert reg.is_known_project_spec("1.0") is True
+    assert reg.is_known_project_spec("9.9") is False
 
 
 def test_registry_unknown_frontmatter_version_raises() -> None:
@@ -493,10 +502,16 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
             '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": {}}}',
             "cli_documentation.versions is not a list",
         ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}}, "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}}, "python_tooling": {"default": "1.0", "versions": ["1.0"]}, "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "1.0", "versions": ["1.0"]}, "project_spec": {"default": "1.0", "versions": {}}}',
+            "project_spec.versions is not a list",
+        ),
     ],
 )
 def test_load_registry_malformed_raises(tmp_path: Path, payload: str, match: str) -> None:
     bad = tmp_path / "registry.json"
+    if "project_spec" not in payload and not match.startswith("missing "):
+        payload = _with_project_spec_registry_block(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)
@@ -598,6 +613,8 @@ def test_load_config_reads_version_keys(tmp_path: Path) -> None:
         "    version: '1.0'\n"
         "    require_sections: true\n"
         "python_tooling:\n"
+        "  version: '1.0'\n"
+        "spec:\n"
         "  version: '1.0'\n",
         encoding="utf-8",
     )
@@ -605,6 +622,7 @@ def test_load_config_reads_version_keys(tmp_path: Path) -> None:
     assert cfg.frontmatter_version == "1.1"
     assert cfg.adr_version == "1.0"
     assert cfg.python_tooling_version == "1.0"
+    assert cfg.project_spec_version == "1.0"
     assert cfg.require_adr_sections is True
 
 
@@ -615,6 +633,7 @@ def test_load_config_version_keys_default_none(tmp_path: Path) -> None:
     assert cfg.frontmatter_version is None
     assert cfg.adr_version is None
     assert cfg.python_tooling_version is None
+    assert cfg.project_spec_version is None
 
 
 def test_load_config_required_false_is_honoured(tmp_path: Path) -> None:
@@ -1099,6 +1118,8 @@ def test_compat_gate_flags_known_incompatible_pair() -> None:
         markdown_tooling_versions=["1.0"],
         cli_documentation_default="1.0",
         cli_documentation_versions=["1.0"],
+        project_spec_default="1.0",
+        project_spec_versions=["1.0"],
     )
     cfg = _cfg(frontmatter_version="2.0", adr_version="1.0", require_adr_sections=True)
     msg = frontmatter_adr_incompatibility(cfg, reg)
@@ -1215,6 +1236,33 @@ def test_unknown_python_tooling_version_exits_2(
     assert "unknown python_tooling.version" in capsys.readouterr().err
 
 
+def test_project_spec_version_emits_no_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text(_doc(MINIMAL), encoding="utf-8")
+    _write_versioned_config(
+        tmp_path,
+        "markdown:\n  frontmatter:\n    include: ['doc.md']\nspec:\n  version: '1.0'\n",
+    )
+    rc = main(["--config", ".project-standards.yml"])
+    out = capsys.readouterr()
+    assert rc == 0
+    assert out.out == "✓  1 file(s) validated\n"
+    assert "spec.version" not in out.out
+    assert "spec.version" not in out.err
+
+
+def test_unknown_project_spec_version_exits_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_versioned_config(tmp_path, "spec:\n  version: '9.9'\n")
+    rc = main(["--config", ".project-standards.yml"])
+    assert rc == 2
+    assert "unknown spec.version" in capsys.readouterr().err
+
+
 def test_main_incompatible_combo_via_registry_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1235,6 +1283,8 @@ def test_main_incompatible_combo_via_registry_exits_2(
         markdown_tooling_versions=["1.0"],
         cli_documentation_default="1.0",
         cli_documentation_versions=["1.0"],
+        project_spec_default="1.0",
+        project_spec_versions=["1.0"],
     )
     monkeypatch.setattr(_vf, "load_registry", lambda: fake)
     monkeypatch.chdir(tmp_path)
@@ -1615,6 +1665,8 @@ def test_effective_schema_bundled_name_version_mismatch_is_config_error() -> Non
         markdown_tooling_versions=["1.0"],
         cli_documentation_default="1.0",
         cli_documentation_versions=["1.0"],
+        project_spec_default="1.0",
+        project_spec_versions=["1.0"],
     )
     cfg = _cfg(schema="markdown-frontmatter", frontmatter_version="2.0")
     with pytest.raises(ConfigError, match="does not match"):
@@ -1660,6 +1712,8 @@ def test_load_registry_cross_field_violations_raise(
     # Defaults must be members of their versions, and ADR supports-lists must name
     # bundled frontmatter versions — crisp load-time errors, not late confusion (F39).
     bad = tmp_path / "registry.json"
+    if "project_spec" not in payload:
+        payload = _with_project_spec_registry_block(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)
@@ -1719,10 +1773,21 @@ def test_tags_reject_edge_and_double_hyphens(
             ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]}, "cli_documentation": {"default": "9.9", "versions": ["1.0"]}}',
             "cli_documentation.default",
         ),
+        (
+            '{"frontmatter": {"default": "1.1", "versions": {"1.1": "markdown-frontmatter"}},'
+            ' "adr": {"default": "1.0", "versions": {"1.0": {"supports_frontmatter": ["1.1"]}}},'
+            ' "python_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "markdown_tooling": {"default": "1.0", "versions": ["1.0"]},'
+            ' "cli_documentation": {"default": "1.0", "versions": ["1.0"]},'
+            ' "project_spec": {"default": "9.9", "versions": ["1.0"]}}',
+            "project_spec.default",
+        ),
     ],
 )
 def test_load_registry_default_not_bundled_raises(tmp_path: Path, payload: str, match: str) -> None:
     bad = tmp_path / "registry.json"
+    if "project_spec" not in payload:
+        payload = _with_project_spec_registry_block(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)

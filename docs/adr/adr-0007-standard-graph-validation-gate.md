@@ -6,7 +6,7 @@ description: 'Records the decision to run standards-graph validation as part of 
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -19,6 +19,14 @@ aliases:
   - 'standard-graph-validation-gate'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
+  - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
+  - 'docs/adr/adr-0004-authority-map-and-conflict-free-composition.md'
+  - 'docs/adr/adr-0008-consumer-config-namespace-registry.md'
+  - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
+  - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+  - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
 supersedes: []
 superseded_by: null
 source: []

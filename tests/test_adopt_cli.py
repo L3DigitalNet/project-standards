@@ -20,7 +20,7 @@ from project_standards import validate_frontmatter
 from project_standards.cli import main
 
 
-def test_list_plain_lists_five_packaged_adopt_standards(
+def test_list_plain_lists_packaged_adopt_standards(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc = main(["list"])
@@ -32,6 +32,7 @@ def test_list_plain_lists_five_packaged_adopt_standards(
         "markdown-tooling",
         "python-tooling",
         "cli-documentation",
+        "project-spec",
     ):
         assert sid in out
 
@@ -43,6 +44,7 @@ def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:
     data = json.loads(out)
     ids = {s["id"] for s in data}
     assert "python-tooling" in ids
+    assert "project-spec" in ids
     for s in data:  # stable schema: every standard carries a contract_version key
         assert "contract_version" in s
     py = next(s for s in data if s["id"] == "python-tooling")
@@ -54,6 +56,12 @@ def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:
         if a["dest"] == ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
     )
     assert script["mode"] == "0755"
+    ps = next(s for s in data if s["id"] == "project-spec")
+    assert ps["contract_version"] == "1.0"
+    assert any(
+        a["kind"] == "workflow-caller" and a["dest"] == ".github/workflows/validate-specs.yml"
+        for a in ps["artifacts"]
+    )
 
 
 def test_list_on_broken_manifest_exits_clean(
@@ -73,25 +81,29 @@ def test_list_on_broken_manifest_exits_clean(
 
 
 def test_bundle_ids_align_with_registry_contract_versions() -> None:
-    # Drift guard (both directions): every adoptable bundle maps to a non-None registry
-    # contract version, and the registry's version-tracked standards are exactly the bundles.
+    # Drift guard (both directions): every adoptable bundle is known to the CLI, while
+    # version-tracked standards still map to a non-None registry contract version.
     from project_standards.adopt.manifest import available_standards
     from project_standards.cli import (
+        _ADOPTABLE_STANDARD_IDS,  # pyright: ignore[reportPrivateUsage]
+        _VERSION_TRACKED_STANDARD_IDS,  # pyright: ignore[reportPrivateUsage]
         _contract_version,  # pyright: ignore[reportPrivateUsage]
     )
     from project_standards.registry import load_registry
 
     reg = load_registry()
     bundle_ids = set(available_standards())
-    registry_ids = {
+    version_tracked_registry_ids = {
         "markdown-frontmatter": reg.frontmatter_default,
         "adr": reg.adr_default,
         "python-tooling": reg.python_tooling_default,
         "markdown-tooling": reg.markdown_tooling_default,
         "cli-documentation": reg.cli_documentation_default,
+        "project-spec": reg.project_spec_default,
     }
-    assert bundle_ids == set(registry_ids)
-    for sid in bundle_ids:
+    assert bundle_ids == set(_ADOPTABLE_STANDARD_IDS)
+    assert set(_VERSION_TRACKED_STANDARD_IDS) == set(version_tracked_registry_ids)
+    for sid in _VERSION_TRACKED_STANDARD_IDS:
         assert _contract_version(reg, sid) is not None, sid
 
 

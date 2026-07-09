@@ -6,7 +6,7 @@ description: 'Records the decision to treat standard resources as lazy-loadable,
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -18,6 +18,12 @@ aliases:
   - 'standard-resource-uris-and-index'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
+  - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
+  - 'docs/adr/adr-0009-agent-summary-and-canonical-standard-split.md'
+  - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+  - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+  - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
 supersedes: []
 superseded_by: null
 source: []

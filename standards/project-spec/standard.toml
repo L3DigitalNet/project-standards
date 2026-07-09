@@ -8,8 +8,8 @@ summary = "Tiered, stable-ID, CLI-validated project specification format and too
 adoption = "cli"
 
 [versions]
-supported = []
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = ["spec"]

@@ -104,19 +104,19 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 **Applies when:** wiring or debugging a repo-wide style gate — markdownlint (`lint-markdown.yml`), Prettier (`format.yml`), or frontmatter validation (`validate-markdown-frontmatter.yml`).
 
-**Rule:** machine-generated or template Markdown is **excluded** from style gates, not reformatted. Draw the exclusion boundary once and mirror it across gates:
+**Rule:** machine-generated or template Markdown is **excluded** from style gates, not reformatted. Draw one boundary and mirror it across gates:
 
 - `.project-standards.yml` excludes `docs/handoff/**` from frontmatter validation.
-- `.markdownlint-cli2.jsonc` `ignores` excludes `docs/codex-reviews/**` + `docs/handoff/**` (config `ignores` apply in both the local bare run and the CI `markdownlint-cli2-action` run, which passes globs explicitly — verify both).
-- Prettier honors `.prettierignore`, which mirrors the markdownlint `ignores` (`docs/codex-reviews/`, `docs/handoff/`) — added 2026-06-09 (`281afe4`); `format.yml` is green (authored docs are formatted, generated transcripts ignored).
+- `.markdownlint-cli2.jsonc` ignores `docs/codex-reviews/**` and `docs/handoff/**`; verify local and CI behavior.
+- `.prettierignore` mirrors the markdownlint ignore boundary.
 
-**Why:** codex review transcripts and v3 handoff state regenerate constantly, and the bundles ship with intentional placeholders. Style-linting them is churn that keeps CI permanently red on content no human authored to a style bar.
+**Why:** codex review transcripts, v3 handoff state, and shipped templates change mechanically. Style-linting them creates churn and false red CI.
 
-**Gotchas (when a doc IS in scope and a rule fights Prettier):**
+**Gotchas for in-scope docs:**
 
-- markdownlint **MD031** (blanks around fences) conflicts with Prettier on **list-nested** fences — Prettier keeps them tight because it owns blank-line placement (cf. the existing MD032 exclusion). Scope-disable MD031 around the block, or disable it globally as Prettier-owned (a rule-set/contract change: `.markdownlint.json` + `tests/test_markdownlint_config.py` + standard doc + CHANGELOG).
-- markdownlint **MD051** (link fragments) anchor algorithm diverges from GitHub's on **emoji** headings — scope-disable on the affected link; it resolves on GitHub. Keep MD051 enabled (it catches real stale TOC links).
-- Inline disables in lists survive Prettier only if the directive stays adjacent to its target — verify with a `prettier --write` + markdownlint pass after adding them.
+- MD031 conflicts with Prettier on list-nested fences; scope-disable locally unless changing the standard.
+- MD051 can disagree with GitHub on emoji anchors; scope-disable only the affected link.
+- Inline disables in lists must stay adjacent to their target after Prettier.
 
 **Sources:** 2026-06-09 session (markdownlint scoping + authored-doc cleanup, `ec2b517`).
 
@@ -134,15 +134,20 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 
 ## 9. Doc-embedded scaffolds are byte-locked to their bundle twin
 
-**Applies when:** editing a copy-paste scaffold fence inside a standard doc (e.g. python-tooling §15 `check.yml`, §6 pyproject baseline; markdown-frontmatter adopt.md starter + caller; markdown-tooling §6 prettierrc) or adding a new one.
+**Applies when:** editing a copy-paste scaffold fence inside a standard doc or adding a new one.
 
-**Rule:** a scaffold that exists both as a fenced block in a standard doc and as an adopt bundle artifact is ONE artifact with two representations. Keep them in sync via a drift test in `tests/test_adopt_dogfood.py` (byte-equality for verbatim blocks; semantic TOML/YAML comparison when the doc adds illustrative content). For **YAML** fences two extra hazards apply:
+**Rule:** a scaffold that exists both as a fenced block in a standard doc and as an adopt bundle artifact is one artifact with two representations. Keep them in sync via a drift test in `tests/test_adopt_dogfood.py`.
 
-- The shared `.editorconfig` defaults Markdown to tab indentation — tabs inside a YAML fence make the scaffold unparseable (this shipped broken for weeks; caught 2026-07-01). Author fences with spaces.
-- Prettier's `embeddedLanguageFormatting: "auto"` DOES reformat yaml fences in Markdown, and the `**/*.md` override (`singleQuote: true`) rewrites their quote style — silently breaking byte-equality with the bundle. Put a bare `<!-- prettier-ignore -->` (no trailing text — Prettier ignores the directive if anything follows it in the comment) on the line before the fence. Prettier does NOT format toml fences (no TOML parser), so TOML needs no guard.
+Use byte equality for verbatim blocks and semantic TOML/YAML comparison when the doc intentionally adds illustrative content.
+
+For YAML fences:
+
+- Author with spaces; tabs from Markdown editor settings make YAML unparseable.
+- Put a bare `<!-- prettier-ignore -->` before verbatim YAML fences so Prettier does not rewrite quote style.
+- TOML fences need no guard because Prettier has no TOML parser.
 
 **Why:** manual copy-adopters use the doc block, the CLI ships the bundle; drift means the two adoption paths deliver different (or broken) tooling.
 
-**Sources:** 2026-07-01 python-tooling standard review (tab-YAML §15 defect + Prettier embedded-formatting verification); same-day markdown-standards sweep (starter example had silently lost `**/*.template.md` to unguarded drift).
+**Sources:** 2026-07-01 python-tooling review and same-day markdown-standards sweep.
 
 **Related:** 1, 5, 6.

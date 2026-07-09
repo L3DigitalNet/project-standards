@@ -41,6 +41,6 @@
 ## Storage
 
 - Specs and design artifacts: `docs/superpowers/specs/`
-- Research / reference support docs: `docs/superpowers/research/` (chosen 2026-07-07 for the MCP reference pack; `docs/research/` was avoided because its `index.md` is qdev-generated)
+- Research / reference support docs: `docs/superpowers/research/` (chosen 2026-07-07 for the MCP reference pack; `docs/research/` was avoided because `docs/research/index.md` is qdev-generated)
 - Implementation plans: `docs/superpowers/plans/` (only the pending `check` drift plan remains after the 2026-07-05 prune)
 - `docs/superpowers/specs/README.md` — human-facing index of the specs directory (own status table, kept separate from this pointer table)

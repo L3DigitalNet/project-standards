@@ -8,7 +8,7 @@ summary = "Reference guidance for Python code shape, boundaries, typing, tests, 
 adoption = "reference-only"
 
 [versions]
-supported = []
+supported = ["0.4"]
 latest = "0.4"
 
 [config]

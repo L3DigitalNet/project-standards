@@ -6,7 +6,7 @@ description: 'Records the decision to treat per-standard agent summaries as deri
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -18,6 +18,7 @@ aliases:
   - 'agent-summary-and-canonical-standard-split'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
 supersedes: []
 superseded_by: null
 source: []

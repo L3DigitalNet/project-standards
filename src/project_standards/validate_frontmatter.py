@@ -482,6 +482,7 @@ class ProjectConfig:
         python_tooling_version: str | None = None,
         markdown_tooling_version: str | None = None,
         cli_documentation_version: str | None = None,
+        project_spec_version: str | None = None,
         references_enabled: bool = False,
     ) -> None:
         self.schema = schema
@@ -494,6 +495,7 @@ class ProjectConfig:
         self.python_tooling_version = python_tooling_version
         self.markdown_tooling_version = markdown_tooling_version
         self.cli_documentation_version = cli_documentation_version
+        self.project_spec_version = project_spec_version
         self.references_enabled = references_enabled
 
 
@@ -601,6 +603,7 @@ def load_config(path: Path) -> ProjectConfig:
     python_tooling_version: str | None = None
     markdown_tooling_version: str | None = None
     cli_documentation_version: str | None = None
+    project_spec_version: str | None = None
     references_enabled = False
 
     if path.exists():
@@ -660,6 +663,10 @@ def load_config(path: Path) -> ProjectConfig:
                 cli_documentation_version = _version_str(
                     cd_dict.get("version"), "cli_documentation.version"
                 )
+            spec = raw_dict.get("spec")
+            if isinstance(spec, dict):
+                spec_dict = cast("dict[str, Any]", spec)
+                project_spec_version = _version_str(spec_dict.get("version"), "spec.version")
 
     return ProjectConfig(
         schema=schema,
@@ -672,6 +679,7 @@ def load_config(path: Path) -> ProjectConfig:
         python_tooling_version=python_tooling_version,
         markdown_tooling_version=markdown_tooling_version,
         cli_documentation_version=cli_documentation_version,
+        project_spec_version=project_spec_version,
         references_enabled=references_enabled,
     )
 
@@ -763,6 +771,7 @@ def main(argv: list[str] | None = None) -> int:
         config.python_tooling_version is not None
         or config.markdown_tooling_version is not None
         or config.cli_documentation_version is not None
+        or config.project_spec_version is not None
         or config.frontmatter_version is not None
         or config.adr_version is not None
         or config.require_adr_sections
@@ -809,6 +818,19 @@ def main(argv: list[str] | None = None) -> int:
     ):
         print(
             f"error: unknown cli_documentation.version {config.cli_documentation_version!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # spec.version is metadata for the Project Specification Standard and must be
+    # known whenever present; the spec subcommand validates the same key directly.
+    if (
+        registry is not None
+        and config.project_spec_version is not None
+        and not registry.is_known_project_spec(config.project_spec_version)
+    ):
+        print(
+            f"error: unknown spec.version {config.project_spec_version!r}",
             file=sys.stderr,
         )
         return 2

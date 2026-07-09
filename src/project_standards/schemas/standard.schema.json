@@ -284,10 +284,12 @@
           "items": {
             "type": "string"
           },
+          "minItems": 1,
           "title": "Supported",
           "type": "array"
         },
         "latest": {
+          "minLength": 1,
           "title": "Latest",
           "type": "string"
         }

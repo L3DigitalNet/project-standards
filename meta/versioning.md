@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: null
 owner: ''
 consumer: 'mix'
@@ -21,6 +21,7 @@ related:
   - 'standards/python-tooling/README.md'
   - 'standards/markdown-tooling/README.md'
   - 'standards/cli-documentation/README.md'
+  - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
 source:
   - 'https://semver.org/spec/v2.0.0.html'
   - 'https://keepachangelog.com/en/1.1.0/'
@@ -53,7 +54,7 @@ license: null
 
 This repository ships **several components under one version number**: six standards — the [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), [Markdown Tooling](../standards/markdown-tooling/README.md), [Project Specification](../standards/project-spec/README.md), and [CLI Documentation](../standards/cli-documentation/README.md) standards — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflows** (`.github/workflows/validate-markdown-frontmatter.yml`, `validate-specs.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. Project Specification is enforced the same way, via its own reusable workflow and `spec:` config block, but ships no scaffolds to copy — the CLI itself is the artifact. The Python Tooling, Markdown Tooling, and CLI Documentation standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow; CLI Documentation ships its own `cli-docs-check.yml`), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All six still ship under the same release tag. A seventh document, the [Python Coding standard](../standards/python-coding/README.md), ships in the repository as an **in-development, reference-only draft** — unregistered, with no contract version, excluded from validation and the adopt CLI — and sits outside this release contract until registered. The [Standard Bundle Authoring standard](../standards/standard-bundle-authoring/README.md) likewise sits outside the release contract: an **internal/reference** meta-standard (`adoption = "none"`) that defines the `standard.toml` bundle contract this repository authors its own standards to. It is unregistered and not consumer-adopted, so it does not change the six-standard release count.
+The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. Project Specification is enforced the same way, via its own reusable workflow and `spec:` config block; its templates and tooling form contract `1.0`, selected with `spec.version`. The Python Tooling, Markdown Tooling, and CLI Documentation standards are **copy-adopted** — a consumer copies their scaffolds (and, for Markdown Tooling, optionally opts into the `lint-markdown.yml` workflow; CLI Documentation ships its own `cli-docs-check.yml`), so they are never inherited automatically and a change to them cannot newly-fail a consumer on its own. All six still ship under the same release tag. A seventh document, the [Python Coding standard](../standards/python-coding/README.md), ships in the repository as an **in-development, reference-only draft** with package version `0.4` — unregistered, excluded from validation and the adopt CLI, and not a consumer-selectable contract until registered. The [Standard Bundle Authoring standard](../standards/standard-bundle-authoring/README.md) likewise sits outside the release contract: an **internal/reference** meta-standard (`adoption = "none"`) at package version `1.0` that defines the `standard.toml` bundle contract this repository authors its own standards to. It is unregistered and not consumer-adopted, so it does not change the six-standard release count.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -80,7 +81,7 @@ Each standard carries its own `major.minor` contract version, selected per stand
 | ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
 | Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
 | Markdown Tooling | `1.1` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
-| Project Specification | none — tracks the installed release | n/a (no selectable version) | yes — `spec:` config + `validate-specs.yml` |
+| Project Specification | `1.0` | `spec.version` (optional; unset = default) | yes — `spec:` config + `validate-specs.yml` |
 | CLI Documentation | `1.0` | `cli_documentation.version` (optional) | no — copy-adopted label, metadata only |
 
 **Adding a bundled contract version is a MINOR tool release; removing one is MAJOR** (a consumer pinned to it would newly fail). Within a single standard's line, the previously-passing rule applies: an additive field/value is MINOR, a stricter rule or removed enum value is MAJOR.

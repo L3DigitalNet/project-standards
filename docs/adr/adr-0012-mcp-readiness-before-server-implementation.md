@@ -6,7 +6,7 @@ description: 'Records the decision to defer any MCP server implementation until 
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -19,6 +19,10 @@ aliases:
   - 'mcp-readiness-before-server-implementation'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
+  - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
+  - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
+  - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
 supersedes: []
 superseded_by: null
 source: []

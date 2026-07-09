@@ -4,7 +4,7 @@ The "standard for standards": the contract every standard bundle under `standard
 
 ## Purpose & status
 
-This standard closes a gap: the repository defines standards as bundles under `standards/{id}/`, but nothing said what a bundle must declare, and the eight current bundles diverge (five ship packaged adopt-artifact manifests, `project-spec` is CLI-enforced with no packaged adopt artifacts, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only). This document is the single, machine-checkable authoring contract that closes it. It realizes [adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md) and is the `SPEC-MT01` Step 02 deliverable.
+This standard closes a gap: the repository defines standards as bundles under `standards/{id}/`, but nothing said what a bundle must declare, and the eight current bundles diverge (six ship packaged adopt-artifact manifests, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only). This document is the single, machine-checkable authoring contract that closes it. It realizes [adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md) and is the `SPEC-MT01` Step 02 deliverable.
 
 It is an **internal / reference** standard: it governs how this repository authors its own standards. Its adoption mode is `none` — there is **no `adopt.md`**, no copy-adopt bundle, and no `registry.json` contract version, because no downstream repository authors its own standards today. It still ships its own [`standard.toml`](standard.toml) so the repository dogfoods the contract it defines.
 
@@ -41,8 +41,8 @@ summary = "Formatting and structural linting for Markdown and adjacent structure
 adoption = "copy-adopt"       # required — validator | copy-adopt | cli | reference-only | none
 
 [versions]
-supported = ["1.0", "1.1"]    # required — every consumer contract version still accepted (may be [])
-latest = "1.1"                # required — the current default contract (may be "" when unversioned)
+supported = ["1.0", "1.1"]    # required — every package/contract version still accepted; never empty
+latest = "1.1"                # required — the current default package/contract version; must be in supported
 
 [config]
 namespaces = ["markdown_tooling"] # required — dotted paths this standard owns in .project-standards.yml (may be [])
@@ -90,11 +90,11 @@ optional = true
 | --- | --- | --- |
 | `validator` | Enforced by a Python validator downstream repos run via a reusable CI workflow. | `markdown-frontmatter`, `adr` |
 | `copy-adopt` | Materialized config / scaffold files copied into the consumer repo by the adopt engine. | `python-tooling`, `markdown-tooling`, `cli-documentation` |
-| `cli` | Enforced through a CLI command the consumer runs (`project-standards spec …`). | `project-spec` |
+| `cli` | Enforced through a CLI command the consumer runs; may also seed repo-local support scaffolding through the artifact plane. | `project-spec` |
 | `reference-only` | Guidance only — no validator, no materialized files, no CLI enforcement. | `python-coding` (draft) |
 | `none` | Internal: governs how this repository authors standards; not consumer-adopted. | `standard-bundle-authoring` (this standard) |
 
-The mode is schema-bound manifest metadata. `cli` names how `project-spec` is enforced today; broaden it (e.g. to `package-tooling`) only via a spec revision if a second CLI-enforced standard appears ([SPEC-BA01 OQ-001](../../docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md)).
+The mode is schema-bound manifest metadata. `cli` names how `project-spec` compliance is enforced; static config and workflow support files still belong in `adopt.toml` when they are seeded into a consumer repository. Broaden the mode name (e.g. to `package-tooling`) only via a spec revision if a second CLI-enforced standard appears ([SPEC-BA01 OQ-001](../../docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md)).
 
 ## Authorities
 
@@ -191,7 +191,7 @@ The `standard.toml` manifest describes the standard; the **artifact plane** (`ad
 - **references its `adopt.md` adoption guide** through the `adopt` resource when `adoption` is `validator`, `copy-adopt`, or `cli`, or
 - **explicitly declares non-adoptability** (`adoption = "reference-only"` or `adoption = "none"`, no `adopt` resource).
 
-Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior. This standard does not re-invent the adopt engine; current graph validation enforces each adoptable standard's `adopt` guide resource, while deeper `standard.toml` to packaged `adopt.toml` artifact linkage remains a future graph/readiness check.
+Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior. This standard does not re-invent the adopt engine; graph validation enforces each adoptable standard's `adopt` guide resource, and package tests verify that packaged `adopt.toml` manifests resolve their artifact sources.
 
 ## Lifecycle & exceptions
 
@@ -208,7 +208,7 @@ draft → review → active → deprecated → archived
 The machine schema and graph validator are authoritative, but this checklist is the manual authoring quick-check. A `standard.toml` conforms when **every required field is present and well-formed**:
 
 - [ ] `[standard]` — `id` (kebab-case, matches directory), `name`, `status` (a valid lifecycle state), `summary`, `adoption` (one of the five modes).
-- [ ] `[versions]` — `supported` (array, may be empty) and `latest` (string, may be empty) both present.
+- [ ] `[versions]` — `supported` (non-empty array) and `latest` (non-empty string, present in `supported`) both present.
 - [ ] `[config]` — `namespaces` present (array of dotted paths, may be empty); no path duplicates another standard's; no reserved meta key claimed.
 - [ ] `[capabilities]` — `provides` and `consumes_platform` both present (arrays, may be empty).
 - [ ] `[resources]` — `readme` present; `adopt` present **iff** `adoption` is `validator`, `copy-adopt`, or `cli`.

@@ -6,12 +6,12 @@
 
 A repository has adopted this standard when:
 
-1. It has a `spec:` block in `.project-standards.yml` declaring which files are project specs.
+1. It has a `spec:` block in `.project-standards.yml` declaring contract version `1.0` and which files are project specs.
 2. Every declared spec passes `project-standards spec validate` (the deterministic structural gate).
 3. CI runs that same validation on every push/PR, pinned to a release tag.
 4. Anyone authoring or extending a spec uses the CLI (`new`, `upgrade`, `next`) rather than hand-editing structure, so the guarantees in [§3](README.md#3-features) hold.
 
-Unlike artifact-bundled standards such as Markdown Frontmatter and Python Tooling SSOT, there is no separate "quick path" command here — installing `project-standards` already gives you the full tool surface, and `new` scaffolds directly from the package's bundled templates. There is nothing to seed into the consuming repo except the config block below.
+This standard has two adoption pieces. `project-standards adopt project-spec` seeds the repo-local configuration and CI caller. The `project-standards spec` CLI remains the only path that creates real spec documents, because specs need repository-specific titles, IDs, owners, and profile choices.
 
 ## 1. Prerequisites
 
@@ -39,16 +39,26 @@ This mints a fresh `spec_id`, fills `created`/`profile`/title into the frontmatt
 
 ## 3. Wire the tooling
 
-Add a `spec:` block to `.project-standards.yml`, declaring which files are project specs:
+Run the adopt command to materialize the workflow caller and print the config fragment:
 
+```bash
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
+  project-standards adopt project-spec --dest .
+```
+
+Merge the reported `spec:` fragment into `.project-standards.yml`, declaring which files are project specs:
+
+<!-- prettier-ignore -->
 ```yaml
+# Add the following to your .project-standards.yml.
 spec:
+  version: "1.0"
   include:
-    - 'docs/specs/**/*.md'
+    - "docs/specs/**/*.md"
   exclude: []
 ```
 
-`include`/`exclude` accept a string or a list of strings (glob patterns, matched the same way as the Markdown Frontmatter Standard's `include`/`exclude`). A missing `spec:` block is not an error by itself, but every `spec` subcommand that discovers files from config (`validate`, `lint`) requires either this block or explicit file arguments — an empty corpus is refused, not silently passed, so CI can never go green vacuously.
+`version` selects the Project Specification contract version bundled with the installed tool; `1.0` is the current default. `include`/`exclude` accept a string or a list of strings (glob patterns, matched the same way as the Markdown Frontmatter Standard's `include`/`exclude`). A missing `spec:` block is not an error by itself, but every `spec` subcommand that discovers files from config (`validate`, `lint`) requires either this block or explicit file arguments — an empty corpus is refused, not silently passed, so CI can never go green vacuously.
 
 The full CLI surface, once specs exist:
 
@@ -65,8 +75,9 @@ All commands default `--config` to `.project-standards.yml`, print human-readabl
 
 ## 4. Validation
 
-**CI.** Create or extend a workflow under `.github/workflows/` calling the reusable validator:
+**CI.** The adopt command writes `.github/workflows/validate-specs.yml` with this reusable workflow caller:
 
+<!-- prettier-ignore -->
 ```yaml
 name: Validate project specs
 
@@ -80,9 +91,9 @@ jobs:
   validate-specs:
     uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v4
     with:
-      config-path: '.project-standards.yml'
-      standards-ref: 'v4'
-      strict-lint: false # set true to also fail CI on lint warnings
+      config-path: ".project-standards.yml"
+      standards-ref: "v4"
+      strict-lint: false
 ```
 
 > **⚠️ Pin both refs**, exactly as for the [Markdown Frontmatter Standard](../markdown-frontmatter/adopt.md#3-step-2--add-the-ci-workflow): `@v4` on `uses:` pins the workflow definition; `standards-ref` pins the installed CLI. Set them to the same ref so they never drift; use a full version (`v4.0.0`) for a fully immutable pin.
@@ -100,6 +111,7 @@ Adoption is complete when this exits `0` and CI runs it on every push/PR.
 
 ## 5. Versioning & staying in compliance
 
+- **Keep `spec.version` quoted and current.** The current Project Specification contract is `1.0`. Unknown versions are configuration errors; unquoted numeric versions are rejected because YAML can silently lose precision.
 - **Pin the major tag `@v4`** for both the `uses:` ref and `standards-ref`, matching the CI workflow above (`v4.0.0` is the first release that carries this standard). Within a major, additive changes only — a spec that validates clean today keeps validating clean tomorrow.
 - **A major bump is intentional work**, same as for the other standards ([§7 Versioning & staying in compliance](../markdown-frontmatter/adopt.md#7-versioning--staying-in-compliance) documents the general policy). Read the CHANGELOG migration notes before re-pinning.
 

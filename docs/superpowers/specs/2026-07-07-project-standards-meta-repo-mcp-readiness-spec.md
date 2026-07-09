@@ -6,24 +6,29 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-07'
+last_reviewed: '2026-07-09'
 supersedes: null
 superseded_by: null
 related:
   adrs:
-    - 'docs/adr/adr-NNNN-standard-bundle-authoring-contract.md'
-    - 'docs/adr/adr-NNNN-manifest-first-standard-discovery.md'
-    - 'docs/adr/adr-NNNN-separate-standard-and-artifact-manifests.md'
-    - 'docs/adr/adr-NNNN-authority-map-and-conflict-free-composition.md'
-    - 'docs/adr/adr-NNNN-stable-generic-agent-tooling-interface.md'
-    - 'docs/adr/adr-NNNN-standard-provider-plugin-model.md'
-    - 'docs/adr/adr-NNNN-standard-graph-validation-gate.md'
-    - 'docs/adr/adr-NNNN-consumer-config-namespace-registry.md'
-    - 'docs/adr/adr-NNNN-agent-summary-and-canonical-standard-split.md'
-    - 'docs/adr/adr-NNNN-standard-resource-uris-and-index.md'
-    - 'docs/adr/adr-NNNN-dogfood-consumer-fixtures-for-standards-composition.md'
-    - 'docs/adr/adr-NNNN-mcp-readiness-before-server-implementation.md'
-    - 'docs/adr/adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
+    - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
+    - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
+    - 'docs/adr/adr-0004-authority-map-and-conflict-free-composition.md'
+    - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
+    - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
+    - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
+    - 'docs/adr/adr-0008-consumer-config-namespace-registry.md'
+    - 'docs/adr/adr-0009-agent-summary-and-canonical-standard-split.md'
+    - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
+    - 'docs/adr/adr-0011-dogfood-consumer-fixtures-for-standards-composition.md'
+    - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
+    - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+    - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
+    - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+    - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
 
   tickets: []
   repositories:
@@ -37,6 +42,9 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.6 | 2026-07-09 | Coding agent | Aligned the manifest example, adoption-mode references, and authority tuple with the implemented ADR 0017-0021 package methodology. |
+| 0.5 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references after the adoption, lifecycle, provenance, versioning, and packaged-skill decisions were recorded. |
+| 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references from placeholders to recorded ADR paths. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: tightened independent-standard-package rules, relationship taxonomy, MCP-evidence alignment, and graph gates for package independence. |
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full specification for preparing the `project-standards` meta-repository for a future scalable MCP server. |
@@ -90,7 +98,7 @@ This is preparation only. The future MCP server should be able to read these con
 | NG-001 | Implement the MCP server in this work. | This spec prepares the repository. MCP design and implementation require a separate downstream spec after readiness gates pass. |
 | NG-002 | Replace the existing CLI, validators, schemas, or reusable workflows with MCP. | MCP should become an access/orchestration layer over canonical repository contracts, not the canonical authority. |
 | NG-003 | Make standards depend on a running service to be usable. | Consumer repositories must remain usable through docs, CLI, and CI without MCP. |
-| NG-004 | Require every standard to have identical implementation mechanics. | Standards may be documentation-only, copy-adopted, validator-enforced, workflow-backed, or provider-backed as long as they declare their capabilities honestly. |
+| NG-004 | Require every standard to have identical implementation mechanics. | Standards may be documentation-only, copy-adopted, validator-enforced, CLI-backed, reference-only, or internal-only as long as they declare their capabilities honestly. |
 | NG-005 | Hide conflicts through precedence rules. | Conflicting standards should be redesigned or explicitly rejected by graph validation, not silently resolved by priority. |
 | NG-006 | Treat agent-specific summaries as canonical replacements for full standards. | Agent summaries are derived/companion artifacts. The canonical standard remains the full bundle documentation and machine contracts. |
 
@@ -389,19 +397,19 @@ The following ADRs should be created or updated as part of this preparation work
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | Create a Standard Bundle Authoring Standard. | Scaling standards requires a standard for standards. | Keep conventions informal; document in README only. | `adr-NNNN-standard-bundle-authoring-contract.md` |
-| D-002 | Use `standard.toml` as the primary manifest for standard metadata. | Machine consumers need stable, validated metadata independent of prose. | Encode everything in `README.md`; expand `registry.json` only. | `adr-NNNN-manifest-first-standard-discovery.md` |
-| D-003 | Preserve `adopt.toml` as artifact-focused and reference it from `standard.toml`. | Current adopt engine already has useful safety and planning behavior. | Merge all artifact fields into one large manifest immediately. | `adr-NNNN-separate-standard-and-artifact-manifests.md` |
-| D-004 | Use authority tuples to enforce conflict-free composition. | Arbitrary co-adoption is impossible to prove from prose alone. | Rely on standard authors to notice conflicts manually. | `adr-NNNN-authority-map-and-conflict-free-composition.md` |
-| D-005 | Keep future agent/MCP tools generic over `standard_id` and operation. | Per-standard tools do not scale and increase context/tool clutter. | Add a new tool for every standard. | `adr-NNNN-stable-generic-agent-tooling-interface.md` |
-| D-006 | Use provider registries for validators, fixers, drift checks, ID generation, and extraction. | Standard-specific behavior should be pluggable without central switch statements. | Hardcode each standard in CLI/MCP. | `adr-NNNN-standard-provider-plugin-model.md` |
-| D-007 | Add graph validation to the normal verification gate. | A manifest model is only useful if continuously enforced. | Run validation manually before releases only. | `adr-NNNN-standard-graph-validation-gate.md` |
-| D-008 | Require config namespace ownership. | `.project-standards.yml` must not become a collision-prone dumping ground. | Allow standards to add arbitrary config keys. | `adr-NNNN-consumer-config-namespace-registry.md` |
-| D-009 | Require agent summaries as companions, not replacements. | Agents need compact context, but canonical standards need full evidence/rationale. | Only full standards; only summaries. | `adr-NNNN-agent-summary-and-canonical-standard-split.md` |
-| D-010 | Treat standards resources as lazy-loadable URI-like assets. | Future MCP can expose resources directly from manifests. | Let each client discover file paths independently. | `adr-NNNN-standard-resource-uris-and-index.md` |
-| D-011 | Require dogfood consumer fixtures for composition. | Pairwise/fixture tests catch failures unit tests miss. | Test only individual standards. | `adr-NNNN-dogfood-consumer-fixtures-for-standards-composition.md` |
-| D-012 | Defer MCP implementation until meta-repo readiness gate passes. | Avoid encoding missing metadata directly into MCP implementation. | Build MCP immediately and backfill repo later. | `adr-NNNN-mcp-readiness-before-server-implementation.md` |
-| D-013 | Treat standards as independent packages and groups as recommendation profiles. | Arbitrary adoption fails if standards secretly require one another. | Model standards as suites with implicit dependencies; rejected because it harms composability and MCP scalability. | `adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md` |
+| D-001 | Create a Standard Bundle Authoring Standard. | Scaling standards requires a standard for standards. | Keep conventions informal; document in README only. | `adr-0001-standard-bundle-authoring-contract.md` |
+| D-002 | Use `standard.toml` as the primary manifest for standard metadata. | Machine consumers need stable, validated metadata independent of prose. | Encode everything in `README.md`; expand `registry.json` only. | `adr-0002-manifest-first-standard-discovery.md` |
+| D-003 | Preserve `adopt.toml` as artifact-focused and reference it from `standard.toml`. | Current adopt engine already has useful safety and planning behavior. | Merge all artifact fields into one large manifest immediately. | `adr-0003-separate-standard-and-artifact-manifests.md` |
+| D-004 | Use authority tuples to enforce conflict-free composition. | Arbitrary co-adoption is impossible to prove from prose alone. | Rely on standard authors to notice conflicts manually. | `adr-0004-authority-map-and-conflict-free-composition.md` |
+| D-005 | Keep future agent/MCP tools generic over `standard_id` and operation. | Per-standard tools do not scale and increase context/tool clutter. | Add a new tool for every standard. | `adr-0005-stable-generic-agent-tooling-interface.md` |
+| D-006 | Use provider registries for validators, fixers, drift checks, ID generation, and extraction. | Standard-specific behavior should be pluggable without central switch statements. | Hardcode each standard in CLI/MCP. | `adr-0006-standard-provider-plugin-model.md` |
+| D-007 | Add graph validation to the normal verification gate. | A manifest model is only useful if continuously enforced. | Run validation manually before releases only. | `adr-0007-standard-graph-validation-gate.md` |
+| D-008 | Require config namespace ownership. | `.project-standards.yml` must not become a collision-prone dumping ground. | Allow standards to add arbitrary config keys. | `adr-0008-consumer-config-namespace-registry.md` |
+| D-009 | Require agent summaries as companions, not replacements. | Agents need compact context, but canonical standards need full evidence/rationale. | Only full standards; only summaries. | `adr-0009-agent-summary-and-canonical-standard-split.md` |
+| D-010 | Treat standards resources as lazy-loadable URI-like assets. | Future MCP can expose resources directly from manifests. | Let each client discover file paths independently. | `adr-0010-standard-resource-uris-and-index.md` |
+| D-011 | Require dogfood consumer fixtures for composition. | Pairwise/fixture tests catch failures unit tests miss. | Test only individual standards. | `adr-0011-dogfood-consumer-fixtures-for-standards-composition.md` |
+| D-012 | Defer MCP implementation until meta-repo readiness gate passes. | Avoid encoding missing metadata directly into MCP implementation. | Build MCP immediately and backfill repo later. | `adr-0012-mcp-readiness-before-server-implementation.md` |
+| D-013 | Treat standards as independent packages and groups as recommendation profiles. | Arbitrary adoption fails if standards secretly require one another. | Model standards as suites with implicit dependencies; rejected because it harms composability and MCP scalability. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
 
 ### 8.4 Solution Alternatives Considered
 
@@ -449,22 +457,16 @@ The following ADRs should be created or updated as part of this preparation work
 [standard]
 id = "markdown-tooling"
 name = "Markdown Tooling"
-status = "active" # draft | active | deprecated | archived
 summary = "Formatting and structural linting for Markdown and adjacent structured text."
-default_contract = "1.1"
-adoption = "copy-adopt" # none | reference-only | copy-adopt | workflow | validator | package-tooling
+status = "active" # draft | review | active | deprecated | archived | superseded
+adoption = "copy-adopt" # validator | copy-adopt | cli | reference-only | none
 
 [versions]
 supported = ["1.0", "1.1"]
 latest = "1.1"
 
 [config]
-namespace = "markdown_tooling"
-
-[resources]
-readme = "README.md"
-adopt = "adopt.md"
-agent_summary = "agent-summary.md"
+namespaces = ["markdown_tooling"]
 
 [capabilities]
 provides = ["markdown.format", "markdown.lint.structure", "yaml.format", "json.format"]
@@ -474,6 +476,10 @@ consumes_platform = [] # generic capabilities supplied by tooling/platform, not 
 companions = ["markdown-frontmatter"] # useful together, never auto-required
 extends = [] # explicit extension only; requires ADR
 conflicts = [] # exceptional; normally redesign to avoid conflict
+
+[resources]
+readme = "README.md"
+adopt = "adopt.md"
 
 [[authority]]
 domain = "markdown"
@@ -491,15 +497,14 @@ mutates = false
 
 [[providers]]
 operation = "drift-check"
-kind = "python"
-entrypoint = "project_standards.markdown_tooling:check_drift"
+kind = "documentation-only"
 optional = true
 ```
 
 ### Authority Tuple
 
 ```text
-(domain, target, concern, owner, mutates, standard_id, contract_version)
+(domain, target, concern, owner, mutates, standard_id, package_version)
 ```
 
 Collision rule:
@@ -953,7 +958,7 @@ No durable runtime data is owned. Repository history and normal GitHub backups c
 ### MS-3 — User and admin experience
 
 1. Update docs so standard authors know how to add a standard.
-2. Add examples of common standard types: reference-only, copy-adopt, workflow-backed, validator-backed, draft.
+2. Add examples of common standard types: reference-only, copy-adopt, cli-backed, validator-backed, internal-only, draft.
 3. Add remediation hints to validation errors.
 4. Add a readiness report command or documented checklist.
 

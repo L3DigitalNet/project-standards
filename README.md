@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling**, **Markdown Tooling**, and **CLI Documentation** standards by copying their scaffolds (Markdown Tooling adds optional reusable lint and format workflows; CLI Documentation adds a copy-adopted CI drift check), and the **Project Specification** standard by installing the `project-standards` package directly (its CLI ships the full spec surface — nothing to copy beyond a `spec:` config block) — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling**, **Markdown Tooling**, **Project Specification**, and **CLI Documentation** standards through copy-adopted scaffolds where they need repo-local config or CI callers, and the Project Specification authoring surface through the `project-standards spec` CLI — rather than vendoring their own copies.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -96,7 +96,7 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 
 ### Project Specification Standard
 
-Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Unlike standards that seed artifacts into a consumer repo, there is nothing to copy besides a `spec:` config block — installing `project-standards` gives the full tool surface directly, and `new` scaffolds from the package's bundled templates.
+Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Adoption seeds the `spec:` config fragment and the reusable `validate-specs.yml` workflow caller; installing `project-standards` gives the full tool surface directly, and `new` scaffolds real specs from the package's bundled templates.
 
 - **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
 - **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
@@ -110,13 +110,13 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 ### Python Coding Standard (draft)
 
-Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (version 0.4):** reference-only, unregistered (no contract version), and not adoptable via the CLI. It ships in the repository for review and early reference until released.
+Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (package version 0.4):** reference-only, unregistered as a consumer-selectable contract, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
 
 - **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` contract version, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
+The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`, package version 1.0):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` consumer contract, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
 
 - **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
 
@@ -153,7 +153,7 @@ Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt in
 
 ### Project Specification
 
-Add a `spec:` block to `.project-standards.yml` declaring which files are project specs, then optionally call the reusable `validate-specs.yml@v4` workflow (same pinning rules as the Markdown standards). Available from `v4.0.0` onward — no earlier tag carries the standard or its workflow. See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
+Run `project-standards adopt project-spec` to materialize the reusable `validate-specs.yml@v4` workflow caller and report the `spec.version: '1.0'` config fragment for `.project-standards.yml`. The adopt path does not create real spec documents; use `project-standards spec new` for that. Available from `v4.0.0` onward — no earlier tag carries the standard or its workflow. See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
 
 ### CLI Documentation
 

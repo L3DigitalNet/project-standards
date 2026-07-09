@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-07'
+last_reviewed: '2026-07-09'
 supersedes: null
 superseded_by: null
 related:
@@ -14,11 +14,16 @@ related:
     - 'docs/adr/adr-NNNN-project-standards-mcp-server-boundary.md'
     - 'docs/adr/adr-NNNN-local-stdio-first-mcp-transport.md'
     - 'docs/adr/adr-NNNN-mcp-resources-before-tools.md'
-    - 'docs/adr/adr-NNNN-generic-mcp-tools-over-standard-specific-tools.md'
+    - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
     - 'docs/adr/adr-NNNN-read-only-first-controlled-write-later.md'
     - 'docs/adr/adr-NNNN-mcp-sdk-adapter-boundary.md'
     - 'docs/adr/adr-NNNN-remote-mcp-transport-deferred.md'
-    - 'docs/adr/adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+    - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
+    - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+    - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
     - 'docs/adr/adr-NNNN-mcp-roots-and-repo-boundary-policy.md'
     - 'docs/adr/adr-NNNN-mcp-capability-advertisement-policy.md'
     - 'docs/adr/adr-NNNN-mcp-protocol-and-sdk-version-selection.md'
@@ -37,6 +42,8 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.4 | 2026-07-09 | Coding agent | Added package-methodology ADR references and split standard descriptor version fields into package and consumer-contract planes. |
+| 0.3 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
@@ -390,11 +397,11 @@ flowchart LR
 | D-001 | MCP server is a thin adapter over the standards graph API. | Prevents parallel standards implementation. | Server parses docs/manifests directly; rejected as duplication. | `adr-NNNN-project-standards-mcp-server-boundary` |
 | D-002 | Use local stdio first. | Safest first transport and fits coding-agent workflows. | Streamable HTTP first; rejected until auth/threat model exists. | `adr-NNNN-local-stdio-first-mcp-transport` |
 | D-003 | Expose canonical content primarily as resources. | Resources are lazy context; tools are model-callable and should stay small. | Tool per document; rejected as tool bloat. | `adr-NNNN-mcp-resources-before-tools` |
-| D-004 | Keep MCP tools generic over standards. | New standards should not expand tool surface. | Per-standard tools; rejected. | `adr-NNNN-generic-mcp-tools-over-standard-specific-tools` |
+| D-004 | Keep MCP tools generic over standards. | New standards should not expand tool surface. | Per-standard tools; rejected. | `adr-0005-stable-generic-agent-tooling-interface.md` |
 | D-005 | Ship read-only/planning v1; defer controlled writes. | Reduces risk and proves value first. | Write tools immediately; rejected until plan identity and approval model are proven. | `adr-NNNN-read-only-first-controlled-write-later` |
 | D-006 | Wrap MCP SDK behind an adapter boundary. | SDK behavior/version may change; internal services should not depend on SDK types. | SDK types everywhere; rejected for maintainability. | `adr-NNNN-mcp-sdk-adapter-boundary` |
 | D-007 | Defer remote transport. | Streamable HTTP requires origin validation/auth/session security. | Local HTTP by default; rejected. | `adr-NNNN-remote-mcp-transport-deferred` |
-| D-008 | Preserve independent standard package semantics. | MCP should reveal graph relationships, not enforce hidden bundles. | Auto-adopt companion standards; rejected. | `adr-NNNN-independent-standard-packages-and-relationship-taxonomy.md` |
+| D-008 | Preserve independent standard package semantics. | MCP should reveal graph relationships, not enforce hidden bundles. | Auto-adopt companion standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
 | D-009 | Treat roots as the preferred repo boundary when the client supports them. | MCP roots define filesystem boundaries for servers. | Trust arbitrary repo paths from prompts; rejected. | `adr-NNNN-mcp-roots-and-repo-boundary-policy.md` |
 | D-010 | Advertise only implemented MCP capabilities. | Incorrect capability flags cause client trust and compatibility problems. | Optimistically advertise future features; rejected. | `adr-NNNN-mcp-capability-advertisement-policy.md` |
 
@@ -448,7 +455,8 @@ StandardDescriptor:
   standard_id: str
   title: str
   status: str
-  default_contract: str | None
+  package_version: str
+  default_consumer_contract: str | None
   resources: list[ResourceDescriptor]
   capabilities: list[str]
   authorities: list[AuthorityDescriptor]

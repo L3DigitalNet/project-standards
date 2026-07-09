@@ -24,7 +24,7 @@ def _manifest(standard_id: str) -> StandardManifest:
                 "summary": "Example standard.",
                 "adoption": "none",
             },
-            "versions": {"supported": [], "latest": ""},
+            "versions": {"supported": ["1.0"], "latest": "1.0"},
             "config": {"namespaces": []},
             "capabilities": {"provides": [], "consumes_platform": []},
             "relations": {"companions": [], "extends": [], "conflicts": []},

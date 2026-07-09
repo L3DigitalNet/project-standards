@@ -6,7 +6,7 @@ description: 'Records the decision to require declared ownership of top-level pr
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -18,6 +18,8 @@ aliases:
   - 'consumer-config-namespace-registry'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
+  - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
 supersedes: []
 superseded_by: null
 source: []

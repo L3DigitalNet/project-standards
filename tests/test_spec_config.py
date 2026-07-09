@@ -76,6 +76,21 @@ def test_reference_prefixes_default_empty(tmp_path: Path) -> None:
     assert cfg.reference_prefixes == []
 
 
+def test_spec_version_parsed(tmp_path: Path) -> None:
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  version: '1.0'\n  include: ['x/**']\n"))
+    assert cfg.version == "1.0"
+
+
+def test_unknown_spec_version_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match=r"unknown spec\.version"):
+        load_spec_config(_write(tmp_path, "spec:\n  version: '9.9'\n"))
+
+
+def test_spec_version_must_be_quoted_string(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="must be a quoted string"):
+        load_spec_config(_write(tmp_path, "spec:\n  version: 1.0\n"))
+
+
 def test_reference_prefixes_bad_shape_rejected(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="1-4 uppercase"):
         load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: ['rq']\n"))

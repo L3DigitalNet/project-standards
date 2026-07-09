@@ -6,7 +6,7 @@ description: 'Records the decision to require dogfood consumer-repo fixtures tha
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-07'
+updated: '2026-07-09'
 reviewed: '2026-07-07'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -19,6 +19,8 @@ aliases:
   - 'dogfood-consumer-fixtures-for-standards-composition'
 related:
   - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/adr/adr-0004-authority-map-and-conflict-free-composition.md'
+  - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
 supersedes: []
 superseded_by: null
 source: []

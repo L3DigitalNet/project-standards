@@ -14,7 +14,7 @@ status: 'fixed'
 
 A Markdown table renders as raw pipe-text on GitHub while the full lint gate (markdownlint-cli2 with MD055/MD056 enabled, Prettier `--check`) stays green. Found twice in `standards/python-tooling/README.md`.
 
-## Root cause
+## Cause
 
 Per GFM, a delimiter row whose cell count differs from the header row means the block is **never recognized as a table**. markdownlint's table rules (MD055 row style, MD056 column count) only fire on blocks the parser already accepted as tables — a malformed delimiter row makes the defect invisible to the exact rules meant to catch it. An unescaped `|` inside inline code (`` `T | None` ``) silently changes a row's cell count the same way. Prettier doesn't flag it either: it only reformats well-formed tables.
 
@@ -22,7 +22,7 @@ Per GFM, a delimiter row whose cell count differs from the header row means the 
 
 Match the delimiter row's cell count to the header and escape pipes inside cells (`\|`). Verify by cell-counting the raw pipes, not by linting.
 
-## Lesson (reusable gotcha)
+## Lesson
 
 - **Green markdownlint says nothing about table well-formedness.** When authoring or reviewing GFM tables, count cells in header vs delimiter rows manually (or render-preview); the linter cannot do it.
 - Inline code containing `|` inside a table cell must use `\|` — backticks do not protect the pipe from the table parser.

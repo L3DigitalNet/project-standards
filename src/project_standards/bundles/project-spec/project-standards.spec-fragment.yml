@@ -1,0 +1,6 @@
+# Add the following to your .project-standards.yml.
+spec:
+  version: "1.0"
+  include:
+    - "docs/specs/**/*.md"
+  exclude: []

@@ -6,7 +6,7 @@ profile: light # this is the Light template; see header note for sibling profile
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-07'
+last_reviewed: '2026-07-09'
 supersedes: null # SPEC id this replaces, if any
 superseded_by: null # filled in when this spec is retired
 related:
@@ -20,6 +20,11 @@ related:
     - 'docs/adr/adr-0009-agent-summary-and-canonical-standard-split.md'
     - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
     - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
+    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
+    - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
+    - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
+    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+    - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   tickets: []
   repositories:
     - 'L3DigitalNet/project-standards'
@@ -42,6 +47,7 @@ related:
 | 0.5 | 2026-07-07 | Chris Purcell / L3DigitalNet | Codex plan-review r2: FR-001 + DoD corrected — `adopt.md` presence is independent of adoption mode; CLI-enforced standards (`project-spec`) are adoptable and keep `adopt.md`; only `adoption = "none"` and unreleased drafts use a non-adoptable marker |
 | 0.6 | 2026-07-07 | Chris Purcell / L3DigitalNet | Implemented (executing-plans): bundle authored under `standards/standard-bundle-authoring/` (README contract + worked `standard.toml` + blank template), repo-facing maps updated, full gate green (868 tests). §17.1 DoD ticked; only owner acceptance of the (empty) Deviations Log remains |
 | 0.7 | 2026-07-07 | Chris Purcell / L3DigitalNet | **Owner sign-off:** Deviations Log (DEV-001, no deviations) accepted; final §17.1 DoD item ticked; `status: draft → approved`. Spec is now change-controlled. Step 02 closed |
+| 0.8 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references and aligned dependency/count language after project-spec gained a packaged adopt surface. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 
@@ -49,11 +55,11 @@ related:
 
 ## 1. Purpose & Background
 
-The `project-standards` repository defines standards as bundles under `standards/{id}/`, but no contract says what a standard bundle must declare. The eight current bundles are inconsistent: five have packaged adopt-artifact manifests, `project-spec` is enforced through its CLI with no packaged adopt artifacts, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only. As the number of standards grows and the meta-repo work (`SPEC-MT01`) makes the repository mechanically self-describing — so a future standards graph, and eventually an MCP server, can discover and compose standards without hardcoding each one — that inconsistency has to be closed by a single, machine-checkable authoring contract.
+The `project-standards` repository defines standards as bundles under `standards/{id}/`, but no contract says what a standard bundle must declare. The eight current bundles are intentionally varied: six ship packaged adopt-artifact manifests, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only. As the number of standards grows and the meta-repo work (`SPEC-MT01`) makes the repository mechanically self-describing — so a future standards graph, and eventually an MCP server, can discover and compose standards without hardcoding each one — that variety has to be governed by a single, machine-checkable authoring contract.
 
 This standard, the **Standard Bundle Authoring Standard**, is that contract: the "standard for standards." It defines the required anatomy of a standard bundle, the `standard.toml` manifest each bundle carries, and the authority, relationship, resource, provider, and config-namespace rules that let arbitrary standards compose without conflict. It is the `SPEC-MT01` Step 02 deliverable and realizes the Standard Bundle Authoring Contract decision ([adr-0001](../../adr/adr-0001-standard-bundle-authoring-contract.md)).
 
-It is an **internal / reference** standard: it governs how this repository authors its own standards. It is deliberately not consumer-adopted — no `adopt.md`, no copy-adopt bundle, and no `registry.json` contract version — because no downstream repository authors its own standards today. It still ships its own `standard.toml` so the repository dogfoods the contract it defines, and adoptability can be added later without reworking the contract.
+It is an **internal / reference** standard: it governs how this repository authors its own standards. It is deliberately not consumer-adopted — no `adopt.md`, no copy-adopt bundle, and no `registry.json` consumer contract version — because no downstream repository authors its own standards today. It still ships its own versioned `standard.toml` so the repository dogfoods the contract it defines, and adoptability can be added later without reworking the contract.
 
 The first-release scope is the **written contract plus one worked example** (this standard's own `standard.toml`). The machine schema, typed model, fixtures, and graph-validation gate that enforce the contract are deferred to `SPEC-MT01` Steps 03–04: the contract must be settled in prose before it is mechanized. The long-term asset is a repository where adding a standard is a data/documentation change rather than a tool-code change.
 
@@ -92,7 +98,7 @@ The first-release scope is the **written contract plus one worked example** (thi
 | Boundary | Description |
 | --- | --- |
 | System owns | The written bundle-authoring contract (`standards/standard-bundle-authoring/README.md`), this standard's own `standard.toml`, and a blank `standard.toml` template. |
-| System depends on | `SPEC-MT01` and its accepted ADRs (adr-0001…0013); the existing bundle anatomy, `adopt.toml` model, and `registry.json`; and the Markdown Frontmatter, Markdown Tooling, and Project Specification standards that govern this document. |
+| System depends on | `SPEC-MT01` and its accepted ADRs (adr-0001…0013 plus package-methodology ADRs 0017…0021); the existing bundle anatomy, `adopt.toml` model, and `registry.json`; and the Markdown Frontmatter, Markdown Tooling, and Project Specification standards that govern this document. |
 | System does not own | The `standard.toml` schema / model / validator (Steps 03–04), the retrofit of existing standards (Step 05), the standards graph, or any MCP runtime. |
 
 ---
@@ -106,8 +112,8 @@ The first-release scope is the **written contract plus one worked example** (thi
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
 | FR-001 | The standard shall define the required and optional anatomy of a standard bundle. | New standards need a uniform, discoverable structure. | The README lists which files MUST vs SHOULD exist, including the `standard.toml` requirement and the explicit non-adoptable marker a `adoption = "none"` or unreleased-draft standard uses instead of `adopt.md`. `adopt.md` presence is independent of adoption mode — adoptable standards, **including CLI-enforced ones like `project-spec`, keep their `adopt.md`**. | Must |
-| FR-002 | The standard shall specify the `standard.toml` manifest contract, each field marked required or optional and shown in one annotated example. | Machine consumers need stable, validated metadata independent of prose (adr-0002). | The README documents identity, lifecycle, versions, config namespace, resources, capabilities, authorities, relationships, providers, and adoption mode with a full example. | Must |
-| FR-003 | The standard shall define an `adoption` mode vocabulary that classifies every one of the seven current standards. | Today's outliers (`project-spec` CLI-enforced, `python-coding` draft) must be first-class, not special cases. | The enum includes at least `validator`, `copy-adopt`, `cli`, `reference-only`, and `none`, and the README maps each current standard to a mode. | Must |
+| FR-002 | The standard shall specify the `standard.toml` manifest contract, each field marked required or optional and shown in one annotated example. | Machine consumers need stable, validated metadata independent of prose (adr-0002). | The README documents identity, lifecycle, non-empty package versions, config namespace, resources, capabilities, authorities, relationships, providers, and adoption mode with a full example. | Must |
+| FR-003 | The standard shall define an `adoption` mode vocabulary that classifies every current standard package. | Today's outliers (`project-spec` CLI-enforced, `python-coding` draft, and this internal meta-standard) must be first-class, not special cases. | The enum includes at least `validator`, `copy-adopt`, `cli`, `reference-only`, and `none`, and the README maps each current standard to a mode. | Must |
 | FR-004 | The standard shall define authority-tuple declarations and the mutating-conflict rule. | Conflict-free composition cannot be proven from prose alone (adr-0004). | The README defines the tuple `(domain, target, concern, owner, mutates)` and states that two mutating authorities over the same concern and overlapping target with different owners conflict unless an ADR-backed `extends` relation exists. | Must |
 | FR-005 | The standard shall define the relationship taxonomy and the independent-package default. | Hidden hard dependencies break arbitrary adoption (adr-0013). | The README defines `independent`, `companion`, `extends`, `conflicts`, and `consumes_platform`; declares `independent` the default; and forbids a hidden `requires` edge. | Must |
 | FR-006 | The standard shall define config-namespace ownership as **dotted namespace paths**, supporting both top-level and nested ownership with parent delegation, and shall reserve non-standard meta keys. | `.project-standards.yml` already nests ownership (`markdown.frontmatter` vs `markdown.adr` under one `markdown` key) and carries meta keys, so top-level-only ownership cannot model the repo (adr-0008). | The README defines a namespace as a dotted path; states that a parent namespace (e.g. `markdown`) may be a shared container whose child paths are owned by different standards; reserves meta keys (`standards_version`) as repo-owned, not standard-owned; and declares duplicate ownership of the _same_ path invalid. The model must represent `markdown.frontmatter` (markdown-frontmatter), `markdown.adr` (adr), `spec` (project-spec), and `standards_version` (meta) without duplicate-owner ambiguity. | Must |

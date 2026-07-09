@@ -18,6 +18,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+import pytest
 import yaml
 
 from project_standards.adopt.engine import major_ref, resolve_source
@@ -159,6 +160,20 @@ def test_adr_adopt_doc_config_fence_matches_fragment_semantically() -> None:
     assert yaml.safe_load(fences[0]) == fragment
 
 
+def test_project_spec_adopt_doc_fences_match_bundle_artifacts() -> None:
+    doc = (_REPO / "standards" / "project-spec" / "adopt.md").read_text()
+    fences = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
+    fragment = (_BUNDLES / "project-spec" / "project-standards.spec-fragment.yml").read_text()
+    caller = (
+        (_BUNDLES / "project-spec" / "validate-specs.caller.yml")
+        .read_text()
+        .replace("{{ref}}", major_ref())
+    )
+    assert fragment in fences
+    assert caller in fences
+    assert doc.count("<!-- prettier-ignore -->\n```yaml\n") >= 2
+
+
 def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
     doc = (_REPO / "standards" / "markdown-tooling" / "README.md").read_text()
     fences = re.findall(r"```json\n(.*?)```", doc, re.DOTALL)
@@ -244,6 +259,26 @@ def test_adopt_markdown_frontmatter_delivers_repo_local_skill(tmp_path: Path) ->
         text=True,
     )
     assert re.fullmatch(r"runbook-[0-9a-z]{6}-router-upgrade", result.stdout.strip())
+
+
+def test_adopt_project_spec_reports_config_fragment_and_workflow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from project_standards.cli import main
+
+    assert main(["adopt", "project-spec", "--dest", str(tmp_path)]) == 0
+    captured = capsys.readouterr()
+    assert "Add these sections to `.project-standards.yml`:" in captured.out
+    assert "spec:" in captured.out
+    assert 'version: "1.0"' in captured.out
+    assert "docs/specs/**/*.md" in captured.out
+    workflow = tmp_path / ".github" / "workflows" / "validate-specs.yml"
+    assert workflow.is_file()
+    doc = yaml.safe_load(workflow.read_text())
+    job = doc["jobs"]["validate-specs"]
+    assert job["uses"].endswith(f"validate-specs.yml@{major_ref()}")
+    assert job["with"]["standards-ref"] == major_ref()
+    assert not (tmp_path / "docs" / "specs").exists()
 
 
 def test_markdown_frontmatter_skill_script_mode_is_manifest_explicit() -> None:

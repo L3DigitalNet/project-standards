@@ -6,8 +6,8 @@ summary = "Internal reference standard."
 adoption = "none"
 
 [versions]
-supported = []
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = ["markdown..frontmatter"]

@@ -41,8 +41,8 @@ summary = "Example standard."
 adoption = "{adoption}"
 
 [versions]
-supported = []
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = {_array(namespaces)}

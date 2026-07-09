@@ -12,8 +12,8 @@ summary = "The contract every standard bundle in this repository must declare."
 adoption = "none"       # validator | copy-adopt | cli | reference-only | none
 
 [versions]
-supported = []          # internal/reference standards carry no consumer contract version
-latest = ""
+supported = ["1.0"]
+latest = "1.0"
 
 [config]
 namespaces = []         # claims no key in .project-standards.yml
