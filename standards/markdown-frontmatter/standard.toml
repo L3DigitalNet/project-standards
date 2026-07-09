@@ -38,6 +38,7 @@ template_concept = "templates/concept.md"
 template_research = "templates/research.md"
 template_runbook = "templates/runbook.md"
 template_spec = "templates/spec.md"
+template_repo_pages = "templates/repo-pages/README.directory.template.md"
 example_note = "examples/note.example.md"
 example_concept = "examples/concept.example.md"
 example_runbook = "examples/runbook.example.md"
@@ -71,25 +72,25 @@ owner = "format-frontmatter"
 mutates = true
 
 [[providers]]
-operation = "validate-frontmatter"
+operation = "validate"
 kind = "python"
 entrypoint = "project_standards.validate_frontmatter:main"
 optional = false
 
 [[providers]]
-operation = "validate-id"
+operation = "validate"
 kind = "python"
 entrypoint = "project_standards.validate_id:main"
 optional = false
 
 [[providers]]
-operation = "validate-references"
+operation = "validate"
 kind = "python"
 entrypoint = "project_standards.validate_references:main"
 optional = true
 
 [[providers]]
-operation = "format-frontmatter"
+operation = "fix"
 kind = "python"
 entrypoint = "project_standards.format_frontmatter:main"
 optional = true

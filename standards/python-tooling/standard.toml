@@ -86,7 +86,7 @@ owner = "python-tooling"
 mutates = true
 
 [[providers]]
-operation = "check"
+operation = "validate"
 kind = "workflow"
 entrypoint = "check"
 optional = false

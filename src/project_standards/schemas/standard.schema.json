@@ -114,9 +114,7 @@
       "description": "One `[[providers]]` entry: an operation this standard mechanizes, and how to invoke it.",
       "properties": {
         "operation": {
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-          "title": "Operation",
-          "type": "string"
+          "$ref": "#/$defs/ProviderOperation"
         },
         "kind": {
           "$ref": "#/$defs/ProviderKind"
@@ -178,6 +176,22 @@
         "documentation-only"
       ],
       "title": "ProviderKind",
+      "type": "string"
+    },
+    "ProviderOperation": {
+      "enum": [
+        "validate",
+        "fix",
+        "lint",
+        "drift-check",
+        "id-next",
+        "extract",
+        "render",
+        "scaffold",
+        "upgrade",
+        "semantic-review"
+      ],
+      "title": "ProviderOperation",
       "type": "string"
     },
     "RelationsTable": {

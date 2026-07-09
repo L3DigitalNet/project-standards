@@ -54,12 +54,7 @@ owner = "github-actions"
 mutates = true
 
 [[providers]]
-operation = "cli-docs-check"
+operation = "drift-check"
 kind = "workflow"
 entrypoint = "cli-docs-check"
 optional = false
-
-[[providers]]
-operation = "drift-check"
-kind = "documentation-only"
-optional = true

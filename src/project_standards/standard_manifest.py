@@ -63,6 +63,19 @@ class ProviderKind(StrEnum):
     DOCUMENTATION_ONLY = "documentation-only"
 
 
+class ProviderOperation(StrEnum):
+    VALIDATE = "validate"
+    FIX = "fix"
+    LINT = "lint"
+    DRIFT_CHECK = "drift-check"
+    ID_NEXT = "id-next"
+    EXTRACT = "extract"
+    RENDER = "render"
+    SCAFFOLD = "scaffold"
+    UPGRADE = "upgrade"
+    SEMANTIC_REVIEW = "semantic-review"
+
+
 class _Table(BaseModel):
     """Fixed-shape table base: unknown keys are rejected (catches the reserved `requires` key)."""
 
@@ -206,8 +219,6 @@ class AuthorityBlock(_Table):
     mutates: bool
 
 
-OperationToken = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")]
-
 _PY_ENTRYPOINT_RE = re.compile(
     r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*:[a-zA-Z_][a-zA-Z0-9_]*$"
 )
@@ -231,7 +242,7 @@ def _validate_entrypoint(kind: ProviderKind, value: str) -> None:
 class ProviderBlock(_Table):
     """One `[[providers]]` entry: an operation this standard mechanizes, and how to invoke it."""
 
-    operation: OperationToken
+    operation: ProviderOperation
     kind: ProviderKind
     optional: bool
     entrypoint: str | None = None

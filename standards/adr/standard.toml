@@ -28,6 +28,7 @@ readme = "README.md"
 adopt = "adopt.md"
 template = "templates/adr.md"
 template_bare = "templates/adr-bare.md"
+template_bare_minimal = "templates/adr-bare-minimal.md"
 template_minimal = "templates/adr-minimal.md"
 example = "examples/adr.example.md"
 
@@ -53,13 +54,13 @@ owner = "project-standards-adopt"
 mutates = true
 
 [[providers]]
-operation = "validate-adr"
+operation = "validate"
 kind = "python"
 entrypoint = "project_standards.validate_frontmatter:main"
 optional = false
 
 [[providers]]
-operation = "validate-id"
+operation = "validate"
 kind = "python"
 entrypoint = "project_standards.validate_id:main"
 optional = false

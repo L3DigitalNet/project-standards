@@ -15,6 +15,7 @@ from project_standards.standard_manifest import (
     LifecycleStatus,
     ProviderBlock,
     ProviderKind,
+    ProviderOperation,
     RelationsTable,
     ResourcesTable,
     StandardManifest,
@@ -66,6 +67,18 @@ def test_enums_have_contract_values() -> None:
         "command",
         "workflow",
         "documentation-only",
+    }
+    assert {m.value for m in ProviderOperation} == {
+        "validate",
+        "fix",
+        "lint",
+        "drift-check",
+        "id-next",
+        "extract",
+        "render",
+        "scaffold",
+        "upgrade",
+        "semantic-review",
     }
 
 
@@ -221,24 +234,34 @@ def test_provider_python_single_letter_module_entrypoint() -> None:
             "optional": True,
         },  # executable missing entrypoint
         {
-            "operation": "x",
+            "operation": "validate-frontmatter",
+            "kind": "documentation-only",
+            "optional": True,
+        },  # standard-specific operation instead of a generic provider operation
+        {
+            "operation": "validate",
             "kind": "documentation-only",
             "optional": True,
             "entrypoint": "pkg:fn",
         },  # doc-only with entrypoint
         {
-            "operation": "x",
+            "operation": "validate",
             "kind": "python",
             "optional": True,
             "entrypoint": "pkg/mod.py",
         },  # filesystem path
         {
-            "operation": "x",
+            "operation": "validate",
             "kind": "command",
             "optional": True,
             "entrypoint": "do | rm",
         },  # shell metachars
-        {"operation": "x", "kind": "command", "optional": True, "entrypoint": "../up"},  # traversal
+        {
+            "operation": "validate",
+            "kind": "command",
+            "optional": True,
+            "entrypoint": "../up",
+        },  # traversal
         {
             "operation": "Bad-Op",
             "kind": "command",

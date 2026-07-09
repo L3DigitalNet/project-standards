@@ -70,13 +70,13 @@ owner = "editorconfig"
 mutates = true
 
 [[providers]]
-operation = "lint-markdown"
+operation = "lint"
 kind = "workflow"
 entrypoint = "lint-markdown"
 optional = false
 
 [[providers]]
-operation = "format"
+operation = "fix"
 kind = "workflow"
 entrypoint = "format"
 optional = true
