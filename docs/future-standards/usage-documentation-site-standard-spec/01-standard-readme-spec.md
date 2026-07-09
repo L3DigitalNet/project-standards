@@ -1,0 +1,620 @@
+---
+spec_id: SPEC-U001
+title: 'Usage Documentation Site Standard README Specification'
+status: draft
+profile: standard
+owner: 'Project standards / repository template'
+implementer: 'coding agent'
+created: '2026-07-08'
+last_reviewed: '2026-07-08'
+supersedes: null
+superseded_by: null
+related:
+  adrs: []
+  tickets: []
+  repositories:
+    - 'L3DigitalNet/project-standards'
+  prior_specs: []
+---
+# Usage Documentation Site Standard README — Specification (Standard)
+
+## Revision History
+
+| Version | Date | Author | Change |
+| ------- | ---- | ------ | ------ |
+| 0.1 | 2026-07-08 | ChatGPT | Initial conformant Project Specification draft |
+
+**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the Deviations Log, not silently patched into requirements.
+
+---
+
+## 1. Purpose & Background
+
+Define the required normative content for `standards/usage-documentation-site/README.md`. The README is the governing standard, while rationale, comparisons, and implementation notes live in resources or the implementation specs.
+
+---
+
+## 2. Scope
+
+### 2.1 In Scope
+
+- Normative README structure.
+- Requirement language and evidence convention.
+- Scope boundary for user-facing usage docs.
+- MkDocs and Material configuration contract.
+- Tag vocabulary, frontmatter policy, links, navigation, and feedback integration.
+- Relationship to sibling standards and exceptions process.
+
+### 2.2 Out of Scope (Non-Goals — never)
+
+| ID     | Non-Goal                                                                   | Reason                                                                  |
+| ------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| NG-001 | Replacing developer documentation, ADRs, project specs, or handoff systems | The new standard is strictly for user-facing usage documentation sites. |
+| NG-002 | Creating a hosted public documentation platform                            | The standard governs repo-local local-browser sites only.               |
+| NG-003 | Adopt-bundle file contents                                                 | Those are specified in the adoption bundle spec.                        |
+
+### 2.3 Won't Have in v1 (deferred — not never)
+
+| ID     | Deferred Capability                       | Why Deferred                                 | Revisit When                               |
+| ------ | ----------------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| WH-001 | Full prose-style linting with Vale        | Useful but subjective and likely noisy in v1 | Repeated content-quality drift appears     |
+| WH-002 | External link checking as a required gate | Network checks are flaky in CI               | A stable allowlist and retry policy exists |
+
+### 2.4 Boundaries
+
+| Boundary               | Description                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Distributor owns       | `project-standards` standard text, templates, schemas, validators, registry entries, tests, and dogfood example. |
+| Consuming repo owns    | Actual tool-specific usage content and local adoption ADRs.                                                      |
+| External platform owns | GitHub Issues UI and permissions; MkDocs and Material runtime behavior.                                          |
+
+---
+
+## 3. Context
+
+### 3.1 Current State
+
+The earlier README plan exists as a narrative draft with ordinary metadata. It does not yet follow Project Specification Standard frontmatter or a traceable requirements matrix.
+
+### 3.2 Target State
+
+The README requirements are captured as a conformant project spec, and the final standard README is written as a rule-oriented standard with rationale separated into resources.
+
+### 3.3 Assumptions
+
+| ID    | Assumption                                                                                 | Impact if False                                                                        |
+| ----- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| A-001 | Consuming repositories can install MkDocs and Material as development dependencies.        | Adoption must document a non-Python invocation equivalent.                             |
+| A-002 | GitHub issue forms are acceptable feedback intake for repositories that use GitHub Issues. | The feedback mechanism must be optional or repo-local alternatives must be documented. |
+
+### 3.4 Constraints
+
+| ID    | Constraint                                                                       | Source                        |
+| ----- | -------------------------------------------------------------------------------- | ----------------------------- |
+| C-001 | Do not conflict with Markdown Frontmatter validation.                            | Markdown Frontmatter Standard |
+| C-002 | Do not conflict with `docs/usage.md` in the existing CLI Documentation Standard. | CLI Documentation Standard    |
+| C-003 | Every governed standard must be dogfooded by the distributor repository.         | Owner decision in this task   |
+
+---
+
+## 4. Goals
+
+| ID    | Goal                                               | Success Signal                                                  | Achieved By    |
+| ----- | -------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| G-001 | Make the governing README deterministic for agents | An implementer can create the README without inventing sections | FR-001, FR-002 |
+| G-002 | Prevent scope drift                                | README states hard in-scope and out-of-scope rules              | FR-003, FR-004 |
+| G-003 | Preserve interoperability                          | README explicitly relates to sibling standards                  | FR-006         |
+
+---
+
+> **§5 (Stakeholders and Users) is Full-tier** and is intentionally omitted at the Standard profile.
+
+## 6. Glossary
+
+| Term                     | Definition                                                                                  | Notes                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Distributor repository   | `L3DigitalNet/project-standards`, the source of truth for standards and adoption artifacts. | Not the same as a consuming repository. |
+| Consuming repository     | A repository that adopts one or more standards from `project-standards`.                    | Owns its local content and deviations.  |
+| Usage documentation site | A repo-local MkDocs and Material site for user-facing instructions about using tools.       | Not developer documentation.            |
+| Dogfood adoption         | The distributor repository adopts and validates the standard it governs.                    | Required as interoperability proof.     |
+| Governing README         | The normative standard document under `standards/usage-documentation-site/README.md`.       | Not the adoption runbook.               |
+
+---
+
+## 7. Requirements
+
+### 7.1 Functional Requirements
+
+| ID     | Requirement                                                                                                                                                | Rationale                                               | Acceptance Criteria                                                                  | Priority |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------- |
+| FR-001 | The README shall define `usage-documentation-site` as a copy-adopted distributable standard.                                                               | Consumers need to understand adoption semantics.        | README states standard identity, contract version, and copy-adopt posture.           | Must     |
+| FR-002 | The README shall define the exact consuming-repo layout under `docs/usage/`.                                                                               | Consistent paths prevent drift.                         | Layout table includes site root, content root, assets, build output, and issue form. | Must     |
+| FR-003 | The README shall state that `docs/usage/content/` is strictly user-facing usage documentation.                                                             | Scope protection is the core purpose of the standard.   | In-scope and out-of-scope lists are present.                                         | Must     |
+| FR-004 | The README shall require canonical Markdown Frontmatter for rendered usage pages by default.                                                               | Avoids conflict with the Markdown Frontmatter Standard. | Frontmatter examples use canonical fields.                                           | Must     |
+| FR-005 | The README shall define tag vocabulary and issue-form field IDs as controlled contracts.                                                                   | Feedback JS and Material tags depend on stable names.   | Vocabulary and field ID tables are present.                                          | Must     |
+| FR-006 | The README shall explain how this standard composes with CLI Documentation, Markdown Tooling, Frontmatter, ADR, Python Tooling, and Project Specification. | Sibling standards already govern adjacent concerns.     | Relationship table is present.                                                       | Must     |
+
+### 7.2 Non-Functional Requirements
+
+| ID      | Category         | Requirement                                                                                         | Measurement / Acceptance Criteria                      | Priority |
+| ------- | ---------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------- |
+| NFR-001 | Maintainability  | The implementation shall avoid creating parallel governance, validation, or instruction systems.    | Review confirms reuse of existing standards patterns.  | Must     |
+| NFR-002 | Interoperability | The implementation shall pass alongside all other governed standards in the distributor repository. | Full repository validation gate passes.                | Must     |
+| NFR-003 | Usability        | The adopted site shall be viewable in a local browser with one documented command.                  | `mkdocs serve` command works from the repository root. | Must     |
+
+### 7.3 Interface Requirements
+
+| ID     | Interface             | Requirement                                                                                                                                    | Contract / Format               | Acceptance Criteria                             |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------- |
+| IR-001 | project-standards CLI | The system shall expose the standard through `project-standards list` and adoption through `project-standards adopt usage-documentation-site`. | Existing adopt/list conventions | Commands return expected output.                |
+| IR-002 | MkDocs site           | The system shall expose a local browser-readable documentation site from `docs/usage/mkdocs.yml`.                                              | MkDocs config contract          | Strict build passes.                            |
+| IR-003 | GitHub issue form     | The system shall expose section feedback through `.github/ISSUE_TEMPLATE/tool-feedback.yml`.                                                   | GitHub issue-form contract      | Prefilled fields match the JavaScript contract. |
+
+### 7.4 Data Requirements
+
+| ID     | Data Entity           | Requirement                                                                                                                            | Validation Rules                                 | Ownership                                  |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------ |
+| DR-001 | Standard bundle files | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy.                      | Distributor repository                     |
+| DR-002 | Adopt bundle files    | The system shall store copy-adopt artifacts under the packaged adopt bundle.                                                           | Manifest paths resolve and tests pass.           | Distributor repository                     |
+| DR-003 | Usage site files      | The system shall store dogfood and consumer site files under `docs/usage/`.                                                            | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
+
+---
+
+## 8. Architecture and Design
+
+### 8.1 Architecture Summary
+
+The README should follow the style of existing standards: evidence convention, requirement language, purpose, scope, rules, adoption references, exceptions, update cadence, and source register. It must avoid becoming an implementation plan or research memo.
+
+### 8.2 Architecture Views
+
+#### 8.2.1 Context View
+
+```mermaid
+flowchart LR
+    Maintainer[Maintainer] --> StandardsRepo[project-standards repository]
+    StandardsRepo --> StandardsBundle[standards bundle]
+    StandardsRepo --> AdoptBundle[adopt bundle]
+    ConsumerRepo[Consuming repository] --> AdoptBundle
+    ConsumerRepo --> UsageSite[docs/usage site]
+    UsageSite --> GitHubIssues[GitHub issue feedback]
+```
+
+#### 8.2.2 Container / Deployment View
+
+```mermaid
+flowchart LR
+    CLI[project-standards CLI] --> Registry[contract registry]
+    CLI --> AdoptEngine[adopt engine]
+    AdoptEngine --> Templates[copy-adopt templates]
+    MkDocs[MkDocs strict build] --> Content[docs/usage/content]
+    Content --> Browser[local browser]
+```
+
+#### 8.2.3 Component View
+
+| Component       | Responsibility                            | Interfaces               | Notes                     |
+| --------------- | ----------------------------------------- | ------------------------ | ------------------------- |
+| README sections | Normative rules and controlled vocabulary | Markdown headings        | Primary standard artifact |
+| Resources       | Rationale and research notes              | `resources/rationale.md` | Non-normative support     |
+| Examples        | Worked usage-site pages                   | `examples/`              | Validated where possible  |
+
+### 8.3 Design Decisions
+
+| ID    | Decision                                           | Rationale                                   | Alternatives Considered                 | ADR           |
+| ----- | -------------------------------------------------- | ------------------------------------------- | --------------------------------------- | ------------- |
+| D-001 | README is normative and resources carry rationale. | Keeps the standard concise and enforceable. | Research-export style README; rejected. | TBD local ADR |
+| D-002 | Use canonical frontmatter examples in usage pages. | Avoids frontmatter validator conflict.      | MkDocs-only minimal metadata; rejected. | TBD local ADR |
+
+> **§8.4 (Solution Alternatives Considered) is Full-tier** and is intentionally omitted at the Standard profile.
+
+### 8.5 Design Constraints
+
+- The implementation must follow existing `project-standards` bundle, registry, and validation conventions.
+- The implementation must not create a second governance system outside existing standards, ADR, and Project Specification mechanisms.
+- The implementation must keep user-facing usage content separate from developer, specification, ADR, and handoff content.
+
+> **§8.6 (Dependency Policy) is Full-tier** and is intentionally omitted at the Standard profile.
+
+---
+
+## 9. Data Model
+
+The system owns repository files, configuration keys, schema files, and validation findings rather than runtime application data. Persistent state is Git history and the files committed to the distributor or consuming repository.
+
+| ID     | Data Entity           | Requirement                                                                                                                            | Validation Rules                                 | Ownership                                  |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------ |
+| DR-001 | Standard bundle files | The system shall store governing standard text, adoption runbook, examples, templates, resources, and schemas in the standards bundle. | Paths match bundle anatomy.                      | Distributor repository                     |
+| DR-002 | Adopt bundle files    | The system shall store copy-adopt artifacts under the packaged adopt bundle.                                                           | Manifest paths resolve and tests pass.           | Distributor repository                     |
+| DR-003 | Usage site files      | The system shall store dogfood and consumer site files under `docs/usage/`.                                                            | Generated output ignored; content pages managed. | Consuming repository or dogfood repository |
+
+---
+
+## 10. Behavior and Workflows
+
+### 10.1 Primary Workflow
+
+```mermaid
+sequenceDiagram
+    actor Maintainer
+    participant Spec
+    participant Repo as project-standards
+    participant Consumer as Consuming repository
+    Maintainer->>Spec: Approve implementation scope
+    Spec->>Repo: Implement standard bundle and validator support
+    Repo->>Repo: Dogfood the standard
+    Repo->>Consumer: Distribute adoptable artifacts
+    Consumer-->>Repo: Feedback through issue form when docs are used
+```
+
+Steps:
+
+1. Write README with canonical frontmatter.
+2. Add scope boundary and repository layout contract.
+3. Add configuration, tags, feedback, validation, and sibling-standard sections.
+4. Move rationale and comparisons to resources.
+5. Validate Markdown and frontmatter.
+
+Expected result:
+
+> The distributor repository contains a tested, registered, dogfooded `usage-documentation-site` standard that consuming repositories can adopt consistently.
+
+### 10.2 Alternate Workflows
+
+| ID     | Trigger                                       | Behavior                                       | Expected Result                                            |
+| ------ | --------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| AW-001 | Research-style README                         | Preserve long-form reasoning in the standard   | Rejected because standards should govern rather than argue |
+| AW-002 | Minimal README with all detail in adopt guide | Make adoption runbook the real source of truth | Rejected because README is the governing standard          |
+
+### 10.3 Edge Cases
+
+| ID     | Edge Case                         | Expected Behavior                                                   |
+| ------ | --------------------------------- | ------------------------------------------------------------------- |
+| EC-001 | A tool has no CLI                 | README still applies because tool may be GUI, TUI, or local service |
+| EC-002 | A repo does not use GitHub Issues | README points to exception ADR or alternate feedback mechanism      |
+
+### 10.4 State Transitions
+
+| State  | Meaning                          | Entry Condition       | Exit Condition              |
+| ------ | -------------------------------- | --------------------- | --------------------------- |
+| Draft  | README content is being authored | Implementation starts | Review begins               |
+| Active | README governs adoption          | Released standard     | Superseded contract version |
+
+---
+
+## 11. UI Pages / API Endpoints
+
+This work has no hosted UI or API surface. The relevant user surfaces are local MkDocs pages, GitHub issue forms, and CLI commands.
+
+| Page or Endpoint                               | Purpose            | Key Actions                   | Authorization       |
+| ---------------------------------------------- | ------------------ | ----------------------------- | ------------------- |
+| `standards/usage-documentation-site/README.md` | Governing standard | Read, cite, and enforce rules | Maintainer or agent |
+
+**Accessibility & i18n:** v1 targets readable local-browser documentation in English. Formal localization is out of scope, but the content must avoid encoding implementation-only jargon into user-facing pages.
+
+---
+
+## 12. Error Handling and Recovery
+
+### 12.1 Expected Failures
+
+| ID      | Failure Mode                                | User/System Behavior                       | Logging / Observability                     | Recovery                                        |
+| ------- | ------------------------------------------- | ------------------------------------------ | ------------------------------------------- | ----------------------------------------------- |
+| ERR-001 | README conflicts with sibling standard      | Implementation creates contradictory rules | Review identifies conflict                  | Amend README or sibling standard before release |
+| ERR-002 | README includes implementation-only details | Standard becomes hard to consume           | Markdown review flags non-normative content | Move to resources or spec                       |
+
+### 12.2 Retry and Idempotency
+
+Adoption must remain idempotent. Existing file artifacts are skipped unless the operator explicitly passes `--force`; fragments are reported for manual merging. Validation commands must be safe to rerun.
+
+### 12.3 Rollback / Recovery
+
+Rollback is Git-based. Revert the implementation commit, remove generated scratch output, and rerun the repository validation gate. Consuming repositories recover by reverting the adoption commit or deleting the `docs/usage/` subtree and issue form if adoption was not yet accepted.
+
+---
+
+## 13. Security and Privacy
+
+### 13.1 Authentication
+
+GitHub authentication is required only for repository writes and issue creation in private repositories. Local MkDocs preview does not require authentication.
+
+### 13.2 Authorization
+
+| Actor / Role        | Allowed Actions                                  | Denied Actions                                          |
+| ------------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| Maintainer          | Create and merge standard implementation changes | Bypass required validation without documented deviation |
+| Consuming repo user | Read and use docs, submit feedback issues        | Change distributor standard unless authorized           |
+
+### 13.3 Secrets
+
+| Secret              | Storage Location                   | Access Pattern | Rotation / Notes                                              |
+| ------------------- | ---------------------------------- | -------------- | ------------------------------------------------------------- |
+| GitHub token for CI | GitHub Actions secret or app token | Workflow only  | Managed by repository policy; never documented in usage pages |
+
+### 13.4 Sensitive Data
+
+| Data                   | Classification                       | Storage       | Transmission   | Retention               |
+| ---------------------- | ------------------------------------ | ------------- | -------------- | ----------------------- |
+| Issue feedback content | Internal or public depending on repo | GitHub Issues | GitHub web/API | Repository issue policy |
+
+### 13.5 Threats and Mitigations
+
+| Threat                                         | Impact                                                                 | Mitigation                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Prompt injection through docs or issue content | Future agents may treat user-facing prose or feedback as instructions. | Agent-instruction fragments must classify docs and issues as data, not authority.             |
+| Private repository feedback leakage            | Prefilled local URLs or issue content may expose internal context.     | Only path, section, anchor, URL, and user-provided fields are captured; no secrets are added. |
+
+### 13.6 Hardening Checklist
+
+- [ ] GitHub issue-form labels and permissions reviewed.
+- [ ] Feedback links do not leak secrets.
+- [ ] Generated site output is not committed.
+- [ ] CI uses pinned project-standards release refs where reusable workflows are involved.
+
+---
+
+> **Sections §14 (Capacity and Scale Assumptions), §15 (Risks), and §16 (Compliance, Licensing, and Data Rights) are Full-tier** and are intentionally omitted at the Standard profile.
+
+## 17. Testing and Acceptance
+
+### 17.1 Definition of Done
+
+- [ ] All Must requirements implemented.
+- [ ] Registry, adopt, validation, and dogfood tests pass.
+- [ ] The standard documentation and templates are validated or intentionally excluded according to repository policy.
+- [ ] The `project-standards` repository adopts and dogfoods the new usage documentation site.
+- [ ] Compatibility text is added to affected sibling standards.
+- [ ] Deviations Log reviewed and accepted by owner.
+
+### 17.2 Test Strategy
+
+| Layer                 | Scope                                                  | Required Coverage                             | Required? |
+| --------------------- | ------------------------------------------------------ | --------------------------------------------- | --------- |
+| Unit / domain         | registry, manifest, schema helper, and validator logic | success and failure cases                     | Yes       |
+| Integration / adapter | adopt dry-run and scratch-repo adoption                | expected artifacts and idempotency            | Yes       |
+| Snapshot / contract   | template and schema fixtures                           | controlled output diff reviewed intentionally | Yes       |
+| End-to-end            | dogfood MkDocs strict build                            | site builds and feedback assets are present   | Yes       |
+
+### 17.3 Requirement-to-Test Traceability
+
+| Requirement ID | Test / Verification Method                   | Status      |
+| -------------- | -------------------------------------------- | ----------- |
+| FR-001         | README identity section review               | Not Started |
+| FR-002         | Layout table review                          | Not Started |
+| FR-003         | Scope section review                         | Not Started |
+| FR-004         | Frontmatter example validation               | Not Started |
+| FR-005         | Tags and field IDs checked against templates | Not Started |
+| FR-006         | Sibling relationship table review            | Not Started |
+
+---
+
+## 18. Deployment and Operations
+
+### 18.1 Runtime Environment
+
+| Item              | Value                                                                 |
+| ----------------- | --------------------------------------------------------------------- |
+| Runtime           | Python package plus Node-free MkDocs runtime from Python dependencies |
+| OS / Platform     | Linux CI and local developer machines                                 |
+| Datastore         | Git repository files only                                             |
+| External services | GitHub Issues for feedback intake                                     |
+
+Runtime services:
+
+| Service             | Purpose                    | Start Mode       | Health Signal                           |
+| ------------------- | -------------------------- | ---------------- | --------------------------------------- |
+| MkDocs local server | Preview usage docs locally | Manual command   | Browser loads local site                |
+| GitHub Issues       | Capture section feedback   | Hosted by GitHub | Issue form opens with prefilled context |
+
+### 18.2 Configuration
+
+| Setting                          | Required? | Default              | Description                                 |
+| -------------------------------- | --------- | -------------------- | ------------------------------------------- |
+| usage_documentation_site.version | Yes       | 1.0                  | Contract marker in `.project-standards.yml` |
+| docs/usage/mkdocs.yml            | Yes       | provided by template | MkDocs site configuration                   |
+| tool-feedback.yml                | Yes       | provided by template | GitHub issue-form contract                  |
+
+**Environment matrix** — differences between environments:
+
+| Aspect                                | Dev                | Staging                   | Prod                                |
+| ------------------------------------- | ------------------ | ------------------------- | ----------------------------------- |
+| Secrets source / auth / external APIs | Local Git checkout | GitHub repository with CI | GitHub repository with released tag |
+
+### 18.3 Deployment Flow
+
+1. Implement the standard bundle, adopt bundle, registry updates, validators, tests, and dogfood site in one branch.
+2. Run the full repository validation gate.
+3. Review generated or adopted files for accidental developer-content leakage into user-facing docs.
+4. Merge to `main` after checks pass.
+5. Cut the appropriate `project-standards` release according to `meta/versioning.md`.
+6. Consumers adopt from the released tag.
+7. Rollback by reverting the release commit before retagging if the release has not been published; after publication, follow release-policy correction guidance.
+
+> **§18.4 (Rollout Controls) is Full-tier** and is intentionally omitted at the Standard profile.
+
+### 18.5 Observability
+
+Minimum signals:
+
+- `project-standards list` shows the new standard.
+- `project-standards adopt usage-documentation-site --dry-run` reports expected artifacts.
+- `project-standards validate --config .project-standards.yml` passes.
+- `project-standards spec validate --config .project-standards.yml` passes for these specs when included.
+- `mkdocs build --strict -f docs/usage/mkdocs.yml` passes after dogfood adoption.
+
+| Alert                         | Trigger                             | Severity | Owner / Action                                        |
+| ----------------------------- | ----------------------------------- | -------- | ----------------------------------------------------- |
+| Usage-site validation failure | A required validation command fails | Warning  | Fix the standard or record a deviation before release |
+
+### 18.6 Backup and Disaster Recovery
+
+The system owns no external durable runtime data. Git history is the recovery mechanism for standard text, templates, schemas, and code.
+
+### 18.7 Documentation Deliverables
+
+Checklist tied to the DoD:
+
+- [ ] Governing README.
+- [ ] Rationale resource file.
+- [ ] Example pages that match README rules.
+
+---
+
+## 19. Implementation Plan
+
+### MS-0 — Outline
+
+1. README section registry drafted.
+2. Reviewer can map each requirement to a section.
+### MS-1 — Normative rules
+
+1. All required rules written.
+2. No research rationale remains inline except source-backed facts.
+### MS-2 — Examples
+
+1. Frontmatter and layout examples added.
+2. Examples validate or are templates excluded from validation.
+### MS-3 — Review
+
+1. Sibling-standard conflicts resolved.
+2. Compatibility spec has no unresolved blockers.
+
+### Milestone Summary
+
+| Milestone            | Deliverable                           | Exit Criteria                                                   |
+| -------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| MS-0 Outline         | README section registry drafted       | Reviewer can map each requirement to a section                  |
+| MS-1 Normative rules | All required rules written            | No research rationale remains inline except source-backed facts |
+| MS-2 Examples        | Frontmatter and layout examples added | Examples validate or are templates excluded from validation     |
+| MS-3 Review          | Sibling-standard conflicts resolved   | Compatibility spec has no unresolved blockers                   |
+
+---
+
+> **§20 (Success Evaluation) is Full-tier** and is intentionally omitted at the Standard profile.
+
+## 21. Open Questions and Decisions
+
+| ID     | Question                                               | Current Assumption                                                       | Blocking? | Owner | Needed By | Status |
+| ------ | ------------------------------------------------------ | ------------------------------------------------------------------------ | --------- | ----- | --------- | ------ |
+| OQ-001 | Should `usage` remain in the canonical tag vocabulary? | Yes, use compatibility vocabulary and normalize `example` to `examples`. | No        | Owner | MS-1      | Open   |
+
+---
+
+## Deviations Log
+
+| ID      | Spec Reference | Deviation                            | Reason | Approved? |
+| ------- | -------------- | ------------------------------------ | ------ | --------- |
+| DEV-001 | None           | No deviations recorded in this draft | N/A    | Pending   |
+
+---
+
+## References
+
+### Standards
+
+- Project Specification Standard.
+- Markdown Frontmatter Standard.
+- Markdown Tooling Standard.
+- Python Tooling SSOT Standard.
+- ADR Standard.
+- CLI Documentation Standard.
+
+### Project References
+
+- standards/usage-documentation-site/README.md
+- standards/markdown-frontmatter/README.md
+- standards/cli-documentation/README.md
+
+---
+
+## Appendix A: ID Conventions
+
+Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments. Section numbers match the Project Specification Standard's Standard profile.
+
+| Prefix | Meaning | Defined In |
+| ------ | ------- | ---------- |
+| `G-` | Goal | §4 |
+| `NG-` | Non-goal (never) | §2.2 |
+| `WH-` | Won't have in v1 (deferred) | §2.3 |
+| `A-` | Assumption | §3.3 |
+| `C-` | Constraint | §3.4 |
+| `FR-` | Functional requirement | §7.1 |
+| `NFR-` | Non-functional requirement | §7.2 |
+| `IR-` | Interface requirement | §7.3 |
+| `DR-` | Data requirement | §7.4 |
+| `D-` | Design decision | §8.3 |
+| `AW-` | Alternate workflow | §10.2 |
+| `EC-` | Edge case | §10.3 |
+| `ERR-` | Error-handling requirement | §12.1 |
+| `MS-` | Milestone | §19 |
+| `OQ-` | Open question | §21 |
+| `DEV-` | Deviation | Deviations Log |
+
+The `R-` prefix is Full-tier and is not used at the Standard profile. Priority values are column values, not ID prefixes; IDs never change when priorities do.
+
+
+---
+
+## Appendix B: Agent Implementation Contract
+
+Binding when this spec is implemented by a coding agent.
+
+### B.1 Implementation Rules
+
+The implementer shall:
+
+- read this entire specification before making changes;
+- preserve all explicit non-goals, won't-haves, constraints, and design constraints;
+- treat Must requirements as mandatory and blocking open questions as hard stops for affected work;
+- record any underspecified behavior as an `OQ-` row with a proposed default assumption;
+- record any implementation divergence as a `DEV-` row rather than adapting silently;
+- add or update tests for every implemented requirement;
+- keep §17.3 current as completion evidence;
+- follow the milestone order in §19;
+- prefer small, reviewable changes.
+
+### B.2 Prohibited Behaviors
+
+The implementer shall not:
+
+- invent requirements not present in this spec;
+- remove existing behavior unless explicitly required;
+- introduce external services or dependencies not agreed with the owner without an approved open question;
+- store secrets in source control or print them in CI logs;
+- ignore failing tests unrelated to the change without documenting them;
+- treat examples as exhaustive or normative unless explicitly stated;
+- mark a requirement complete without a verification entry in §17.3.
+
+### B.3 Required Completion Report
+
+At completion, provide:
+
+- summary of changes and files changed;
+- requirements implemented, each mapped to the test or command that proves it;
+- tests added or changed;
+- deviations and their approval status;
+- known limitations and remaining open questions;
+- documentation deliverables completed.
+
+### B.4 Session Handoff
+
+For multi-session implementations, record current milestone, in-progress requirement IDs, and unresolved open questions or deviations in the repository's session-state or handoff documents according to repository convention.
+
+
+---
+
+> **Appendix C (Optional Modules) is Full-tier** and is intentionally omitted at the Standard profile.
+
+## Appendix D: Tailoring
+
+This specification uses the Standard profile because the change spans one repository, several standards, packaged CLI behavior, validation machinery, and dogfooding requirements, but it does not introduce durable runtime data or external production services.
+
+| Profile | Use For | Decision |
+| --- | --- | --- |
+| Light | Small single-session changes | Too small for this standard addition. |
+| Standard | Typical feature or standards-bundle work | Selected. |
+| Full | Multi-service systems, durable data, or external integrations | Not required for this change. |
+
+Upgrade to Full only if the implementation introduces a durable service, external integration, release orchestration system, or substantial runtime data model beyond standard repository files.
+
