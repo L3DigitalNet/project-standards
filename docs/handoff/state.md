@@ -4,12 +4,12 @@
 
 ## State at a glance
 
-- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard (sixth); tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is now **ahead of `main`** by the v5 work below (docs-only, unreleased). Full release detail: `deployed.md`.
-- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–03 done. **Step 04 plan written/reviewed 2026-07-09** (`5f83d79`) for the graph validator + CLI; next execute it, then Step 05 retrofit. Detail: `TODO.md`.
+- **v4.3.0 RELEASED (2026-07-07)** — CLI Documentation Standard; tags `v4.3.0@74db623` + `v4`, GitHub release Latest. `testing` is **ahead of `main`** by unreleased v5 work. Full detail: `deployed.md`.
+- **v5.0.0 build-out active (`testing`):** MCP specs ingested (`SPEC-MT01→RD01→MS01`; impl **BLOCKED** until MT01 gate). Steps 00–04 done (`8d23a0c`): standards graph loader/validators + `project-standards standards validate-graph`. Next: Step 05 retrofit existing standards with manifests. Detail: `TODO.md`.
 
 ## Active incidents
 
-- _None known._ Last full gate green at Step 03; Step 04 plan closeout uses docs/spec verification.
+- _None known._ Step 04 Python/spec/frontmatter gates green; full Prettier/markdownlint still hit pre-existing `docs/future-standards/**` backlog files unrelated to Step 04.
 
 ## Ops notes
 
