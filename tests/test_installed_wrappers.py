@@ -61,3 +61,8 @@ def test_wrapper_version_prints_exact_contract(installed_venv: Path, script: str
 def test_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     proc = _run(installed_venv, "project-standards", "spec", "validate", "--help")
     assert proc.returncode == 0, proc.stderr
+
+
+def test_standards_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
+    proc = _run(installed_venv, "project-standards", "standards", "validate-graph", "--help")
+    assert proc.returncode == 0, proc.stderr

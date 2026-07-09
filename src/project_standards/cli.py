@@ -244,6 +244,11 @@ def main(argv: list[str] | None = None) -> int:
 
         return _spec_run(args_list[1:])
 
+    if args_list and args_list[0] == "standards":
+        from project_standards.standards_graph.cli import run as _standards_run
+
+        return _standards_run(args_list[1:])
+
     parser = argparse.ArgumentParser(prog="project-standards")
     parser.add_argument("--version", action="store_true", help="print the package version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -254,6 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
     sub.add_parser("spec", help="validate|lint|extract|next|new|upgrade over project specs")
+    sub.add_parser("standards", help="validate-graph over standard manifests")
 
     p_adopt = sub.add_parser(
         "adopt",
