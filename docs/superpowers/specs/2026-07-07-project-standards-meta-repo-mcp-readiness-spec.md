@@ -781,17 +781,17 @@ No secrets are required. The repository must not add secrets for manifest valida
 
 ### 17.1 Definition of Done
 
-- [ ] Required ADRs in §8.3 are created or intentionally scoped with an approved deferral.
-- [ ] Standard Bundle Authoring Standard exists and is validated.
-- [ ] `standard.toml` schema/model exists and is tested.
-- [ ] Every existing standard has a manifest or explicit draft/non-adoptable manifest.
-- [ ] Authority graph validation catches positive and negative cases.
-- [ ] Config namespace registry catches duplicates and undeclared keys.
-- [ ] Generated standards index exists and is checked for freshness.
-- [ ] Dogfood consumer fixtures pass.
-- [ ] Existing CLI/adopt/frontmatter/spec tests still pass.
+- [x] Required ADRs in §8.3 are created or intentionally scoped with an approved deferral.
+- [x] Standard Bundle Authoring Standard exists and is validated.
+- [x] `standard.toml` schema/model exists and is tested.
+- [x] Every existing standard has a manifest or explicit draft/non-adoptable manifest.
+- [x] Authority graph validation catches positive and negative cases.
+- [x] Config namespace registry catches duplicates and undeclared keys.
+- [x] Generated standards index exists and is checked for freshness.
+- [x] Dogfood consumer fixtures pass.
+- [x] Existing CLI/adopt/frontmatter/spec tests still pass.
 - [ ] MCP-readiness report shows no blocking gaps.
-- [ ] Graph validation proves active standards have no undeclared hard dependencies and that all companion/extension relationships are indexed.
+- [x] Graph validation proves active standards have no undeclared hard dependencies and that all companion/extension relationships are indexed.
 - [ ] Documentation deliverables (§18.7) complete.
 
 ### 17.2 Test Strategy
@@ -810,28 +810,28 @@ No secrets are required. The repository must not add secrets for manifest valida
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001 | Standard bundle authoring doc validates and is referenced in index. | Not Started |
-| FR-002 | Manifest schema tests and real-standard manifest validation. | Not Started |
-| FR-003 | Existing adopt tests plus new manifest-adopt linkage tests. | Not Started |
-| FR-004 | Authority graph unit and integration tests. | Not Started |
-| FR-005 | Namespace registry tests. | Not Started |
-| FR-006 | Capability and relationship registry tests. | Not Started |
-| FR-007 | Resource path validation tests. | Not Started |
-| FR-008 | Lifecycle/version metadata tests. | Not Started |
-| FR-009 | Provider registry fake provider tests. | Not Started |
-| FR-010 | CLI graph validation tests. | Not Started |
-| FR-011 | CI/check script includes graph validation. | Not Started |
-| FR-012 | Real standards manifest coverage test. | Not Started |
-| FR-013 | Agent summary presence or exception test. | Not Started |
-| FR-014 | Generated standards index freshness test. | Not Started |
-| FR-015 | Upgrade docs review. | Not Started |
-| FR-016 | ADR files created and linked. | Not Started |
-| FR-017 | Pairwise/combinatorial fixture tests. | Not Started |
-| FR-018 | Dogfood consumer fixtures. | Not Started |
-| FR-019 | Readiness report checklist test. | Not Started |
-| FR-020 | Exception-path documentation and ADR annotation fixture. | Not Started |
-| FR-021 | Relationship graph tests: optional companion, valid extension, hidden dependency rejection. | Not Started |
-| FR-022 | Relationship taxonomy schema and invalid-field tests. | Not Started |
+| FR-001 | `standards/standard-bundle-authoring/README.md`; graph validation; catalog includes `standard-bundle-authoring`. | Passing |
+| FR-002 | `tests/test_standard_manifest.py::test_real_manifests_validate`; `tests/test_standards_graph_cli.py::test_current_repo_validate_graph_require_all_manifests_passes_after_retrofit`. | Passing |
+| FR-003 | `tests/test_standards_graph_discovery.py::test_build_graph_loads_linked_artifact_manifest`; artifact-linkage tests in `tests/test_standards_graph_validators.py`. | Passing |
+| FR-004 | `tests/test_standards_graph_validators.py::test_mutating_authority_conflict_is_error` and compatible-extension coverage. | Passing |
+| FR-005 | `tests/test_standards_graph_validators.py::test_duplicate_config_namespace_is_error`. | Passing |
+| FR-006 | Relationship, companion, capability, and platform-consumption tests in `tests/test_standards_graph_validators.py`. | Passing |
+| FR-007 | Resource-path loader tests in `tests/test_standard_manifest.py` and provider-schema resource checks in `tests/test_standards_graph_validators.py`. | Passing |
+| FR-008 | Lifecycle enum and version-consistency tests in `tests/test_standard_manifest.py`. | Passing |
+| FR-009 | `tests/test_provider_runner.py`; provider declaration and resource checks in manifest/graph tests. | Passing |
+| FR-010 | `tests/test_standards_graph_cli.py` human, JSON, load-error, and current-repository cases. | Passing |
+| FR-011 | `.github/workflows/validate-standards-graph.yml`; `tests/test_standards_graph_workflow.py`. | Passing |
+| FR-012 | Nine real `standards/*/standard.toml` files; `test_real_manifests_validate`; required-manifest graph gate. | Passing |
+| FR-013 | Agent Handoff provides `agent-summary.md`; Python Coding records a rationale; the other active standards do not yet provide either. | Failing — non-blocking `Should` gap |
+| FR-014 | `standards/catalog.md`; `tests/test_standards_graph_catalog.py`; `render-catalog --check`. | Passing |
+| FR-015 | v5 manifest/graph migration posture is added with the release documents. | Blocked — migration note not yet committed |
+| FR-016 | ADRs 0001-0013 are active and pass managed frontmatter/ADR validation. | Passing |
+| FR-017 | Individual, pairwise, and all-standard coverage in `tests/test_standards_composition.py`. | Passing |
+| FR-018 | `tests/test_adopt_dogfood.py` and `tests/test_standards_composition.py`. | Passing |
+| FR-019 | Step 07 must produce the MCP-readiness report and no-blocker checklist. | Blocked — Step 07 deliverable |
+| FR-020 | Standard Bundle Authoring exception rules; ADR-backed extension tests in `tests/test_standards_graph_validators.py`. | Passing |
+| FR-021 | Companion, extension, hidden dependency, unknown target, and cycle tests in graph validation. | Passing |
+| FR-022 | Relationship enums/schema; `tests/test_standard_manifest.py::test_relations_rejects_requires_key`. | Passing |
 
 ---
 
@@ -906,12 +906,12 @@ No durable runtime data is owned. Repository history and normal GitHub backups c
 
 ### 18.7 Documentation Deliverables
 
-- [ ] Standard Bundle Authoring Standard.
-- [ ] `standard.toml` schema reference and examples.
-- [ ] Standards graph validation CLI usage.
-- [ ] Generated standards index.
-- [ ] ADRs listed in §8.3.
-- [ ] Updated adopt guides or bundle docs for every existing standard.
+- [x] Standard Bundle Authoring Standard.
+- [x] `standard.toml` schema reference and examples.
+- [x] Standards graph validation CLI usage.
+- [x] Generated standards index.
+- [x] ADRs listed in §8.3.
+- [x] Updated adopt guides or bundle docs for every existing standard.
 - [ ] `UPGRADING.md` / migration notes for manifest introduction.
 - [ ] MCP-readiness report template/checklist.
 
@@ -1009,22 +1009,22 @@ No external automation is required. CI integration is the only automation in sco
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Should `standard.toml` live under `standards/{id}/` only, or also be mirrored into packaged `bundles/{id}/`? | Source standard gets the canonical file; package includes a generated or copied equivalent. | Yes | Standards owner | MS-1 | Open |
-| OQ-002 | Should `adopt.toml` be referenced from `standard.toml` or eventually merged? | Keep separate for v1; reference artifact manifest from standard manifest. | No | Standards owner | MS-1 | Open |
-| OQ-003 | What is the exact capability naming convention? | Dot-separated domain verbs, e.g. `markdown.format`, `python.typecheck.strict`. | Yes | Standards owner | MS-1 | Open |
-| OQ-004 | How strict should graph validation be for draft standards? | Validate manifest shape but do not require adoptability. | No | Standards owner | MS-2 | Open |
+| OQ-001 | Should `standard.toml` live under `standards/{id}/` only, or also be mirrored into packaged `bundles/{id}/`? | Canonical manifests live in `standards/{id}/`; only executable installed-wheel providers require a byte-identical runtime mirror. | Yes | Standards owner | MS-1 | Resolved |
+| OQ-002 | Should `adopt.toml` be referenced from `standard.toml` or eventually merged? | Keep `standard.toml` and `adopt.toml` separate and link them, per ADR 0003. | No | Standards owner | MS-1 | Resolved |
+| OQ-003 | What is the exact capability naming convention? | Use validated dot-separated capability identifiers. | Yes | Standards owner | MS-1 | Resolved |
+| OQ-004 | How strict should graph validation be for draft standards? | Draft/reference manifests validate structurally without becoming adoptable. | No | Standards owner | MS-2 | Resolved |
 | OQ-005 | Should agent summaries be hand-authored, generated, or both? | Hand-authored first; generated checks later. | No | Documentation owner | MS-3 | Open |
-| OQ-006 | Should graph validation support semantic version ranges for standard contracts? | Use explicit versions first; add ranges only when needed. | No | Tooling owner | MS-2 | Open |
-| OQ-007 | What is the minimum readiness gate before MCP design starts? | No blocking graph findings, all existing standards manifested, core ADRs approved. | Yes | Standards owner | MS-5 | Open |
-| OQ-008 | How should the current ADR-on-frontmatter relationship be modeled without violating independence? | Treat ADR as an explicit extension/profile of Markdown Frontmatter only if the ADR cannot stand alone; otherwise model Frontmatter as a companion plus shared validation provider. | Yes | Standards owner | MS-1 | Open |
+| OQ-006 | Should graph validation support semantic version ranges for standard contracts? | Use explicit versions only; ranges require a demonstrated compatibility need. | No | Tooling owner | MS-2 | Deferred |
+| OQ-007 | What is the minimum readiness gate before MCP design starts? | No blocking graph findings, all manifests present, accepted core ADRs, a fresh catalog, and the Step-07 report. | Yes | Standards owner | MS-5 | Resolved |
+| OQ-008 | How should the current ADR-on-frontmatter relationship be modeled without violating independence? | Use independent packages plus companion relationships by default; use `extends` only with explicit ADR metadata. | Yes | Standards owner | MS-1 | Resolved |
 
 ---
 
 ## Deviations Log
 
-| ID      | Spec Reference | Deviation          | Reason         | Approved? |
-| ------- | -------------- | ------------------ | -------------- | --------- |
-| DEV-001 | N/A            | No deviations yet. | Initial draft. | Pending   |
+| ID | Spec Reference | Deviation | Reason | Approved? |
+| --- | --- | --- | --- | --- |
+| — | N/A | No implementation deviations recorded through Step 06. | Implemented behavior follows the accepted ADRs and requirements. | N/A |
 
 ---
 
