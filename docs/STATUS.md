@@ -27,3 +27,4 @@
 - `homelab` is migrated (`ceba125`); changed-doc frontmatter and Markdown, npm audit, llm-wiki citations, and the dual profile pass on `main`.
 - `website-l3digital.net` validates on `testing` (`87dabc2`) with a clean Astro build; branch policy still requires integration to `main`.
 - `docmend` validates on `dev` (`1657e2e`) with 619 tests, 97% coverage, and its full local gate; branch policy still requires integration to `main`.
+- `hw-radar` validates on `dev` (`cbe77be`) with 357 tests, 93% coverage, and its full local gate; branch policy still requires integration to `main`.
