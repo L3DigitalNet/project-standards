@@ -6,12 +6,12 @@
 
 - `testing` carries unreleased v5.0.0 work; `main` remains released v4.3.0 (`v4.3.0@74db623`).
 - Release freeze holds until v5.0.0; Steps 00-06 and package ADRs 0017-0021 are complete.
-- `SPEC-DPEY` defines the new `agent-handoff` v1 standards package and awaits owner review.
+- `SPEC-DPEY` rev 0.2 addresses its adversarial review; proposed ADR 0022 records project-local packaged-hook placement. Both await owner approval.
 - Handoff v3.5 migration is applied; fatal checks pass, with advisories only in historical session rows and the generated bug index.
 
 ## Next
 
-- Review `SPEC-DPEY`; after approval, write its implementation plan.
+- Approve or revise `SPEC-DPEY` rev 0.2 and proposed ADR 0022; after approval, write the implementation plan.
 - SPEC-MT01 Step 07 remains queued: produce the MCP-readiness report and close blocking traceability gaps.
 
 ## Blockers

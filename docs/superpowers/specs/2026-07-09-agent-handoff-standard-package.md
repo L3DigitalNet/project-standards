@@ -16,6 +16,7 @@ related:
     - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
     - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
     - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+    - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   tickets: []
   repositories:
     - 'L3DigitalNet/project-standards'
@@ -30,6 +31,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-09 | Codex with owner review | Initial full specification from the approved agent-handoff ingestion design. |
+| 0.2 | 2026-07-09 | Codex with adversarial review | Map package commands to generic providers, specify platform and artifact-lifecycle work, add hook-placement ADR, scope config strictness, and restore workflow/error identifiers. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
@@ -70,8 +72,8 @@ The outcome is a reproducible project-local memory layer with automatic startup 
 
 | ID | Non-Goal | Reason |
 | --- | --- | --- |
-| NG-001 | Own, modify, validate, or install user-global, agent-global, home-directory, machine-level, or filesystem-root state. | Standard adoption is project-local under ADR 0021. |
-| NG-002 | Scan, mutate, or coordinate sibling repositories or an entire projects directory. | Each consumer adopts and validates independently. |
+| NG-001 | Own, modify, validate, or install user-global, agent-global, home-directory, machine-level, or filesystem-root state. | Standard-packaged skills and hooks are project-local under ADRs 0021 and 0022. |
+| NG-002 | Scan, mutate, or coordinate sibling repositories or an entire projects directory through standard adoption. | Each consumer adopts and validates independently; any separately authorized operator workflow remains external to the standard. |
 | NG-003 | Require a clone, fork, service, daemon, database, or separately released runtime package. | The `project-standards` distribution is the complete source. |
 | NG-004 | Deterministically transform every historical legacy layout. | Historical structures vary too widely for a safe universal transformer. |
 | NG-005 | Overwrite or semantically rewrite consumer project knowledge during adoption or upgrade. | Knowledge requires project-local judgment and remains consumer-owned. |
@@ -88,7 +90,7 @@ The outcome is a reproducible project-local memory layer with automatic startup 
 | WH-002 | Consumer-defined policy overrides. | A single default policy reduces ambiguity during initial adoption. | Two or more consumers need legitimate, non-conflicting budget or shape variations. |
 | WH-003 | Automated semantic migration or content classification. | An agent must reconcile project-specific knowledge and conflicting historical files. | A later corpus proves a narrow transformation safe across real consumers. |
 | WH-004 | A write-capable MCP surface. | CLI and CI are the authoritative mutation and validation paths. | The Project Standards MCP server has a reviewed write model and explicit apply semantics. |
-| WH-005 | Cross-repository migration orchestration. | It violates the repository boundary even if implemented as a convenience command. | Never through standard adoption; a separately authorized operator workflow may coordinate independent invocations. |
+| WH-005 | Separately authorized multi-repository migration operator workflow. | V1 is proving independent repository migration before adding fleet-level coordination outside the standard. | V1 migration evidence is complete and the owner authorizes a separate operator tool. |
 
 ### 2.4 Boundaries
 
@@ -165,6 +167,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | C-008 | Fail closed before mutation when ownership, syntax, containment, or integration state is ambiguous. | Existing adopt-engine safety model. |
 | C-009 | Keep the hook dependency-free, fast, read-only, and functional without importing the installed `project-standards` package. | Startup reliability and clone independence. |
 | C-010 | Do not delete the legacy repository until every known consumer conforms to v1. | Owner retirement plan. |
+| C-011 | Install this standard's hook only at `.agents/hooks/agent-handoff/` unless a later ADR authorizes another project-local destination. | Proposed ADR 0022. |
 
 ---
 
@@ -215,7 +218,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The system shall publish an adoptable `standards/agent-handoff/` bundle with `standard.toml`, `README.md`, `adopt.md`, `agent-summary.md`, templates, resources, and the `agent-handoff` skill. | The package must satisfy the Standard Bundle Authoring contract. | Graph validation accepts the bundle and generated catalog output includes it. | Must |
+| FR-001 | The system shall publish an adoptable `standards/agent-handoff/` bundle with `standard.toml`, `README.md`, `adopt.md`, templates, resources, and the `agent-handoff` skill, and shall choose to ship the optional `agent-summary.md` resource. | The package must satisfy the Standard Bundle Authoring contract and chooses the optional summary for agent discoverability. | Graph validation accepts the bundle and generated catalog output includes it. | Must |
 | FR-002 | The system shall declare `agent-handoff` package version `1.0` and shall not continue a legacy version line. | The new package has a new contract and ownership model. | Manifest, docs, config fragments, policy, and tests consistently identify version `1.0`. | Must |
 | FR-003 | Every operation shall confine consumer-data access and all mutation to the resolved adopting repository; it may read immutable resources from the installed `project-standards` distribution and invoke declared toolchain executables. | The standard owns project-level knowledge only but must load its own package resources. | Boundary tests reject absolute consumer paths, traversal, symlink escape, outside-root consumer reads, and every attempted write outside the root while permitting package-resource loads. | Must |
 | FR-004 | The system shall define `docs/STATUS.md`, `docs/TODO.md`, and the required `docs/handoff/` files and directories as the canonical v1 knowledge layout. | Root status/task files are no longer desired. | Fresh adoption produces the exact required layout and validation rejects misplaced canonical files. | Must |
@@ -224,7 +227,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | FR-007 | Automatic-mode adoption shall install one dependency-free shared hook at `.agents/hooks/agent-handoff/session_start.py`; manual mode shall not require or register it. | One repo-local hook avoids duplicated harness copies and external sources without adding unused runtime files to manual consumers. | Both supported profiles reference the same file and hook parity validation passes; manual fixtures conform without it. | Must |
 | FR-008 | The Claude Code profile shall register the shared hook as a project-local `SessionStart` command hook and shall inject startup context through a documented Claude Code output path. | Claude Code is a first-class v1 harness. | A Claude-shaped input probe receives valid context for startup, resume, clear, and compact sources. | Must |
 | FR-009 | The Codex profile shall register the shared hook in the trusted project `.codex/config.toml` layer and shall inject startup context through a documented Codex output path. | Codex is a first-class v1 harness. | A Codex-shaped input probe receives valid context, and the adoption guide documents project trust and hook review. | Must |
-| FR-010 | The system shall record startup mode and selected harness profiles in `.project-standards.yml`; automatic mode shall require working injection for each declared supported profile, while manual mode shall claim no automatic profile. | Declared conformance must be mechanically testable without excluding unsupported agents. | Validation fails when automatic mode lacks a registration, hook, or expected output behavior, or when manual mode declares an automatic profile. | Must |
+| FR-010 | The system shall record startup mode and selected harness profiles in the `agent_handoff` namespace of `.project-standards.yml`; automatic mode shall require working injection for each declared supported profile, while manual mode shall claim no automatic profile. | Declared conformance must be mechanically testable without excluding unsupported agents. | Validation rejects unknown keys inside `agent_handoff`, fails when automatic mode lacks a registration, hook, or expected output behavior, and fails when manual mode declares an automatic profile; it makes no whole-file unknown-key claim. | Must |
 | FR-011 | Adoption shall add or update one delimiter-bounded `agent-handoff` block in each selected profile's root instruction file, or in `AGENTS.md` for manual mode, while preserving all content outside the markers. | The skill and session-end procedure must be reliably discoverable without owning the entire file. | First-run, update, automatic/manual, duplicate-marker, malformed-marker, and byte-preservation fixtures pass. | Must |
 | FR-012 | Adoption shall structurally merge only the required hook registration into existing Claude Code and Codex project configuration while preserving unrelated values. | Consumer configurations are often bespoke. | Semantic before/after comparisons prove unrelated configuration unchanged; malformed or ambiguous input blocks all mutation. | Must |
 | FR-013 | The hook shall inject bounded `docs/handoff/state.md` content, current Git branch, recent commits, working-tree status, and lazy pointers to the canonical knowledge files. | The next session needs current state without loading the whole knowledge base. | Golden-output tests cover Git and non-Git repositories, missing optional files, Unicode boundaries, and both transports. | Must |
@@ -257,10 +260,10 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 ### 7.3 Interface Requirements
 
 | ID | Interface | Requirement | Contract / Format | Acceptance Criteria |
-| --- | --- | --- | --- | --- | --- |
-| IR-001 | Adoption CLI | Scaffold the standard with explicit automatic profiles or explicit manual mode. | `project-standards adopt agent-handoff --dest PATH (--harness {claude-code,codex}... | --manual) [--dry-run] [--json]` | At least one repeated harness is required for automatic mode; `--manual` is mutually exclusive and claims no automatic profile. |
-| IR-002 | Command group | Expose package-specific read and maintenance operations without a second executable. | `project-standards agent-handoff {validate,drift-check,size-report,shape-check,legacy-report}` | Help, human output, JSON output, and exit-code tests pass. |
-| IR-003 | Consumer config | Declare contract version, startup mode, and selected profiles. | `.project-standards.yml` key `agent_handoff` with quoted `version: "1.0"`, `startup: automatic\|manual`, and `harnesses` list | Automatic mode requires one or more unique known harnesses; manual mode requires an empty list. |
+| --- | --- | --- | --- | --- |
+| IR-001 | Adoption CLI | Scaffold the standard with explicit automatic profiles or explicit manual mode. | `project-standards adopt agent-handoff --dest PATH (--harness {claude-code,codex}... \| --manual) [--dry-run] [--json]` | At least one repeated harness is required for automatic mode; `--manual` is mutually exclusive and claims no automatic profile. The manifest maps this mutation to generic `scaffold`. |
+| IR-002 | Command group | Expose package-specific read and maintenance operations without a second executable. | `project-standards agent-handoff {validate,drift-check,size-report,shape-check,legacy-report,upgrade}` | Help, human output, JSON output, and exit-code tests pass. `validate`, `size-report`, and `shape-check` use the generic `validate` provider; `drift-check` uses `drift-check`; `legacy-report` uses read-only `extract`; and `upgrade` uses `upgrade`. Diagnostic view names are CLI subcommands, not new manifest operations. |
+| IR-003 | Consumer config | Declare contract version, startup mode, and selected profiles. | `.project-standards.yml` key `agent_handoff` with quoted `version: "1.0"`, `startup: automatic\|manual`, and `harnesses` list | Automatic mode requires one or more unique known harnesses; manual mode requires an empty list; unknown keys inside this namespace fail validation. Other top-level namespaces remain outside this parser's authority. |
 | IR-004 | Claude Code hook | Register one project `SessionStart` command hook. | `.claude/settings.json` points to `.agents/hooks/agent-handoff/session_start.py` using a repository-anchored command | Official input/output fixtures and real smoke probe pass. |
 | IR-005 | Codex hook | Register one trusted project `SessionStart` command hook. | `.codex/config.toml` inline hook table points to `.agents/hooks/agent-handoff/session_start.py` | Official schema fixtures, trust guidance, and real smoke probe pass. |
 | IR-006 | Instruction integration | Own one marked block without owning the file. | HTML-comment start/end markers containing the exact token `agent-handoff` | Duplicate, nested, missing-end, and reordered markers fail closed. |
@@ -271,9 +274,9 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | Standard manifest | Describe identity, version, adoption, resources, capabilities, authorities, relationships, artifacts, and providers. | Must pass standard-manifest and graph validation. | `standards/agent-handoff/standard.toml` |
+| DR-001 | Standard manifest | Describe identity, version, `adoption = "cli"`, `[config].namespaces = ["agent_handoff"]`, resources, capabilities, authorities, relationships, artifacts, and providers. Declare only the existing generic provider operations `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`. | Must pass standard-manifest and graph validation; CLI diagnostic views map to these providers and do not expand `ProviderOperation`. | `standards/agent-handoff/standard.toml` |
 | DR-002 | Default policy | Define required files, shape profiles, hard byte caps, working targets, and blocked content patterns. | TOML parses dependency-free; docs and tooling derive the same values. | `standards/agent-handoff/resources/policy.toml` |
-| DR-003 | Artifact manifest | Describe all materialized files, destinations, modes, and provenance. | No unsafe destination, collision, undeclared mirror, or global skill path. | Packaged `adopt.toml` |
+| DR-003 | Artifact manifest | Describe all materialized files, destinations, modes, provenance, and `install_policy = "managed" \| "create-only"`. | The schema defaults to `managed` for existing manifests. Knowledge templates declare `create-only` and cannot be overwritten even by force or upgrade; hook and skill artifacts declare `managed` and refresh only through the owned upgrade path after drift/precondition checks. No unsafe destination, collision, undeclared mirror, or global skill/hook path is allowed. | Packaged `adopt.toml` |
 | DR-004 | Consumer configuration | Record version, startup mode, and selected harnesses. | Version is quoted and supported; automatic mode has a unique non-empty known list; manual mode has an empty list. | Consumer `.project-standards.yml` |
 | DR-005 | Consumer knowledge | Store current and durable project facts by lifetime. | Required paths and document profiles pass; credentials contain references only. | Consumer repository |
 | DR-006 | Standard-owned copies | Carry hook, skill, policy, and integration content matching the package version. | Drift and provenance checks identify exact expected source and local changes. | Standard package; installed copies in consumer repo |
@@ -353,14 +356,15 @@ flowchart TB
 
 | ID | Decision | Rationale | Consequence |
 | --- | --- | --- | --- |
-| D-001 | Use one integrated CLI-backed standard package. | It provides one owner and eliminates clone/runtime split. | Provider implementation joins the `project-standards` package. |
-| D-002 | Treat all knowledge documents as consumer-owned after create-only scaffolding. | Their content is project-specific and cannot be safely refreshed from templates. | Upgrades validate shape but never overwrite knowledge. |
-| D-003 | Store one shared hook under `.agents/` for both profiles. | One installed source prevents duplicate drift. | Both harness configs reference the same repo-local executable file. |
+| D-001 | Use one integrated CLI-backed standard package with `adoption = "cli"`. | It provides one owner and eliminates clone/runtime split. | Provider implementation and package-specific CLI dispatch join the `project-standards` package. |
+| D-002 | Treat all knowledge documents as consumer-owned after create-only scaffolding. | Their content is project-specific and cannot be safely refreshed from templates. | The artifact schema gains optional `install_policy`; knowledge declares `create-only`, while standard-owned artifacts declare `managed`. Upgrades validate shape but never overwrite knowledge. |
+| D-003 | Store one shared hook under `.agents/hooks/agent-handoff/` for both profiles. | One installed source prevents duplicate drift. | Both harness configs reference the same repo-local executable file, subject to proposed ADR 0022. |
 | D-004 | Require automatic injection for declared Claude Code and Codex profiles. | Reliable startup is central to the standard's value. | A declared but broken profile is non-conforming. |
 | D-005 | Use bounded instruction blocks and structural config merges. | Narrow ownership preserves consumer customization. | Ambiguous ownership blocks mutation. |
 | D-006 | Use a guide plus read-only legacy report, not automatic migration. | Historical layouts and content need local judgment. | The local agent performs semantic reconciliation. |
 | D-007 | Keep all operations repository-confined. | The standard governs project knowledge, not workstation state. | Fleet rollout and global cleanup remain separate owner operations. |
 | D-008 | Start at standard package version `1.0`. | The new contract is independent of legacy lineage. | No compatibility promise is inferred from old version numbers. |
+| D-009 | Map package-specific commands onto the existing generic provider vocabulary. | Generic operations should remain stable while a standard may expose focused diagnostic views. | The manifest declares `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`; `size-report`, `shape-check`, and `legacy-report` remain CLI names mapped to those operations. |
 
 ### 8.4 Solution Alternatives Considered
 
@@ -375,6 +379,10 @@ flowchart TB
 
 - Package resources must work from an installed wheel, not only a source tree.
 - Provider entrypoints are Python import paths declared in `standard.toml`, never filesystem paths.
+- The current provider declarations are metadata-only. Implementation must add an executable dispatch boundary plus a specialized `agent-handoff` CLI branch without broadening the generic operation enum.
+- The current `adopt` parser lacks `--harness`, `--manual`, and `--json`. Implementation must add and forward those arguments for `agent-handoff` while preserving existing standards' behavior.
+- The hard-coded adoptable/version-tracked registry parity guards must include `agent-handoff` when its artifact bundle and contract version are added.
+- The artifact manifest/model/engine must add optional `install_policy` with `managed` as the backward-compatible default and enforce `create-only` independently of `--force` and upgrade.
 - The hook must remain a standalone source-owned artifact and must not rely on the provider runtime.
 - Integration adapters may edit only the exact semantic key or bounded block owned by `agent-handoff`.
 - Consumer-owned Markdown may be validated for conformance but never regenerated after creation.
@@ -398,7 +406,7 @@ The implementation uses typed in-memory models; no database or service state exi
 | `AgentHandoffConfig` | `version`, `startup`, `harnesses` | Version supported; automatic/manual mode consistent with the harness list |
 | `Policy` | required paths, byte caps, working targets, document profiles | One canonical bundled policy for v1 |
 | `HarnessProfile` | id, config path, registration recognizer, registration renderer, transport | Profile logic is explicit and testable |
-| `ArtifactRule` | source, destination, provenance, ownership, mode | Destination contained and ownership declared |
+| `ArtifactRule` | source, destination, provenance, ownership, install policy, mode | Destination contained; ownership and `managed`/`create-only` lifecycle declared |
 | `IntegrationBlock` | file, start marker, end marker, expected body | Exactly zero or one well-formed block |
 | `Action` | kind, destination, expected precondition, rendered content | No consumer-knowledge overwrite |
 | `Plan` | repository, config, actions, blocked findings | Apply allowed only when blocked findings are empty |
@@ -460,45 +468,28 @@ Consumer knowledge follows lifetime-specific document profiles:
 
 ### 10.2 Alternate Workflows
 
-#### Legacy migration
-
-1. Run `legacy-report` against one repository.
-2. Review recognized and unclassified evidence.
-3. Read the migration guide and inspect current project knowledge.
-4. Reconcile content into the v1 target layout with local agent judgment.
-5. Run v1 adoption for the selected harnesses.
-6. Remove obsolete repo-local legacy artifacts only after preserving useful content.
-7. Run full validation and inspect the repository diff.
-
-#### Unsupported harness
-
-1. Adopt with `--manual` when no supported automatic profile is used.
-2. The agent reads `docs/handoff/state.md`, current Git state, and lazy pointers at startup.
-3. The agent loads `.agents/skills/agent-handoff/` and follows the same closeout rules.
-4. Validation reports manual-only status and does not claim automatic-injection conformance.
-
-#### Package upgrade
-
-1. Run drift-check and preview the upgrade.
-2. Refresh only the hook, skill, policy-derived integrations, and bounded blocks.
-3. Preserve every consumer-knowledge file and unrelated config value.
-4. Require manual resolution for locally modified standard-owned artifacts whose provenance cannot be established safely.
-5. Validate against the newly selected supported package version.
+| ID | Trigger | Behavior | Expected Result |
+| --- | --- | --- | --- |
+| AW-001 | A repository contains a legacy handoff layout. | Run `legacy-report`; review recognized and unclassified evidence; read the migration guide; reconcile content into the v1 layout with local-agent judgment; adopt the selected profiles; remove obsolete repo-local artifacts only after preservation; then validate and inspect the diff. | Useful project knowledge is preserved, legacy uncertainty remains explicit, and only a clean v1 validation establishes migration. |
+| AW-002 | No supported automatic harness profile is selected. | Adopt with `--manual`; at startup, read `docs/handoff/state.md`, Git state, and lazy pointers; load the repo-local skill; and follow the same closeout rules. | Validation reports manual-only status and makes no automatic-injection conformance claim. |
+| AW-003 | A consumer selects a newer supported `agent-handoff` package version. | Run drift-check and preview `upgrade`; refresh only managed hook, skill, policy-derived integration, and bounded-block artifacts after precondition checks; preserve create-only knowledge and unrelated config; require manual resolution of ambiguous local drift; then validate. | Managed artifacts match the selected package, create-only knowledge is byte-identical, and the consumer conforms to the selected version. |
 
 ### 10.3 Edge Cases
 
-- The target is not a Git repository: adoption may scaffold, but the hook reports Git context unavailable.
-- The command starts in a repository subdirectory: root resolution still anchors all access to the declared Git root.
-- A required knowledge file is missing: validation reports it; repair may create it only when no conflicting path exists.
-- A knowledge file already exists with unexpected shape: preserve it and report findings; never replace it.
-- A config file is invalid JSON or TOML: block all mutations and identify the parse locus.
-- Instruction markers are duplicated, nested, or incomplete: block that integration and all apply actions.
-- A destination is a symlink or resolves outside the root: reject it even when forced.
-- Git is absent, times out, or returns nonzero: emit document context with an explicit unavailable marker.
-- Hook input is malformed: exit nonzero with a concise diagnostic and no traceback or write.
-- Legacy artifacts are unknown: report unclassified evidence and direct the local agent to inspect manually.
-- Both old and new hooks are active: report duplicate startup injection as a migration blocker.
-- A declared Codex project is untrusted or its hook is unapproved: validation explains the trust prerequisite; it does not modify user-global trust state.
+| ID | Edge Case | Expected Behavior |
+| --- | --- | --- |
+| EC-001 | The target is not a Git repository. | Adoption may scaffold; the hook reports Git context unavailable. |
+| EC-002 | The command starts in a repository subdirectory. | Root resolution anchors all access to the declared Git root. |
+| EC-003 | A required knowledge file is missing. | Validation reports it; repair may create it only when no conflicting path exists. |
+| EC-004 | A knowledge file exists with unexpected shape. | Preserve it byte-for-byte and report findings; never replace it. |
+| EC-005 | A config file is invalid JSON or TOML. | Block all mutations and identify the parse locus. |
+| EC-006 | Instruction markers are duplicated, nested, or incomplete. | Block that integration and all apply actions. |
+| EC-007 | A destination is a symlink or resolves outside the root. | Reject it even when forced. |
+| EC-008 | Git is absent, times out, or returns nonzero. | Emit document context with an explicit unavailable marker. |
+| EC-009 | Hook input is malformed. | Exit nonzero with a concise diagnostic and no traceback or write. |
+| EC-010 | Legacy artifacts are unknown. | Report unclassified evidence and direct the local agent to inspect manually. |
+| EC-011 | Both old and new hooks are active. | Report duplicate startup injection as a migration blocker. |
+| EC-012 | A declared Codex project is untrusted or its hook is unapproved. | Explain the trust prerequisite without modifying user-global trust state. |
 
 ### 10.4 State Transitions
 
@@ -536,6 +527,7 @@ The system has no graphical UI, HTTP API, or remote service. Its user interface 
 | `project-standards agent-handoff size-report` | Report eager-context caps and working targets | No |
 | `project-standards agent-handoff shape-check` | Validate mechanical document profiles | No |
 | `project-standards agent-handoff legacy-report` | Inventory recognized old repo-local evidence and conflicts | No |
+| `project-standards agent-handoff upgrade` | Preview or refresh managed package artifacts and owned integrations | Yes unless `--dry-run` |
 
 All commands accept an explicit repository path, default to the current repository where safe, support human-readable output, and support JSON when intended for automation.
 
@@ -545,17 +537,17 @@ All commands accept an explicit repository path, default to the current reposito
 
 ### 12.1 Expected Failures
 
-| Failure | Behavior | Operator Action |
-| --- | --- | --- |
-| Invalid config syntax | Block all mutation; report parser and locus | Repair the consumer config, then rerun preview |
-| Ambiguous markers or duplicate registrations | Block all mutation; enumerate conflicts | Reconcile the duplicated integration manually |
-| Existing consumer knowledge | Preserve and mark create action skipped | Review shape findings; edit only with project judgment |
-| Drifted standard-owned artifact | Report expected source and local digest | Review local changes, then choose package copy or intentional deviation |
-| Unsafe path or symlink | Reject operation as a safety error | Replace with a contained regular path if intended |
-| Missing Git or Git failure | Continue hook with explicit unavailable context | Repair Git only if Git context is required |
-| Unsupported harness | Reject automatic profile selection | Use the manual path or wait for a supported profile |
-| Legacy uncertainty | Report evidence without proposed transform | Let the local agent inspect and reconcile |
-| Upstream hook contract drift | Fail profile smoke/release gate | Update the profile and package version before release |
+| ID | Failure Mode | User/System Behavior | Logging / Observability | Recovery |
+| --- | --- | --- | --- | --- |
+| ERR-001 | Invalid config syntax or unknown `agent_handoff` key | Block all mutation. | Report parser/key and locus in human and JSON output. | Repair the owned namespace, then rerun preview. |
+| ERR-002 | Ambiguous markers or duplicate registrations | Block all mutation and enumerate conflicts. | Emit every conflicting marker or registration locus. | Reconcile the duplicated integration manually. |
+| ERR-003 | Existing create-only consumer knowledge | Preserve content and mark the create action skipped. | Report the path and any independent shape findings. | Review and edit only with project judgment. |
+| ERR-004 | Drifted managed artifact | Refuse ambiguous refresh and report expected provenance plus local digest. | Include the package source, expected digest, and local digest. | Review local changes, then use the owned upgrade path or record an intentional deviation. |
+| ERR-005 | Unsafe path or symlink | Reject the operation as a safety error. | Emit the resolved path and violated containment rule without reading escaped content. | Replace it with a contained regular path if intended. |
+| ERR-006 | Missing Git or Git failure | Continue the hook with explicit unavailable context. | Emit a bounded local diagnostic; create no persistent log. | Repair Git only if Git context is required. |
+| ERR-007 | Unsupported harness selected for automatic mode | Reject profile selection. | Name the unsupported profile and supported alternatives. | Use the manual path or wait for a supported profile. |
+| ERR-008 | Legacy uncertainty | Report evidence without a proposed transform. | Emit deterministic classified or unclassified findings. | Let the local agent inspect and reconcile. |
+| ERR-009 | Upstream hook contract drift | Fail the profile smoke/release gate. | Preserve fixture/schema mismatch evidence in test or release output. | Update the profile and package version before release. |
 
 ### 12.2 Retry and Idempotency
 
@@ -644,6 +636,8 @@ The hook reads only the eager file and Git summary; its cost does not grow with 
 | R-006 | The old repository is deleted before every dependency is ingested. | Low | High | Enforce the retirement gate and exact source inventory at the pinned legacy commit. |
 | R-007 | Users mistake the manual unsupported-harness path for automatic conformance. | Medium | Low | Validation labels profile status and docs distinguish automatic from manual startup. |
 | R-008 | The Full spec expands implementation beyond one manageable plan. | Medium | Medium | Implement in milestones with package foundation, providers, runtime, migration, and rollout gates. |
+| R-009 | The new provider execution boundary or package-specific CLI dispatch destabilizes existing commands. | Medium | High | Isolate dispatch, retain the generic provider enum, cover old CLI help/behavior, and enforce adoptable/version-registry parity. |
+| R-010 | The new artifact install policy changes existing bundle overwrite behavior. | Medium | High | Default existing manifests to `managed`, regression-test current bundle behavior, and add explicit create-only force/upgrade rejection tests. |
 
 ---
 
@@ -704,6 +698,8 @@ Every bug found during implementation receives a regression test at the narrowes
 | FR-018–FR-020 | Provenance, package parity, wheel-install, drift, and upgrade tests |
 | FR-021 | Unsupported-harness documentation and manual-procedure review |
 | FR-022 | Release checklist and final consumer/dependency inventory |
+| IR-001–IR-008, DR-001–DR-008 | CLI/provider mapping, manifest/config/artifact schemas, package data, and output-contract tests |
+| AW-001–AW-003, EC-001–EC-012, ERR-001–ERR-009 | Workflow acceptance, edge-case regression, and error-contract fixtures |
 | Cross-cutting quality | NFR-002 and NFR-006–NFR-009: idempotency, diagnostics, full toolchain, snapshots, and release evidence |
 
 ---
@@ -734,7 +730,7 @@ agent_handoff:
     - codex
 ```
 
-`agent_handoff` is the syntax-safe config namespace for the canonical `agent-handoff` standard. A manual-only consumer sets `startup: manual` and `harnesses: []`. V1 has no consumer policy override. Unknown keys fail configuration validation unless the schema explicitly marks them forward-compatible.
+`agent_handoff` is the syntax-safe config namespace for the canonical `agent-handoff` standard and is declared in the standard manifest as `[config].namespaces = ["agent_handoff"]`. A manual-only consumer sets `startup: manual` and `harnesses: []`. V1 has no consumer policy override. The `agent-handoff` parser rejects unknown keys inside its own namespace. Other top-level keys and namespaces remain governed by the shared config loader or their owning standards; this package makes no whole-file strictness claim.
 
 ### 18.3 Deployment Flow
 
@@ -800,7 +796,9 @@ Implementation is split into dependency-ordered milestones. A detailed executabl
 - Approve this specification and record any required ADR updates.
 - Inventory every potentially reusable file and behavior at the pinned legacy commit.
 - Classify each item as ingest, rewrite, document-only reference, or discard.
-- Freeze canonical naming, paths, config schema, provider operations, and CLI contracts.
+- Accept or revise proposed ADR 0022 for standard-packaged hook placement.
+- Freeze canonical naming, paths, strict `agent_handoff` config schema, the existing generic provider mapping, and CLI contracts.
+- Revise the Standard Bundle Authoring/artifact-plane contract for optional `install_policy` without changing existing manifests' default behavior.
 - Add red package/graph/fixture tests for the new bundle.
 
 ### MS-1 — Standard Package
@@ -808,7 +806,8 @@ Implementation is split into dependency-ordered milestones. A detailed executabl
 - Author the standard, adoption guide, agent summary, policy, templates, migration resource, and skill.
 - Add `standard.toml`, artifact manifest, authorities, resources, capabilities, and providers.
 - Package every resource with explicit provenance and parity/transform tests.
-- Update graph fixtures, catalog generation, indexes, and package-data tests.
+- Add the artifact `install_policy` schema/model and tests; mark knowledge create-only and standard-owned hook/skill files managed.
+- Update graph fixtures, catalog generation, adoptable/version-tracked registries, indexes, and package-data tests.
 
 ### MS-2 — Adoption and Integration
 
@@ -816,7 +815,8 @@ Implementation is split into dependency-ordered milestones. A detailed executabl
 - Implement create-only knowledge scaffolding.
 - Implement bounded instruction-block and Claude/Codex config adapters.
 - Add dry-run/apply parity, idempotency, preservation, conflict, and unsafe-path coverage.
-- Wire the specialized provider through the approved CLI surfaces.
+- Add the `agent-handoff` early-dispatch/subparser, `--harness`/`--manual`/adopt `--json` argument forwarding, and the executable provider bridge.
+- Wire CLI views to generic `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade` providers without adding manifest operations.
 
 ### MS-3 — Runtime and Validation
 
@@ -847,9 +847,9 @@ Implementation is split into dependency-ordered milestones. A detailed executabl
 
 | Milestone | Primary Requirements | Completion Evidence |
 | --- | --- | --- |
-| MS-0 | FR-002, FR-018 | Approved contract and source inventory |
-| MS-1 | FR-001–FR-002, FR-006, FR-017–FR-019 | Graph/package/provenance tests |
-| MS-2 | FR-003–FR-005, FR-010–FR-012, FR-020, FR-024 | Provider integration suite |
+| MS-0 | FR-002, FR-018, DR-001, DR-003 | Approved contract, ADR 0022 disposition, provider mapping, artifact lifecycle, and source inventory |
+| MS-1 | FR-001–FR-002, FR-006, FR-017–FR-019, DR-001–DR-003 | Graph/package/provenance/install-policy tests and registry parity |
+| MS-2 | FR-003–FR-005, FR-010–FR-012, FR-020, FR-024, IR-001–IR-003 | CLI/provider dispatch and integration suite |
 | MS-3 | FR-007–FR-015, FR-021, FR-023 | Hook/validator/harness acceptance suite |
 | MS-4 | FR-016–FR-017, FR-022 | Migration fixtures, dogfood, pilot evidence |
 | MS-5 | FR-019, FR-022 | Release evidence and signed retirement gate |
@@ -910,13 +910,14 @@ No implementation-blocking questions remain after design approval.
 - [ADR 0019 — Packaged Artifact Parity and Provenance](../../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
 - [ADR 0020 — Standard Package Versioning](../../adr/adr-0020-standard-package-versioning-methodology.md)
 - [ADR 0021 — Standard-Packaged Skill Installation](../../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
+- [ADR 0022 — Standard-Packaged Hook Installation (proposed)](../../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
 
 ### Harness Contracts
 
 - [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks)
 - [Claude Code Hooks Guide](https://code.claude.com/docs/en/hooks-guide)
-- [Codex Hooks Reference](https://developers.openai.com/codex/hooks)
-- [Codex Configuration Basics](https://developers.openai.com/codex/config-basic)
+- [Codex Hooks Reference](https://learn.chatgpt.com/docs/hooks)
+- [Codex Configuration Basics](https://learn.chatgpt.com/docs/config-file/config-basic)
 - [Codex SessionStart Command Input Schema](https://raw.githubusercontent.com/openai/codex/main/codex-rs/hooks/schema/generated/session-start.command.input.schema.json)
 
 ### Project References
