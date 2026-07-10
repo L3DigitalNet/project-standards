@@ -14,19 +14,141 @@ required = [
   "docs/handoff/bugs",
 ]
 
-[limits]
-state_hard_bytes = 2048
-state_target_bytes = 1024
-hook_output_hard_bytes = 4096
+[budgets."docs/handoff/state.md"]
+cap = 2048
+target = 1740
+fatal = true
 
-[document_profiles]
-status = "current-snapshot"
-todo = "user-and-agent-queues"
-state = "current-focus-and-active-incidents"
-conventions = "quick-reference-and-stable-numbered-entries"
-sessions = "append-only-monthly-log"
-bugs = "stable-three-digit-records-and-index"
+[budgets."CLAUDE.md"]
+cap = 2048
+target = 1740
+fatal = false
+
+[budgets."AGENTS.md"]
+cap = 4096
+target = 3480
+fatal = false
+
+[budgets."hook-output"]
+cap = 4096
+target = 3480
+fatal = true
+virtual = true
+
+[shape.defaults]
+max_paragraph_chars = 360
+max_bullet_chars = 180
+max_heading_depth = 3
+prefer_bullets = true
+require_overflow_pointer = true
+
+[shape.blocked_phrases]
+phrases = [
+  "it is important to note",
+  "it should be noted",
+  "as mentioned above",
+  "this section provides",
+  "in order to",
+  "the purpose of this document is to",
+  "going forward",
+  "at this point in time",
+]
+
+[shape.documents."docs/handoff/state.md"]
+profile = "live-state"
+hard_byte_cap = 2048
+target_bytes = 1740
+allowed_sections = ["Active", "Next", "Blockers", "Pointers"]
+required_sections = ["Active", "Next", "Blockers", "Pointers"]
+required_order = ["Active", "Next", "Blockers", "Pointers"]
+max_bullets_per_section = 4
+max_bullet_chars = 140
+forbid_paragraphs = true
+required = true
+severity = "fatal"
+
+[shape.documents."docs/STATUS.md"]
+profile = "status-snapshot"
+target_lines = 60
+max_bullet_chars = 180
+required_sections = ["Current State", "Completed Recently", "Notes"]
+forbid_narrative_history = true
+required = true
+severity = "advisory"
+
+[shape.documents."docs/TODO.md"]
+profile = "work-queue"
+max_bullet_chars = 160
+required_order = ["User Tracked Tasks", "Agent Tracked Tasks"]
+required = true
+severity = "fatal"
+
+[shape.documents."docs/handoff/deployed.md"]
+profile = "current-truth"
+target_lines = 120
+require_tables_or_bullets = true
+forbid_changelog = true
+required = true
+severity = "advisory"
+
+[shape.documents."docs/handoff/architecture.md"]
+profile = "structural-reference"
+target_lines = 200
+max_paragraph_chars = 420
+require_pointer_for_details_over_chars = 700
+required = true
+severity = "advisory"
+
+[shape.documents."docs/handoff/conventions.md"]
+profile = "numbered-rules"
+require_quick_reference = true
+max_rule_summary_chars = 180
+max_entry_chars = 1200
+required = true
+severity = "advisory"
+
+[shape.documents."docs/handoff/sessions/*.md"]
+profile = "session-log"
+append_only = true
+row_max_chars = 220
+headline_max_words = 20
+required = false
+severity = "advisory"
+
+[shape.documents."docs/handoff/bugs/*.md"]
+profile = "bug-record"
+required_sections = ["Cause", "Fix", "Lesson"]
+required = false
+severity = "advisory"
 
 [credentials]
-allowed_reference_kinds = ["environment-variable", "secret-name", "openbao-path", "retrieval-reference"]
-blocked_value_labels = ["password", "token", "private-key", "secret-value"]
+private_key_headers = [
+  "-----BEGIN PRIVATE KEY-----",
+  "-----BEGIN RSA PRIVATE KEY-----",
+  "-----BEGIN EC PRIVATE KEY-----",
+  "-----BEGIN OPENSSH PRIVATE KEY-----",
+]
+access_key_patterns = [
+  '\bAKIA[0-9A-Z]{16}\b',
+  '\bgh[pousr]_[A-Za-z0-9]{36,255}\b',
+]
+blocked_assignment_labels = [
+  "password",
+  "token",
+  "api_key",
+  "access_key",
+  "secret",
+  "secret_value",
+  "credential",
+]
+allowed_reference_prefixes = [
+  "bao://",
+  "secret/",
+  "env:",
+  "$",
+]
+allowed_reference_values = [
+  "REDACTED",
+  "CHANGEME",
+  "not-set",
+]
