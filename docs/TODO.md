@@ -116,13 +116,13 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   ADR 0023 establishes the neutral `.standards/` control plane, explicit reconciliation, central lock, and semantic composition; ADR 0024 establishes catalog-scoped non-breaking defaults and opt-in breaking package candidates. Superseded and retained ADRs, the ADR index, and `meta/versioning.md` are reconciled.
 
-- [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
+- [x] 2026-07-10 - Superseded the Standard Bundle Authoring design contract with approved `SPEC-BA02`.
 
-  `SPEC-BA02` rev 0.2 defines the Full V2 authoring contract: family indexes, immutable payloads, fixed package-option namespaces, repository catalog channels, migrations, semantic contributions, trusted bounded providers, integrity, and the reduced adoption-guide role. Round-1 review found no blocker; remediation is applied. Preserve implemented `SPEC-BA01` as active history until owner approval supersedes it.
+  `SPEC-BA02` rev 0.3 defines the Full V2 authoring contract: family indexes, immutable payloads, fixed package-option namespaces, repository catalog channels, migrations, semantic contributions, trusted bounded providers, integrity, and the reduced adoption-guide role. SPEC-BA01 remains superseded implementation history until V2 execution replaces its package.
 
 - [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 are complete; `SPEC-BA02` review remediation is complete and owner approval remains before implementation planning.
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and approved `SPEC-BA02` are complete; implementation planning is next.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 

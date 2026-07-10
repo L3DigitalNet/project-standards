@@ -1,14 +1,14 @@
 ---
 spec_id: SPEC-BA01
 title: 'Standard Bundle Authoring Standard'
-status: approved # draft | review | approved | superseded
+status: superseded # draft | review | approved | superseded
 profile: light # this is the Light template; see header note for sibling profiles
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-09'
+last_reviewed: '2026-07-10'
 supersedes: null # SPEC id this replaces, if any
-superseded_by: null # filled in when this spec is retired
+superseded_by: SPEC-BA02 # filled in when this spec is retired
 related:
   adrs:
     - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
@@ -48,6 +48,7 @@ related:
 | 0.6 | 2026-07-07 | Chris Purcell / L3DigitalNet | Implemented (executing-plans): bundle authored under `standards/standard-bundle-authoring/` (README contract + worked `standard.toml` + blank template), repo-facing maps updated, full gate green (868 tests). §17.1 DoD ticked; only owner acceptance of the (empty) Deviations Log remains |
 | 0.7 | 2026-07-07 | Chris Purcell / L3DigitalNet | **Owner sign-off:** Deviations Log (DEV-001, no deviations) accepted; final §17.1 DoD item ticked; `status: draft → approved`. Spec is now change-controlled. Step 02 closed |
 | 0.8 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references and aligned dependency/count language after project-spec gained a packaged adopt surface. |
+| 0.9 | 2026-07-10 | Chris Purcell / L3DigitalNet | Superseded by approved SPEC-BA02 after the unified control-plane, immutable-payload, catalog-channel, and semantic-composition decisions. Retained as implementation history. |
 
 **Spec lifecycle:** This document is **living until `approved`**, then **change-controlled**: post-approval edits require a new revision row and, for scope-affecting changes, re-approval by the owner. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. When replaced, set `status: superseded` and `superseded_by:` in the frontmatter.
 

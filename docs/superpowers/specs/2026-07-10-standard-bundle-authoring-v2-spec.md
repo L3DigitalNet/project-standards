@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-BA02
 title: 'Standard Bundle Authoring V2'
-status: review
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -43,8 +43,9 @@ related:
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-10 | Coding agent with owner-approved design | Initial Full specification for the V2 package-family index, immutable payload, catalog-channel, semantic-contribution, provider, migration, and conformance contract. |
 | 0.2 | 2026-07-10 | Coding agent with round-1 review | Corrected provider phase vocabulary and goal traceability; sourced the 11-family V5 estimate; defined exact legacy managed-block signatures and migration behavior; normalized catalog placeholders and legacy current-state terminology. |
+| 0.3 | 2026-07-10 | Chris Purcell / L3DigitalNet | Owner approval after round-1 remediation; SPEC-BA01 superseded and implementation planning authorized. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). Approval of this specification supersedes SPEC-BA01; until then, SPEC-BA01 remains the implemented authoring contract.
+**Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
 ---
 
@@ -870,22 +871,64 @@ No regulated or personal data is introduced. Every payload resource and provider
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001-FR-005 | Family/payload schema and layout fixture suites | Not Started |
-| FR-006-FR-009 | Graph, config-schema/default, and resource fixture suites | Not Started |
-| FR-010-FR-014 | Artifact/contribution/adapter/shared-identity suites | Not Started |
-| FR-015-FR-019 | Provider, extension, and migration contract suites | Not Started |
-| FR-020-FR-025 | Integrity, catalog-channel, immutable-baseline, and release-classification suites | Not Started |
-| FR-026-FR-028 | Documentation and author-workflow conformance | Not Started |
-| FR-029-FR-031 | Current-package compatibility matrix and self-hosting gate | Not Started |
-| FR-032-FR-033 | Generated-schema drift and no-package-branch architecture tests | Not Started |
+| FR-001 | Family layout valid/invalid fixtures | Not Started |
+| FR-002 | Family-index model and generated-schema tests | Not Started |
+| FR-003 | Forbidden family/payload channel-field fixtures | Not Started |
+| FR-004 | Required payload-tree resource fixtures | Not Started |
+| FR-005 | Payload availability and legacy-mode rejection tests | Not Started |
+| FR-006 | Per-payload capability and relationship graph tests | Not Started |
+| FR-007 | Package option-schema namespace and closed-object tests | Not Started |
+| FR-008 | Effective-default and internal-contract selector tests | Not Started |
+| FR-009 | Resource identity/path/media/digest tests | Not Started |
+| FR-010 | Whole-artifact lifecycle and collision tests | Not Started |
+| FR-011 | Semantic-contribution source/scope validation tests | Not Started |
+| FR-012 | Shared-identity equality and disagreement tests | Not Started |
+| FR-013 | Adapter-selector schema and current-surface coverage tests | Not Started |
+| FR-014 | Provider-output bound and pre-executor rejection tests | Not Started |
+| FR-015 | Provider declaration, entrypoint, phase/effect, and wheel-resolution tests | Not Started |
+| FR-016 | Provider filesystem/network spy and typed-output tests | Not Started |
+| FR-017 | Referenced-extension path/digest/disable preservation tests | Not Started |
+| FR-018 | Migration endpoint/signature/effect-inventory schema tests | Not Started |
+| FR-019 | Candidate entry, exact-target exit, and rollback-path tests | Not Started |
+| FR-020 | Complete payload inventory and symlink rejection tests | Not Started |
+| FR-021 | Canonical aggregate-digest golden tests | Not Started |
+| FR-022 | Catalog-source schema, role, and digest-parity tests | Not Started |
+| FR-023 | Catalog default uniqueness, candidate-major, and promotion tests | Not Started |
+| FR-024 | Released-payload tagged-baseline immutability tests | Not Started |
+| FR-025 | Catalog-diff release-classification tests | Not Started |
+| FR-026 | Reduced package adoption-guide conformance tests | Not Started |
+| FR-027 | Family/payload README authority, link, and summary-size tests | Not Started |
+| FR-028 | Author-workflow documentation and CI gate checks | Not Started |
+| FR-029 | Current-package fresh/migrated/pairwise/full compatibility matrix | Not Started |
+| FR-030 | Legacy-authority dependency search and marker-migration fixtures | Not Started |
+| FR-031 | Standard Bundle Authoring `2.0` self-hosting and template tests | Not Started |
+| FR-032 | Typed-model generated-schema drift tests | Not Started |
+| FR-033 | No-package-ID-branch architecture tests and review | Not Started |
 | FR-034 | Source-to-installed-payload tree and digest parity | Not Started |
-| NFR-001-NFR-004 | Determinism, offline, tamper, and permutation suites | Not Started |
-| NFR-005-NFR-007 | Path/provider safety, byte-preservation, and fixture-package extensibility | Not Started |
-| NFR-008-NFR-009 | Scale benchmark and diagnostic snapshots | Not Started |
-| IR-001-IR-004 | File-interface parser/schema/generator suites | Not Started |
-| IR-005-IR-006 | Installed provider dispatch and consumer-catalog generation suites | Not Started |
+| NFR-001 | Repeated-generation and randomized-discovery determinism tests | Not Started |
+| NFR-002 | Network-deny installed-wheel suite | Not Started |
+| NFR-003 | Payload tamper and undeclared-file fixtures | Not Started |
+| NFR-004 | Pairwise/full-set request-order permutation tests | Not Started |
+| NFR-005 | Path/symlink/provider read-write boundary spies | Not Started |
+| NFR-006 | Adapter byte-preservation round-trip corpus | Not Started |
+| NFR-007 | Synthetic package extensibility architecture test | Not Started |
+| NFR-008 | 100-family/1,000-payload/10,000-unit benchmark | Not Started |
+| NFR-009 | Structured diagnostic snapshot tests | Not Started |
+| IR-001 | Family-index parser/schema fixture suite | Not Started |
+| IR-002 | Payload-manifest parser/schema fixture suite | Not Started |
+| IR-003 | Package option-schema/default suite | Not Started |
+| IR-004 | Catalog-source parser/schema/generator suite | Not Started |
+| IR-005 | Generic provider protocol and installed dispatch suite | Not Started |
+| IR-006 | Generated consumer-catalog round-trip/drift suite | Not Started |
 | IR-007 | Installed payload root inventory/parity suite | Not Started |
-| DR-001-DR-008 | Model invariants, persistence/serialization, installed-tree, and graph/catalog parity | Not Started |
+| DR-001 | Package-family identity/lifecycle model invariants | Not Started |
+| DR-002 | Payload version/inventory/digest model invariants | Not Started |
+| DR-003 | Package config contract serialization/default invariants | Not Started |
+| DR-004 | Artifact/contribution identity and ownership invariants | Not Started |
+| DR-005 | Provider contract serialization and resource-reference invariants | Not Started |
+| DR-006 | Migration graph endpoint/effect/reversibility invariants | Not Started |
+| DR-007 | Catalog-role uniqueness and parity invariants | Not Started |
+| DR-008 | Installed payload-tree byte/inventory invariants | Not Started |
 
 ---
 
