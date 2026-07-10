@@ -8,8 +8,8 @@ summary = "Profile-based user-facing CLI help, usage-reference, man-page, and dr
 adoption = "copy-adopt"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = ["cli_documentation"]
@@ -25,6 +25,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 research_notes = "resources/research-notes.md"
 usage_example = "examples/usage.example.md"

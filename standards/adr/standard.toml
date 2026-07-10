@@ -8,8 +8,8 @@ summary = "MADR-based architecture decision records with project-standard frontm
 adoption = "validator"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = ["markdown.adr"]
@@ -25,6 +25,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 template = "templates/adr.md"
 template_bare = "templates/adr-bare.md"

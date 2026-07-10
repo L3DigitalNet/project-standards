@@ -8,8 +8,8 @@ summary = "Canonical metadata, ID, and reference validation for managed Markdown
 adoption = "validator"
 
 [versions]
-supported = ["1.0", "1.1"]
-latest = "1.1"
+supported = ["1.0", "1.1", "1.2"]
+latest = "1.2"
 
 [config]
 namespaces = ["markdown.frontmatter"]
@@ -30,6 +30,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 structure = "structure.md"
 field_values = "field-values.md"

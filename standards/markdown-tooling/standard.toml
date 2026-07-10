@@ -8,8 +8,8 @@ summary = "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and
 adoption = "copy-adopt"
 
 [versions]
-supported = ["1.0", "1.1"]
-latest = "1.1"
+supported = ["1.0", "1.1", "1.2"]
+latest = "1.2"
 
 [config]
 namespaces = ["markdown_tooling"]
@@ -25,6 +25,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 
 [artifacts]
