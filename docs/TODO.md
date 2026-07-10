@@ -98,7 +98,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Preserved the drafts, added them to the managed frontmatter scope, and added conformant metadata with current relationships.
 
-- [x] 2026-07-10 - Defined the project-level workflow routing and authority direction.
+- [x] 2026-07-10 - Defined the project-level workflow routing and authority direction (`24d13de`).
 
   The future `project-toolbox` package owns managed core workflows under `.agents/workflows/project-toolbox/`; consumer-authored local workflows remain managed project documents under `docs/workflows/`. Record the general workflow-installation methodology in an ADR when the separate toolbox spec is written.
 
