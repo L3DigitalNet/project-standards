@@ -122,7 +122,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and approved `SPEC-BA02` are complete; implementation planning is next.
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and approved `SPEC-BA02` are complete. The first of three implementation plans—BA02's package-contract foundation—is written and awaits adversarial review; control-plane core and current-package migration/release plans follow.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
