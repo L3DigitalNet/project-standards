@@ -108,9 +108,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 #### P1 — Finalize the v5 standard architecture
 
-- [ ] Resolve root-artifact ownership and semantic composition across standards.
+- [x] 2026-07-10 - Resolved root-artifact ownership and semantic composition across standards.
 
-  Option 1 is documented in `docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md`. Round-1 findings on modified-unit conflicts, legacy whole-file migration, formatter stability, deterministic placement, provider ordering, and shared-unit assignment are addressed; re-review remains before closure.
+  The approved design uses consumer-owned containers, typed package contributions, syntax-preserving adapters, reference-counted shared units, and no precedence. Adversarial review converged in round 2 at `b229602`; the result now feeds ADR 0023 and `SPEC-BA02`.
 
 - [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
 

@@ -1,6 +1,6 @@
 # Root-Artifact Ownership and Semantic Composition Design
 
-**Date:** 2026-07-10 **Status:** owner-approved approach; round-1 findings addressed; re-review pending **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** approved; adversarial review converged in round 2 **Author:** session 2026-07-10
 
 ## Problem and goal
 
@@ -269,6 +269,8 @@ Every conflict is reported before writes and identifies the target, normalized s
 - ambiguous duplicate semantic identity;
 - modified managed unit;
 - incompatible shared contribution;
+- ambiguous legacy payload modification;
+- unresolved legacy cleanup;
 - provider output outside declared scope; and
 - unsafe container deletion.
 
