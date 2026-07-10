@@ -33,6 +33,8 @@ related:
 | 0.1 | 2026-07-09 | Codex with owner review | Initial full specification from the approved agent-handoff ingestion design. |
 | 0.2 | 2026-07-09 | Codex with adversarial review | Map package commands to generic providers, specify platform and artifact-lifecycle work, add hook-placement ADR, scope config strictness, and restore workflow/error identifiers. |
 | 0.3 | 2026-07-09 | Codex with owner approval | Name the canonical hook source and bundle-anatomy change required by accepted ADR 0022; approve the specification for implementation planning. |
+| 0.4 | 2026-07-09 | Codex with owner-directed plan review | Make the installed hook path the repository trust anchor and correct the repository/legacy licensing contract. |
+| 0.5 | 2026-07-09 | Codex with owner direction | Remove a package-specific license for `agent-handoff`; inherit the repository license while preserving notices for MIT-licensed legacy inputs. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
@@ -451,7 +453,7 @@ Consumer knowledge follows lifetime-specific document profiles:
 #### Session start
 
 1. A declared harness invokes the shared hook with its lifecycle input.
-2. The hook resolves the Git root from the event working directory without escaping it.
+2. The hook derives the repository root from its canonical installed path under `.agents/hooks/agent-handoff/`; event working-directory and environment paths are untrusted metadata and may not broaden that authority.
 3. The hook reads and byte-clamps `docs/handoff/state.md`.
 4. It gathers bounded Git branch, recent-commit, and status output with fixed timeouts.
 5. It adds lazy pointers to canonical knowledge files.
@@ -480,7 +482,7 @@ Consumer knowledge follows lifetime-specific document profiles:
 | ID | Edge Case | Expected Behavior |
 | --- | --- | --- |
 | EC-001 | The target is not a Git repository. | Adoption may scaffold; the hook reports Git context unavailable. |
-| EC-002 | The command starts in a repository subdirectory. | Root resolution anchors all access to the declared Git root. |
+| EC-002 | The command starts in a repository subdirectory. | CLI operations anchor access to the declared Git root; the hook anchors access to the repository containing its canonical installed path. |
 | EC-003 | A required knowledge file is missing. | Validation reports it; repair may create it only when no conflicting path exists. |
 | EC-004 | A knowledge file exists with unexpected shape. | Preserve it byte-for-byte and report findings; never replace it. |
 | EC-005 | A config file is invalid JSON or TOML. | Block all mutations and identify the parse locus. |
@@ -644,7 +646,7 @@ The hook reads only the eager file and Git summary; its cost does not grow with 
 
 ## 16. Compliance, Licensing, and Data Rights
 
-The standard and ingested implementation artifacts use the repository's MIT license. Before ingestion, the implementation plan shall verify that every retained legacy file is MIT-licensed or authored under compatible ownership. Third-party code is not copied merely because it appears in research or examples.
+`agent-handoff` declares no package-specific license and ships no nested license file; its new content inherits this repository's root license. Before ingestion, the implementation plan shall verify that every retained legacy file is covered by the legacy repository's MIT license or authored under compatible ownership, and shall preserve any required MIT notice when copied or substantially derived. Third-party code is not copied merely because it appears in research or examples.
 
 The package makes no claim of formal ISO, SOC, HIPAA, or other regulatory compliance. Its repository boundary, reference-only credential policy, and no-telemetry behavior support secure operation but do not replace consumer data-governance review.
 

@@ -12,7 +12,7 @@
 
 ## Source of Truth
 
-- Approved specification: `docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md` (`SPEC-DPEY`, rev 0.3).
+- Approved specification: `docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md` (`SPEC-DPEY`, rev 0.5).
 - Accepted hook methodology: `docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md`.
 - Package methodology: ADRs 0017–0021 and `standards/standard-bundle-authoring/README.md`.
 - Pinned legacy evidence source: `/home/chris/projects/agent-handoff-v3` commit `56b24df7279572c485c2512783b0cc7e5395429b`.
@@ -32,6 +32,7 @@ The legacy checkout is read-only evidence. Copy no global installer, home-direct
 - Manual adoption does not install or register the hook. Automatic adoption requires at least one of `claude-code` or `codex`.
 - The manifest operation enum stays unchanged. Package commands map to `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`.
 - Existing standards retain their CLI and `--force` behavior. `install_policy` defaults to `managed`; `create-only` is never overwritten, including with `--force`.
+- `agent-handoff` declares no package-specific license and ships no nested license file. New content inherits the repository root license; copied or substantially derived MIT legacy content retains its required notice.
 - When an adoption invocation includes `agent-handoff`, the specialized path accepts additional standard IDs, applies harness flags only to `agent-handoff`, and preflights the combined static artifact plan before any write. Invocations without `agent-handoff` retain the existing generic path.
 - No new runtime dependency is required. PyYAML and Pydantic are already project dependencies; TOML updates use parsed validation plus bounded text blocks rather than a second TOML writer.
 - Exit codes are `0` clean/success, `1` conformance findings or recoverable apply failure, `2` usage/config error, and `3` package prerequisite/internal failure.
@@ -41,28 +42,28 @@ The legacy checkout is read-only evidence. Copy no global installer, home-direct
 
 Every source-owned row has a byte-identical mirror under `src/project_standards/bundles/agent-handoff/` at the same bundle-relative path.
 
-| Canonical source | Consumer destination or target | Install policy | Mode / selection |
-| --- | --- | --- | --- |
-| `templates/STATUS.md` | `docs/STATUS.md` | `create-only` | all modes |
-| `templates/TODO.md` | `docs/TODO.md` | `create-only` | all modes |
-| `templates/handoff/state.md` | `docs/handoff/state.md` | `create-only` | all modes |
-| `templates/handoff/deployed.md` | `docs/handoff/deployed.md` | `create-only` | all modes |
-| `templates/handoff/architecture.md` | `docs/handoff/architecture.md` | `create-only` | all modes |
-| `templates/handoff/credentials.md` | `docs/handoff/credentials.md` | `create-only` | all modes |
-| `templates/handoff/conventions.md` | `docs/handoff/conventions.md` | `create-only` | all modes |
-| `templates/handoff/specs-plans.md` | `docs/handoff/specs-plans.md` | `create-only` | all modes |
-| `templates/handoff/sessions/.gitkeep` | `docs/handoff/sessions/.gitkeep` | `create-only` | all modes |
-| `templates/handoff/bugs/.gitkeep` | `docs/handoff/bugs/.gitkeep` | `create-only` | all modes |
-| `hooks/session-start/session_start.py` | `.agents/hooks/agent-handoff/session_start.py` | `managed` | `0755`, automatic only |
-| `skills/agent-handoff/SKILL.md` | `.agents/skills/agent-handoff/SKILL.md` | `managed` | all modes |
-| `skills/agent-handoff/agents/openai.yaml` | `.agents/skills/agent-handoff/agents/openai.yaml` | `managed` | all modes |
-| `resources/integration/project-config.yml` | `.project-standards.yml` managed namespace block | `managed` | all modes |
-| `resources/integration/agent-instructions.md` | `AGENTS.md` or `CLAUDE.md` bounded block | `managed` | selected harness/manual mode |
-| `resources/integration/claude-session-start.json` | `.claude/settings.json` semantic hook entry | `managed` | `claude-code` only |
-| `resources/integration/codex-session-start.toml` | `.codex/config.toml` bounded hook block | `managed` | `codex` only |
-| package-owned `runtime/provenance-lock.json` seed | `.agents/agent-handoff/manifest.json` | `managed` | all modes; provider renders final content |
+| Canonical source | Artifact kind | Consumer destination or target | Install policy | Mode / selection |
+| --- | --- | --- | --- | --- |
+| `templates/STATUS.md` | `file` | `docs/STATUS.md` | `create-only` | all modes |
+| `templates/TODO.md` | `file` | `docs/TODO.md` | `create-only` | all modes |
+| `templates/handoff/state.md` | `file` | `docs/handoff/state.md` | `create-only` | all modes |
+| `templates/handoff/deployed.md` | `file` | `docs/handoff/deployed.md` | `create-only` | all modes |
+| `templates/handoff/architecture.md` | `file` | `docs/handoff/architecture.md` | `create-only` | all modes |
+| `templates/handoff/credentials.md` | `file` | `docs/handoff/credentials.md` | `create-only` | all modes |
+| `templates/handoff/conventions.md` | `file` | `docs/handoff/conventions.md` | `create-only` | all modes |
+| `templates/handoff/specs-plans.md` | `file` | `docs/handoff/specs-plans.md` | `create-only` | all modes |
+| `templates/handoff/sessions/.gitkeep` | `file` | `docs/handoff/sessions/.gitkeep` | `create-only` | all modes |
+| `templates/handoff/bugs/.gitkeep` | `file` | `docs/handoff/bugs/.gitkeep` | `create-only` | all modes |
+| `hooks/session-start/session_start.py` | `file` | `.agents/hooks/agent-handoff/session_start.py` | `managed` | `0755`, automatic only |
+| `skills/agent-handoff/SKILL.md` | `file` | `.agents/skills/agent-handoff/SKILL.md` | `managed` | all modes |
+| `skills/agent-handoff/agents/openai.yaml` | `file` | `.agents/skills/agent-handoff/agents/openai.yaml` | `managed` | all modes |
+| `resources/integration/project-config.yml` | `fragment` | `.project-standards.yml` managed namespace block | `managed` | all modes |
+| `resources/integration/agent-instructions.md` | `fragment` | `AGENTS.md` or `CLAUDE.md` bounded block | `managed` | selected harness/manual mode |
+| `resources/integration/claude-session-start.json` | `fragment` | `.claude/settings.json` semantic hook entry | `managed` | `claude-code` only |
+| `resources/integration/codex-session-start.toml` | `fragment` | `.codex/config.toml` bounded hook block | `managed` | `codex` only |
+| package-owned `runtime/provenance-lock.json` seed | `file` | `.agents/agent-handoff/manifest.json` | `managed` | all modes; provider renders final content |
 
-The artifact manifest declares the package-owned lock seed so every materialized destination remains visible in the artifact plane. The provider filters that static seed from generic execution and creates `.agents/agent-handoff/manifest.json` last with rendered content after a successful apply. The lock records the selected standard version, startup mode, harnesses, and SHA-256 hashes of managed files and normalized integration entries. It never records consumer knowledge hashes as overwrite preconditions.
+The artifact manifest declares the package-owned lock seed so every materialized destination remains visible in the artifact plane. The provider filters every `fragment` row and the static lock seed from generic execution: fragment destinations always use package-specific bounded/semantic merge adapters, and the provider creates `.agents/agent-handoff/manifest.json` last with rendered content after a successful apply. The lock records the selected standard version, startup mode, harnesses, and SHA-256 hashes of managed files and normalized integration entries. It never records consumer knowledge hashes as overwrite preconditions.
 
 ## File Structure
 
@@ -176,6 +177,7 @@ def test_force_never_overwrites_create_only(tmp_path: Path) -> None:
         dest="docs/STATUS.md",
         target=None,
         standards=("agent-handoff",),
+        mode=None,
         install_policy=InstallPolicy.CREATE_ONLY,
     )
 
@@ -295,9 +297,9 @@ Expected: the invalid destination is not yet reported.
 
 Treat a source-owned artifact as a standard-packaged hook when its canonical path starts with `standards/{standard_id}/hooks/`. Require its destination to start with `.agents/hooks/{standard_id}/`, and emit `SG-ARTIFACT-HOOK-DEST` otherwise. Do not classify arbitrary consumer scripts as hooks.
 
-- [ ] **Step 4: Extend bundle anatomy documentation.**
+- [ ] **Step 4: Extend bundle anatomy and executable-provider documentation.**
 
-Add `hooks/{hook-id}/` as an optional canonical directory, `.agents/hooks/{standard-id}/` as the default installed root, ADR 0022 as the authority, and executable mode/provenance/drift requirements.
+Add `hooks/{hook-id}/` as an optional canonical directory, `.agents/hooks/{standard-id}/` as the default installed root, ADR 0022 as the authority, and executable mode/provenance/drift requirements. Also document that a standard whose executable provider runner loads declarations from the installed wheel must ship `src/project_standards/bundles/{id}/standard.toml` as a byte-identical runtime mirror of `standards/{id}/standard.toml`. Keep parity enforcement in the package/wheel tests because the current manifest schema does not declare which provider runner needs a runtime mirror; do not add an implicit graph heuristic.
 
 - [ ] **Step 5: Run GREEN and commit.**
 
@@ -421,19 +423,19 @@ Expected: failures because the package and registry entry do not exist.
 
 - [ ] **Step 2: Record the pinned-source inventory.**
 
-The inventory must map each legacy file to one of `rewrite`, `ingest`, `document-only`, or `discard`. At minimum record:
+The inventory must map each legacy file to one of `rewrite`, `ingest`, `document-only`, or `discard`. Verify the pinned commit's `LICENSE` is MIT, record each retained row as covered by that license or by compatible owner authorship, and preserve the MIT notice for copied or substantially derived content. Do not add a package-specific `LICENSE` file. At minimum record:
 
-| Legacy source at the pinned commit | Disposition | New owner |
-| --- | --- | --- |
-| `agent-handoff-v3/global/hooks/session_start.py` | rewrite | canonical v1 hook |
-| `agent-handoff-v3/resources/handoff-policy.toml` | rewrite | v1 policy |
-| `agent-handoff-v3/scripts/handoff/_handoff_policy.py` | rewrite | Python policy provider |
-| `validate-layout.sh`, `size-report.sh`, `validate-shape.sh` | rewrite | Python validation provider |
-| `skills/.agents/skills/handoff-system-v3/` | rewrite | `agent-handoff` skill |
-| `install-globals.sh`, `claude-bootstrap.sh`, `validate-globals.sh` | discard | prohibited global/fleet ownership |
-| `global/claude/settings.json`, `global/codex/config.toml` | evidence only | structural integration fixtures |
-| legacy root `STATUS.md`/`TODO.md` | evidence only | `docs/` templates |
-| legacy Bats/Python tests | ingest behavior | pytest acceptance corpus |
+| Legacy source at the pinned commit | Disposition | License / ownership evidence | New owner |
+| --- | --- | --- | --- |
+| `agent-handoff-v3/global/hooks/session_start.py` | rewrite | verify MIT coverage and file history | canonical v1 hook |
+| `agent-handoff-v3/resources/handoff-policy.toml` | rewrite | verify MIT coverage and file history | v1 policy |
+| `agent-handoff-v3/scripts/handoff/_handoff_policy.py` | rewrite | verify MIT coverage and file history | Python policy provider |
+| `agent-handoff-v3/scripts/handoff/validate-layout.sh`, `agent-handoff-v3/scripts/handoff/size-report.sh`, `agent-handoff-v3/scripts/handoff/validate-shape.sh` | rewrite | verify MIT coverage and file history | Python validation provider |
+| `agent-handoff-v3/skills/.agents/skills/handoff-system-v3/` | rewrite | verify MIT coverage and file history | `agent-handoff` skill |
+| `agent-handoff-v3/scripts/handoff/install-globals.sh`, `agent-handoff-v3/scripts/handoff/claude-bootstrap.sh`, `agent-handoff-v3/scripts/handoff/validate-globals.sh` | discard | inventory only; no copied content | prohibited global/fleet ownership |
+| `agent-handoff-v3/global/claude/settings.json`, `agent-handoff-v3/global/codex/config.toml` | document-only | structural evidence only; no copied content | integration fixtures |
+| `agent-handoff-v3/STATUS.md`, `agent-handoff-v3/TODO.md` | document-only | structural evidence only; no copied content | `docs/` templates |
+| `scripts/tests/*.bats`, `tests/unit/test_session_start.py`, `tests/unit/test_handoff_policy.py` | ingest | verify MIT coverage and file history | pytest acceptance corpus |
 
 - [ ] **Step 3: Author `standards/agent-handoff/standard.toml`.**
 
@@ -451,7 +453,7 @@ Declare hook, skill, template, policy, migration, and integration resources. Dec
 
 - [ ] **Step 4: Author the artifact manifest and source mirrors.**
 
-Every knowledge row declares `install_policy = "create-only"`. Hook, skill, integration fragment, and lock rows declare `install_policy = "managed"`. Every human-authored mirror declares `provenance = "source-owned"` and its repository-relative canonical path. The hook declares `mode = "0755"`; the lock seed declares `provenance = "package-owned"` and is intercepted by the provider for deterministic rendering.
+Every knowledge row declares `kind = "file"` and `install_policy = "create-only"`. Hook and skill rows declare `kind = "file"`; integration rows declare `kind = "fragment"`; all are `install_policy = "managed"`. The provider must intercept every fragment row so `execute_plan()` never copies a fragment over a consumer configuration or instruction file. Every human-authored mirror declares `provenance = "source-owned"` and its repository-relative canonical path. The hook declares `mode = "0755"`; the `kind = "file"` lock seed declares `provenance = "package-owned"` and is intercepted by the provider for deterministic rendering.
 
 Use minimal, usable knowledge templates with their required headings. The credentials template states that only names, environment variables, and OpenBao paths are permitted. The integration resources use these markers:
 
@@ -836,7 +838,7 @@ def plan_adoption(
 
 1. Load packaged resources and strict input.
 2. Resolve and validate every consumer path before reading it.
-3. Build one generic artifact plan for every requested standard, omit the agent-handoff hook action in manual mode, and always replace the static lock seed with the provider-rendered lock action.
+3. Build one generic artifact plan for every requested standard, remove all agent-handoff `kind = "fragment"` rows before generic execution, omit the hook action in manual mode, and replace the static lock seed with the provider-rendered lock action. Build each removed integration row through its bounded/semantic adapter; generic `execute_plan()` must never write a fragment destination.
 4. Dry-run the static plan so all source/render/destination failures surface before writes.
 5. Build config/instruction actions with original-content SHA-256 preconditions.
 6. Accumulate all blockers; apply is forbidden when any exist.
@@ -972,7 +974,7 @@ git commit -m "feat(v5): validate handoff size and shape policy"
 
 - [ ] **Step 1: Write RED hook tests from official contracts and legacy behavior.**
 
-Port the pinned `tests/unit/test_session_start.py` behavior corpus, but remove dual-read legacy paths and global-engine assumptions. Add tests for path-derived repository authority, malformed JSON exit `2`, subdirectory launches, non-Git degradation, missing state, UTF-8 limits, five commits, ten status lines, literal closing-tag neutralization, wrapper survival under truncation, fixed subprocess arguments/timeouts, no network, no package import, Claude JSON output, Codex plain stdout, and total output at or below 4096 bytes.
+Port the pinned `tests/unit/test_session_start.py` behavior corpus, but remove dual-read legacy paths and global-engine assumptions. Load the hook from a disposable repository's installed `.agents/hooks/agent-handoff/` path. Add tests for path-derived repository authority, malformed or empty JSON input exit `2`, subdirectory launches, non-Git degradation, missing state, UTF-8 limits, five commits, ten status lines, literal closing-tag neutralization, wrapper survival under truncation, fixed subprocess arguments/timeouts, no network, no package import, Claude JSON output, Codex plain stdout, and total output at or below 4096 bytes.
 
 ```python
 def test_hook_uses_installed_path_as_repository_authority(hook_module: ModuleType) -> None:
@@ -983,6 +985,29 @@ def test_hook_uses_installed_path_as_repository_authority(hook_module: ModuleTyp
 def test_codex_stdout_is_bounded_context(hook_module: ModuleType, capsys: pytest.CaptureFixture[str]) -> None:
     hook_module.emit("context", "codex")
     assert capsys.readouterr().out == "context\n"
+
+
+def test_hook_p95_under_two_seconds(
+    hook_module: ModuleType,
+    session_start_event: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def reject_network(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("network access is forbidden")
+
+    monkeypatch.setattr(socket, "create_connection", reject_network)
+    monkeypatch.setattr(socket, "socket", reject_network)
+    durations: list[float] = []
+    for _ in range(100):
+        started = time.perf_counter()
+        assert hook_module.main(
+            stdin=io.StringIO(session_start_event),
+            stdout=io.StringIO(),
+            stderr=io.StringIO(),
+        ) == 0
+        durations.append(time.perf_counter() - started)
+
+    assert sorted(durations)[94] < 2.0
 ```
 
 - [ ] **Step 2: Run RED.**
@@ -993,14 +1018,24 @@ Expected: the placeholder hook resource lacks the required behavior.
 
 - [ ] **Step 3: Rewrite the hook.**
 
-The hook uses only the standard library. It derives the repository root from its installed `.agents/hooks/agent-handoff/` path, treats stdin/env paths as event metadata rather than authority, reads only canonical `docs/handoff/state.md`, runs fixed Git argument arrays with timeouts, neutralizes `session_context` tags, clamps inner content before wrapping, and branches output by Claude's project environment signal. Malformed hook input emits a concise stderr diagnostic and exits `2`; Git/document unavailability degrades inside context and exits `0`.
+The hook uses only the standard library. It derives the repository root from its installed `.agents/hooks/agent-handoff/` path, treats stdin/env paths as event metadata rather than authority, reads only canonical `docs/handoff/state.md`, runs fixed Git argument arrays with timeouts, neutralizes `session_context` tags, clamps inner content before wrapping, and branches output by Claude's project environment signal. Expose `main(*, stdin, stdout, stderr) -> int` with real streams as defaults so the same installed artifact is benchmarkable without a subprocess harness. Empty stdin and malformed JSON both emit a concise stderr diagnostic and exit `2`; Git/document unavailability degrades inside context and exits `0`.
 
 - [ ] **Step 4: Run GREEN, performance, and isolated-runtime checks.**
 
 ```bash
 uv run pytest tests/agent_handoff/test_hook.py -q
-python3 standards/agent-handoff/hooks/session-start/session_start.py </dev/null >/tmp/agent-handoff-hook.out
-test "$(wc -c </tmp/agent-handoff-hook.out)" -le 4096
+smoke_repo="$(mktemp -d)"
+trap 'rm -rf "$smoke_repo"' EXIT
+git -C "$smoke_repo" init -q
+mkdir -p "$smoke_repo/.agents/hooks/agent-handoff" "$smoke_repo/docs/handoff"
+cp standards/agent-handoff/hooks/session-start/session_start.py "$smoke_repo/.agents/hooks/agent-handoff/session_start.py"
+chmod 0755 "$smoke_repo/.agents/hooks/agent-handoff/session_start.py"
+printf '# State\n' >"$smoke_repo/docs/handoff/state.md"
+printf '{"session_id":"smoke","transcript_path":"/dev/null","cwd":"%s","permission_mode":"default","hook_event_name":"SessionStart","source":"startup"}\n' "$smoke_repo" \
+  | CLAUDE_PROJECT_DIR="$smoke_repo" "$smoke_repo/.agents/hooks/agent-handoff/session_start.py" >"$smoke_repo/hook.out"
+hook_status="${PIPESTATUS[1]}"
+test "$hook_status" -eq 0
+test "$(wc -c <"$smoke_repo/hook.out")" -le 4096
 cmp standards/agent-handoff/hooks/session-start/session_start.py src/project_standards/bundles/agent-handoff/hooks/session-start/session_start.py
 git add standards/agent-handoff/hooks src/project_standards/bundles/agent-handoff/hooks tests/agent_handoff/test_hook.py
 git commit -m "feat(v5): add shared agent-handoff startup hook"
@@ -1127,7 +1162,7 @@ Expected: failures for incomplete docs/resources or wheel operation.
 - `SKILL.md`: startup, lazy reads, where-facts-go, session closeout, create-only knowledge, secret references, and validation commands.
 - `agents/openai.yaml`: display name `Agent Handoff`, short description, and explicit `$agent-handoff` default prompt.
 
-The skill and public docs name no legacy repo/runtime dependency outside the migration guide.
+The skill and public docs name no legacy repo/runtime dependency outside the migration guide. The skill omits a package-specific `license` key, and the bundle ships no nested license file; both inherit the repository root license.
 
 - [ ] **Step 4: Regenerate catalog and run GREEN.**
 
@@ -1291,6 +1326,8 @@ git commit -m "docs(v5): record agent-handoff release readiness"
 | NFR-007 quality gate                        | every task, final in 18 |
 | NFR-008 determinism                         | 3, 5, 7–15              |
 | NFR-009 upstream compatibility              | 8–9, 13, 18             |
+| IR-001–IR-008 interfaces                    | 5, 7–11, 14–15          |
+| DR-001–DR-008 data and provenance           | 1, 4–5, 7, 10, 12, 16   |
 | AW-001–AW-003                               | 10, 15, 17–18           |
 | EC-001–EC-012                               | 6–15                    |
 | ERR-001–ERR-009                             | 5–15                    |

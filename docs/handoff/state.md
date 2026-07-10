@@ -6,12 +6,12 @@
 
 - `testing` carries unreleased v5.0.0 work; `main` remains released v4.3.0 (`v4.3.0@74db623`).
 - Release freeze holds until v5.0.0; Steps 00-06 and package ADRs 0017-0021 are complete.
-- `SPEC-DPEY` rev 0.3 and ADR 0022 are approved; the 18-task TDD implementation plan awaits review/execution choice.
+- `SPEC-DPEY` rev 0.5 and ADR 0022 are approved; the plan review and license-inheritance direction are incorporated, and the 18-task TDD implementation plan awaits execution choice.
 - Handoff layout passes; shape validation has two pre-existing user-owned `TODO.md` bullet-length failures.
 
 ## Next
 
-- Review `docs/superpowers/plans/2026-07-09-agent-handoff-standard-package.md`, then execute it with the selected plan workflow.
+- Execute `docs/superpowers/plans/2026-07-09-agent-handoff-standard-package.md` with the selected plan workflow.
 - SPEC-MT01 Step 07 remains queued: produce the MCP-readiness report and close blocking traceability gaps.
 
 ## Blockers
