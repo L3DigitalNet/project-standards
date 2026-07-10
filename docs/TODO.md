@@ -16,13 +16,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## User tasks
 
-- [ ] Update GitHub repo settings.
-- [ ] Does `standards/standard-bundle-authoring` need any updates to reflect recent meta-repo ADRs and
-  structure changes? If so, update the standard and its examples.
-- [ ] The two tooling standards `python-tooling` and `markdown-tooling` put a lot of files in the repo root.
-  Is it possible to move these to a consolidated location, or is that incompatible with the requirements
-  of the config file by the tooling design itself?
-- [ ]
+Pre-release owner work is tracked in the durable v5.0.0 project tracker below.
 
 ## Agent tasks
 
@@ -34,14 +28,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Informational, non-blocking. Templates cite the unpinned OpenAPI Specification; pin only when a spec needs a specific contract dialect.
 
-- [ ] Branch protection adoption.
-
-  Research is complete; do not apply without explicit go-ahead. Apply near the next major release so required checks and PR review are coordinated with release flow.
-
-  `main` already has rulesets for signed commits, non-fast-forward, and deletion. Remaining gaps: required status checks and PR reviews.
-
-  Candidate checks: `check`, `prettier`, `lint`, `validate`, and `validate-specs`. Decide whether dependency review is N/A for this repo.
-
 - [ ] MCP enablement program.
 
   Specs are ingested. Do not start MCP server code until the SPEC-MT01 readiness gate passes. Recheck MCP spec and SDK versions before SPEC-MS01 MS-0.
@@ -52,8 +38,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Complete Agent Handoff consumer retirement from the tracked inventory.
 
-  Migrate one repo per reviewed change. Delete the old engine only after every row validates, v5 is published,
-  the final dependency search is clean, and the owner explicitly approves.
+  Migrate one repo per reviewed change. Delete the old engine only after every row validates, v5 is published, the final dependency search is clean, and the owner explicitly approves.
 
 ## 🚀 v5.0.0 Project Tracker — Meta-Repo Standards Platform (DURABLE)
 
@@ -77,6 +62,7 @@ Completed items stay checked and in order. Add new work as unchecked items and c
 - [x] 2026-07-09 - Markdown Frontmatter value guidance and skill ownership done.
 - [x] 2026-07-09 - Standard package methodology ADRs and compliance pass done.
 - [x] 2026-07-09 - Agent Handoff v1 package, dogfood adoption, and release-readiness evidence completed (`11cabc7`, `bd3cee5`).
+- [x] 2026-07-10 - FR-013 agent-summary coverage and traceability completed (`529ec72`…`27bed75`).
 
 ### ⬜ Pending
 
@@ -93,6 +79,43 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
   Adoption-mode parity, package versions, artifact provenance, and repo-local skill installs are now baseline graph/catalog facts.
 
 - [x] 2026-07-10 - Pre-Step-07 readiness remediation completed (`70b20ee`…`342a802`).
+
+V5 standard and repository prerequisites — complete before the Step 07 readiness gate:
+
+- [ ] Create and release the `agent-managed-repo` standard for v5.0.0.
+
+  Use `docs/future-standards/github-repository-governance-standard.md` as the provisional guide. Formally design, review, implement, register, and document the standard before release.
+
+- [ ] Reconcile the Standard Bundle Authoring Standard with the final v5 architecture.
+
+  Audit recent meta-repo ADRs and structural changes, then update the standard, manifest guidance, templates, and examples where required.
+
+- [ ] Resolve root-artifact placement for both tooling standards.
+
+  Determine whether Python Tooling and Markdown Tooling artifacts can share a consolidated location without breaking tool discovery or consumer contracts. Implement the approved design before release.
+
+- [ ] Normalize every v5 specification into a clean final baseline.
+
+  Reconcile final ADR and design decisions, including MCP changes. Remove amendment-style narration and release no spec with unresolved deviations.
+
+- [ ] Confirm every v5 standard is ready for later MCP exposure.
+
+  Resolve compatibility gaps before release so MCP implementation does not immediately require corrective per-standard releases.
+
+- [ ] Complete the pre-release housekeeping and repository-hygiene sweep.
+
+- [ ] Bring `docs/workflows/` into managed-document scope.
+
+  Add conformant frontmatter, current links and references, and project-level agent guidance that routes relevant work through these workflow documents.
+
+- [ ] Decide whether repository workflows require an ADR.
+
+  If an ADR materially improves workflow authority and consistency, create and accept it before completing the workflow documentation task.
+
+- [ ] Reconcile GitHub repository settings with `agent-managed-repo`.
+
+  Keep repository-policy changes paused. After the standard is approved, define required-review and required-check behavior there, then apply the resulting v5 policy to this repository.
+
 - [ ] Step 07 - MCP-readiness gate passes.
 
 Release cut (after readiness is complete):
