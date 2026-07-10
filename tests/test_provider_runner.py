@@ -7,6 +7,7 @@ from types import ModuleType
 
 import pytest
 
+import project_standards.provider_runner as provider_runner
 from project_standards.adopt.errors import ManifestError, UsageError
 from project_standards.provider_runner import (
     load_packaged_standard_manifest,
@@ -15,11 +16,11 @@ from project_standards.provider_runner import (
 from project_standards.standard_manifest import ProviderOperation, StandardManifestError
 
 
-def _write_bundle(root: Path, providers: str) -> Path:
-    bundle = root / "demo"
-    bundle.mkdir()
+def _write_bundle(root: Path, providers: str, *, standard_id: str = "demo") -> Path:
+    bundle = root / standard_id
+    bundle.mkdir(parents=True)
     (bundle / "standard.toml").write_text(
-        '[standard]\nid = "demo"\nname = "Demo"\nstatus = "active"\n'
+        f'[standard]\nid = "{standard_id}"\nname = "Demo"\nstatus = "active"\n'
         'summary = "Demo."\nadoption = "cli"\n\n[versions]\nsupported = ["1.0"]\n'
         'latest = "1.0"\n\n[config]\nnamespaces = []\n\n[capabilities]\n'
         "provides = []\nconsumes_platform = []\n\n[relations]\ncompanions = []\n"
@@ -80,15 +81,124 @@ def test_load_packaged_standard_manifest_rejects_missing_manifest(tmp_path: Path
     assert exc_info.value.exit_code == 3
 
 
+def test_load_packaged_standard_manifest_accepts_canonical_hyphenated_id(
+    tmp_path: Path,
+) -> None:
+    _write_bundle(
+        tmp_path,
+        _python_provider("validate", "demo_provider:main"),
+        standard_id="demo-standard",
+    )
+
+    manifest = load_packaged_standard_manifest("demo-standard", bundles_dir=tmp_path)
+
+    assert manifest.standard.id == "demo-standard"
+
+
 def test_load_packaged_standard_manifest_wraps_invalid_manifest(tmp_path: Path) -> None:
     bundle = tmp_path / "demo"
     bundle.mkdir()
     (bundle / "standard.toml").write_text("not valid = [", encoding="utf-8")
 
-    with pytest.raises(ManifestError, match="cannot load packaged standard manifest") as exc_info:
+    with pytest.raises(ManifestError, match="packaged standard manifest is invalid") as exc_info:
         load_packaged_standard_manifest("demo", bundles_dir=tmp_path)
 
     assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, StandardManifestError)
+
+
+@pytest.mark.parametrize(
+    "standard_id",
+    [
+        "",
+        ".",
+        "..",
+        "../demo",
+        "nested/demo",
+        "nested\\demo",
+        "C:demo",
+        "Demo",
+        "demo_name",
+        "-demo",
+        "demo-",
+        "demo..name",
+    ],
+)
+def test_load_packaged_standard_manifest_rejects_noncanonical_id(
+    tmp_path: Path, standard_id: str
+) -> None:
+    with pytest.raises(ManifestError) as exc_info:
+        load_packaged_standard_manifest(standard_id, bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == "invalid packaged standard id"
+    assert exc_info.value.exit_code == 3
+
+
+def test_load_packaged_standard_manifest_rejects_absolute_id_before_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outside_bundle = _write_bundle(
+        tmp_path / "outside", _python_provider("validate", "demo_provider:main")
+    )
+    bundles_dir = tmp_path / "bundles"
+    bundles_dir.mkdir()
+    loaded: list[Path] = []
+
+    def record_load(path: Path) -> object:
+        loaded.append(path)
+        raise AssertionError("outside manifest was read")
+
+    monkeypatch.setattr(provider_runner, "load_standard_manifest", record_load)
+
+    with pytest.raises(ManifestError) as exc_info:
+        load_packaged_standard_manifest(str(outside_bundle), bundles_dir=bundles_dir)
+
+    assert str(exc_info.value) == "invalid packaged standard id"
+    assert exc_info.value.exit_code == 3
+    assert loaded == []
+
+
+def test_load_packaged_standard_manifest_rejects_symlink_escape_before_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outside_bundle = _write_bundle(
+        tmp_path / "outside", _python_provider("validate", "demo_provider:main")
+    )
+    bundles_dir = tmp_path / "bundles"
+    bundles_dir.mkdir()
+    (bundles_dir / "demo").symlink_to(outside_bundle, target_is_directory=True)
+    loaded: list[Path] = []
+
+    def record_load(path: Path) -> object:
+        loaded.append(path)
+        raise AssertionError("outside manifest was read")
+
+    monkeypatch.setattr(provider_runner, "load_standard_manifest", record_load)
+
+    with pytest.raises(ManifestError) as exc_info:
+        load_packaged_standard_manifest("demo", bundles_dir=bundles_dir)
+
+    assert str(exc_info.value) == "packaged standard manifest escapes bundles directory"
+    assert exc_info.value.exit_code == 3
+    assert loaded == []
+
+
+def test_load_packaged_standard_manifest_does_not_echo_invalid_manifest_content(
+    tmp_path: Path,
+) -> None:
+    secret = "provider-secret-material"
+    bundle = _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+    manifest_path = bundle / "standard.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8") + f'\n[unknown]\nsecret = "{secret}"\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError) as exc_info:
+        load_packaged_standard_manifest("demo", bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == f"packaged standard manifest is invalid: {manifest_path}"
+    assert secret not in str(exc_info.value)
     assert isinstance(exc_info.value.__cause__, StandardManifestError)
 
 
@@ -142,7 +252,9 @@ def test_run_packaged_providers_skips_documentation_only_alongside_python(
     "entrypoint",
     ["demo_provider", "demo_provider:main:extra", ":main", "demo_provider:"],
 )
-def test_run_packaged_providers_wraps_malformed_entrypoint(tmp_path: Path, entrypoint: str) -> None:
+def test_run_packaged_providers_wraps_manifest_with_malformed_entrypoint(
+    tmp_path: Path, entrypoint: str
+) -> None:
     _write_bundle(tmp_path, _python_provider("validate", entrypoint))
 
     with pytest.raises(ManifestError) as exc_info:
@@ -158,6 +270,44 @@ def test_run_packaged_providers_wraps_import_failure(tmp_path: Path) -> None:
         run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
 
     assert isinstance(exc_info.value.__cause__, ImportError)
+
+
+def test_run_packaged_providers_wraps_import_system_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    def abort_import(_module_name: str) -> ModuleType:
+        raise SystemExit("provider-secret-material")
+
+    monkeypatch.setattr(provider_runner, "import_module", abort_import)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == "cannot import Python provider demo_provider:main (SystemExit)"
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, SystemExit)
+
+
+def test_run_packaged_providers_wraps_dynamic_attribute_system_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+    module = ModuleType("demo_provider")
+
+    def abort_attribute(_name: str) -> object:
+        raise SystemExit("provider-secret-material")
+
+    module.__dict__["__getattr__"] = abort_attribute
+    monkeypatch.setitem(sys.modules, "demo_provider", module)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == "cannot resolve Python provider demo_provider:main (SystemExit)"
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, SystemExit)
 
 
 def test_run_packaged_providers_wraps_missing_attribute(
@@ -202,6 +352,80 @@ def test_run_packaged_providers_wraps_provider_exception(
     assert isinstance(exc_info.value.__cause__, RuntimeError)
 
 
+def test_run_packaged_providers_wraps_call_system_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    def main(_argv: list[str]) -> int:
+        raise SystemExit("provider-secret-material")
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == "Python provider demo_provider:main failed (SystemExit)"
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, SystemExit)
+
+
+def test_run_packaged_providers_allows_keyboard_interrupt_to_propagate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    def main(_argv: list[str]) -> int:
+        raise KeyboardInterrupt
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(KeyboardInterrupt):
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+
+def test_run_packaged_providers_formats_broken_exception_safely(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    class BrokenStringError(RuntimeError):
+        def __str__(self) -> str:
+            raise RuntimeError("secondary formatting failure")
+
+    def main(_argv: list[str]) -> int:
+        raise BrokenStringError("provider-secret-material")
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == ("Python provider demo_provider:main failed (BrokenStringError)")
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, BrokenStringError)
+
+
+def test_run_packaged_providers_does_not_echo_provider_exception_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = "provider-secret-material"
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    def main(_argv: list[str]) -> int:
+        raise TypeError(secret)
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == "Python provider demo_provider:main failed (TypeError)"
+    assert secret not in str(exc_info.value)
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, TypeError)
+
+
 @pytest.mark.parametrize("result", [True, None, "0", -1, 256])
 def test_run_packaged_providers_rejects_invalid_exit_code(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, result: object
@@ -215,6 +439,29 @@ def test_run_packaged_providers_rejects_invalid_exit_code(
 
     with pytest.raises(ManifestError, match="returned invalid exit code"):
         run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+
+def test_run_packaged_providers_formats_invalid_result_with_broken_repr_safely(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    class BrokenResult:
+        def __repr__(self) -> str:
+            raise RuntimeError("secondary formatting failure")
+
+    def main(_argv: list[str]) -> object:
+        return BrokenResult()
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == (
+        "Python provider demo_provider:main returned invalid exit code type BrokenResult"
+    )
+    assert exc_info.value.exit_code == 3
 
 
 def test_run_packaged_providers_runs_python_providers_in_declared_order_and_returns_maximum(
