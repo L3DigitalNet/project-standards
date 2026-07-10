@@ -59,7 +59,7 @@ jobs:
         # SHA-pinned: setup-uv publishes no moving major/minor tag as of v8.0.0
         # (no @v8), so a tag pin no longer resolves and would break every caller.
         # Dependabot bumps the SHA via the trailing version comment.
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           # Only this repo ships a uv.lock for the cache to key on. Consuming
           # repos install the validator via `uv tool install` from git and have
