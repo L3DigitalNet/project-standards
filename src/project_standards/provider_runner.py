@@ -45,7 +45,7 @@ def load_packaged_standard_manifest(
         resolved_bundle = bundle_path.resolve()
         manifest_path = bundle_path / "standard.toml"
         resolved_manifest = manifest_path.resolve()
-    except (OSError, RuntimeError) as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
         raise ManifestError(
             f"cannot resolve packaged standard manifest ({type(exc).__name__})"
         ) from exc
@@ -102,13 +102,13 @@ def _run_python_provider(provider: ProviderBlock, argv: list[str]) -> int:
     except (Exception, SystemExit) as exc:
         raise ManifestError(f"Python provider {entrypoint} failed ({type(exc).__name__})") from exc
 
-    if (
-        isinstance(result, bool)
-        or not isinstance(result, int)
-        or not 0 <= result <= _MAX_PROCESS_EXIT_CODE
-    ):
+    if isinstance(result, bool) or not isinstance(result, int):
         raise ManifestError(
             f"Python provider {entrypoint} returned invalid exit code type {type(result).__name__}"
+        )
+    if not 0 <= result <= _MAX_PROCESS_EXIT_CODE:
+        raise ManifestError(
+            f"Python provider {entrypoint} returned exit code outside 0..{_MAX_PROCESS_EXIT_CODE}"
         )
     return result
 

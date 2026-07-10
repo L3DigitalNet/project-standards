@@ -183,6 +183,15 @@ def test_load_packaged_standard_manifest_rejects_symlink_escape_before_loader(
     assert loaded == []
 
 
+def test_load_packaged_standard_manifest_wraps_null_byte_in_bundles_dir() -> None:
+    with pytest.raises(ManifestError) as exc_info:
+        load_packaged_standard_manifest("demo", bundles_dir=Path("bad\x00root"))
+
+    assert str(exc_info.value) == "cannot resolve packaged standard manifest (ValueError)"
+    assert exc_info.value.exit_code == 3
+    assert isinstance(exc_info.value.__cause__, ValueError)
+
+
 def test_load_packaged_standard_manifest_does_not_echo_invalid_manifest_content(
     tmp_path: Path,
 ) -> None:
@@ -426,9 +435,15 @@ def test_run_packaged_providers_does_not_echo_provider_exception_message(
     assert isinstance(exc_info.value.__cause__, TypeError)
 
 
-@pytest.mark.parametrize("result", [True, None, "0", -1, 256])
-def test_run_packaged_providers_rejects_invalid_exit_code(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, result: object
+@pytest.mark.parametrize(
+    ("result", "type_name"),
+    [(True, "bool"), (None, "NoneType"), ("0", "str")],
+)
+def test_run_packaged_providers_rejects_invalid_exit_code_type(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    result: object,
+    type_name: str,
 ) -> None:
     _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
 
@@ -437,8 +452,31 @@ def test_run_packaged_providers_rejects_invalid_exit_code(
 
     _install_module(monkeypatch, "demo_provider", main)
 
-    with pytest.raises(ManifestError, match="returned invalid exit code"):
+    with pytest.raises(ManifestError) as exc_info:
         run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == (
+        f"Python provider demo_provider:main returned invalid exit code type {type_name}"
+    )
+
+
+@pytest.mark.parametrize("result", [-1, 256])
+def test_run_packaged_providers_rejects_exit_code_outside_process_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, result: int
+) -> None:
+    _write_bundle(tmp_path, _python_provider("validate", "demo_provider:main"))
+
+    def main(_argv: list[str]) -> int:
+        return result
+
+    _install_module(monkeypatch, "demo_provider", main)
+
+    with pytest.raises(ManifestError) as exc_info:
+        run_packaged_providers("demo", ProviderOperation.VALIDATE, [], bundles_dir=tmp_path)
+
+    assert str(exc_info.value) == (
+        "Python provider demo_provider:main returned exit code outside 0..255"
+    )
 
 
 def test_run_packaged_providers_formats_invalid_result_with_broken_repr_safely(
