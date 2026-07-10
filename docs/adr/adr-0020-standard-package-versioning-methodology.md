@@ -4,10 +4,10 @@ id: 'adr-0020-project-standards-standard-package-versioning-methodology'
 title: 'ADR 0020: Standard Package Versioning Methodology'
 description: 'Records the decision that every standard package declares package versions, while consumer-selectable contract versions remain explicit registry metadata.'
 doc_type: 'adr'
-status: 'active'
+status: 'superseded'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -30,8 +30,9 @@ related:
   - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 supersedes: []
-superseded_by: null
+superseded_by: 'adr-0024-project-standards-catalog-scoped-package-version-channels'
 source:
   - 'meta/versioning.md'
   - 'standards/standard-bundle-authoring/README.md'
@@ -55,7 +56,7 @@ project:
 
 # ADR 0020: Standard Package Versioning Methodology
 
-MADR status: **accepted**.
+MADR status: **superseded** by [ADR 0024](adr-0024-catalog-scoped-package-version-channels.md).
 
 ## Context and Problem Statement
 

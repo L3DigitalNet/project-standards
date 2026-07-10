@@ -6,8 +6,8 @@ description: 'Records the decision to exclude standards/** from project-standard
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -24,6 +24,7 @@ related:
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/README.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
@@ -42,6 +43,8 @@ project:
 # ADR 0015: Exclude Standards from Local Frontmatter Scope
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0023.** The published `standards/**` exclusion remains in force. After control-plane migration, package-managed resources under `.standards/packages/**` are also outside ordinary consumer-managed Markdown policy unless a package explicitly declares a document as consumer-owned input. The current `.project-standards.yml` scope remains transitional repository state.
 
 ## Context and Problem Statement
 

@@ -6,8 +6,8 @@ description: 'Decision record for how project-standards applies and demonstrates
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -27,6 +27,7 @@ related:
   - '.project-standards.yml'
   - 'docs/adr/README.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
@@ -46,6 +47,8 @@ project:
 # ADR 0014: Markdown Frontmatter Field Value Policy
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0023.** This repository-local field-value policy remains in force. Consumer package configuration moves from `.project-standards.yml` into owned namespaces under `.standards/config.toml`; the current repository keeps its legacy file only until it dogfoods the new control plane. Managed project documentation includes `docs/workflows/**`.
 
 ## Context and Problem Statement
 

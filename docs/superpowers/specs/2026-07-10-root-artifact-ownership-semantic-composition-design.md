@@ -1,6 +1,6 @@
 # Root-Artifact Ownership and Semantic Composition Design
 
-**Date:** 2026-07-10 **Status:** approved; adversarial review converged in round 2 **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** approved; adopted by ADR 0023 after adversarial review converged in round 2 **Author:** session 2026-07-10
 
 ## Problem and goal
 

@@ -6,8 +6,8 @@ description: 'Records the decision that skills shipped by standard packages inst
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,6 +33,7 @@ related:
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
@@ -63,6 +64,8 @@ project:
 # ADR 0021: Standard-Packaged Skill Installation Methodology
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0023.** The project-local `.agents/skills/<skill-id>/` destination and standard ownership remain in force. The unified control plane becomes the installation entry point, and the central lock owns applied provenance, drift, update, shared references, and safe removal instead of package-specific adoption state.
 
 ## Context and Problem Statement
 

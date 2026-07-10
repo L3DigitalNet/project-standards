@@ -6,13 +6,13 @@
 - Seven standards are released or staged: the six v4 standards plus Agent Handoff v1 for the v5 release.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
-- ADRs 0017-0022 define standard-package adoption, lifecycle, provenance, versioning, skills, and hook installation.
+- ADRs 0023-0024 govern the unified `.standards/` control plane and catalog-scoped package channels; conflicting legacy decisions are superseded.
 - SPEC-MT01 Steps 00-06 are complete; Step 07 remains the MCP-readiness gate before SPEC-MS01 server work.
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
-- FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, enforces the 3,000-byte policy, publishes catalog resource URIs, and passes the 1,382-test gate.
+- FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
-- `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and the control-plane contract is ready for planning.
-- Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence.
+- `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and ADRs 0023-0024 record its control-plane and version-channel decisions.
+- Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

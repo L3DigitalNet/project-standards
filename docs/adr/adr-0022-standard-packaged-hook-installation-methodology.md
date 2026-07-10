@@ -6,8 +6,8 @@ description: 'Records the project-local source and installation convention for h
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -30,6 +30,7 @@ related:
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
@@ -56,6 +57,8 @@ project:
 # ADR 0022: Standard-Packaged Hook Installation Methodology
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0023.** The project-local `.agents/hooks/<standard-id>/` destination and harness trust boundary remain in force. The unified control plane installs and updates the hook, semantically composes only declared harness registrations, and records ownership and drift in the central lock.
 
 ## Context and Problem Statement
 

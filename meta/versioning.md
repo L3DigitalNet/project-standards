@@ -6,8 +6,8 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-09'
-reviewed: null
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: ''
 consumer: 'mix'
 tags:
@@ -22,6 +22,7 @@ related:
   - 'standards/markdown-tooling/README.md'
   - 'standards/cli-documentation/README.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 source:
   - 'https://semver.org/spec/v2.0.0.html'
   - 'https://keepachangelog.com/en/1.1.0/'
@@ -39,7 +40,8 @@ license: null
   - [Purpose](#purpose)
   - [What a version promises](#what-a-version-promises)
   - [Version grammar](#version-grammar)
-  - [Per-standard contract versions](#per-standard-contract-versions)
+  - [Catalog and package channels](#catalog-and-package-channels)
+  - [Package release and contract versions](#package-release-and-contract-versions)
     - [FM→ADR compatibility](#fmadr-compatibility)
   - [Component-level version markers](#component-level-version-markers)
   - [Change classification](#change-classification)
@@ -54,7 +56,7 @@ license: null
 
 This repository ships **several components under one version number**: seven standards — [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), [Markdown Tooling](../standards/markdown-tooling/README.md), [Project Specification](../standards/project-spec/README.md), [CLI Documentation](../standards/cli-documentation/README.md), and [Agent Handoff](../standards/agent-handoff/README.md) — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflows** (`.github/workflows/validate-markdown-frontmatter.yml`, `validate-specs.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-The two Markdown frontmatter standards (Frontmatter and ADR) are **enforced automatically**: a consumer pins the workflow and the validator checks its documents on every run. Project Specification is enforced the same way through its reusable workflow and `spec:` config block. Python Tooling, Markdown Tooling, and CLI Documentation are **copy-adopted**. Agent Handoff is **CLI-adopted**: the consumer explicitly selects contract `1.0` and a startup profile, then receives repo-local managed runtime artifacts and create-only knowledge documents. None of these four adoption-based standards is inherited automatically. All seven ship under the same release tag. An eighth document, the [Python Coding standard](../standards/python-coding/README.md), is an in-development, reference-only draft at package version `0.4`. The [Standard Bundle Authoring standard](../standards/standard-bundle-authoring/README.md) is an internal/reference meta-standard (`adoption = "none"`) at package version `1.0`. Neither is a consumer-selectable contract, so neither changes the seven-standard release count.
+All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific adoption mechanics are migration inputs rather than the future authority. Seven standards are released or staged for consumer use, [Python Coding](../standards/python-coding/README.md) remains a draft, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) remains an internal authoring contract pending its successor specification.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -68,39 +70,39 @@ This reframing is what makes the moving major tag (`@v4`) safe to track unattend
 
 ## Version grammar
 
-- **Contract plane (per standard):** `major.minor` — no patch component, matching `schema_version`. Registry keys and config values use this two-part form (`'1.0'`, `'1.1'`, `'2.0'`).
-- **Tool release plane:** full SemVer `MAJOR.MINOR.PATCH` (the git tag / `pyproject.toml` version). "SemVer" in this document refers only to the tool plane.
+- **Tool release plane:** full SemVer `MAJOR.MINOR.PATCH` for the git tag and `pyproject.toml` version. "SemVer" in this document refers to this plane.
+- **Catalog plane:** an integer major selected in `.standards/config.toml`; it matches the tool release major and defines the ordinary package defaults available to that consumer line.
+- **Package release plane:** immutable `major.minor` payload identities advertised by the selected catalog.
+- **Internal contract plane:** an optional package-owned selector such as `contract_version`, used only when one resolved package payload supports multiple schema or behavior contracts.
 
-## Per-standard contract versions
+## Catalog and package channels
 
-Each standard carries its own `major.minor` contract version, selected per standard in a consumer's `.project-standards.yml`. The tool release bundles a known set of these versions (in `registry.json`); selecting one is a config edit, not a new pin.
+Within one catalog major, each package declares one non-breaking default for ordinary `version = "latest"` resolution. `latest` means the newest compatible version on the consumer's current default or explicitly accepted package-major track; it never means the numerically highest advertised version.
 
-| Standard | Version marker | Selected by | Enforced? |
-| --- | --- | --- | --- |
-| Markdown Frontmatter | `schema_version` (`1.1`) | `markdown.frontmatter.version` (optional; unset = default) | yes — JSON schema |
-| ADR | ADR contract `1.0` | `markdown.adr.version` (optional; unset = frozen default) | yes — body-rule + FM-compatibility check |
-| Python Tooling | `1.0` | `python_tooling.version` (optional) | no — copy-adopted label, metadata only |
-| Markdown Tooling | `1.1` | `markdown_tooling.version` (optional) | no — copy-adopted label, metadata only |
-| Project Specification | `1.0` | `spec.version` (optional; unset = default) | yes — `spec:` config + `validate-specs.yml` |
-| CLI Documentation | `1.0` | `cli_documentation.version` (optional) | no — copy-adopted label, metadata only |
-| Agent Handoff | `1.0` | `agent_handoff.version` (required after adoption) | yes — repo layout, integrations, provenance, and policy |
+A catalog may also advertise retained versions and opt-in breaking candidates. Entering a non-default package major requires explicit `--allow-major STANDARD_ID@TARGET_MAJOR` authorization and a declared migration path. Successful entry records a durable accepted-major track in `.standards/lock.toml`, separate from enabled-package state, so disable/re-enable and compatible same-major updates preserve the consumer's intent. Exact package selectors remain exact.
 
-**Adding a bundled contract version is a MINOR tool release; removing one is MAJOR** (a consumer pinned to it would newly fail). Within a single standard's line, the previously-passing rule applies: an additive field/value is MINOR, a stricter rule or removed enum value is MAJOR.
+A MINOR tool release may advertise an opt-in breaking candidate when the ordinary default and every previously valid selection remain available. Promoting that candidate to the ordinary `latest` default, removing an advertised version, or incompatibly changing a same-catalog-major default requires a MAJOR tool release and catalog-major transition. The consumer therefore opts into changed defaults once by changing catalog major; package-level `latest` then remains non-breaking within that selected catalog line.
+
+## Package release and contract versions
+
+Every advertised package release is a complete, immutable, offline-installable payload. A supported-version list or registry entry alone is not proof of availability: the installed distribution must carry the versioned manifest, schemas, migrations, resources, artifacts, providers, and integrity data required to reconcile it.
+
+A package release may expose one or more internal contract versions. Those selectors describe schema or behavior choices _inside_ the resolved payload and are not package release identities. Legacy `registry.json` entries and `.project-standards.yml` selectors remain V5 migration inputs; `.standards/config.toml`, the catalog, and the central lock are the V5 authorities.
 
 ### FM→ADR compatibility
 
-ADR is a profile over the Frontmatter schema, so each ADR contract version declares the Frontmatter versions it supports (today: ADR `1.0` → Frontmatter `1.1`, which itself accepts `schema_version: '1.0'` documents). The validator rejects an incompatible configured pair (exit 2). "Independent" therefore means independently selected **subject to declared compatibility**, not any combination. A no-version config uses each standard's default and is always compatible. A configured `frontmatter.version` that is not bundled reports "unknown frontmatter version" (caught at schema resolution), not a compatibility error.
+The resolved ADR payload declares the Frontmatter contract versions it supports. Selection remains independent **subject to declared compatibility**, not arbitrary combination; the resolver and validator fail closed on an incompatible pair. This subject-level compatibility is separate from package release identity and catalog-channel selection.
 
 ## Component-level version markers
 
-The single release version is the only number a consumer pins. Four **component-level markers** version individual pieces of the repository and are deliberately **decoupled** from the release version — none is itself a release number:
+The following current markers are contract-plane inputs retained during V5 migration. They do not identify package payload releases and are deliberately decoupled from the tool release version:
 
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling contract version** — the `1.0` label in the [Python Tooling standard](../standards/python-tooling/README.md)'s status banner — is a copy-adopted label: not machine-enforced and not a release version.
 - The **Markdown Tooling contract version** — the `1.1` label in the [Markdown Tooling standard](../standards/markdown-tooling/README.md) — is a copy-adopted label like the Python Tooling one: validated as a known version when selected, but it does not enforce the standard's body rules (the `lint-markdown.yml` workflow does) and is not a release version.
 - The **Agent Handoff contract version** — `1.0`, recorded under `agent_handoff.version` by adoption — versions its repo-local layout, integrations, lifecycle, and policy. It is enforced by the `agent-handoff` CLI and provenance lock, but is not a release version.
 
-The **ADR standard** now carries its own ADR contract version (`1.0`) for its body rules and Frontmatter-compatibility; for document _metadata_ it remains a profile over the frontmatter schema, so its docs still declare `schema_version` and its opt-in MADR section check lives in the validator. Each standard's `major.minor` **contract version** (see [Per-standard contract versions](#per-standard-contract-versions)) is distinct from the single **tool release version** on the git tag. There are still no per-standard _release tags_ — every standard ships together under the one repository tag, and a contract version is selected in config, not pinned separately.
+The **ADR standard** carries its own ADR contract version for body rules and Frontmatter compatibility; for document _metadata_ it remains a profile over the Frontmatter schema. Package payload releases and package-owned contract selectors remain distinct as described in [Package release and contract versions](#package-release-and-contract-versions). There are no per-standard git release tags: all immutable package payloads ship inside the one repository distribution.
 
 ## Change classification
 
@@ -113,7 +115,9 @@ Classify each release by the highest-severity change it contains.
 | **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
 | **Python / Markdown Tooling standards** (copy-adopted) | Raising the required Python or a tool floor; removing or renaming a scaffold or the gate command; a default change that makes the verification gate newly fail | A new optional scaffold or recommended tool with a backward-compatible default; a new opt-in step | An editorial revision of the standard doc; a refreshed tool pin with no behavior change |
 | **Agent Handoff Standard** (CLI-adopted) | Removing/renaming a required repo artifact, config key, profile, or command; making a previously-valid adopted repo fail | A new optional profile, report, policy view, or create-only knowledge artifact | Editorial fixes or diagnostics with unchanged conformance outcomes |
-| **Bundled contract set** | A bundled contract version **removed** (a consumer pinned to it newly fails) | A bundled contract version **added** (selectable; nothing previously-passing changes) | — |
+| **Catalog / package payload set** | An advertised version removed; a same-catalog-major ordinary default changed incompatibly; a breaking candidate promoted to ordinary default | A compatible payload added; an opt-in breaking candidate advertised while the ordinary default and prior selections remain available | — |
+
+An opt-in breaking candidate is MINOR only while existing defaults and selections remain valid. Promotion to the ordinary default is MAJOR.
 
 Because the Python and Markdown Tooling standards are **copy-adopted**, a consumer sees their changes only when it deliberately re-syncs the scaffolds — they are never inherited automatically on `@vN`. That row classifies the impact on a consumer that re-syncs; the previously-passing rule below applies to the validator-enforced surface.
 
@@ -164,7 +168,7 @@ Pin the reusable workflow and the CLI by **major tag** to receive non-breaking f
 uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
 ```
 
-- **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule guarantees these updates never newly-fail a passing repo.
+- **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule protects ordinary defaults and prior valid selections; breaking package candidates require explicit package-major authorization.
 - **`@vMAJOR.MINOR.PATCH`** or a **commit SHA** — an immutable freeze, for repos that want byte-for-byte reproducibility and to adopt every change explicitly.
 - **`@main`** — only for this repository's own development or deliberate test repos. Never pin a production consumer to `main`.
 

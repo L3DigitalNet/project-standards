@@ -6,8 +6,8 @@ description: 'Records the decision that standard package artifacts must declare 
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -30,6 +30,8 @@ related:
   - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+  - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 supersedes: []
 superseded_by: null
 source:
@@ -53,6 +55,8 @@ project:
 # ADR 0019: Packaged Artifact Parity and Provenance
 
 MADR status: **accepted**.
+
+> **Amended by ADRs 0023 and 0024.** Provenance now applies to each immutable versioned payload and to semantic units recorded in the central consumer lock. The lock replaces package-specific provenance locks. Explicitly referenced consumer inputs carry path and digest evidence without transferring managed ownership.
 
 ## Context and Problem Statement
 

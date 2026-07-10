@@ -4,10 +4,10 @@ id: 'adr-0017-project-standards-unified-standard-adoption-methodology'
 title: 'ADR 0017: Unified Standard Adoption Methodology'
 description: 'Records the decision that standards expose a consistent adoption surface while preserving mode-specific enforcement and authoring mechanics.'
 doc_type: 'adr'
-status: 'active'
+status: 'superseded'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -29,8 +29,9 @@ related:
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
-superseded_by: null
+superseded_by: 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 source:
   - 'standards/standard-bundle-authoring/README.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
@@ -50,7 +51,7 @@ project:
 
 # ADR 0017: Unified Standard Adoption Methodology
 
-MADR status: **accepted**.
+MADR status: **superseded** by [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md).
 
 ## Context and Problem Statement
 

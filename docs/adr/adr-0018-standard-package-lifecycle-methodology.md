@@ -6,8 +6,8 @@ description: 'Records the decision that standard package lifecycle changes are g
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -27,6 +27,7 @@ related:
   - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
+  - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 supersedes: []
 superseded_by: null
 source:
@@ -50,6 +51,8 @@ project:
 # ADR 0018: Standard Package Lifecycle Methodology
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0024.** Package-series lifecycle (`draft`, `active`, `deprecated`, and related states) remains distinct from per-release catalog channels. Each immutable package version separately declares whether it is the catalog default, stable/retained, or a breaking candidate; lifecycle transitions and channel promotion update all declared surfaces together.
 
 ## Context and Problem Statement
 

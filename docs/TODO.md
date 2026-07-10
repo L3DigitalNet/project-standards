@@ -110,7 +110,11 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [x] 2026-07-10 - Resolved root-artifact ownership and semantic composition across standards.
 
-  The approved design uses consumer-owned containers, typed package contributions, syntax-preserving adapters, reference-counted shared units, and no precedence. Adversarial review converged in round 2 at `b229602`; the result now feeds ADR 0023 and `SPEC-BA02`.
+  The approved design uses consumer-owned containers, typed package contributions, syntax-preserving adapters, reference-counted shared units, and no precedence. Adversarial review converged in round 2 at `b229602`; the result now feeds `SPEC-BA02` and is adopted by ADR 0023.
+
+- [x] 2026-07-10 - Accepted the unified control-plane and catalog-channel architecture.
+
+  ADR 0023 establishes the neutral `.standards/` control plane, explicit reconciliation, central lock, and semantic composition; ADR 0024 establishes catalog-scoped non-breaking defaults and opt-in breaking package candidates. Superseded and retained ADRs, the ADR index, and `meta/versioning.md` are reconciled.
 
 - [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
 
@@ -118,7 +122,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. Create ADRs 0023-0024 and reconcile the affected ADRs and versioning policy first.
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and the affected decision/versioning reconciliation are complete; `SPEC-BA02` is the remaining design prerequisite.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 

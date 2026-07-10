@@ -6,8 +6,8 @@ description: 'Records the decision that the Markdown Frontmatter Standard owns a
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
-reviewed: '2026-07-09'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -27,6 +27,7 @@ related:
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
@@ -48,6 +49,8 @@ project:
 # ADR 0016: Package Markdown Frontmatter Skill with Standard
 
 MADR status: **accepted**.
+
+> **Amended by ADR 0023.** The Markdown Frontmatter package remains the skill's canonical owner and `.agents/skills/markdown-frontmatter/` remains its consumer destination. Selection, installation, payload provenance, drift, update, and removal move from package-specific adoption behavior to the unified control plane and central lock.
 
 ## Context and Problem Statement
 

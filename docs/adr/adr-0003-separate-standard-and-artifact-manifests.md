@@ -4,10 +4,10 @@ id: 'adr-0003-project-standards-separate-standard-and-artifact-manifests'
 title: 'ADR 0003: Separate Standard and Artifact Manifests'
 description: 'Records the decision to keep the existing artifact-focused adopt.toml and reference it from standard.toml rather than merging everything into one manifest.'
 doc_type: 'adr'
-status: 'active'
+status: 'superseded'
 created: '2026-07-07'
-updated: '2026-07-09'
-reviewed: '2026-07-07'
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -23,8 +23,9 @@ related:
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+  - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
-superseded_by: null
+superseded_by: 'adr-0023-project-standards-unified-consumer-standards-control-plane'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -38,7 +39,7 @@ project:
 
 # ADR 0003: Separate Standard and Artifact Manifests
 
-MADR status: **accepted**. Records decision D-003 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **superseded** by [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md). Records historical decision D-003 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 
