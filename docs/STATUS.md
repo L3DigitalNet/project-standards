@@ -20,3 +20,4 @@
 - `HomeBase` is migrated (`ec3df46`); 466 tests and the dual profile pass on `main`.
 - `Russ-Estate-Paperwork` is migrated (`ab71b83`); the dual profile passes and current task metadata no longer carries financial identifiers.
 - `star-trek-retro-remake` is migrated (`9d4e19e`); 11,212 tests, strict mypy, Ruff, and five import contracts pass on `main`.
+- `agent-pseudocode` is migrated (`21ade51`); 48 tests, Ruff, BasedPyright, three pseudocode checks, and the dual profile pass on `main`.
