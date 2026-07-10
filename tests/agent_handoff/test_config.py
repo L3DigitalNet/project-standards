@@ -108,7 +108,7 @@ def test_project_config_merge_preserves_unowned_bytes() -> None:
     )
 
     assert after.startswith(before + "\n")
-    assert "version: '1.0'" in after
+    assert 'version: "1.0"' in after
     assert "  startup: automatic" in after
     assert "    - claude-code\n    - codex\n" in after
 

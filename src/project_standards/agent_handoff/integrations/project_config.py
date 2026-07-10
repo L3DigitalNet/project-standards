@@ -48,7 +48,7 @@ def _reject_owned_yaml_indirection(block: str) -> None:
 def _render_owned_config(config: AgentHandoffConfig) -> str:
     lines = [
         "agent_handoff:",
-        "  version: '1.0'",
+        '  version: "1.0"',
         f"  startup: {config.startup.value}",
     ]
     if config.harnesses:

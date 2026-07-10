@@ -1,6 +1,0 @@
-interface:
-  display_name: "Handoff System v3"
-  short_description: "Operating guide for STATUS.md, TODO.md, and docs/handoff/"
-
-policy:
-  allow_implicit_invocation: true

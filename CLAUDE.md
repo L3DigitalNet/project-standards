@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-**Session startup:** live state is injected by the SessionStart hook (`.claude/hooks/session_start.py`); do not read `docs/handoff/state.md` directly.
+**Session startup:** live state is injected by the shared repo-local SessionStart hook; do not read `docs/handoff/state.md` directly.
 
-**Purpose:** single source of truth for reusable standards — defines six: **Markdown Frontmatter** and **ADR** (validator-enforced via a reusable CI workflow), **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`/`format.yml`), **Python Tooling SSOT** (copy-adopt scaffolds), **Project Specification** (tiered specs + stable IDs, `project-standards spec` CLI + `validate-specs.yml`), and **CLI Documentation** (usage-doc standard, adopt-materialized scaffolds + `cli_documentation` contract) — plus two unreleased: **Python Coding** (reference-only draft) and **Standard Bundle Authoring** (internal/reference meta-standard, `adoption = "none"`, the `standard.toml` bundle contract).
+**Purpose:** single source of truth for reusable standards — defines seven released or v5-staged standards: **Markdown Frontmatter**, **ADR**, **Markdown Tooling**, **Python Tooling SSOT**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** — plus two unreleased/reference standards: **Python Coding** and **Standard Bundle Authoring** (`adoption = "none"`, the `standard.toml` bundle contract).
 
 **Document layout (read on demand):**
 
@@ -19,5 +19,12 @@
 
 - Dogfood the standards: `uv run validate-frontmatter --config .project-standards.yml` must pass before finishing.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
-- Keep the toolchain green: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit && uv run pytest tests/coherence` (the last needs `npm ci` for the behavioral markdownlint/Prettier co-satisfaction tests).
+- Keep the full toolchain gate listed in `AGENTS.md` green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.
+
+<!-- BEGIN agent-handoff managed instructions -->
+Use the repo-local `$agent-handoff` skill at startup and closeout.
+Do not reread `docs/handoff/state.md` when SessionStart already injected it.
+Keep current status and tasks in `docs/STATUS.md` and `docs/TODO.md`; route durable facts through `docs/handoff/`.
+At closeout, update only changed facts, preserve user-authored work, store credential references only, and run relevant validation.
+<!-- END agent-handoff managed instructions -->

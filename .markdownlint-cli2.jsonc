@@ -13,7 +13,7 @@
 	// session state rather than authored prose held to the body-style standard —
 	// the same boundary `.project-standards.yml` already draws for FRONTMATTER
 	// validation (it excludes docs/handoff/**). These paths are regenerated
-	// artifacts (codex review transcripts; v3 handoff session state), so
+	// artifacts (codex review transcripts; Agent Handoff session state), so
 	// body-linting them is churn, not quality, and would keep CI permanently red on
 	// content no human wrote to a style bar. The spec fixtures are deliberately
 	// mutated/generated Markdown used to exercise parser failures, not authored docs.

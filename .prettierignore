@@ -1,10 +1,7 @@
 # Prettier ignore — mirrors the `ignores` in .markdownlint-cli2.jsonc.
 #
-# These paths are machine-generated transcripts, v3 handoff session state, or
-# generated parser fixtures, not authored prose held to the formatter's bar — the same boundary
-# .project-standards.yml draws for frontmatter validation (it excludes
-# docs/handoff/**). Formatting them is churn, not quality, and would keep the
-# Format CI gate permanently red on content no human wrote to a style.
+# These paths are generated artifacts, Agent Handoff state, or formatter-external
+# contracts. Formatting them is churn or would conflict with their owning tool.
 #
 # Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
 # ignored — they stay gated, same as markdownlint. Prettier already honors
@@ -12,6 +9,14 @@
 docs/codex-reviews/
 docs/handoff/
 tests/fixtures/specs/
+
+# Agent Handoff owns exact managed blocks in the instruction files; its shape
+# policy owns the status/task documents and preserves user-authored task wrapping.
+AGENTS.md
+CLAUDE.md
+.agents/agent-handoff/
+docs/STATUS.md
+docs/TODO.md
 
 # Machine-generated JSON Schema: its canonical byte format is owned by the
 # standard_manifest.standard_schema_json() writer and enforced by a byte-drift

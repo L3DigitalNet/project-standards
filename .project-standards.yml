@@ -34,7 +34,7 @@ markdown:
       - ".claude/**"
       - ".agents/**"
       - ".codex/**"
-      # Agent session state (handoff-system-v3) is harness state, not managed docs.
+      # Agent Handoff state is harness state, not managed docs.
       - "docs/handoff/**"
 
   # Opt-in ADR body-structure check (separate from markdown.frontmatter above).
@@ -78,3 +78,12 @@ spec:
     - "docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md"
     # Agent Handoff v1 standards-package ingestion (SPEC-DPEY).
     - "docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md"
+
+# BEGIN agent-handoff managed config
+agent_handoff:
+  version: "1.0"
+  startup: automatic
+  harnesses:
+    - claude-code
+    - codex
+# END agent-handoff managed config
