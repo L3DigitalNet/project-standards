@@ -6,6 +6,7 @@ import json
 import re
 import stat
 from typing import Literal, cast
+from urllib.parse import unquote
 
 from project_standards.adopt.engine import build_plan, render_action
 from project_standards.adopt.errors import AdoptError
@@ -38,6 +39,8 @@ _POLICY_PATH = BUNDLES_DIR / "agent-handoff/resources/policy.toml"
 _HOOK_PATH = ".agents/hooks/agent-handoff/session_start.py"
 _LOCK_PATH = ".agents/agent-handoff/manifest.json"
 _LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+_FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
+_INLINE_CODE_RE = re.compile(r"(`+)(.*?)\1")
 
 
 def _finding(
@@ -418,6 +421,33 @@ def _markdown_files(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[
     return tuple(sorted(files))
 
 
+def _reference_text(text: str) -> str:
+    visible: list[str] = []
+    fence_character: str | None = None
+    fence_length = 0
+    for line in text.splitlines(keepends=True):
+        marker = _FENCE_RE.match(line)
+        if fence_character is not None:
+            if marker is not None:
+                fence = marker.group("fence")
+                if fence[0] == fence_character and len(fence) >= fence_length:
+                    fence_character = None
+                    fence_length = 0
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        if marker is not None:
+            fence = marker.group("fence")
+            fence_character = fence[0]
+            fence_length = len(fence)
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        if line.startswith(("    ", "\t")):
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        visible.append(_INLINE_CODE_RE.sub("", line))
+    return "".join(visible)
+
+
 def _references(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[Finding, ...]:
     findings: list[Finding] = []
     root = repository.path
@@ -429,8 +459,10 @@ def _references(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[Find
             text = data.decode("utf-8")
         except RepositoryBoundaryError, UnicodeDecodeError:
             continue
-        for raw_target in _LINK_RE.findall(text):
-            target = raw_target.strip().strip("<>").split(maxsplit=1)[0].split("#", maxsplit=1)[0]
+        for raw_target in _LINK_RE.findall(_reference_text(text)):
+            target = unquote(
+                raw_target.strip().strip("<>").split(maxsplit=1)[0].split("#", maxsplit=1)[0]
+            )
             if not target or "://" in target or target.startswith(("mailto:", "#")):
                 continue
             candidates = (root / target, (root / relative).parent / target)

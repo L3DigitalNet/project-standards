@@ -157,6 +157,26 @@ def test_missing_local_markdown_pointer_is_reported(tmp_path: Path) -> None:
     )
 
 
+def test_reference_validation_decodes_urls_and_ignores_code_examples(tmp_path: Path) -> None:
+    _adopt(tmp_path)
+    target = tmp_path / "docs with spaces/reference.md"
+    target.parent.mkdir()
+    target.write_text("# Reference\n", encoding="utf-8")
+    architecture = tmp_path / "docs/handoff/architecture.md"
+    architecture.write_text(
+        architecture.read_text(encoding="utf-8")
+        + "\n[Encoded path](docs%20with%20spaces/reference.md)\n"
+        + "\n`[inline example](url)`\n"
+        + "\n```markdown\n[fenced example](missing.md)\n```\n"
+        + "\n    [indented example](also-missing.md)\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_repository(RepositoryRoot(tmp_path))
+
+    assert not any(finding.code == "AH-REFERENCE-MISSING" for finding in findings)
+
+
 def test_size_and_shape_views_project_policy_findings(tmp_path: Path) -> None:
     _adopt(tmp_path)
     state = tmp_path / "docs/handoff/state.md"

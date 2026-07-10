@@ -89,7 +89,7 @@ All automatic probes loaded the repository marker from `docs/handoff/state.md`, 
 
 ## Acceptance baseline
 
-- Pass: npm audit; Ruff format/check; BasedPyright strict; 1,367 tests; 94% coverage; pip-audit; 8 coherence tests; frontmatter; spec validate/lint; standards graph; catalog freshness.
+- Pass: npm audit; Ruff format/check; BasedPyright strict; 1,368 tests; 94% coverage; pip-audit; 8 coherence tests; frontmatter; spec validate/lint; standards graph; catalog freshness.
 - Known unchanged broad Markdown backlog: Prettier reports two files under `docs/future-standards/`; markdownlint reports 463 errors confined to `docs/future-standards/**`.
 - Required release condition: every file changed for Agent Handoff must pass targeted Prettier and markdownlint checks even while that unrelated backlog remains.
 
