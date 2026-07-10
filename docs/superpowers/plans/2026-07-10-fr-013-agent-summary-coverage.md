@@ -30,7 +30,7 @@ Every summary must remain at or below 3,000 UTF-8 bytes.
 
 - Modify: `tests/test_standard_manifest.py`
 
-- [ ] **Step 1: Add the failing coverage test**
+- [x] **Step 1: Add the failing coverage test**
 
 Immediately after `_REAL_MANIFESTS`, add:
 
@@ -57,7 +57,7 @@ def test_real_manifests_have_compact_agent_summaries(real: Path) -> None:
 
 This test deliberately derives the inventory from real manifests. Do not add a handwritten standard-ID list.
 
-- [ ] **Step 2: Verify the red state**
+- [x] **Step 2: Verify the red state**
 
 Run:
 
@@ -67,7 +67,7 @@ uv run pytest tests/test_standard_manifest.py::test_real_manifests_have_compact_
 
 Expected: nine failing parameter cases. Eight fail because `agent_summary` is absent; Agent Handoff fails because its existing summary lacks the exact authority notice.
 
-- [ ] **Step 3: Verify test-file quality before continuing**
+- [x] **Step 3: Verify test-file quality before continuing**
 
 Run:
 
@@ -79,7 +79,7 @@ uv run basedpyright tests/test_standard_manifest.py
 
 Expected: all three commands pass even though the new behavioral test is red.
 
-- [ ] **Step 4: Commit the red test**
+- [x] **Step 4: Commit the red test**
 
 ```bash
 git add tests/test_standard_manifest.py
@@ -100,7 +100,7 @@ git commit -m "test(v5): require compact agent summaries"
 - Create: `standards/markdown-tooling/agent-summary.md`
 - Modify: `standards/markdown-tooling/standard.toml`
 
-- [ ] **Step 1: Author the ADR summary and manifest resource**
+- [x] **Step 1: Author the ADR summary and manifest resource**
 
 Create `standards/adr/agent-summary.md` with the common authority notice and these sections:
 
@@ -124,7 +124,7 @@ Add under `[resources]`:
 agent_summary = "agent-summary.md"
 ```
 
-- [ ] **Step 2: Author the CLI Documentation summary and manifest resource**
+- [x] **Step 2: Author the CLI Documentation summary and manifest resource**
 
 Create `standards/cli-documentation/agent-summary.md` with:
 
@@ -137,7 +137,7 @@ Create `standards/cli-documentation/agent-summary.md` with:
 
 Set package versions to `supported = ["1.0", "1.1"]`, `latest = "1.1"`, and declare `agent_summary`.
 
-- [ ] **Step 3: Author the Markdown Frontmatter summary and manifest resource**
+- [x] **Step 3: Author the Markdown Frontmatter summary and manifest resource**
 
 Create `standards/markdown-frontmatter/agent-summary.md` with:
 
@@ -150,7 +150,7 @@ Create `standards/markdown-frontmatter/agent-summary.md` with:
 
 Set package versions to `supported = ["1.0", "1.1", "1.2"]`, `latest = "1.2"`, and declare `agent_summary`.
 
-- [ ] **Step 4: Author the Markdown Tooling summary and manifest resource**
+- [x] **Step 4: Author the Markdown Tooling summary and manifest resource**
 
 Create `standards/markdown-tooling/agent-summary.md` with:
 
@@ -162,7 +162,7 @@ Create `standards/markdown-tooling/agent-summary.md` with:
 
 Set package versions to `supported = ["1.0", "1.1", "1.2"]`, `latest = "1.2"`, and declare `agent_summary`.
 
-- [ ] **Step 5: Verify this group**
+- [x] **Step 5: Verify this group**
 
 Run:
 
@@ -187,7 +187,7 @@ npx markdownlint-cli2 --no-globs \
 
 Expected: the four selected summary cases and all document/graph checks pass. The aggregate nine-standard test remains red until Tasks 3-4 finish.
 
-- [ ] **Step 6: Commit this summary group**
+- [x] **Step 6: Commit this summary group**
 
 Stage only the eight files named by this task and commit:
 
@@ -212,7 +212,7 @@ git commit -m "docs(v5): summarize documentation standards for agents"
 - Create: `standards/python-tooling/agent-summary.md`
 - Modify: `standards/python-tooling/standard.toml`
 
-- [ ] **Step 1: Author the Project Specification summary and manifest resource**
+- [x] **Step 1: Author the Project Specification summary and manifest resource**
 
 Create `standards/project-spec/agent-summary.md` with:
 
@@ -225,7 +225,7 @@ Create `standards/project-spec/agent-summary.md` with:
 
 Set package versions to `supported = ["1.0", "1.1"]`, `latest = "1.1"`, and declare `agent_summary`.
 
-- [ ] **Step 2: Author the Python Coding summary and replace the stale rationale**
+- [x] **Step 2: Author the Python Coding summary and replace the stale rationale**
 
 Create `standards/python-coding/agent-summary.md` with:
 
@@ -245,7 +245,7 @@ The canonical standard remains this document. Agents may load the compact [agent
 
 Keep the existing rule that any future summary revision must not weaken the canonical standard.
 
-- [ ] **Step 3: Author the Python Tooling summary and manifest resource**
+- [x] **Step 3: Author the Python Tooling summary and manifest resource**
 
 Create `standards/python-tooling/agent-summary.md` with:
 
@@ -258,7 +258,7 @@ Create `standards/python-tooling/agent-summary.md` with:
 
 Set package versions to `supported = ["1.0", "1.1"]`, `latest = "1.1"`, and declare `agent_summary`.
 
-- [ ] **Step 4: Verify this group**
+- [x] **Step 4: Verify this group**
 
 Run:
 
@@ -282,7 +282,7 @@ npx markdownlint-cli2 --no-globs \
 
 Expected: all selected cases and document/graph checks pass; the aggregate remains red only for Standard Bundle Authoring and Agent Handoff.
 
-- [ ] **Step 5: Commit this summary group**
+- [x] **Step 5: Commit this summary group**
 
 Stage only the seven files named by this task and commit:
 
@@ -308,7 +308,7 @@ git commit -m "docs(v5): summarize specification and python standards"
 - Modify: `src/project_standards/bundles/agent-handoff/agent-summary.md`
 - Modify: `src/project_standards/bundles/agent-handoff/standard.toml`
 
-- [ ] **Step 1: Author the Standard Bundle Authoring summary**
+- [x] **Step 1: Author the Standard Bundle Authoring summary**
 
 Create `standards/standard-bundle-authoring/agent-summary.md` with:
 
@@ -319,7 +319,7 @@ Create `standards/standard-bundle-authoring/agent-summary.md` with:
 - the rule that it governs authoring but is not consumer-adopted; and
 - links to `README.md` and `templates/standard.toml`.
 
-- [ ] **Step 2: Update the authoring contract and its own manifest**
+- [x] **Step 2: Update the authoring contract and its own manifest**
 
 In `README.md`:
 
@@ -332,7 +332,7 @@ In `templates/standard.toml`, revise the optional `agent_summary` comment to men
 
 In `standard.toml`, set `supported = ["1.0", "1.1"]`, `latest = "1.1"`, and declare `agent_summary = "agent-summary.md"`.
 
-- [ ] **Step 3: Normalize Agent Handoff's summary and package version**
+- [x] **Step 3: Normalize Agent Handoff's summary and package version**
 
 Keep its current operational content, but add the exact authority notice and normalize it to the common section order without exceeding 3,000 bytes. Set canonical package versions to `supported = ["1.0", "1.1"]`, `latest = "1.1"`.
 
@@ -341,7 +341,7 @@ Copy both canonical files byte-for-byte to:
 - `src/project_standards/bundles/agent-handoff/agent-summary.md`;
 - `src/project_standards/bundles/agent-handoff/standard.toml`.
 
-- [ ] **Step 4: Verify the full coverage policy turns green**
+- [x] **Step 4: Verify the full coverage policy turns green**
 
 Run:
 
@@ -357,7 +357,7 @@ uv run project-standards standards validate-graph --root . --require-all-manifes
 
 Expected: nine summary cases pass, manifest/dogfood tests pass, both mirrors are byte-identical, and the graph has no findings.
 
-- [ ] **Step 5: Perform the semantic review**
+- [x] **Step 5: Perform the semantic review**
 
 For every summary, compare it directly with its canonical README and confirm:
 
@@ -368,7 +368,7 @@ For every summary, compare it directly with its canonical README and confirm:
 
 Record any correction in the summary before committing. Do not weaken the canonical README to make a summary easier to write.
 
-- [ ] **Step 6: Commit the authoring contract and final mirrors**
+- [x] **Step 6: Commit the authoring contract and final mirrors**
 
 Stage only the eight files named by this task and commit:
 
@@ -392,7 +392,7 @@ git commit -m "docs(v5): complete agent summary coverage"
 - Modify: `CHANGELOG.md`
 - Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
-- [ ] **Step 1: Regenerate the standards catalog**
+- [x] **Step 1: Regenerate the standards catalog**
 
 Run:
 
@@ -403,13 +403,13 @@ uv run project-standards standards render-catalog --root . --check
 
 Expected: the Resources table contains exactly nine `agent_summary` rows and package-version columns show the new `latest` values while contract defaults remain unchanged.
 
-- [ ] **Step 2: Add release-note evidence**
+- [x] **Step 2: Add release-note evidence**
 
 Set `CHANGELOG.md` frontmatter `updated: '2026-07-10'`. Under `[Unreleased]` `### Added`, add a bullet stating that all nine standard packages now provide compact, canonical-linked agent summaries exposed through manifest resource URIs with a 3,000-byte readiness policy.
 
 Under `### Changed`, record the nine additive package-version advances and explicitly state that consumer contract defaults and adoption behavior do not change.
 
-- [ ] **Step 3: Promote FR-013 only after the evidence exists**
+- [x] **Step 3: Promote FR-013 only after the evidence exists**
 
 Replace the FR-013 traceability row with:
 
@@ -419,7 +419,7 @@ Replace the FR-013 traceability row with:
 
 Do not check the Step-07 readiness report or aggregate documentation Definition-of-Done items.
 
-- [ ] **Step 4: Verify generated and managed documents**
+- [x] **Step 4: Verify generated and managed documents**
 
 Run:
 
@@ -436,7 +436,7 @@ npx markdownlint-cli2 --no-globs CHANGELOG.md \
   docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
-- [ ] **Step 5: Commit catalog and traceability evidence**
+- [x] **Step 5: Commit catalog and traceability evidence**
 
 ```bash
 git add standards/catalog.md CHANGELOG.md \
@@ -455,7 +455,7 @@ git commit -m "docs(v5): close fr-013 traceability"
 - Modify: `docs/handoff/sessions/2026-07.md`
 - Modify: `docs/STATUS.md`
 
-- [ ] **Step 1: Run the complete implementation gate**
+- [x] **Step 1: Run the complete implementation gate**
 
 ```bash
 npm ci
@@ -481,7 +481,7 @@ uv run project-standards agent-handoff drift-check --repo .
 
 If validation remains nonzero only because of concurrent owner-authored `docs/TODO.md` shape errors, do not edit or stage that file. Report the exact exception and keep the corresponding plan verification marker open; otherwise require both commands to pass.
 
-- [ ] **Step 3: Update durable closeout facts**
+- [x] **Step 3: Update durable closeout facts**
 
 - Mark the design `owner-approved; implementation complete`.
 - Mark completed plan steps `[x]`; leave any failed handoff-validation step open.
@@ -490,7 +490,7 @@ If validation remains nonzero only because of concurrent owner-authored `docs/TO
 - Append one compact session row with the commit range and final test count.
 - Do not alter or stage `docs/TODO.md` or `docs/workflows/`.
 
-- [ ] **Step 4: Verify and commit closeout facts**
+- [x] **Step 4: Verify and commit closeout facts**
 
 Run:
 
@@ -520,6 +520,6 @@ git diff --cached --check
 git commit -m "docs(v5): close fr-013 summary coverage"
 ```
 
-- [ ] **Step 5: Continue owner-choice questions**
+- [x] **Step 5: Continue owner-choice questions**
 
 Ask the next unresolved question from the pre-Step-07 remediation sequence: GitHub required-review and required-check ruleset adoption. Do not begin Step 07 until owner blocking decisions are resolved.

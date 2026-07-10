@@ -9,6 +9,7 @@
 - ADRs 0017-0022 define standard-package adoption, lifecycle, provenance, versioning, skills, and hook installation.
 - SPEC-MT01 Steps 00-06 are complete; Step 07 remains the MCP-readiness gate before SPEC-MS01 server work.
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
+- FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, enforces the 3,000-byte policy, publishes catalog resource URIs, and passes the 1,382-test gate.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
