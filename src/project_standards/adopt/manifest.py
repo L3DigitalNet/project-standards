@@ -31,6 +31,13 @@ class ArtifactProvenance(StrEnum):
     EXTERNAL_OWNED = "external-owned"
 
 
+class InstallPolicy(StrEnum):
+    """Whether an installed artifact may be refreshed by an owned update path."""
+
+    MANAGED = "managed"
+    CREATE_ONLY = "create-only"
+
+
 @dataclass(frozen=True)
 class Artifact:
     """One artifact a standard contributes. Exactly one of (source, shared) is set."""
@@ -43,6 +50,7 @@ class Artifact:
     target: str | None  # fragment target, relative to --dest
     mode: int | None = None  # optional POSIX permissions for written artifacts
     provenance: ArtifactProvenance = ArtifactProvenance.PACKAGE_OWNED
+    install_policy: InstallPolicy = InstallPolicy.MANAGED
     canonical: str | None = None  # repository-relative source for parity/transform checks
     transform: str | None = None  # deterministic transform identifier for generated artifacts
 
@@ -120,7 +128,16 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
         kind = a.get("kind")
         if kind not in _KNOWN_KINDS:
             raise ManifestError(f"manifest {path} artifact {i} has unknown kind {kind!r}")
-        for fld in ("source", "shared", "dest", "target", "provenance", "canonical", "transform"):
+        for fld in (
+            "source",
+            "shared",
+            "dest",
+            "target",
+            "provenance",
+            "install_policy",
+            "canonical",
+            "transform",
+        ):
             val = a.get(fld)
             if val is not None and not isinstance(val, str):
                 raise ManifestError(
@@ -150,6 +167,13 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
         except ValueError as exc:
             raise ManifestError(
                 f"manifest {path} artifact {i} has unknown provenance {provenance_raw!r}"
+            ) from exc
+        install_policy_raw = a.get("install_policy", InstallPolicy.MANAGED.value)
+        try:
+            install_policy = InstallPolicy(cast("str", install_policy_raw))
+        except ValueError as exc:
+            raise ManifestError(
+                f"manifest {path} artifact {i} has unknown install policy {install_policy_raw!r}"
             ) from exc
         canonical = cast("str | None", a.get("canonical"))
         transform = cast("str | None", a.get("transform"))
@@ -191,6 +215,7 @@ def load_manifest(standard_id: str, bundles_dir: Path = BUNDLES_DIR) -> Manifest
                 target=cast("str | None", target),
                 mode=mode,
                 provenance=provenance,
+                install_policy=install_policy,
                 canonical=canonical,
                 transform=transform,
             )

@@ -107,6 +107,7 @@ def _artifact_entry(a: Artifact) -> dict[str, object]:
         "kind": a.kind,
         "owner": a.owner,
         "provenance": a.provenance.value,
+        "install_policy": a.install_policy.value,
     }
     if a.kind == "fragment":
         entry["target"] = a.target

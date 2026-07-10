@@ -57,6 +57,7 @@ def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:
     )
     assert script["mode"] == "0755"
     assert script["provenance"] == "source-owned"
+    assert script["install_policy"] == "managed"
     assert script["canonical"].endswith("scripts/new-doc-id")
     ps = next(s for s in data if s["id"] == "project-spec")
     assert ps["contract_version"] == "1.0"

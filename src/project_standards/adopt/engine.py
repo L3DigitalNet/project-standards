@@ -14,6 +14,7 @@ from project_standards.adopt.errors import ManifestError, UsageError, WriteError
 from project_standards.adopt.manifest import (
     BUNDLES_DIR,
     Artifact,
+    InstallPolicy,
     available_standards,
     load_manifest,
 )
@@ -58,6 +59,7 @@ class Action:
     target: str | None  # relative target for fragment
     standards: tuple[str, ...]  # contributing standard ids (for reporting)
     mode: int | None = None  # optional POSIX permissions for written artifacts
+    install_policy: InstallPolicy = InstallPolicy.MANAGED
 
 
 def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> list[Action]:
@@ -89,6 +91,7 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                         dest=None,
                         target=art.target,
                         standards=(sid,),
+                        install_policy=art.install_policy,
                     )
                 )
                 continue
@@ -105,6 +108,11 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                         f"destination collision at {art.dest!r}: "
                         f"{existing.standards[0]} and {sid} use different modes"
                     )
+                if existing.install_policy is not art.install_policy:
+                    raise UsageError(
+                        f"destination collision at {art.dest!r}: "
+                        f"{existing.standards[0]} and {sid} use different install policies"
+                    )
                 write_actions[art.dest] = Action(
                     kind=existing.kind,
                     source_path=existing.source_path,
@@ -112,6 +120,7 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                     target=None,
                     standards=(*existing.standards, sid),
                     mode=existing.mode,
+                    install_policy=existing.install_policy,
                 )
                 continue
             write_actions[art.dest] = Action(
@@ -121,6 +130,7 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                 target=None,
                 standards=(sid,),
                 mode=art.mode,
+                install_policy=art.install_policy,
             )
     return list(write_actions.values()) + fragment_actions
 
@@ -268,6 +278,9 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
             )  # never write through a symlinked leaf OR parent
             continue
         exists = abs_dest.exists()
+        if exists and action.install_policy is InstallPolicy.CREATE_ONLY:
+            report.skipped.append(action.dest)
+            continue
         if exists and not force:
             report.skipped.append(action.dest)
             continue

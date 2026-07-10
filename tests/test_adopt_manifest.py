@@ -11,7 +11,12 @@ from pathlib import Path
 import pytest
 
 from project_standards.adopt.errors import ManifestError
-from project_standards.adopt.manifest import ArtifactProvenance, available_standards, load_manifest
+from project_standards.adopt.manifest import (
+    ArtifactProvenance,
+    InstallPolicy,
+    available_standards,
+    load_manifest,
+)
 
 
 def test_available_standards_lists_released_adoptable_standards_excludes_shared() -> None:
@@ -42,6 +47,44 @@ def test_load_manifest_parses_octal_artifact_mode(tmp_path: Path) -> None:
         '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\nsource = "s"\ndest = "d"\nprovenance = "package-owned"\nmode = "0755"\n',
     )
     assert load_manifest("x", bundles_dir=tmp_path).artifacts[0].mode == 0o755
+
+
+def test_install_policy_defaults_managed(tmp_path: Path) -> None:
+    _manifest(
+        tmp_path,
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n'
+        'source = "s"\ndest = "d"\nprovenance = "package-owned"\n',
+    )
+    assert (
+        load_manifest("x", bundles_dir=tmp_path).artifacts[0].install_policy
+        is InstallPolicy.MANAGED
+    )
+
+
+def test_load_manifest_parses_create_only_install_policy(tmp_path: Path) -> None:
+    _manifest(
+        tmp_path,
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n'
+        'source = "s"\ndest = "d"\nprovenance = "package-owned"\n'
+        'install_policy = "create-only"\n',
+    )
+
+    assert (
+        load_manifest("x", bundles_dir=tmp_path).artifacts[0].install_policy
+        is InstallPolicy.CREATE_ONLY
+    )
+
+
+def test_load_manifest_rejects_unknown_install_policy(tmp_path: Path) -> None:
+    _manifest(
+        tmp_path,
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n'
+        'source = "s"\ndest = "d"\nprovenance = "package-owned"\n'
+        'install_policy = "replace"\n',
+    )
+
+    with pytest.raises(ManifestError, match="unknown install policy"):
+        load_manifest("x", bundles_dir=tmp_path)
 
 
 @pytest.mark.parametrize(

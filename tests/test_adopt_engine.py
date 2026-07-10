@@ -20,7 +20,7 @@ from project_standards.adopt.engine import (
     resolve_source,
 )
 from project_standards.adopt.errors import ManifestError, UsageError, WriteError
-from project_standards.adopt.manifest import Artifact
+from project_standards.adopt.manifest import Artifact, InstallPolicy
 
 
 def test_major_ref_is_vN() -> None:
@@ -95,6 +95,48 @@ def test_build_plan_collision_across_kinds(monkeypatch: pytest.MonkeyPatch) -> N
         build_plan(["markdown-tooling"])
 
 
+def test_build_plan_rejects_different_install_policies(monkeypatch: pytest.MonkeyPatch) -> None:
+    import project_standards.adopt.engine as eng
+    from project_standards.adopt.manifest import Manifest
+
+    source = "markdownlint.json"
+    fake = Manifest(
+        id="markdown-tooling",
+        artifacts=(
+            Artifact(
+                kind="file",
+                owner=True,
+                source=source,
+                shared=None,
+                dest="same-dest",
+                target=None,
+                install_policy=InstallPolicy.MANAGED,
+            ),
+            Artifact(
+                kind="file",
+                owner=True,
+                source=source,
+                shared=None,
+                dest="same-dest",
+                target=None,
+                install_policy=InstallPolicy.CREATE_ONLY,
+            ),
+        ),
+    )
+
+    def fake_available(*_a: object, **_k: object) -> list[str]:
+        return ["markdown-tooling"]
+
+    def fake_load(*_a: object, **_k: object) -> Manifest:
+        return fake
+
+    monkeypatch.setattr(eng, "available_standards", fake_available)
+    monkeypatch.setattr(eng, "load_manifest", fake_load)
+
+    with pytest.raises(UsageError, match="different install policies"):
+        build_plan(["markdown-tooling"])
+
+
 # ---------------------------------------------------------------------------
 # resolve_source containment + execute_plan / _atomic_write failure paths
 # ---------------------------------------------------------------------------
@@ -160,6 +202,28 @@ def test_execute_plan_unreadable_fragment_raises_writeerror(tmp_path: Path) -> N
     )
     with pytest.raises(WriteError, match="cannot read fragment"):
         execute_plan([action], tmp_path, force=False, dry_run=True)
+
+
+def test_force_never_overwrites_create_only(tmp_path: Path) -> None:
+    source = tmp_path / "source.md"
+    source.write_text("template\n", encoding="utf-8")
+    target = tmp_path / "consumer" / "docs" / "STATUS.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("consumer knowledge\n", encoding="utf-8")
+    action = Action(
+        kind="file",
+        source_path=source,
+        dest="docs/STATUS.md",
+        target=None,
+        standards=("agent-handoff",),
+        mode=None,
+        install_policy=InstallPolicy.CREATE_ONLY,
+    )
+
+    report = execute_plan([action], target.parents[1], force=True, dry_run=False)
+
+    assert target.read_text(encoding="utf-8") == "consumer knowledge\n"
+    assert report.skipped == ["docs/STATUS.md"]
 
 
 def test_validate_dest_lexical_escape_raises(monkeypatch: pytest.MonkeyPatch) -> None:
