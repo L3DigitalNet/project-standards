@@ -92,7 +92,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [ ] Re-review and approve Consumer Standards Control Plane `SPEC-CP01`.
 
-  Revision 0.2 resolves all seven round-1 findings plus self-review gaps in provider phases, major-authorization scope, and referenced-extension ownership. Do not write the implementation plan until the revised spec is re-reviewed and approved.
+  Revision 0.3 resolves the round-2 accepted-track disable/re-enable lifecycle and exact three-file plain-init scaffold findings, in addition to the round-1 review. Do not write the implementation plan until the revised spec passes convergence review and is approved.
 
 - [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation (`2a7ed25`).
 
