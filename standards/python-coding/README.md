@@ -1262,12 +1262,12 @@ standards/python-tooling/           # toolchain, pyproject, CI, editor, agent en
 standards/python-coding/README.md   # code-shape and behavior rules (this document, reference-only)
 ```
 
-This document is the canonical version; agents and humans read it in place. No compact agent summary or separate rationale file exists today. A condensed agent-facing summary is a possible future artifact — the python-tooling bundle already ships condensed `AGENTS.md`/`CLAUDE.md` entry points for its own content — but until one exists, agents needing code-shape guidance read this document directly.
+The canonical standard remains this document. Agents may load the compact [agent summary](agent-summary.md) for routine code-shape guidance, then return here for rationale, edge cases, source evidence, or any ambiguity. The summary is non-authoritative and MUST NOT weaken this standard.
 
 Rules:
 
 - Rationale and source evidence MUST remain discoverable from this canonical document.
-- If a compact agent summary is added later, it MUST NOT weaken the canonical standard.
+- Any compact agent summary revision MUST NOT weaken the canonical standard.
 - Repositories with repeated agent use SHOULD maintain a small golden-task or fixture suite that can detect regressions in how agents follow this standard.
 - Repositories with multiple agent instruction systems SHOULD document precedence across `AGENTS.md`, `CLAUDE.md`, `.continue/rules`, `.devin/rules`, project memory, and other active mechanisms.
 

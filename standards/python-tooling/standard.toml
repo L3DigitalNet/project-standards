@@ -8,8 +8,8 @@ summary = "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-ins
 adoption = "copy-adopt"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = ["python_tooling"]
@@ -33,6 +33,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 build_backend = "build-backend.md"
 

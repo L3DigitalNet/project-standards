@@ -8,8 +8,8 @@ summary = "Tiered, stable-ID, CLI-validated project specification format and too
 adoption = "cli"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = ["spec"]
@@ -32,6 +32,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 adopt = "adopt.md"
 tooling_notes = "resources/tooling-notes.md"
 example = "examples/spec.example.md"
