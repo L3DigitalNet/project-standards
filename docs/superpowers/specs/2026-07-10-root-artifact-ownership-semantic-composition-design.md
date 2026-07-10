@@ -1,6 +1,6 @@
 # Root-Artifact Ownership and Semantic Composition Design
 
-**Date:** 2026-07-10 **Status:** owner-approved approach; written review pending **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** owner-approved approach; round-1 findings addressed; re-review pending **Author:** session 2026-07-10
 
 ## Problem and goal
 
@@ -98,15 +98,29 @@ The reconciler composes all enabled packages against one virtual tree before any
 1. Resolve package versions and validate their contribution declarations.
 2. Load each live target once and record its whole-file precondition digest.
 3. Parse the target with the declared syntax-preserving adapter.
-4. Normalize every current, desired, and previously applied semantic unit.
-5. Invoke declared read-only render or migration-planning providers.
+4. Invoke declared read-only render or migration-planning providers and validate their output bounds.
+5. Normalize every current, rendered desired, and previously applied semantic unit.
 6. Detect overlapping package scopes, incompatible shared identities, malformed containers, and consumer conflicts.
-7. Classify each desired unit as create, adopt-equal, update, preserve, remove, no-op, or conflict.
-8. Apply every non-conflicting contribution to an in-memory virtual target in canonical package and scope order.
+7. Classify every relevant current and desired unit as create, adopt-equal, update, preserve, remove, no-op, or conflict.
+8. Apply every non-conflicting contribution to an in-memory virtual target in the canonical contribution order defined below.
 9. Display one final action per target plus its unit-level provenance and conflict details.
 10. On explicit apply, recheck the whole-file precondition, atomically write the reviewed virtual target, verify it, and write the central lock last.
 
 No provider writes a partial file, and the executor never writes one package's whole file before asking another package to patch it.
+
+### Deterministic ordering and placement
+
+Canonical contribution order is bytewise lexicographic standard ID followed by the adapter's normalized semantic scope. A shared unit uses its stable shared identity in place of a standard ID. This order controls deterministic physical placement only; it never chooses a value, suppresses a conflict, or grants precedence.
+
+Adapters preserve the relative order and physical representation of existing consumer-owned units. Existing managed units remain in place unless their selected payload updates or removes them. When one reconciliation inserts several units at the same placement point, it orders those new units canonically:
+
+- TOML, JSON/JSONC, and YAML mapping entries are appended to the end of their existing parent mapping.
+- Set-like entries are appended after existing entries and sorted by normalized entry identity.
+- Markdown blocks are inserted after the last existing managed block, or at end of file when none exists, with one surrounding blank line.
+- EditorConfig properties are appended to an existing section; missing sections are appended at end of file.
+- Whole-file artifacts have no nested placement order.
+
+Package argument order therefore cannot change a plan's final bytes. The adapter does not reorder existing consumer content merely to canonicalize a file.
 
 ## Preservation and conflict rules
 
@@ -120,8 +134,9 @@ No provider writes a partial file, and the executor never writes one package's w
 
 ### Applied content
 
+- `preserve` applies only when the current transition intentionally lacks mutation authority, such as unrelated consumer content, create-only content after creation, or a shared unit retained for another owner.
 - An unchanged owned unit may be updated or removed according to its selected payload.
-- A locally modified owned unit blocks update or removal and remains in place.
+- Any owned unit whose normalized live value differs from its recorded value classifies as `conflict`, remains untouched, and blocks the complete plan. This rule applies whether the selected payload would keep, update, or remove the unit.
 - An edit outside owned scopes does not create package drift, but the executor still rechecks the whole-file digest to prevent a concurrent overwrite.
 - A package-version migration may change scope only through a declared migration that proves how old ownership maps to new ownership.
 
@@ -138,6 +153,7 @@ Semantic equality and physical preservation are separate concerns. Every shared-
 - preserve unowned comments, ordering, whitespace, quoting, and trailing separators;
 - render deterministic changes only within owned scopes;
 - expose normalized values for conflict and drift comparison;
+- make Markdown-block normalization stable under every declared physical formatter, without erasing semantic distinctions such as code fences, links, or heading levels; otherwise require and validate formatter exclusion for the block;
 - reject duplicate or ambiguous identities; and
 - support unit removal without reformatting the rest of the file.
 
@@ -182,6 +198,17 @@ The current `_shared/editorconfig` and `_shared/vscode-extensions.json` prove th
 The shared resource is not an automatically enabled standard and does not appear as a consumer-selectable package.
 
 ## Package migration requirements
+
+### Legacy whole-file recognition
+
+V5 migration metadata carries offline signatures for known v4 whole-file payloads that become semantic contributions. The migrator handles each pre-existing target as follows:
+
+- A byte-identical digest match to a known released payload produces a reviewed replacement action that removes the legacy whole-file body and installs only the new bounded units.
+- A file with a declared legacy structural signature but a different digest is ambiguous local modification. It produces a conflict and no new block is inserted, preventing stale and current instructions from coexisting silently.
+- A file with no known payload digest or structural signature remains consumer-owned. The normal missing-unit insertion rules apply.
+- A file containing both a legacy signature and a current managed block is a cleanup conflict until the duplicate legacy content is resolved.
+
+Signatures are versioned package migration data, not network lookups or heuristic guesses. The plan names the recognized payload version, the content to be retired, the replacement units, and every preserved consumer region.
 
 ### Python Tooling
 
@@ -251,7 +278,7 @@ The platform provides no force flag that silently chooses a package or overwrite
 
 ### Adapter suites
 
-Each adapter requires fixtures for create, adopt-equal, update, no-op, remove, malformed input, duplicate identity, consumer conflict, package overlap, local modification, and concurrent precondition failure. Round-trip fixtures must contain comments, unusual ordering, alternate quoting, trailing commas where supported, and unrelated content that remains byte-identical.
+Each adapter requires fixtures for create, adopt-equal, update, no-op, preserve, remove, malformed input, duplicate identity, consumer conflict, package overlap, local modification, and concurrent precondition failure. Round-trip fixtures must contain comments, unusual ordering, alternate quoting, trailing commas where supported, and unrelated content that remains byte-identical. Markdown-block fixtures must run every sanctioned formatter over a managed container and then reconcile to `no-op`, or prove that the declared formatter exclusion remains effective.
 
 ### Composition suites
 
@@ -260,6 +287,7 @@ The installed-wheel compatibility suite must prove:
 - every current package reconciles independently;
 - every package pair and the full supported set perform a real apply;
 - package input order does not change the final bytes or lock;
+- canonical ordering changes placement only and never resolves a conflicting value;
 - Python Tooling, Markdown Tooling, and Agent Handoff compose on all shared surfaces;
 - enable, update, disable, re-enable, and removal preserve consumer content;
 - shared units remain until the final reference is removed;
@@ -271,6 +299,9 @@ The installed-wheel compatibility suite must prove:
 Fixtures must cover fresh repositories and representative existing consumers with:
 
 - pre-existing compatible and conflicting `pyproject.toml` keys;
+- byte-identical known-v4 Python Tooling `AGENTS.md`, `CLAUDE.md`, VS Code settings, and VS Code tasks files that migrate without retaining the legacy whole-file body;
+- byte-identical known-v4 shared EditorConfig and extension-recommendation files that decompose into semantic units without duplication or content loss;
+- structurally recognized but locally modified v4 instruction files that block without inserting duplicate managed blocks;
 - combined consumer and package blocks in agent instructions;
 - JSONC comments and consumer-defined VS Code settings, tasks, and recommendations;
 - customized EditorConfig sections;
@@ -300,6 +331,7 @@ This design is a prerequisite input, not a replacement for the controlling contr
 
 - Exact TOML/JSONC/YAML/EditorConfig library selection and performance benchmarks.
 - Final manifest field names and generated schema layout, owned by `SPEC-BA02`.
+- Exact per-property and per-extension ownership plus shared identities for the current `_shared` payloads, assigned by the package-migration payloads under `SPEC-BA02`.
 - Package-specific configuration choices such as alternate Python type checkers.
 - Workflow-installation methodology for `project-toolbox`, which receives its own ADR.
 - Repository-host settings governed by the future `agent-managed-repo` standard.
