@@ -13,3 +13,4 @@
 - Consumer retirement is blocked on per-repository migrations, a published v5 wheel check, a final dependency search, and owner approval.
 - `progressive-apparel` is the first migrated consumer (`2b062b6`); its Codex-only profile validates cleanly on `main`.
 - `doc-proc-scripts` is migrated (`e1db276`); its full 532-test, 100%-coverage gate and Codex profile pass on `main`.
+- `cc-usage-monitor` is migrated (`81d464d`); its full 150-test gate and dual Claude/Codex profile pass on `main`.
