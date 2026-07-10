@@ -66,3 +66,8 @@ def test_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
 def test_standards_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     proc = _run(installed_venv, "project-standards", "standards", "validate-graph", "--help")
     assert proc.returncode == 0, proc.stderr
+
+
+def test_agent_handoff_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
+    proc = _run(installed_venv, "project-standards", "agent-handoff", "--help")
+    assert proc.returncode == 0, proc.stderr

@@ -84,6 +84,24 @@ def _has_schema_flag(args: list[str]) -> bool:
     return any(a == "--schema" or a.startswith("--schema=") for a in args)
 
 
+def _adopt_positional_standards(args: list[str]) -> tuple[str, ...]:
+    """Extract adopt standard ids while skipping values owned by specialized flags."""
+    standards: list[str] = []
+    index = 0
+    while index < len(args):
+        argument = args[index]
+        if argument in {"--dest", "--repo", "--harness"}:
+            index += 2
+            continue
+        if argument.startswith(("--dest=", "--repo=", "--harness=")):
+            index += 1
+            continue
+        if not argument.startswith("-"):
+            standards.append(argument)
+        index += 1
+    return tuple(standards)
+
+
 def _assert_registry_bundle_parity(registry: Registry) -> None:
     """Adoptable bundles and version-tracked registry entries must agree.
 
@@ -185,6 +203,20 @@ def main(argv: list[str] | None = None) -> int:
     if args_list and args_list[0] == "--version":
         print(f"project-standards {package_version()}")
         return 0
+
+    if args_list and args_list[0] == "agent-handoff":
+        from project_standards.agent_handoff.cli import run as _agent_handoff_run
+
+        return _agent_handoff_run(args_list[1:])
+
+    if (
+        args_list
+        and args_list[0] == "adopt"
+        and "agent-handoff" in _adopt_positional_standards(args_list[1:])
+    ):
+        from project_standards.agent_handoff.cli import run_adopt as _agent_handoff_adopt
+
+        return _agent_handoff_adopt(args_list[1:])
 
     # EARLY DISPATCH for `validate`: delegate every trailing arg to all three validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects
@@ -295,6 +327,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
     sub.add_parser("spec", help="validate|lint|extract|next|new|upgrade over project specs")
     sub.add_parser("standards", help="validate-graph over standard manifests")
+    sub.add_parser(
+        "agent-handoff",
+        help="validate, inspect, and upgrade an agent-handoff installation",
+    )
 
     p_adopt = sub.add_parser(
         "adopt",
