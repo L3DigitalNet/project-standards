@@ -28,3 +28,4 @@
 - `website-l3digital.net` validates on `testing` (`87dabc2`) with a clean Astro build; branch policy still requires integration to `main`.
 - `docmend` validates on `dev` (`1657e2e`) with 619 tests, 97% coverage, and its full local gate; branch policy still requires integration to `main`.
 - `hw-radar` validates on `dev` (`cbe77be`) with 357 tests, 93% coverage, and its full local gate; branch policy still requires integration to `main`.
+- The `projects` workspace meta-repo is migrated (`3da7641`); its dual profile, 298 tests, and full local gate pass on `main`.
