@@ -103,3 +103,46 @@ Scripted cross-check results (no action needed, recorded for the approver):
 6. **M3, M6, L1–L5** — batch with the same editing pass.
 
 None of the findings challenge the spec's architecture: repository confinement, the shared-hook model, create-only knowledge, guide-plus-report migration, and the retirement gate are all well-reasoned and consistent with the platform's direction. The gaps are between the spec's assumed platform and the platform that exists on `testing` today — exactly the class of gap MS-0 exists to close, so close it there with these items named.
+
+---
+
+## Round 2 — Re-review after fixes (2026-07-09, spec v0.2, commit `577c937`)
+
+**Verdict: READY FOR APPROVAL — one small residual finding.** Every round-1 item is resolved correctly and verified empirically (re-run table scan, extended traceability script, full gate suite, and live-doc fetches — not taken from the diff). The revision chose the right C2 strategy (map onto the existing generic operations rather than widen the enum), turned the M1/M2 platform deltas into explicit §8.5 constraints plus new risks R-009/R-010, and backed the hook location with a properly structured proposed ADR 0022. The one thing the fix round missed: ADR 0022 mandates a canonical hook **source** location inside the bundle, and the spec never names it (N1 below). It is a small, additive edit — approval need not wait on anything else.
+
+### Round-1 fixes — verified resolved ✅
+
+| Item | Fix applied | Verified |
+| --- | --- | --- |
+| C1 | IR-001 pipe escaped (`… \| --manual`), delimiter row restored to 5 cells | ✅ scripted re-scan: every table in the document now has matching header/delimiter/row cell counts; Prettier and markdownlint both parse and pass the file |
+| C2 | Option (b): D-009 added; DR-001 declares only `scaffold`, `validate`, `drift-check`, `extract`, `upgrade`; IR-002 maps `size-report`/`shape-check` → `validate`, `legacy-report` → `extract`, adds `upgrade`; "diagnostic view names are CLI subcommands, not new manifest operations" | ✅ all five declared operations exist in `ProviderOperation` (`standard_manifest.py:66-77`); no enum expansion claimed anywhere |
+| M1 | §8.5 gains four explicit platform-delta bullets (metadata-only providers → executable dispatch, missing adopt flags, registry parity guards, `install_policy`); R-009 added; MS-1/MS-2 name the registry and dispatch work | ✅ matches the actual `cli.py` gaps found in round 1 |
+| M2 | DR-003 specifies `install_policy = "managed" \| "create-only"` with `managed` as the backward-compatible default and force/upgrade-proof create-only; D-002 consequence updated; MS-0 adds the bundle-contract revision; R-010 added | ✅ scoped as a Standard Bundle Authoring/artifact-plane contract change, exactly where it belongs |
+| M3 | FR-010/IR-003 scope strictness to the `agent_handoff` namespace; §18.2 rewritten with an explicit no-whole-file-claim sentence; ERR-001 covers the unknown-key failure | ✅ no longer contradicts the shared loader's behavior |
+| M4 | New proposed ADR 0022 (`docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md`); C-011 added; D-003/NG-001 cite it; MS-0 gates its acceptance; References list it | ✅ ADR read in full — mirrors ADR 0021's structure, keeps trust with the harness, requires destination-guard confirmation; passes the frontmatter gate (27 files validated) |
+| M5 | DR-001 pins `adoption = "cli"`; D-001 restates it | ✅ valid `AdoptionMode` value |
+| M6 | §10.2 → AW-001…003 table, §10.3 → EC-001…012 table, §12.1 → ERR-001…009 five-column table, matching the Full template's shapes; §17.3 gains IR/DR and AW/EC/ERR traceability rows | ✅ scripted check: every Appendix A prefix now has assigned IDs in the body; extended traceability over FR/NFR/IR/DR/AW/EC/ERR is complete with nothing dangling |
+| L1 | FR-001 rewords `agent-summary.md` as a chosen optional resource | ✅ |
+| L2 | Codex URLs replaced with `learn.chatgpt.com/docs/hooks` and `…/docs/config-file/config-basic` | ✅ both fetched live today; both resolve to the expected content |
+| L3 | WH-005 recast as the deferred operator workflow; the "never through adoption" clause moved into NG-002 | ✅ the deferred table no longer contains a non-goal |
+| L4 | `SPEC-DPEY` retained | ✅ accepted as-is per the round-1 recommendation |
+| L5 | DR-001 and §18.2 declare `[config].namespaces = ["agent_handoff"]` | ✅ |
+
+Gate evidence for v0.2: `spec validate` OK, `spec lint` OK, `validate-frontmatter` OK (27 files, ADR 0022 included), Prettier clean, markdownlint zero findings on the spec and the ADR, all tables parse, and the traceability script reports no ID missing from §17.3 and none traced-but-undefined across all seven ID families.
+
+### 🟡 Residual finding
+
+#### N1 · The canonical hook source location ADR 0022 mandates is absent from the spec's bundle enumeration
+
+ADR 0022 states: "A standard-owned hook's canonical authored source lives under `standards/<standard-id>/hooks/<hook-id>/`" (`adr-0022…md:81`). But the spec never names that path: FR-001's bundle list (line 221) enumerates `standard.toml`, `README.md`, `adopt.md`, templates, resources, and the skill — no `hooks/` entry — and §18.7's documentation deliverables (lines 768-772) likewise stop at the skill. The only `hooks/` path in the spec is the consumer-side install destination. Two consequences: (a) an implementer authoring MS-1 has no spec-level statement of where the hook source lives, and must pull it from the ADR alone; (b) the Standard Bundle Authoring anatomy table (`standard-bundle-authoring/README.md:17-29`) has no `hooks/` directory entry, and while MS-0 now names the `install_policy` contract revision, it does not name the `hooks/` bundle-anatomy addition that ADR 0022's own consequence row concedes ("graph/adopt validation and documentation must learn" the new convention). DR-003's destination guard ("no … global skill/hook path") is already in place, so this is purely the source side.
+
+**Fix:** add `hooks/agent-handoff/session_start.py` (or the chosen hook-id path) to FR-001's bundle enumeration and §18.7's deliverables, and extend MS-0's bundle-contract revision item to cover the `hooks/` anatomy entry alongside `install_policy`.
+
+### Informational (no action required)
+
+- **Codex hooks are enabled by default** — verified live: "Hooks are enabled by default"; disabling requires `[features] hooks = false`. §18.1's "enabled hooks" runtime requirement is accurate and conservative. The docs list `hooks` in a feature-flag table without an explicit stable/experimental maturity label, which mildly supports R-001's medium-likelihood rating for upstream contract drift.
+- The FR count in the scripted scan reads 26 because two §17.3 rows (`FR-021`, `FR-022`) sit alone in their cells and re-match the row pattern; the requirement tables define exactly 24 FRs. Not a defect.
+
+### Round-2 status
+
+Resolve N1 in the same editing pass as any owner-requested wording changes, then approve. All round-1 criticals and importants are closed; nothing else regressed — the revision is careful, and D-009's provider-mapping decision is the cleanest available resolution of C2.

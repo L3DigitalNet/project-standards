@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-DPEY
 title: 'Agent Handoff Standard Package'
-status: draft
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -32,6 +32,7 @@ related:
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-09 | Codex with owner review | Initial full specification from the approved agent-handoff ingestion design. |
 | 0.2 | 2026-07-09 | Codex with adversarial review | Map package commands to generic providers, specify platform and artifact-lifecycle work, add hook-placement ADR, scope config strictness, and restore workflow/error identifiers. |
+| 0.3 | 2026-07-09 | Codex with owner approval | Name the canonical hook source and bundle-anatomy change required by accepted ADR 0022; approve the specification for implementation planning. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
@@ -218,7 +219,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The system shall publish an adoptable `standards/agent-handoff/` bundle with `standard.toml`, `README.md`, `adopt.md`, templates, resources, and the `agent-handoff` skill, and shall choose to ship the optional `agent-summary.md` resource. | The package must satisfy the Standard Bundle Authoring contract and chooses the optional summary for agent discoverability. | Graph validation accepts the bundle and generated catalog output includes it. | Must |
+| FR-001 | The system shall publish an adoptable `standards/agent-handoff/` bundle with `standard.toml`, `README.md`, `adopt.md`, templates, resources, `hooks/session-start/session_start.py`, and the `agent-handoff` skill, and shall choose to ship the optional `agent-summary.md` resource. | The package must satisfy the Standard Bundle Authoring contract, follow ADR 0022's canonical hook-source convention, and choose the optional summary for agent discoverability. | Graph validation accepts the bundle, the hook source resolves under the declared package, and generated catalog output includes the standard. | Must |
 | FR-002 | The system shall declare `agent-handoff` package version `1.0` and shall not continue a legacy version line. | The new package has a new contract and ownership model. | Manifest, docs, config fragments, policy, and tests consistently identify version `1.0`. | Must |
 | FR-003 | Every operation shall confine consumer-data access and all mutation to the resolved adopting repository; it may read immutable resources from the installed `project-standards` distribution and invoke declared toolchain executables. | The standard owns project-level knowledge only but must load its own package resources. | Boundary tests reject absolute consumer paths, traversal, symlink escape, outside-root consumer reads, and every attempted write outside the root while permitting package-resource loads. | Must |
 | FR-004 | The system shall define `docs/STATUS.md`, `docs/TODO.md`, and the required `docs/handoff/` files and directories as the canonical v1 knowledge layout. | Root status/task files are no longer desired. | Fresh adoption produces the exact required layout and validation rejects misplaced canonical files. | Must |
@@ -687,20 +688,20 @@ Every bug found during implementation receives a regression test at the narrowes
 
 | Requirement | Verification |
 | --- | --- |
-| FR-001–FR-002 | Manifest/schema/graph/catalog tests and standard-version assertions |
+| FR-001, FR-002 | Manifest/schema/graph/catalog tests and standard-version assertions |
 | FR-003, NFR-001 | Instrumented repository-boundary and unsafe-path test suite |
-| FR-004–FR-006 | Fresh/existing scaffold, create-only, skill-installation, and drift fixtures |
-| FR-007–FR-010 | Shared-hook installation plus Claude/Codex contract and config tests |
-| FR-011–FR-012 | Marker and structured-merge preservation/conflict matrices |
-| FR-013–FR-014, NFR-003–NFR-005 | Hook golden, Unicode, security, benchmark, and isolated-runtime tests |
-| FR-015, FR-023–FR-024 | Validator/report schema, accumulated findings, secrets, and dry-run parity tests |
-| FR-016–FR-017 | Historical legacy-report fixtures and migration-guide conformance review |
-| FR-018–FR-020 | Provenance, package parity, wheel-install, drift, and upgrade tests |
+| FR-004, FR-005, FR-006 | Fresh/existing scaffold, create-only, skill-installation, and drift fixtures |
+| FR-007, FR-008, FR-009, FR-010 | Shared-hook installation plus Claude/Codex contract and config tests |
+| FR-011, FR-012 | Marker and structured-merge preservation/conflict matrices |
+| FR-013, FR-014, NFR-003, NFR-004, NFR-005 | Hook golden, Unicode, security, benchmark, and isolated-runtime tests |
+| FR-015, FR-023, FR-024 | Validator/report schema, accumulated findings, secrets, and dry-run parity tests |
+| FR-016, FR-017 | Historical legacy-report fixtures and migration-guide conformance review |
+| FR-018, FR-019, FR-020 | Provenance, package parity, wheel-install, drift, and upgrade tests |
 | FR-021 | Unsupported-harness documentation and manual-procedure review |
 | FR-022 | Release checklist and final consumer/dependency inventory |
 | IR-001–IR-008, DR-001–DR-008 | CLI/provider mapping, manifest/config/artifact schemas, package data, and output-contract tests |
 | AW-001–AW-003, EC-001–EC-012, ERR-001–ERR-009 | Workflow acceptance, edge-case regression, and error-contract fixtures |
-| Cross-cutting quality | NFR-002 and NFR-006–NFR-009: idempotency, diagnostics, full toolchain, snapshots, and release evidence |
+| Cross-cutting quality | NFR-002, NFR-006, NFR-007, NFR-008, and NFR-009: idempotency, diagnostics, full toolchain, snapshots, and release evidence |
 
 ---
 
@@ -769,6 +770,7 @@ The old repository remains available until the retirement gate proves all necess
 - `standards/agent-handoff/adopt.md` — fresh adoption, supported profiles, manual path, trust, upgrade, and validation.
 - `standards/agent-handoff/agent-summary.md` — concise agent-facing overview.
 - `standards/agent-handoff/resources/legacy-migration.md` — agent-guided migration procedure and known legacy families.
+- `standards/agent-handoff/hooks/session-start/session_start.py` — canonical dependency-free shared SessionStart hook source.
 - `standards/agent-handoff/skills/agent-handoff/SKILL.md` — fact routing, startup, closeout, and validation workflow.
 - CLI usage documentation for every `agent-handoff` command and exit code.
 - Manifest/catalog/index updates and CHANGELOG/UPGRADING release notes.
@@ -793,12 +795,12 @@ Implementation is split into dependency-ordered milestones. A detailed executabl
 
 ### MS-0 — Foundation
 
-- Approve this specification and record any required ADR updates.
+- Preserve this approved specification and accepted ADR 0022 as the implementation contract.
 - Inventory every potentially reusable file and behavior at the pinned legacy commit.
 - Classify each item as ingest, rewrite, document-only reference, or discard.
-- Accept or revise proposed ADR 0022 for standard-packaged hook placement.
+- Apply accepted ADR 0022 for standard-packaged hook source and installation placement.
 - Freeze canonical naming, paths, strict `agent_handoff` config schema, the existing generic provider mapping, and CLI contracts.
-- Revise the Standard Bundle Authoring/artifact-plane contract for optional `install_policy` without changing existing manifests' default behavior.
+- Revise the Standard Bundle Authoring contract with the `hooks/{hook-id}/` bundle-anatomy entry and the artifact plane with optional `install_policy`, without changing existing manifests' default behavior.
 - Add red package/graph/fixture tests for the new bundle.
 
 ### MS-1 — Standard Package

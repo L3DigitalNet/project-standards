@@ -2,12 +2,12 @@
 schema_version: '1.1'
 id: 'adr-0022-project-standards-standard-packaged-hook-installation-methodology'
 title: 'ADR 0022: Standard-Packaged Hook Installation Methodology'
-description: 'Proposes a project-local source and installation convention for hooks shipped by standard packages.'
+description: 'Records the project-local source and installation convention for hooks shipped by standard packages.'
 doc_type: 'adr'
-status: 'review'
+status: 'active'
 created: '2026-07-09'
 updated: '2026-07-09'
-reviewed: null
+reviewed: '2026-07-09'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -55,7 +55,7 @@ project:
 
 # ADR 0022: Standard-Packaged Hook Installation Methodology
 
-MADR status: **proposed**.
+MADR status: **accepted**.
 
 ## Context and Problem Statement
 
@@ -76,7 +76,7 @@ This decision governs hooks shipped by standard packages as a class. It does not
 
 ## Decision Outcome
 
-Proposed option: **install one shared project-local hook under `.agents/hooks/`**.
+Chosen option: **install one shared project-local hook under `.agents/hooks/`**.
 
 A standard-owned hook's canonical authored source lives under `standards/<standard-id>/hooks/<hook-id>/`. Any distribution copy under `src/project_standards/bundles/<standard-id>/` follows ADR 0019 provenance: byte parity for a source-owned mirror or a declared deterministic transform when identity is not the correct contract.
 
