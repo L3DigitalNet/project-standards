@@ -55,7 +55,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `agent-pseudocode` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `cc-usage-monitor` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `control-center` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
-| `doc-proc-scripts` | `main` | Codex registration/hook, engine references, root companions | Codex | — | Pending | Repo-local reviewed migration |
+| `doc-proc-scripts` | `main` | Migrated from Codex hook, engine references, root companions | Codex | `e1db276` | Pass | Recheck with published v5 before deletion |
 | `doc-proc-scripts-kate-decision` | `main` | Codex registration/hook; root status/tasks | Codex | — | Pending | Protected no-upstream topic worktree; inventory-only |
 | `docmend` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Current `dev` branch requires repo-local review |
 | `docs` | `main` | Symlinked Codex layout, `docs/state.md`, handoff references | Determine locally | — | Pending | Reconcile nonstandard legacy layout |
@@ -72,7 +72,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `website-aboutme` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `website-l3digital.net` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 
-Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. `project-standards` and `progressive-apparel` now validate on v1; 19 concrete-evidence consumers remain.
+Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. `project-standards`, `progressive-apparel`, and `doc-proc-scripts` now validate on v1; 18 concrete-evidence consumers remain.
 
 ## Installed-wheel verification
 

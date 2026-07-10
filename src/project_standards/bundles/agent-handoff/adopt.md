@@ -65,6 +65,23 @@ git diff --check
 git diff
 ```
 
+## Formatter ownership
+
+The provenance lock owns exact bytes for the installed skill and hook, plus the exact body inside managed instruction markers. A Markdown formatter that joins or rewraps those instruction lines creates real drift even when the prose looks equivalent. The shape policy also owns task-line length and may require continuation wrapping that a formatter would rejoin.
+
+If the repository uses an automatic Markdown or structured-text formatter, exclude these paths from formatter writes:
+
+```gitignore
+AGENTS.md
+CLAUDE.md
+.agents/agent-handoff/
+.agents/skills/agent-handoff/
+docs/STATUS.md
+docs/TODO.md
+```
+
+Keep unrelated consumer-owned content under its existing formatter. Configuration integrations are validated semantically, so whitespace-only formatting of `.claude/settings.json` and the managed `.project-standards.yml` block is safe when it preserves their parsed values. After any formatter run, use `agent-handoff drift-check` before committing.
+
 ## Harness trust and hook review
 
 Claude Code and Codex apply their own project trust and hook-review workflows. Agent Handoff never writes user-global trust state.
