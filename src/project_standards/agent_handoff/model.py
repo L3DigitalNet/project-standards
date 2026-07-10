@@ -112,6 +112,13 @@ class OperationReport:
     changes: tuple[PlannedChange, ...] = ()
     findings: tuple[Finding, ...] = ()
 
+    @property
+    def blocked(self) -> bool:
+        """Whether errors or explicitly blocked changes prohibit success."""
+        return any(finding.severity == "error" for finding in self.findings) or any(
+            change.kind is ChangeKind.BLOCKED for change in self.changes
+        )
+
     def to_dict(self) -> dict[str, object]:
         changes = sorted(self.changes, key=lambda change: change.sort_key)
         findings = sorted(self.findings, key=lambda finding: finding.sort_key)

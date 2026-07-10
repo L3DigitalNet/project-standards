@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 import stat
 import tempfile
@@ -60,6 +61,8 @@ class Action:
     standards: tuple[str, ...]  # contributing standard ids (for reporting)
     mode: int | None = None  # optional POSIX permissions for written artifacts
     install_policy: InstallPolicy = InstallPolicy.MANAGED
+    precondition_sha256: str | None = None
+    require_absent: bool = False
 
 
 def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> list[Action]:
@@ -201,12 +204,28 @@ def _read_bytes(path: Path) -> bytes:
         raise WriteError(f"cannot read source {path}: {exc}") from exc
 
 
-def _render(action: Action, ref: str) -> bytes:
+def render_action(action: Action, ref: str | None = None) -> bytes:
     """Bytes to write for a file/workflow-caller action ({{ref}} substituted for callers)."""
+    resolved_ref = major_ref() if ref is None else ref
     data = _read_bytes(action.source_path)
     if action.kind == "workflow-caller":
-        data = data.replace(_REF_PLACEHOLDER.encode(), ref.encode())
+        data = data.replace(_REF_PLACEHOLDER.encode(), resolved_ref.encode())
     return data
+
+
+def _check_precondition(action: Action, target: Path) -> None:
+    if action.require_absent:
+        if target.exists() or target.is_symlink():
+            raise WriteError(f"destination changed after preflight: {target}")
+        return
+    if action.precondition_sha256 is None:
+        return
+    try:
+        current = target.read_bytes()
+    except OSError as exc:
+        raise WriteError(f"cannot recheck destination {target}: {exc}") from exc
+    if hashlib.sha256(current).hexdigest() != action.precondition_sha256:
+        raise WriteError(f"destination changed after preflight: {target}")
 
 
 def _atomic_write(
@@ -309,14 +328,17 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
             )  # never write through a symlinked leaf OR parent
             continue
         exists = abs_dest.exists()
+        if not dry_run and action.require_absent and exists:
+            _check_precondition(action, abs_dest)
         if exists and action.install_policy is InstallPolicy.CREATE_ONLY:
             report.skipped.append(action.dest)
             continue
         if exists and not force:
             report.skipped.append(action.dest)
             continue
-        rendered = _render(action, ref)  # may raise WriteError on unreadable source
+        rendered = render_action(action, ref)  # may raise WriteError on unreadable source
         if not dry_run:
+            _check_precondition(action, abs_dest)
             installed = _atomic_write(
                 abs_dest,
                 rendered,
