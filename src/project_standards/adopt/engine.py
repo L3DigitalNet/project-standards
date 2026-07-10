@@ -215,9 +215,11 @@ def _atomic_write(
     """Stage data beside target, then install it atomically.
 
     EVERY filesystem step (mkdir, mkstemp, write, publish) is inside the guard so a
-    recoverable failure surfaces as WriteError (exit 1), never a raw traceback. The
-    temp file is cleaned up on any failure (including KeyboardInterrupt / generator-
-    throw — uses BaseException, not just OSError); an existing destination is left intact.
+    recoverable failure surfaces as WriteError (exit 1), never a raw traceback. Staging
+    cleanup is always attempted, including after KeyboardInterrupt / generator-throw.
+    Persistent cleanup failure is explicitly reported and may leave the staging alias
+    beside an installed destination for manual removal; an existing destination remains
+    intact when publication fails.
 
     Return ``False`` only when a non-replacing install loses a destination-creation
     race. Managed installs use atomic replacement; create-only installs use an atomic
