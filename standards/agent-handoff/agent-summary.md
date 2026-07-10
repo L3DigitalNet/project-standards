@@ -1,38 +1,35 @@
-# Agent Handoff Summary
+# Agent Handoff Standard: Agent Summary
 
-Agent Handoff version `1.0` keeps project knowledge inside the adopting repository. Use the installed [`.agents/skills/agent-handoff/SKILL.md`](skills/agent-handoff/SKILL.md) whenever a session starts or closes, a durable fact needs an owner, or handoff files are changed.
+The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
-## Canonical paths
+Lifecycle: active. Adoption: `cli` with scaffold and managed integration support.
 
-| Fact or operation | Owner |
+## Use this summary when
+
+Start or close an agent session, route a durable repository fact, change handoff files, adopt the standard, or investigate conformance drift. Use the installed [repo-local skill](skills/agent-handoff/SKILL.md) for the operating procedure.
+
+## Core rules
+
+- The adopting repository is the complete authority boundary. Do not read sibling repositories or workstation-global state for project handoff.
+- Consumer knowledge is create-only; standard-owned skills, hooks, bounded integration entries, and the provenance lock are managed. Preserve user-authored tasks and unrelated instruction or configuration content.
+- Do not reread `state.md` when SessionStart already injected it. In manual mode, read it and inspect Git state.
+- Keep current facts eager and route durable detail by lifetime:
+
+| Fact | Owner |
 | --- | --- |
-| Current project snapshot | `docs/STATUS.md` |
+| Current snapshot | `docs/STATUS.md` |
 | User and agent work queues | `docs/TODO.md` |
 | Next-session focus and active incidents | `docs/handoff/state.md` |
 | Deployment truth | `docs/handoff/deployed.md` |
-| Stable architecture and boundaries | `docs/handoff/architecture.md` |
-| Credential names and retrieval references | `docs/handoff/credentials.md` |
-| Stable project patterns | `docs/handoff/conventions.md` |
-| Active specification and plan pointers | `docs/handoff/specs-plans.md` |
-| Compact session history | `docs/handoff/sessions/YYYY-MM.md` |
-| Durable bug lessons | `docs/handoff/bugs/NNN-slug.md` |
-| Shared automatic startup hook | `.agents/hooks/agent-handoff/session_start.py` |
-| Repo-local operating procedure | `.agents/skills/agent-handoff/SKILL.md` |
-| Managed provenance | `.agents/agent-handoff/manifest.json` |
+| Stable architecture and patterns | `docs/handoff/architecture.md`, `conventions.md` |
+| Credential references, never values | `docs/handoff/credentials.md` |
+| Active spec and plan pointers | `docs/handoff/specs-plans.md` |
+| Compact history and durable lessons | `docs/handoff/sessions/YYYY-MM.md`, `bugs/NNN-slug.md` |
 
-Consumer knowledge is create-only. Standard-owned skills, hooks, bounded integration entries, and the provenance lock are managed.
+- At closeout, update only changed facts, move completed work out of eager state, preserve user work, append compact history when useful, validate, and review the diff.
+- Automatic Claude Code and Codex profiles use the same repository-local hook. Manual mode supports other agents without claiming automatic injection.
 
-## Operating rules
-
-- Do not reread state already injected by SessionStart.
-- In manual mode, read `docs/handoff/state.md` and inspect repository Git state.
-- Read only the adopting repository for project handoff.
-- Store credential references only—never values.
-- Keep completed work out of eager state; route it to status, sessions, bugs, or another durable owner.
-- Preserve user-authored tasks and unrelated instruction/configuration content.
-- At closeout, update only facts changed during the session and validate the result.
-
-## Commands
+## Commands and artifacts
 
 ```bash
 project-standards agent-handoff validate --repo .
@@ -43,4 +40,10 @@ project-standards agent-handoff legacy-report --repo . --json
 project-standards agent-handoff upgrade --repo . --dry-run --json
 ```
 
-Automatic profiles support `claude-code` and `codex`; manual mode supports other agents without claiming automatic injection.
+## Boundaries and companions
+
+Agent Handoff does not own workstation configuration, global hooks or skills, credentials, fleet rollout, sibling repositories, or consumer-authored knowledge after creation. Store credential names and retrieval references only.
+
+## Canonical resources
+
+Read the [standard](README.md), [adoption and maintenance guide](adopt.md), and [legacy migration guide](resources/legacy-migration.md).

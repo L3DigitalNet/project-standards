@@ -8,8 +8,8 @@ summary = "Repository-local, lifetime-routed project knowledge and bounded agent
 adoption = "cli"
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = ["agent_handoff"]

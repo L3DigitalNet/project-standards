@@ -25,7 +25,7 @@ A standard bundle is the directory `standards/{id}/`. The `{id}` is kebab-case a
 | `skills/` | Optional | Standard-owned agent skills installed into consuming repositories by the adoption path. |
 | `hooks/{hook-id}/` | Optional | Canonical source for a standard-owned executable hook. Adoption installs it under the shared project-local hook root. |
 | `resources/` | Optional | Additional lazy-loadable bundle content addressed by resource ID (see [Resources](#resources)). |
-| `agent-summary.md` | Optional | A condensed, token-cheap view for agents; never the source of truth (the `README.md` is). |
+| `agent-summary.md` | Expected | A condensed, token-cheap view for agents; never the source of truth. If omitted, the canonical `README.md` records why a summary would not be useful. |
 
 **`adopt.md` presence is independent of adoption _mode_.** Any standard released for adoption keeps its `adopt.md`, including CLI-enforced ones like `project-spec` (`adoption = "cli"`). Only `adoption = "none"` (internal) standards and unreleased-draft documents replace it with the explicit non-adoptable marker. This standard is the first `adoption = "none"` case.
 
@@ -62,7 +62,7 @@ conflicts = []                # optional — exceptional; prefer redesign
 [resources]
 readme = "README.md"          # required — bundle-relative, contained
 adopt = "adopt.md"            # required for validator/copy-adopt/cli; omit for reference-only/none
-agent_summary = "agent-summary.md" # optional — condensed agent view
+agent_summary = "agent-summary.md" # expected compact view; target <= 3,000 UTF-8 bytes
 
 [artifacts]
 manifest = "src/project_standards/bundles/markdown-tooling/adopt.toml" # optional — required when packaged artifacts exist
@@ -175,12 +175,20 @@ A **resource** is a lazy-loadable piece of bundle content addressed by a stable,
 
 - `readme` → `README.md` (required),
 - `adopt` → `adopt.md` (adoptable standards),
-- `agent_summary` → `agent-summary.md` (optional),
+- `agent_summary` → `agent-summary.md` (expected; omission requires a rationale in the canonical README),
 - `template` → `templates/standard.toml`,
 - `skill` / `skill_<name>` → files under `skills/`, when the standard owns an agent skill,
 - and any bundle-specific IDs under `resources/`.
 
 Resource IDs are lowercase, URI-safe tokens. Every path is **bundle-relative and contained** (see [Manifest safety](#manifest-safety)).
+
+An `agent-summary.md` is a reviewed companion for routine context loading, not a second normative contract. It targets at most **3,000 UTF-8 bytes**, links to the canonical `README.md`, and includes this exact authority notice:
+
+```markdown
+The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
+```
+
+If a useful summary cannot meet the target, record the exception and its rationale in the canonical README. If a bundle omits the summary entirely, the README must instead explain why a compact agent view would not be useful. Summary content must preserve lifecycle, adoption mode, core rules, commands or artifacts, boundaries, and companion relationships without weakening the canonical standard.
 
 ## Manifest safety
 
@@ -222,7 +230,7 @@ The machine schema and graph validator are authoritative, but this checklist is 
 - [ ] `[config]` — `namespaces` present (array of dotted paths, may be empty); no path duplicates another standard's; no reserved meta key claimed.
 - [ ] `[capabilities]` — `provides` and `consumes_platform` both present (arrays, may be empty).
 - [ ] `[resources]` — `readme` present; `adopt` present **iff** `adoption` is `validator`, `copy-adopt`, or `cli`.
-- [ ] Agent context — provide `agent-summary.md` and declare `resources.agent_summary` when useful; otherwise record the explicit rationale in the canonical README.
+- [ ] Agent context — provide `agent-summary.md`, declare `resources.agent_summary`, target at most 3,000 UTF-8 bytes, link `README.md`, and include the exact canonical-authority notice; otherwise record the explicit omission or size-exception rationale in the canonical README.
 - [ ] `[artifacts]` — present when a packaged `adopt.toml` exists; `manifest` names its safe repository-relative path; every artifact declares valid provenance.
 - [ ] `hooks/{hook-id}/` — present when the standard owns a hook; the source-owned artifact installs under `.agents/hooks/{standard-id}/` with managed drift and executable mode declarations.
 - [ ] `[relations]` — any of `companions` / `extends` / `conflicts` present are arrays; no `requires` field; every `extends` is ADR-backed.

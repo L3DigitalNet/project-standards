@@ -11,8 +11,8 @@ summary = "The contract every standard bundle in this repository must declare."
 adoption = "none"       # validator | copy-adopt | cli | reference-only | none
 
 [versions]
-supported = ["1.0"]
-latest = "1.0"
+supported = ["1.0", "1.1"]
+latest = "1.1"
 
 [config]
 namespaces = []         # claims no key in .project-standards.yml
@@ -28,6 +28,7 @@ conflicts = []
 
 [resources]
 readme = "README.md"
+agent_summary = "agent-summary.md"
 template = "templates/standard.toml"
 
 # No [[authority]] blocks — governs authoring, not a concern over consumer files.
