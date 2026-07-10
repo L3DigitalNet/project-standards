@@ -54,7 +54,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `agent-handoff-v3` | `main` | Deprecated engine checkout itself | Not a consumer | — | Not applicable | Final deletion target; owner checkpoint required |
 | `agent-pseudocode` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `cc-usage-monitor` | `main` | Migrated from dual hooks and root companions | Dual | `81d464d` | Pass | Recheck with published v5 before deletion |
-| `control-center` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
+| `control-center` | `main` | Migrated from dual hooks and root companions | Dual | `1be92ec` | Pass | Recheck with published v5 before deletion |
 | `doc-proc-scripts` | `main` | Migrated from Codex hook, engine references, root companions | Codex | `e1db276` | Pass | Recheck with published v5 before deletion |
 | `doc-proc-scripts-kate-decision` | `main` | Codex registration/hook; root status/tasks | Codex | — | Pending | Protected no-upstream topic worktree; inventory-only |
 | `docmend` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Current `dev` branch requires repo-local review |
@@ -72,7 +72,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `website-aboutme` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `website-l3digital.net` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 
-Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. `project-standards`, `progressive-apparel`, `doc-proc-scripts`, and `cc-usage-monitor` now validate on v1; 17 concrete-evidence consumers remain.
+Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Five repositories now validate on v1: `project-standards`, `progressive-apparel`, `doc-proc-scripts`, `cc-usage-monitor`, and `control-center`; 16 concrete-evidence consumers remain.
 
 ## Installed-wheel verification
 
