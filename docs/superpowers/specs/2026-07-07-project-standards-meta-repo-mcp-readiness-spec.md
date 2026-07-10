@@ -824,7 +824,7 @@ No secrets are required. The repository must not add secrets for manifest valida
 | FR-012 | Nine real `standards/*/standard.toml` files; `test_real_manifests_validate`; required-manifest graph gate. | Passing |
 | FR-013 | Agent Handoff provides `agent-summary.md`; Python Coding records a rationale; the other active standards do not yet provide either. | Failing — non-blocking `Should` gap |
 | FR-014 | `standards/catalog.md`; `tests/test_standards_graph_catalog.py`; `render-catalog --check`. | Passing |
-| FR-015 | v5 manifest/graph migration posture is added with the release documents. | Blocked — migration note not yet committed |
+| FR-015 | `UPGRADING.md` v5 manifest/graph migration posture. | Passing |
 | FR-016 | ADRs 0001-0013 are active and pass managed frontmatter/ADR validation. | Passing |
 | FR-017 | Individual, pairwise, and all-standard coverage in `tests/test_standards_composition.py`. | Passing |
 | FR-018 | `tests/test_adopt_dogfood.py` and `tests/test_standards_composition.py`. | Passing |
@@ -912,7 +912,7 @@ No durable runtime data is owned. Repository history and normal GitHub backups c
 - [x] Generated standards index.
 - [x] ADRs listed in §8.3.
 - [x] Updated adopt guides or bundle docs for every existing standard.
-- [ ] `UPGRADING.md` / migration notes for manifest introduction.
+- [x] `UPGRADING.md` / migration notes for manifest introduction.
 - [ ] MCP-readiness report template/checklist.
 
 ---

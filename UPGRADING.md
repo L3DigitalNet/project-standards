@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for upgrading a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-07'
+updated: '2026-07-10'
 tags:
   - 'migration'
   - 'upgrade'
@@ -18,6 +18,7 @@ related:
   - 'standards/project-spec/adopt.md'
   - 'standards/agent-handoff/adopt.md'
   - 'standards/agent-handoff/resources/legacy-migration.md'
+  - 'standards/standard-bundle-authoring/README.md'
 ---
 
 # Upgrading from v3 to v4
@@ -39,6 +40,19 @@ For each consuming repository:
 5. Run `project-standards agent-handoff validate --repo .` and `drift-check --repo .`; commit the migration as that repository's own reviewed change.
 
 The new package owns no global environment and stores no state outside the adopting repository. See [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) and the [legacy migration guide](standards/agent-handoff/resources/legacy-migration.md) for the complete procedure.
+
+## Standard manifests and graph validation in v5.0.0
+
+No action is required for ordinary consuming repositories. `standard.toml`, the standards graph, provider declarations, artifact-manifest links, composition fixtures, and `standards/catalog.md` describe and verify this repository's published standard packages; they do not add consumer configuration keys or silently adopt files.
+
+Repositories that author or redistribute their own standard bundles must follow the [Standard Bundle Authoring Standard](standards/standard-bundle-authoring/README.md), provide a validated `standard.toml`, declare any packaged `adopt.toml` link and artifact provenance, and run:
+
+```bash
+project-standards standards validate-graph --root . --require-all-manifests
+project-standards standards render-catalog --root . --check
+```
+
+Existing consumers continue to use their selected standard's `adopt.md`, config fragment, and reusable workflow. Re-pinning to v5 does not enable graph validation against the consumer repository unless that repository deliberately adopts the authoring contract.
 
 ## What breaks
 
