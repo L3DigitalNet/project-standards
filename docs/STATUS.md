@@ -21,3 +21,4 @@
 - `Russ-Estate-Paperwork` is migrated (`ab71b83`); the dual profile passes and current task metadata no longer carries financial identifiers.
 - `star-trek-retro-remake` is migrated (`9d4e19e`); 11,212 tests, strict mypy, Ruff, and five import contracts pass on `main`.
 - `agent-pseudocode` is migrated (`21ade51`); 48 tests, Ruff, BasedPyright, three pseudocode checks, and the dual profile pass on `main`.
+- `Claude-Code-Plugins` is migrated (`0fdbd98`); marketplace validation, npm audit, targeted Markdown, and the dual profile pass on `main`.
