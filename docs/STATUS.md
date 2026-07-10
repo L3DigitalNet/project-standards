@@ -24,3 +24,4 @@
 - `Claude-Code-Plugins` is migrated (`0fdbd98`); marketplace validation, npm audit, targeted Markdown, and the dual profile pass on `main`.
 - `dotfiles` is migrated (`baf8705`); its complete 170-test `make check` gate and the dual profile pass on `main`.
 - `finances` is migrated (`f3e1d01`); Ruff, 361 PostgreSQL-backed tests, an empty legacy report, and the dual profile pass on `main`.
+- `homelab` is migrated (`ceba125`); changed-doc frontmatter and Markdown, npm audit, llm-wiki citations, and the dual profile pass on `main`.
