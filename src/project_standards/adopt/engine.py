@@ -222,12 +222,16 @@ def _atomic_write(
     Return ``False`` only when a non-replacing install loses a destination-creation
     race. Managed installs use atomic replacement; create-only installs use an atomic
     hard-link operation that cannot overwrite a destination created after classification.
+    Create-only publication therefore requires hard-link support in the destination
+    filesystem; unsupported link operations fail cleanly instead of falling back to a
+    non-atomic write.
 
     Mode: if overwriting an existing file, copy its permissions. For a new file, use
     a umask-respecting 0o666 (same behaviour as open()), avoiding the mkstemp default
     of 0600 which would leave adopted files owner-only.
     """
     tmp: Path | None = None
+    published = False
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".adopt-", suffix=".tmp")
@@ -257,7 +261,9 @@ def _atomic_write(
             try:
                 # Both paths share a directory/filesystem. link(2) publishes the staged
                 # inode atomically but returns EEXIST instead of replacing consumer content.
+                # Filesystems without hard-link support fail closed through WriteError.
                 os.link(tmp, target)
+                published = True
             except FileExistsError:
                 tmp.unlink(missing_ok=True)
                 return False
@@ -265,11 +271,17 @@ def _atomic_write(
         return True
     except OSError as exc:
         if tmp is not None:
-            tmp.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                tmp.unlink(missing_ok=True)
+        if published:
+            raise WriteError(
+                f"destination {target} was installed but staging cleanup failed for {tmp}: {exc}"
+            ) from exc
         raise WriteError(f"failed writing {target}: {exc}") from exc
     except BaseException:
         if tmp is not None:
-            tmp.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                tmp.unlink(missing_ok=True)
         raise
 
 

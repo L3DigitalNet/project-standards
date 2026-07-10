@@ -7,11 +7,13 @@ Covers the full attack surface the engine defends against:
   - Symlinked parent directories that could redirect writes outside --dest
   - Broken (dangling) symlinks
   - WriteError mapping for mkstemp failure, unreadable source, and os.replace failure
+  - Create-only hard-link publication, cleanup failures, and unsupported filesystems
   - Fragment target path-safety (UsageError on traversal even though fragments never write)
 """
 
 from __future__ import annotations
 
+import errno
 from pathlib import Path
 
 import pytest
@@ -86,6 +88,90 @@ def test_atomic_write_failure_preserves_original(
         eng.execute_plan(plan, tmp_path, force=True, dry_run=False)
     assert target.read_text() == "original\n"  # untouched
     assert not list(tmp_path.glob(".adopt-*"))  # temp cleaned up
+
+
+def test_create_only_transient_cleanup_failure_reports_installed_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from project_standards.adopt.engine import _atomic_write  # pyright: ignore[reportPrivateUsage]
+
+    target = tmp_path / "STATUS.md"
+    real_unlink = Path.unlink
+    attempts = 0
+
+    def flaky_unlink(path: Path, missing_ok: bool = False) -> None:
+        nonlocal attempts
+        if path.name.startswith(".adopt-"):
+            attempts += 1
+            if attempts == 1:
+                raise PermissionError("staging cleanup blocked")
+        real_unlink(path, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+
+    with pytest.raises(
+        WriteError, match=r"destination .* was installed but staging cleanup failed"
+    ) as exc_info:
+        _atomic_write(target, b"template\n", replace=False)
+
+    assert isinstance(exc_info.value.__cause__, PermissionError)
+    assert target.read_bytes() == b"template\n"
+    assert list(tmp_path.glob(".adopt-*.tmp")) == []
+    assert attempts == 2
+
+
+def test_create_only_persistent_cleanup_failure_never_masks_writeerror(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from project_standards.adopt.engine import _atomic_write  # pyright: ignore[reportPrivateUsage]
+
+    target = tmp_path / "STATUS.md"
+    real_unlink = Path.unlink
+    attempts = 0
+
+    def blocked_unlink(path: Path, missing_ok: bool = False) -> None:
+        nonlocal attempts
+        if path.name.startswith(".adopt-"):
+            attempts += 1
+            raise PermissionError("staging cleanup blocked")
+        real_unlink(path, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", blocked_unlink)
+
+    with pytest.raises(
+        WriteError, match=r"destination .* was installed but staging cleanup failed"
+    ) as exc_info:
+        _atomic_write(target, b"template\n", replace=False)
+
+    assert isinstance(exc_info.value.__cause__, PermissionError)
+    assert target.read_bytes() == b"template\n"
+    staged = list(tmp_path.glob(".adopt-*.tmp"))
+    assert len(staged) == 1
+    assert staged[0].read_bytes() == b"template\n"
+    assert attempts == 2
+
+
+def test_create_only_unsupported_hard_link_fails_cleanly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import project_standards.adopt.engine as engine
+
+    target = tmp_path / "STATUS.md"
+
+    def unsupported_link(_src: Path, _dst: Path) -> None:
+        raise OSError(errno.EOPNOTSUPP, "hard links unsupported")
+
+    monkeypatch.setattr(engine.os, "link", unsupported_link)
+
+    with pytest.raises(WriteError, match="failed writing") as exc_info:
+        engine._atomic_write(  # pyright: ignore[reportPrivateUsage]
+            target, b"template\n", replace=False
+        )
+
+    assert isinstance(exc_info.value.__cause__, OSError)
+    assert exc_info.value.__cause__.errno == errno.EOPNOTSUPP
+    assert not target.exists()
+    assert list(tmp_path.glob(".adopt-*.tmp")) == []
 
 
 def test_source_side_unsafe_rejected() -> None:
