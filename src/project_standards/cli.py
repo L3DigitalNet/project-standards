@@ -313,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     p_adopt.add_argument(
         "--force",
         action="store_true",
-        help="overwrite existing files that would otherwise be skipped",
+        help="overwrite existing managed artifacts; create-only artifacts remain skipped",
     )
     p_adopt.add_argument(
         "--dry-run",

@@ -37,6 +37,18 @@ def test_list_plain_lists_packaged_adopt_standards(
         assert sid in out
 
 
+def test_adopt_force_help_explains_create_only_exception(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["adopt", "--help"])
+
+    assert exc_info.value.code == 0
+    normalized = " ".join(capsys.readouterr().out.split())
+    assert "overwrite existing managed artifacts" in normalized
+    assert "create-only artifacts remain skipped" in normalized
+
+
 def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["list", "--json"])
     out = capsys.readouterr().out

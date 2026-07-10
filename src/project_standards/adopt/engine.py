@@ -209,13 +209,19 @@ def _render(action: Action, ref: str) -> bytes:
     return data
 
 
-def _atomic_write(target: Path, data: bytes, mode: int | None = None) -> None:
-    """Write to a temp file in the target's directory, then os.replace into place.
+def _atomic_write(
+    target: Path, data: bytes, mode: int | None = None, *, replace: bool = True
+) -> bool:
+    """Stage data beside target, then install it atomically.
 
-    EVERY filesystem step (mkdir, mkstemp, write, replace) is inside the guard so a
+    EVERY filesystem step (mkdir, mkstemp, write, publish) is inside the guard so a
     recoverable failure surfaces as WriteError (exit 1), never a raw traceback. The
     temp file is cleaned up on any failure (including KeyboardInterrupt / generator-
     throw — uses BaseException, not just OSError); an existing destination is left intact.
+
+    Return ``False`` only when a non-replacing install loses a destination-creation
+    race. Managed installs use atomic replacement; create-only installs use an atomic
+    hard-link operation that cannot overwrite a destination created after classification.
 
     Mode: if overwriting an existing file, copy its permissions. For a new file, use
     a umask-respecting 0o666 (same behaviour as open()), avoiding the mkstemp default
@@ -243,9 +249,20 @@ def _atomic_write(target: Path, data: bytes, mode: int | None = None) -> None:
                 tmp.chmod(stat.S_IMODE(0o666 & ~mask))
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
-        # Module-level os.replace (not Path.replace) so the failure-injection test can
-        # monkeypatch this exact atomic-rename call.
-        os.replace(tmp, target)  # noqa: PTH105
+        if replace:
+            # Module-level os.replace (not Path.replace) so the failure-injection test can
+            # monkeypatch this exact atomic-rename call.
+            os.replace(tmp, target)  # noqa: PTH105
+        else:
+            try:
+                # Both paths share a directory/filesystem. link(2) publishes the staged
+                # inode atomically but returns EEXIST instead of replacing consumer content.
+                os.link(tmp, target)
+            except FileExistsError:
+                tmp.unlink(missing_ok=True)
+                return False
+            tmp.unlink()
+        return True
     except OSError as exc:
         if tmp is not None:
             tmp.unlink(missing_ok=True)
@@ -286,7 +303,15 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
             continue
         rendered = _render(action, ref)  # may raise WriteError on unreadable source
         if not dry_run:
-            _atomic_write(abs_dest, rendered, action.mode)
+            installed = _atomic_write(
+                abs_dest,
+                rendered,
+                action.mode,
+                replace=action.install_policy is InstallPolicy.MANAGED,
+            )
+            if not installed:
+                report.skipped.append(action.dest)
+                continue
         (report.overwritten if exists else report.created).append(action.dest)
     return report
 

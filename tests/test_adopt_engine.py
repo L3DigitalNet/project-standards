@@ -226,6 +226,67 @@ def test_force_never_overwrites_create_only(tmp_path: Path) -> None:
     assert report.skipped == ["docs/STATUS.md"]
 
 
+def test_create_only_race_preserves_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import project_standards.adopt.engine as engine
+
+    source = tmp_path / "source.md"
+    source.write_text("template\n", encoding="utf-8")
+    target = tmp_path / "consumer" / "docs" / "STATUS.md"
+    real_link = engine.os.link
+
+    def racing_link(src: Path, dst: Path) -> None:
+        target.write_text("consumer knowledge\n", encoding="utf-8")
+        real_link(src, dst)
+
+    monkeypatch.setattr(engine.os, "link", racing_link)
+    action = Action(
+        kind="file",
+        source_path=source,
+        dest="docs/STATUS.md",
+        target=None,
+        standards=("agent-handoff",),
+        install_policy=InstallPolicy.CREATE_ONLY,
+    )
+
+    report = execute_plan([action], target.parents[1], force=True, dry_run=False)
+
+    assert target.read_text(encoding="utf-8") == "consumer knowledge\n"
+    assert report.created == []
+    assert report.skipped == ["docs/STATUS.md"]
+    assert list(target.parent.glob(".adopt-*.tmp")) == []
+
+
+def test_create_only_flows_from_manifest_through_execution(tmp_path: Path) -> None:
+    bundles = tmp_path / "bundles"
+    bundle = bundles / "x"
+    bundle.mkdir(parents=True)
+    (bundle / "template.md").write_text("template\n", encoding="utf-8")
+    (bundle / "adopt.toml").write_text(
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n'
+        'source = "template.md"\ndest = "docs/STATUS.md"\n'
+        'provenance = "package-owned"\ninstall_policy = "create-only"\n',
+        encoding="utf-8",
+    )
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+
+    plan = build_plan(["x"], bundles_dir=bundles)
+    first_report = execute_plan(plan, consumer, force=False, dry_run=False)
+    target = consumer / "docs" / "STATUS.md"
+
+    assert plan[0].install_policy is InstallPolicy.CREATE_ONLY
+    assert target.read_text(encoding="utf-8") == "template\n"
+    assert first_report.created == ["docs/STATUS.md"]
+
+    target.write_text("consumer knowledge\n", encoding="utf-8")
+    second_report = execute_plan(plan, consumer, force=True, dry_run=False)
+
+    assert target.read_text(encoding="utf-8") == "consumer knowledge\n"
+    assert second_report.skipped == ["docs/STATUS.md"]
+
+
 def test_validate_dest_lexical_escape_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     # On POSIX every escape vector is already rejected by _require_safe_relative,
     # so the normpath containment check is exercised by injection (it guards
