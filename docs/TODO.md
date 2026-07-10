@@ -90,7 +90,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
 
-- [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation.
+- [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation (`2a7ed25`).
 
   Preserved the drafts, added them to the managed frontmatter scope, and added conformant metadata with current relationships.
 
