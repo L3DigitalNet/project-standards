@@ -303,7 +303,9 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                 messages.append(
                     f"paragraph has {len(paragraph)} chars; max {config.max_paragraph_chars}"
                 )
-    if config.require_quick_reference and "Quick Reference" not in sections:
+    if config.require_quick_reference and not any(
+        section.casefold() == "quick reference" for section in sections
+    ):
         messages.append("missing Quick Reference")
     if config.require_tables_or_bullets:
         lines = text.splitlines()
@@ -370,7 +372,7 @@ def check_secret_references(path: str, text: str, policy: HandoffPolicy) -> tupl
     """Flag likely literal credentials without returning any matched value."""
     findings: list[Finding] = []
     assignment = re.compile(
-        rf"^\s*({'|'.join(re.escape(label) for label in policy.credentials.blocked_assignment_labels)})"
+        rf"^\s*(?:[-*+]\s+)?({'|'.join(re.escape(label) for label in policy.credentials.blocked_assignment_labels)})"
         r"\s*[:=]\s*(.+?)\s*$",
         re.IGNORECASE,
     )

@@ -49,11 +49,9 @@ def test_size_status_boundaries(tmp_path: Path, size: int, expected: str) -> Non
 def _state(extra: str = "") -> str:
     return (
         "**Last updated:** 2026-07-09\n\n"
-        "## Active\n\n- Implementing policy.\n"
+        "## Current focus\n\n- Implementing policy.\n"
         f"{extra}"
-        "\n## Next\n\n- Run tests.\n"
-        "\n## Blockers\n\n- None.\n"
-        "\n## Pointers\n\n- Plan: `docs/plan.md`\n"
+        "\n## Active incidents\n\n- None.\n"
     )
 
 
@@ -89,10 +87,7 @@ def test_status_shape_is_advisory(policy: HandoffPolicy) -> None:
 
 
 def test_todo_required_order_is_fatal(policy: HandoffPolicy) -> None:
-    text = (
-        "# TODO\n\n## Agent Tracked Tasks\n\n- [ ] Agent task.\n\n"
-        "## User Tracked Tasks\n\n- [ ] User task.\n"
-    )
+    text = "# TODO\n\n## Agent tasks\n\n- [ ] Agent task.\n\n## User tasks\n\n- [ ] User task.\n"
 
     findings = check_document("docs/TODO.md", text, policy)
 

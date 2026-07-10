@@ -551,6 +551,18 @@ def plan_upgrade(*, repository: Path, standard_ids: tuple[str, ...]) -> Adoption
     )
 
 
+def check_provenance_lock(
+    repository: RepositoryRoot, *, required: bool = True
+) -> tuple[ProvenanceLock | None, tuple[Finding, ...]]:
+    """Read and verify the installed lock using the planner's normalized hashes."""
+    findings: list[Finding] = []
+    changes: list[PlannedChange] = []
+    lock, _raw = _load_lock(repository, findings, changes, required=required)
+    if lock is not None:
+        _verify_lock(repository, lock, findings, changes)
+    return lock, tuple(findings)
+
+
 def _recheck_dynamic(repository: RepositoryRoot, write: _DynamicWrite) -> None:
     current = _read_optional(repository, write.path)
     if write.require_absent:
