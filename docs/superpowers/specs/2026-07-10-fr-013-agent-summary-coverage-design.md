@@ -1,6 +1,6 @@
 # FR-013 Agent Summary Coverage Design
 
-**Date:** 2026-07-10 **Status:** owner-approved in principle; written review pending **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** owner-approved; design review revisions applied **Author:** session 2026-07-10
 
 ## Goal
 
@@ -64,7 +64,7 @@ Graph validation will enforce path existence and bundle containment. The generat
 
 Summaries will not be added to packaged `adopt.toml` artifact manifests. They are standard-package resources for discovery and context loading, not files installed into consumer repositories. No consumer configuration, adoption behavior, registry default, reusable workflow, or MCP server code changes.
 
-Agent Handoff's runtime `standard.toml` mirror already declares its summary and remains byte-identical to the canonical manifest.
+Agent Handoff's runtime bundle mirrors both `standard.toml` and `agent-summary.md`. After the canonical files change, both copies under `src/project_standards/bundles/agent-handoff/` must be re-synced byte-for-byte. Existing dogfood tests enforce summary parity; manifest parity remains an explicit package test contract.
 
 ### Package versioning
 
@@ -103,6 +103,8 @@ The summaries also receive a manual semantic review against their canonical docu
 After the summaries and manifests exist:
 
 - regenerate `standards/catalog.md`;
+- re-sync `src/project_standards/bundles/agent-handoff/standard.toml` and `agent-summary.md` from their canonical counterparts;
+- revise the Python Coding README agent-summary passage to link to the new summary instead of claiming none exists;
 - update Standard Bundle Authoring's anatomy, example, checklist, and template guidance;
 - record the additive package-resource changes in CHANGELOG `[Unreleased]`;
 - update the SPEC-MT01 FR-013 traceability row to `Passing` only after verification;
@@ -114,11 +116,12 @@ After the summaries and manifests exist:
 The implementation must pass:
 
 ```bash
-uv run pytest tests/test_standard_manifest.py tests/test_standards_graph_catalog.py -q
+uv run pytest tests/test_standard_manifest.py tests/test_standards_graph_catalog.py tests/test_adopt_dogfood.py -q
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards render-catalog --root . --check
 npx prettier --check .
 npx markdownlint-cli2 "**/*.md"
+uv run project-standards validate --config .project-standards.yml
 uv run project-standards spec validate --config .project-standards.yml
 uv run project-standards spec lint --config .project-standards.yml --strict
 uv run python scripts/check.py
