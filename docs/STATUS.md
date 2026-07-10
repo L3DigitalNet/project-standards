@@ -16,3 +16,4 @@
 - `cc-usage-monitor` is migrated (`81d464d`); its full 150-test gate and dual Claude/Codex profile pass on `main`.
 - `control-center` is migrated (`1be92ec`); its full 283-test gate and dual profile pass on `main` after two vulnerable locks were refreshed.
 - `website-aboutme` validates on `testing` (`ab6bc3d`) with a clean Astro build; branch policy still requires integration to `main`.
+- `Markdown-Keeper` is migrated (`d373df1`); 174 unit tests and the dual profile pass on `main`.
