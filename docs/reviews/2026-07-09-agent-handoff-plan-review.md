@@ -100,3 +100,36 @@ No existing bundle ships a `standard.toml` under `src/project_standards/bundles/
 5. **L1–L2** — batch with the same pass.
 
 None of the findings disturb the plan's architecture: the provider-runner boundary, install-policy lifecycle, bounded-merge adapters, two-phase preflight-then-apply planner, provenance lock, and agent-guided migration are all faithful to SPEC-DPEY rev 0.3 and ADR 0022, and the plan's platform assumptions were verified against the code rather than assumed. Fix the two criticals, batch the importants, and it is safe to hand to an executor.
+
+---
+
+## Round 2 — Re-review after fixes (2026-07-09, plan at commit `99f768f`, spec rev 0.5)
+
+**Verdict: READY TO EXECUTE.** Every round-1 item is resolved correctly, and every resolution was verified empirically — the revised spec passes `spec validate`/`spec lint`, the frontmatter gate (27 files) and Prettier pass on all changed documents, the newly pinned legacy paths were re-checked against the pinned commit, and the spec was grepped clean of residual cwd-authority wording. Nothing regressed. No blocking findings remain; two informational notes below carry into execution.
+
+### Round-1 fixes — verified resolved ✅
+
+| Item | Fix applied | Verified |
+| --- | --- | --- |
+| C1 | Task 13 Step 4 rewritten as a disposable-repo probe: `mktemp` repo, hook copied to `.agents/hooks/agent-handoff/` at `0755`, minimal `docs/handoff/state.md`, a valid SessionStart JSON event piped in with `CLAUDE_PROJECT_DIR` set, exit captured via `PIPESTATUS[1]` and asserted `0`, byte cap checked on the real output. Step 3 defines empty stdin: "Empty stdin and malformed JSON both emit a concise stderr diagnostic and exit `2`"; Step 1's test list gains "malformed or empty JSON input exit `2`" and loads the hook from the installed layout. | ✅ script traced by hand: the installed depth makes `parents[3]` resolve to the smoke repo root; the fixture event is well-formed; the `/tmp` redirect (L4) is gone with it |
+| C2 | Resolved via change-controlled spec revision rather than a Deviations Log row — the recommended option (a). Rev 0.4 amends §10.1 step 2 ("derives the repository root from its canonical installed path… event working-directory and environment paths are untrusted metadata") and splits EC-002 into CLI-anchor vs hook-anchor behavior, attributed to owner-directed plan review; the plan now cites rev 0.5. | ✅ grep confirms no "working directory" authority wording survives anywhere in the spec; plan Task 13 and spec §10.1/EC-002 now state the same authority model |
+| M1 | Coverage table gains `IR-001–IR-008 → 5, 7–11, 14–15` and `DR-001–DR-008 → 1, 4–5, 7, 10, 12, 16`. | ✅ spot-checked per ID: IR-001→11, IR-004/005→8–9, IR-006→7, IR-007→14, IR-008→15; DR-002→12, DR-003→1+4, DR-006→16 all hold |
+| M2 | `test_hook_p95_under_two_seconds` added to Task 13 Step 1: 100 runs, `sorted(durations)[94] < 2.0`, in-process network blocked by `socket` monkeypatch; Step 3 adds `main(*, stdin, stdout, stderr) -> int` so the installed artifact is benchmarkable without a subprocess harness. | ✅ index 94 of 100 sorted samples is the p95 value; the callable-`main` requirement makes the benchmark honest rather than import-time trickery |
+| M3 | Spec §16 reworked (rev 0.4/0.5, owner-directed): no package-specific license, no nested license file, repository root license inherited, MIT notices preserved for copied/derived legacy content. Plan mirrors it: new Global Constraints bullet, "License / ownership evidence" column plus a verify-`LICENSE`-is-MIT instruction in Task 4 Step 2, and Task 16 requires the skill to omit a `license` key. | ✅ pinned commit's `LICENSE` re-checked: MIT. The rev 0.5 no-nested-license direction goes beyond the round-1 ask; it is internally consistent everywhere it appears |
+| M4 | Artifact Matrix gains an "Artifact kind" column: the four integration rows are `fragment`, all others `file`. The matrix note, Task 4 Step 4, and Task 10 Step 3 all now state the interception rule — "generic `execute_plan()` must never write a fragment destination"; fragments always go through the bounded/semantic adapters. | ✅ the clobbering path is closed at declaration, planning, and execution altitude — three redundant statements, which is right for the one rule whose violation destroys consumer config |
+| M5 | Task 2 Step 4 extended: bundle-contract docs must state that a standard whose provider runner loads declarations from the installed wheel ships a byte-identical `src/project_standards/bundles/{id}/standard.toml` mirror; parity stays in package/wheel tests, with an explicit and well-reasoned refusal to add a graph heuristic ("the current manifest schema does not declare which provider runner needs a runtime mirror"). | ✅ |
+| L1 | `mode=None` added to the Task 1 `Action(...)` snippet. | ✅ constructs against the current dataclass |
+| L2 | Every inventory row now carries its exact commit-relative path: nested `agent-handoff-v3/…` prefixes on the scripts/skill/globals/STATUS/TODO rows, repo-root `scripts/tests/*.bats` and `tests/unit/test_*.py` for the test corpus. Dispositions also normalized to the declared enum (`evidence only` → `document-only`). | ✅ all nine path groups re-verified present at `56b24df7…` (including `agent-handoff-v3/STATUS.md`/`TODO.md` and 7 `.bats` files under root `scripts/tests/`) |
+| L3 | `docs/handoff/state.md` updated: rev 0.5 approved, plan awaits execution choice. | ✅ |
+| L4 | Superseded by the C1 rewrite; no `/tmp` artifact remains. | ✅ |
+
+Gate evidence for the revised documents: `spec validate` OK, `spec lint` OK, `validate-frontmatter` OK (27 files), Prettier clean on the spec, plan, and state file; markdownlint's only repository findings remain the pre-existing `docs/future-standards/**` backlog.
+
+### Informational (no action required — carry into execution)
+
+- **Smoke probe exercises the degraded-Git path.** The Task 13 Step 4 smoke repo is `git init` with zero commits, so the probe validates the EC-008 degradation branch (bounded output, exit 0), not the full branch/commits/status path — which the pytest corpus covers separately. Adding one `git commit --allow-empty` to the script would make the probe exercise the primary path; worth doing opportunistically, not worth a revision.
+- **Empty-`args` exec-form reading (round-1 caveat, unchanged).** Task 8 still relies on an empty `args` array selecting exec form; the live docs say exec form applies "when `args` is set", which an empty array plausibly satisfies. Task 8 Step 3's implement-from-current-contract instruction covers it — the executor should confirm the empty-array behavior when fetching the contract, before the RED tests encode it.
+
+### Round-2 status
+
+All round-1 criticals, importants, and minors are closed; the fixes were made at the right altitude (spec revision for the authority model, contract documentation for the bundle mirror, declaration-plus-planner rules for fragment safety) rather than patched locally. The plan is consistent with SPEC-DPEY rev 0.5 and ADR 0022 end to end. Ready to hand to an executor.
