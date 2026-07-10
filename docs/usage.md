@@ -28,7 +28,7 @@ license: null
 
 ## NAME
 
-`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, and materialize packaged standard artifacts.
+`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, materialize packaged standards, and maintain Agent Handoff repositories.
 
 ## SYNOPSIS
 
@@ -37,23 +37,25 @@ project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
+project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--dry-run] [--json]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
 project-standards standards <verb> [<args>...]
+project-standards agent-handoff <verb> [<args>...]
 project-standards {--help | --version}
 ```
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes twelve leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), two `standards` operations (`validate-graph`, `render-catalog`), and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes eighteen leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), two `standards` operations (`validate-graph`, `render-catalog`), six `spec` verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`), and six `agent-handoff` verbs (`validate`, `drift-check`, `size-report`, `shape-check`, `legacy-report`, `upgrade`).
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 11 leaf commands plus the `spec` and `standards` group overviews, documented on this single page because the two-group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — eighteen leaf commands plus the `spec`, `standards`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
-`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, `spec`, and `standards` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
+`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, `spec`, `standards`, specialized Agent Handoff adoption, and `agent-handoff` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
 
 ## OPTIONS
 
@@ -108,16 +110,22 @@ Materialize one or more standards' artifacts into a destination directory. Runs 
 
 ```text
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
+project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
 ```
 
 Options:
 
-- **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`). Required.
+- **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`, `agent-handoff`). Required.
 - **`--dest <dir>`** — Destination directory to write artifacts into. Default: the current directory. Must already exist unless `--dry-run` is given (a non-existent `--dest` without `--dry-run` exits 2).
-- **`--force`** — Overwrite existing files that would otherwise be skipped. Safety: destructive — it replaces on-disk files; prefer `--dry-run` first.
+- **`--force`** — Overwrite existing managed files that would otherwise be skipped. Create-only artifacts remain skipped. Safety: destructive for generic managed files — prefer `--dry-run` first.
 - **`--dry-run`** — Show what would be written without making any changes. Depends on nothing; when set, a non-existent `--dest` is accepted because nothing is written.
+- **`--manual`** — Agent Handoff only. Select manual startup and declare no automatic harness. Mutually exclusive with `--harness`; one selection is required.
+- **`--harness {claude-code | codex}`** — Agent Handoff only. Select an automatic startup profile. Repeat for both harnesses. Values must be unique; mutually exclusive with `--manual`.
+- **`--json`** — Agent Handoff only. Emit the aggregate plan/report schema instead of human-readable changes.
 
 Exit status: `0` success · `1` a file write failed · `2` invalid invocation, non-directory `--dest`, or registry/bundle drift · `3` a standard's bundle manifest is missing or malformed.
+
+Agent Handoff adoption performs a complete non-mutating preflight before writes, preserves consumer knowledge, rechecks content hashes before managed updates, and writes its provenance lock last. Another standard may share the same invocation and aggregate plan.
 
 ### `list`
 
@@ -132,6 +140,75 @@ Options:
 - **`--json`** — Emit the standards, their contract versions, and their artifacts as a JSON array instead of the default human-readable listing. Default: off (text).
 
 Exit status: `0` success · `2` registry/bundle drift.
+
+### `agent-handoff`
+
+Command group for validating and maintaining an adopted Agent Handoff v1 repository. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
+
+```text
+project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade} [--repo <dir>] [--json]
+```
+
+All verbs accept **`--repo <dir>`** (default: current directory). Read-only reports accept **`--json`**. `upgrade` additionally accepts **`--dry-run`**.
+
+| Verb | Purpose |
+| --- | --- |
+| `validate` | Accumulate layout, config, integration, artifact, provenance, reference, size, shape, and credential findings |
+| `drift-check` | Report only standard-owned artifact, integration, and provenance drift |
+| `size-report` | Project UTF-8 byte targets and hard caps into the common finding schema |
+| `shape-check` | Project fatal eager-document and advisory lazy-document shape rules |
+| `legacy-report` | Detect recognized and unclassified repo-local historical evidence without mutation |
+| `upgrade` | Preview or apply a provenance-guarded refresh of standard-owned artifacts |
+
+Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite failure.
+
+### `agent-handoff validate`
+
+Validate the complete v1 repository contract without writing files.
+
+```text
+project-standards agent-handoff validate [--repo <dir>] [--json]
+```
+
+### `agent-handoff drift-check`
+
+Report only standard-owned skill, hook, integration, and provenance drift.
+
+```text
+project-standards agent-handoff drift-check [--repo <dir>] [--json]
+```
+
+### `agent-handoff size-report`
+
+Report configured UTF-8 byte targets and hard caps through the common finding schema.
+
+```text
+project-standards agent-handoff size-report [--repo <dir>] [--json]
+```
+
+### `agent-handoff shape-check`
+
+Report eager and lazy document-shape findings without other conformance checks.
+
+```text
+project-standards agent-handoff shape-check [--repo <dir>] [--json]
+```
+
+### `agent-handoff legacy-report`
+
+Detect recognized and unclassified historical repository evidence without mutation or outside-repository inspection.
+
+```text
+project-standards agent-handoff legacy-report [--repo <dir>] [--json]
+```
+
+### `agent-handoff upgrade`
+
+Preview or apply a provenance-guarded refresh of standard-owned artifacts. Existing consumer knowledge is never overwritten.
+
+```text
+project-standards agent-handoff upgrade [--repo <dir>] [--dry-run] [--json]
+```
 
 ### `standards`
 

@@ -49,6 +49,18 @@ _DOGFOOD = {
     "markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id": (
         "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id"
     ),
+    "agent-handoff/README.md": "standards/agent-handoff/README.md",
+    "agent-handoff/adopt.md": "standards/agent-handoff/adopt.md",
+    "agent-handoff/agent-summary.md": "standards/agent-handoff/agent-summary.md",
+    "agent-handoff/hooks/session-start/session_start.py": (
+        "standards/agent-handoff/hooks/session-start/session_start.py"
+    ),
+    "agent-handoff/skills/agent-handoff/SKILL.md": (
+        "standards/agent-handoff/skills/agent-handoff/SKILL.md"
+    ),
+    "agent-handoff/skills/agent-handoff/agents/openai.yaml": (
+        "standards/agent-handoff/skills/agent-handoff/agents/openai.yaml"
+    ),
 }
 
 

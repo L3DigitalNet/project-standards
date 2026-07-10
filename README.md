@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation and Python projects across all repositories. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them — the **Frontmatter** and **ADR** standards through a small config file plus a reusable CI workflow, the **Python Tooling**, **Markdown Tooling**, **Project Specification**, and **CLI Documentation** standards through copy-adopted scaffolds where they need repo-local config or CI callers, and the Project Specification authoring surface through the `project-standards spec` CLI — rather than vendoring their own copies.
+Shared standards, schemas, templates, and tooling for documentation, Python projects, CLI documentation, project specifications, and repository-local agent continuity. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them through config, reusable workflows, copy-adopted scaffolds, repo-local skills, and the `project-standards` CLI rather than vendoring their own implementations.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -17,6 +17,7 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [Markdown Tooling Standard](#markdown-tooling-standard)
     - [Project Specification Standard](#project-specification-standard)
     - [CLI Documentation Standard](#cli-documentation-standard)
+    - [Agent Handoff Standard](#agent-handoff-standard)
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
     - [Standard Bundle Authoring Standard (internal/reference)](#standard-bundle-authoring-standard-internalreference)
   - [Consuming the standards](#consuming-the-standards)
@@ -25,6 +26,7 @@ Shared standards, schemas, templates, and tooling for documentation and Python p
     - [Markdown Tooling](#markdown-tooling)
     - [Project Specification](#project-specification)
     - [CLI Documentation](#cli-documentation)
+    - [Agent Handoff](#agent-handoff)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
@@ -42,6 +44,7 @@ project-standards/
 │   ├── markdown-tooling/      #   standard + adopt (doc-only)
 │   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
 │   ├── cli-documentation/     #   standard + adopt + templates/ + examples/ + resources/
+│   ├── agent-handoff/         #   standard + adopt + templates/ + skill + shared hook
 │   ├── python-coding/         #   draft standard (reference-only; README only)
 │   └── standard-bundle-authoring/ # internal/reference meta-standard (README + standard.toml + template)
 ├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
@@ -108,6 +111,14 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 - **Standard:** [`standards/cli-documentation/README.md`](standards/cli-documentation/README.md)
 - **Templates:** [`templates/`](standards/cli-documentation/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/adopt.md)
 
+### Agent Handoff Standard
+
+Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
+
+- **Standard:** [`standards/agent-handoff/README.md`](standards/agent-handoff/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/resources/legacy-migration.md)
+
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (package version 0.4):** reference-only, unregistered as a consumer-selectable contract, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
@@ -116,13 +127,13 @@ Code-shape and agent-behavior rules for Python — the reference companion to th
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`, package version 1.0):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` consumer contract, and **not one of the six released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
+The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`, package version 1.0):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` consumer contract, and **not one of the seven released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
 
 - **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
 
 ## Consuming the standards
 
-How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, **Project Specification**, and **CLI Documentation** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
+How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
@@ -158,6 +169,17 @@ Run `project-standards adopt project-spec` to materialize the reusable `validate
 ### CLI Documentation
 
 Copy-adopt like Markdown Tooling: select a profile (Script/Packaged/Packaged-deep), then run `project-standards adopt cli-documentation` to materialize a `docs/usage.md` scaffold and the `cli-docs-check.yml` drift-check workflow, plus a `cli_documentation:` config fragment to paste into `.project-standards.yml`. See [`standards/cli-documentation/adopt.md`](standards/cli-documentation/adopt.md) for profile selection and the full authoring/review checklist.
+
+### Agent Handoff
+
+Choose manual startup or one or both supported automatic harnesses, preview the full plan, and adopt from the installed package. Consumer knowledge remains create-only; the repo-local skill, optional shared hook, bounded integrations, and provenance lock are standard-managed.
+
+```bash
+project-standards adopt agent-handoff --dest . --manual --dry-run --json
+project-standards agent-handoff validate --repo .
+```
+
+See [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) for automatic profiles, harness trust review, validation, upgrades, and migration.
 
 ### Pin to a release tag, not `main`
 

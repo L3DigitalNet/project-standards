@@ -21,6 +21,7 @@ This is the Python package that ships the validator, adopt engine, bundled schem
     - [project-standards validate (combined command)](#project-standards-validate-combined-command)
     - [project-standards fix (combined fix command)](#project-standards-fix-combined-fix-command)
     - [project-standards spec (nested command group)](#project-standards-spec-nested-command-group)
+    - [project-standards agent-handoff (nested command group)](#project-standards-agent-handoff-nested-command-group)
   - [Module map](#module-map)
   - [Adopt engine](#adopt-engine)
     - [Artifact kinds](#artifact-kinds)
@@ -42,6 +43,7 @@ Console scripts registered by `pyproject.toml`:
 | `project-standards fix [FLAGS] [FILE …]` | `cli.py` | Format frontmatter, fix ids, then re-validate (bundled schema only) |
 | `project-standards spec {validate\|lint\|extract\|next\|new\|upgrade} …` | `specs/cli.py` | Nested command group over project specs — see [project-standards spec (nested command group)](#project-standards-spec-nested-command-group) |
 | `project-standards standards {validate-graph\|render-catalog} …` | `standards_graph/cli.py` | Validate standard composition or render/check the generated standards catalog |
+| `project-standards agent-handoff {validate\|drift-check\|size-report\|shape-check\|legacy-report\|upgrade} …` | `agent_handoff/cli.py` | Validate and maintain repository-local Agent Handoff v1 |
 | `validate-frontmatter [FLAGS] [FILE …]` | `validate_frontmatter.py` | Validate YAML frontmatter against the JSON Schema |
 | `validate-id [FLAGS] [FILE …]` | `validate_id.py` | Validate `id` field format per `doc_type` |
 | `validate-references [FLAGS]` | `validate_references.py` | Cross-file checks (id uniqueness, referential integrity, etc.) |
@@ -253,6 +255,19 @@ Returns the worst exit code across all three phases. If the final validate fails
 
 Each verb is implemented in `src/project_standards/specs/cli.py`; `spec new` and `spec upgrade` share the `_NewArgParser`/`NewError`-style refusal contract (frozen `code` + `message` + `findings`, `--json` support) so both fail closed rather than emitting a document the validator would reject.
 
+### project-standards agent-handoff (nested command group)
+
+`project-standards agent-handoff` routes manifest-declared providers for the Agent Handoff v1 standard. `validate` accumulates full conformance findings; `drift-check` limits findings to standard-owned artifacts, integrations, and provenance; `size-report` and `shape-check` expose policy views; `legacy-report` detects repo-local historical evidence without mutation; and `upgrade` refreshes only clean managed content.
+
+Specialized adoption is intercepted before the generic parser so startup profile flags remain available while the complete ordered standard list still forms one aggregate preflight:
+
+```bash
+project-standards adopt agent-handoff --dest . --manual --dry-run --json
+project-standards agent-handoff validate --repo . --json
+```
+
+The provider implementation lives under `agent_handoff/`. All consumer I/O is confined to a resolved repository root, dynamic writes carry content-hash preconditions, and the provenance lock is written last.
+
 ---
 
 ## Module map
@@ -276,6 +291,7 @@ src/project_standards/
 │   ├── engine.py      # build_plan() + execute_plan() — plan-and-execute model
 │   ├── manifest.py    # adopt.toml reader; Artifact + Manifest dataclasses
 │   └── errors.py      # AdoptError hierarchy with exit codes
+├── agent_handoff/               # v1 planner, adapters, policy, validation, and providers
 │
 └── bundles/
     ├── _shared/               # Artifacts shared across multiple standards
@@ -285,7 +301,8 @@ src/project_standards/
     ├── markdown-frontmatter/  # Markdown Frontmatter bundle + repo-local skill artifacts
     ├── markdown-tooling/      # Markdown Tooling standard bundle
     ├── python-tooling/        # Python Tooling standard bundle
-    └── cli-documentation/     # CLI Documentation standard bundle
+    ├── cli-documentation/     # CLI Documentation standard bundle
+    └── agent-handoff/         # docs, templates, skill, hook, policy, and manifests
 ```
 
 ---
@@ -320,7 +337,7 @@ The registry encodes the two-plane versioning model:
 
 - **Frontmatter** — maps contract version labels (`"1.0"`, `"1.1"`) to bundled schema file names; one label is the `default` used when no version is pinned.
 - **ADR** — each ADR contract version declares `supports_frontmatter: […]`, the Frontmatter versions it is compatible with. The validator enforces this at config load time.
-- **Python Tooling / Markdown Tooling / CLI Documentation** — flat lists of known label versions; validated as metadata only (never used to select a schema).
+- **Python Tooling / Markdown Tooling / CLI Documentation / Agent Handoff** — flat lists of known label versions; validated as metadata only (never used to select a schema).
 
 `cli.py` asserts at startup that the set of bundles and the set of registry-tracked standards are identical in both directions (bundle-only or registry-only → exit 2).
 

@@ -1,0 +1,191 @@
+from __future__ import annotations
+
+import json
+import os
+import stat
+import subprocess
+import tomllib
+import zipfile
+from pathlib import Path
+
+import yaml
+
+from project_standards.cli import main
+
+_REPO = Path(__file__).parents[2]
+_SOURCE = _REPO / "standards/agent-handoff"
+_BUNDLE = _REPO / "src/project_standards/bundles/agent-handoff"
+
+
+def _source_files() -> tuple[Path, ...]:
+    return tuple(sorted(path for path in _SOURCE.rglob("*") if path.is_file()))
+
+
+def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
+    source_relatives = {path.relative_to(_SOURCE) for path in _source_files()}
+    bundled_relatives = {
+        path.relative_to(_BUNDLE)
+        for path in _BUNDLE.rglob("*")
+        if path.is_file() and path.name != "adopt.toml"
+    }
+
+    assert source_relatives == bundled_relatives
+    for relative in source_relatives:
+        assert (_SOURCE / relative).read_bytes() == (_BUNDLE / relative).read_bytes(), relative
+
+
+def test_every_declared_resource_resolves() -> None:
+    manifest = tomllib.loads((_SOURCE / "standard.toml").read_text(encoding="utf-8"))
+
+    for relative in manifest["resources"].values():
+        assert (_SOURCE / relative).is_file(), relative
+        assert (_BUNDLE / relative).is_file(), relative
+
+
+def test_skill_identity_version_and_openai_metadata_are_canonical() -> None:
+    skill = (_SOURCE / "skills/agent-handoff/SKILL.md").read_text(encoding="utf-8")
+    _opening, frontmatter, body = skill.split("---", maxsplit=2)
+    metadata = yaml.safe_load(frontmatter)
+    openai = yaml.safe_load(
+        (_SOURCE / "skills/agent-handoff/agents/openai.yaml").read_text(encoding="utf-8")
+    )
+
+    assert metadata["name"] == "agent-handoff"
+    assert metadata["metadata"]["version"] == "1.0"
+    assert "license" not in metadata
+    assert body.lstrip().startswith("# Agent Handoff")
+    assert openai["interface"]["display_name"] == "Agent Handoff"
+    assert "$agent-handoff" in openai["interface"]["default_prompt"]
+    assert not list(_SOURCE.rglob("LICENSE*"))
+
+
+def test_public_package_material_has_no_retired_runtime_dependency() -> None:
+    excluded = {_SOURCE / "resources/legacy-migration.md"}
+    forbidden = ("handoff-system-v3", "agent-handoff-v3", "~/projects/", "git clone")
+
+    for path in _source_files():
+        if path in excluded or path.suffix not in {".md", ".yaml", ".json", ".toml"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert not any(term in text for term in forbidden), path
+
+
+def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
+    adopt = (_SOURCE / "adopt.md").read_text(encoding="utf-8")
+    root_readme = (_REPO / "README.md").read_text(encoding="utf-8")
+    standards_index = (_REPO / "standards/README.md").read_text(encoding="utf-8")
+    package_readme = (_REPO / "src/project_standards/README.md").read_text(encoding="utf-8")
+
+    assert "--repository" not in adopt
+    assert "--repo ." in adopt
+    assert "Agent Handoff Standard" in root_readme
+    assert "[agent-handoff/]" in standards_index
+    assert "project-standards agent-handoff" in package_readme
+
+
+def test_automatic_adoption_preserves_executable_hook_mode(tmp_path: Path) -> None:
+    assert (
+        main(
+            [
+                "adopt",
+                "agent-handoff",
+                "--dest",
+                str(tmp_path),
+                "--harness",
+                "codex",
+            ]
+        )
+        == 0
+    )
+
+    hook = tmp_path / ".agents/hooks/agent-handoff/session_start.py"
+    assert stat.S_IMODE(hook.stat().st_mode) == 0o755
+    assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 0
+
+
+def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(tmp_path)],
+        cwd=_REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (wheel,) = tmp_path.glob("*.whl")
+    names = set(zipfile.ZipFile(wheel).namelist())
+
+    for source in _source_files():
+        relative = source.relative_to(_SOURCE).as_posix()
+        expected = f"project_standards/bundles/agent-handoff/{relative}"
+        assert any(name.endswith(expected) for name in names), expected
+    assert any(name.endswith("project_standards/bundles/agent-handoff/adopt.toml") for name in names)
+
+
+def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(dist)],
+        cwd=_REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (wheel,) = dist.glob("*.whl")
+    venv = tmp_path / "venv"
+    subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
+    subprocess.run(
+        [str(venv / "bin/python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        check=True,
+        capture_output=True,
+    )
+    repository = tmp_path / "consumer"
+    repository.mkdir()
+    executable = venv / "bin/project-standards"
+    environment = {**os.environ, "PYTHONPATH": ""}
+
+    adopted = subprocess.run(
+        [
+            str(executable),
+            "adopt",
+            "agent-handoff",
+            "--dest",
+            str(repository),
+            "--harness",
+            "claude-code",
+            "--harness",
+            "codex",
+            "--json",
+        ],
+        cwd=repository,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert adopted.returncode == 0, adopted.stderr
+    assert json.loads(adopted.stdout)["summary"]["errors"] == 0
+
+    validated = subprocess.run(
+        [str(executable), "agent-handoff", "validate", "--repo", str(repository), "--json"],
+        cwd=repository,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert validated.returncode == 0, validated.stderr
+    assert json.loads(validated.stdout)["findings"] == []
+
+    imported = subprocess.run(
+        [
+            str(venv / "bin/python"),
+            "-c",
+            "import project_standards; print(project_standards.__file__)",
+        ],
+        cwd=repository,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert str(_REPO) not in imported.stdout
