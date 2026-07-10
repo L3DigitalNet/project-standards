@@ -1,6 +1,6 @@
 # Pre-Step-07 Readiness Remediation Design
 
-**Date:** 2026-07-10 **Status:** approved for implementation planning **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** revised after adversarial review; pending owner approval **Author:** session 2026-07-10
 
 ## Problem and goal
 
@@ -8,7 +8,7 @@ SPEC-MT01 Steps 00-06 are implemented and the full local Python gate is green, b
 
 The goal is to reconcile the implemented contract with its evidence, fix verified housekeeping defects, and add an explicit repository-only graph/catalog CI gate. The work must not change the generic Python Tooling verification contract or begin MCP server implementation.
 
-The source inventory is the [2026-07-10 readiness and housekeeping review](../../codex-reviews/2026-07-10-1004-codex-review-plan.md).
+The source inventory is the [2026-07-10 readiness and housekeeping review](../../codex-reviews/2026-07-10-1004-codex-review-plan.md). The design also incorporates the 2026-07-10 adversarial design review.
 
 ## Approved approach
 
@@ -33,7 +33,7 @@ Use a hybrid of conservative reconciliation and repository-specific enforcement 
 - Add the missing SPEC-MT01 Steps 02-06 v5 changelog and migration posture.
 - Reconcile stale handoff plan/inventory pointers without rewriting append-only history.
 - Fix Agent Handoff shape policy so `docs/handoff/bugs/INDEX.md` is not treated as a numbered bug record.
-- Add explicit hosted CI for graph validation and catalog freshness.
+- Add explicit hosted CI for graph validation and catalog freshness on the active `testing` branch and released `main` branch.
 - Add tests for the workflow contract and shape-policy correction.
 
 ### Deferred for owner input
@@ -44,6 +44,8 @@ Use a hybrid of conservative reconciliation and repository-specific enforcement 
 - Whether FR-013 advisory debt must be cleared before v5.0.0 or may remain documented.
 - Root-artifact consolidation across Python Tooling and Markdown Tooling.
 - Any rewriting of append-only historical session rows.
+- Machine-enforced sorting or completeness validation for `docs/handoff/bugs/INDEX.md`.
+- Trimming the advisory instruction-file size warnings in `AGENTS.md` and `CLAUDE.md` while preserving the repository's self-contained contract.
 
 ### Excluded
 
@@ -69,7 +71,7 @@ Blocking open questions already settled by ADRs 0001-0013 and the implemented ma
 
 `scripts/check.py` and `.github/workflows/check.yml` are dogfooded copies of the Python Tooling standard. Adding `project-standards standards ...` commands there would impose behavior specific to this repository on unrelated Python consumers and break the byte-identical source/bundle contract.
 
-Create `.github/workflows/validate-standards-graph.yml` instead. It runs on every pull request and every push to `main`, with no path filters. Avoiding path filters prevents a future manifest, registry, provider, resource, artifact, or renderer change from bypassing the gate.
+Create `.github/workflows/validate-standards-graph.yml` instead. It runs on every pull request and every push to `testing` or `main`, with no path filters. The `testing` trigger produces hosted evidence for the branch where v5 work lands; the `main` trigger continues enforcement after release. Avoiding path filters prevents a future manifest, registry, provider, resource, artifact, or renderer change from bypassing the gate.
 
 The workflow uses the repository's current action and uv pins, installs the locked development environment, and runs two named steps:
 
@@ -84,27 +86,32 @@ The workflow job has a stable display name suitable for later branch-protection 
 
 A focused Python test parses the new workflow and proves:
 
-- `pull_request` and `push` to `main` remain enabled;
+- `pull_request` and `push` to both `testing` and `main` remain enabled;
 - the job has a stable display name;
 - dependency installation uses `uv sync --locked --all-groups`;
 - graph validation retains `--require-all-manifests`;
 - catalog validation retains `--check`;
 - the workflow does not use path filters;
-- action and uv pins match current repository policy.
+- checkout, Python setup, and uv setup versions match the corresponding entries parsed from `.github/workflows/check.yml`.
+
+The workflow test compares parsed workflow values instead of repeating action or uv pin literals. A coordinated dependency update therefore changes the reusable gate and repository-only workflow, while the test continues to enforce parity without becoming a third pin source.
 
 The existing current-repository graph and catalog tests remain in place. The new workflow adds operational visibility and hosted evidence; it does not replace unit or integration coverage.
 
 ### 4. Bug-index policy targets numbered records only
 
-The Agent Handoff standard requires `Cause`, `Fix`, and `Lesson` sections in numbered bug records, while `bugs/INDEX.md` has a distinct index shape. The current `docs/handoff/bugs/*.md` policy glob incorrectly applies bug-record requirements to the index.
+The Agent Handoff standard requires `Cause`, `Fix`, and `Lesson` sections in numbered bug records. `bugs/INDEX.md` is an index governed only by the skill's sorting instruction; it has no machine-enforced shape profile. The current `docs/handoff/bugs/*.md` policy glob incorrectly applies bug-record requirements to the index.
 
-Change the policy target to numbered filenames such as `docs/handoff/bugs/[0-9][0-9][0-9]-*.md`. Update shape-target discovery so it derives the static parent directory from the path component before the filename pattern instead of splitting only at `*`. This keeps repository-boundary validation correct for bracket globs and avoids a hard-coded `INDEX.md` exception.
+Change the policy target to numbered filenames such as `docs/handoff/bugs/[0-9][0-9][0-9]-*.md`. Update shape-target discovery by separating the directory and filename pattern. Reject glob metacharacters (`*`, `?`, or `[`) in the directory component with an `AH-PATH-BOUNDARY` finding, validate the literal directory through the repository boundary, and apply the filename pattern with `Path.glob`. This keeps repository-boundary validation correct for bracket globs and avoids a hard-coded `INDEX.md` exception.
+
+This remediation deliberately leaves `INDEX.md` without structural validation. Removing a known-invalid record check is narrower and safer than adding a new index grammar. Machine-enforced sorting or completeness is a separate owner-choice enhancement.
 
 The fix updates both canonical and packaged policy copies and adds regression tests proving:
 
 - a malformed numbered bug record still warns;
 - `bugs/INDEX.md` is excluded from bug-record section checks;
-- bracket-pattern discovery remains confined to the repository.
+- bracket-pattern discovery remains confined to the repository;
+- a policy pattern with a glob metacharacter in its directory component is rejected.
 
 ### 5. Handoff history remains append-only
 
@@ -149,6 +156,8 @@ uv run project-standards validate --config .project-standards.yml
 uv run project-standards agent-handoff validate --repo .
 uv run project-standards agent-handoff drift-check --repo .
 uv run python scripts/check.py
+npm ci
+uv run pytest tests/coherence -v
 git diff --check
 ```
 
@@ -160,7 +169,7 @@ Targeted Prettier and markdownlint checks apply to changed Markdown. The known b
 - Step-07-only work and advisory gaps remain visibly pending rather than falsely complete.
 - Standard Bundle Authoring describes the current repository and recent package-methodology ADRs.
 - v5 changelog and upgrading guidance cover the manifest/graph/catalog introduction.
-- A dedicated repository-only workflow visibly enforces graph validity and catalog freshness.
+- A dedicated repository-only workflow visibly enforces graph validity and catalog freshness on pushes to `testing` and `main`, and on pull requests.
 - Generic Python Tooling gate files remain byte-identical and behaviorally unchanged.
 - `bugs/INDEX.md` produces no numbered-bug section warning; malformed numbered records still do.
 - Current handoff pointers no longer describe completed Step 06 work as pending or the integrated Agent Handoff package as feature-branch-only.
@@ -174,4 +183,6 @@ After implementing and verifying the scope above, ask the owner one question at 
 2. whether FR-013 advisory summary/rationale debt must block v5;
 3. GitHub required-review and required-check ruleset adoption;
 4. remote issue/PR cleanup;
-5. root-artifact consolidation design.
+5. root-artifact consolidation design;
+6. whether to trim the advisory instruction-file size warnings;
+7. whether the bug index needs machine-enforced sorting or completeness validation.
