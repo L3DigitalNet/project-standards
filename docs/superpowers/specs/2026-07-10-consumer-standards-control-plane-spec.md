@@ -19,6 +19,7 @@ related:
     - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
     - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
     - 'docs/adr/adr-0008-consumer-config-namespace-registry.md'
+    - 'docs/adr/adr-0009-agent-summary-and-canonical-standard-split.md'
     - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
     - 'docs/adr/adr-0011-dogfood-consumer-fixtures-for-standards-composition.md'
     - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
@@ -46,6 +47,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-10 | Codex with owner design review | Initial full specification from the approved control-plane, reconciliation, version-channel, migration, and safety design. |
+| 0.2 | 2026-07-10 | Codex with specification review | Resolve round-1 findings and follow-up consistency gaps across recovery, migration, version transitions, provider phases, concurrency, package-local state, referenced extensions, ADR coverage, and examples. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -57,7 +59,7 @@ Consumer repositories currently adopt standards through package-specific procedu
 
 This specification introduces a consumer-side standards control plane rooted at `.standards/`. A consumer initializes one catalog line, selects independently adoptable standards and their options in one TOML file, previews a deterministic reconciliation plan, and explicitly applies installation, upgrade, repair, or removal. The installed `project-standards` distribution supplies a complete offline catalog, immutable versioned payloads, schemas, providers, and migrations. Validation remains read-only.
 
-The design separates the SemVer `project-standards` release, each standard package's immutable `major.minor` payload version, the consumer's package selector, and any package-owned schema/behavior contract version. `version = 'latest'` selects a package payload from the non-breaking default track for the installed catalog major; a package option such as `contract_version` independently selects a supported consumer contract inside that payload. Breaking package majors may ship early as explicit candidates without forcing a catalog-major release. A consumer may opt into one with package-specific `--allow-major` authorization; the next catalog major may later promote that line to the ordinary default.
+The design separates the SemVer `project-standards` release, each standard package's immutable `major.minor` payload version, the consumer's package selector, and any package-owned schema/behavior contract version. Absent a matching candidate authorization or accepted-major lock record, `version = 'latest'` selects the non-breaking default for the installed catalog major. A package option such as `contract_version` independently selects a supported consumer contract inside that payload. Breaking package majors may ship early as explicit candidates without forcing a catalog-major release. A consumer may opt into one by applying `latest` with authorization for the named package and target major, or may combine that authorization with an exact pin; the accepted-major lock record then constrains later `latest` resolution until the next catalog major may promote that line to the ordinary default.
 
 The resulting control plane is the foundation for a separate `project-toolbox` standard. That standard will provide provider-neutral, project-local workflows and skills without depending on GitHub or any other standard. It is deliberately specified after this platform contract so it can use one stable adoption, configuration, versioning, and drift model.
 
@@ -70,7 +72,8 @@ The resulting control plane is the foundation for a separate `project-toolbox` s
 - A neutral `project-standards init --catalog CATALOG_MAJOR` bootstrap that creates `.standards/` without enabling any standard.
 - A unified `.standards/config.toml` for catalog selection, desired package state, version selectors, and namespaced package options.
 - Tool-managed `.standards/catalog.toml` and `.standards/lock.toml` files.
-- Package-owned resources under `.standards/packages/STANDARD_ID/` when no external discovery path is required.
+- Package-owned resources and durable state under `.standards/packages/STANDARD_ID/` when no external discovery path is required.
+- Optional consumer-owned referenced extensions under `.standards/extensions/STANDARD_ID/` when no conventional external path is required.
 - Versioned configuration schemas for each consumer-facing standard namespace.
 - Embedded, immutable payloads for every catalog-advertised installable package version.
 - Catalog-scoped non-breaking defaults and opt-in breaking-candidate package versions.
@@ -142,19 +145,21 @@ Every initialized consumer carries a committed, reviewable control plane:
 ├── config.toml          # user-owned desired state and package options
 ├── catalog.toml         # tool-owned snapshot from the installed distribution
 ├── lock.toml            # tool-owned applied state and provenance
+├── extensions/          # optional consumer-owned package inputs; absent after plain init
+│   └── STANDARD_ID/
 └── packages/
     └── STANDARD_ID/     # package-owned resources/state without required external paths
 ```
 
-The user initializes the selected catalog major once. No package is enabled by default. The user then edits `config.toml` or uses equivalent CLI commands, previews reconciliation, and explicitly applies it. The planner resolves versions, validates package options, checks authorities and destinations, classifies changes, and reports every conflict before mutation. The executor installs trusted embedded payloads, runs declared providers, verifies results, and writes the lock last.
+The user initializes the selected catalog major once. No package is enabled by default. The user then edits `config.toml` or uses equivalent CLI commands, previews reconciliation, and explicitly applies it. The planner resolves versions, validates package options, runs declared read-only planning providers, checks authorities and destinations, classifies changes, and reports every conflict before mutation. The executor alone writes the reviewed artifact plan, invokes declared read-only post-apply verification, and writes the lock last.
 
-Files that external tools discover at fixed paths remain there. The lock records their owner, version, provenance, install policy, content hash, and shared references. Package-specific duplicate locks are retired.
+Files that external tools discover at fixed paths remain there. The lock records their owner, version, provenance, install policy, content hash, and shared references. Every durable entry below `packages/STANDARD_ID/` is likewise declared, centrally inventoried, and committed with the repository; transient or ignored runtime state does not belong in that namespace. Consumer-owned package inputs may use `extensions/STANDARD_ID/` when no conventional path is needed; packages may read and hash those referenced inputs but never manage their content. Package-specific duplicate locks are retired.
 
 ### 3.3 Assumptions
 
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
-| A-001 | Consumers commit `config.toml`, `catalog.toml`, and `lock.toml` with the repository. | Reproducibility and review require a different durable-state mechanism. |
+| A-001 | Consumers commit the durable `.standards/` tree, including `config.toml`, `catalog.toml`, `lock.toml`, declared package-owned entries under `packages/`, and any consumer-authored referenced inputs under `extensions/`. | Reproducibility and review require a different durable-state mechanism. |
 | A-002 | The installed `project-standards` distribution is the trusted source for catalog metadata, payloads, schemas, providers, and migrations. | Remote trust, signatures, and source resolution must be specified before reconciliation can proceed. |
 | A-003 | Standard payloads are small enough that retaining supported immutable versions in the distribution is practical. | A content-addressed external package store becomes necessary. |
 | A-004 | The `project-standards` major release is the default compatibility boundary for package `latest` resolution. | A separate catalog-version authority and upgrade policy are required. |
@@ -167,7 +172,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | C-001 | The control plane must launch with v5 and remain compatible with every v5 consumer-facing standard. | Owner scope decision. |
 | C-002 | Initialization enables no standard and writes only the minimum `.standards/` scaffold unless migration is explicitly requested. | Owner design decision. |
 | C-003 | Validation and planning are read-only; apply is explicit. | Owner safety decision. |
-| C-004 | `version = 'latest'` must remain non-breaking within one catalog major. | Owner version-channel decision. |
+| C-004 | Without matching candidate authorization or a previously accepted-major track, `version = 'latest'` must remain on the non-breaking default within one catalog major. | Owner version-channel decision. |
 | C-005 | A breaking package major may be catalog-advertised before promotion but requires package-specific explicit authorization. | Owner version-channel decision. |
 | C-006 | A previously authorized package major must not be silently downgraded on later reconciliation. | Owner reconciliation decision. |
 | C-007 | Every ordinary package option must be expressible in `.standards/config.toml`. | Owner unified-configuration decision. |
@@ -182,11 +187,11 @@ Files that external tools discover at fixed paths remain there. The lock records
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
 | G-001 | Give consumers one neutral standards entry point. | An empty repository initializes a valid control plane with no enabled package. | FR-001, FR-002, FR-017 |
-| G-002 | Make desired and applied standard state explicit. | Configuration, catalog, and lock schemas validate and accurately describe a reconciled repository. | FR-003–FR-006 |
-| G-003 | Make adoption lifecycle safe and repeatable. | Install, update, repair, and removal plans are deterministic, reviewable, explicit, and idempotent. | FR-007–FR-010, FR-029, NFR-001–NFR-004 |
-| G-004 | Support non-breaking defaults and opt-in breaking candidates. | Catalog tests prove `latest`, pins, candidate authorization, retention, and promotion semantics. | FR-011–FR-016 |
-| G-005 | Preserve independent package composition. | Each package, all pairs, and the full supported set reconcile without undeclared dependencies or ownership conflicts. | FR-018–FR-023, FR-029, FR-031 |
-| G-006 | Centralize user-selectable package configuration. | Every normal option validates under its owned namespace and materializes through its package provider without conflating package and consumer contracts. | FR-003, FR-004, FR-024, FR-030 |
+| G-002 | Make desired and applied standard state explicit. | Configuration, catalog, lock, and package-local state validate, accurately describe a reconciled repository, and have bounded recovery when one authority is missing. | FR-003–FR-006, FR-032, FR-034 |
+| G-003 | Make adoption lifecycle safe and repeatable. | Install, update, repair, and removal plans are deterministic, reviewable, explicit, idempotent, and concurrency-safe. | FR-007–FR-010, FR-029, FR-034–FR-036, NFR-001–NFR-004, NFR-009 |
+| G-004 | Support non-breaking defaults and opt-in breaking candidates. | Catalog tests prove `latest`, pins, candidate authorization, retention, explicit exit, and promotion semantics. | FR-011–FR-016, FR-033 |
+| G-005 | Preserve independent package composition. | Each package, all pairs, and the full supported set reconcile without undeclared dependencies or ownership conflicts. | FR-018–FR-023, FR-029, FR-031, FR-035 |
+| G-006 | Centralize user-selectable package configuration. | Every normal option validates under its owned namespace and materializes through its package provider without conflating package and consumer contracts. | FR-003, FR-004, FR-024, FR-030, FR-036 |
 | G-007 | Preserve offline reproducibility. | An installed-wheel test initializes and reconciles every advertised version without network access. | FR-005, FR-006, FR-016, FR-028 |
 | G-008 | Provide a stable foundation for `project-toolbox`. | The later toolbox spec can declare workflows, skills, options, and managed artifacts without new adoption machinery. | FR-018, FR-019, FR-024 |
 
@@ -213,13 +218,14 @@ Files that external tools discover at fixed paths remain there. The lock records
 | Tool release | Exact SemVer version of the installed `project-standards` distribution, such as `5.3.0`. | Different from package `major.minor` versions. |
 | Standard package version | Immutable `major.minor` contract and payload for one standard. | Several package versions may exist in one catalog release. |
 | Consumer contract version | Package-owned schema or behavior version selected as a standard option, such as the Markdown Frontmatter schema contract. | Not the package payload selector and never inferred from it. |
-| Default track | Package version resolved by `version = 'latest'` for the selected catalog major. | Must remain non-breaking within that catalog major. |
+| Default track | Ordinary package version resolved by `version = 'latest'` for the selected catalog major. | Used when no matching candidate authorization or accepted-major track overrides ordinary resolution; remains non-breaking within that catalog major. |
 | Breaking candidate | Available package major excluded from ordinary `latest` resolution until explicitly authorized or promoted in a later catalog major. | Released and installable, but not the catalog default. |
 | Desired state | User-owned package selection and options in `config.toml`. | Not proof that artifacts are installed. |
 | Applied state | Tool-owned resolved versions, options, ownership, and provenance in `lock.toml`. | Written only after successful apply and verification. |
 | Versioned payload | Immutable package resources, artifact manifest, config schema, providers, migrations, documentation, and digest for one version. | The current one-payload bundle is insufficient for candidate versions. |
 | Reconciliation | Comparing desired state, catalog, lock, and live files to plan or apply convergent changes. | Planning is read-only; apply is explicit. |
 | Managed artifact | Package-owned file that the reconciler may update or remove only when its recorded preconditions hold. | Different from create-only and consumer-owned content. |
+| Referenced extension | Consumer-owned package input named by a typed config option and hashed as a reconciliation input. | Prefer `.standards/extensions/STANDARD_ID/` unless an external tool requires a conventional path; never place it in the package-owned namespace. |
 | Semantic contribution | A package-owned, key- or marker-scoped change composed with other contributions against one virtual planned tree. | Replaces unowned printed fragments and whole-file collisions for shared structured/instruction files. |
 
 ---
@@ -235,25 +241,25 @@ Files that external tools discover at fixed paths remain there. The lock records
 | FR-003 | `config.toml` shall declare the expected catalog major, each standard's enabled state and version selector, and package settings under owned `config` namespaces. | Desired state and options need one user-owned source. | Schema fixtures accept valid selectors/settings and reject unknown or misplaced keys. | Must |
 | FR-004 | Every consumer-facing package version shall publish a machine-readable configuration schema with defaults and namespace ownership. | Options must be version-aware and collision-free. | Catalog validation rejects missing schemas, duplicate namespaces, invalid defaults, and undeclared settings. | Must |
 | FR-005 | `catalog.toml` shall list every package available in the installed distribution, including non-enabled, reference-only, internal, stable, retained, and candidate versions. | Users and tools need complete local discovery. | The generated catalog matches packaged manifests and includes all graph nodes and version channels. | Must |
-| FR-006 | `lock.toml` shall record the exact tool release, catalog major and digest, config digest, resolved package versions, effective-option digests, artifact ownership/provenance/hashes, shared references, and accepted package-major tracks. | Applied state must be reproducible and auditable. | Lock schema and reconciliation tests detect every material mismatch. | Must |
+| FR-006 | `lock.toml` shall record the exact tool release, catalog major and digest, config digest, resolved package versions, effective-option digests, artifact ownership/provenance/hashes, referenced-input paths/digests, shared references, and accepted package-major tracks. | Applied state must be reproducible and auditable. | Lock schema and reconciliation tests detect every material mismatch without assigning managed ownership to referenced inputs. | Must |
 | FR-007 | `project-standards reconcile` shall build and display a complete read-only plan from config, catalog, lock, live repository state, and a virtual tree containing every planned semantic contribution. | Users must inspect changes before mutation, and cross-package conflicts must be known before writes. | Plan fixtures cover create, semantic merge, update, repair, remove, preserve, no-op, and conflict actions without filesystem writes. | Must |
 | FR-008 | `project-standards reconcile --apply` shall execute only a conflict-free plan, run post-apply verification, and write the lock last. | Mutation requires explicit, recoverable authorization. | Apply tests prove precondition rechecks, atomic replacement, verification, and lock-last behavior. | Must |
 | FR-009 | `project-standards validate` and `reconcile --check` shall report desired-state, lock, config, catalog, and artifact drift without applying changes. | Validation and CI must remain safe. | Mutation spies prove all validation/check paths are read-only. | Must |
-| FR-010 | Disabling a package shall remove only unchanged, exclusively owned managed artifacts; it shall preserve shared, create-only, consumer-owned, modified, and ambiguous content. | Removal must not destroy project work. | Removal fixtures verify preservation, reference counting, and actionable conflict findings. | Must |
-| FR-011 | Within a selected catalog major, `version = 'latest'` shall resolve to the package's declared non-breaking default, not necessarily the numerically highest available version. | Breaking candidates must not surprise ordinary consumers. | Resolver tests keep default-track consumers on the compatible package line. | Must |
+| FR-010 | Disabling a package shall remove only unchanged, exclusively owned managed artifacts, including package-local artifacts under `.standards/packages/STANDARD_ID/`; it shall preserve shared, create-only, consumer-owned, modified, and ambiguous content. A modified or undeclared entry in the package namespace shall block that package's removal, and the empty namespace shall be pruned only after every declared entry is removed safely. | Removal must not destroy project work. | Removal fixtures verify preservation, reference counting, package-local conflict handling, namespace pruning, and actionable findings. | Must |
+| FR-011 | Within a selected catalog major, `version = 'latest'` shall resolve to the package's declared non-breaking default, not necessarily the numerically highest available version, unless the current apply carries matching FR-013 authorization or the lock carries an FR-014 accepted-major track. | Breaking candidates must not surprise ordinary consumers while explicit and durable opt-ins remain usable. | Resolver tests keep ordinary consumers on the compatible default and exercise only the two declared candidate-track exceptions. | Must |
 | FR-012 | Consumers shall be able to pin an exact catalog-advertised package version. | Projects need deterministic opt-out from automatic package updates. | Exact-pin fixtures remain unchanged across compatible catalog refreshes. | Must |
-| FR-013 | A catalog may advertise a breaking package candidate, but installation or transition to its major shall require `--allow-major STANDARD_ID` or an equivalent explicit package-specific authorization. | Package betas should ship without forcing a tool-major release. | Candidate fixtures fail closed without authorization and succeed only for the named package with authorization. | Must |
-| FR-014 | After a breaking package major is authorized, ordinary reconciliation shall retain that major and track compatible updates within it without repeated authorization or silent downgrade. | Applied authorization must be durable and convergent. | Lock/resolver tests preserve an accepted candidate track when the catalog default remains older. | Must |
-| FR-015 | Promoting a breaking candidate to the ordinary default track shall require a new `project-standards` catalog major. | Default-track breaking changes need one explicit consumer boundary. | Release-policy tests reject a default package-major change within one tool major. | Must |
+| FR-013 | A catalog may advertise a breaking package candidate, but entry to a major that is not the selected catalog's default shall require `--allow-major STANDARD_ID@TARGET_MAJOR` or equivalent authorization matching both package and target major. With `version = 'latest'`, authorization shall select the newest compatible advertised candidate within that major; an exact selector shall remain an exact pin. A bare package ID shall never choose among candidate majors. | Package betas should ship without forcing a tool-major release, weakening pins, or creating ambiguous candidate selection. | Candidate fixtures cover `latest` and exact pins, fail closed without matching target-major authorization, isolate authorization to one package/major, and remain deterministic with several candidate majors and versions. | Must |
+| FR-014 | After a breaking package major is authorized, ordinary reconciliation with `version = 'latest'` shall retain that major and track compatible updates within it without repeated authorization or silent downgrade; an exact selector shall remain fixed under FR-012. | Applied authorization must be durable and convergent without weakening explicit pins. | Lock/resolver tests preserve and update an accepted `latest` track when the catalog default remains older while exact candidate pins remain fixed. | Must |
+| FR-015 | Promoting a breaking candidate to the ordinary default track shall require a new `project-standards` catalog major. For packages following the prior catalog's default track, the consumer's explicit catalog-major transition and apply shall authorize the new catalog's declared defaults without redundant package flags. Exact pins and accepted tracks on a different major shall remain sticky; an accepted `latest` track matching the promoted default shall normalize to the ordinary default and clear `major_authorized`. | Default-track breaking changes need one explicit consumer boundary without double authorization or silent loss of stronger package intent. | Release-policy and upgrade tests reject default package-major changes within one tool major, apply promoted defaults only after catalog-major opt-in, preserve pins/different accepted tracks, and normalize a matching promoted track. | Must |
 | FR-016 | Every catalog-advertised installable package version shall have an embedded immutable payload containing version-specific manifests, documentation/resources, config schema, providers, migrations, and digest metadata. | Multiple selectable versions must be genuinely installable offline. | Installed-wheel tests adopt every advertised version with network access disabled. | Must |
 | FR-017 | The catalog control plane shall be the single supported entry point for new adoption; the v5 `adopt` command shall remain only as a compatibility wrapper over init, desired-state update, and reconciliation. | Package guides should not reimplement platform mechanics. | CLI tests prove wrapper equivalence and emit the documented deprecation notice. | Must |
-| FR-018 | Reconciliation shall invoke only manifest-declared providers from the trusted installed payload selected for the resolved package version. | Package behavior must remain generic without arbitrary execution. | Provider tests reject config-supplied entrypoints and dispatch the version-correct packaged provider. | Must |
-| FR-019 | Package resources that need no conventional discovery path shall live under `.standards/packages/STANDARD_ID/`; required external artifacts shall remain at their declared consumer paths and be centrally locked. | The control plane should reduce clutter without breaking third-party discovery. | Path-policy tests accept both classes and reject undeclared destinations. | Must |
-| FR-020 | The central lock shall replace package-specific artifact/provenance locks; specialized package runtime state may remain only under `.standards/packages/STANDARD_ID/` without duplicating the central inventory. | Applied state needs one authority. | Agent Handoff migration tests import and retire its prior lock without losing required state. | Must |
-| FR-021 | The system shall provide a previewable and explicitly applied migration from legacy YAML configuration and recognized installed artifacts into the unified control plane. | Existing consumers need a safe v5 path. | Migration fixtures cover every current namespace, package, ownership class, and ambiguous-state stop. | Must |
+| FR-018 | Reconciliation shall invoke only manifest-declared providers from the trusted installed payload selected for the resolved package version and only according to their declared phase and side-effect contract. | Package behavior must remain generic without arbitrary or mistimed execution. | Provider tests reject config-supplied entrypoints, dispatch the version-correct packaged provider, and reject undeclared phases or effects. | Must |
+| FR-019 | Package resources and durable state that need no conventional discovery path shall live under `.standards/packages/STANDARD_ID/`; required external artifacts shall remain at their declared consumer paths and be centrally locked. | The control plane should reduce clutter without breaking third-party discovery. | Path-policy tests accept both classes and reject undeclared destinations. | Must |
+| FR-020 | The central lock shall replace package-specific artifact/provenance locks; specialized package-local durable state may remain only under `.standards/packages/STANDARD_ID/` without duplicating the central inventory. | Applied state needs one authority. | Agent Handoff migration tests import and retire its prior lock without losing required state. | Must |
+| FR-021 | The system shall provide a previewable and explicitly applied migration from legacy YAML configuration and recognized installed artifacts into the unified control plane; a successful apply shall retire `.project-standards.yml` as a visible removal action only after every recognized setting is represented and the unified state validates. | Existing consumers need a safe v5 path, and the result cannot retain two configuration authorities. | Migration fixtures cover every current namespace, package, ownership class, ambiguous-state stop, previewed legacy-file removal, failure preservation, and an applied state in which the legacy path is absent. | Must |
 | FR-022 | During v5, validation may read `.project-standards.yml` only when unified config is absent and shall emit a migration warning; both files together shall fail as split authority, and v6 shall remove legacy support. | Migration needs a bounded compatibility window. | Legacy-mode fixtures prove read-only fallback, dual-file rejection, and the documented removal gate. | Must |
 | FR-023 | Every current standard package shall work independently and in supported composition after migration to the control plane. | V5 cannot strand existing standards. | Individual, all-pairs, and all-packages real-apply fixtures pass from both fresh and migrated states, followed by every enabled package validator. | Must |
-| FR-024 | Every normal user-selectable package option shall be expressible in `config.toml`; packages shall materialize required external tool config from that desired state, while separate package config files remain explicitly referenced exceptions. | Consumers need one configuration authority. | A configurable-package fixture validates options, defaults, materialization, drift, and version migration. | Must |
+| FR-024 | Every normal user-selectable package option shall be expressible in `config.toml`; packages shall materialize required external tool config from that desired state. A separate consumer-owned config file is allowed only as an explicitly typed, repository-relative reference, outside `.standards/packages/`, when the data is unsuitable for ordinary TOML options or an external tool requires its own file. | Consumers need one configuration authority without pretending every specialized external format is inline TOML. | Configurable-package fixtures validate options, defaults, referenced extensions, materialization, drift, version migration, and rejection of undeclared or package-owned reference paths. | Must |
 | FR-025 | Reconciliation under a newer installed tool release in the same configured catalog major shall preview and apply the new generated catalog snapshot and compatible package updates. | Minor and patch catalog improvements should flow without config edits. | Same-major refresh fixtures update catalog/lock while preserving pins and non-breaking defaults. | Must |
 | FR-026 | The CLI shall provide list, inspect, enable, disable, and version-selection operations that make explicit edits equivalent to manual `config.toml` changes. | Users and agents need discoverable configuration helpers. | Round-trip tests prove CLI edits produce schema-valid config and the same reconciliation plan as manual edits. | Should |
 | FR-027 | Consumer adoption guides shall describe package-specific suitability, options, artifacts, companions, and verification while delegating common install, version, lock, upgrade, and removal mechanics to the control-plane guide. | Package procedures should stay concise and consistent. | Documentation tests and review show no package repeats or contradicts platform adoption mechanics. | Must |
@@ -261,6 +267,11 @@ Files that external tools discover at fixed paths remain there. The lock records
 | FR-029 | The planner shall compose every structured-file, config, and bounded-instruction contribution against one virtual planned tree before writing; package integrations shall declare semantic ownership instead of printing untracked fragments or competing for whole files. | Current aggregate adoption can drop fragments or partially write before discovering collisions. | Real-apply fixtures for every package pair and the full set prove preflight composition of TOML, YAML, JSON, Markdown blocks, VS Code files, and workflow artifacts. | Must |
 | FR-030 | Package selection and consumer contract selection shall remain distinct: `standards.STANDARD_ID.version` selects an installable package payload, while any schema/behavior contract version is a versioned package option under `config`. | Existing package and registry contract versions are different and cannot be reinterpreted safely. | Migration and resolver tests preserve both values independently for every currently registered contract. | Must |
 | FR-031 | The implementation shall replace approved SPEC-BA01 with a separately reviewed SPEC-BA02 for the breaking Standard Bundle Authoring contract, while retaining SPEC-BA01 and its completed plan as history. | Versioned payloads, channels, config schemas, migrations, and central reconciliation materially change the authoring contract. | SPEC-BA02 is approved, indexed, and traceable before authoring-standard implementation begins. | Must |
+| FR-032 | The system shall detect an incomplete control plane and provide a read-only recovery plan: regenerate a missing catalog from the matching installed distribution, reconstruct a missing lock only from config plus unambiguous payload/content evidence, and refuse to infer or recreate missing user-owned config. | Committed control-plane files may be lost independently through merges or manual deletion. | Missing-file fixtures cover every combination, require explicit `--repair-state --apply` for lock reconstruction, re-require candidate authorization when needed, and never invent desired config or managed ownership. | Must |
+| FR-033 | Any package-major transition outside FR-015's explicit catalog-major promotion of a prior default track, including entry to or exit from an accepted candidate, shall require matching `--allow-major STANDARD_ID@TARGET_MAJOR` authorization and a declared migration or rollback path. Candidate entry may use `latest` resolution from FR-013 or an exact pin; exit from an accepted major shall require an exact target version. Successful exit shall update `track_major` and clear `major_authorized` when the target is the selected catalog's default major; changing that exact selector back to `latest` on the already recorded major shall require no further authorization. | Candidate opt-in must be reversible without silent downgrade, ambiguous selection, weakened pin semantics, or redundant authorization during a catalog-major upgrade. | Tests cover `latest` and pinned entry, exact-target exit, several candidate majors, successful and refused downgrade, absent migration/rollback support, target-major matching, catalog-promotion exemption, sticky pins/tracks, lock updates, and subsequent same-major `latest` behavior. | Must |
+| FR-034 | Every durable entry materialized under `.standards/packages/STANDARD_ID/` shall be declared by the selected payload or a bounded provider-output contract, committed and reviewable with the repository, and inventoried in the central lock with ownership, provenance, policy, and content digest. Packages shall not store transient, cache, ignored, secret, or separately locked state there. | Package namespaces need the same reproducibility, drift, and lifecycle guarantees as conventional-path artifacts. | Fixtures prove package-local creation and hashing, edit drift, safe update/removal, modified and undeclared-content conflicts, empty-directory pruning, and absence of transient or duplicate lock state. | Must |
+| FR-035 | Every catalog provider shall declare a phase and effect contract. Read-only planning, validation, extraction, and verification providers shall consume declared immutable input snapshots and return typed outputs. Operations that intend repository mutation, including `fix`, `scaffold`, and `upgrade`, shall return a complete typed mutation plan for platform-executor apply rather than write directly. An existing explicit mutating CLI invocation may remain the apply authorization for its non-reconciliation authoring operation; reconciliation itself still requires `--apply`. The executor shall be the only supported repository writer, and legacy direct-write providers shall not be advertised as v5-compatible. | A complete preflight plan and compatible generic provider model are impossible if package code may introduce unplanned writes. | Graph, payload, installed-wheel, and filesystem-spy tests inventory every provider, prove current mutating operations return complete plans without changing the live fixture, preserve documented CLI authorization behavior, reject undeclared returned effects before executor invocation, and prove executor-only application plus read-only post-apply verification. | Must |
+| FR-036 | Explicitly referenced package extensions shall remain consumer-owned and repository-relative, be declared through the resolved package's config schema, and live outside `.standards/packages/STANDARD_ID/`; `.standards/extensions/STANDARD_ID/` is the preferred location when no conventional external path is required. After canonical path resolution, a referenced input shall not overlap any applied or planned managed artifact or semantic target in v1. The central lock shall record its path and digest without claiming, overwriting, or deleting content; disabling the package shall remove only the lock reference and preserve the file. | Specialized package input needs a reproducible authority boundary distinct from package-managed state and output ownership. | Tests cover preferred and conventional paths, path/symlink containment, missing/changed input, lock digest updates, disable/re-enable preservation, and rejection of package-namespace or current/planned-output aliases across packages. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -274,6 +285,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | NFR-006 | Maintainability | Adding a package or package version shall require manifest/payload registration, not a package-specific branch in shared init, resolver, planner, executor, or validator code. | Architecture tests and review find no package-ID dispatch outside declared adapters/providers. | Must |
 | NFR-007 | Compatibility | The v5 implementation shall preserve all current supported package behavior or document and test an approved v5 migration. | Compatibility matrix and installed-wheel fixtures pass for every package. | Must |
 | NFR-008 | Diagnostics | Every read-only and mutating command shall provide stable human output and structured `--json` findings/actions with documented exit codes. | CLI contract tests snapshot success, drift, conflict, config error, and apply failure outputs. | Should |
+| NFR-009 | Concurrency | Every initialized-repository command shall take a non-blocking advisory lock on the `.standards/` directory: shared for read-only operations and exclusive for config edits, migration, repair, and apply. Init may atomically create the directory before taking its exclusive lock but shall write no file first. | Multiprocess tests prove concurrent readers succeed, concurrent mutation/read-versus-write fails with a stable finding, the lock spans post-apply verification and lock replacement, and process exit releases it without a committed or ignored lock file. | Must |
 
 ### 7.3 Interface Requirements
 
@@ -281,7 +293,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | --- | --- | --- | --- | --- |
 | IR-001 | CLI bootstrap | The system shall expose `project-standards init --catalog CATALOG_MAJOR [--migrate] [--apply]`. | Local CLI; preview unless an apply flag is present for migration. | Help, argument, JSON, idempotency, and filesystem tests pass. |
 | IR-002 | CLI package selection | The system shall expose the `standards list`, `show`, `enable`, `disable`, and `version` operations. | Edits only `.standards/config.toml`; supports human and JSON output. | CLI/manual-edit plan equivalence passes. |
-| IR-003 | CLI reconciliation | The system shall expose `project-standards reconcile [--check] [--apply] [--allow-major ID]`. | Plan by default; check is read-only; apply mutates; authorization is package-scoped. | Full command matrix and exit-code tests pass. |
+| IR-003 | CLI reconciliation | The system shall expose `project-standards reconcile [--check] [--apply] [--allow-major ID@MAJOR] [--repair-state]`. | Plan by default; check is read-only; apply mutates; repeatable authorization is package-and-target-major scoped; repair is explicit. | Full command matrix, ambiguous-candidate, and exit-code tests pass. |
 | IR-004 | CLI validation | Existing validators and generic providers shall resolve unified config by repository root and accept explicit override only for supported migration/debug use. | `.standards/config.toml` is canonical; legacy fallback is v5-only. | Every validator and reusable workflow passes unified-config fixtures. |
 | IR-005 | Desired-state file | `.standards/config.toml` shall use a versioned TOML schema with platform, standards, and config containers. | UTF-8 TOML; repository-relative references only. | Schema, formatter, migration, and round-trip tests pass. |
 | IR-006 | Catalog and lock files | `.standards/catalog.toml` and `.standards/lock.toml` shall use generated canonical TOML with stable ordering. | Tool-owned UTF-8 TOML; committed and reviewable. | Generation is deterministic and parser/generator round trips are lossless. |
@@ -292,10 +304,11 @@ Files that external tools discover at fixed paths remain there. The lock records
 | --- | --- | --- | --- | --- |
 | DR-001 | Desired config | Store catalog-major intent, package selectors, and package settings without applied-state claims. | Versioned schema; declared namespaces/options only; no secrets or executable values. | Consumer-owned. |
 | DR-002 | Catalog snapshot | Store the complete inventory and version-channel metadata supplied by the installed distribution. | Must match the installed catalog digest and configured major; no consumer edits. | Platform-owned. |
-| DR-003 | Applied lock | Store resolved versions, digests, accepted tracks, effective config, artifacts, owners, policies, and shared references. | Written last; canonical order; content hashes verified; no duplicate package locks. | Platform-owned. |
+| DR-003 | Applied lock | Store resolved versions, digests, accepted tracks, effective config, referenced inputs, artifacts, owners, policies, and shared references. | Written last; canonical order; artifact and input hashes verified; referenced inputs carry no managed owner; no duplicate package locks. | Platform-owned. |
 | DR-004 | Versioned payload | Retain one immutable complete payload per advertised package version. | Version/digest identity, contained paths, config schema, manifests, resources, providers, and migration graph required. | Standard package-owned. |
-| DR-005 | Package runtime state | Store specialized non-generic state only below `.standards/packages/STANDARD_ID/`. | Declared schema/path; no duplicate artifact inventory; no secret values. | Declaring package-owned. |
+| DR-005 | Package-local durable state | Store deterministic, non-generic package resources or state only below `.standards/packages/STANDARD_ID/`. | Every entry is declared by the selected payload or provider-output contract, committed, centrally inventoried and hashed; no transient/cache data, ignore-only paths, secrets, or duplicate locks. | Declaring package-owned. |
 | DR-006 | Migration evidence | Report legacy sources, inferred ownership, preserved ambiguity, and applied conversion without storing sensitive content. | Repository-confined; read-only until apply; stable JSON schema. | Platform-owned report; consumer owns source content. |
+| DR-007 | Referenced extension | Store specialized consumer-authored package input at an explicitly configured repository-relative path, preferably `.standards/extensions/STANDARD_ID/` when no conventional path is required. | Resolved schema declares the reference; canonical path is contained, outside `.standards/packages/`, and disjoint from every applied/planned managed or semantic target; lock records path/digest as input, never managed ownership; no secrets. | Consumer-owned. |
 
 ---
 
@@ -355,9 +368,9 @@ The top-level `standard.toml` describes the package series and catalog channels.
 | Control-plane models | Parse and validate config, catalog, lock, package release, and migration report schemas. | Typed Python models and generated schemas. | Reject unknown keys and invalid ownership. |
 | Catalog builder | Build the complete snapshot from graph manifests and embedded payloads. | Installed distribution resources; `catalog.toml`. | Deterministic, offline, catalog-major scoped. |
 | Version resolver | Resolve exact, default, retained, and candidate tracks. | Config, catalog, lock, authorization flags. | Never silently cross or downgrade a package major. |
-| Reconciliation planner | Produce ordered actions and conflicts from desired/applied/live state. | Artifact manifests, authorities, relationships, hashes. | No writes or provider execution. |
-| Executor | Apply a validated plan and verify it. | Staged files, declared providers, filesystem adapter. | Contained writes; lock written last. |
-| Provider runner | Invoke version-selected package behavior. | Manifest operation and trusted entrypoint. | No config-defined executable surface. |
+| Reconciliation planner | Produce ordered actions and conflicts from desired/applied/live state. | Artifact manifests, authorities, relationships, hashes, read-only planning providers. | May invoke declared deterministic planning providers; performs no writes. |
+| Executor | Apply a validated plan and verify it. | Staged files, read-only verification providers, filesystem adapter. | Sole artifact writer; contained writes; lock written last. |
+| Provider runner | Invoke version-selected package behavior according to declared phase/effects. | Manifest operation, trusted entrypoint, immutable input snapshots, typed findings/content/mutation plans. | No config-defined executable surface or direct repository mutation; mutating intent returns a plan. |
 | Semantic adapter registry | Compose owned TOML/YAML/JSON keys, Markdown blocks, and set-like contributions against the virtual tree. | Typed contribution declarations and format-specific adapters. | Detect every overlap before writes; preserve unrelated content. |
 | Migrator | Convert legacy config/state into control-plane inputs. | YAML/config adapters and declared package signatures. | Preserve ambiguity and user content. |
 | Compatibility suite | Prove each package and composition works. | Source and installed-wheel fixtures. | Package-complete, not sample-only. |
@@ -367,11 +380,11 @@ The top-level `standard.toml` describes the package series and catalog channels.
 | Package | Current Consumer Surface | Required V5 Control-Plane Migration |
 | --- | --- | --- |
 | `adr` | Validator package; `markdown.adr` YAML config, ADR template, config fragment, and two validation providers. | Move settings to `config.markdown.adr`, add a versioned payload/schema, remove the fragment, preserve Frontmatter compatibility metadata, and eliminate or explicitly resolve the current hidden Frontmatter adoption dependency. |
-| `agent-handoff` | CLI package; strict YAML config, create-only knowledge, managed skill/hook, semantic harness/instruction integrations, specialized providers, and a separate lock. | Move options to `config.agent_handoff`, keep knowledge create-only, move generic ownership to the central planner/lock, retain package rendering/validation providers, store non-discovered policy under its package directory, and retire its lock. |
+| `agent-handoff` | CLI package; strict YAML config, create-only knowledge, managed skill/hook, semantic harness/instruction integrations, specialized providers, and a separate lock. | Move options to `config.agent_handoff`, keep knowledge create-only, move generic ownership to the central planner/lock, convert scaffold/upgrade and rendering operations to typed plans, retain read-only validation providers, store non-discovered policy under its package directory, and retire its lock. |
 | `cli-documentation` | Copy-adopt package; metadata-only YAML version, consumer usage doc, GitHub workflow, printed config fragment, and workflow drift provider. | Add package options for profile/entrypoint/CI, make the usage doc create-only, generate or externalize editable workflow values, remove the fragment, and make GitHub/Python assumptions conditional. |
-| `markdown-frontmatter` | Validator package; whole YAML config, GitHub caller, skill/script files, validators, and formatter. | Move all settings to `config.markdown.frontmatter`, keep package and schema contract versions distinct, update every tool/skill/workflow to unified config and lock resolution, and remove whole-config ownership. |
+| `markdown-frontmatter` | Validator package; whole YAML config, GitHub caller, skill/script files, validators, and formatter. | Move all settings to `config.markdown.frontmatter`, keep package and schema contract versions distinct, convert formatter fixes to typed plans, update every tool/skill/workflow to unified config and lock resolution, and remove whole-config ownership. |
 | `markdown-tooling` | Copy-adopt package; Markdown configs, shared EditorConfig/VS Code recommendations, two GitHub callers, workflow providers, and manual instruction/settings guidance. | Add lint/format/CI options, classify managed versus extensible root config, semantically union per-package VS Code/instruction contributions, centrally lock shared ownership, and compose exclusions required by other packages. |
-| `project-spec` | CLI package; `spec` YAML config, validation workflow, templates, and six providers. | Move settings to `config.spec`, bind templates/providers/workflow to the resolved payload, remove the fragment/YAML grep, and encode its separate-doc-schema scope relative to Frontmatter. |
+| `project-spec` | CLI package; `spec` YAML config, validation workflow, templates, and six providers. | Move settings to `config.spec`, bind templates/providers/workflow to the resolved payload, convert scaffold/upgrade to typed plans, remove the fragment/YAML grep, and encode its separate-doc-schema scope relative to Frontmatter. |
 | `python-coding` | Draft reference-only package with documentation-only semantic review and no artifacts/config. | Keep catalog-visible but non-default while draft; advertise only reconstructed payloads, optionally materialize reference resources under its package directory, and perform no root writes. |
 | `python-tooling` | Copy-adopt package; metadata-only YAML version, `pyproject.toml` fragment, Python/workflow/script files, whole agent instructions and VS Code files, shared artifacts, and workflow validation. | Add a comprehensive option schema, semantically compose root/config/instruction/VS Code contributions, make type-checker selection fan out coherently, preflight key-level `pyproject.toml` ownership, and add mandatory real-apply tests with Agent Handoff and Markdown Tooling. |
 | `standard-bundle-authoring` | Internal non-adoptable package defining the current singleton manifest/payload contract. | Keep catalog-visible and non-enableable; replace its contract through SPEC-BA02 with channels, immutable releases, config schemas, migrations, digests, semantic contributions, and central reconciliation. |
@@ -385,13 +398,16 @@ Five packages currently target `.project-standards.yml`; after migration no pack
 | D-001 | Use one `.standards/` consumer control plane. | One visible inventory and authority reduces sprawl, ambiguity, and package-specific machinery. | Ride-along bootstrap per package; keep imperative adoption only. | New ADR 0023; supersede ADRs 0003, 0008, and 0017 while preserving their still-valid plane separation and namespace principles. |
 | D-002 | Use unified TOML for package selection and settings. | One source avoids YAML/TOML precedence and lets every package publish options. | Split desired state from legacy YAML; relocate YAML unchanged. | New ADR 0023; supersede ADR 0008's file-specific decision while retaining namespace ownership. |
 | D-003 | Keep validation/planning read-only and make apply explicit. | CI and untrusted repository changes must not trigger installation or executable hooks. | Reconcile automatically during validation. | New ADR 0023. |
-| D-004 | Scope package `latest` to the catalog major's non-breaking default. | Breaking candidates can ship early without surprising existing consumers. | Numerically highest version; package major always forces tool major immediately. | New ADR 0024; supersede ADR 0020 and amend `meta/versioning.md`. |
+| D-004 | Scope ordinary package `latest` to the catalog major's non-breaking default, with only explicit current authorization or a recorded accepted-major track as exceptions. | Breaking candidates can ship early without surprising existing consumers. | Numerically highest version; package major always forces tool major immediately. | New ADR 0024; supersede ADR 0020 and amend `meta/versioning.md`. |
 | D-005 | Permit explicit breaking candidates and retain accepted package-major tracks. | Users can beta-test package majors while normal consumers stay compatible. | Prerelease the entire tool distribution; require exact pins only. | New ADR 0024. |
 | D-006 | Embed every advertised versioned payload. | Offline and deterministic selection requires actual historical and candidate content. | Remote retrieval; one current payload. | New ADR 0024; ADR 0023 supersedes ADR 0003 and ADR 0019 is amended for versioned provenance. |
 | D-007 | Maintain one central lock. | Duplicate package locks create drift and unclear applied-state authority. | Keep independent locks; aggregate summaries only. | New ADR 0023; amend ADRs 0019, 0021, and 0022. |
 | D-008 | Keep required integration artifacts in conventional paths. | External tools and harnesses will not discover arbitrary `.standards/` locations. | Move or symlink everything below `.standards/`. | New ADR 0023; retain project-local destination rules in ADRs 0021 and 0022. |
 | D-009 | Initialize no standard by default. | The platform is neutral and packages remain explicit independent choices. | Install `project-toolbox` or a baseline profile automatically. | New ADR 0023; reinforce ADR 0013. |
 | D-010 | Require package-versioned option schemas. | Unified config must remain type-safe as package choices evolve. | Free-form tables; one global monolithic schema. | New ADR 0023; amend the Standard Bundle Authoring contract. |
+| D-011 | Make the platform executor the sole artifact writer. | Deterministic read-only providers and plan-returning `fix`/`scaffold`/`upgrade` operations preserve generic behavior without bypassing preflight review. | Let trusted package providers mutate declared paths directly; exempt authoring providers; forbid providers entirely. | New ADR 0023; extend ADR 0006 and the Standard Bundle Authoring contract with phase/effect and typed-mutation-plan declarations. |
+| D-012 | Separate consumer-owned referenced extensions from package-owned state and managed outputs. | Distinct, non-overlapping input namespaces preserve unified-plane locality without letting package lifecycle operations claim or rewrite consumer content. | Mix consumer files into package namespaces; allow input/output aliasing; require all extensions at repository root. | New ADR 0023; extend the unified configuration and central-lock input contracts. |
+| D-013 | Scope non-default major authorization to a package and target major. | `ID@MAJOR` handles multiple candidate majors while allowing `latest` to follow compatible versions; catalog-major opt-in already authorizes promoted defaults for prior-default followers. | Bare package flag; require exact pins for all candidate entry; require both catalog and package authorization for promoted defaults. | New ADR 0024; supersede ADR 0020. |
 
 #### ADR Reconciliation Matrix
 
@@ -402,7 +418,7 @@ Five packages currently target `.project-standards.yml`; after migration no pack
 | ADR 0003 — Separate Standard and Artifact Manifests | Supersede with ADR 0023 | Preserve metadata/artifact separation but replace the singleton `adopt.toml` and unchanged adopt-engine decision with immutable version payloads and reconciliation. |
 | ADR 0004 — Authority Map | Retain; extend through new ADR | Reconciliation consumes authority tuples and adds platform files, package directories, semantic contributions, version scope, and shared lock references. |
 | ADR 0005 — Generic Tooling Interface | Retain | Init, resolve, reconcile, validate, and provider dispatch remain generic over standard identity. |
-| ADR 0006 — Provider Plugin Model | Retain; extend through new ADR | Providers become package-version selected and catalog-trusted, with config migration and post-apply operations. |
+| ADR 0006 — Provider Plugin Model | Retain; extend through new ADR | Providers become package-version selected and catalog-trusted; read-only operations consume snapshots, mutating `fix`/`scaffold`/`upgrade` intent returns typed plans, and repository writes belong to the platform executor. |
 | ADR 0007 — Graph Validation Gate | Retain; extend through new ADR | Graph validation expands to catalog channels, payload completeness, option schemas, migrations, and release-policy checks. |
 | ADR 0008 — Consumer Config Namespace Registry | Supersede | Namespace ownership remains, but `.project-standards.yml` and its top-level model are replaced by `.standards/config.toml`. |
 | ADR 0009 — Agent Summary Split | Retain | Versioned payloads carry matching canonical docs and summaries without changing their authority relationship. |
@@ -415,7 +431,7 @@ Five packages currently target `.project-standards.yml`; after migration no pack
 | ADR 0016 — Frontmatter Skill Packaging | Amend | Preserve skill ownership/destination while moving adoption, payload, drift, and lock behavior to the control plane. |
 | ADR 0017 — Unified Adoption Methodology | Supersede | The new control plane becomes the single consumer adoption entry point. |
 | ADR 0018 — Package Lifecycle | Amend | Package lifecycle and per-version stable/candidate/retained channels must be distinct. |
-| ADR 0019 — Artifact Provenance | Amend | Provenance applies per immutable versioned payload and central installed lock. |
+| ADR 0019 — Artifact Provenance | Amend | Provenance applies per immutable versioned payload and central installed lock; referenced consumer inputs carry digests without managed ownership. |
 | ADR 0020 — Package Versioning | Supersede | `latest` no longer means highest available; package candidates and catalog-major promotion become explicit. |
 | ADR 0021 — Skill Installation | Amend | Project-local destination remains; ownership and drift move to the central lock. |
 | ADR 0022 — Hook Installation | Amend | Project-local destination remains; ownership and drift move to the central lock. |
@@ -440,9 +456,9 @@ Five packages currently target `.project-standards.yml`; after migration no pack
 - The configured catalog major and executing tool major must match before mutation.
 - A same-major tool update may refresh the catalog only when it preserves default-track compatibility.
 - An older same-major tool release must not replace or apply against a catalog snapshot produced by a newer release it cannot verify.
-- A candidate-major authorization is scoped to one standard ID and recorded durably.
+- A candidate-major authorization is scoped to one standard ID and target major and recorded durably; `latest` resolves within that authorized major, while an exact selector remains pinned.
 - Resolver output is complete before config-schema validation and provider selection.
-- Planner output is complete before any provider execution or filesystem write.
+- Read-only planning-provider output is complete and incorporated before the planner finalizes; the final plan is complete before any filesystem write or post-apply verification.
 - Config, catalog, and lock parsers reject unknown keys by default.
 - Catalog and lock generators use stable ordering and omit volatile timestamps.
 - Configuration values cannot name executable entrypoints or external artifact sources.
@@ -471,10 +487,6 @@ Five packages currently target `.project-standards.yml`; after migration no pack
 schema_version = '1.0'
 catalog = '5'
 
-[standards.project-toolbox]
-enabled = true
-version = 'latest'
-
 [standards.markdown-frontmatter]
 enabled = true
 version = 'latest'
@@ -484,16 +496,13 @@ contract_version = '1.1'
 required = true
 include = ['docs/**/*.md']
 exclude = ['docs/generated/**']
-
-[config.python_tooling]
-type_checker = 'basedpyright'
-python_version = '3.14'
-coverage_threshold = 85
 ```
 
-`project_standards`, `standards`, and `config` are platform containers. Package IDs own their package-payload selection records under `standards`. Standard manifests continue to declare dotted option namespaces beneath `config`. A package-owned `contract_version` or equivalent selects that standard's consumer schema/behavior contract independently from the package payload. Omitted package options receive version-specific schema defaults. The file stores desired intent only; it does not claim that installation succeeded.
+`project_standards`, `standards`, and `config` are platform containers. Package IDs own their package-payload selection records under `standards`. Standard manifests continue to declare dotted option namespaces beneath `config`. A package-owned `contract_version` or equivalent selects that standard's consumer schema/behavior contract independently from the package payload. Omitted package options receive version-specific schema defaults. When a package schema permits a referenced extension, the option contains a repository-relative path to consumer-owned input outside `.standards/packages/`; `.standards/extensions/STANDARD_ID/` is preferred when no external convention dictates another path. The file stores desired intent only; it does not claim that installation succeeded.
 
 ### Catalog Snapshot
+
+This schema example uses an existing standard with an illustrative future breaking candidate. Release fixtures must substitute package versions and digests that are actually embedded in the catalog under test.
 
 ```toml
 [project_standards]
@@ -502,18 +511,18 @@ catalog = '5'
 release = '5.3.0'
 digest = 'sha256:catalog-content-digest'
 
-[standards.project-toolbox]
+[standards.markdown-frontmatter]
 status = 'active'
-adoption = 'copy-adopt'
+adoption = 'validator'
 available = ['1.2', '2.0']
 default = '1.2'
 candidates = ['2.0']
 
-[standards.project-toolbox.versions.'1.2']
+[standards.markdown-frontmatter.versions.'1.2']
 channel = 'stable'
 payload_digest = 'sha256:stable-payload-digest'
 
-[standards.project-toolbox.versions.'2.0']
+[standards.markdown-frontmatter.versions.'2.0']
 channel = 'breaking-candidate'
 payload_digest = 'sha256:candidate-payload-digest'
 ```
@@ -530,7 +539,7 @@ release = '5.3.0'
 catalog_digest = 'sha256:catalog-content-digest'
 config_digest = 'sha256:desired-config-digest'
 
-[standards.project-toolbox]
+[standards.markdown-frontmatter]
 requested = 'latest'
 resolved = '2.0'
 track_major = 2
@@ -540,24 +549,24 @@ payload_digest = 'sha256:candidate-payload-digest'
 effective_config_digest = 'sha256:normalized-options-digest'
 
 [[artifacts]]
-path = '.agents/workflows/project-toolbox/review-spec.md'
-owners = ['project-toolbox']
+path = '.standards/packages/markdown-frontmatter/agent-summary.md'
+owners = ['markdown-frontmatter']
 policy = 'managed'
 provenance = 'source-owned'
 content_digest = 'sha256:artifact-content-digest'
 ```
 
-The lock records resolved facts, not user intent. `major_authorized = true` is durable evidence that the package major was accepted; later resolution stays on that major until the config pins another supported version or a separately authorized transition occurs. Shared artifacts list every current owner.
+The example assumes candidate major `2` was selected by applying `latest` with matching `ID@2` authorization, so compatible updates can continue within the accepted major. An exact candidate selector would instead remain pinned under FR-012. The lock records resolved facts, not user intent. `major_authorized = true` is durable evidence that the package major was accepted; later `latest` resolution stays on that major until config pins an exact version on another supported major and apply receives matching `--allow-major ID@MAJOR` authorization. The target payload must declare a safe migration or rollback path. When the target is the catalog-default major, successful apply updates `track_major`, sets `major_authorized = false`, and records the exact selection; changing an exit pin back to `latest` then follows that already recorded default major without another authorization. A catalog-major promotion applies its new defaults without redundant package authorization only to packages that followed the prior default track; an accepted `latest` track matching the promoted major normalizes to that default, while exact pins and accepted tracks on other majors remain sticky. Shared artifacts list every current owner. Package-local artifacts use the same central artifact records, hashes, and drift rules as conventional-path artifacts.
 
 ### Package Release Payload
 
 Each immutable release payload contains:
 
-- `package.toml`: version identity, lifecycle channel, config schema, capabilities, authorities, relations, resources, providers, migrations, and artifact-manifest pointer.
+- `package.toml`: version identity, lifecycle channel, config schema, capabilities, authorities, relations, resources, provider phase/effect contracts, migrations, and artifact-manifest pointer.
 - `adopt.toml`: materialized artifacts with destinations, owners, provenance, install policies, modes, and transforms.
 - `config.schema.json`: accepted options and defaults for this version.
 - Version-specific documentation and resources.
-- Version-selected provider and migration declarations.
+- Version-selected read-only planning/verification provider and migration declarations.
 - A digest manifest covering every payload file.
 
 Top-level `standard.toml` remains the package-series manifest and catalog authoring source. A released snapshot is immutable; a correction requires a new package version.
@@ -566,7 +575,7 @@ The migration must not reinterpret today's `standard.toml` `supported` list as p
 
 ### Semantic Contributions
 
-A semantic contribution declares a target, adapter type, ownership scope, source/render provider, install policy, and conflict rule. Supported v5 adapters cover:
+A semantic contribution declares a target, adapter type, ownership scope, source or read-only render provider, install policy, and conflict rule. Supported v5 adapters cover:
 
 - TOML tables and keys, including `pyproject.toml`;
 - JSON objects and keys, including VS Code and harness settings;
@@ -574,7 +583,7 @@ A semantic contribution declares a target, adapter type, ownership scope, source
 - delimiter-bounded Markdown instruction blocks; and
 - set-like lists such as extension recommendations.
 
-The planner loads the live target once, renders all contributions in deterministic package/manifest order, detects overlapping ownership, and produces one final virtual target. It never writes one package's whole file and then asks another package to patch the result. Unowned legacy `fragment` actions are migrated into config options or semantic contributions; they are not silently discarded or left as untracked console instructions.
+The planner loads each declared input once, invokes any deterministic read-only render or migration-planning provider, renders all contributions in deterministic package/manifest order, detects overlapping ownership, and produces one final virtual target. Provider output is data returned to the planner, never an unplanned filesystem side effect. The executor never writes one package's whole file and then asks another package to patch the result. Unowned legacy `fragment` actions are migrated into config options or semantic contributions; they are not silently discarded or left as untracked console instructions.
 
 ---
 
@@ -596,6 +605,8 @@ sequenceDiagram
     User->>CLI: reconcile
     CLI->>Control: load config, catalog, and lock
     CLI->>Repo: inspect declared paths and hashes
+    CLI->>Provider: run declared read-only planning providers
+    Provider-->>CLI: exact contributions, actions, and findings
     CLI-->>User: complete read-only plan
     User->>CLI: reconcile --apply
     CLI->>Repo: recheck preconditions and apply staged artifacts
@@ -615,10 +626,14 @@ Expected result:
 | --- | --- | --- | --- |
 | AW-001 | User runs `standards enable` or `disable`. | CLI makes a schema-aware edit to desired config, then reports that reconciliation is pending. | Manual and CLI config edits produce the same plan. |
 | AW-002 | Same-major tool release changes the embedded catalog. | Reconciliation previews catalog refresh and compatible default-track updates. | Pins remain pinned; defaults advance only compatibly. |
-| AW-003 | User authorizes a breaking candidate. | Resolver selects the candidate payload for the named package and records its accepted major after apply. | Future compatible updates stay on the accepted major without downgrade. |
-| AW-004 | User changes catalog major. | New tool validates migration availability, previews default-track transitions, and requires explicit apply. | Breaking defaults occur only after the catalog-major opt-in. |
-| AW-005 | Legacy config is present. | Init/migrate reads legacy inputs, produces a migration and ownership report, and writes only with explicit apply. | Unified files replace legacy authority without losing project content. |
+| AW-003 | User authorizes a breaking candidate. | With config on `latest`, user applies with matching `--allow-major ID@MAJOR`; resolver chooses the newest compatible candidate in that major and records the accepted track. An exact config selector remains pinned. | The major target is unambiguous, and later `latest` updates do not cross or downgrade the accepted major. |
+| AW-004 | User changes catalog major. | New tool validates migration availability, preserves exact pins and accepted tracks on different majors, normalizes matching accepted `latest` tracks, previews changes for packages following the prior default, and requires explicit apply. | Promoted defaults occur only after catalog-major opt-in and need no duplicate package flags. |
+| AW-005 | Legacy config is present. | Init/migrate reads legacy inputs, produces a migration and ownership report that includes legacy-file removal, and writes only with explicit apply. It removes the legacy file only after the converted state validates. | Unified files replace legacy authority, the legacy path is absent, and Git history retains recovery evidence. |
 | AW-006 | User disables a package. | Planner computes reference-aware removal and preservation actions. | Only unchanged exclusively managed files are deleted. |
+| AW-007 | User exits an accepted breaking-candidate major. | User pins an exact version on the target line and previews/applies with matching `--allow-major ID@MAJOR`; planner requires a declared reverse migration path. After success, user may restore `latest` without another authorization because the lock already records that major. | Artifacts migrate safely, the lock records the target major, and default-major authorization is cleared. |
+| AW-008 | A package materializes durable resources or state below its package namespace. | Reconciliation declares and hashes every entry in the central lock and applies ordinary drift/update rules. | Package-local state remains committed, reviewable, and removable without a secondary inventory. |
+| AW-009 | A package needs specialized consumer-authored input outside ordinary TOML options. | Consumer stores it at a typed referenced path, preferably below `.standards/extensions/STANDARD_ID/`, and reconciliation hashes it as read-only input. | The package reacts to content changes without owning or deleting the extension. |
+| AW-010 | User invokes a provider-backed `fix`, `scaffold`, or `upgrade` command. | Provider returns a typed plan; CLI validates paths/preconditions, displays the action summary, and passes it to the platform executor under that explicit command authorization. | User-facing behavior remains documented while package code performs no direct repository write. |
 
 ### 10.3 Edge Cases
 
@@ -626,7 +641,7 @@ Expected result:
 | --- | --- | --- |
 | EC-001 | Legacy YAML exists during plain init, or both legacy YAML and unified TOML exist. | Plain init stops and routes to migration; dual authority fails validation; neither case merges or mutates. |
 | EC-002 | Config requests a package version absent from the catalog. | Report a configuration error and list available versions/channels. |
-| EC-003 | `latest` default is older than an available candidate. | Resolve the declared default unless an accepted-major track applies. |
+| EC-003 | `latest` default is older than an available candidate. | Resolve the declared default unless the current apply authorizes that package and candidate major or an accepted-major track already applies. |
 | EC-004 | Lock records an accepted candidate major but config still says `latest`. | Stay on the accepted major and select its newest compatible advertised version. |
 | EC-005 | Installed artifact was modified locally. | Report conflict; neither overwrite nor delete it without a separately specified resolution. |
 | EC-006 | Shared artifact loses one owner. | Retain the file and remove only that owner's reference. |
@@ -635,12 +650,18 @@ Expected result:
 | EC-009 | Installed tool major differs from configured catalog major. | Allow read-only inspection but refuse catalog refresh or apply until the catalog selection is explicitly updated. |
 | EC-010 | An internal package is marked enabled. | Reject the desired state and explain that the package is catalog-visible but non-adoptable. |
 | EC-011 | Installed tool release is older than the committed same-major catalog or lock release. | Refuse mutation and catalog downgrade; instruct the user to restore the recorded or newer compatible tool release. |
+| EC-012 | One control-plane file is missing. | Missing config fails closed and must be restored or migrated; missing catalog is regenerated only from the matching installed distribution; missing lock requires an explicit recovery plan and unambiguous evidence. |
+| EC-013 | User requests a non-promotion package-major transition without matching `ID@MAJOR` authorization or declared migration/rollback support, or requests an accepted-major exit without an exact target. | Refuse the transition before writes and report every missing precondition. |
+| EC-014 | A package namespace contains a modified managed entry or undeclared content. | Preserve every affected path, report drift or ambiguity, and block update, disable, and namespace pruning until the content is resolved. |
+| EC-015 | A referenced extension is missing, escapes the repository, points into `.standards/packages/`, or aliases an applied/planned managed output after canonical resolution. | Reject the desired state or report missing/conflicting input before provider execution; never reinterpret the path as package-managed state. |
+| EC-016 | A provider declares/returns an unsupported effect, or runtime checks observe a direct live write outside the supported snapshot/plan API. | Reject before invocation when possible; otherwise stop immediately, preserve the prior lock, report a trusted-provider integrity incident and affected paths, and perform no further operation. |
 
 ### 10.4 State Transitions
 
 | State | Meaning | Entry Condition | Exit Condition |
 | --- | --- | --- | --- |
 | Uninitialized | No unified control plane exists. | Repository has not run init or migration. | Successful init or migration. |
+| Incomplete | At least one required control-plane file is absent while another remains. | Deletion, merge loss, or partial commit. | Restore config from version control, or explicitly apply a safe catalog/lock recovery plan. |
 | Initialized | Control plane exists with no pending desired/applied difference. | Empty or reconciled state. | Config/catalog/live drift appears. |
 | Pending | A read-only plan contains non-conflicting actions. | Desired, catalog, lock, or live state differs. | Apply succeeds, config reverts, or conflict appears. |
 | Conflicted | Planning found ambiguity, unsafe paths, incompatible versions, modified managed files, or authority collision. | One or more blocking findings exist. | User or package migration resolves every finding. |
@@ -667,8 +688,12 @@ No browser UI or network API is in scope. The supported surfaces are the CLI and
 | ERR-004 | Modified managed artifact | Preserve the file and stop the affected update/removal. | Expected and actual digests are reported without file content. | Review local intent, then adopt a package-supported migration or explicit resolution. |
 | ERR-005 | Provider failure | Stop apply, preserve prior lock, and report provider operation and stable error class. | Provider stdout/stderr is bounded and secrets-redacted. | Fix permanent input/config errors or rerun transient external checks explicitly. |
 | ERR-006 | Filesystem or interruption failure | Stop, leave prior lock, and report successfully applied actions. | Incomplete-state result is emitted in human and JSON forms. | Rerun planning; repair from previous lock and live hashes. |
-| ERR-007 | Legacy migration ambiguity | Stop before writes and preserve source files. | Migration report lists evidence and unresolved ownership. | Owner or local agent resolves ambiguity and reruns migration. |
+| ERR-007 | Legacy migration ambiguity or incomplete conversion | Stop before writes and preserve `.project-standards.yml` and every source artifact. | Migration report lists evidence, unmapped settings, and unresolved ownership. | Owner or local agent resolves ambiguity and reruns migration; the legacy file is removed only by a fully validated apply. |
 | ERR-008 | Catalog/tool major mismatch | Refuse mutation and explain both versions and the required explicit upgrade. | Stable version-mismatch finding. | Update the external tool pin and configured catalog major intentionally. |
+| ERR-009 | Required control-plane file is missing | Report which authority is missing and expose only its sanctioned recovery path; perform no implicit write. | Stable missing-config, missing-catalog, or missing-lock finding. | Restore user config, regenerate catalog from a matching distribution, or explicitly apply an evidence-backed lock repair. |
+| ERR-010 | Another process holds an incompatible control-plane lock | Fail immediately without reading a potentially changing state or writing any path. | Stable busy-control-plane finding identifies the repository but not another process's sensitive arguments. | Wait for the active command to finish, then rerun and recompute the plan. |
+| ERR-011 | Undeclared content exists in a package-owned namespace | Preserve the content and block the affected package update/removal; do not infer ownership from location. | Stable finding reports the package, repository-relative path, and digest without file content. | Relocate or remove the content intentionally, or add an explicit reviewed package migration that declares its ownership. |
+| ERR-012 | Provider violates its declared phase or effect contract | Reject invalid declarations/returned effects before executor invocation. If an out-of-contract live write is observed, stop immediately, retain the prior lock, and perform no further operation; prevention of malicious trusted code is outside the v1 sandbox boundary. | Stable integrity finding names package, provider operation, declared phase, observed effect, and affected paths without exposing content. | Restore affected content from version control/previous-lock evidence, correct the trusted provider, and publish a new immutable package version before re-enabling it. |
 
 ### 12.2 Retry and Idempotency
 
@@ -692,9 +717,11 @@ No network authentication is required. The local user or authorized agent runs t
 
 | Actor / Role | Allowed Actions | Denied Actions |
 | --- | --- | --- |
-| Validation/CI process | Parse, validate, inspect, plan, and report. | Apply, migrate, enable executable providers for mutation, or authorize candidate majors. |
+| Validation/CI process | Parse, validate, inspect, run declared read-only planning/verification providers, plan, and report. | Apply, migrate, execute direct-write providers, or authorize candidate majors. |
 | Repository owner or explicitly authorized agent | Edit desired config, preview plans, apply reconciliation, and authorize named package majors. | Bypass path containment, install arbitrary providers, or mutate global state. |
-| Package provider | Read declared repository inputs and mutate only declared authorized targets during apply. | Read secrets, escape the repository, change other packages' state, or update the tool/catalog pin. |
+| Package provider | Consume declared immutable input snapshots and return deterministic findings, content, or mutation plans through its phase-specific interface. | Write live repository state directly, read undeclared inputs or secrets, escape the repository, change another package's state, or update the tool/catalog pin. |
+
+Installed catalog providers are trusted code. The phase/effect contract is an authoring, packaging, and compatibility boundary, not an operating-system sandbox for malicious Python. The runner supplies immutable snapshots and no supported live-write API; graph/payload validation and installed-wheel mutation-spy tests gate publication. A provider that bypasses that API through raw operating-system access is a trusted-distribution integrity defect handled by ERR-012, not a behavior configuration can authorize.
 
 ### 13.3 Secrets
 
@@ -706,6 +733,7 @@ The control plane has no secret values. Package settings may contain environment
 | --- | --- | --- | --- | --- |
 | Package/config selection | Internal repository metadata | Committed TOML | Normal Git transport outside this spec | Repository history |
 | Artifact digests and paths | Internal repository metadata | Committed lock | Normal Git transport outside this spec | Repository history |
+| Referenced extension content | Consumer project data; package schema may narrow it | Consumer-owned repository path | Normal Git transport outside this spec | Consumer controlled |
 | Migration findings | Internal; may reveal filenames | CLI output or explicitly saved report | None by default | User controlled |
 | Secret values | Prohibited | Not stored | Not transmitted | None |
 
@@ -715,7 +743,9 @@ The control plane has no secret values. Package settings may contain environment
 | --- | --- | --- |
 | Untrusted pull request enables a package or candidate | Unexpected code/artifact installation | Validation is read-only; apply and candidate authorization are explicit local actions. |
 | Config injects an executable entrypoint or remote payload | Arbitrary code execution | Schemas prohibit entrypoints/URLs; providers and payloads resolve only from trusted catalog manifests. |
+| Trusted provider bypasses its phase API and writes live state | Unreviewed mutation during validation or apply | Immutable-snapshot APIs and prepublication/installed-wheel mutation-spy conformance prevent supported direct writes; observed bypass is an integrity incident under ERR-012, not a claimed OS sandbox. |
 | Malicious or malformed artifact path escapes repository | External file overwrite | Resolve root, reject absolute/traversal/symlink escape, and recheck before write. |
+| Referenced input aliases a managed or semantic output | Ownership loop, unstable plans, or consumer-content overwrite | Canonically resolve all input/output paths and reject any applied or planned overlap before provider execution. |
 | Stale plan overwrites concurrent user changes | Data loss | Plan captures hashes and executor rechecks immediately before mutation. |
 | Lock tampering hides drift | Incorrect ownership or deletion | Validate lock against catalog/config/live hashes; fail closed on inconsistent state. |
 | Candidate authorization leaks across packages | Unintended breaking upgrade | Authorization flag and lock record are scoped to one standard ID and target major. |
@@ -729,6 +759,7 @@ The control plane has no secret values. Package settings may contain environment
 - [x] Filesystem operations are repository-confined and run with the invoking user's permissions.
 - [x] Config and repository content are treated as untrusted data rather than instruction authority.
 - [x] Executable providers are selected only from the installed trusted catalog.
+- [x] Planning and verification providers are read-only; the platform executor is the sole artifact writer.
 
 ---
 
@@ -739,7 +770,7 @@ The control plane has no secret values. Package settings may contain environment
 | Catalog size | Fewer than 25 first-party packages and 10 versions per package | Up to 100 packages and 1,000 total artifacts without redesign | In-memory typed models and deterministic sorting are sufficient. |
 | Repository artifact count | Fewer than 250 managed/shared artifacts | Up to 1,000 declared artifacts | Hash only declared paths; avoid repository-wide content scans. |
 | Config size | Fewer than 5,000 TOML lines | Package schemas may grow independently | Namespace validation and lazy package schema loading. |
-| Concurrent writers | One authorized apply process | Multiple read-only checks may run concurrently | Apply uses a repository-local lock and hash preconditions; readers do not mutate. |
+| Concurrent writers | One mutating process | Multiple read-only checks may run concurrently | Shared/exclusive advisory locking on the `.standards/` directory plus hash preconditions prevents overlapping apply/config operations without adding a lock artifact. |
 | Payload volume | Mostly Markdown, TOML, JSON, YAML, and small scripts | Wheel grows with retained versions | Track distribution size and revisit external storage only when measured cost is material. |
 
 ---
@@ -774,13 +805,20 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 - [ ] ADR 0024 records catalog-scoped package channels, candidates, promotion, and embedded versioned payloads.
 - [ ] Conflicting ADRs and `meta/versioning.md` are amended or superseded according to §8.3.
 - [ ] SPEC-BA02 supersedes SPEC-BA01 as the reviewed implementation contract for the breaking Standard Bundle Authoring revision.
-- [ ] Config, catalog, lock, package-release, migration-report, and package-option schemas are generated and validated.
+- [ ] Config, catalog, lock, package-release, migration-report, provider-phase, referenced-extension, and package-option schemas/contracts are generated and validated.
 - [ ] Every current package migrates and passes individual, pairwise, all-packages, and installed-wheel fixtures.
 - [ ] Legacy YAML migration and v5 read-only fallback pass for every current namespace.
+- [ ] Successful migration previews and removes `.project-standards.yml` only after complete conversion and validation; failed migration preserves it.
 - [ ] Candidate authorization, retention, promotion, pinning, and no-downgrade tests pass.
+- [ ] Candidate-major entry requires matching package-and-major authorization, candidate `latest` remains compatible-trackable, exact selectors remain pinned, and exact-target exit plus catalog-major promotion preserve the documented authorization boundaries.
 - [ ] Package payload selectors and consumer contract/schema selectors remain independent in configuration, migration, resolution, and validation.
 - [ ] Semantic contributions compose against one virtual tree, and every package pair/full-set real apply completes or fails before any write.
 - [ ] Init, plan, apply, removal, interruption recovery, path safety, and no-network tests pass.
+- [ ] Missing config, catalog, and lock states produce only their sanctioned read-only recovery plans.
+- [ ] Shared/exclusive control-plane concurrency tests prevent overlapping mutation without creating a lock artifact.
+- [ ] Every package-local durable entry is committed, centrally hashed, drift-checked, and safely removed; modified or undeclared namespace content blocks package removal.
+- [ ] Every provider is phased; read-only operations use immutable snapshots, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
+- [ ] Referenced extension inputs remain consumer-owned, cannot alias managed/planned outputs, are centrally hashed without managed ownership, and survive package disable/re-enable.
 - [ ] This repository dogfoods the control plane and has no package-specific provenance lock.
 - [ ] Consumer, package-author, migration, upgrade, and release documentation is current.
 - [ ] Full repository quality and coherence gates pass.
@@ -794,7 +832,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | Integration | Init, config edits, resolver, planner, executor, providers, migration | Success, no-op, conflict, partial failure, recovery, and package-specific adapters | Yes |
 | Snapshot/contract | TOML generation, JSON output, plans, findings, help text, catalog | Stable canonical output with intentional reviewed changes | Yes |
 | Composition | Each package, all pairs, and complete supported set | Fresh install, upgrade, disable, migration, shared artifacts, authorities | Yes |
-| Security | Paths, symlinks, entrypoints, URLs, config trust, candidate authorization, redaction | Every threat in §13.5 | Yes |
+| Security | Paths, symlinks, entrypoints, provider effects, extension references, URLs, config trust, candidate authorization, redaction | Every threat in §13.5 | Yes |
 | Installed distribution | Wheel contents, payload parity, offline init/reconcile/provider execution | Every advertised installable version | Yes |
 | Performance | 100-package/1,000-artifact planning fixture | NFR-005 threshold and deterministic result | Yes |
 | Documentation | Spec, ADR, manifests, schemas, guides, catalog, upgrade and release docs | Link, lint, spec validation, generated-drift, and review gates | Yes |
@@ -806,22 +844,25 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | FR-001–FR-002, IR-001 | Init CLI, minimum-scaffold, idempotency, and filesystem-boundary tests | Not Started |
 | FR-003–FR-006, IR-005–IR-006, DR-001–DR-003 | Config/catalog/lock schema, generation, strictness, digest, and round-trip tests | Not Started |
 | FR-007–FR-010, IR-003, NFR-001–NFR-004 | Planner/executor/removal/conflict/fault-injection test suites | Not Started |
-| FR-011–FR-015 | Default, pin, candidate, accepted-track, promotion, and no-downgrade resolver tests | Not Started |
+| FR-011–FR-015 | Default, pin, candidate `latest`/target-major authorization, accepted-track, catalog-promotion exemption, sticky-intent, and no-downgrade resolver tests | Not Started |
 | FR-016, FR-028, DR-004 | Versioned-payload completeness, parity, digest, and offline installed-wheel tests | Not Started |
 | FR-017, FR-026, IR-002 | Unified entrypoint, adoption-wrapper, config-edit, and CLI contract tests | Not Started |
-| FR-018–FR-020, DR-005 | Version-selected provider, path policy, central-lock, and Agent Handoff migration tests | Not Started |
+| FR-018–FR-020, FR-034–FR-035, DR-005, ERR-011–ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Not Started |
 | FR-021–FR-022, DR-006 | Legacy namespace/artifact migration, ambiguity, fallback, and dual-authority tests | Not Started |
 | FR-023, NFR-006–NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Not Started |
-| FR-024 | Versioned package-option schema, default, external materialization, and option-migration tests | Not Started |
+| FR-024, FR-036, DR-007 | Versioned package-option schema, referenced-extension ownership/canonical-path/output-collision/hash, default, external materialization, preservation, and option-migration tests | Not Started |
 | FR-025 | Same-major catalog refresh and compatible-update tests | Not Started |
 | FR-027 | Package adoption-guide inventory and content review | Not Started |
 | FR-029 | Virtual-tree semantic contribution, all-pairs real-apply, collision, and no-partial-write tests | Not Started |
 | FR-030 | Package-version versus consumer-contract migration, resolver, config, and validator tests | Not Started |
 | FR-031 | SPEC-BA02 approval, index, supersession, and traceability review | Not Started |
+| FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Not Started |
+| FR-033 | Candidate-major `latest`/pinned entry, exact exit, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, lock update, and subsequent-`latest` tests | Not Started |
 | NFR-005 | 100-package/1,000-artifact planning benchmark | Not Started |
 | NFR-008 | Human/JSON output and exit-code contract tests | Not Started |
+| NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, full-lifecycle, and process-exit tests | Not Started |
 | IR-004 | Every validator/provider/reusable-workflow unified-config fixture | Not Started |
-| NFR-003, ERR-001–ERR-008 | Security boundary, error contract, and recovery suites | Not Started |
+| NFR-003, ERR-001–ERR-009 | Security boundary, error contract, and recovery suites | Not Started |
 
 ---
 
@@ -849,6 +890,7 @@ There is no daemon, database, background worker, or network listener.
 | `standards.STANDARD_ID.enabled` | Yes for selected record | `false` when absent | Desired package presence. |
 | `standards.STANDARD_ID.version` | Yes when enabled | `latest` | Exact package version or catalog-default selector. |
 | `config.NAMESPACE` | Package-specific | Version-specific defaults | User-selectable standard options. |
+| `config.NAMESPACE.REFERENCE_OPTION` | Package-specific exception | None | Typed repository-relative reference to consumer-owned specialized input; preferred under `.standards/extensions/STANDARD_ID/` when no conventional path is required. |
 
 The executing tool's exact release is not user-configured as an applied fact; it is discovered and recorded in catalog/lock. External package and workflow pins remain the authority for installing that release.
 
@@ -868,7 +910,7 @@ Rollback before publication is a normal commit revert. After publication, full r
 
 - New consumers use the unified control plane immediately.
 - Existing v5 consumers may validate in read-only legacy mode while scheduling migration.
-- Candidate package majors remain excluded from normal defaults and require explicit package-scoped authorization.
+- Candidate package majors remain excluded from ordinary defaults and require explicit package-and-target-major authorization; an exact selector is optional and remains a pin.
 - V6 removes legacy YAML fallback only after migration evidence is complete and documented.
 - A package that fails the compatibility matrix remains unavailable in the unified catalog rather than shipping a partial migration.
 
@@ -878,7 +920,7 @@ There is no runtime monitoring service. Every command emits a stable result summ
 
 ### 18.6 Backup and Disaster Recovery
 
-No separate backup system applies. Config, catalog, lock, and project files are committed to Git. Recovery uses the previous commit plus immutable embedded payloads. Apply operations must not rely on uncommitted backup copies as their only rollback path.
+No separate backup system applies. The durable `.standards/` tree, including package-local managed state and consumer-owned referenced extensions, plus managed project files are committed to Git. Recovery uses the previous commit plus immutable embedded payloads. Apply operations must not rely on uncommitted backup copies as their only rollback path.
 
 ### 18.7 Documentation Deliverables
 
@@ -913,13 +955,15 @@ A separate detailed executable plan follows only after this specification is rev
 - Accept ADR 0023 and ADR 0024.
 - Amend or supersede the decisions listed in §8.3.
 - Author, review, and approve SPEC-BA02 as the successor contract for versioned standard bundles.
-- Freeze config, catalog, lock, package-release, migration-report, and option-schema contracts.
-- Add failing schema, resolver, payload-completeness, and release-policy tests.
+- Freeze config, catalog, lock, package-release, migration-report, provider-phase, referenced-extension, and option-schema contracts.
+- Add failing schema, resolver, provider-effect, referenced-input, payload-completeness, and release-policy tests.
 
 ### MS-1 — Control-Plane Models and Bootstrap
 
 - Implement typed models, strict loaders, canonical generators, and schemas.
 - Implement neutral `init`, catalog generation, config editing, and read-only validation.
+- Implement incomplete-state detection and read-only catalog/lock recovery planning without config inference.
+- Implement shared/exclusive advisory directory locking for every control-plane command.
 - Add installed-wheel minimum-scaffold and idempotency tests.
 
 ### MS-2 — Version Resolution and Planning
@@ -927,19 +971,21 @@ A separate detailed executable plan follows only after this specification is rev
 - Implement exact/default/candidate/accepted-track/promotion resolution.
 - Implement immutable payload discovery and version-selected schemas/providers.
 - Refactor the adopt engine into a deterministic control-plane planner.
+- Implement phase-declared read-only planning providers and typed consumer-owned extension inputs.
 - Implement semantic contribution declarations and virtual-tree adapters for shared structured and instruction files.
 - Add ownership, shared-reference, removal, conflict, and JSON plan contracts.
 
 ### MS-3 — Apply, Lock, and Recovery
 
-- Implement staged contained mutation, precondition rechecks, provider execution, and post-apply verification.
-- Implement central lock generation and retire generic support for package-specific locks.
+- Implement staged contained executor-only mutation, precondition rechecks, and read-only post-apply provider verification.
+- Implement central lock generation, package-local durable-state inventory/removal, and retirement of generic support for package-specific locks.
 - Implement interruption recovery and all security/path boundaries.
 
 ### MS-4 — Package Compatibility and Migration
 
 - Create immutable payloads and option schemas for every current package version advertised in v5.
 - Migrate every current config namespace and artifact/provider surface.
+- Convert every current direct-write `fix`, `scaffold`, and `upgrade` provider to return a typed executor plan while preserving its user-facing command behavior.
 - Preserve package payload selectors and consumer contract/schema selectors as separate values.
 - Import and retire Agent Handoff's lock.
 - Pass individual, all-pairs, all-packages, legacy, shared-artifact, and root-ownership fixtures.
@@ -955,11 +1001,11 @@ A separate detailed executable plan follows only after this specification is rev
 
 | Milestone | Primary Requirements | Completion Evidence |
 | --- | --- | --- |
-| MS-0 | FR-003–FR-006, FR-011–FR-016, FR-031, D-001–D-010 | Accepted ADRs, approved SPEC-BA02, schemas, red contract tests, reviewed impact matrix |
-| MS-1 | FR-001–FR-006, FR-026 | Typed models, neutral init, catalog, config edit, installed-wheel tests |
-| MS-2 | FR-007, FR-011–FR-019, FR-025, FR-029–FR-030 | Resolver, semantic composition, and deterministic planning suites |
-| MS-3 | FR-008–FR-010, FR-018–FR-020 | Apply, provider, central lock, removal, safety, recovery tests |
-| MS-4 | FR-021–FR-024, FR-027–FR-028 | Complete package/migration/composition/offline matrix |
+| MS-0 | FR-003–FR-006, FR-011–FR-016, FR-031, D-001–D-013 | Accepted ADRs, approved SPEC-BA02, schemas, red contract tests, reviewed impact matrix |
+| MS-1 | FR-001–FR-006, FR-026, FR-032 | Typed models, neutral init, catalog, state repair, config edit, installed-wheel tests |
+| MS-2 | FR-007, FR-011–FR-019, FR-025, FR-029–FR-030, FR-033, FR-035–FR-036 | Resolver, provider-phase, referenced-input, semantic-composition, and deterministic-planning suites |
+| MS-3 | FR-008–FR-010, FR-018–FR-020, FR-034–FR-035 | Executor-only apply, provider verification, central lock, package-local lifecycle, removal, safety, recovery tests |
+| MS-4 | FR-021–FR-024, FR-027–FR-028, FR-035 | Complete package/provider-migration/composition/offline matrix |
 | MS-5 | All Must requirements | Dogfood, full gate, docs, pilot migrations, v5 release evidence |
 
 ---
@@ -991,7 +1037,7 @@ No implementation-blocking design question remains after owner review.
 | OQ-002 | Configuration authority | resolved | Use one `.standards/config.toml`; do not retain a parallel active YAML config. |
 | OQ-003 | Bootstrap behavior | resolved | Initialize the minimum scaffold and enable no standard. |
 | OQ-004 | Mutation boundary | resolved | Validation and planning are read-only; only explicit apply mutates. |
-| OQ-005 | Package `latest` semantics | resolved | Resolve the non-breaking default scoped to the selected catalog major. |
+| OQ-005 | Package `latest` semantics | resolved | Resolve the selected catalog's non-breaking default unless matching current authorization or an accepted-major lock track explicitly scopes `latest` to a candidate major. |
 | OQ-006 | Breaking package releases | resolved | Advertise opt-in candidates, require package-specific major authorization, and promote only at a catalog major. |
 | OQ-007 | Candidate retention | resolved | Preserve an accepted package major and never silently downgrade it. |
 | OQ-008 | Payload distribution | resolved | Embed every advertised immutable package payload for offline use. |
@@ -999,6 +1045,9 @@ No implementation-blocking design question remains after owner review.
 | OQ-010 | Package options | resolved | Express ordinary options under owned `config.toml` namespaces with versioned schemas. |
 | OQ-011 | Existing consumers | resolved | Provide explicit migration, v5 read-only fallback, dual-authority rejection, and v6 fallback removal. |
 | OQ-012 | `project-toolbox` scope | resolved | Specify and implement it separately after this control-plane contract. |
+| OQ-013 | Provider mutation boundary | resolved | Read-only providers consume snapshots; `fix`/`scaffold`/`upgrade` return typed mutation plans; the platform executor alone performs supported repository writes. |
+| OQ-014 | Referenced extension ownership | resolved | Keep consumer-owned references outside package-managed namespaces and all applied/planned outputs, prefer `.standards/extensions/STANDARD_ID/`, and hash without claiming ownership. |
+| OQ-015 | Package-major authorization scope | resolved | Use `ID@MAJOR`; candidate entry may resolve `latest` within that major or remain exactly pinned, exits require an exact target, and catalog-major promotion authorizes defaults only for prior-default followers. |
 
 ---
 
@@ -1082,6 +1131,8 @@ IDs are stable and are not renumbered when priority, status, or implementation o
 - Do not fetch catalog-advertised resources from a network.
 - Do not accept config-defined executable entrypoints, artifact URLs, absolute paths, traversal, or global destinations.
 - Do not overwrite or delete modified, shared, create-only, consumer-owned, or ambiguously owned content.
+- Do not let a package provider write repository state directly or return an effect outside its declared planning/verification contract.
+- Do not store consumer-owned referenced extensions, transient data, caches, or ignored state in `.standards/packages/STANDARD_ID/`.
 - Do not introduce package-ID conditionals into generic resolver/planner/executor code.
 - Do not retain a package-specific artifact lock after its central-lock migration is complete.
 - Do not mark a requirement complete without the evidence required by §17.3.

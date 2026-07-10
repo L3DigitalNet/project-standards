@@ -90,9 +90,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
 
-- [ ] Review and approve Consumer Standards Control Plane `SPEC-CP01`.
+- [ ] Re-review and approve Consumer Standards Control Plane `SPEC-CP01`.
 
-  Review `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md`, including its ADR supersession matrix, package compatibility matrix, semantic-composition requirement, version channels, and v5 migration boundary. Do not write the implementation plan until the spec is approved.
+  Revision 0.2 resolves all seven round-1 findings plus self-review gaps in provider phases, major-authorization scope, and referenced-extension ownership. Do not write the implementation plan until the revised spec is re-reviewed and approved.
 
 - [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation (`2a7ed25`).
 
