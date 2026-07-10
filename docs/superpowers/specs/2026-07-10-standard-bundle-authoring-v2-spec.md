@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-BA02
 title: 'Standard Bundle Authoring V2'
-status: draft
+status: review
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -42,6 +42,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.1 | 2026-07-10 | Coding agent with owner-approved design | Initial Full specification for the V2 package-family index, immutable payload, catalog-channel, semantic-contribution, provider, migration, and conformance contract. |
+| 0.2 | 2026-07-10 | Coding agent with round-1 review | Corrected provider phase vocabulary and goal traceability; sourced the 11-family V5 estimate; defined exact legacy managed-block signatures and migration behavior; normalized catalog placeholders and legacy current-state terminology. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). Approval of this specification supersedes SPEC-BA01; until then, SPEC-BA01 remains the implemented authoring contract.
 
@@ -104,7 +105,7 @@ The resulting authoring surface is deliberately declarative. Adding a package or
 
 ### 3.1 Current State
 
-Nine bundles carry one mutable `standard.toml`. Seven link to current `adopt.toml` artifact manifests; Python Coding is reference-only and Standard Bundle Authoring is internal. The manifest combines family identity, adoption mode, current/supported package versions, legacy YAML namespaces, resources, authorities, relationships, providers, and artifact linkage. `registry.json` separately tracks consumer contract versions. Runtime bundle mirrors and graph/catalog tests prove current-tree parity, not installability of multiple historical versions.
+Nine bundles carry one mutable `standard.toml`. Seven link to current `adopt.toml` artifact manifests; Python Coding uses legacy adoption `reference-only`, and Standard Bundle Authoring uses legacy adoption `none`. The manifest combines family identity, adoption mode, current/supported package versions, legacy YAML namespaces, resources, authorities, relationships, providers, and artifact linkage. `registry.json` separately tracks consumer contract versions. Runtime bundle mirrors and graph/catalog tests prove current-tree parity, not installability of multiple historical versions.
 
 Shared root artifacts still expose the limitations of that model: whole-file ownership collisions, printed but unapplied fragments, byte-identical `_shared` files with no semantic ownership, direct-write package tooling, and package-specific provenance state. The approved root-artifact design and SPEC-CP01 replace those behaviors with immutable payloads, package-owned semantic units, typed providers, migrations, and one central lock.
 
@@ -142,11 +143,11 @@ Package authors describe desired semantics rather than imperative installation s
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Make every advertised package version a real immutable offline payload. | Installed-wheel tests load and reconcile every catalog entry without network access. | FR-004-FR-008, FR-017-FR-020, FR-034; NFR-001-NFR-003 |
-| G-002 | Separate package identity, payload behavior, and catalog channel policy. | No family or payload manifest contains a global `latest` or candidate/default role. | FR-001-FR-003, FR-021-FR-023 |
-| G-003 | Make package composition declarative and conflict-free. | All declared scopes validate before providers run; pairwise/full-set plans are order-independent. | FR-010-FR-014; NFR-004, NFR-006 |
-| G-004 | Bound package behavior behind typed trusted provider and migration contracts. | Mutation spies observe no direct writes and all effects match declarations. | FR-015-FR-016, FR-024-FR-026; NFR-005 |
-| G-005 | Give authors one repeatable release and compatibility gate. | A new version requires data/schema/test additions, not shared package-ID dispatch. | FR-027-FR-033; NFR-007-NFR-009 |
+| G-001 | Make every advertised package version a real immutable offline payload. | Installed-wheel tests load and reconcile every catalog entry without network access. | FR-004-FR-009, FR-020-FR-021, FR-024, FR-034; NFR-001-NFR-003 |
+| G-002 | Separate package identity, payload behavior, and catalog channel policy. | No family or payload manifest contains a global `latest` or candidate/default role. | FR-001-FR-003, FR-022-FR-025 |
+| G-003 | Make package composition declarative and conflict-free. | All declared scopes validate before providers run; pairwise/full-set plans are order-independent. | FR-010-FR-014, FR-017; NFR-004, NFR-006 |
+| G-004 | Bound package behavior behind typed trusted provider and migration contracts. | Mutation spies observe no direct writes and all effects match declarations. | FR-015-FR-019; NFR-005 |
+| G-005 | Give authors one repeatable release and compatibility gate. | A new version requires data/schema/test additions, not shared package-ID dispatch. | FR-026-FR-033; NFR-007-NFR-009 |
 
 ---
 
@@ -203,11 +204,11 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-015 | Each provider shall declare stable ID, generic operation, kind, phase, allowed effect, payload-resource entrypoint, input/output schema, and referenced resources. | Provider behavior must be version-correct, typed, and schedulable. | Schema and installed-wheel tests resolve entrypoints only inside the selected payload and reject undeclared phases/effects or global/unqualified implementations. | Must |
 | FR-016 | Read-only providers shall return findings or content from declared immutable snapshots; mutation-intent providers shall return typed mutation plans and shall never write the live repository. | The platform executor is the sole reconciliation writer. | Filesystem/network spies cover every provider; direct writes, undeclared reads, and undeclared effects fail conformance. | Must |
 | FR-017 | Each referenced extension shall bind one config option to an allowed content type, repository-relative path policy, and optional preferred `.standards/extensions/{id}/` location while retaining consumer ownership. | Specialized inputs need reproducibility without managed ownership. | Path/digest/disable fixtures reject package-namespace and output overlap and preserve extension content. | Must |
-| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, and affected config/artifact/contribution identities. | Version and legacy transitions need explicit bounded plans. | Migration graph validation rejects unknown endpoints, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
+| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, affected config/artifact/contribution identities, and any exact legacy signatures it recognizes. | Version and legacy transitions need explicit bounded plans. | Migration graph validation rejects unknown endpoints/signatures, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
 | FR-019 | Every advertised package-major entry and exit shall have a declared path; a non-automatic rollback shall identify its exact manual instructions and limitations. | Candidate authorization is useful only when transition consequences are known. | Candidate fixtures cover forward entry, exact-target exit, automatic rollback, manual rollback, and missing-path rejection. | Must |
 | FR-020 | Every regular file inside an indexed payload directory shall be declared and digested, except `payload.toml`, which is included directly in the aggregate inventory. | Undeclared content would escape catalog integrity and lifecycle rules. | Inventory fixtures reject undeclared, missing, duplicate, and symlink-escaped files. | Must |
 | FR-021 | The family index aggregate digest shall be SHA-256 over a canonical sorted inventory containing the raw `payload.toml` digest and every declared path/digest pair. | Catalogs and locks need a deterministic non-self-referential payload identity. | Independent implementations produce the same lowercase `sha256:HEX` value and detect any byte change. | Must |
-| FR-022 | Repository catalog sources shall live at `catalogs/{major}.toml`, declare `schema_version = "1.0"` and `catalog_major`, and assign every included package/version/digest one role: `default`, `retained`, `candidate`, `reference-only`, or `internal`. | Channel policy belongs to the catalog, not the package. | Catalog schema and generation tests reject mismatched digests, invalid roles, and versions absent from family indexes. | Must |
+| FR-022 | Repository catalog sources shall live at `catalogs/{catalog-major}.toml`, declare `schema_version = "1.0"` and `catalog_major`, and assign every included package/version/digest one role: `default`, `retained`, `candidate`, `reference-only`, or `internal`. | Channel policy belongs to the catalog, not the package. | Catalog schema and generation tests reject mismatched digests, invalid roles, and versions absent from family indexes. | Must |
 | FR-023 | Each catalog major shall declare exactly one default version for every consumer package it offers ordinarily; candidate and retained entries shall not change that default implicitly, and a candidate shall use a non-default package major. | Ordinary `latest` must remain unambiguous and non-breaking. | Catalog-channel tests cover default uniqueness, same-major compatible advancement, retained/candidate coexistence, candidate-major separation, and cross-major promotion. | Must |
 | FR-024 | A payload may change before release but shall become immutable after first inclusion in a released catalog; any correction shall use a new package version. | Exact pins and historical migrations require byte-stable payloads. | Release checks compare published payload digests with tagged catalog baselines and fail mutation or deletion. | Must |
 | FR-025 | Removing an advertised payload, incompatibly changing an ordinary default, or promoting a breaking candidate shall follow ADR 0024's tool/catalog-major rules. | Author actions must preserve consumer version guarantees. | Release classification tests and review evidence map every catalog diff to the required tool release level. | Must |
@@ -215,7 +216,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-027 | Root `README.md` shall be a mutable family landing page; the selected payload's `README.md` shall be authoritative for that version, and its agent summary shall link to that versioned README with the canonical-authority notice. | Current navigation and historical normative content have different lifecycles. | Link/authority/3,000-byte checks pass for every payload summary. | Must |
 | FR-028 | The standard shall define an author workflow that creates the payload, validates schemas/content, computes digests, indexes it, proves conformance, assigns a catalog role, and only then publishes it. | Publication ordering prevents incomplete catalog entries. | The V2 README and template checklist enumerate the workflow and CI enforces its prepublication gates. | Must |
 | FR-029 | Every current package shall be reconstructed as V2 payload data and pass fresh, migrated, individual, pairwise, and all-package compatibility tests before being advertised as V5-compatible. | V5 must not strand or silently weaken current standards. | A compatibility matrix records all current packages, payloads, surfaces, migrations, and passing evidence. | Must |
-| FR-030 | Legacy `standard.toml`, `adopt.toml`, `registry.json`, YAML fragments, `_shared` files, and package-specific locks shall be migration inputs only after V2 activation, not parallel V2 authorities. | Split authoring and consumer authority would make reconciliation non-deterministic. | Dependency and runtime searches find no V2 reads except explicit migration adapters. | Must |
+| FR-030 | Legacy `standard.toml`, `adopt.toml`, `registry.json`, YAML fragments, `_shared` files, package-specific locks, and deployed Markdown/TOML/YAML managed-block marker formats shall be migration inputs only after V2 activation, not parallel V2 authorities. | Split authoring and consumer authority would make reconciliation non-deterministic, while deployed bounded blocks need an explicit ownership transition. | Dependency/runtime searches find no V2 reads except explicit migration adapters; Agent Handoff fixtures recognize its exact legacy instruction, Codex-hook, and project-config markers without treating them as canonical V2 delimiters. | Must |
 | FR-031 | The Standard Bundle Authoring package shall dogfood this contract as internal package version `2.0`, ship family/payload/catalog templates, and replace its V1 README only after SPEC-BA02 approval. | The meta-standard must demonstrate its own contract without prematurely retiring BA01. | Self-hosting schema/graph/catalog tests pass; BA01 remains historical and is marked superseded only on approval. | Must |
 | FR-032 | Family, payload, option, and catalog schemas shall be generated from strict typed models and checked into the distribution with drift tests. | Prose alone cannot enforce the exact V2 contract. | Schema snapshots use Draft 2020-12, reject unknown fields, and match generated output byte-for-byte. | Must |
 | FR-033 | Shared control-plane and graph code shall dispatch by declared adapter/provider/schema data and contain no ordinary package-ID branches. | New standards must remain data additions rather than platform rewrites. | Architecture tests and review reject package-ID conditionals outside explicit legacy migrations and package-owned provider code. | Must |
@@ -242,7 +243,7 @@ Package authors describe desired semantics rather than imperative installation s
 | IR-001 | Family index | The system shall parse and validate V2 `standards/{id}/standard.toml`. | Strict TOML schema described by FR-002. | Valid/invalid fixture corpus and generated JSON Schema pass. |
 | IR-002 | Payload manifest | The system shall parse and validate `versions/{version}/payload.toml`. | Strict TOML schema covering FR-005-FR-020. | Valid/invalid fixture corpus and generated JSON Schema pass. |
 | IR-003 | Package option schema | The system shall validate package config against the selected payload's schema. | JSON Schema Draft 2020-12; closed object rooted at package `config`. | Defaults, invalid values, and unknown-key tests pass. |
-| IR-004 | Catalog source | The system shall parse and validate `catalogs/{major}.toml`. | Strict TOML schema described by FR-022-FR-023. | Catalog generation/channel fixtures pass. |
+| IR-004 | Catalog source | The system shall parse and validate `catalogs/{catalog-major}.toml`. | Strict TOML schema described by FR-022-FR-023. | Catalog generation/channel fixtures pass. |
 | IR-005 | Generic provider | The system shall invoke version-qualified packaged providers through typed immutable-snapshot input and finding/content/mutation-plan output contracts. | Phase/effect-specific JSON-compatible schemas. | Installed-wheel dispatch and mutation-spy tests pass. |
 | IR-006 | Generated consumer catalog | Package authoring output shall supply every package/version/channel/digest fact required by `.standards/catalog.toml`. | SPEC-CP01 catalog schema; generated, never hand-edited. | Generator round-trip and drift checks pass. |
 | IR-007 | Installed payload root | The distribution shall expose byte-identical payload trees at one version-qualified package-data path. | `project_standards/payloads/{standard-id}/{version}/`. | Source/wheel inventory and digest parity pass for every indexed payload. |
@@ -322,7 +323,7 @@ Optional directories are absent when unused; empty directories are not package c
 | Option-schema validator | Validate version-specific package settings and defaults. | `config.schema.json`. | Fixed namespace derives from standard ID. |
 | Integrity builder | Inventory declared files and compute aggregate digest. | Raw files and canonical digest algorithm. | Rejects undeclared/symlink-escaped content. |
 | Graph validator | Validate relationships, scopes, shared identities, provider bounds, and migrations. | All family/payload models. | Runs before provider execution. |
-| Catalog-source model/generator | Validate catalog roles and produce consumer catalog facts. | `catalogs/{major}.toml`. | Channel policy remains outside payloads. |
+| Catalog-source model/generator | Validate catalog roles and produce consumer catalog facts. | `catalogs/{catalog-major}.toml`. | Channel policy remains outside payloads. |
 | Compatibility suite | Prove package behavior individually and in composition. | Repository and installed-wheel fixtures. | Gates V5-compatible advertisement. |
 | Payload packager | Copy canonical indexed payloads into the version-qualified installed package-data root. | Source payload tree and wheel contents. | Mechanical byte-preserving build step only. |
 
@@ -497,7 +498,9 @@ V1 scope selectors use these exact canonical forms:
 | `editorconfig` | `property:SECTION#KEY`; `$global` is the pre-section scope | `property:$global#root`, `property:*.py#indent_size` |
 | `markdown-block` | `block:BLOCK_ID` | `block:agent-handoff-instructions` |
 
-`JSON_POINTER` uses RFC 6901 escaping. `IDENTITY`, `KEY`, section text, and block IDs use percent-encoded UTF-8 when they contain selector delimiters. Table/mapping selectors own their descendants and therefore overlap any nested table/key selector. Set identities compare normalized values; keyed sets require unique scalar identity keys. Markdown delimiters are derived from the block ID as `BEGIN project-standards:BLOCK_ID` and `END project-standards:BLOCK_ID` inside the adapter's valid comment syntax. Adapter schemas reject any selector form not listed for that adapter.
+`JSON_POINTER` uses RFC 6901 escaping. `IDENTITY`, `KEY`, section text, and block IDs use percent-encoded UTF-8 when they contain selector delimiters. Table/mapping selectors own their descendants and therefore overlap any nested table/key selector. Set identities compare normalized values; keyed sets require unique scalar identity keys. New V2 Markdown delimiters are derived from the block ID as `BEGIN project-standards:BLOCK_ID` and `END project-standards:BLOCK_ID` inside valid HTML comments. Adapter schemas reject any selector form not listed for that adapter.
+
+Pre-V2 delimiters are never interpreted as canonical V2 block IDs. A payload migration claims them only through exact `[[legacy_signatures]]` data, maps the recognized content to declared V2 contributions, and removes the old markers in the same previewed mutation plan. This applies to deployed Agent Handoff HTML instruction blocks, TOML Codex-hook blocks, and YAML project-config blocks. Unknown or locally modified content between recognized delimiters remains consumer-owned and blocks automatic migration.
 
 Referenced extensions bind config to consumer-owned input:
 
@@ -521,7 +524,7 @@ Providers use a closed phase/effect contract:
 id = "render-ruff-config"
 operation = "render"
 kind = "python"
-phase = "plan"               # plan | validate | verify | authoring
+phase = "plan"               # plan | inspect | validate | verify | authoring
 effect = "content"           # findings | content | mutation-plan
 entrypoint = "payload:provider-render-ruff#render_ruff"
 input_schema = "render-ruff-input"
@@ -556,6 +559,7 @@ mode = "automatic"           # automatic | manual
 provider = "migrate-v4"
 reversible = true
 affected = ["config:*", "artifact:python-version", "contribution:ruff-config"]
+signatures = []
 
 [[migrations]]
 id = "2-to-1-rollback"
@@ -568,6 +572,39 @@ affected = ["config:*", "contribution:ruff-config"]
 ```
 
 Exactly one of `provider` or `instructions` is required according to mode. At least one package endpoint equals the containing payload version. `affected` uses typed identity prefixes and must cover every returned action. Manual transitions remain plan-visible and block automatic apply until their declared prerequisites are satisfied.
+
+Legacy signatures are versioned payload data and are referenced by ID from migrations:
+
+```toml
+[[legacy_signatures]]
+id = "agent-handoff-instructions-v1"
+kind = "bounded-block"
+format = "markdown"
+targets = ["AGENTS.md", "CLAUDE.md"]
+begin = "\u003c!-- BEGIN agent-handoff managed instructions --\u003e"
+end = "\u003c!-- END agent-handoff managed instructions --\u003e"
+known_content_digests = ["sha256:..."]
+
+[[legacy_signatures]]
+id = "agent-handoff-codex-hook-v1"
+kind = "bounded-block"
+format = "toml"
+targets = [".codex/config.toml"]
+begin = "# BEGIN agent-handoff managed codex hook"
+end = "# END agent-handoff managed codex hook"
+known_content_digests = ["sha256:..."]
+
+[[legacy_signatures]]
+id = "agent-handoff-project-config-v1"
+kind = "bounded-block"
+format = "yaml"
+targets = [".project-standards.yml"]
+begin = "# BEGIN agent-handoff managed config"
+end = "# END agent-handoff managed config"
+known_content_digests = ["sha256:..."]
+```
+
+`kind` is `whole-file` or `bounded-block`; a bounded block requires exact begin/end bytes and a declared format. `targets` are contained repository-relative paths. `known_content_digests` identify normalized block bodies or whole-file bytes previously shipped by the package. Marker presence alone never proves managed ownership. The Agent Handoff legacy migration lists all three signature IDs in its `signatures` field and maps each recognized block to its V2 contribution or config state.
 
 ### Integrity
 
@@ -647,7 +684,7 @@ Expected result:
 | AW-002 | Author publishes a breaking candidate. | Create a new package major with entry/exit migrations and assign `candidate` in the current catalog. | Payload is available only with explicit major authorization. |
 | AW-003 | A later catalog major promotes a candidate. | Reuse the immutable payload digest and assign it `default` in the new catalog. | Catalog-major opt-in changes ordinary defaults without payload mutation. |
 | AW-004 | Package is reference-only or internal. | Publish complete docs/resources/config schema as applicable and assign the corresponding catalog role without consumer adoption guide/actions. | Package remains discoverable but cannot be enabled as an ordinary consumer package. |
-| AW-005 | Existing package migrates to V2. | Reconstruct one or more payloads, declare legacy signatures/migrations, and pass the full compatibility matrix before advertisement. | Legacy artifacts become migration evidence, not active authority. |
+| AW-005 | Existing package migrates to V2. | Reconstruct one or more payloads, declare exact legacy file/block signatures and migrations, and pass the full compatibility matrix before advertisement. | Legacy artifacts and deployed markers become migration evidence, not active authority. |
 | AW-006 | Released payload needs correction. | Leave it byte-identical, author a new package version, and update catalog roles according to compatibility. | Pins and historical migration inputs remain reproducible. |
 
 ### 10.3 Edge Cases
@@ -665,6 +702,7 @@ Expected result:
 | EC-009 | Package option schema attempts to define `enabled`, `version`, provider, or catalog fields. | Reject reserved control-plane properties. |
 | EC-010 | Referenced extension aliases a managed or semantic output after canonical resolution. | Reject before provider execution and preserve the consumer file. |
 | EC-011 | Released catalog baseline cannot be located during release checking. | Block publication until immutable-baseline evidence is restored; never assume the payload is unchanged. |
+| EC-012 | A target contains a recognized pre-V2 delimiter but its body digest is unknown or modified. | Preserve the entire block, report migration ambiguity, and require explicit owner resolution; never claim it from markers alone. |
 
 ### 10.4 State Transitions
 
@@ -775,6 +813,8 @@ Package families, payloads, schemas, providers, migrations, catalogs, fixtures, 
 | Payload size | Mostly documentation/config/source; under a few MiB each | Historical payloads accumulate within catalog support policy | Catalog removal is explicit; no runtime cache/download layer in V1. |
 | Provider execution | Package-specific and bounded | External validators may dominate runtime | Authoring validation does not execute providers; performance threshold excludes external validators. |
 
+The 11-family launch estimate is the nine current families plus the two V5 standard deliverables tracked in [`docs/TODO.md`](../../TODO.md): `project-toolbox` and `agent-managed-repo`.
+
 ---
 
 ## 15. Risks
@@ -821,7 +861,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | Graph/composition | Relations, overlaps, shared identities, migrations, channel constraints | Individual, pairs, full catalog, randomized order | Yes |
 | Adapter/preservation | Whole/TOML/JSONC/YAML/EditorConfig/Markdown adapters | Create/equal/update/remove/conflict plus byte preservation | Yes |
 | Provider security | Phase/effect/input/output bounds and installed entrypoints | Mutation/network/undeclared-read spies and malformed output | Yes |
-| Migration | Legacy and package-version transitions | Fresh, forward, exact-target exit, automatic/manual rollback | Yes |
+| Migration | Legacy and package-version transitions | Fresh, forward, exact-target exit, automatic/manual rollback, exact legacy block signatures, and modified-block refusal | Yes |
 | Installed wheel | Packaged payload completeness and offline execution | Every advertised version and provider | Yes |
 | Release regression | Historical immutability and catalog-diff classification | Every published payload/catalog baseline | Yes |
 | Documentation | Family/payload authority, summary limit, adoption-guide scope, links | Every payload | Yes |
@@ -978,7 +1018,7 @@ Exit criterion: all DoD and traceability rows pass; no package compatibility blo
 | --- | --- | --- | --- | --- | --- | --- |
 | OQ-001 | What specification profile should BA02 use? | Full: exact author-facing contracts and conformance, while runtime behavior remains in SPEC-CP01. | No | Owner | Design | Answered 2026-07-10 |
 | OQ-002 | How should multiple immutable package versions be represented? | One family index plus complete `versions/{major.minor}/` payload directories. | No | Owner | Design | Answered 2026-07-10 |
-| OQ-003 | Where should default, retained, and candidate roles live? | Repository `catalogs/{major}.toml`; never in family or payload manifests. | No | Owner | Design | Answered 2026-07-10 |
+| OQ-003 | Where should default, retained, and candidate roles live? | Repository `catalogs/{catalog-major}.toml`; never in family or payload manifests. | No | Owner | Design | Answered 2026-07-10 |
 | OQ-004 | Should V2 retain BA01 adoption modes and arbitrary config namespaces? | No. Use payload availability/capabilities/providers and fixed `standards.STANDARD_ID.config` ownership. | No | Owner | Design | Answered 2026-07-10 |
 
 ---

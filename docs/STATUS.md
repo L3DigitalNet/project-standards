@@ -13,7 +13,7 @@
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
 - `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and ADRs 0023-0024 record its control-plane and version-channel decisions.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` is drafted as the Full V2 package-author contract; BA01 remains active until review and owner approval.
+- `SPEC-BA02` is in review at rev 0.2 after round-1 remediation; BA01 remains active until owner approval.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
