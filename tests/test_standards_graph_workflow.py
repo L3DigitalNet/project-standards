@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
 _REPO = Path(__file__).resolve().parent.parent
 
 
-def _load(name: str) -> dict[str, Any]:
-    payload = yaml.safe_load((_REPO / name).read_text(encoding="utf-8"))
-    assert isinstance(payload, dict)
-    return payload
+# PyYAML parses the top-level `on:` key as boolean True, so workflow mappings
+# cannot honestly be typed as string-keyed dictionaries.
+def _load(name: str) -> dict[Any, Any]:
+    return cast(
+        "dict[Any, Any]",
+        yaml.safe_load((_REPO / name).read_text(encoding="utf-8")),
+    )
 
 
-def _uses_steps(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _uses_steps(workflow: dict[Any, Any]) -> dict[str, dict[Any, Any]]:
     job = next(iter(workflow["jobs"].values()))
     return {step["uses"].split("@", 1)[0]: step for step in job["steps"] if "uses" in step}
 

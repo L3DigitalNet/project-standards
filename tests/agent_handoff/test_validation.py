@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 import project_standards.agent_handoff.validation as validation
-from project_standards.agent_handoff.model import Harness, StartupMode
+from project_standards.agent_handoff.model import Finding, Harness, StartupMode
 from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
 from project_standards.agent_handoff.policy import HandoffPolicy, load_policy
@@ -30,6 +31,15 @@ def _replace_shape_pattern(pattern: str) -> HandoffPolicy:
     )
     shape = policy.shape.model_copy(update={"documents": {pattern: bug_policy}})
     return policy.model_copy(update={"shape": shape})
+
+
+def _fixed_policy_loader(
+    policy: HandoffPolicy,
+) -> Callable[[list[Finding]], HandoffPolicy]:
+    def load(_findings: list[Finding]) -> HandoffPolicy:
+        return policy
+
+    return load
 
 
 def _adopt(
@@ -223,7 +233,7 @@ def test_shape_check_treats_bracket_only_filename_as_glob(
     bug = tmp_path / "docs/handoff/bugs/1.md"
     bug.write_text("# Bug\n", encoding="utf-8")
     policy = _replace_shape_pattern("docs/handoff/bugs/[0-9].md")
-    monkeypatch.setattr(validation, "_load_policy", lambda findings: policy)
+    monkeypatch.setattr(validation, "_load_policy", _fixed_policy_loader(policy))
 
     findings = shape_check(RepositoryRoot(tmp_path))
 
@@ -237,7 +247,7 @@ def test_shape_check_rejects_glob_in_directory_component(
 ) -> None:
     _adopt(tmp_path)
     policy = _replace_shape_pattern("docs/handoff/*/[0-9].md")
-    monkeypatch.setattr(validation, "_load_policy", lambda findings: policy)
+    monkeypatch.setattr(validation, "_load_policy", _fixed_policy_loader(policy))
 
     findings = shape_check(RepositoryRoot(tmp_path))
 
