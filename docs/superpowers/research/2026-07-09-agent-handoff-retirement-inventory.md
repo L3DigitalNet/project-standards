@@ -57,7 +57,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `control-center` | `main` | Migrated from dual hooks and root companions | Dual | `1be92ec` | Pass | Recheck with published v5 before deletion |
 | `doc-proc-scripts` | `main` | Migrated from Codex hook, engine references, root companions | Codex | `e1db276` | Pass | Recheck with published v5 before deletion |
 | `doc-proc-scripts-kate-decision` | `main` | Codex registration/hook; root status/tasks | Codex | — | Pending | Protected no-upstream topic worktree; inventory-only |
-| `docmend` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Current `dev` branch requires repo-local review |
+| `docmend` | `main` | Migrated on required `dev` branch; `main` remains legacy | Dual | `1657e2e` (`dev`) | Pass on `dev` | Merge `dev` through the protected PR flow; recheck published v5 |
 | `docs` | `main` | Symlinked Codex layout, `docs/state.md`, handoff references | Determine locally | — | Pending | Reconcile nonstandard legacy layout |
 | `dotfiles` | `main` | Migrated from dual registrations/hooks and root companions | Dual | `baf8705` | Pass | Recheck with published v5 before deletion |
 | `finances` | `main` | Migrated from dual hooks and root companions; historical brief classified | Dual | `f3e1d01` | Pass | Recheck with published v5 before deletion |
@@ -72,7 +72,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `website-aboutme` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `ab6bc3d` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
 | `website-l3digital.net` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `87dabc2` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
 
-Summary: 21 repositories had concrete legacy layout or registration evidence, `ClaudeCodeStatusLine` is a resolved local-only non-consumer classification, the deprecated engine remains the final deletion target, and three repositories have no legacy evidence. Fourteen repositories validate on v1 on their integration branch; `website-aboutme` and `website-l3digital.net` also validate on `testing` but still need their protected merges. Seven concrete-evidence default branches remain.
+Summary: 21 repositories had concrete legacy layout or registration evidence, `ClaudeCodeStatusLine` is a resolved local-only non-consumer classification, the deprecated engine remains the final deletion target, and three repositories have no legacy evidence. Fourteen repositories validate on v1 on their default or feature integration branch; `docmend` validates on `dev`, and `website-aboutme` plus `website-l3digital.net` validate on `testing`, but all three still need their protected merges. Seven concrete-evidence default branches remain.
 
 ## Installed-wheel verification
 
