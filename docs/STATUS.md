@@ -25,3 +25,4 @@
 - `dotfiles` is migrated (`baf8705`); its complete 170-test `make check` gate and the dual profile pass on `main`.
 - `finances` is migrated (`f3e1d01`); Ruff, 361 PostgreSQL-backed tests, an empty legacy report, and the dual profile pass on `main`.
 - `homelab` is migrated (`ceba125`); changed-doc frontmatter and Markdown, npm audit, llm-wiki citations, and the dual profile pass on `main`.
+- `website-l3digital.net` validates on `testing` (`87dabc2`) with a clean Astro build; branch policy still requires integration to `main`.
