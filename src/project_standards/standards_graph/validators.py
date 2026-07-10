@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 from project_standards.adopt.engine import resolve_source
 from project_standards.adopt.errors import ManifestError
 from project_standards.adopt.manifest import ArtifactProvenance
-from project_standards.standard_manifest import AdoptionMode, is_safe_relative_path
+from project_standards.standard_manifest import AdoptionMode
 from project_standards.standards_graph.model import (
     GraphFinding,
     StandardNode,
@@ -55,14 +55,15 @@ def _finding(
 
 
 def _is_path_below(path: str | None, parent: str) -> bool:
-    if path is None or not is_safe_relative_path(path):
+    if path is None or not path or "\x00" in path or "\\" in path:
         return False
     normalized = PurePosixPath(path)
     parent_path = PurePosixPath(parent)
-    # Exact serialization rejects aliases such as `./` and duplicate separators;
-    # accepting them would make a raw manifest prefix differ from its effective path.
+    has_windows_drive = len(path) >= 2 and path[0].isalpha() and path[1] == ":"
+    # PurePosixPath normalizes harmless aliases but preserves traversal components;
+    # no filesystem lookup or symlink resolution belongs in manifest graph validation.
     return (
-        normalized.as_posix() == path
+        not (normalized.is_absolute() or has_windows_drive or ".." in normalized.parts)
         and normalized != parent_path
         and normalized.is_relative_to(parent_path)
     )

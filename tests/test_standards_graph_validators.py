@@ -454,14 +454,14 @@ def test_standard_packaged_hook_rejects_destination_traversal(tmp_path: Path) ->
     assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
 
 
-def test_standard_packaged_hook_rejects_non_normal_destination(tmp_path: Path) -> None:
+def test_standard_packaged_hook_accepts_normalized_destination_alias(tmp_path: Path) -> None:
     _write_source_owned_hook_artifact(
         tmp_path,
         canonical="standards/alpha/hooks/start/run.py",
         dest=".agents/hooks/alpha/./run.py",
     )
 
-    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
 
 
 def test_traversing_canonical_path_is_not_classified_as_hook(tmp_path: Path) -> None:
@@ -476,14 +476,14 @@ def test_traversing_canonical_path_is_not_classified_as_hook(tmp_path: Path) -> 
     assert "SG-ARTIFACT-HOOK-DEST" not in codes
 
 
-def test_non_normal_canonical_path_is_not_classified_as_hook(tmp_path: Path) -> None:
+def test_normalized_canonical_alias_is_classified_as_hook(tmp_path: Path) -> None:
     _write_source_owned_hook_artifact(
         tmp_path,
         canonical="standards/alpha/hooks/./start/run.py",
         dest=".claude/hooks/run.py",
     )
 
-    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
 
 
 def test_provider_schema_resources_must_exist_when_declared(tmp_path: Path) -> None:

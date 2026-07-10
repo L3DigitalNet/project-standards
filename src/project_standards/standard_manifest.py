@@ -158,8 +158,8 @@ class RelationsTable(_Table):
 _RESOURCE_ID_RE = re.compile(r"^[a-z0-9]+([_-][a-z0-9]+)*$")
 
 
-def is_safe_relative_path(value: str) -> bool:
-    """Return whether a relative path has no traversal, absolute, Windows, or null escape.
+def _is_safe_bundle_path(value: str) -> bool:
+    """A bundle-relative path with no traversal, absolute, Windows-drive/backslash escape, or null byte.
 
     The null-byte check matters even though `PurePosixPath` is pure string
     manipulation and would otherwise happily accept it: an embedded null byte
@@ -200,7 +200,7 @@ class ResourcesTable(BaseModel):
             if not _RESOURCE_ID_RE.match(key):
                 msg = f"resource id {key!r} is not a URI-safe token"
                 raise ValueError(msg)
-            if not is_safe_relative_path(value):
+            if not _is_safe_bundle_path(value):
                 msg = f"resource {key!r} path {value!r} is not a safe bundle-relative path"
                 raise ValueError(msg)
         return self
@@ -217,7 +217,7 @@ class ArtifactsTable(_Table):
     @field_validator("manifest")
     @classmethod
     def _safe_repository_path(cls, value: str) -> str:
-        if not is_safe_relative_path(value):
+        if not _is_safe_bundle_path(value):
             msg = f"artifact manifest path {value!r} is not a safe repository-relative path"
             raise ValueError(msg)
         return value
