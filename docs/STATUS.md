@@ -12,6 +12,7 @@
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, enforces the 3,000-byte policy, publishes catalog resource URIs, and passes the 1,382-test gate.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
 - `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and the control-plane contract is ready for planning.
+- Root-artifact composition uses consumer-owned containers with typed package contributions; the written design awaits owner review.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

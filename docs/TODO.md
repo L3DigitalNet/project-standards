@@ -110,7 +110,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [ ] Resolve root-artifact ownership and semantic composition across standards.
 
-  Determine key/block ownership for `pyproject.toml`, agent instructions, VS Code files, shared EditorConfig/extension recommendations, workflows, and other externally discovered artifacts. This is a prerequisite for `SPEC-CP01` real-apply composition and must preserve tool discovery and consumer-owned content.
+  Option 1 is selected and documented in `docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md`: consumer-owned containers with typed package contributions, syntax-preserving adapters, reference-counted shared units, and no precedence. Written design review remains before closure.
 
 - [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
 
