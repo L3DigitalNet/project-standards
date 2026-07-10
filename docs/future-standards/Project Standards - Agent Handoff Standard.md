@@ -30,7 +30,7 @@ That mix is useful in the engine repo, but a published standard should separate 
 
 Create:
 
-```
+```text
 standards/agent-handoff/
 ├── README.md
 ├── adopt.md
@@ -53,7 +53,7 @@ standards/agent-handoff/
 
 Then update:
 
-```
+```text
 standards/README.md
 README.md
 .project-standards.yml
@@ -67,13 +67,13 @@ The existing standards repo already expects every published standard to be a sel
 
 Use:
 
-```
+```text
 Agent Handoff Standard
 ```
 
 Not:
 
-```
+```text
 Agent Handoff System v3
 ```
 
@@ -106,7 +106,7 @@ Agent sessions are stateless; repository-local handoff files preserve working st
 
 The standard should require this shape for active agent-managed repos:
 
-```
+```text
 <repo>/
 ├── STATUS.md
 ├── TODO.md
@@ -150,13 +150,13 @@ Make this an **implementation profile**, not the whole standard.
 
 The standard can say:
 
-```
+```text
 A conforming implementation SHOULD provide an automatic session-start mechanism when the agent harness supports one.
 ```
 
 Then define the V3 reference profile:
 
-```
+```text
 Reference profile: agent-handoff-v3
 ```
 
@@ -170,7 +170,7 @@ The engine repo is the **factory**: it owns the canonical hook, skill, validator
 
 Rules to publish:
 
-```
+```text
 - Shared engine files MUST have one canonical source.
 - Installed hook files MUST be byte-identical copies of the canonical source.
 - Per-repo hook edits MUST NOT be made.
@@ -192,7 +192,7 @@ This should become a required operational procedure. The current V3 ritual is al
 
 Keep this as a standard requirement:
 
-```
+```text
 A conforming implementation MUST provide a non-mutating validation command.
 ```
 
@@ -343,7 +343,7 @@ Bake in a **deterministic byte-budget workflow**. The current standard already h
 
 Make this normative:
 
-```
+```text
 Agents MUST NOT reduce capped handoff files by guessing.
 
 Before editing any capped file, the agent MUST:
@@ -371,7 +371,7 @@ Example interface:
 
 Human output:
 
-```
+```text
 docs/handoff/state.md     2314 / 2048 bytes   OVER by 266   target: 1740   reduce: 574
 CLAUDE.md                 1320 / 2048 bytes   OK            target: 1740   spare: 420
 AGENTS.md                 3550 / 4096 bytes   OK            target: 3600   spare: 46
@@ -403,7 +403,7 @@ For capped files, agents should not edit the live file and then discover the mis
 
 Normative rule:
 
-```
+```text
 When replacing a capped file wholesale, agents SHOULD write the candidate content to a temporary file, measure it with the same byte-counting method used by the validator, and only then replace the real file.
 ```
 
@@ -413,7 +413,7 @@ This is especially useful for `state.md`, `CLAUDE.md`, and `AGENTS.md`.
 
 Make the measurement canonical:
 
-```
+```text
 Capped file size is measured as the length in bytes of the file's UTF-8 encoded contents on disk.
 The count includes newlines and frontmatter if present.
 Agents MUST NOT use character count, token estimate, word count, or rendered Markdown length as a substitute.
@@ -457,7 +457,7 @@ Example:
 
 Then the rule:
 
-```
+```text
 If `state.md` exceeds its cap, agents MUST reduce by moving facts out by lifetime before shortening prose.
 ```
 
@@ -467,7 +467,7 @@ This aligns with the existing design: over-full `state.md` means longer-lived co
 
 Add a deterministic algorithm agents must follow when a capped file is over budget:
 
-```
+```text
 Capped-file reduction order:
 
 1. Move completed work to `STATUS.md` or `sessions/<YYYY-MM>.md`.
@@ -489,7 +489,7 @@ This gives you an audit signal and trains agents to think numerically.
 
 Example final report requirement:
 
-```
+```text
 When editing capped handoff files, the agent's final response MUST report:
 - file path
 - before size
@@ -500,7 +500,7 @@ When editing capped handoff files, the agent's final response MUST report:
 
 Example:
 
-```
+```text
 Size results:
 - `docs/handoff/state.md`: 2314 → 1628 bytes / 2048 cap
 - `AGENTS.md`: unchanged, 3550 bytes / 4096 cap
@@ -511,13 +511,13 @@ Size results:
 
 A failure like this is not enough:
 
-```
+```text
 state.md exceeds 2048 bytes
 ```
 
 Better:
 
-```
+```text
 docs/handoff/state.md is 2314 bytes; cap is 2048; over by 266.
 Recommended target is 1740, so reduce by about 574 bytes.
 Do not delete live facts blindly. Move longer-lived facts to:
@@ -562,7 +562,7 @@ Do not let the template invite narrative. Narrative belongs in `sessions/`, spec
 
 This is a good agent discipline rule:
 
-```
+```text
 If a capped-file reduction still fails after one edit-and-measure cycle, the agent MUST stop prose tweaking and produce a size report plus a routing plan before editing again.
 ```
 
@@ -580,7 +580,7 @@ Bake in three layers:
 
 The most important single rule is:
 
-```
+```text
 For capped handoff files, agents MUST target a working size below the cap, not merely pass the cap.
 ```
 
@@ -608,13 +608,13 @@ The existing handoff design already has the key premise: facts route by lifetime
 
 Add a new section to the standard:
 
-```
+```text
 Document Shape and Verbosity Control
 ```
 
 with this rule:
 
-```
+```text
 Every handoff document has a shape profile. Agents MUST write to the profile for that document, not to an open-ended prose style.
 
 When a shape profile sets a measurable limit, agents MUST measure it before completion. Agents MUST NOT rely on visual length, estimated token count, or subjective concision.
@@ -720,7 +720,7 @@ Add a validator command that checks shape separately from semantic quality:
 
 It should report exact failures:
 
-```
+```text
 docs/handoff/state.md
   FAIL: 2291 bytes; cap 2048; target 1740
   FAIL: section "Active" has 7 bullets; max 4
@@ -758,7 +758,7 @@ Strictest profile.
 
 Rules:
 
-```
+```text
 - Hard cap: 2048 bytes.
 - Working target: 1740 bytes.
 - Paragraphs forbidden.
@@ -797,7 +797,7 @@ Template:
 
 Rules:
 
-```
+```text
 - Snapshot, not history.
 - Bullets only by default.
 - No session narrative.
@@ -812,7 +812,7 @@ This directly reinforces the current V3 rule that `STATUS.md` is a current-state
 
 Rules:
 
-```
+```text
 - Preserve `## User Tracked Tasks` above `## Agent Tracked Tasks`.
 - Agent may not rewrite the user-owned section unless asked.
 - Each task is one checkbox line.
@@ -826,7 +826,7 @@ The current spec already requires the user-tracked section to stay above the age
 
 Rules:
 
-```
+```text
 - Current runtime/deployment truth only.
 - No deployment changelog.
 - Prefer compact tables.
@@ -838,7 +838,7 @@ Rules:
 
 Rules:
 
-```
+```text
 - Structural map and standing backlog only.
 - Explanations allowed, but paragraphs max 420 characters.
 - If a topic needs more than 700 characters, create or link a spec/ADR/design note.
@@ -849,7 +849,7 @@ Rules:
 
 The current skill already defines this file as a pattern library with a Quick Reference table and numbered entries. Make that strict:
 
-```
+```text
 - Must start with Quick Reference.
 - Every convention has a stable number.
 - Every entry uses this structure:
@@ -868,7 +868,7 @@ The current skill already defines this file as a pattern library with a Quick Re
 
 Rules:
 
-```
+```text
 - Append-only.
 - One row per noteworthy session.
 - Headline max 20 words.
@@ -882,7 +882,7 @@ The V3 spec already says session rows should be compact with date, ≤20-word he
 
 Rules:
 
-```
+```text
 - Required sections: Cause, Fix, Lesson.
 - No general debugging diary.
 - Cause explains root cause.
@@ -897,7 +897,7 @@ This is the part that will reduce agent verbosity the most.
 
 Define allowed units:
 
-```
+```text
 Allowed units:
 - Fact bullet: one durable fact, one sentence preferred.
 - Task bullet: one action, starts with a verb.
@@ -921,7 +921,7 @@ This gives agents a vocabulary for what they are allowed to write.
 
 This should be universal:
 
-```
+```text
 When content exceeds the profile limit, agents MUST NOT continue compressing the same document indefinitely. They MUST move detail to the correct durable location and leave a pointer.
 ```
 
@@ -955,7 +955,7 @@ Use this as **warning by default**, fail only in capped/eager files.
 
 Better rule:
 
-```
+```text
 Capped files fail on blocked filler phrases.
 Lazy reference files warn on blocked filler phrases.
 ```
@@ -964,7 +964,7 @@ Lazy reference files warn on blocked filler phrases.
 
 Require this after any handoff-doc edit:
 
-```
+```text
 When an agent edits handoff documents, the final response MUST report shape metrics for every capped or shaped file changed:
 - path
 - bytes before/after, if byte budgeted
@@ -975,7 +975,7 @@ When an agent edits handoff documents, the final response MUST report shape metr
 
 Example:
 
-```
+```text
 Shape results:
 - `docs/handoff/state.md`: 1912 → 1488 bytes / 2048 cap; 9 bullets; passed.
 - `STATUS.md`: 72 → 54 lines; target 60; passed.
@@ -1074,7 +1074,7 @@ That separation is important. A Project Standards MCP server should know the **s
 
 ## What MCP would actually help with
 
-MCP is useful when you want an agent-visible, typed, discoverable interface. Official MCP defines server-exposed **tools**, **resources**, and **prompts**: tools are executable functions, resources provide context data, and prompts provide reusable interaction templates. [![](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/docs/concepts/architecture)
+MCP is useful when you want an agent-visible, typed, discoverable interface. Official MCP defines server-exposed **tools**, **resources**, and **prompts**: tools are executable functions, resources provide context data, and prompts provide reusable interaction templates. [![Source](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/docs/concepts/architecture)
 
 That maps cleanly to two different layers.
 
@@ -1082,7 +1082,7 @@ That maps cleanly to two different layers.
 
 Good uses:
 
-```
+```text
 standards://agent-handoff/README.md
 standards://agent-handoff/adopt.md
 standards://agent-handoff/templates/state.md
@@ -1091,7 +1091,7 @@ standards://agent-handoff/resources/implementation-profile-agent-handoff-v3.md
 
 Prompts:
 
-```
+```text
 adopt_agent_handoff_standard
 review_handoff_layout
 explain_handoff_fact_routing
@@ -1100,7 +1100,7 @@ draft_agent_handoff_exception_adr
 
 Tools should be minimal, mostly read-only:
 
-```
+```text
 standards.find_standard
 standards.get_adoption_runbook
 standards.get_template
@@ -1113,7 +1113,7 @@ This is valuable because agents can pull the exact standard and templates withou
 
 Good uses, but only after the CLI/core library exists:
 
-```
+```text
 handoff.size_report
 handoff.shape_report
 handoff.validate_layout
@@ -1127,7 +1127,7 @@ But these should be wrappers around deterministic local code, not independent MC
 
 For example:
 
-```
+```text
 handoff.size_report
   -> calls the same byte-counting function used by validate-layout
 
@@ -1145,17 +1145,17 @@ handoff.update_state
 
 Keep the SessionStart hook. MCP is not the right primitive for guaranteed startup injection.
 
-The current V3 hook automatically injects `state.md`, git branch, recent commits, working-tree status, and pointers at session start; it also branches output for Claude vs Codex. MCP resources, by contrast, are application-driven: the host decides how to incorporate them. [![](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/server/resources) Prompts are user-controlled, and tools are model-controlled. [![](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol+1](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)
+The current V3 hook automatically injects `state.md`, git branch, recent commits, working-tree status, and pointers at session start; it also branches output for Claude vs Codex. MCP resources, by contrast, are application-driven: the host decides how to incorporate them. [![Source](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/server/resources) Prompts are user-controlled, and tools are model-controlled. [![Source](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol+1](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)
 
 So the hook remains the reliable eager-context mechanism. MCP is better for **on-demand structured operations**.
 
 ## Security boundary
 
-A handoff MCP server would be more dangerous than a read-only standards server because it touches repo state. Official MCP tooling guidance explicitly treats tools as model-invoked functions and recommends human-visible controls/confirmation for operations. [![](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) MCP roots can define filesystem boundaries, and servers are expected to respect those boundaries and validate paths against them. [![](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/client/roots)
+A handoff MCP server would be more dangerous than a read-only standards server because it touches repo state. Official MCP tooling guidance explicitly treats tools as model-invoked functions and recommends human-visible controls/confirmation for operations. [![Source](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) MCP roots can define filesystem boundaries, and servers are expected to respect those boundaries and validate paths against them. [![Source](https://www.google.com/s2/favicons?domain=https://modelcontextprotocol.io&sz=128)Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/client/roots)
 
 For this standard, require:
 
-```
+```text
 - MCP MUST NOT be required for conformance.
 - MCP write tools MUST be dry-run by default.
 - MCP write tools MUST be scoped to the active repo root.
@@ -1176,7 +1176,7 @@ Do this in three phases.
 
 Build the deterministic tooling first:
 
-```
+```text
 handoff size-report
 handoff shape-report
 handoff validate-layout
@@ -1190,7 +1190,7 @@ This directly fixes the problems you identified: blind byte reduction, verbosity
 
 Expose standards as resources and prompts:
 
-```
+```text
 standards://agent-handoff/README.md
 standards://agent-handoff/adopt.md
 standards://agent-handoff/templates/*
@@ -1204,14 +1204,14 @@ Add a separate logical server/profile only if the CLI proves useful and repeated
 
 I would implement it as one of these:
 
-```
+```text
 project-standards mcp --profile standards
 agent-handoff mcp --profile repo
 ```
 
 or:
 
-```
+```text
 project-standards-mcp        # read-only standards server
 agent-handoff-mcp            # repo-local handoff adapter
 ```

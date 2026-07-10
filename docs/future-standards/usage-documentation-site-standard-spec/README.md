@@ -148,13 +148,13 @@ Implementers shall start with `00-master-spec.md`, then use the child specificat
 
 Stable IDs allow requirements to be referenced from commits, tests, issues, ADRs, and review comments.
 
-| Prefix | Meaning | Defined In |
-| --- | --- | --- |
-| `NG-` | Non-goal (never) | §2.2 |
-| `WH-` | Won't have in v1 (deferred) | §2.3 |
-| `FR-` | Functional requirement | §7.1 |
-| `OQ-` | Open question | §21 |
-| `DEV-` | Deviation | Deviations Log |
+| Prefix | Meaning                     | Defined In     |
+| ------ | --------------------------- | -------------- |
+| `NG-`  | Non-goal (never)            | §2.2           |
+| `WH-`  | Won't have in v1 (deferred) | §2.3           |
+| `FR-`  | Functional requirement      | §7.1           |
+| `OQ-`  | Open question               | §21            |
+| `DEV-` | Deviation                   | Deviations Log |
 
 Higher-tier ID prefixes are defined in the Standard and Full templates. Priority values are column values, not ID prefixes; IDs never change when priorities do.
 

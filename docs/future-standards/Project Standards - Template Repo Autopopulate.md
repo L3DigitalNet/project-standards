@@ -17,11 +17,11 @@ One important constraint is already visible: a GitHub template repository is onl
 
 ## Bottom line
 
-Use the **standards repo as the only source of truth** and treat the template repo as a **generated release artifact**, not a hand-maintained repository. GitHub template repositories are useful for starting new repos, but they do not maintain an upstream relationship after creation; GitHub’s own docs describe template-created branches as having unrelated histories, so you cannot rely on normal PR/merge mechanics between the template and generated descendants. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository)
+Use the **standards repo as the only source of truth** and treat the template repo as a **generated release artifact**, not a hand-maintained repository. GitHub template repositories are useful for starting new repos, but they do not maintain an upstream relationship after creation; GitHub’s own docs describe template-created branches as having unrelated histories, so you cannot rely on normal PR/merge mechanics between the template and generated descendants. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository)
 
 The best architecture is:
 
-```
+```text
 project-standards repo
   ├─ canonical standards
   ├─ scaffold fragments
@@ -45,7 +45,7 @@ The template repo should have almost no manually edited content. It should be re
 
 The standards repo owns:
 
-```
+```text
 standards/
   python/
   markdown/
@@ -62,7 +62,7 @@ template-manifest.yml
 
 The template repo receives:
 
-```
+```text
 .project-standards.lock.yml
 .project-standards.yml
 pyproject.toml
@@ -107,7 +107,7 @@ artifact_hash: '<hash-of-managed-tree>'
 
 Then add a **drift check** in the template repo:
 
-```
+```text
 regenerate from .project-standards.lock.yml
 compare generated output to repository contents
 fail CI if there is any diff in managed paths
@@ -137,7 +137,7 @@ On `release.published` in `project-standards`:
 8. Open a PR.
 9. Auto-merge after required checks pass, or direct-push only if you decide the template repo is purely generated.
 
-Use a GitHub App instead of a personal token. GitHub App installation access tokens can make API requests for resources owned by the installation, are attributed to the app, and expire after one hour. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation) GitHub also recommends selecting the minimum permissions required for the app. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app)
+Use a GitHub App instead of a personal token. GitHub App installation access tokens can make API requests for resources owned by the installation, are attributed to the app, and expire after one hour. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation) GitHub also recommends selecting the minimum permissions required for the app. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app)
 
 ### Pattern B — standards repo dispatches an update event to the template repo
 
@@ -155,7 +155,7 @@ On `release.published` in `project-standards`, call the template repo’s `repos
 }
 ```
 
-GitHub Actions supports `repository_dispatch` for activity outside GitHub Actions, and the payload is available through `github.event.client_payload`. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) The REST endpoint for creating a repository dispatch event accepts `event_type` and `client_payload`; fine-grained tokens need repository `Contents: write`. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/rest/repos/repos)
+GitHub Actions supports `repository_dispatch` for activity outside GitHub Actions, and the payload is available through `github.event.client_payload`. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) The REST endpoint for creating a repository dispatch event accepts `event_type` and `client_payload`; fine-grained tokens need repository `Contents: write`. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/rest/repos/repos)
 
 I would prefer **Pattern A** for your setup because the standards repo is the authority. The update logic belongs beside the release logic.
 
@@ -182,9 +182,9 @@ Copier is worth considering if you want the **same mechanism** to update both:
 1. the official template repo, and
 2. existing project repos created from that template.
 
-Copier’s update flow expects a valid `.copier-answers.yml`, a Git-tagged template, and a Git-versioned destination; `copier update` reads available Git tags and can update to the latest tag. [![](https://www.google.com/s2/favicons?domain=https://copier.readthedocs.io&sz=128)Copier](https://copier.readthedocs.io/en/stable/updating/) Copier also has `copier check-update` with JSON and quiet modes for automation. [![](https://www.google.com/s2/favicons?domain=https://copier.readthedocs.io&sz=128)Copier](https://copier.readthedocs.io/en/stable/updating/)
+Copier’s update flow expects a valid `.copier-answers.yml`, a Git-tagged template, and a Git-versioned destination; `copier update` reads available Git tags and can update to the latest tag. [![Source](https://www.google.com/s2/favicons?domain=https://copier.readthedocs.io&sz=128)Copier](https://copier.readthedocs.io/en/stable/updating/) Copier also has `copier check-update` with JSON and quiet modes for automation. [![Source](https://www.google.com/s2/favicons?domain=https://copier.readthedocs.io&sz=128)Copier](https://copier.readthedocs.io/en/stable/updating/)
 
-Cruft is similar for Cookiecutter templates: it stores template commit/context in `.cruft.json`, supports update/check/diff, and documents GitHub Actions automation for detecting changes and opening PRs. [![](https://www.google.com/s2/favicons?domain=https://cruft.github.io&sz=128)Cruft](https://cruft.github.io/cruft/)
+Cruft is similar for Cookiecutter templates: it stores template commit/context in `.cruft.json`, supports update/check/diff, and documents GitHub Actions automation for detecting changes and opening PRs. [![Source](https://www.google.com/s2/favicons?domain=https://cruft.github.io&sz=128)Cruft](https://cruft.github.io/cruft/)
 
 My read: **use Copier only if templating variables matter**. For your immediate “standards → official template repo” problem, a purpose-built generator is simpler and more deterministic. Copier becomes more attractive once you want to propagate template changes into dozens of already-created repos.
 
@@ -210,7 +210,7 @@ jobs:
     uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v2
 ```
 
-GitHub reusable workflows are called with `jobs.<job_id>.uses`, and external reusable workflow refs can be a SHA, release tag, or branch; GitHub says commit SHA is safest for stability/security. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
+GitHub reusable workflows are called with `jobs.<job_id>.uses`, and external reusable workflow refs can be a SHA, release tag, or branch; GitHub says commit SHA is safest for stability/security. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
 
 ---
 
@@ -245,7 +245,7 @@ managed_paths:
 
 For files where comments are legal:
 
-```
+```text
 # Generated from L3DigitalNet/project-standards@v2.1.0.
 # Do not edit directly. Update the source standard/scaffold instead.
 ```
@@ -275,7 +275,7 @@ The generated template must run the same checks it gives to consumers. Your Pyth
 
 Manual edits should happen in:
 
-```
+```text
 project-standards/scaffolds/
 project-standards/standards/
 project-standards/tools/render_template/
@@ -283,7 +283,7 @@ project-standards/tools/render_template/
 
 Not in:
 
-```
+```text
 project-template/
 ```
 
@@ -308,9 +308,9 @@ For Python tooling specifically, your standard already treats raising the Python
 
 ## GitHub permissions note
 
-If you rely on a workflow inside the **template repo** using `GITHUB_TOKEN` to create PRs, GitHub has a repository/org setting controlling whether workflows may create or approve pull requests; new personal repositories default to not allowing it, while org repos inherit the org setting. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
+If you rely on a workflow inside the **template repo** using `GITHUB_TOKEN` to create PRs, GitHub has a repository/org setting controlling whether workflows may create or approve pull requests; new personal repositories default to not allowing it, while org repos inherit the org setting. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
 
-To avoid that fragility, use a GitHub App installed on both repos and give it only the permissions it needs. For writing workflow files under `.github/workflows`, GitHub’s GitHub App permission docs say the app needs `Workflows` permission in addition to `Contents`. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app)
+To avoid that fragility, use a GitHub App installed on both repos and give it only the permissions it needs. For writing workflow files under `.github/workflows`, GitHub’s GitHub App permission docs say the app needs `Workflows` permission in addition to `Contents`. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app)
 
 ---
 
@@ -318,7 +318,7 @@ To avoid that fragility, use a GitHub App installed on both repos and give it on
 
 Start with the simplest durable system:
 
-```
+```text
 project-standards
   tools/render_template/
   template-manifest.yml
@@ -331,7 +331,7 @@ project-template
 
 Initial release workflow:
 
-```
+```text
 on release published:
   checkout project-standards at release tag
   render template to /tmp/rendered-template
@@ -389,7 +389,7 @@ It should validate:
 
 The output needs to be actionable, not just “too long”:
 
-```
+```text
 handoff/current.md: FAIL
 limit: 8000 chars
 actual: 10426 chars
@@ -413,7 +413,7 @@ This is the single highest-leverage fix.
 
 Add a rule like this to the standard:
 
-```
+```text
 Agents MUST NOT revise capped handoff documents by guessing whether the result will fit.
 
 Before writing or shrinking a capped handoff document, the agent MUST:
@@ -427,7 +427,7 @@ Before writing or shrinking a capped handoff document, the agent MUST:
 
 Example:
 
-```
+```text
 Cap: 8,000 chars
 Safety target: 7,200 chars
 Current size: 11,400 chars
@@ -492,7 +492,7 @@ Do not force one document to serve every use case.
 
 Recommended structure:
 
-```
+```text
 handoff/
   current.md              # hard-capped, active working state
   index.md                # tiny pointer file
@@ -551,7 +551,7 @@ Give agents a required over-cap reduction ladder.
 
 Example:
 
-```
+```text
 If handoff/current.md exceeds its cap, apply these reductions in order:
 
 1. Delete duplicated information already present in repo files.
@@ -606,7 +606,7 @@ Agents are much better when they can use numbers. Do not make them estimate.
 
 This sounds small, but it matters.
 
-```
+```text
 When reducing a capped document, agents MUST NOT begin by rewriting the whole document.
 
 They MUST first produce or inspect a size report, identify the over-budget sections, and only edit the sections responsible for the overage.
@@ -710,7 +710,7 @@ Use character or byte caps for repository validation. Token caps are model-depen
 
 Recommended:
 
-```
+```text
 Primary cap: UTF-8 bytes or Unicode characters.
 Optional advisory cap: approximate tokens.
 ```
@@ -731,7 +731,7 @@ The validator should enforce the exact cap and optionally report the estimate. D
 
 Your coding standard already suggests golden-task or fixture suites for repeated agent use. Add fixtures like:
 
-```
+```text
 tests/fixtures/handoff/over_cap_narrative.md
 tests/fixtures/handoff/over_cap_logs.md
 tests/fixtures/handoff/missing_next_action.md
@@ -755,7 +755,7 @@ This is how you turn “agents should be better” into an enforceable standard.
 
 Agents should not say “reduced the handoff” unless they include numbers.
 
-```
+```text
 Handoff update report:
 - File: handoff/current.md
 - Cap: 8,000 chars

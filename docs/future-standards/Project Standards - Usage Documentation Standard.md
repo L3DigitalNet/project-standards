@@ -23,11 +23,11 @@ I’m already seeing a likely split: “wiki app” tools are worse fits because
 
 Use **MkDocs + Material for MkDocs** as the default for your per-repository user-facing docs layer.
 
-It fits your constraints best: Markdown files live inside the same Git repo, it has a local live-preview server, produces a browser-friendly static site, has built-in search, supports normal relative Markdown links, and stays close to your Python/Markdown workflow. MkDocs explicitly targets “project documentation with Markdown,” uses a single YAML config, and ships a live dev server with auto-reload. Material adds a much better reading/search/navigation experience on top. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+2![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+2](https://www.mkdocs.org/?utm_source=chatgpt.com)
+It fits your constraints best: Markdown files live inside the same Git repo, it has a local live-preview server, produces a browser-friendly static site, has built-in search, supports normal relative Markdown links, and stays close to your Python/Markdown workflow. MkDocs explicitly targets “project documentation with Markdown,” uses a single YAML config, and ships a live dev server with auto-reload. Material adds a much better reading/search/navigation experience on top. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+2![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+2](https://www.mkdocs.org/?utm_source=chatgpt.com)
 
 My recommended pattern:
 
-```
+```text
 repo/
   README.md
   mkdocs.yml
@@ -54,7 +54,7 @@ repo/
     glossary.md
 ```
 
-Set `docs_dir: user-docs` so the user-facing layer is intentionally separate from developer docs, specs, ADRs, implementation notes, and README content. MkDocs supports configuring the documentation source directory and output site directory. [![](https://www.google.com/s2/favicons?domain=https://mkdocs.readthedocs.io&sz=128)mkdocs.readthedocs.io+1](https://mkdocs.readthedocs.io/en/0.13.3/user-guide/configuration/?utm_source=chatgpt.com)
+Set `docs_dir: user-docs` so the user-facing layer is intentionally separate from developer docs, specs, ADRs, implementation notes, and README content. MkDocs supports configuring the documentation source directory and output site directory. [![Source](https://www.google.com/s2/favicons?domain=https://mkdocs.readthedocs.io&sz=128)mkdocs.readthedocs.io+1](https://mkdocs.readthedocs.io/en/0.13.3/user-guide/configuration/?utm_source=chatgpt.com)
 
 ---
 
@@ -70,14 +70,14 @@ Why it fits:
 | --- | --- |
 | Lives inside each Git repo | Yes. Plain Markdown plus `mkdocs.yml`. |
 | User-facing, not developer-facing | Easy to isolate with `user-docs/` or `docs/user/`. |
-| Wiki-like cross-referencing | Use normal relative Markdown links; MkDocs rewrites them to HTML links during build. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org](https://www.mkdocs.org/user-guide/writing-your-docs/?utm_source=chatgpt.com) |
-| Browser-based reading | `mkdocs serve` gives local browser preview at localhost with auto-reload. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org](https://www.mkdocs.org/getting-started/?utm_source=chatgpt.com) |
-| Search | MkDocs includes a default search plugin; Material improves the experience. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+1](https://www.mkdocs.org/user-guide/configuration/?utm_source=chatgpt.com) |
+| Wiki-like cross-referencing | Use normal relative Markdown links; MkDocs rewrites them to HTML links during build. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org](https://www.mkdocs.org/user-guide/writing-your-docs/?utm_source=chatgpt.com) |
+| Browser-based reading | `mkdocs serve` gives local browser preview at localhost with auto-reload. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org](https://www.mkdocs.org/getting-started/?utm_source=chatgpt.com) |
+| Search | MkDocs includes a default search plugin; Material improves the experience. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+1](https://www.mkdocs.org/user-guide/configuration/?utm_source=chatgpt.com) |
 | Low operational burden | No database, no hosted wiki, no sync service. |
 | LLM-friendly | Source remains ordinary Markdown in the repo. |
 | Multi-project repeatability | Use the same `mkdocs.yml` pattern in every repo. |
 
-Material also has tags support, which helps recover some wiki-like discoverability across a larger documentation set without turning the docs into an unstructured graph. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)squidfunk.github.io](https://squidfunk.github.io/mkdocs-material/plugins/tags/?utm_source=chatgpt.com)
+Material also has tags support, which helps recover some wiki-like discoverability across a larger documentation set without turning the docs into an unstructured graph. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)squidfunk.github.io](https://squidfunk.github.io/mkdocs-material/plugins/tags/?utm_source=chatgpt.com)
 
 Suggested local workflow:
 
@@ -87,7 +87,7 @@ uv run mkdocs serve
 uv run mkdocs build --strict
 ```
 
-Use `mkdocs build --strict` as a CI/local check so broken internal links and warnings become failures; MkDocs has validation settings for link diagnostics intended to work with strict builds. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+1](https://www.mkdocs.org/user-guide/configuration/?utm_source=chatgpt.com)
+Use `mkdocs build --strict` as a CI/local check so broken internal links and warnings become failures; MkDocs has validation settings for link diagnostics intended to work with strict builds. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+1](https://www.mkdocs.org/user-guide/configuration/?utm_source=chatgpt.com)
 
 One caveat: MkDocs core itself has not been moving as quickly as some newer JS-based tools, while Material remains very actively used and maintained. For your use case, that is not a dealbreaker because the core job is stable: Markdown in, static docs site out. If you were building a large public docs platform with heavy custom interactivity, I would weigh VitePress, Starlight, or Docusaurus more heavily.
 
@@ -97,7 +97,7 @@ One caveat: MkDocs core itself has not been moving as quickly as some newer JS-b
 
 ### VitePress
 
-VitePress is the best alternative if you want a very fast, modern JS docs stack without Docusaurus’s React/MDX weight. It is a Vite/Vue-powered static site generator that turns Markdown into docs, supports file-based routing, has a local search option, and gives a very good dev-server experience. [![](https://www.google.com/s2/favicons?domain=https://vitepress.dev&sz=128)VitePress+2![](https://www.google.com/s2/favicons?domain=https://vitepress.dev&sz=128)VitePress+2](https://vitepress.dev/?utm_source=chatgpt.com)
+VitePress is the best alternative if you want a very fast, modern JS docs stack without Docusaurus’s React/MDX weight. It is a Vite/Vue-powered static site generator that turns Markdown into docs, supports file-based routing, has a local search option, and gives a very good dev-server experience. [![Source](https://www.google.com/s2/favicons?domain=https://vitepress.dev&sz=128)VitePress+2![Source](https://www.google.com/s2/favicons?domain=https://vitepress.dev&sz=128)VitePress+2](https://vitepress.dev/?utm_source=chatgpt.com)
 
 Use it when:
 
@@ -113,7 +113,7 @@ It is a credible second choice. For your Python-heavy CLI/tooling projects, I wo
 
 ### Astro Starlight
 
-Starlight is a polished Astro-based documentation framework. It supports Markdown, MDX, and Markdoc, has built-in site navigation/search/i18n features, and is explicitly designed for documentation sites. [![](https://www.google.com/s2/favicons?domain=https://starlight.astro.build&sz=128)Starlight+2![](https://www.google.com/s2/favicons?domain=https://starlight.astro.build&sz=128)Starlight+2](https://starlight.astro.build/?utm_source=chatgpt.com)
+Starlight is a polished Astro-based documentation framework. It supports Markdown, MDX, and Markdoc, has built-in site navigation/search/i18n features, and is explicitly designed for documentation sites. [![Source](https://www.google.com/s2/favicons?domain=https://starlight.astro.build&sz=128)Starlight+2![Source](https://www.google.com/s2/favicons?domain=https://starlight.astro.build&sz=128)Starlight+2](https://starlight.astro.build/?utm_source=chatgpt.com)
 
 Use it when:
 
@@ -129,7 +129,7 @@ Starlight is excellent, but it is more “site framework” than “just render 
 
 ### Docusaurus
 
-Docusaurus is powerful and mature, especially for public-facing product docs. It supports MDX, autogenerated sidebars, versioning, docs/blog/pages, and React customization. [![](https://www.google.com/s2/favicons?domain=https://docusaurus.io&sz=128)Docusaurus+2![](https://www.google.com/s2/favicons?domain=https://docusaurus.io&sz=128)Docusaurus+2](https://docusaurus.io/?utm_source=chatgpt.com)
+Docusaurus is powerful and mature, especially for public-facing product docs. It supports MDX, autogenerated sidebars, versioning, docs/blog/pages, and React customization. [![Source](https://www.google.com/s2/favicons?domain=https://docusaurus.io&sz=128)Docusaurus+2![Source](https://www.google.com/s2/favicons?domain=https://docusaurus.io&sz=128)Docusaurus+2](https://docusaurus.io/?utm_source=chatgpt.com)
 
 Use it when:
 
@@ -147,11 +147,11 @@ For your stated use case, Docusaurus is probably more platform than you need.
 
 ### mdBook
 
-mdBook is very good when the documentation is book-like: a linear guide, handbook, or manual. It uses Markdown, has live rebuild/refresh via `mdbook serve`, and produces a clean static site. [![](https://www.google.com/s2/favicons?domain=https://rust-lang.github.io&sz=128)rust-lang.github.io](https://rust-lang.github.io/mdBook/guide/creating.html?utm_source=chatgpt.com)
+mdBook is very good when the documentation is book-like: a linear guide, handbook, or manual. It uses Markdown, has live rebuild/refresh via `mdbook serve`, and produces a clean static site. [![Source](https://www.google.com/s2/favicons?domain=https://rust-lang.github.io&sz=128)rust-lang.github.io](https://rust-lang.github.io/mdBook/guide/creating.html?utm_source=chatgpt.com)
 
 Use it for:
 
-```
+```text
 user-manual/
   book.toml
   src/
@@ -168,7 +168,7 @@ Good fit for “one tool, one manual.” Weaker fit for “many tools, many cros
 
 ### Docsify
 
-Docsify is the lowest-friction web-rendered Markdown option. It does not generate static HTML at build time; it loads/parses Markdown in the browser and can use a static server or GitHub Pages. It has plugins including full-text search. [![](https://www.google.com/s2/favicons?domain=https://docsify.js.org&sz=128)Docsify+1](https://docsify.js.org/?utm_source=chatgpt.com)
+Docsify is the lowest-friction web-rendered Markdown option. It does not generate static HTML at build time; it loads/parses Markdown in the browser and can use a static server or GitHub Pages. It has plugins including full-text search. [![Source](https://www.google.com/s2/favicons?domain=https://docsify.js.org&sz=128)Docsify+1](https://docsify.js.org/?utm_source=chatgpt.com)
 
 Use it when:
 
@@ -184,7 +184,7 @@ It is tempting, but I would not make it your standard. The lack of a real build 
 
 ### Sphinx + MyST
 
-Sphinx is the most powerful technical-documentation engine here. It supports reStructuredText or MyST Markdown, strong cross-referencing, references across projects, citations, glossaries, tables, code blocks, and deep structured docs. [![](https://www.google.com/s2/favicons?domain=https://www.sphinx-doc.org&sz=128)Sphinx Documentation+2![](https://www.google.com/s2/favicons?domain=https://www.sphinx-doc.org&sz=128)Sphinx Documentation+2](https://www.sphinx-doc.org/?utm_source=chatgpt.com)
+Sphinx is the most powerful technical-documentation engine here. It supports reStructuredText or MyST Markdown, strong cross-referencing, references across projects, citations, glossaries, tables, code blocks, and deep structured docs. [![Source](https://www.google.com/s2/favicons?domain=https://www.sphinx-doc.org&sz=128)Sphinx Documentation+2![Source](https://www.google.com/s2/favicons?domain=https://www.sphinx-doc.org&sz=128)Sphinx Documentation+2](https://www.sphinx-doc.org/?utm_source=chatgpt.com)
 
 Use it when:
 
@@ -202,7 +202,7 @@ For your user-facing tooling docs, Sphinx is probably overkill unless you also n
 
 ### Gollum
 
-Gollum is the closest match to a true Git-backed local wiki. It is a Git-powered wiki with a local frontend and supports Markdown plus additional wiki/documentation features such as Mermaid, PlantUML, math, macros, redirects, and more. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/gollum/gollum/?utm_source=chatgpt.com)
+Gollum is the closest match to a true Git-backed local wiki. It is a Git-powered wiki with a local frontend and supports Markdown plus additional wiki/documentation features such as Mermaid, PlantUML, math, macros, redirects, and more. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/gollum/gollum/?utm_source=chatgpt.com)
 
 Use it only if browser-side wiki editing is important.
 
@@ -212,7 +212,7 @@ It is not my default recommendation because your desired artifact is really **re
 
 ### Quartz
 
-Quartz is strong for digital gardens, backlinks, graphs, and note networks. Its own documentation describes it as a static-site generator for transforming Markdown content into functional websites. [![](https://www.google.com/s2/favicons?domain=https://quartz.jzhao.xyz&sz=128)Quartz](https://quartz.jzhao.xyz/?utm_source=chatgpt.com)
+Quartz is strong for digital gardens, backlinks, graphs, and note networks. Its own documentation describes it as a static-site generator for transforming Markdown content into functional websites. [![Source](https://www.google.com/s2/favicons?domain=https://quartz.jzhao.xyz&sz=128)Quartz](https://quartz.jzhao.xyz/?utm_source=chatgpt.com)
 
 I would not use Quartz for formal user docs unless backlinks/graph navigation matter more than task-oriented documentation. It leans toward networked notes, not product manuals. Given your prior direction away from Obsidian-style workflows, Quartz is probably the wrong default.
 
@@ -220,7 +220,7 @@ I would not use Quartz for formal user docs unless backlinks/graph navigation ma
 
 ### Foam / VS Code wiki extensions
 
-Foam is a VS Code + Git personal knowledge management system with wiki links, backlinks, graph visualization, tags, and publishing support. [![](https://www.google.com/s2/favicons?domain=https://foambubble.github.io&sz=128)Foam Bubble](https://foambubble.github.io/foam/?utm_source=chatgpt.com)
+Foam is a VS Code + Git personal knowledge management system with wiki links, backlinks, graph visualization, tags, and publishing support. [![Source](https://www.google.com/s2/favicons?domain=https://foambubble.github.io&sz=128)Foam Bubble](https://foambubble.github.io/foam/?utm_source=chatgpt.com)
 
 This solves the editing/navigation side inside VS Code, but not the “local static web docs site for each repo” requirement as cleanly as MkDocs/VitePress/Starlight. It is better for a personal knowledge base than user-facing repo docs.
 
@@ -230,13 +230,13 @@ This solves the editing/navigation side inside VS Code, but not the “local sta
 
 | Tool/category | Why I would not use it as the standard |
 | --- | --- |
-| **BookStack** | Good self-hosted wiki, but it is an application/platform, not repo-local Markdown docs. BookStack describes itself as self-hosted wiki software for organizing information. [![](https://www.google.com/s2/favicons?domain=https://www.bookstackapp.com&sz=128)BookStack](https://www.bookstackapp.com/?utm_source=chatgpt.com) |
-| **Wiki.js** | Has Git storage sync, but it introduces a wiki service and sync layer. That is unnecessary if the docs already live in each repo. [![](https://www.google.com/s2/favicons?domain=https://docs.requarks.io&sz=128)Wiki.js](https://docs.requarks.io/storage/git?utm_source=chatgpt.com) |
-| **DokuWiki** | File-based and no DB, but it is still a wiki app with its own conventions rather than repo-local Markdown docs. [![](https://www.google.com/s2/favicons?domain=https://www.dokuwiki.org&sz=128)dokuwiki.org](https://www.dokuwiki.org/dokuwiki?utm_source=chatgpt.com) |
-| **Backstage TechDocs** | Built around docs-as-code and MkDocs, but intended for a developer portal and CI/CD publishing. Overkill for local personal project docs. [![](https://www.google.com/s2/favicons?domain=https://backstage.io&sz=128)backstage.io+1](https://backstage.io/docs/features/techdocs/creating-and-publishing/?utm_source=chatgpt.com) |
-| **Antora** | Excellent for large multi-repo, versioned product docs, but AsciiDoc-first and heavier than needed. Antora is designed for docs composed from one or more versioned content repositories. [![](https://www.google.com/s2/favicons?domain=https://antora.org&sz=128)antora.org](https://antora.org/?utm_source=chatgpt.com) |
-| **Hugo + Docsy** | Capable and mature, but more general static-site machinery than needed. Docsy is a Hugo theme, and Hugo handles the static build from Markdown/HTML sources. [![](https://www.google.com/s2/favicons?domain=https://www.docsy.dev&sz=128)Docsy+1](https://www.docsy.dev/docs/?utm_source=chatgpt.com) |
-| **GitBook SaaS** | Good reading experience, but it moves you toward a hosted docs platform rather than repo-local tooling. GitBook positions itself as a knowledge platform with Git sync and AI features. [![](https://www.google.com/s2/favicons?domain=https://www.gitbook.com&sz=128)gitbook.com](https://www.gitbook.com/?utm_source=chatgpt.com) |
+| **BookStack** | Good self-hosted wiki, but it is an application/platform, not repo-local Markdown docs. BookStack describes itself as self-hosted wiki software for organizing information. [![Source](https://www.google.com/s2/favicons?domain=https://www.bookstackapp.com&sz=128)BookStack](https://www.bookstackapp.com/?utm_source=chatgpt.com) |
+| **Wiki.js** | Has Git storage sync, but it introduces a wiki service and sync layer. That is unnecessary if the docs already live in each repo. [![Source](https://www.google.com/s2/favicons?domain=https://docs.requarks.io&sz=128)Wiki.js](https://docs.requarks.io/storage/git?utm_source=chatgpt.com) |
+| **DokuWiki** | File-based and no DB, but it is still a wiki app with its own conventions rather than repo-local Markdown docs. [![Source](https://www.google.com/s2/favicons?domain=https://www.dokuwiki.org&sz=128)dokuwiki.org](https://www.dokuwiki.org/dokuwiki?utm_source=chatgpt.com) |
+| **Backstage TechDocs** | Built around docs-as-code and MkDocs, but intended for a developer portal and CI/CD publishing. Overkill for local personal project docs. [![Source](https://www.google.com/s2/favicons?domain=https://backstage.io&sz=128)backstage.io+1](https://backstage.io/docs/features/techdocs/creating-and-publishing/?utm_source=chatgpt.com) |
+| **Antora** | Excellent for large multi-repo, versioned product docs, but AsciiDoc-first and heavier than needed. Antora is designed for docs composed from one or more versioned content repositories. [![Source](https://www.google.com/s2/favicons?domain=https://antora.org&sz=128)antora.org](https://antora.org/?utm_source=chatgpt.com) |
+| **Hugo + Docsy** | Capable and mature, but more general static-site machinery than needed. Docsy is a Hugo theme, and Hugo handles the static build from Markdown/HTML sources. [![Source](https://www.google.com/s2/favicons?domain=https://www.docsy.dev&sz=128)Docsy+1](https://www.docsy.dev/docs/?utm_source=chatgpt.com) |
+| **GitBook SaaS** | Good reading experience, but it moves you toward a hosted docs platform rather than repo-local tooling. GitBook positions itself as a knowledge platform with Git sync and AI features. [![Source](https://www.google.com/s2/favicons?domain=https://www.gitbook.com&sz=128)gitbook.com](https://www.gitbook.com/?utm_source=chatgpt.com) |
 
 ---
 
@@ -244,7 +244,7 @@ This solves the editing/navigation side inside VS Code, but not the “local sta
 
 For each repo that contains user-facing tools:
 
-```
+```text
 repo/
   README.md                 # project/dev landing page
   mkdocs.yml                # user-docs site config
@@ -268,7 +268,7 @@ repo/
     glossary.md
 ```
 
-Use Diátaxis as the content model: tutorials, how-to guides, reference, and explanation. The framework is explicitly built around those four user needs, and that maps well to tool documentation: quickstarts/tutorials for learning, workflows/how-tos for tasks, command/options pages for reference, and concepts/troubleshooting for explanation. [![](https://www.google.com/s2/favicons?domain=https://diataxis.fr&sz=128)diataxis.fr+1](https://diataxis.fr/?utm_source=chatgpt.com)
+Use Diátaxis as the content model: tutorials, how-to guides, reference, and explanation. The framework is explicitly built around those four user needs, and that maps well to tool documentation: quickstarts/tutorials for learning, workflows/how-tos for tasks, command/options pages for reference, and concepts/troubleshooting for explanation. [![Source](https://www.google.com/s2/favicons?domain=https://diataxis.fr&sz=128)diataxis.fr+1](https://diataxis.fr/?utm_source=chatgpt.com)
 
 A practical `mkdocs.yml` shape:
 
@@ -301,7 +301,7 @@ validation:
     unrecognized_links: warn
 ```
 
-For larger docs, add navigation tooling only when needed. `mkdocs-literate-nav` lets you maintain navigation as Markdown rather than a giant YAML list, while `mkdocs-awesome-nav` gives directory-level navigation control without listing every page manually. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub+1](https://github.com/oprypin/mkdocs-literate-nav?utm_source=chatgpt.com)
+For larger docs, add navigation tooling only when needed. `mkdocs-literate-nav` lets you maintain navigation as Markdown rather than a giant YAML list, while `mkdocs-awesome-nav` gives directory-level navigation control without listing every page manually. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub+1](https://github.com/oprypin/mkdocs-literate-nav?utm_source=chatgpt.com)
 
 ## Final ranking
 
@@ -334,7 +334,7 @@ I’ll turn this into an implementer-ready adoption spec, with hard scope bounda
 
 The official docs confirm the core mechanics we want: MkDocs uses Markdown files under a docs directory, `mkdocs.yml` config, local live preview, static build output, configurable validation, and Material adds browser-side search/navigation/tags without needing a separate service.
 
-Here is a copy-pasteable adoption document for an agent. I verified the MkDocs/Material details against the current official docs before writing it: MkDocs uses Markdown source files plus `mkdocs.yml`, supports configurable `docs_dir`/`site_dir`, has a local live-preview server, strict validation, static build output, and Material adds search, navigation, and tags support. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)squidfunk.github.io+5![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+5![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+5](https://www.mkdocs.org/user-guide/writing-your-docs/)
+Here is a copy-pasteable adoption document for an agent. I verified the MkDocs/Material details against the current official docs before writing it: MkDocs uses Markdown source files plus `mkdocs.yml`, supports configurable `docs_dir`/`site_dir`, has a local live-preview server, strict validation, static build output, and Material adds search, navigation, and tags support. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)squidfunk.github.io+5![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+5![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)mkdocs.org+5](https://www.mkdocs.org/user-guide/writing-your-docs/)
 
 # Adopt MkDocs + Material for Repo-Local User-Facing Tool Documentation
 
@@ -350,7 +350,7 @@ This is **not** a developer documentation system. It is **not** for architecture
 
 The final result should be:
 
-````
+````text
 repo/
   mkdocs.yml
   user-docs/
@@ -427,7 +427,7 @@ If this is a Python repository using `uv`, add docs tooling as development tooli
 
 Recommended simple command:
 
-````
+````text
 uv add --dev mkdocs mkdocs-material```
 
 This keeps documentation tooling out of the project’s runtime dependencies. `uv` development dependencies are declared under `[dependency-groups]` and are local-only development dependencies rather than published/runtime package dependencies.
@@ -444,7 +444,7 @@ Do not add MkDocs or Material to `[project.dependencies]`.
 
 Create or update:
 
-````
+````text
 mkdocs.yml
 user-docs/
 .gitignore```
@@ -469,7 +469,7 @@ Create `mkdocs.yml` at the repository root.
 
 Use this as the starting point and replace placeholder values:
 
-````
+````text
 site_name: '<REPO NAME> User Guide'
 site_description: 'User-facing usage documentation for the tools provided by this repository.'
 
@@ -552,7 +552,7 @@ user-docs/ index.md start-here.md tools/ index.md workflows/ index.md reference/
 
 For each user-facing tool in the repository, create:
 
-````
+````text
 user-docs/tools/<tool-name>/
   index.md
   quickstart.md
@@ -579,7 +579,7 @@ Every Markdown page under `user-docs/` should either appear in `nav:` or be inte
 
 After creating tool pages, update `nav:` like this:
 
-````
+````text
 nav:
   - Home: index.md
   - Start here: start-here.md
@@ -620,7 +620,7 @@ Do not use Obsidian-style wikilinks.
 
 Good:
 
-````
+````text
 [Quickstart](quickstart.md)
 [Examples](examples.md)
 [Global troubleshooting](../../troubleshooting/index.md)```
@@ -629,7 +629,7 @@ Bad:
 
 ````
 
-[[Quickstart]] <a href="quickstart.html">Quickstart</a> [Quickstart](/site/tools/tool-name/quickstart.html)```
+[[Quickstart]] [Quickstart](quickstart.html) [Quickstart](/site/tools/tool-name/quickstart.html)```
 
 MkDocs supports regular Markdown files in nested directories, and the file layout determines the generated page URLs.
 
@@ -639,7 +639,7 @@ Use minimal YAML front matter on all user-facing pages.
 
 Example:
 
-````
+````text
 ---
 title: Quickstart
 description: First successful use of <tool-name>.
@@ -884,7 +884,7 @@ Prefer actual help output and current source behavior.
 
 For each CLI-style tool, attempt:
 
-````
+````text
 <tool> --help
 <tool> <subcommand> --help
 python -m <module> --help
@@ -909,7 +909,7 @@ Run this command. Set this option. The tool writes output to... Use this when...
 
 Avoid:
 
-````
+````text
 This module implements...
 The parser internally...
 The agent should...
@@ -933,7 +933,7 @@ Prefer task headings:
 
 Avoid implementation headings:
 
-````
+````text
 ## Processing pipeline
 ## Internal architecture
 ## Parser behavior```
@@ -960,7 +960,7 @@ Do not overuse admonitions. Reserve them for information that changes user behav
 
 ## Example page template: tool overview
 
-````
+````text
 ---
 title: <Tool Name>
 description: User guide for <tool-name>.
@@ -1007,7 +1007,7 @@ Do not use `<tool-name>` when...
 
 ---
 
-title: Quickstart description: First successful use of <tool-name>. tags:
+title: Quickstart description: First successful use of TOOL_NAME. tags:
 
 - quickstart
 - cli
@@ -1039,7 +1039,7 @@ See [usage](usage.md) for common workflows.
 
 ## Example page template: command reference
 
-````markdown
+`````markdown
 ---
 title: Command reference
 description: Commands and options for <tool-name>.
@@ -1077,7 +1077,9 @@ tags:
 
 ## Examples
 ````
-````
+`````
+
+````text
 
 <example command>```
 
@@ -1085,7 +1087,7 @@ tags:
 
 ## Example page template: troubleshooting
 
-```markdown
+````markdown
 ---
 title: Troubleshooting
 description: Common <tool-name> problems and fixes.
@@ -1121,11 +1123,11 @@ Cross-link aggressively, but keep links useful.
 
 Good cross-links:
 
-* Quickstart to command reference.
-* Command reference to examples.
-* Troubleshooting item to relevant configuration reference.
-* Tool overview to related workflows.
-* Workflow to each tool it uses.
+- Quickstart to command reference.
+- Command reference to examples.
+- Troubleshooting item to relevant configuration reference.
+- Tool overview to related workflows.
+- Workflow to each tool it uses.
 
 Do not create decorative links.
 
@@ -1139,19 +1141,18 @@ Add them only if they help the user operate the tool.
 
 Allowed:
 
-* Screenshot of a GUI/TUI state the user must recognize.
-* Diagram of user-visible input/output flow.
-* Example output image if the tool produces visual output.
+- Screenshot of a GUI/TUI state the user must recognize.
+- Diagram of user-visible input/output flow.
+- Example output image if the tool produces visual output.
 
 Not allowed:
 
-* Architecture diagrams.
-* Internal data-flow diagrams.
-* Class/module diagrams.
-* Developer-only pipeline diagrams.
+- Architecture diagrams.
+- Internal data-flow diagrams.
+- Class/module diagrams.
+- Developer-only pipeline diagrams.
 
 If images are added, place them under:
-
 ````
 
 user-docs/assets/```
@@ -1164,7 +1165,7 @@ Do not move the main project README into `user-docs/`.
 
 Add a small section to `README.md` pointing to the user docs:
 
-````
+````text
 ## User documentation
 
 User-facing documentation for the tools in this repository lives in [`user-docs/`](user-docs/).
@@ -1212,7 +1213,7 @@ The docs build must fail on:
 
 Use:
 
-````
+````text
 uv run mkdocs build --strict```
 
 Do not leave warnings unresolved.
@@ -1345,16 +1346,16 @@ Does this system have the capability to ingest user notes directly within the us
 
 The important distinction: MkDocs/Material is a static documentation viewer, not a writable wiki. I’ll verify the supported interaction hooks, then give you a repo-local pattern that preserves the “user docs only” boundary while still capturing feedback for agents.
 
-No — **MkDocs + Material does not natively ingest notes, bug reports, or change requests from the browser UI into the repo.** It is fundamentally a **static documentation site generator**: Markdown files in the repo become a browser-readable static site, and the local dev server previews/reloads that site as files change. It is excellent for reading and navigating docs, but it is not a writable wiki or issue tracker. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/)
+No — **MkDocs + Material does not natively ingest notes, bug reports, or change requests from the browser UI into the repo.** It is fundamentally a **static documentation site generator**: Markdown files in the repo become a browser-readable static site, and the local dev server previews/reloads that site as files change. It is excellent for reading and navigating docs, but it is not a writable wiki or issue tracker. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/)
 
 The closest built-in/official-adjacent features are useful but not what you described:
 
 | Mechanism | What it does | Fit for your use case |
 | --- | --- | --- |
-| `repo_url` / `edit_uri` | Adds links from docs pages back to the source repository/page. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/) | Good for “edit this page,” not for capturing tool feedback while using docs. |
-| Material feedback widget | “Was this page helpful?” style page feedback, usually tied to analytics or a custom integration. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/setup/setting-up-site-analytics/) | Good for docs quality signals, not structured bug/change notes. |
-| Giscus/comments | Adds a third-party comment system using GitHub Discussions as backend. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/setup/adding-a-comment-system/) | Useful, but no longer purely repo-local/static; creates external discussion state. |
-| GitHub issue forms | Structured bug/feature request forms in GitHub issues. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms?utm_source=chatgpt.com) | Good if you accept GitHub Issues as the feedback sink. |
+| `repo_url` / `edit_uri` | Adds links from docs pages back to the source repository/page. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/) | Good for “edit this page,” not for capturing tool feedback while using docs. |
+| Material feedback widget | “Was this page helpful?” style page feedback, usually tied to analytics or a custom integration. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/setup/setting-up-site-analytics/) | Good for docs quality signals, not structured bug/change notes. |
+| Giscus/comments | Adds a third-party comment system using GitHub Discussions as backend. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/setup/adding-a-comment-system/) | Useful, but no longer purely repo-local/static; creates external discussion state. |
+| GitHub issue forms | Structured bug/feature request forms in GitHub issues. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms?utm_source=chatgpt.com) | Good if you accept GitHub Issues as the feedback sink. |
 
 ## The right design
 
@@ -1366,7 +1367,7 @@ Recommended repo shape:
 
 repo/ mkdocs.yml user-docs/ # published user-facing usage docs only feedback/ README.md inbox/ .gitkeep templates/ bug.md behavior-change.md docs-issue.md tools/ docs-feedback/ # optional helper CLI/server
 
-````
+````text
 
 The key rule: **feedback notes are not user documentation.** They are implementation intake for you and coding agents, so they should not live under `user-docs/`.
 
@@ -1382,7 +1383,7 @@ uv run docs-feedback new
 
 It would prompt for:
 
-```
+```text
 Type: bug | behavior-change | docs-issue | question
 Tool:
 Docs page:
@@ -1394,7 +1395,7 @@ Notes:
 
 Then write:
 
-```
+```text
 feedback/inbox/2026-07-07-tool-name-bug-short-title.md
 ```
 
@@ -1406,7 +1407,7 @@ That is possible, but it requires a **custom local companion service**, not just
 
 Pattern:
 
-```
+```text
 Browser docs page
   ↓ POST to localhost
 127.0.0.1:<port>/feedback
@@ -1416,7 +1417,7 @@ repo/feedback/inbox/<timestamp>-<slug>.md
 
 Implementation stack could be:
 
-```
+```text
 FastAPI local-only service
 127.0.0.1 binding only
 simple HTML/JS form injected into MkDocs Material
@@ -1431,7 +1432,7 @@ But I would treat that as **phase 2**, because it adds moving parts: a local ser
 
 Start with this:
 
-```
+```text
 feedback/
   README.md
   inbox/
@@ -1465,7 +1466,7 @@ Yes. That is probably the cleanest low-friction solution.
 
 Not a filesystem hard link, but a normal Markdown hyperlink in the MkDocs page that opens GitHub’s **new issue** page with the correct issue form, title, and some fields prefilled.
 
-GitHub explicitly supports opening new issues with URL query parameters such as `title`, `body`, `labels`, `assignees`, `projects`, and `template`; it also supports query-parameter prefills for custom text fields in issue forms. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue) GitHub issue forms are YAML files stored under `.github/ISSUE_TEMPLATE/`, and they support structured fields such as text inputs, textareas, dropdowns, checkboxes, and uploads. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository)
+GitHub explicitly supports opening new issues with URL query parameters such as `title`, `body`, `labels`, `assignees`, `projects`, and `template`; it also supports query-parameter prefills for custom text fields in issue forms. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue) GitHub issue forms are YAML files stored under `.github/ISSUE_TEMPLATE/`, and they support structured fields such as text inputs, textareas, dropdowns, checkboxes, and uploads. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository)
 
 ## Recommended pattern
 
@@ -1481,7 +1482,7 @@ Rendered in the docs, the user clicks the link, GitHub opens the issue form, and
 
 Create:
 
-```
+```text
 .github/
   ISSUE_TEMPLATE/
     tool-feedback.yml
@@ -1574,13 +1575,13 @@ Then your MkDocs section link could be:
 [Give feedback on this section](https://github.com/OWNER/REPO/issues/new?template=tool-feedback.yml&title=%5Bexample-tool%5D%20Feedback%3A%20Dry%20run&tool=example-tool&doc-page=user-docs%2Ftools%2Fexample-tool%2Fcommands.md&section=Dry%20run)
 ```
 
-GitHub’s form schema uses each field’s `id` as the canonical identifier for URL query-parameter prefills, so fields like `tool`, `doc-page`, and `section` are reasonable prefill targets. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema)
+GitHub’s form schema uses each field’s `id` as the canonical identifier for URL query-parameter prefills, so fields like `tool`, `doc-page`, and `section` are reasonable prefill targets. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema)
 
 ## Why this is a good fit
 
 This preserves the boundary cleanly:
 
-```
+```text
 user-docs/                    # user-facing usage docs only
 .github/ISSUE_TEMPLATE/       # structured feedback intake
 GitHub Issues                 # implementation queue for you/agents
@@ -1590,7 +1591,7 @@ It avoids custom local servers, browser-side write access, JavaScript injection,
 
 ## Caveats
 
-For a private repo, the person clicking the link must have GitHub access to create issues. Labels, assignees, milestones, and project-prefill behavior can depend on repository permissions; form-level defaults in the YAML are safer than relying entirely on URL labels. GitHub also returns errors for invalid query URLs or URLs that exceed server length limits, so keep prefilled bodies short. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue)
+For a private repo, the person clicking the link must have GitHub access to create issues. Labels, assignees, milestones, and project-prefill behavior can depend on repository permissions; form-level defaults in the YAML are safer than relying entirely on URL labels. GitHub also returns errors for invalid query URLs or URLs that exceed server length limits, so keep prefilled bodies short. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue)
 
 My recommendation: add these links at the **page level and major H2 sections**, not every small subsection. Too many links will clutter the docs. Use wording like:
 
@@ -1614,13 +1615,13 @@ Yes. That is feasible, and it is a good fit for H2/H3-level feedback.
 
 I would **not manually hard-code a GitHub URL beside every heading** unless the docs are tiny. Better pattern: add one small JavaScript file to MkDocs/Material that automatically appends a tiny feedback icon to every `h2` and `h3`, then builds the GitHub issue-form URL from the current page URL, heading text, and heading anchor.
 
-MkDocs supports `extra_css` and `extra_javascript` for small theme tweaks, and Material explicitly supports this customization path. MkDocs also supports normal Markdown/HTML authoring and Material supports customization through added assets. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/customizing-your-theme/?utm_source=chatgpt.com) GitHub issue forms can be prefilled by URL query parameters, including custom fields whose IDs match the form field IDs. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs+1](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema?utm_source=chatgpt.com)
+MkDocs supports `extra_css` and `extra_javascript` for small theme tweaks, and Material explicitly supports this customization path. MkDocs also supports normal Markdown/HTML authoring and Material supports customization through added assets. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/customizing-your-theme/?utm_source=chatgpt.com) GitHub issue forms can be prefilled by URL query parameters, including custom fields whose IDs match the form field IDs. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs+1](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema?utm_source=chatgpt.com)
 
 ## Recommended implementation
 
 Add this:
 
-```
+```text
 user-docs/
   assets/
     feedback-links.css
@@ -1715,7 +1716,7 @@ body:
       required: false
 ```
 
-GitHub requires issue form field IDs to be unique, and those IDs are the canonical identifiers used for URL-prefilled custom form fields. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema?utm_source=chatgpt.com)
+GitHub requires issue form field IDs to be unique, and those IDs are the canonical identifiers used for URL-prefilled custom form fields. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema?utm_source=chatgpt.com)
 
 ## Auto-add icon beside H2/H3 headings
 
@@ -1812,7 +1813,7 @@ That gives you a tiny square link beside each H2/H3 without consuming a whole li
 
 Manual per-heading links work, but they are brittle. If you rename a heading, move a file, or change a section anchor, your prefilled metadata can go stale. The small JavaScript approach derives the metadata from the rendered page, so it stays accurate enough for agent review:
 
-```
+```text
 doc_page     = current docs page path
 doc_section  = visible heading text
 doc_anchor   = generated heading anchor
@@ -1823,7 +1824,7 @@ That gives your later coding agent a precise source location without turning the
 
 ## One caveat
 
-This will open GitHub. It will not work fully offline, and private repos require the user to be authenticated and authorized to create issues. GitHub also documents that invalid query URLs can fail, and overly long URLs can hit server length limits, so keep prefilled fields short. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/enterprise-cloud%40latest/issues/tracking-your-work-with-issues/creating-an-issue?utm_source=chatgpt.com)
+This will open GitHub. It will not work fully offline, and private repos require the user to be authenticated and authorized to create issues. GitHub also documents that invalid query URLs can fail, and overly long URLs can hit server length limits, so keep prefilled fields short. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs](https://docs.github.com/enterprise-cloud%40latest/issues/tracking-your-work-with-issues/creating-an-issue?utm_source=chatgpt.com)
 
 ---
 
@@ -1837,11 +1838,11 @@ I don’t want integrating this system to cause pollution and visual clutter wit
 
 Yes — **use `root/docs/usage/` as the standard location.** That is a cleaner structure than scattering `mkdocs.yml`, assets, feedback JS/CSS, and Markdown pages across the repo root.
 
-The one real exception is **GitHub Issue Forms**: GitHub requires issue form YAML files under `.github/ISSUE_TEMPLATE/`, so that part cannot live under `docs/usage/` if you want GitHub’s native issue-form UI. Everything MkDocs-specific can live under `docs/usage/`. GitHub’s docs state that issue forms must be added to `.github/ISSUE_TEMPLATE`, while MkDocs supports specifying a non-default config path with `-f` / `--config-file`. [![](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs+1](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository)
+The one real exception is **GitHub Issue Forms**: GitHub requires issue form YAML files under `.github/ISSUE_TEMPLATE/`, so that part cannot live under `docs/usage/` if you want GitHub’s native issue-form UI. Everything MkDocs-specific can live under `docs/usage/`. GitHub’s docs state that issue forms must be added to `.github/ISSUE_TEMPLATE`, while MkDocs supports specifying a non-default config path with `-f` / `--config-file`. [![Source](https://www.google.com/s2/favicons?domain=https://docs.github.com&sz=128)GitHub Docs+1](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository)
 
 Recommended structure:
 
-```
+```text
 repo/
   docs/
     usage/
@@ -1874,7 +1875,7 @@ repo/
 
 Use this `mkdocs.yml` location:
 
-```
+```text
 docs/usage/mkdocs.yml
 ```
 
@@ -1885,7 +1886,7 @@ uv run mkdocs serve -f docs/usage/mkdocs.yml
 uv run mkdocs build --strict -f docs/usage/mkdocs.yml
 ```
 
-That works because MkDocs allows the config file path to be specified explicitly, and path-based options such as `docs_dir` and `site_dir` are resolved relative to the config file location. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/configuration/)
+That works because MkDocs allows the config file path to be specified explicitly, and path-based options such as `docs_dir` and `site_dir` are resolved relative to the config file location. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/configuration/)
 
 Inside `docs/usage/mkdocs.yml`, use:
 
@@ -1962,11 +1963,11 @@ nav:
   - Glossary: glossary.md
 ```
 
-This keeps the root visually clean while staying idiomatic. MkDocs documents `docs_dir` as the source Markdown directory and `site_dir` as the generated output directory, both configurable; it also documents that CSS/JS customizations can live inside the documentation directory and be referenced through `extra_css` / `extra_javascript`. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/configuration/)
+This keeps the root visually clean while staying idiomatic. MkDocs documents `docs_dir` as the source Markdown directory and `site_dir` as the generated output directory, both configurable; it also documents that CSS/JS customizations can live inside the documentation directory and be referenced through `extra_css` / `extra_javascript`. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs+1](https://www.mkdocs.org/user-guide/configuration/)
 
 Root-level impact becomes minimal:
 
-```
+```text
 repo/
   .github/
     ISSUE_TEMPLATE/
@@ -2013,7 +2014,7 @@ This system is for documenting how users operate the tools provided by the repos
 
 All MkDocs usage-documentation files must live under:
 
-````
+````text
 docs/usage/```
 
 This location is the standard path for every repository using this system.
@@ -2048,7 +2049,7 @@ The documentation must not explain internal implementation details unless the in
 
 Use:
 
-````
+````text
 MkDocs
 Material for MkDocs
 Markdown source files
@@ -2109,7 +2110,7 @@ repo/ docs/ usage/ mkdocs.yml content/ index.md start-here.md tools/ index.md wo
 
 The generated site output goes under:
 
-````
+````text
 docs/usage/.site/```
 
 That directory must be ignored by Git.
@@ -2128,14 +2129,14 @@ Do not commit generated MkDocs output.
 
 Create:
 
-````
+````text
 docs/usage/mkdocs.yml```
 
 Use this as the baseline:
 
 ````
 
-site_name: '<REPO NAME> User Guide' site_description: 'User-facing usage documentation for the tools provided by this repository.'
+site_name: 'REPO_NAME User Guide' site_description: 'User-facing usage documentation for the tools provided by this repository.'
 
 docs_dir: content site_dir: .site
 
@@ -2190,7 +2191,7 @@ If `plugins:` is declared, explicitly keep `search` in the plugin list. Do not a
 
 From the repository root, preview the docs with:
 
-````
+````text
 uv run mkdocs serve -f docs/usage/mkdocs.yml```
 
 Build and validate with:
@@ -2207,7 +2208,7 @@ MkDocs and Material for MkDocs are documentation tooling dependencies. They are 
 
 If this is a Python repository using `uv`, prefer:
 
-````
+````text
 uv add --dev mkdocs mkdocs-material```
 
 If the repository already uses a dedicated docs dependency group, use the repo convention instead, for example:
@@ -2222,7 +2223,7 @@ Do not add MkDocs or Material for MkDocs to runtime dependencies unless the repo
 
 Create:
 
-````
+````text
 docs/usage/content/
   index.md
   start-here.md
@@ -2243,7 +2244,7 @@ For each user-facing tool, create:
 
 ````
 
-docs/usage/content/tools/<tool-name>/ index.md quickstart.md usage.md commands.md examples.md troubleshooting.md```
+docs/usage/content/tools/TOOL_NAME/ index.md quickstart.md usage.md commands.md examples.md troubleshooting.md```
 
 Use lowercase kebab-case file and directory names.
 
@@ -2374,7 +2375,7 @@ Purpose: user-visible recovery guidance.
 
 Use this structure:
 
-````
+````text
 ## <Symptom or error message>
 
 ### Symptom
@@ -2441,7 +2442,7 @@ Example:
 
 ---
 
-title: Quickstart description: First successful use of <tool-name>. tags:
+title: Quickstart description: First successful use of TOOL_NAME. tags:
 
 - quickstart
 - cli
@@ -2460,7 +2461,7 @@ Use normal Markdown links to Markdown files.
 
 Good:
 
-````
+````text
 See [the command reference](commands.md).
 See [global troubleshooting](../../troubleshooting/index.md).```
 
@@ -2480,7 +2481,7 @@ Usage docs remain read-only. Feedback intake uses GitHub issue forms.
 
 The feedback flow is:
 
-````
+````text
 User reads docs in browser
   -> clicks small feedback icon beside an H2/H3 heading
   -> GitHub issue form opens
@@ -2500,7 +2501,7 @@ Create:
 
 Use:
 
-````
+````text
 name: Tool feedback
 description: Report a bug, confusing behavior, or requested behavior change while using the documented tools.
 title: "[Tool feedback]: "
@@ -2612,7 +2613,7 @@ docs/usage/content/assets/feedback-links.js```
 
 Use this as the baseline:
 
-````
+````text
 (function () {
   const owner = "OWNER";
   const repo = "REPO";
@@ -2694,7 +2695,7 @@ The `document$.subscribe(addFeedbackLinks)` hook is included so the links are re
 
 Create:
 
-````
+````text
 docs/usage/content/assets/feedback-links.css```
 
 Use:
@@ -2713,7 +2714,7 @@ The icon must remain visually small and low-clutter. It must not consume an enti
 
 Apply feedback icons to:
 
-````
+````text
 H2
 H3```
 
@@ -2745,7 +2746,7 @@ Different repositories may use different systems. The agent must inspect the rep
 
 Possible instruction locations include, but are not limited to:
 
-````
+````text
 AGENTS.md
 CLAUDE.md
 GEMINI.md
@@ -2824,13 +2825,13 @@ Rules for future agents:
 
 - Preview locally with:
 
-  ````
+  ````text
   uv run mkdocs serve -f docs/usage/mkdocs.yml```
   ````
 
 When updating tool behavior, update the usage docs if the user-facing commands, options, defaults, inputs, outputs, safety behavior, or troubleshooting behavior changed.
 
-````
+````text
 
 The exact wording may be adapted to match the repository’s existing instruction style, but the substance must be preserved.
 
@@ -2872,7 +2873,7 @@ docs/usage/mkdocs.yml docs/usage/content/ docs/usage/content/assets/feedback-lin
 
 Add:
 
-````
+````text
 docs/usage/.site/```
 
 ### Phase 4: Create GitHub issue form
@@ -2889,7 +2890,7 @@ If issue templates already exist, integrate this form without deleting existing 
 
 Create the baseline Markdown pages:
 
-````
+````text
 docs/usage/content/index.md
 docs/usage/content/start-here.md
 docs/usage/content/tools/index.md
@@ -2902,13 +2903,13 @@ For each confirmed user-facing tool, create:
 
 ````
 
-docs/usage/content/tools/<tool-name>/index.md docs/usage/content/tools/<tool-name>/quickstart.md docs/usage/content/tools/<tool-name>/usage.md docs/usage/content/tools/<tool-name>/commands.md docs/usage/content/tools/<tool-name>/examples.md docs/usage/content/tools/<tool-name>/troubleshooting.md```
+docs/usage/content/tools/TOOL_NAME/index.md docs/usage/content/tools/TOOL_NAME/quickstart.md docs/usage/content/tools/TOOL_NAME/usage.md docs/usage/content/tools/TOOL_NAME/commands.md docs/usage/content/tools/TOOL_NAME/examples.md docs/usage/content/tools/TOOL_NAME/troubleshooting.md```
 
 ### Phase 6: Populate from actual behavior
 
 For each CLI-style tool, inspect actual help output where possible:
 
-````
+````text
 <tool> --help
 <tool> <subcommand> --help
 python -m <module> --help
@@ -2949,7 +2950,7 @@ Fix all warnings and errors.
 
 Then run:
 
-````
+````text
 uv run mkdocs serve -f docs/usage/mkdocs.yml```
 
 Verify:
@@ -2991,7 +2992,7 @@ Run this command. Set this option. The tool writes output to... Use this when...
 
 Avoid:
 
-````
+````text
 This module implements...
 The parser internally...
 The agent should...
@@ -3011,7 +3012,7 @@ Prefer task headings:
 
 Avoid implementation headings:
 
-````
+````text
 ## Processing pipeline
 ## Internal architecture
 ## Parser behavior```
@@ -3046,7 +3047,7 @@ Orphan pages are usually a mistake.
 
 When adding a tool, update navigation:
 
-````
+````text
 nav:
   - Home: index.md
   - Start here: start-here.md
@@ -3073,15 +3074,15 @@ nav:
 
 ---
 
-title: <Tool Name> description: User guide for <tool-name>. tags:
+title: TOOL_NAME description: User guide for TOOL_NAME. tags:
 
 - cli
 
 ---
 
-# <Tool Name>
+# TOOL_NAME
 
-<One-sentence description of what the tool does for the user.>
+ONE-SENTENCE DESCRIPTION OF WHAT THE TOOL DOES FOR THE USER.
 
 ## When to use it
 
@@ -3115,7 +3116,7 @@ Do not use `<tool-name>` when...
 
 ## Example quickstart page
 
-````
+````text
 ---
 title: Quickstart
 description: First successful use of <tool-name>.
@@ -3148,7 +3149,7 @@ See [usage](usage.md) for common workflows.```
 
 ## Example command reference page
 
-````
+````text
 ---
 title: Command reference
 description: Commands and options for <tool-name>.
@@ -3204,7 +3205,7 @@ tags:
 
 ## Example troubleshooting page
 
-````
+````text
 ---
 title: Troubleshooting
 description: Common <tool-name> problems and fixes.
@@ -3327,7 +3328,7 @@ One important refinement: the “strictly user-facing” boundary should apply t
 
 docs/usage/content/
 
-```
+```text
 
 not necessarily the whole `docs/usage/` tree.
 
@@ -3337,7 +3338,7 @@ That lets you keep system/governance files beside the MkDocs setup without rende
 
 repo/ docs/ usage/ mkdocs.yml content/ # rendered user-facing docs only governance/ # non-rendered adoption/control docs adr-0001-adopt-usage-docs-standard.md conformance-checklist.md controlled-vocabulary.md .site/ # generated, ignored
 
-```
+```text
 
 `docs/usage/governance/` should **not** appear in MkDocs `nav:` and should not be rendered as part of the user-facing site.
 
@@ -3416,7 +3417,7 @@ docs/usage/```
 
 The rendered user-facing documentation source must live under:
 
-````
+````text
 docs/usage/content/```
 
 The MkDocs configuration file must live at:
@@ -3427,7 +3428,7 @@ docs/usage/mkdocs.yml```
 
 The generated MkDocs output must go to:
 
-````
+````text
 docs/usage/.site/```
 
 The generated output directory must be ignored by Git.
@@ -3440,7 +3441,7 @@ uv run mkdocs serve -f docs/usage/mkdocs.yml```
 
 The canonical validation command is:
 
-````
+````text
 uv run mkdocs build --strict -f docs/usage/mkdocs.yml```
 
 GitHub issue forms are used for structured feedback intake. The feedback form must live at:
@@ -3457,7 +3458,7 @@ A small feedback icon must be automatically added beside rendered H2 and H3 head
 
 The directory:
 
-````
+````text
 docs/usage/content/```
 
 is strictly for user-facing usage documentation.
@@ -3523,7 +3524,7 @@ The MkDocs tag set is controlled vocabulary.
 
 The canonical initial tag set is:
 
-````
+````text
 tags_allowed:
   - cli
   - tui
@@ -3561,7 +3562,7 @@ Do not rename these fields unless the feedback JavaScript and this ADR are updat
 
 The rendered docs must add feedback links to:
 
-````
+````text
 H2
 H3```
 
@@ -3582,7 +3583,7 @@ Rationale:
 
 At minimum, create:
 
-````
+````text
 docs/usage/content/
   index.md
   start-here.md
@@ -3600,7 +3601,7 @@ For each confirmed user-facing tool, create:
 
 ````
 
-docs/usage/content/tools/<tool-name>/ index.md quickstart.md usage.md commands.md examples.md troubleshooting.md```
+docs/usage/content/tools/TOOL_NAME/ index.md quickstart.md usage.md commands.md examples.md troubleshooting.md```
 
 Do not create tool documentation for internal packages, modules, test helpers, private scripts, or implementation components unless they are directly exposed to users.
 
@@ -3608,7 +3609,7 @@ Do not create tool documentation for internal packages, modules, test helpers, p
 
 Every rendered usage page should use minimal front matter:
 
-````
+````text
 ---
 title: <Page Title>
 description: <Short user-facing description.>
@@ -3646,7 +3647,7 @@ Any repository adopting this system must update its existing agent-instruction o
 
 The adopting agent must follow the repository’s existing convention for agent instructions. Possible locations include:
 
-````
+````text
 AGENTS.md
 CLAUDE.md
 GEMINI.md
@@ -3714,7 +3715,7 @@ This is intentionally not user-facing content. Put it here:
 
 docs/usage/governance/controlled-vocabulary.md
 
-```
+```text
 
 # Usage Documentation Controlled Vocabulary
 
@@ -3772,13 +3773,21 @@ Do not create synonyms.
 
 Examples:
 
-<table><tbody><tr><td><span>Do not add</span></td><td><span>Use instead</span></td></tr><tr><td><code dir="ltr"><span>command-line</span></code></td><td><code dir="ltr"><span>cli</span></code></td></tr><tr><td><code dir="ltr"><span>terminal</span></code></td><td><code dir="ltr"><span>cli</span></code><span> or </span><code dir="ltr"><span>tui</span></code></td></tr><tr><td><code dir="ltr"><span>setup</span></code></td><td><code dir="ltr"><span>installation</span></code></td></tr><tr><td><code dir="ltr"><span>config</span></code></td><td><code dir="ltr"><span>configuration</span></code></td></tr><tr><td><code dir="ltr"><span>how-to</span></code></td><td><code dir="ltr"><span>workflow</span></code></td></tr><tr><td><code dir="ltr"><span>errors</span></code></td><td><code dir="ltr"><span>troubleshooting</span></code></td></tr><tr><td><code dir="ltr"><span>danger</span></code></td><td><code dir="ltr"><span>safety</span></code></td></tr></tbody></table>
+| Do not add     | Use instead       |
+| -------------- | ----------------- |
+| `command-line` | `cli`             |
+| `terminal`     | `cli` or `tui`    |
+| `setup`        | `installation`    |
+| `config`       | `configuration`   |
+| `how-to`       | `workflow`        |
+| `errors`       | `troubleshooting` |
+| `danger`       | `safety`          |
 
 ## Front matter keys
 
 Allowed front matter keys for rendered usage pages:
 
-````
+````text
 title:
 description:
 tags:```
@@ -3795,7 +3804,7 @@ Rendered usage pages are not developer handoff documents.
 
 The feedback form must preserve these field IDs:
 
-````
+````text
 doc_page
 doc_section
 doc_anchor
@@ -3822,7 +3831,7 @@ Do not add additional values unless the feedback-processing workflow is also upd
 
 Use:
 
-````
+````text
 uv run mkdocs build --strict -f docs/usage/mkdocs.yml```
 
 The build must pass before usage-documentation changes are considered complete.
@@ -3901,7 +3910,7 @@ That keeps the standard centralized and prevents each repo from slowly inventing
 
 Earlier I suggested:
 
-```
+```text
 docs/usage/governance/
 ```
 
@@ -3909,7 +3918,7 @@ I would drop that now.
 
 Given your existing ADR standard, the better structure is:
 
-```
+```text
 repo/
   docs/
     usage/
@@ -3929,7 +3938,7 @@ Your `project-standards` repo already has an active **CLI Documentation Standard
 
 That conflicts with the new desired structure:
 
-```
+```text
 docs/usage/mkdocs.yml
 docs/usage/content/
 ```
@@ -3938,13 +3947,13 @@ So I would **not** treat the existing `cli-documentation` standard as the comple
 
 Best name:
 
-```
+```text
 standards/usage-documentation-site/
 ```
 
 or:
 
-```
+```text
 standards/tool-usage-docs/
 ```
 
@@ -3956,7 +3965,7 @@ Your standards repo already defines the bundle pattern: every standard gets a fo
 
 So the new standard should live as:
 
-```
+```text
 L3DigitalNet/project-standards/
   standards/
     usage-documentation-site/
@@ -4010,7 +4019,7 @@ Use this to replace the earlier “governance” section.
 
 This repository adopts the repo-local usage-documentation system from the centralized project standards repository:
 
-````
+````text
 L3DigitalNet/project-standards```
 
 The authoritative standard is expected to live under:
@@ -4049,7 +4058,7 @@ Intentional deviations from the central standard require a local ADR.
 
 A consuming repository must record adoption with a local ADR under:
 
-````
+````text
 docs/decisions/```
 
 Do not place ADRs under `docs/usage/`.
@@ -4172,7 +4181,7 @@ Yes. The right re-architecture is:
 
 Call it:
 
-```
+```text
 usage-documentation-site
 ```
 
@@ -4199,7 +4208,7 @@ Date: 2026-07-07
 
 Add a new standards bundle to `L3DigitalNet/project-standards`:
 
-````
+````text
 standards/usage-documentation-site/```
 
 This standard governs repo-local, browser-readable, user-facing usage documentation built with MkDocs + Material for MkDocs.
@@ -4225,7 +4234,7 @@ Rationale:
 
 Initial contract version:
 
-````
+````text
 1.0```
 
 Registry key:
@@ -4240,7 +4249,7 @@ This follows the existing registry naming style used by `cli_documentation`, `ma
 
 Add:
 
-````
+````text
 standards/
   usage-documentation-site/
     README.md
@@ -4285,7 +4294,7 @@ docs/ usage/ mkdocs.yml content/ index.md start-here.md tools/ index.md workflow
 
 Generated output:
 
-````
+````text
 docs/usage/.site/```
 
 Git-ignored output:
@@ -4338,7 +4347,7 @@ The new standard’s `README.md` should be normative.
 
 Recommended sections:
 
-````
+````text
 # Usage Documentation Site Standard
 
 Evidence convention
@@ -4412,7 +4421,7 @@ Out of scope:
 
 Decision test:
 
-````
+````text
 Would a user need this information to successfully use the tools this repository provides?```
 
 If no, it does not belong under `docs/usage/content/`.
@@ -4427,7 +4436,7 @@ docs/usage/mkdocs.yml```
 
 with:
 
-````
+````text
 site_name: '<REPO NAME> User Guide'
 site_description: 'User-facing usage documentation for the tools provided by this repository.'
 
@@ -4511,7 +4520,7 @@ uv run mkdocs serve -f docs/usage/mkdocs.yml```
 
 Validate:
 
-````
+````text
 uv run mkdocs build --strict -f docs/usage/mkdocs.yml```
 
 These commands should be the standard’s canonical commands. If a repo does not use `uv`, the standard may allow equivalent invocation, but the file layout and MkDocs config path remain invariant.
@@ -4541,7 +4550,15 @@ Do not add repo-local synonyms casually.
 
 Examples:
 
-<table><tbody><tr><td><span>Avoid</span></td><td><span>Use</span></td></tr><tr><td><code dir="ltr"><span>command-line</span></code></td><td><code dir="ltr"><span>cli</span></code></td></tr><tr><td><code dir="ltr"><span>terminal</span></code></td><td><code dir="ltr"><span>cli</span></code><span> or </span><code dir="ltr"><span>tui</span></code></td></tr><tr><td><code dir="ltr"><span>setup</span></code></td><td><code dir="ltr"><span>installation</span></code></td></tr><tr><td><code dir="ltr"><span>config</span></code></td><td><code dir="ltr"><span>configuration</span></code></td></tr><tr><td><code dir="ltr"><span>how-to</span></code></td><td><code dir="ltr"><span>workflow</span></code></td></tr><tr><td><code dir="ltr"><span>errors</span></code></td><td><code dir="ltr"><span>troubleshooting</span></code></td></tr><tr><td><code dir="ltr"><span>danger</span></code></td><td><code dir="ltr"><span>safety</span></code></td></tr></tbody></table>
+| Avoid          | Use               |
+| -------------- | ----------------- |
+| `command-line` | `cli`             |
+| `terminal`     | `cli` or `tui`    |
+| `setup`        | `installation`    |
+| `config`       | `configuration`   |
+| `how-to`       | `workflow`        |
+| `errors`       | `troubleshooting` |
+| `danger`       | `safety`          |
 
 Additional tags require either a central standard revision or a repo-local deviation ADR.
 
@@ -4549,7 +4566,7 @@ Additional tags require either a central standard revision or a repo-local devia
 
 Usage pages should use only:
 
-````
+````text
 ---
 title: '<Page title>'
 description: '<Short user-facing description.>'
@@ -4573,7 +4590,7 @@ GitHub issue forms support structured YAML form fields such as inputs, textareas
 
 Required issue-form path:
 
-````
+````text
 .github/ISSUE_TEMPLATE/tool-feedback.yml```
 
 Required field IDs:
@@ -4590,7 +4607,7 @@ Material for MkDocs supports additional CSS and JavaScript files through `extra_
 
 Required files in consuming repos:
 
-````
+````text
 docs/usage/content/assets/feedback-links.css
 docs/usage/content/assets/feedback-links.js```
 
@@ -4602,7 +4619,7 @@ H2 H3```
 
 Do not apply feedback links by default to:
 
-````
+````text
 H1
 H4
 H5
@@ -4646,7 +4663,7 @@ Required instruction substance:
 
 Add packaged adopt artifacts under:
 
-````
+````text
 src/project_standards/bundles/usage-documentation-site/```
 
 The adopt system discovers standards by checking bundle directories for `adopt.toml`. Manifest artifacts currently support `file`, `workflow-caller`, and `fragment`; file artifacts need `dest`, fragment artifacts need `target`, and exactly one of `source` or `shared` is set.
@@ -4659,7 +4676,7 @@ src/project_standards/ bundles/ usage-documentation-site/ adopt.toml mkdocs.yml 
 
 Recommended `adopt.toml`:
 
-````
+````text
 [standard]
 id = "usage-documentation-site"
 
@@ -4759,7 +4776,7 @@ src/project_standards/schemas/registry.json src/project_standards/registry.py```
 
 Add:
 
-````
+````text
 "usage_documentation_site": { "default": "1.0", "versions": ["1.0"] }```
 
 `registry.py` currently hardcodes the known versioned standards in its constructor and loader, including `cli_documentation` but not the proposed site standard. The loader currently requires `frontmatter`, `adr`, `python_tooling`, `markdown_tooling`, and `cli_documentation` objects. Add `usage_documentation_site` consistently to that path.
@@ -4774,7 +4791,7 @@ standards/README.md```
 
 Add a row:
 
-````
+````text
 | Usage Documentation Site | Repo-local MkDocs/Material site for user-facing tool usage docs, feedback links, and local browser preview | [usage-documentation-site/](usage-documentation-site/) | [adopt](usage-documentation-site/adopt.md) |```
 
 The top-level standards index already lists each standard, what it governs, its bundle, and adoption runbook.
@@ -4789,7 +4806,7 @@ standards/cli-documentation/README.md standards/cli-documentation/adopt.md src/p
 
 Add a compatibility rule:
 
-````
+````text
 If a repository adopts usage-documentation-site, the canonical CLI usage reference may live under docs/usage/content/ instead of docs/usage.md. The CLI Documentation Standard still governs the content contract, but the Usage Documentation Site Standard governs the location, navigation, feedback links, and MkDocs site structure.```
 
 Potential adopt-engine issue:
@@ -4814,7 +4831,7 @@ docs/decisions/```
 
 Suggested title:
 
-````
+````text
 ADR 000N: Adopt usage documentation site standard```
 
 The ADR should be short. It records local adoption; it does not duplicate the central standard.
@@ -4833,7 +4850,7 @@ The ADR standard documents those required MADR body sections.
 
 Create:
 
-````
+````text
 standards/usage-documentation-site/README.md
 standards/usage-documentation-site/adopt.md
 standards/usage-documentation-site/templates/
@@ -4854,7 +4871,7 @@ with `adopt.toml` and scaffold files.
 
 Update:
 
-````
+````text
 src/project_standards/schemas/registry.json
 src/project_standards/registry.py```
 
@@ -4880,7 +4897,7 @@ Do not silently let both standards imply separate canonical usage-doc locations.
 
 Examples should include:
 
-````
+````text
 examples/
   mkdocs.example.yml
   tool-overview.example.md
@@ -4905,7 +4922,7 @@ Run the repo’s normal validation gate after implementation.
 
 At minimum:
 
-````
+````text
 uv run project-standards validate
 uv run project-standards list
 uv run project-standards adopt usage-documentation-site --dry-run```
@@ -5069,7 +5086,7 @@ That aligns with the existing standard and still works as MkDocs page metadata.
 
 The standards repo intentionally enforces registry/bundle parity. The CLI’s `_REGISTRY_STANDARD_IDS` list currently includes:
 
-```
+```text
 markdown-frontmatter
 adr
 python-tooling
@@ -5087,7 +5104,7 @@ The registry currently contains `frontmatter`, `adr`, `python_tooling`, `markdow
 
 If you add:
 
-```
+```text
 src/project_standards/bundles/usage-documentation-site/
 ```
 
@@ -5099,7 +5116,7 @@ Likewise, adding a registry key without a bundle will fail.
 
 Add `usage-documentation-site` / `usage_documentation_site` consistently to:
 
-```
+```text
 src/project_standards/schemas/registry.json
 src/project_standards/registry.py
 src/project_standards/cli.py
@@ -5120,7 +5137,7 @@ Also update `validate_frontmatter.py`, because it currently parses and validates
 
 The existing CLI Documentation Standard says the Packaged profile requires:
 
-```
+```text
 docs/usage.md
 ```
 
@@ -5128,7 +5145,7 @@ as the usage reference.
 
 Its adopt bundle also materializes:
 
-```
+```text
 docs/usage.md
 ```
 
@@ -5136,7 +5153,7 @@ directly.
 
 The new site standard wants:
 
-```
+```text
 docs/usage/mkdocs.yml
 docs/usage/content/
 docs/usage/.site/
@@ -5146,7 +5163,7 @@ docs/usage/.site/
 
 There is no literal file-path collision, but there is a **semantic collision**:
 
-```
+```text
 docs/usage.md        # existing CLI standard canonical usage reference
 docs/usage/          # proposed site standard root
 ```
@@ -5168,7 +5185,7 @@ Instead:
 
 Recommended wording:
 
-```
+```text
 If a repository adopts usage-documentation-site, the canonical CLI usage reference may live under docs/usage/content/ instead of docs/usage.md. The CLI Documentation Standard still governs CLI content: synopsis notation, option entries, exit codes, environment variables, examples, help boundary, and drift checks. The Usage Documentation Site Standard governs location, navigation, page taxonomy, feedback links, and MkDocs configuration.
 ```
 
@@ -5253,7 +5270,7 @@ tags_allowed:
 
 Then define:
 
-```
+```text
 usage = general use/operation page
 workflow = task-oriented multi-step guide
 examples = copy-pasteable example collection
@@ -5299,7 +5316,7 @@ Add a cross-standard rule:
 
 This could be handled through:
 
-```
+```text
 scripts/check.py
 .vscode/tasks.json
 .github/workflows/docs-usage.yml
@@ -5368,19 +5385,19 @@ Option 1 is least disruptive but leaves two usage surfaces. Option 3 is cleanest
 
 For the standards repo itself:
 
-```
+```text
 docs/usage.md
 ```
 
 should eventually become:
 
-```
+```text
 docs/usage/content/tools/project-standards/commands.md
 ```
 
 or:
 
-```
+```text
 docs/usage/content/reference/project-standards-cli.md
 ```
 
@@ -5409,7 +5426,7 @@ Add `Usage Documentation Site` to:
 
 Recommended classification:
 
-```
+```text
 Usage Documentation Site | 1.0 | usage_documentation_site.version | no — copy-adopted label, metadata only
 ```
 
@@ -5425,7 +5442,7 @@ Markdown Tooling governs Markdown and adjacent structured text, with Prettier fo
 
 It also assumes the model:
 
-```
+```text
 frontmatter title + body # H1
 ```
 
@@ -5473,7 +5490,7 @@ But I recommend the opposite: make usage-site pages canonical frontmatter docume
 
 The ADR Standard says consuming repositories store ADRs under:
 
-```
+```text
 docs/decisions/
 ```
 
@@ -5485,7 +5502,7 @@ It also defines the special ADR ID/filename convention: ADR IDs include the repo
 
 No conflict if the usage-site standard says:
 
-```
+```text
 Do not put ADRs under docs/usage/.
 Local adoption ADRs belong under docs/decisions/.
 ```
@@ -5522,7 +5539,7 @@ No conflict.
 
 The required file:
 
-```
+```text
 .github/ISSUE_TEMPLATE/tool-feedback.yml
 ```
 
@@ -5553,7 +5570,7 @@ This is not a standards conflict, but it is a practical adoption footgun.
 
 ### Must update in standards repo
 
-```
+```text
 standards/usage-documentation-site/README.md
 standards/usage-documentation-site/adopt.md
 standards/usage-documentation-site/templates/
@@ -5572,7 +5589,7 @@ tests/
 
 Also amend:
 
-```
+```text
 standards/cli-documentation/README.md
 standards/cli-documentation/adopt.md
 ```
@@ -5589,7 +5606,7 @@ Use canonical Markdown Frontmatter, not minimal MkDocs-only front matter.
 
 `usage-documentation-site` owns:
 
-```
+```text
 docs/usage/
 docs/usage/mkdocs.yml
 docs/usage/content/
@@ -5602,7 +5619,7 @@ page taxonomy
 
 `cli-documentation` owns:
 
-```
+```text
 command synopsis
 option contract
 exit codes
@@ -5616,7 +5633,7 @@ help/docs drift checks
 
 Central governance belongs in `project-standards`. Local adoption decisions belong in:
 
-```
+```text
 docs/decisions/
 ```
 
@@ -5624,7 +5641,7 @@ docs/decisions/
 
 Use adopt fragments for:
 
-```
+```text
 .project-standards.yml
 .gitignore
 AGENTS.md
@@ -5699,7 +5716,7 @@ Yes — **but only for the YAML files whose shape the new standard owns.** Do no
 
 I’d add a small schema layer for the **Usage Documentation Site Standard’s controlled YAML artifacts**:
 
-```
+```text
 standards/usage-documentation-site/schemas/
   mkdocs-usage-site.schema.json
   tool-feedback-issue-form.schema.json
@@ -5707,7 +5724,7 @@ standards/usage-documentation-site/schemas/
 
 And possibly later:
 
-```
+```text
   project-standards-usage-site-config.schema.json
 ```
 
@@ -5721,7 +5738,7 @@ And possibly later:
 | `.github/workflows/*.yml` | **No custom schema** | Use existing GitHub Actions schema/editor support. |
 | arbitrary repo YAML | **No** | Out of scope and likely to cause noise. |
 
-JSON Schema is appropriate here because it defines structure, required fields, allowed values, and object/array constraints for data documents. JSON Schema’s own docs describe it as a vocabulary for annotating and validating JSON documents, and validators can validate data against a schema after parsing. [![](https://www.google.com/s2/favicons?domain=https://json-schema.org&sz=128)json-schema.org](https://json-schema.org/learn/getting-started-step-by-step) YAML editor tooling also commonly applies JSON schemas to YAML files; YAML Language Server supports JSON Schema drafts including 2020-12 and lets schemas be associated with YAML glob patterns. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/redhat-developer/yaml-language-server)
+JSON Schema is appropriate here because it defines structure, required fields, allowed values, and object/array constraints for data documents. JSON Schema’s own docs describe it as a vocabulary for annotating and validating JSON documents, and validators can validate data against a schema after parsing. [![Source](https://www.google.com/s2/favicons?domain=https://json-schema.org&sz=128)json-schema.org](https://json-schema.org/learn/getting-started-step-by-step) YAML editor tooling also commonly applies JSON schemas to YAML files; YAML Language Server supports JSON Schema drafts including 2020-12 and lets schemas be associated with YAML glob patterns. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/redhat-developer/yaml-language-server)
 
 ## Important limitation
 
@@ -5729,7 +5746,7 @@ A JSON Schema validates the **parsed YAML data model**, not the exact source for
 
 It can enforce:
 
-```
+```text
 docs_dir must equal content
 site_dir must equal .site
 strict must be true
@@ -5740,7 +5757,7 @@ unknown top-level keys are rejected
 
 It cannot reliably enforce:
 
-```
+```text
 quote style
 comment text
 key order
@@ -5755,7 +5772,7 @@ Those remain owned by Prettier / markdown tooling / repo formatting rules. Your 
 
 ### 1. Add schemas to the new standard bundle
 
-```
+```text
 standards/usage-documentation-site/
   schemas/
     mkdocs-usage-site.schema.json
@@ -5764,7 +5781,7 @@ standards/usage-documentation-site/
 
 Also ship copies in the adopt bundle if the consuming repo should have local editor support:
 
-```
+```text
 src/project_standards/bundles/usage-documentation-site/
   schemas/
     mkdocs-usage-site.schema.json
@@ -5814,7 +5831,7 @@ uv run project-standards usage-site validate
 
 It would check:
 
-```
+```text
 docs/usage/mkdocs.yml
 .github/ISSUE_TEMPLATE/tool-feedback.yml
 docs/usage/content/assets/feedback-links.css
@@ -5837,13 +5854,13 @@ Add an optional VS Code/YAML Language Server mapping fragment:
 }
 ```
 
-YAML Language Server supports associating local or remote schemas with glob patterns through `yaml.schemas`; modelines are also supported. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/redhat-developer/yaml-language-server)
+YAML Language Server supports associating local or remote schemas with glob patterns through `yaml.schemas`; modelines are also supported. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/redhat-developer/yaml-language-server)
 
 ## My recommendation
 
 Add JSON schemas for:
 
-```
+```text
 docs/usage/mkdocs.yml
 .github/ISSUE_TEMPLATE/tool-feedback.yml
 ```
@@ -5854,7 +5871,7 @@ Do **not** replace MkDocs strict build with schema validation.
 
 The validation stack should be:
 
-```
+```text
 JSON Schema        = standard contract shape
 MkDocs strict build = actual site correctness
 Markdown/frontmatter validators = page metadata and links
@@ -5888,7 +5905,7 @@ Yes. For the content pages, I would **not** rely only on MkDocs, markdownlint, o
 | Prose/style | Vale | Checks wording, terms, style guide, banned phrasing. | Optional/advisory |
 | Semantic review | Agent checklist | Checks whether content is truly user-facing usage docs. | **Yes, but not deterministic** |
 
-MkDocs already has useful validation controls: it can warn on omitted nav files, missing nav targets, broken links, anchors, absolute links, and unrecognized links, and those warnings become errors under `mkdocs build --strict`. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/) Material’s tags plugin can enforce a predefined allowed tag list and stop the build if a page uses a tag outside it. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/plugins/tags/)
+MkDocs already has useful validation controls: it can warn on omitted nav files, missing nav targets, broken links, anchors, absolute links, and unrecognized links, and those warnings become errors under `mkdocs build --strict`. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/) Material’s tags plugin can enforce a predefined allowed tag list and stop the build if a page uses a tag outside it. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/plugins/tags/)
 
 ## Key point
 
@@ -5898,7 +5915,7 @@ The body of a Markdown page is semi-structured prose. You can validate some stru
 
 So the right design is:
 
-```
+```text
 deterministic validation
   + advisory lint
   + semantic agent review
@@ -5932,7 +5949,7 @@ This command should be deterministic and conservative. It should fail only on th
 
 Validate that these exist:
 
-```
+```text
 docs/usage/mkdocs.yml
 docs/usage/content/index.md
 docs/usage/content/start-here.md
@@ -5948,7 +5965,7 @@ docs/usage/content/assets/feedback-links.js
 
 Validate that this is ignored:
 
-```
+```text
 docs/usage/.site/
 ```
 
@@ -5956,7 +5973,7 @@ docs/usage/.site/
 
 Validate `docs/usage/mkdocs.yml` against the usage-site schema:
 
-```
+```text
 docs_dir: content
 site_dir: .site
 strict: true
@@ -5977,13 +5994,13 @@ Validate each tool directory.
 
 For every:
 
-```
+```text
 docs/usage/content/tools/<tool-name>/
 ```
 
 require:
 
-```
+```text
 index.md
 quickstart.md
 usage.md
@@ -6000,7 +6017,7 @@ Validate that every intended content page is represented in `mkdocs.yml` navigat
 
 MkDocs can warn about omitted files; the standard validator should turn the site standard’s policy into a clearer failure:
 
-```
+```text
 docs/usage/content/tools/foo/examples.md exists but is not in nav
 ```
 
@@ -6040,7 +6057,7 @@ Keep this modest. Do not overfit every page into a rigid template.
 
 Fail on:
 
-```
+```text
 [[wikilinks]]
 links to generated .html files
 absolute local repo paths
@@ -6049,7 +6066,7 @@ links into docs/usage/.site/
 
 Allow:
 
-```
+```text
 relative Markdown links to .md files
 normal external URLs
 mailto links
@@ -6062,7 +6079,7 @@ MkDocs handles link correctness well under strict mode, but the custom validator
 
 Validate that:
 
-```
+```text
 feedback-links.js exists
 feedback-links.css exists
 tool-feedback.yml exists
@@ -6078,7 +6095,7 @@ This should produce warnings, not hard failures by default.
 
 Warn on patterns that usually indicate drift out of user-facing scope:
 
-```
+```text
 Implementation details
 Architecture
 Internal API
@@ -6097,7 +6114,7 @@ But do not hard-fail these words. A user-facing troubleshooting page might legit
 
 Also warn on weak usage-doc patterns:
 
-```
+```text
 page has no examples
 command page has options but no defaults
 destructive command lacks safety warning
@@ -6116,27 +6133,27 @@ Mandatory:
 uv run mkdocs build --strict -f docs/usage/mkdocs.yml
 ```
 
-MkDocs validation already covers missing nav targets, omitted files, broken internal links, anchors, absolute links, and unrecognized links when configured strictly. [![](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/)
+MkDocs validation already covers missing nav targets, omitted files, broken internal links, anchors, absolute links, and unrecognized links when configured strictly. [![Source](https://www.google.com/s2/favicons?domain=https://www.mkdocs.org&sz=128)MkDocs](https://www.mkdocs.org/user-guide/configuration/)
 
 ### Material tags plugin
 
 Mandatory through `tags_allowed`.
 
-Material’s tags plugin reads tags from page front matter and can stop the build if a page references a tag outside the allowed list. [![](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/plugins/tags/)
+Material’s tags plugin reads tags from page front matter and can stop the build if a page references a tag outside the allowed list. [![Source](https://www.google.com/s2/favicons?domain=https://squidfunk.github.io&sz=128)GitHub Pages](https://squidfunk.github.io/mkdocs-material/plugins/tags/)
 
 ### markdownlint-cli2
 
-Keep it under the existing Markdown Tooling Standard. It is already a good fit for Markdown/CommonMark structural linting, supports config-driven use, globs, `--fix`, and config files such as `.markdownlint.json` / `.markdownlint-cli2.jsonc`. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/DavidAnson/markdownlint-cli2)
+Keep it under the existing Markdown Tooling Standard. It is already a good fit for Markdown/CommonMark structural linting, supports config-driven use, globs, `--fix`, and config files such as `.markdownlint.json` / `.markdownlint-cli2.jsonc`. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/DavidAnson/markdownlint-cli2)
 
 ### Vale
 
-Vale is useful but should be optional. It is a prose linter: it brings code-like linting to prose and can enforce a writing style guide. [![](https://www.google.com/s2/favicons?domain=https://vale.sh&sz=128)vale.sh](https://vale.sh/docs/)
+Vale is useful but should be optional. It is a prose linter: it brings code-like linting to prose and can enforce a writing style guide. [![Source](https://www.google.com/s2/favicons?domain=https://vale.sh&sz=128)vale.sh](https://vale.sh/docs/)
 
 I would not make Vale mandatory in v1. It is powerful, but style rules can become noisy and subjective. Add it later if you want controlled terminology like “use ‘tool’ not ‘utility’” or “avoid implementation-facing terms in user docs.”
 
 ### External link checker
 
-Optional. `lychee` is a good candidate because it checks broken hyperlinks and email addresses in Markdown, HTML, websites, and more. [![](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/lycheeverse/lychee)
+Optional. `lychee` is a good candidate because it checks broken hyperlinks and email addresses in Markdown, HTML, websites, and more. [![Source](https://www.google.com/s2/favicons?domain=https://github.com&sz=128)GitHub](https://github.com/lycheeverse/lychee)
 
 I would keep this optional because external link checks are flaky in CI unless you manage retries, timeouts, and ignored domains.
 
@@ -6162,7 +6179,7 @@ lychee docs/usage/content/**/*.md
 
 For the first version of the standard, I would make these mandatory:
 
-```
+```text
 canonical frontmatter validation
 markdownlint/Prettier via Markdown Tooling
 mkdocs build --strict
@@ -6173,7 +6190,7 @@ agent semantic review checklist
 
 I would make these optional:
 
-```
+```text
 Vale
 external link checker
 spell checker
@@ -6187,7 +6204,7 @@ Add a **standard-specific content validator**, but keep it deterministic and nar
 
 The content-page validation model should be:
 
-```
+```text
 Markdown Frontmatter validator
   validates page metadata
 
@@ -6277,7 +6294,7 @@ The new standard should be implemented as a **copy-adopted standard with a contr
 
 The spec now emphasizes that adding the standard requires coordinated changes to:
 
-```
+```text
 standards/usage-documentation-site/
 src/project_standards/bundles/usage-documentation-site/
 src/project_standards/schemas/registry.json
