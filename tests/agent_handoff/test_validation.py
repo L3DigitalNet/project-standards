@@ -5,9 +5,11 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.agent_handoff.validation as validation
 from project_standards.agent_handoff.model import Harness, StartupMode
 from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
+from project_standards.agent_handoff.policy import HandoffPolicy, load_policy
 from project_standards.agent_handoff.validation import (
     drift_check,
     shape_check,
@@ -15,6 +17,19 @@ from project_standards.agent_handoff.validation import (
     validate_repository,
 )
 from project_standards.cli import main
+
+POLICY_PATH = (
+    Path(__file__).parents[2] / "src/project_standards/bundles/agent-handoff/resources/policy.toml"
+)
+
+
+def _replace_shape_pattern(pattern: str) -> HandoffPolicy:
+    policy = load_policy(POLICY_PATH)
+    bug_policy = next(
+        document for document in policy.shape.documents.values() if document.profile == "bug-record"
+    )
+    shape = policy.shape.model_copy(update={"documents": {pattern: bug_policy}})
+    return policy.model_copy(update={"shape": shape})
 
 
 def _adopt(
@@ -184,6 +199,52 @@ def test_size_and_shape_views_project_policy_findings(tmp_path: Path) -> None:
 
     assert any(finding.code == "AH-SIZE-CAP" for finding in size_report(RepositoryRoot(tmp_path)))
     assert any(finding.code == "AH-SHAPE" for finding in shape_check(RepositoryRoot(tmp_path)))
+
+
+def test_shape_check_excludes_index_but_checks_numbered_bug(tmp_path: Path) -> None:
+    _adopt(tmp_path)
+    bugs = tmp_path / "docs/handoff/bugs"
+    (bugs / "INDEX.md").write_text("# Bug Index\n", encoding="utf-8")
+    (bugs / "001-test.md").write_text(
+        "# Bug\n\n## Cause\n\nCause.\n\n## Fix\n\nFix.\n",
+        encoding="utf-8",
+    )
+
+    findings = shape_check(RepositoryRoot(tmp_path))
+
+    assert any(finding.path == "docs/handoff/bugs/001-test.md" for finding in findings)
+    assert not any(finding.path == "docs/handoff/bugs/INDEX.md" for finding in findings)
+
+
+def test_shape_check_treats_bracket_only_filename_as_glob(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _adopt(tmp_path)
+    bug = tmp_path / "docs/handoff/bugs/1.md"
+    bug.write_text("# Bug\n", encoding="utf-8")
+    policy = _replace_shape_pattern("docs/handoff/bugs/[0-9].md")
+    monkeypatch.setattr(validation, "_load_policy", lambda findings: policy)
+
+    findings = shape_check(RepositoryRoot(tmp_path))
+
+    assert any(
+        finding.code == "AH-SHAPE" and finding.path.endswith("/1.md") for finding in findings
+    )
+
+
+def test_shape_check_rejects_glob_in_directory_component(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _adopt(tmp_path)
+    policy = _replace_shape_pattern("docs/handoff/*/[0-9].md")
+    monkeypatch.setattr(validation, "_load_policy", lambda findings: policy)
+
+    findings = shape_check(RepositoryRoot(tmp_path))
+
+    assert any(
+        finding.code == "AH-PATH-BOUNDARY" and finding.path == "docs/handoff/*/[0-9].md"
+        for finding in findings
+    )
 
 
 def test_literal_credentials_fail_but_references_pass(tmp_path: Path) -> None:

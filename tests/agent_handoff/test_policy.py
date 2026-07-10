@@ -23,6 +23,13 @@ def policy() -> HandoffPolicy:
     return load_policy(POLICY_PATH)
 
 
+def test_bug_profile_targets_numbered_records_only(policy: HandoffPolicy) -> None:
+    documents = policy.shape.documents
+
+    assert "docs/handoff/bugs/[0-9][0-9][0-9]-*.md" in documents
+    assert "docs/handoff/bugs/*.md" not in documents
+
+
 def test_size_uses_utf8_bytes(tmp_path: Path) -> None:
     path = tmp_path / "docs/handoff/state.md"
     path.parent.mkdir(parents=True)

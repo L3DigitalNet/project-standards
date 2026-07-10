@@ -6,6 +6,7 @@ import fnmatch
 import re
 import tomllib
 from dataclasses import dataclass
+from glob import has_magic
 from pathlib import Path
 from typing import Literal, Self
 
@@ -231,7 +232,7 @@ def _document_config(path: str, policy: HandoffPolicy) -> DocumentPolicy | None:
         (
             config
             for pattern, config in policy.shape.documents.items()
-            if "*" in pattern and fnmatch.fnmatchcase(path, pattern)
+            if has_magic(pattern) and fnmatch.fnmatchcase(path, pattern)
         ),
         None,
     )

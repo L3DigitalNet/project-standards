@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 import stat
+from glob import has_magic
+from pathlib import PurePosixPath
 from typing import Literal, cast
 from urllib.parse import unquote
 
@@ -357,13 +359,17 @@ def size_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
 
 
 def _shape_targets(repository: RepositoryRoot, pattern: str) -> tuple[tuple[str, bytes], ...]:
-    if "*" not in pattern:
+    relative_pattern = PurePosixPath(pattern)
+    directory = relative_pattern.parent.as_posix()
+    filename = relative_pattern.name
+    if has_magic(directory):
+        raise RepositoryBoundaryError("shape glob directory must be literal")
+    if not has_magic(filename):
         data = _read_optional(repository, pattern)
         return () if data is None else ((pattern, data),)
-    parent = pattern.split("*", maxsplit=1)[0].rstrip("/")
-    repository.consumer_path(parent)
+    parent = repository.consumer_path(directory)
     targets: list[tuple[str, bytes]] = []
-    for candidate in sorted(repository.path.glob(pattern)):
+    for candidate in sorted(parent.glob(filename)):
         if not candidate.is_file():
             continue
         relative = candidate.relative_to(repository.path).as_posix()
