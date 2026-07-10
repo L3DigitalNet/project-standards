@@ -11,7 +11,7 @@
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, enforces the 3,000-byte policy, publishes catalog resource URIs, and passes the 1,382-test gate.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
-- `SPEC-CP01` is draft rev 0.3; round-2 lifecycle and scaffold findings are resolved, and convergence review is pending.
+- `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and the control-plane contract is ready for planning.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

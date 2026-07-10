@@ -90,9 +90,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
 
-- [ ] Re-review and approve Consumer Standards Control Plane `SPEC-CP01`.
+- [x] 2026-07-10 - Re-reviewed and approved Consumer Standards Control Plane `SPEC-CP01`.
 
-  Revision 0.3 resolves the round-2 accepted-track disable/re-enable lifecycle and exact three-file plain-init scaffold findings, in addition to the round-1 review. Do not write the implementation plan until the revised spec passes convergence review and is approved.
+  Round 3 converged at `0093a87` with no blocker or new major finding. Revision 0.4 applies the optional audit-lineage clarification and is approved for implementation planning.
 
 - [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation (`2a7ed25`).
 

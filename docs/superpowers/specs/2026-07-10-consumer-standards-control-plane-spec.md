@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-CP01
 title: 'Consumer Standards Control Plane'
-status: draft
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -49,6 +49,7 @@ related:
 | 0.1 | 2026-07-10 | Codex with owner design review | Initial full specification from the approved control-plane, reconciliation, version-channel, migration, and safety design. |
 | 0.2 | 2026-07-10 | Codex with specification review | Resolve round-1 findings and follow-up consistency gaps across recovery, migration, version transitions, provider phases, concurrency, package-local state, referenced extensions, ADR coverage, and examples. |
 | 0.3 | 2026-07-10 | Codex with owner-approved round-2 review | Separate persistent accepted-major authorization from enabled/applied package state and define the exact three-file plain-init scaffold. |
+| 0.4 | 2026-07-10 | Codex with converged review and owner direction | Clarify the audit-only role of accepted-track catalog lineage and approve the specification for implementation planning. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -561,7 +562,7 @@ provenance = 'source-owned'
 content_digest = 'sha256:artifact-content-digest'
 ```
 
-The example assumes candidate major `2` was selected by applying `latest` with matching `ID@2` authorization, so compatible updates can continue within the accepted major. An exact candidate selector would instead remain pinned under FR-012. The lock records resolved facts, not user intent. The `standards` partition contains enabled-package applied state only. The separate `accepted_tracks` partition is durable evidence that a non-default package major was authorized; it records only the package key, accepted major, and authorizing catalog lineage.
+The example assumes candidate major `2` was selected by applying `latest` with matching `ID@2` authorization, so compatible updates can continue within the accepted major. An exact candidate selector would instead remain pinned under FR-012. The lock records resolved facts, not user intent. The `standards` partition contains enabled-package applied state only. The separate `accepted_tracks` partition is durable evidence that a non-default package major was authorized; it records only the package key, accepted major, and authorizing catalog lineage. `authorized_catalog` is audit provenance for diagnostics and migration reports, not a resolver input.
 
 On successful disable, the package's applied, artifact, and referenced-input records are removed, but its accepted-track record remains. Re-enable with `latest` resumes that major without new authorization; if the catalog no longer advertises a compatible version on the retained major, resolution fails closed instead of falling back to the ordinary default. An FR-033 transition to another non-default major replaces the record, while exit to the selected catalog's default removes it. A matching catalog promotion also removes the exceptional record whether the package is enabled or disabled; exact pins and accepted tracks on other majors remain sticky. Missing-lock recovery never reconstructs this authorization history. Shared artifacts list every current owner, and package-local artifacts use the same central records, hashes, and drift rules as conventional-path artifacts.
 
@@ -852,15 +853,15 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 
 | Requirement IDs | Planned Verification | Status |
 | --- | --- | --- |
-| FR-001–FR-002, IR-001 | Init CLI, exact three-file enumeration, absent optional/placeholder/lock paths, failure cleanup, idempotency, and filesystem-boundary tests | Not Started |
-| FR-003–FR-006, IR-005–IR-006, DR-001–DR-003 | Config/catalog/partitioned-lock schema, enabled-versus-authorized state, generation, strictness, digest, and round-trip tests | Not Started |
-| FR-007–FR-010, IR-002–IR-003, NFR-001–NFR-004 | Planner/executor/removal, disable config preservation, applied-record removal, accepted-track retention, conflict, and fault-injection suites | Not Started |
-| FR-011–FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Not Started |
+| FR-001, FR-002, IR-001 | Init CLI, exact three-file enumeration, absent optional/placeholder/lock paths, failure cleanup, idempotency, and filesystem-boundary tests | Not Started |
+| FR-003, FR-004, FR-005, FR-006, IR-005, IR-006, DR-001, DR-002, DR-003 | Config/catalog/partitioned-lock schema, enabled-versus-authorized state, generation, strictness, digest, and round-trip tests | Not Started |
+| FR-007, FR-008, FR-009, FR-010, IR-002, IR-003, NFR-001, NFR-002, NFR-003, NFR-004 | Planner/executor/removal, disable config preservation, applied-record removal, accepted-track retention, conflict, and fault-injection suites | Not Started |
+| FR-011, FR-012, FR-013, FR-014, FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Not Started |
 | FR-016, FR-028, DR-004 | Versioned-payload completeness, parity, digest, and offline installed-wheel tests | Not Started |
 | FR-017, FR-026 | Unified entrypoint, adoption-wrapper, non-destructive config-edit, and CLI contract tests | Not Started |
-| FR-018–FR-020, FR-034–FR-035, DR-005, ERR-011–ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Not Started |
-| FR-021–FR-022, DR-006 | Legacy namespace/artifact migration, ambiguity, fallback, and dual-authority tests | Not Started |
-| FR-023, NFR-006–NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Not Started |
+| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Not Started |
+| FR-021, FR-022, DR-006 | Legacy namespace/artifact migration, ambiguity, fallback, and dual-authority tests | Not Started |
+| FR-023, NFR-006, NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Not Started |
 | FR-024, FR-036, DR-007 | Versioned package-option schema, referenced-extension ownership/canonical-path/output-collision/hash, default, external materialization, preservation, and option-migration tests | Not Started |
 | FR-025 | Same-major catalog refresh and compatible-update tests | Not Started |
 | FR-027 | Package adoption-guide inventory and content review | Not Started |
@@ -873,7 +874,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | NFR-008 | Human/JSON output and exit-code contract tests | Not Started |
 | NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Not Started |
 | IR-004 | Every validator/provider/reusable-workflow unified-config fixture | Not Started |
-| NFR-003, ERR-001–ERR-009 | Security boundary, error contract, and recovery suites | Not Started |
+| NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, error contract, and recovery suites | Not Started |
 
 ---
 
