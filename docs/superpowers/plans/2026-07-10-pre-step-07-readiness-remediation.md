@@ -52,14 +52,14 @@ Import the validation module, `load_policy`, and define a policy path plus a hel
 import project_standards.agent_handoff.validation as validation
 from project_standards.agent_handoff.policy import HandoffPolicy, load_policy
 
-_POLICY_PATH = (
+POLICY_PATH = (
     Path(__file__).parents[2]
     / "src/project_standards/bundles/agent-handoff/resources/policy.toml"
 )
 
 
 def _replace_shape_pattern(pattern: str) -> HandoffPolicy:
-    policy = load_policy(_POLICY_PATH)
+    policy = load_policy(POLICY_PATH)
     bug_policy = next(
         document
         for document in policy.shape.documents.values()
@@ -98,7 +98,10 @@ def test_shape_check_treats_bracket_only_filename_as_glob(
 
     findings = shape_check(RepositoryRoot(tmp_path))
 
-    assert any(finding.code == "AH-SHAPE" and finding.path.endswith("/1.md") for finding in findings)
+    assert any(
+        finding.code == "AH-SHAPE" and finding.path.endswith("/1.md")
+        for finding in findings
+    )
 
 
 def test_shape_check_rejects_glob_in_directory_component(
@@ -191,6 +194,8 @@ Run:
 
 ```bash
 uv run pytest tests/agent_handoff/test_policy.py tests/agent_handoff/test_validation.py -q
+uv run ruff format --check src/project_standards/agent_handoff tests/agent_handoff
+uv run ruff check src/project_standards/agent_handoff tests/agent_handoff
 cmp standards/agent-handoff/resources/policy.toml \
   src/project_standards/bundles/agent-handoff/resources/policy.toml
 uv run project-standards agent-handoff shape-check --repo .
@@ -287,13 +292,14 @@ Expected: failure while reading `.github/workflows/validate-standards-graph.yml`
 
 Create `.github/workflows/validate-standards-graph.yml`:
 
+<!-- prettier-ignore -->
 ```yaml
 name: Validate standards graph
 
 on:
   pull_request:
   push:
-    branches: ['main', 'testing']
+    branches: ["main", "testing"]
 
 permissions:
   contents: read
@@ -308,11 +314,11 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version-file: '.python-version'
+          python-version-file: ".python-version"
 
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          version: '0.11.6'
+          version: "0.11.6"
           enable-cache: true
 
       - name: Sync dependencies
@@ -336,6 +342,7 @@ uv run pytest \
   tests/test_standards_graph_catalog.py -q
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards render-catalog --root . --check
+npx prettier --check .github/workflows/validate-standards-graph.yml
 ```
 
 Expected: all tests pass, graph output is `OK standards graph`, and catalog output is `OK generated catalog`.
@@ -380,6 +387,12 @@ Add this checklist item immediately after `[resources]`:
 ```
 
 This records the FR-013 author decision without claiming the existing bundle gap is closed.
+
+In `standards/standard-bundle-authoring/templates/standard.toml`, add the corresponding optional resource directly below `readme`:
+
+```toml
+# agent_summary = "agent-summary.md" # optional: compact view; otherwise explain omission in README
+```
 
 - [ ] **Step 3: Remove obsolete Step 04 future tense**
 
@@ -466,7 +479,7 @@ Use the following evidence and statuses:
 | FR-012 | Nine real `standards/*/standard.toml` files; `test_real_manifests_validate`; required-manifest graph gate. | Passing |
 | FR-013 | Agent Handoff provides `agent-summary.md`; Python Coding records a rationale; the other active standards do not yet provide either. | Failing — non-blocking `Should` gap |
 | FR-014 | `standards/catalog.md`; `tests/test_standards_graph_catalog.py`; `render-catalog --check`. | Passing |
-| FR-015 | `UPGRADING.md` v5 manifest/graph migration posture. | Passing |
+| FR-015 | v5 manifest/graph migration posture is added with the release documents. | Blocked — migration note not yet committed |
 | FR-016 | ADRs 0001-0013 are active and pass managed frontmatter/ADR validation. | Passing |
 | FR-017 | Individual, pairwise, and all-standard coverage in `tests/test_standards_composition.py`. | Passing |
 | FR-018 | `tests/test_adopt_dogfood.py` and `tests/test_standards_composition.py`. | Passing |
@@ -476,9 +489,9 @@ Use the following evidence and statuses:
 | FR-022 | Relationship enums/schema; `tests/test_standard_manifest.py::test_relations_rejects_requires_key`. | Passing |
 ```
 
-- [ ] **Step 3: Check supported documentation deliverables**
+- [ ] **Step 3: Check only documentation deliverables with current evidence**
 
-In §18.7, check the first seven deliverables through `UPGRADING.md` migration notes. Leave only `MCP-readiness report template/checklist` unchecked.
+In §18.7, check the first six deliverables through the updated adopt guides. Leave both `UPGRADING.md / migration notes` and `MCP-readiness report template/checklist` unchecked until their evidence exists.
 
 - [ ] **Step 4: Resolve settled open questions without erasing real choices**
 
@@ -514,7 +527,7 @@ npx prettier --check docs/superpowers/specs/2026-07-07-project-standards-meta-re
 npx markdownlint-cli2 --no-globs docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
-Expected: validation and strict lint pass; FR-013 and FR-019 remain visible rather than being marked complete.
+Expected: validation and strict lint pass; FR-013, FR-015, and FR-019 remain visible rather than being marked complete.
 
 - [ ] **Step 7: Commit traceability reconciliation**
 
@@ -530,6 +543,7 @@ git commit -m "docs(v5): reconcile spec mt01 traceability"
 
 - Modify: `CHANGELOG.md`
 - Modify: `UPGRADING.md`
+- Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
 - [ ] **Step 1: Add classified `[Unreleased]` entries**
 
@@ -560,20 +574,41 @@ project-standards standards render-catalog --root . --check
 Existing consumers continue to use their selected standard's `adopt.md`, config fragment, and reusable workflow. Re-pinning to v5 does not enable graph validation against the consumer repository unless that repository deliberately adopts the authoring contract.
 ````
 
-- [ ] **Step 3: Verify changed release documents**
+- [ ] **Step 3: Promote FR-015 only after its evidence exists**
+
+Replace the temporary FR-015 traceability row with:
+
+```markdown
+| FR-015 | `UPGRADING.md` v5 manifest/graph migration posture. | Passing |
+```
+
+Check the §18.7 `UPGRADING.md / migration notes` deliverable. Keep the MCP-readiness report/checklist deliverable and the aggregate §17.1 documentation item unchecked for Step 07.
+
+- [ ] **Step 4: Verify changed release documents**
 
 Run:
 
 ```bash
 uv run project-standards validate --config .project-standards.yml
-npx prettier --check CHANGELOG.md UPGRADING.md
-npx markdownlint-cli2 --no-globs CHANGELOG.md UPGRADING.md
+uv run project-standards spec validate --config .project-standards.yml
+uv run project-standards spec lint --config .project-standards.yml --strict
+npx prettier --check \
+  CHANGELOG.md \
+  UPGRADING.md \
+  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+npx markdownlint-cli2 --no-globs \
+  CHANGELOG.md \
+  UPGRADING.md \
+  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
-- [ ] **Step 4: Commit release guidance**
+- [ ] **Step 5: Commit release guidance**
 
 ```bash
-git add CHANGELOG.md UPGRADING.md
+git add \
+  CHANGELOG.md \
+  UPGRADING.md \
+  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 git diff --cached --check
 git commit -m "docs(v5): document standards graph migration"
 ```
