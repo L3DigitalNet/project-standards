@@ -8,15 +8,15 @@ Manifest-derived package, relationship, resource, provider, and artifact facts.
 
 | Standard | Status | Adoption | Package version | Contract default | Config namespaces | Artifacts | Readiness |
 | --- | --- | --- | --- | --- | --- | ---: | --- |
-| [`adr`](adr/README.md) | active | validator | 1.0 (supported: 1.0) | 1.0 | `markdown.adr` | 2 | ready |
-| [`agent-handoff`](agent-handoff/README.md) | active | cli | 1.0 (supported: 1.0) | 1.0 | `agent_handoff` | 18 | ready |
-| [`cli-documentation`](cli-documentation/README.md) | active | copy-adopt | 1.0 (supported: 1.0) | 1.0 | `cli_documentation` | 3 | ready |
-| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | validator | 1.1 (supported: 1.0, 1.1) | 1.1 | `markdown.frontmatter` | 5 | ready |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | copy-adopt | 1.1 (supported: 1.0, 1.1) | 1.1 | `markdown_tooling` | 6 | ready |
-| [`project-spec`](project-spec/README.md) | active | cli | 1.0 (supported: 1.0) | 1.0 | `spec` | 2 | ready |
-| [`python-coding`](python-coding/README.md) | draft | reference-only | 0.4 (supported: 0.4) | — | — | 0 | ready |
-| [`python-tooling`](python-tooling/README.md) | active | copy-adopt | 1.0 (supported: 1.0) | 1.0 | `python_tooling` | 10 | ready |
-| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | none | 1.0 (supported: 1.0) | — | — | 0 | ready |
+| [`adr`](adr/README.md) | active | validator | 1.1 (supported: 1.0, 1.1) | 1.0 | `markdown.adr` | 2 | ready |
+| [`agent-handoff`](agent-handoff/README.md) | active | cli | 1.1 (supported: 1.0, 1.1) | 1.0 | `agent_handoff` | 18 | ready |
+| [`cli-documentation`](cli-documentation/README.md) | active | copy-adopt | 1.1 (supported: 1.0, 1.1) | 1.0 | `cli_documentation` | 3 | ready |
+| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | validator | 1.2 (supported: 1.0, 1.1, 1.2) | 1.1 | `markdown.frontmatter` | 5 | ready |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | copy-adopt | 1.2 (supported: 1.0, 1.1, 1.2) | 1.1 | `markdown_tooling` | 6 | ready |
+| [`project-spec`](project-spec/README.md) | active | cli | 1.1 (supported: 1.0, 1.1) | 1.0 | `spec` | 2 | ready |
+| [`python-coding`](python-coding/README.md) | draft | reference-only | 0.5 (supported: 0.4, 0.5) | — | — | 0 | ready |
+| [`python-tooling`](python-tooling/README.md) | active | copy-adopt | 1.1 (supported: 1.0, 1.1) | 1.0 | `python_tooling` | 10 | ready |
+| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | none | 1.1 (supported: 1.0, 1.1) | — | — | 0 | ready |
 
 ## Capabilities
 
@@ -50,6 +50,7 @@ Standards are independent unless an edge appears below.
 | Standard | Resource | URI | Path |
 | --- | --- | --- | --- |
 | `adr` | `adopt` | `standards://adr/adopt` | `adopt.md` |
+| `adr` | `agent_summary` | `standards://adr/agent_summary` | `agent-summary.md` |
 | `adr` | `example` | `standards://adr/example` | `examples/adr.example.md` |
 | `adr` | `readme` | `standards://adr/readme` | `README.md` |
 | `adr` | `template` | `standards://adr/template` | `templates/adr.md` |
@@ -80,6 +81,7 @@ Standards are independent unless an edge appears below.
 | `agent-handoff` | `template_status` | `standards://agent-handoff/template_status` | `templates/STATUS.md` |
 | `agent-handoff` | `template_todo` | `standards://agent-handoff/template_todo` | `templates/TODO.md` |
 | `cli-documentation` | `adopt` | `standards://cli-documentation/adopt` | `adopt.md` |
+| `cli-documentation` | `agent_summary` | `standards://cli-documentation/agent_summary` | `agent-summary.md` |
 | `cli-documentation` | `readme` | `standards://cli-documentation/readme` | `README.md` |
 | `cli-documentation` | `readme_single_file_template` | `standards://cli-documentation/readme_single_file_template` | `templates/readme-single-file.md` |
 | `cli-documentation` | `research_notes` | `standards://cli-documentation/research_notes` | `resources/research-notes.md` |
@@ -87,6 +89,7 @@ Standards are independent unless an edge appears below.
 | `cli-documentation` | `usage_template` | `standards://cli-documentation/usage_template` | `templates/usage-doc.md` |
 | `cli-documentation` | `workflow_template` | `standards://cli-documentation/workflow_template` | `templates/cli-docs-check.yml` |
 | `markdown-frontmatter` | `adopt` | `standards://markdown-frontmatter/adopt` | `adopt.md` |
+| `markdown-frontmatter` | `agent_summary` | `standards://markdown-frontmatter/agent_summary` | `agent-summary.md` |
 | `markdown-frontmatter` | `example_concept` | `standards://markdown-frontmatter/example_concept` | `examples/concept.example.md` |
 | `markdown-frontmatter` | `example_note` | `standards://markdown-frontmatter/example_note` | `examples/note.example.md` |
 | `markdown-frontmatter` | `example_runbook` | `standards://markdown-frontmatter/example_runbook` | `examples/runbook.example.md` |
@@ -106,18 +109,23 @@ Standards are independent unless an edge appears below.
 | `markdown-frontmatter` | `template_spec` | `standards://markdown-frontmatter/template_spec` | `templates/spec.md` |
 | `markdown-frontmatter` | `template_standard` | `standards://markdown-frontmatter/template_standard` | `templates/frontmatter-standard.yml` |
 | `markdown-tooling` | `adopt` | `standards://markdown-tooling/adopt` | `adopt.md` |
+| `markdown-tooling` | `agent_summary` | `standards://markdown-tooling/agent_summary` | `agent-summary.md` |
 | `markdown-tooling` | `readme` | `standards://markdown-tooling/readme` | `README.md` |
 | `project-spec` | `adopt` | `standards://project-spec/adopt` | `adopt.md` |
+| `project-spec` | `agent_summary` | `standards://project-spec/agent_summary` | `agent-summary.md` |
 | `project-spec` | `example` | `standards://project-spec/example` | `examples/spec.example.md` |
 | `project-spec` | `readme` | `standards://project-spec/readme` | `README.md` |
 | `project-spec` | `template_full` | `standards://project-spec/template_full` | `templates/spec-full-template.md` |
 | `project-spec` | `template_light` | `standards://project-spec/template_light` | `templates/spec-light-template.md` |
 | `project-spec` | `template_standard` | `standards://project-spec/template_standard` | `templates/spec-standard-template.md` |
 | `project-spec` | `tooling_notes` | `standards://project-spec/tooling_notes` | `resources/tooling-notes.md` |
+| `python-coding` | `agent_summary` | `standards://python-coding/agent_summary` | `agent-summary.md` |
 | `python-coding` | `readme` | `standards://python-coding/readme` | `README.md` |
 | `python-tooling` | `adopt` | `standards://python-tooling/adopt` | `adopt.md` |
+| `python-tooling` | `agent_summary` | `standards://python-tooling/agent_summary` | `agent-summary.md` |
 | `python-tooling` | `build_backend` | `standards://python-tooling/build_backend` | `build-backend.md` |
 | `python-tooling` | `readme` | `standards://python-tooling/readme` | `README.md` |
+| `standard-bundle-authoring` | `agent_summary` | `standards://standard-bundle-authoring/agent_summary` | `agent-summary.md` |
 | `standard-bundle-authoring` | `readme` | `standards://standard-bundle-authoring/readme` | `README.md` |
 | `standard-bundle-authoring` | `template` | `standards://standard-bundle-authoring/template` | `templates/standard.toml` |
 

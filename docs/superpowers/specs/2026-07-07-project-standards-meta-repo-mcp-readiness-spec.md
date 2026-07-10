@@ -822,7 +822,7 @@ No secrets are required. The repository must not add secrets for manifest valida
 | FR-010 | `tests/test_standards_graph_cli.py` human, JSON, load-error, and current-repository cases. | Passing |
 | FR-011 | `.github/workflows/validate-standards-graph.yml`; `tests/test_standards_graph_workflow.py`. | Passing |
 | FR-012 | Nine real `standards/*/standard.toml` files; `test_real_manifests_validate`; required-manifest graph gate. | Passing |
-| FR-013 | Agent Handoff provides `agent-summary.md`; Python Coding records a rationale; the other active standards do not yet provide either. | Failing — non-blocking `Should` gap |
+| FR-013 | Nine `agent-summary.md` resources; `test_real_manifests_have_compact_agent_summaries`; generated catalog resource URIs; semantic review against canonical READMEs. | Passing |
 | FR-014 | `standards/catalog.md`; `tests/test_standards_graph_catalog.py`; `render-catalog --check`. | Passing |
 | FR-015 | `UPGRADING.md` v5 manifest/graph migration posture. | Passing |
 | FR-016 | ADRs 0001-0013 are active and pass managed frontmatter/ADR validation. | Passing |
