@@ -21,9 +21,9 @@
 - Modify: `tests/standards_graph_helpers.py`
 - Modify: `tests/test_standard_manifest.py`
 
-- [ ] Add a failing model test proving `[artifacts].manifest` accepts a safe repository-relative path and rejects absolute/traversing paths.
-- [ ] Add an `ArtifactsTable` with `manifest: str`, validate it as a safe relative path, and expose `artifacts: ArtifactsTable | None` on `StandardManifest`.
-- [ ] Regenerate the bundled JSON schema and run `uv run pytest tests/test_standard_manifest.py -q`.
+- [x] Add a failing model test proving `[artifacts].manifest` accepts a safe repository-relative path and rejects absolute/traversing paths.
+- [x] Add an `ArtifactsTable` with `manifest: str`, validate it as a safe relative path, and expose `artifacts: ArtifactsTable | None` on `StandardManifest`.
+- [x] Regenerate the bundled JSON schema and run `uv run pytest tests/test_standard_manifest.py -q`.
 
 ### Task 2: Add typed artifact provenance
 
@@ -33,11 +33,11 @@
 - Modify: `tests/test_adopt_manifest.py`
 - Modify: `src/project_standards/bundles/*/adopt.toml`
 
-- [ ] Add failing tests for the four provenance classes: `source-owned`, `generated`, `package-owned`, and `external-owned`.
-- [ ] Require `provenance` on every `[[artifact]]`; require `canonical` for source-owned/generated artifacts, require `transform` for generated artifacts, and reject canonical/transform metadata on package-owned/external-owned artifacts.
-- [ ] Require `external-owned` artifacts to use `shared`, and reject `shared` for the other provenance classes.
-- [ ] Annotate every current packaged artifact with its provenance and canonical source when applicable.
-- [ ] Run `uv run pytest tests/test_adopt_manifest.py tests/test_adopt_dogfood.py -q`.
+- [x] Add failing tests for the four provenance classes: `source-owned`, `generated`, `package-owned`, and `external-owned`.
+- [x] Require `provenance` on every `[[artifact]]`; require `canonical` for source-owned/generated artifacts, require `transform` for generated artifacts, and reject canonical/transform metadata on package-owned/external-owned artifacts.
+- [x] Require `external-owned` artifacts to use `shared`, and reject `shared` for the other provenance classes.
+- [x] Annotate every current packaged artifact with its provenance and canonical source when applicable.
+- [x] Run `uv run pytest tests/test_adopt_manifest.py tests/test_adopt_dogfood.py -q`.
 
 ### Task 3: Validate the two manifest planes together
 
@@ -50,10 +50,10 @@
 - Modify: `tests/test_standards_graph_discovery.py`
 - Modify: `tests/test_standards_graph_validators.py`
 
-- [ ] Add failing tests for missing/mismatched artifact links, orphan packaged manifests, non-adoptable standards with artifact links, source-owned parity drift, missing canonical sources, and global skill destinations.
-- [ ] Load a linked adopt manifest into each `StandardNode` and retain its path; discover orphan packaged manifests under `src/project_standards/bundles/*/adopt.toml`.
-- [ ] Add deterministic graph findings for cross-plane linkage, adoption posture, canonical provenance/parity, and project-local skill installation.
-- [ ] Run `uv run pytest tests/test_standards_graph_discovery.py tests/test_standards_graph_validators.py -q`.
+- [x] Add failing tests for missing/mismatched artifact links, orphan packaged manifests, non-adoptable standards with artifact links, source-owned parity drift, missing canonical sources, and global skill destinations.
+- [x] Load a linked adopt manifest into each `StandardNode` and retain its path; discover orphan packaged manifests under `src/project_standards/bundles/*/adopt.toml`.
+- [x] Add deterministic graph findings for cross-plane linkage, adoption posture, canonical provenance/parity, and project-local skill installation.
+- [x] Run `uv run pytest tests/test_standards_graph_discovery.py tests/test_standards_graph_validators.py -q`.
 
 ### Task 4: Retrofit real standard manifests and authoring docs
 
@@ -63,9 +63,9 @@
 - Modify: `standards/standard-bundle-authoring/README.md`
 - Modify: `standards/standard-bundle-authoring/templates/standard.toml`
 
-- [ ] Add `[artifacts]` links to all six standards that ship packaged adoption manifests.
-- [ ] Document the link and provenance contract in the Standard Bundle Authoring Standard and its template.
-- [ ] Run `uv run project-standards standards validate-graph --root . --require-all-manifests`.
+- [x] Add `[artifacts]` links to all six standards that ship packaged adoption manifests.
+- [x] Document the link and provenance contract in the Standard Bundle Authoring Standard and its template.
+- [x] Run `uv run project-standards standards validate-graph --root . --require-all-manifests`.
 
 ### Task 5: Prove individual and combined adoption
 
@@ -73,10 +73,10 @@
 
 - Create: `tests/test_standards_composition.py`
 
-- [ ] Add a failing fixture test that derives adoptable standard IDs from graph metadata rather than a handwritten list.
-- [ ] Prove every adoptable standard builds a plan alone, every pair builds a collision-free plan, and the all-standard combination builds and executes into `tmp_path`.
-- [ ] Assert declared conflicts are absent from successful combinations, shared artifacts deduplicate, fragments remain report-only, and the repo-local skill lands under `.agents/skills/`.
-- [ ] Run `uv run pytest tests/test_standards_composition.py -q`.
+- [x] Add a failing fixture test that derives adoptable standard IDs from graph metadata rather than a handwritten list.
+- [x] Prove every adoptable standard builds a plan alone, every pair builds a collision-free plan, and the all-standard combination builds and executes into `tmp_path`.
+- [x] Assert declared conflicts are absent from successful combinations, shared artifacts deduplicate, fragments remain report-only, and the repo-local skill lands under `.agents/skills/`.
+- [x] Run `uv run pytest tests/test_standards_composition.py -q`.
 
 ### Task 6: Generate and check the standards catalog
 
@@ -90,10 +90,10 @@
 - Create: `standards/catalog.md`
 - Modify: `standards/README.md`
 
-- [ ] Add failing renderer tests covering all standard IDs, lifecycle/adoption/version/config facts, capabilities, resources, provider operations, artifact counts/provenance, repo-local skills, and companion/extension/conflict edges.
-- [ ] Implement a deterministic pure Markdown renderer and `standards render-catalog --root . [--check] [--output PATH]`.
-- [ ] Generate `standards/catalog.md`, link it from the human standards index, and prove `--check` exits 1 on stale output and 0 when fresh.
-- [ ] Run `uv run pytest tests/test_standards_graph_catalog.py tests/test_standards_graph_cli.py -q`.
+- [x] Add failing renderer tests covering all standard IDs, lifecycle/adoption/version/config facts, capabilities, resources, provider operations, artifact counts/provenance, repo-local skills, and companion/extension/conflict edges.
+- [x] Implement a deterministic pure Markdown renderer and `standards render-catalog --root . [--check] [--output PATH]`.
+- [x] Generate `standards/catalog.md`, link it from the human standards index, and prove `--check` exits 1 on stale output and 0 when fresh.
+- [x] Run `uv run pytest tests/test_standards_graph_catalog.py tests/test_standards_graph_cli.py -q`.
 
 ### Task 7: Verify Step 06 and update handoff
 
@@ -105,6 +105,6 @@
 - Modify: `docs/handoff/specs-plans.md`
 - Modify: `docs/handoff/sessions/2026-07.md`
 
-- [ ] Run the complete Python gate, coherence gate, graph validation, catalog freshness check, managed Markdown/spec gates, and handoff validators.
-- [ ] Mark Step 06 complete and advance the active next item to Step 07 without starting MCP server work.
-- [ ] Run `git diff --check` and review the complete diff.
+- [x] Run the complete Python gate, coherence gate, graph validation, catalog freshness check, managed Markdown/spec gates, and handoff validators.
+- [x] Mark Step 06 complete and advance the active next item to Step 07 without starting MCP server work.
+- [x] Run `git diff --check` and review the complete diff.

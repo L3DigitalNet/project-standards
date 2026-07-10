@@ -6,7 +6,7 @@ description: 'Consumer-by-consumer migration ledger and deletion checkpoint for 
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-09'
+updated: '2026-07-10'
 reviewed: null
 owner: 'project-standards'
 consumer: 'agent'
@@ -67,7 +67,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `network-infrastructure` | `main` | None | Not a legacy consumer | — | Not applicable | None |
 | `network-infrastructure-schema` | `main` | None | Not a legacy consumer | — | Not applicable | None |
 | `progressive-apparel` | `main` | Migrated from Codex hook and root companions | Codex | `2b062b6` | Pass | Recheck with published v5 before deletion |
-| `project-standards` | `main` | Old layout remains in dirty `testing` checkout; feature branch migrated | Dual | `bd3cee5` | Pass on feature branch | Integrate v5 feature branch |
+| `project-standards` | `main` | Migration and package adoption are integrated on `testing` | Dual | `bd3cee5` | Pass on `testing` | Promote v5, then recheck the published artifact |
 | `star-trek-retro-remake` | `main` | Migrated from dual hooks and root companions | Dual | `9d4e19e` | Pass | Recheck with published v5 before deletion |
 | `website-aboutme` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `ab6bc3d` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
 | `website-l3digital.net` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `87dabc2` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
