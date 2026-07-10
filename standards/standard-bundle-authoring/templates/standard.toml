@@ -26,6 +26,7 @@ conflicts = []          # exceptional; prefer redesign
 
 [resources]
 readme = "README.md"    # bundle-relative paths only (no .., no absolute, no symlink escape)
+# agent_summary = "agent-summary.md" # optional: compact view; otherwise explain omission in README
 # adopt = "adopt.md"    # required when adoption is validator, copy-adopt, or cli
 # skill = "skills/<skill-name>/SKILL.md"  # optional: standard-owned agent skill entrypoint
 

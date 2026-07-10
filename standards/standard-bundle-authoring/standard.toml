@@ -1,8 +1,7 @@
 # The machine manifest for the Standard Bundle Authoring Standard.
 # This meta-standard dogfoods the contract it defines. It is internal/reference
 # (adoption = "none"): no consumer config namespace, no authorities over consumer
-# files, no providers. Enforcement of the contract is future graph validation
-# (SPEC-MT01 Step 04), not this bundle.
+# files, and no providers. The repository graph validator enforces the contract.
 
 [standard]
 id = "standard-bundle-authoring"

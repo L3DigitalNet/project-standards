@@ -4,7 +4,7 @@ The "standard for standards": the contract every standard bundle under `standard
 
 ## Purpose & status
 
-This standard closes a gap: the repository defines standards as bundles under `standards/{id}/`, but nothing said what a bundle must declare, and the eight current bundles diverge (six ship packaged adopt-artifact manifests, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only). This document is the single, machine-checkable authoring contract that closes it. It realizes [adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md) and is the `SPEC-MT01` Step 02 deliverable.
+This standard closes a gap: the repository defines standards as bundles under `standards/{id}/`, but nothing said what a bundle must declare, and the nine current bundles diverge (seven ship packaged adopt-artifact manifests, `python-coding` is an unregistered draft, and this meta-standard is internal/reference-only). This document is the single, machine-checkable authoring contract that closes it. It realizes [adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md) and is the `SPEC-MT01` Step 02 deliverable.
 
 It is an **internal / reference** standard: it governs how this repository authors its own standards. Its adoption mode is `none` — there is **no `adopt.md`**, no copy-adopt bundle, and no `registry.json` contract version, because no downstream repository authors its own standards today. It still ships its own [`standard.toml`](standard.toml) so the repository dogfoods the contract it defines.
 
@@ -32,6 +32,8 @@ A standard bundle is the directory `standards/{id}/`. The `{id}` is kebab-case a
 ## The `standard.toml` manifest
 
 Every bundle carries a `standard.toml` — stable, validated metadata that machine consumers read without parsing prose ([adr-0002](../../docs/adr/adr-0002-manifest-first-standard-discovery.md)). The manifest below is a complete annotated example for a representative _adoptable_ standard (`markdown-tooling`) so every table is realistic; each comment marks a field **required** or **optional**. The field _names_ shown here are the contract — this standard's own manifest and the [template](templates/standard.toml) use exactly these keys.
+
+Package and contract versions follow [ADR 0020](../../docs/adr/adr-0020-standard-package-versioning-methodology.md): each package declares its current version and every version it still supports.
 
 ```toml
 [standard]
@@ -88,7 +90,7 @@ optional = true
 
 ## Adoption modes
 
-`adoption` classifies **how** a standard reaches a consumer repository, so today's outliers are first-class rather than special cases ([adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md)). The vocabulary is exactly:
+`adoption` classifies **how** a standard reaches a consumer repository, so today's outliers are first-class rather than special cases ([adr-0001](../../docs/adr/adr-0001-standard-bundle-authoring-contract.md), [ADR 0017](../../docs/adr/adr-0017-unified-standard-adoption-methodology.md)). The vocabulary is exactly:
 
 | Mode | Meaning | Current standards |
 | --- | --- | --- |
@@ -197,13 +199,13 @@ The `standard.toml` manifest describes the standard; the **artifact plane** (`ad
 - **references its `adopt.md` adoption guide** through the `adopt` resource when `adoption` is `validator`, `copy-adopt`, or `cli`, or
 - **explicitly declares non-adoptability** (`adoption = "reference-only"` or `adoption = "none"`, no `adopt` resource).
 
-Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Every `[[artifact]]` declares provenance: `source-owned` with a byte-identical repository-relative `canonical` source; `generated` with `canonical` plus a deterministic `transform`; `package-owned` for installed-tooling-only files; or `external-owned` for explicit `_shared` artifacts. An artifact's optional `install_policy` defaults to `managed`; `create-only` installs the artifact only when its destination is absent and is never overwritten, even when adoption uses `--force`. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior.
+Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane under [ADR 0019](../../docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md). Every `[[artifact]]` declares provenance: `source-owned` with a byte-identical repository-relative `canonical` source; `generated` with `canonical` plus a deterministic `transform`; `package-owned` for installed-tooling-only files; or `external-owned` for explicit `_shared` artifacts. An artifact's optional `install_policy` defaults to `managed`; `create-only` installs the artifact only when its destination is absent and is never overwritten, even when adoption uses `--force`. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior.
 
-Standard-packaged skills install only under `.agents/skills/<skill-id>/`. Under [ADR 0022](../../docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md), a standard-owned hook's canonical source lives under `standards/{standard-id}/hooks/{hook-id}/`, and its source-owned artifact installs under `.agents/hooks/{standard-id}/` by default. Hook artifacts declare `provenance = "source-owned"`, a byte-identical canonical source, `install_policy = "managed"`, and an executable `mode`. Drift validation identifies changed or stale installed hooks, and only the package's owned upgrade path refreshes them after its normal precondition and ambiguity checks. Graph validation checks linkage, provenance parity, and the project-local skill and hook boundaries without re-inventing the adopt engine.
+Under [ADR 0021](../../docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md), standard-packaged skills install only under `.agents/skills/<skill-id>/`. Under [ADR 0022](../../docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md), a standard-owned hook's canonical source lives under `standards/{standard-id}/hooks/{hook-id}/`, and its source-owned artifact installs under `.agents/hooks/{standard-id}/` by default. Hook artifacts declare `provenance = "source-owned"`, a byte-identical canonical source, `install_policy = "managed"`, and an executable `mode`. Drift validation identifies changed or stale installed hooks, and only the package's owned upgrade path refreshes them after its normal precondition and ambiguity checks. Graph validation checks linkage, provenance parity, and the project-local skill and hook boundaries without re-inventing the adopt engine.
 
 ## Lifecycle & exceptions
 
-A standard moves through explicit lifecycle states, mirrored in `standard.toml` `status` so tooling can tell draft from active from retired:
+A standard moves through the package lifecycle defined by [ADR 0018](../../docs/adr/adr-0018-standard-package-lifecycle-methodology.md), mirrored in `standard.toml` `status` so tooling can tell draft from active from retired:
 
 ```text
 draft → review → active → deprecated → archived
@@ -220,6 +222,7 @@ The machine schema and graph validator are authoritative, but this checklist is 
 - [ ] `[config]` — `namespaces` present (array of dotted paths, may be empty); no path duplicates another standard's; no reserved meta key claimed.
 - [ ] `[capabilities]` — `provides` and `consumes_platform` both present (arrays, may be empty).
 - [ ] `[resources]` — `readme` present; `adopt` present **iff** `adoption` is `validator`, `copy-adopt`, or `cli`.
+- [ ] Agent context — provide `agent-summary.md` and declare `resources.agent_summary` when useful; otherwise record the explicit rationale in the canonical README.
 - [ ] `[artifacts]` — present when a packaged `adopt.toml` exists; `manifest` names its safe repository-relative path; every artifact declares valid provenance.
 - [ ] `hooks/{hook-id}/` — present when the standard owns a hook; the source-owned artifact installs under `.agents/hooks/{standard-id}/` with managed drift and executable mode declarations.
 - [ ] `[relations]` — any of `companions` / `extends` / `conflicts` present are arrays; no `requires` field; every `extends` is ADR-backed.

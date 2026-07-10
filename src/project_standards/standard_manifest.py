@@ -4,7 +4,7 @@ Mechanizes the Standard Bundle Authoring Standard (SPEC-BA01) contract for ONE
 manifest: validate its shape and single-manifest self-consistency, and expose the
 data as a typed object. Cross-standard rules — authority conflicts, namespace
 duplicate-ownership across standards, relationship-graph acyclicity, extends-needs-
-an-ADR, hidden-dependency rejection — are Step 04's standards-graph validator.
+an-ADR, hidden-dependency rejection — are enforced by the standards-graph validator.
 
 This module intentionally omits `from __future__ import annotations`: its field
 annotations are resolved at runtime by Pydantic, and the future import would turn
@@ -34,7 +34,7 @@ class StandardManifestError(ValueError):
 
     The single error type load_standard_manifest raises; it wraps
     tomllib.TOMLDecodeError, OSError, and pydantic.ValidationError so no raw parser
-    or I/O traceback crosses the boundary. Maps to exit code 2 at the future Step 04
+    or I/O traceback crosses the boundary. Maps to exit code 2 at the standards-graph
     CLI boundary.
     """
 
@@ -146,8 +146,8 @@ class RelationsTable(_Table):
     """The `[relations]` table: this standard's ties to other standards.
 
     All fields are optional lists; a stray `requires` key is rejected by
-    `_Table`'s `extra="forbid"` — dependency requirements are Step 04's
-    standards-graph concern, not a single-manifest field.
+    `_Table`'s `extra="forbid"` — dependency requirements are a standards-graph
+    concern, not a single-manifest field.
     """
 
     companions: list[str] = Field(default_factory=list)
@@ -282,7 +282,7 @@ class StandardManifest(_Table):
 
     Subclasses `_Table` (`extra="forbid"`) so an unrecognized top-level table name
     is rejected here rather than silently ignored. Field names are load-bearing for
-    Step 04's loader (`manifest.standard.id`, `manifest.resources.as_dict()`).
+    the graph loader (`manifest.standard.id`, `manifest.resources.as_dict()`).
     """
 
     standard: StandardTable
