@@ -79,6 +79,8 @@ spec:
     - "docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md"
     # Agent Handoff v1 standards-package ingestion (SPEC-DPEY).
     - "docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md"
+    # V5 consumer-side catalog/config/lock/reconciliation control plane (SPEC-CP01).
+    - "docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md"
 
 # BEGIN agent-handoff managed config
 agent_handoff:

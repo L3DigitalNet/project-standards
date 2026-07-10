@@ -90,13 +90,17 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
 
+- [ ] Review and approve Consumer Standards Control Plane `SPEC-CP01`.
+
+  Review `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md`, including its ADR supersession matrix, package compatibility matrix, semantic-composition requirement, version channels, and v5 migration boundary. Do not write the implementation plan until the spec is approved.
+
 - [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation (`2a7ed25`).
 
   Preserved the drafts, added them to the managed frontmatter scope, and added conformant metadata with current relationships.
 
-- [ ] Define project-level routing and authority for `docs/workflows/`.
+- [x] 2026-07-10 - Defined the project-level workflow routing and authority direction.
 
-  Add repository-level routing guidance. Decide whether workflow authority requires an ADR and create one if useful.
+  The future `project-toolbox` package owns managed core workflows under `.agents/workflows/project-toolbox/`; consumer-authored local workflows remain managed project documents under `docs/workflows/`. Record the general workflow-installation methodology in an ADR when the separate toolbox spec is written.
 
 - [ ] Reconcile the stale GitHub issue and pull-request queue.
 
@@ -104,17 +108,25 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 #### P1 — Finalize the v5 standard architecture
 
-- [ ] Resolve root-artifact ownership and placement across standards.
+- [ ] Resolve root-artifact ownership and semantic composition across standards.
 
-  Determine whether Python Tooling, Markdown Tooling, and the future repository-governance package can consolidate root artifacts without breaking tool discovery or consumer contracts.
+  Determine key/block ownership for `pyproject.toml`, agent instructions, VS Code files, shared EditorConfig/extension recommendations, workflows, and other externally discovered artifacts. This is a prerequisite for `SPEC-CP01` real-apply composition and must preserve tool discovery and consumer-owned content.
+
+- [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
+
+  Preserve implemented `SPEC-BA01` as history. Specify immutable versioned payloads, package option schemas, catalog channels, migrations, semantic contributions, trusted providers, central-lock ownership, and the reduced package-specific adoption-guide role before control-plane implementation.
+
+- [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
+
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. Create ADRs 0023-0024 and reconcile the affected ADRs and versioning policy first.
+
+- [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
+
+  Specify this only after `SPEC-CP01` is approved. V1 packages the four proven workflows plus one routing skill, installs managed core workflows under `.agents/workflows/project-toolbox/`, keeps `docs/workflows/` for local extensions, and documents the later operational-suite and extension-framework waves.
 
 - [ ] Create and release the `agent-managed-repo` standard for v5.0.0.
 
   Use `docs/future-standards/github-repository-governance-standard.md` as the provisional guide. Formally design, review, implement, register, and document the standard before release.
-
-- [ ] Reconcile the Standard Bundle Authoring Standard with the final v5 architecture.
-
-  Perform this after the artifact-placement and `agent-managed-repo` decisions. Update manifest guidance, templates, examples, and meta-repo ADR alignment where required.
 
 - [ ] Reconcile GitHub repository settings with `agent-managed-repo`.
 
