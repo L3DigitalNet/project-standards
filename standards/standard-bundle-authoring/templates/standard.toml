@@ -31,6 +31,8 @@ readme = "README.md"    # bundle-relative paths only (no .., no absolute, no sym
 
 # [artifacts]  # include only when this standard ships a packaged adopt.toml
 # manifest = "src/project_standards/bundles/<id>/adopt.toml"
+# Canonical hook source: hooks/<hook-id>/; its source-owned artifact installs under
+# .agents/hooks/<id>/ with managed policy, canonical parity, and executable mode.
 
 # [[authority]]         # one block per owned concern; delete if none
 # domain = ""           # e.g. "markdown"
@@ -44,3 +46,5 @@ readme = "README.md"    # bundle-relative paths only (no .., no absolute, no sym
 # kind = ""             # python | command | workflow | documentation-only
 # entrypoint = ""       # import path or command reference (NOT a filesystem path)
 # optional = true
+# If its runner loads this manifest from the installed wheel, also ship a byte-identical
+# runtime mirror at src/project_standards/bundles/<id>/standard.toml and test its parity.

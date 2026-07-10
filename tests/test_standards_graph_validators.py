@@ -225,6 +225,201 @@ def test_standard_packaged_skill_must_install_project_locally(tmp_path: Path) ->
     assert "SG-ARTIFACT-SKILL-DEST" in _codes(tmp_path)
 
 
+def test_standard_packaged_hook_must_install_under_shared_project_root(
+    tmp_path: Path,
+) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        'dest = ".claude/hooks/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/hooks/start/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    canonical = tmp_path / "standards/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("hook\n", encoding="utf-8")
+    canonical.write_text("hook\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+
+
+def test_standard_packaged_hook_may_install_under_shared_project_root(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        'dest = ".agents/hooks/alpha/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/hooks/start/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    canonical = tmp_path / "standards/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("hook\n", encoding="utf-8")
+    canonical.write_text("hook\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
+def test_standard_packaged_hook_rejects_similar_standard_destination(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        'dest = ".agents/hooks/alpha-other/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/hooks/start/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    canonical = tmp_path / "standards/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("hook\n", encoding="utf-8")
+    canonical.write_text("hook\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+
+
+def test_standard_packaged_hook_destination_requires_file_below_root(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        'dest = ".agents/hooks/alpha"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/hooks/start/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    canonical = tmp_path / "standards/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("hook\n", encoding="utf-8")
+    canonical.write_text("hook\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+
+
+def test_hook_canonical_directory_without_child_is_not_hook_source(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hook-source"\n'
+        'dest = ".claude/hooks/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/hooks"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hook-source"
+    canonical = tmp_path / "standards/alpha/hooks"
+    packaged.write_text("not a hook path\n", encoding="utf-8")
+    canonical.write_text("not a hook path\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
+def test_similar_standard_hook_canonical_is_not_owned_hook_source(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "consumer-script.py"\n'
+        'dest = ".claude/hooks/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha-other/hooks/start/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/consumer-script.py"
+    canonical = tmp_path / "standards/alpha-other/hooks/start/run.py"
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("consumer script\n", encoding="utf-8")
+    canonical.write_text("consumer script\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
+def test_package_owned_hook_named_source_is_not_standard_packaged_hook(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        'dest = ".claude/hooks/run.py"\nprovenance = "package-owned"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    packaged.write_text("package tooling\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
+def test_source_owned_consumer_script_is_not_standard_packaged_hook(tmp_path: Path) -> None:
+    relative = _write_artifact_manifest(
+        tmp_path,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "scripts/run.py"\n'
+        'dest = ".claude/hooks/run.py"\nprovenance = "source-owned"\n'
+        'canonical = "standards/alpha/scripts/run.py"\n',
+    )
+    write_standard(
+        tmp_path,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = tmp_path / "src/project_standards/bundles/alpha/scripts/run.py"
+    canonical = tmp_path / "standards/alpha/scripts/run.py"
+    packaged.parent.mkdir(parents=True)
+    canonical.parent.mkdir(parents=True)
+    packaged.write_text("consumer script\n", encoding="utf-8")
+    canonical.write_text("consumer script\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
 def test_provider_schema_resources_must_exist_when_declared(tmp_path: Path) -> None:
     write_standard(
         tmp_path,

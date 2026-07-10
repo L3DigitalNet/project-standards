@@ -54,6 +54,14 @@ def _finding(
     )
 
 
+def _is_path_below(path: str | None, parent: str) -> bool:
+    if path is None:
+        return False
+    path_parts = Path(path).parts
+    parent_parts = Path(parent).parts
+    return len(path_parts) > len(parent_parts) and path_parts[: len(parent_parts)] == parent_parts
+
+
 def _validate_missing_manifests(
     graph: StandardsGraph, require_all_manifests: bool
 ) -> list[GraphFinding]:
@@ -230,6 +238,21 @@ def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
                         _rel(node.artifact_manifest_path),
                         f"standard-packaged skill installs outside .agents/skills: {artifact.dest!r}",
                         "install standard-owned skills under .agents/skills/<skill-id>/",
+                    )
+                )
+            if (
+                artifact.provenance is ArtifactProvenance.SOURCE_OWNED
+                and _is_path_below(artifact.canonical, f"standards/{node.standard_id}/hooks")
+                and not _is_path_below(artifact.dest, f".agents/hooks/{node.standard_id}")
+            ):
+                findings.append(
+                    _finding(
+                        "SG-ARTIFACT-HOOK-DEST",
+                        node,
+                        _rel(node.artifact_manifest_path),
+                        f"standard-packaged hook installs outside "
+                        f".agents/hooks/{node.standard_id}: {artifact.dest!r}",
+                        f"install standard-owned hooks under .agents/hooks/{node.standard_id}/",
                     )
                 )
     return findings

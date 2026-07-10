@@ -23,6 +23,7 @@ A standard bundle is the directory `standards/{id}/`. The `{id}` is kebab-case a
 | `templates/` | Optional | Blank, annotated files an author or the adopt engine materializes. |
 | `examples/` | Optional | Worked, validated examples that dogfood the standard. |
 | `skills/` | Optional | Standard-owned agent skills installed into consuming repositories by the adoption path. |
+| `hooks/{hook-id}/` | Optional | Canonical source for a standard-owned executable hook. Adoption installs it under the shared project-local hook root. |
 | `resources/` | Optional | Additional lazy-loadable bundle content addressed by resource ID (see [Resources](#resources)). |
 | `agent-summary.md` | Optional | A condensed, token-cheap view for agents; never the source of truth (the `README.md` is). |
 
@@ -164,6 +165,8 @@ A **provider** declares how a generic operation is fulfilled for this standard, 
 
 Providers cover the operations a graph or MCP server invokes generically across standards. A provider may also declare `input_schema` / `output_schema` (a structured or named built-in schema) — recommended for executable providers. A **missing optional provider is declared explicitly** (`optional = true`), never silently inferred.
 
+When an executable provider runner loads a standard's declarations from the installed wheel, the standard also ships `src/project_standards/bundles/{id}/standard.toml`. This runtime mirror must be byte-identical to `standards/{id}/standard.toml`. Package and installed-wheel tests enforce parity because the manifest schema does not identify which provider runners need a runtime mirror; graph validation must not infer that requirement.
+
 ## Resources
 
 A **resource** is a lazy-loadable piece of bundle content addressed by a stable, URI-safe ID that maps to a bundle-relative file path, so future resource / MCP consumers reference identifiers rather than paths ([adr-0010](../../docs/adr/adr-0010-standard-resource-uris-and-index.md)). The `[resources]` table maps IDs to paths:
@@ -194,7 +197,9 @@ The `standard.toml` manifest describes the standard; the **artifact plane** (`ad
 - **references its `adopt.md` adoption guide** through the `adopt` resource when `adoption` is `validator`, `copy-adopt`, or `cli`, or
 - **explicitly declares non-adoptability** (`adoption = "reference-only"` or `adoption = "none"`, no `adopt` resource).
 
-Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Every `[[artifact]]` declares provenance: `source-owned` with a byte-identical repository-relative `canonical` source; `generated` with `canonical` plus a deterministic `transform`; `package-owned` for installed-tooling-only files; or `external-owned` for explicit `_shared` artifacts. An artifact's optional `install_policy` defaults to `managed`; `create-only` installs the artifact only when its destination is absent and is never overwritten, even when adoption uses `--force`. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior. Standard-packaged skills install only under `.agents/skills/<skill-id>/`. Graph validation checks linkage, provenance parity, and the project-local skill boundary without re-inventing the adopt engine.
+Artifact ownership, shared artifacts (`_shared`), destination-collision semantics, and installed file modes remain delegated to the artifact plane. Every `[[artifact]]` declares provenance: `source-owned` with a byte-identical repository-relative `canonical` source; `generated` with `canonical` plus a deterministic `transform`; `package-owned` for installed-tooling-only files; or `external-owned` for explicit `_shared` artifacts. An artifact's optional `install_policy` defaults to `managed`; `create-only` installs the artifact only when its destination is absent and is never overwritten, even when adoption uses `--force`. Written artifacts may declare an explicit POSIX `mode` as an octal string (for example, `mode = "0755"`) when the installed file must be executable; omit it for ordinary documents and configs, which use the adopt engine's normal umask/preserve-mode behavior.
+
+Standard-packaged skills install only under `.agents/skills/<skill-id>/`. Under [ADR 0022](../../docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md), a standard-owned hook's canonical source lives under `standards/{standard-id}/hooks/{hook-id}/`, and its source-owned artifact installs under `.agents/hooks/{standard-id}/` by default. Hook artifacts declare `provenance = "source-owned"`, a byte-identical canonical source, `install_policy = "managed"`, and an executable `mode`. Drift validation identifies changed or stale installed hooks, and only the package's owned upgrade path refreshes them after its normal precondition and ambiguity checks. Graph validation checks linkage, provenance parity, and the project-local skill and hook boundaries without re-inventing the adopt engine.
 
 ## Lifecycle & exceptions
 
@@ -216,9 +221,11 @@ The machine schema and graph validator are authoritative, but this checklist is 
 - [ ] `[capabilities]` — `provides` and `consumes_platform` both present (arrays, may be empty).
 - [ ] `[resources]` — `readme` present; `adopt` present **iff** `adoption` is `validator`, `copy-adopt`, or `cli`.
 - [ ] `[artifacts]` — present when a packaged `adopt.toml` exists; `manifest` names its safe repository-relative path; every artifact declares valid provenance.
+- [ ] `hooks/{hook-id}/` — present when the standard owns a hook; the source-owned artifact installs under `.agents/hooks/{standard-id}/` with managed drift and executable mode declarations.
 - [ ] `[relations]` — any of `companions` / `extends` / `conflicts` present are arrays; no `requires` field; every `extends` is ADR-backed.
 - [ ] `[[authority]]` — each block (if any) declares `domain`, `target`, `concern`, `owner`, `mutates`; no mutating conflict per the [conflict rule](#authorities).
 - [ ] `[[providers]]` — each block (if any) declares `operation`, `kind`, `optional`, and an `entrypoint` for executable kinds; `entrypoint` is an import path or command, not a filesystem path.
+- [ ] Runtime `standard.toml` mirror — present and byte-identical in `src/project_standards/bundles/{id}/` when an executable provider runner loads declarations from the installed wheel; package/wheel tests enforce parity.
 - [ ] All resource / template paths are bundle-relative and contained (no `..`, absolute, or symlink escape).
 
 Schema/model changes must preserve this checklist's field set or record a deliberate supersession.
