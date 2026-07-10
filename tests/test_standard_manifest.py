@@ -477,6 +477,23 @@ def _load_toml(path: Path) -> dict[str, object]:
 _REAL_MANIFESTS = sorted(
     (Path(__file__).resolve().parent.parent / "standards").glob("*/standard.toml")
 )
+_AGENT_SUMMARY_MAX_BYTES = 3_000
+_AGENT_SUMMARY_AUTHORITY_NOTICE = (
+    "The canonical [README](README.md) is authoritative and wins if this summary conflicts with it."
+)
+
+
+@pytest.mark.parametrize("real", _REAL_MANIFESTS, ids=lambda path: path.parent.name)
+def test_real_manifests_have_compact_agent_summaries(real: Path) -> None:
+    manifest = load_standard_manifest(real)
+    summary_relative = manifest.resources.as_dict().get("agent_summary")
+
+    assert summary_relative == "agent-summary.md"
+    summary = real.parent / summary_relative
+    data = summary.read_bytes()
+    text = data.decode("utf-8")
+    assert len(data) <= _AGENT_SUMMARY_MAX_BYTES
+    assert _AGENT_SUMMARY_AUTHORITY_NOTICE in text
 
 
 @pytest.mark.parametrize("real", _REAL_MANIFESTS, ids=lambda p: p.parent.name)
