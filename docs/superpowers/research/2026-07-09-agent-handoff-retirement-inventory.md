@@ -68,11 +68,11 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `network-infrastructure-schema` | `main` | None | Not a legacy consumer | — | Not applicable | None |
 | `progressive-apparel` | `main` | Migrated from Codex hook and root companions | Codex | `2b062b6` | Pass | Recheck with published v5 before deletion |
 | `project-standards` | `main` | Old layout remains in dirty `testing` checkout; feature branch migrated | Dual | `bd3cee5` | Pass on feature branch | Integrate v5 feature branch |
-| `star-trek-retro-remake` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
+| `star-trek-retro-remake` | `main` | Migrated from dual hooks and root companions | Dual | `9d4e19e` | Pass | Recheck with published v5 before deletion |
 | `website-aboutme` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `ab6bc3d` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
 | `website-l3digital.net` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 
-Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Eight repositories validate on v1 on their integration branch; `website-aboutme` also validates on `testing` but still needs its protected merge. Thirteen concrete-evidence default branches remain.
+Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Nine repositories validate on v1 on their integration branch; `website-aboutme` also validates on `testing` but still needs its protected merge. Twelve concrete-evidence default branches remain.
 
 ## Installed-wheel verification
 
