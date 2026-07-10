@@ -72,6 +72,30 @@ def _write_artifact_manifest(root: Path, standard_id: str, body: str = "") -> st
     return relative
 
 
+def _write_source_owned_hook_artifact(root: Path, *, canonical: str, dest: str) -> None:
+    relative = _write_artifact_manifest(
+        root,
+        "alpha",
+        '\n[[artifact]]\nkind = "file"\nsource = "hooks/start/run.py"\n'
+        f'dest = "{dest}"\nprovenance = "source-owned"\n'
+        f'canonical = "{canonical}"\n',
+    )
+    write_standard(
+        root,
+        "alpha",
+        adoption="cli",
+        resources={"adopt": "adopt.md"},
+        artifact_manifest=relative,
+    )
+    packaged = root / "src/project_standards/bundles/alpha/hooks/start/run.py"
+    packaged.parent.mkdir(parents=True)
+    packaged.write_text("hook\n", encoding="utf-8")
+    if ".." not in Path(canonical).parts:
+        canonical_path = root / canonical
+        canonical_path.parent.mkdir(parents=True)
+        canonical_path.write_text("hook\n", encoding="utf-8")
+
+
 def test_packaged_artifact_manifest_requires_standard_manifest_link(tmp_path: Path) -> None:
     write_standard(tmp_path, "alpha", adoption="copy-adopt", resources={"adopt": "adopt.md"})
     _write_artifact_manifest(tmp_path, "alpha")
@@ -416,6 +440,48 @@ def test_source_owned_consumer_script_is_not_standard_packaged_hook(tmp_path: Pa
     canonical.parent.mkdir(parents=True)
     packaged.write_text("consumer script\n", encoding="utf-8")
     canonical.write_text("consumer script\n", encoding="utf-8")
+
+    assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
+
+
+def test_standard_packaged_hook_rejects_destination_traversal(tmp_path: Path) -> None:
+    _write_source_owned_hook_artifact(
+        tmp_path,
+        canonical="standards/alpha/hooks/start/run.py",
+        dest=".agents/hooks/alpha/../outside.py",
+    )
+
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+
+
+def test_standard_packaged_hook_rejects_non_normal_destination(tmp_path: Path) -> None:
+    _write_source_owned_hook_artifact(
+        tmp_path,
+        canonical="standards/alpha/hooks/start/run.py",
+        dest=".agents/hooks/alpha/./run.py",
+    )
+
+    assert "SG-ARTIFACT-HOOK-DEST" in _codes(tmp_path)
+
+
+def test_traversing_canonical_path_is_not_classified_as_hook(tmp_path: Path) -> None:
+    _write_source_owned_hook_artifact(
+        tmp_path,
+        canonical="standards/alpha/hooks/../scripts/run.py",
+        dest=".claude/hooks/run.py",
+    )
+
+    codes = _codes(tmp_path)
+    assert "SG-ARTIFACT-CANONICAL-MISSING" in codes
+    assert "SG-ARTIFACT-HOOK-DEST" not in codes
+
+
+def test_non_normal_canonical_path_is_not_classified_as_hook(tmp_path: Path) -> None:
+    _write_source_owned_hook_artifact(
+        tmp_path,
+        canonical="standards/alpha/hooks/./start/run.py",
+        dest=".claude/hooks/run.py",
+    )
 
     assert "SG-ARTIFACT-HOOK-DEST" not in _codes(tmp_path)
 

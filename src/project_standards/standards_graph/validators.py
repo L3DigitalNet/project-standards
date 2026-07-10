@@ -5,12 +5,12 @@ from __future__ import annotations
 import fnmatch
 from collections import defaultdict
 from itertools import combinations
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from project_standards.adopt.engine import resolve_source
 from project_standards.adopt.errors import ManifestError
 from project_standards.adopt.manifest import ArtifactProvenance
-from project_standards.standard_manifest import AdoptionMode
+from project_standards.standard_manifest import AdoptionMode, is_safe_relative_path
 from project_standards.standards_graph.model import (
     GraphFinding,
     StandardNode,
@@ -55,11 +55,17 @@ def _finding(
 
 
 def _is_path_below(path: str | None, parent: str) -> bool:
-    if path is None:
+    if path is None or not is_safe_relative_path(path):
         return False
-    path_parts = Path(path).parts
-    parent_parts = Path(parent).parts
-    return len(path_parts) > len(parent_parts) and path_parts[: len(parent_parts)] == parent_parts
+    normalized = PurePosixPath(path)
+    parent_path = PurePosixPath(parent)
+    # Exact serialization rejects aliases such as `./` and duplicate separators;
+    # accepting them would make a raw manifest prefix differ from its effective path.
+    return (
+        normalized.as_posix() == path
+        and normalized != parent_path
+        and normalized.is_relative_to(parent_path)
+    )
 
 
 def _validate_missing_manifests(
