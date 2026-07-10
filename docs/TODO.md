@@ -50,6 +50,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Future ADR themes: MCP boundary, resources-before-tools, SDK adapter, remote transport deferral, manifest resources, and plan-first controlled writes.
 
+- [ ] Complete Agent Handoff consumer retirement from the tracked inventory.
+
+  Migrate one repo per reviewed change. Delete the old engine only after every row validates, v5 is published,
+  the final dependency search is clean, and the owner explicitly approves.
+
 ## 🚀 v5.0.0 Project Tracker — Meta-Repo Standards Platform (DURABLE)
 
 <!-- DO NOT DELETE OR MOVE THIS SECTION, OR ANY COMPLETED ITEM WITHIN IT, UNTIL v5.0.0 IS RELEASED. -->
@@ -71,6 +76,7 @@ Completed items stay checked and in order. Add new work as unchecked items and c
 - [x] 2026-07-07 - SPEC-MT01 ADR foundation accepted (`ee98d0f`).
 - [x] 2026-07-09 - Markdown Frontmatter value guidance and skill ownership done.
 - [x] 2026-07-09 - Standard package methodology ADRs and compliance pass done.
+- [x] 2026-07-09 - Agent Handoff v1 package, dogfood adoption, and release-readiness evidence completed (`11cabc7`, `bd3cee5`).
 
 ### ⬜ Pending
 

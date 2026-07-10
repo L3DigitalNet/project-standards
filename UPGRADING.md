@@ -16,11 +16,29 @@ related:
   - 'CHANGELOG.md'
   - 'standards/markdown-frontmatter/adopt.md'
   - 'standards/project-spec/adopt.md'
+  - 'standards/agent-handoff/adopt.md'
+  - 'standards/agent-handoff/resources/legacy-migration.md'
 ---
 
 # Upgrading from v3 to v4
 
 `project-standards` `4.0.0` is a **major** release: re-pinning a repo from `@v3` to `@v4` can turn a previously-passing CI run red. This runbook is the step-by-step upgrade path. For the full list of changes see [`CHANGELOG.md`](CHANGELOG.md); for first-time adoption (not upgrade) see each standard's `adopt.md` (e.g. [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md)).
+
+> **v5 release-candidate note.** This document remains the released v3-to-v4 runbook until the v5 release commit rewrites it for v4-to-v5. The section below records the Agent Handoff migration that v5 consumers must perform deliberately.
+
+## Preparing Agent Handoff for v5.0.0
+
+Agent Handoff `1.0` is new and opt-in, but it replaces the deprecated separately-cloned handoff engine for repositories that used it. Do not copy files mechanically across legacy versions and do not delete the legacy checkout yet.
+
+For each consuming repository:
+
+1. Run `project-standards agent-handoff legacy-report --repo . --json` and review every finding locally.
+2. Reconcile root `STATUS.md` and `TODO.md` into `docs/STATUS.md` and `docs/TODO.md`; preserve existing `docs/handoff/` knowledge in place.
+3. Adopt one explicit startup profile with `project-standards adopt agent-handoff --dest . --manual` or one or more `--harness` flags.
+4. Remove old per-harness hooks, registrations, and retired skill copies only after the shared repo-local hook and skill are installed.
+5. Run `project-standards agent-handoff validate --repo .` and `drift-check --repo .`; commit the migration as that repository's own reviewed change.
+
+The new package owns no global environment and stores no state outside the adopting repository. See [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) and the [legacy migration guide](standards/agent-handoff/resources/legacy-migration.md) for the complete procedure.
 
 ## What breaks
 

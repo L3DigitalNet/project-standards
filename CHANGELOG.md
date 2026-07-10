@@ -20,6 +20,8 @@ related:
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
+  - 'standards/agent-handoff/README.md'
+  - 'docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md'
   - '.project-standards.yml'
 source: []
 confidence: 'high'
@@ -36,6 +38,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 ## [Unreleased]
 
 > **Ships in v5.0.0.** Per the release freeze (see [`meta/versioning.md`](meta/versioning.md)), no interim release is cut before v5.0.0; entries here accumulate and are promoted together at that MAJOR cut.
+
+### Added
+
+- **Agent Handoff Standard `1.0`.** A new opt-in, repository-confined standard packages project memory under `docs/`, a repo-local `$agent-handoff` skill, and one dependency-free shared SessionStart hook for Claude Code and Codex. `project-standards adopt agent-handoff` supports manual, Claude-only, Codex-only, and dual profiles; the `agent-handoff` command group adds `validate`, `drift-check`, `size-report`, `shape-check`, read-only `legacy-report`, and provenance-guarded `upgrade`. Adoption never writes outside the target repository or overwrites consumer-owned knowledge. The legacy migration guide deliberately leaves structural reconciliation to the consuming repo's local agent; the old engine is not retired until the tracked consumer inventory is clean and the owner approves deletion.
+- **Artifact lifecycle and provenance metadata.** Packaged `adopt.toml` artifacts now declare provenance and an `install_policy` of `managed` or `create-only`, with optional canonical-source, deterministic-transform, and POSIX-mode metadata. This separates refreshable standard-owned artifacts from consumer-owned create-once knowledge while retaining the existing collision-safe adoption engine.
 
 ### Changed
 

@@ -2,7 +2,7 @@
 
 **Session startup:** live state is injected by the shared repo-local SessionStart hook; do not read `docs/handoff/state.md` directly.
 
-**Purpose:** single source of truth for reusable standards — defines seven released or v5-staged standards: **Markdown Frontmatter**, **ADR**, **Markdown Tooling**, **Python Tooling SSOT**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** — plus two unreleased/reference standards: **Python Coding** and **Standard Bundle Authoring** (`adoption = "none"`, the `standard.toml` bundle contract).
+**Purpose:** single source of truth for reusable standards — defines seven released or v5-staged standards: **Markdown Frontmatter**, **ADR**, **Markdown Tooling** (including `format.yml`), **Python Tooling SSOT**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** — plus two unreleased/reference standards: **Python Coding** and **Standard Bundle Authoring** (`adoption = "none"`, the `standard.toml` bundle contract).
 
 **Document layout (read on demand):**
 
