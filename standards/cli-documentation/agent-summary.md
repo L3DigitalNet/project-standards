@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `copy-adopt`.
+
 ## Use this summary when
 
 Document or review a user-facing command-line interface and its drift checks.
@@ -21,7 +23,7 @@ Document or review a user-facing command-line interface and its drift checks.
 project-standards adopt cli-documentation
 ```
 
-The copy-adopt bundle provides a `docs/usage.md` scaffold and `cli-docs-check` workflow. The workflow must exercise a freshly installed command, normalize color and terminal width, and check command/option inventory parity. Generate deep-profile per-command pages and committed man pages; do not maintain them separately by hand.
+The copy-adopt bundle provides a `docs/usage.md` scaffold and `cli-docs-check` workflow. The copied workflow exercises a freshly installed command and normalizes color and terminal width; add the required inventory, option, exit-code, generated-man-page, and safe-example checks as the surface grows. Generate deep-profile per-command pages and committed man pages; do not maintain them separately by hand.
 
 ## Boundaries and companions
 

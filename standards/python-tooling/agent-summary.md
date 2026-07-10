@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `copy-adopt`.
+
 ## Use this summary when
 
 Create, adopt, migrate, or verify a Python repository toolchain and its agent-facing gate.

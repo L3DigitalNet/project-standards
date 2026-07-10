@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: draft. Adoption: `reference-only`.
+
 ## Use this summary when
 
 Design, implement, debug, test, or review Python code in a repository governed by the companion Python Tooling standard.

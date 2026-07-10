@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `validator`, with copy-adopt templates.
+
 ## Use this summary when
 
 Create, review, index, or validate a durable record for a significant, costly-to-reverse architecture decision.

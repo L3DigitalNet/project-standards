@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `cli`, with copy-adopt support scaffolding.
+
 ## Use this summary when
 
 Create, inspect, validate, or implement a durable specification for a project, feature, or subsystem.

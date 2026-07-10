@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `copy-adopt`.
+
 ## Use this summary when
 
 Format or structurally lint Markdown and adjacent JSON, JSONC, or YAML, or adopt the repository's reusable documentation workflows.

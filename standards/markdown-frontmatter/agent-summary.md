@@ -2,6 +2,8 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
+Lifecycle: active. Adoption: `validator`.
+
 ## Use this summary when
 
 Add, repair, or validate metadata on Markdown paths managed by `.project-standards.yml`.
