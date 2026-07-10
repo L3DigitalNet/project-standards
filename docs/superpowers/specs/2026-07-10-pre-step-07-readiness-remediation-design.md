@@ -1,6 +1,6 @@
 # Pre-Step-07 Readiness Remediation Design
 
-**Date:** 2026-07-10 **Status:** revised after adversarial review; pending owner approval **Author:** session 2026-07-10
+**Date:** 2026-07-10 **Status:** adversarially approved; pending owner approval **Author:** session 2026-07-10
 
 ## Problem and goal
 
@@ -8,7 +8,7 @@ SPEC-MT01 Steps 00-06 are implemented and the full local Python gate is green, b
 
 The goal is to reconcile the implemented contract with its evidence, fix verified housekeeping defects, and add an explicit repository-only graph/catalog CI gate. The work must not change the generic Python Tooling verification contract or begin MCP server implementation.
 
-The source inventory is the [2026-07-10 readiness and housekeeping review](../../codex-reviews/2026-07-10-1004-codex-review-plan.md). The design also incorporates the 2026-07-10 adversarial design review.
+The source inventory is the [2026-07-10 readiness and housekeeping review](../../codex-reviews/2026-07-10-1004-codex-review-plan.md). The design also incorporates the [2026-07-10 adversarial design review](../../reviews/2026-07-10-pre-step-07-remediation-design-adversarial-review.md).
 
 ## Approved approach
 
@@ -92,7 +92,8 @@ A focused Python test parses the new workflow and proves:
 - graph validation retains `--require-all-manifests`;
 - catalog validation retains `--check`;
 - the workflow does not use path filters;
-- checkout, Python setup, and uv setup versions match the corresponding entries parsed from `.github/workflows/check.yml`.
+- checkout and Python setup action references match the corresponding entries parsed from `.github/workflows/check.yml`;
+- both the uv setup action reference and its `with.version` uv release match `.github/workflows/check.yml`.
 
 The workflow test compares parsed workflow values instead of repeating action or uv pin literals. A coordinated dependency update therefore changes the reusable gate and repository-only workflow, while the test continues to enforce parity without becoming a third pin source.
 
@@ -102,7 +103,7 @@ The existing current-repository graph and catalog tests remain in place. The new
 
 The Agent Handoff standard requires `Cause`, `Fix`, and `Lesson` sections in numbered bug records. `bugs/INDEX.md` is an index governed only by the skill's sorting instruction; it has no machine-enforced shape profile. The current `docs/handoff/bugs/*.md` policy glob incorrectly applies bug-record requirements to the index.
 
-Change the policy target to numbered filenames such as `docs/handoff/bugs/[0-9][0-9][0-9]-*.md`. Update shape-target discovery by separating the directory and filename pattern. Reject glob metacharacters (`*`, `?`, or `[`) in the directory component with an `AH-PATH-BOUNDARY` finding, validate the literal directory through the repository boundary, and apply the filename pattern with `Path.glob`. This keeps repository-boundary validation correct for bracket globs and avoids a hard-coded `INDEX.md` exception.
+Change the policy target to numbered filenames such as `docs/handoff/bugs/[0-9][0-9][0-9]-*.md`. Update shape-target discovery by separating the directory and filename pattern. Treat a filename containing any glob metacharacter (`*`, `?`, or `[`) as a glob; otherwise, use the literal-path branch. Reject those metacharacters in the directory component with an `AH-PATH-BOUNDARY` finding, validate the literal directory through the repository boundary, and apply the filename pattern with `Path.glob`. This keeps repository-boundary validation correct for bracket globs and avoids a hard-coded `INDEX.md` exception.
 
 This remediation deliberately leaves `INDEX.md` without structural validation. Removing a known-invalid record check is narrower and safer than adding a new index grammar. Machine-enforced sorting or completeness is a separate owner-choice enhancement.
 
@@ -111,6 +112,7 @@ The fix updates both canonical and packaged policy copies and adds regression te
 - a malformed numbered bug record still warns;
 - `bugs/INDEX.md` is excluded from bug-record section checks;
 - bracket-pattern discovery remains confined to the repository;
+- a filename pattern containing `[` but no `*` uses glob discovery;
 - a policy pattern with a glob metacharacter in its directory component is rejected.
 
 ### 5. Handoff history remains append-only
