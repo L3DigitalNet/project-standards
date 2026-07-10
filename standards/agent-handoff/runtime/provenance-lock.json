@@ -1,0 +1,7 @@
+{
+	"standard": "agent-handoff",
+	"version": "1.0",
+	"startup": "manual",
+	"harnesses": [],
+	"managed": {}
+}

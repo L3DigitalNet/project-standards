@@ -6,9 +6,9 @@ docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md). This modul
 is the sole reader of registry.json: it maps each bundled Frontmatter contract
 version to its schema name, records which Frontmatter versions each ADR contract
 version supports, and lists the known Python Tooling, Markdown Tooling, CLI
-Documentation, and Project Specification label versions. It performs no document
-validation itself — callers in validate_frontmatter.py use it to resolve schemas
-by version and to enforce the FM->ADR compatibility contract.
+Documentation, Project Specification, and Agent Handoff label versions. It performs
+no document validation itself — callers in validate_frontmatter.py use it to resolve
+schemas by version and to enforce the FM->ADR compatibility contract.
 
 Kept separate from validate_frontmatter.py so the registry shape has one owner and
 the validator's schema-validation core stays untouched.
@@ -51,6 +51,8 @@ class Registry:
         cli_documentation_versions: list[str],
         project_spec_default: str,
         project_spec_versions: list[str],
+        agent_handoff_default: str = "1.0",
+        agent_handoff_versions: list[str] | None = None,
     ) -> None:
         self.frontmatter_default = frontmatter_default
         self.frontmatter_versions = frontmatter_versions
@@ -64,6 +66,10 @@ class Registry:
         self.cli_documentation_versions = cli_documentation_versions
         self.project_spec_default = project_spec_default
         self.project_spec_versions = project_spec_versions
+        self.agent_handoff_default = agent_handoff_default
+        self.agent_handoff_versions = (
+            agent_handoff_versions if agent_handoff_versions is not None else ["1.0"]
+        )
 
     def frontmatter_schema_name(self, version: str) -> str:
         """Bundled schema *name* for a Frontmatter contract version."""
@@ -94,6 +100,9 @@ class Registry:
 
     def is_known_project_spec(self, version: str) -> bool:
         return version in self.project_spec_versions
+
+    def is_known_agent_handoff(self, version: str) -> bool:
+        return version in self.agent_handoff_versions
 
 
 def _require_str_map(obj: Any, where: str) -> dict[str, str]:
@@ -129,6 +138,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     mt = data.get("markdown_tooling")
     cd = data.get("cli_documentation")
     ps = data.get("project_spec")
+    ah = data.get("agent_handoff", {"default": "1.0", "versions": ["1.0"]})
     if (
         not isinstance(fm, dict)
         or not isinstance(adr, dict)
@@ -136,6 +146,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         or not isinstance(mt, dict)
         or not isinstance(cd, dict)
         or not isinstance(ps, dict)
+        or not isinstance(ah, dict)
     ):
         raise RegistryError(
             f"registry {path} missing frontmatter/adr/python_tooling/"
@@ -147,6 +158,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     mt_d = cast("dict[str, Any]", mt)
     cd_d = cast("dict[str, Any]", cd)
     ps_d = cast("dict[str, Any]", ps)
+    ah_d = cast("dict[str, Any]", ah)
 
     fm_default = fm_d.get("default")
     adr_default = adr_d.get("default")
@@ -154,6 +166,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     mt_default = mt_d.get("default")
     cd_default = cd_d.get("default")
     ps_default = ps_d.get("default")
+    ah_default = ah_d.get("default")
     if (
         not isinstance(fm_default, str)
         or not isinstance(adr_default, str)
@@ -161,6 +174,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         or not isinstance(mt_default, str)
         or not isinstance(cd_default, str)
         or not isinstance(ps_default, str)
+        or not isinstance(ah_default, str)
     ):
         raise RegistryError(f"registry {path} has a non-string default")
 
@@ -182,6 +196,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     mt_versions = _require_str_list(mt_d.get("versions"), "markdown_tooling.versions")
     cd_versions = _require_str_list(cd_d.get("versions"), "cli_documentation.versions")
     ps_versions = _require_str_list(ps_d.get("versions"), "project_spec.versions")
+    ah_versions = _require_str_list(ah_d.get("versions"), "agent_handoff.versions")
 
     # Cross-field validation: a default naming an unbundled version, or an ADR
     # supports-list referencing one, loads "cleanly" and only fails later as a
@@ -208,6 +223,10 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         raise RegistryError(
             f"registry project_spec.default {ps_default!r} is not a bundled version"
         )
+    if ah_default not in ah_versions:
+        raise RegistryError(
+            f"registry agent_handoff.default {ah_default!r} is not a bundled version"
+        )
     for key, supports in adr_supports.items():
         unknown = [v for v in supports if v not in fm_versions]
         if unknown:
@@ -229,4 +248,6 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         cli_documentation_versions=cd_versions,
         project_spec_default=ps_default,
         project_spec_versions=ps_versions,
+        agent_handoff_default=ah_default,
+        agent_handoff_versions=ah_versions,
     )

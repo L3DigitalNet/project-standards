@@ -24,6 +24,7 @@ def test_each_artifact_standard_builds_an_independent_plan() -> None:
     standard_ids = _adoptable_standard_ids()
 
     assert standard_ids
+    assert "agent-handoff" in standard_ids
     for standard_id in standard_ids:
         assert build_plan([standard_id]), standard_id
 
@@ -31,6 +32,10 @@ def test_each_artifact_standard_builds_an_independent_plan() -> None:
 def test_every_artifact_standard_pair_builds_without_destination_conflict() -> None:
     standard_ids = _adoptable_standard_ids()
 
+    agent_handoff_pairs = [
+        pair for pair in combinations(standard_ids, 2) if "agent-handoff" in pair
+    ]
+    assert agent_handoff_pairs
     for pair in combinations(standard_ids, 2):
         assert build_plan(list(pair)), pair
 

@@ -42,6 +42,13 @@ def test_wheel_contains_bundles_and_manifests(tmp_path: Path) -> None:
         "project_standards/bundles/project-spec/adopt.toml",
         "project_standards/bundles/project-spec/project-standards.spec-fragment.yml",
         "project_standards/bundles/project-spec/validate-specs.caller.yml",
+        "project_standards/bundles/agent-handoff/standard.toml",
+        "project_standards/bundles/agent-handoff/adopt.toml",
+        "project_standards/bundles/agent-handoff/hooks/session-start/session_start.py",
+        "project_standards/bundles/agent-handoff/skills/agent-handoff/SKILL.md",
+        "project_standards/bundles/agent-handoff/skills/agent-handoff/agents/openai.yaml",
+        "project_standards/bundles/agent-handoff/resources/policy.toml",
+        "project_standards/bundles/agent-handoff/resources/legacy-migration.md",
     ]
     for entry in must:
         assert any(n.endswith(entry) for n in names), entry

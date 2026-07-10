@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Handoff"
+  short_description: "Maintain repository-local session knowledge."
+
+policy:
+  allow_implicit_invocation: true

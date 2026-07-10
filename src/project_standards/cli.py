@@ -40,6 +40,7 @@ def _contract_version(registry: Registry, standard_id: str) -> str | None:
         "markdown-tooling": registry.markdown_tooling_default,
         "cli-documentation": registry.cli_documentation_default,
         "project-spec": registry.project_spec_default,
+        "agent-handoff": registry.agent_handoff_default,
     }.get(standard_id)
 
 
@@ -52,6 +53,7 @@ _ADOPTABLE_STANDARD_IDS = (
     "markdown-tooling",
     "cli-documentation",
     "project-spec",
+    "agent-handoff",
 )
 
 # The registry's version-tracked standards (hyphenated ids), the single source for
@@ -63,6 +65,7 @@ _VERSION_TRACKED_STANDARD_IDS = (
     "markdown-tooling",
     "cli-documentation",
     "project-spec",
+    "agent-handoff",
 )
 
 

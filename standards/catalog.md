@@ -9,6 +9,7 @@ Manifest-derived package, relationship, resource, provider, and artifact facts.
 | Standard | Status | Adoption | Package version | Contract default | Config namespaces | Artifacts | Readiness |
 | --- | --- | --- | --- | --- | --- | ---: | --- |
 | [`adr`](adr/README.md) | active | validator | 1.0 (supported: 1.0) | 1.0 | `markdown.adr` | 2 | ready |
+| [`agent-handoff`](agent-handoff/README.md) | active | cli | 1.0 (supported: 1.0) | 1.0 | `agent_handoff` | 18 | ready |
 | [`cli-documentation`](cli-documentation/README.md) | active | copy-adopt | 1.0 (supported: 1.0) | 1.0 | `cli_documentation` | 3 | ready |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | validator | 1.1 (supported: 1.0, 1.1) | 1.1 | `markdown.frontmatter` | 5 | ready |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | copy-adopt | 1.1 (supported: 1.0, 1.1) | 1.1 | `markdown_tooling` | 6 | ready |
@@ -22,6 +23,7 @@ Manifest-derived package, relationship, resource, provider, and artifact facts.
 | Standard | Provides | Consumes platform |
 | --- | --- | --- |
 | `adr` | `adr.frontmatter`, `adr.section-validation`, `adr.template` | — |
+| `agent-handoff` | `agent-handoff.scaffold`, `agent-handoff.validate`, `agent-handoff.drift-check`, `agent-handoff.session-context`, `agent-handoff.legacy-report` | `project-standards.validate`, `project-standards.drift-check`, `project-standards.extract` |
 | `cli-documentation` | `cli.docs.usage`, `cli.docs.drift-check`, `cli.docs.templates` | — |
 | `markdown-frontmatter` | `markdown.frontmatter.schema`, `markdown.frontmatter.format`, `markdown.id.validate`, `markdown.references.validate` | — |
 | `markdown-tooling` | `markdown.format`, `markdown.lint.structure`, `yaml.format`, `json.format` | — |
@@ -54,6 +56,29 @@ Standards are independent unless an edge appears below.
 | `adr` | `template_bare` | `standards://adr/template_bare` | `templates/adr-bare.md` |
 | `adr` | `template_bare_minimal` | `standards://adr/template_bare_minimal` | `templates/adr-bare-minimal.md` |
 | `adr` | `template_minimal` | `standards://adr/template_minimal` | `templates/adr-minimal.md` |
+| `agent-handoff` | `adopt` | `standards://agent-handoff/adopt` | `adopt.md` |
+| `agent-handoff` | `agent_summary` | `standards://agent-handoff/agent_summary` | `agent-summary.md` |
+| `agent-handoff` | `hook_session_start` | `standards://agent-handoff/hook_session_start` | `hooks/session-start/session_start.py` |
+| `agent-handoff` | `integration_agent_instructions` | `standards://agent-handoff/integration_agent_instructions` | `resources/integration/agent-instructions.md` |
+| `agent-handoff` | `integration_claude_session_start` | `standards://agent-handoff/integration_claude_session_start` | `resources/integration/claude-session-start.json` |
+| `agent-handoff` | `integration_codex_session_start` | `standards://agent-handoff/integration_codex_session_start` | `resources/integration/codex-session-start.toml` |
+| `agent-handoff` | `integration_project_config` | `standards://agent-handoff/integration_project_config` | `resources/integration/project-config.yml` |
+| `agent-handoff` | `legacy_migration` | `standards://agent-handoff/legacy_migration` | `resources/legacy-migration.md` |
+| `agent-handoff` | `policy` | `standards://agent-handoff/policy` | `resources/policy.toml` |
+| `agent-handoff` | `provenance_lock_seed` | `standards://agent-handoff/provenance_lock_seed` | `runtime/provenance-lock.json` |
+| `agent-handoff` | `readme` | `standards://agent-handoff/readme` | `README.md` |
+| `agent-handoff` | `skill` | `standards://agent-handoff/skill` | `skills/agent-handoff/SKILL.md` |
+| `agent-handoff` | `skill_openai` | `standards://agent-handoff/skill_openai` | `skills/agent-handoff/agents/openai.yaml` |
+| `agent-handoff` | `template_architecture` | `standards://agent-handoff/template_architecture` | `templates/handoff/architecture.md` |
+| `agent-handoff` | `template_bugs_keep` | `standards://agent-handoff/template_bugs_keep` | `templates/handoff/bugs/.gitkeep` |
+| `agent-handoff` | `template_conventions` | `standards://agent-handoff/template_conventions` | `templates/handoff/conventions.md` |
+| `agent-handoff` | `template_credentials` | `standards://agent-handoff/template_credentials` | `templates/handoff/credentials.md` |
+| `agent-handoff` | `template_deployed` | `standards://agent-handoff/template_deployed` | `templates/handoff/deployed.md` |
+| `agent-handoff` | `template_sessions_keep` | `standards://agent-handoff/template_sessions_keep` | `templates/handoff/sessions/.gitkeep` |
+| `agent-handoff` | `template_specs_plans` | `standards://agent-handoff/template_specs_plans` | `templates/handoff/specs-plans.md` |
+| `agent-handoff` | `template_state` | `standards://agent-handoff/template_state` | `templates/handoff/state.md` |
+| `agent-handoff` | `template_status` | `standards://agent-handoff/template_status` | `templates/STATUS.md` |
+| `agent-handoff` | `template_todo` | `standards://agent-handoff/template_todo` | `templates/TODO.md` |
 | `cli-documentation` | `adopt` | `standards://cli-documentation/adopt` | `adopt.md` |
 | `cli-documentation` | `readme` | `standards://cli-documentation/readme` | `README.md` |
 | `cli-documentation` | `readme_single_file_template` | `standards://cli-documentation/readme_single_file_template` | `templates/readme-single-file.md` |
@@ -102,6 +127,11 @@ Standards are independent unless an edge appears below.
 | --- | --- | --- | --- | --- |
 | `adr` | `validate` | python | `project_standards.validate_frontmatter:main` | no |
 | `adr` | `validate` | python | `project_standards.validate_id:main` | no |
+| `agent-handoff` | `scaffold` | python | `project_standards.agent_handoff.providers:scaffold` | no |
+| `agent-handoff` | `validate` | python | `project_standards.agent_handoff.providers:validate` | no |
+| `agent-handoff` | `drift-check` | python | `project_standards.agent_handoff.providers:drift_check` | no |
+| `agent-handoff` | `extract` | python | `project_standards.agent_handoff.providers:extract` | no |
+| `agent-handoff` | `upgrade` | python | `project_standards.agent_handoff.providers:upgrade` | no |
 | `cli-documentation` | `drift-check` | workflow | `cli-docs-check` | no |
 | `markdown-frontmatter` | `validate` | python | `project_standards.validate_frontmatter:main` | no |
 | `markdown-frontmatter` | `validate` | python | `project_standards.validate_id:main` | no |
@@ -125,6 +155,7 @@ Standards are independent unless an edge appears below.
 | Standard | Artifact manifest | Count | Provenance | Repo-local skills |
 | --- | --- | ---: | --- | --- |
 | `adr` | `src/project_standards/bundles/adr/adopt.toml` | 2 | package-owned: 1, source-owned: 1 | — |
+| `agent-handoff` | `src/project_standards/bundles/agent-handoff/adopt.toml` | 18 | package-owned: 1, source-owned: 17 | `.agents/skills/agent-handoff/SKILL.md`, `.agents/skills/agent-handoff/agents/openai.yaml` |
 | `cli-documentation` | `src/project_standards/bundles/cli-documentation/adopt.toml` | 3 | package-owned: 1, source-owned: 2 | — |
 | `markdown-frontmatter` | `src/project_standards/bundles/markdown-frontmatter/adopt.toml` | 5 | package-owned: 2, source-owned: 3 | `.agents/skills/markdown-frontmatter/SKILL.md`, `.agents/skills/markdown-frontmatter/agents/openai.yaml`, `.agents/skills/markdown-frontmatter/scripts/new-doc-id` |
 | `markdown-tooling` | `src/project_standards/bundles/markdown-tooling/adopt.toml` | 6 | external-owned: 2, package-owned: 2, source-owned: 2 | — |

@@ -1,0 +1,8 @@
+# BEGIN agent-handoff managed codex hook
+[[hooks.SessionStart]]
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "bash -c 'python3 \"$(git rev-parse --show-toplevel)/.agents/hooks/agent-handoff/session_start.py\"'"
+timeout = 30
+statusMessage = "Loading agent handoff state..."
+# END agent-handoff managed codex hook

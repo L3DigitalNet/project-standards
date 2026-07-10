@@ -24,6 +24,8 @@ def test_catalog_renders_all_manifest_and_relationship_facts() -> None:
     assert "markdown-frontmatter" in rendered
     assert "markdown-tooling" in rendered
     assert "companion" in rendered
+    assert "[`agent-handoff`](agent-handoff/README.md)" in rendered
+    assert "standards://agent-handoff/skill" in rendered
 
 
 def test_catalog_is_deterministic() -> None:

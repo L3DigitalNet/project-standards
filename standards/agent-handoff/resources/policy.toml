@@ -1,0 +1,32 @@
+version = "1.0"
+
+[paths]
+required = [
+  "docs/STATUS.md",
+  "docs/TODO.md",
+  "docs/handoff/state.md",
+  "docs/handoff/deployed.md",
+  "docs/handoff/architecture.md",
+  "docs/handoff/credentials.md",
+  "docs/handoff/conventions.md",
+  "docs/handoff/specs-plans.md",
+  "docs/handoff/sessions",
+  "docs/handoff/bugs",
+]
+
+[limits]
+state_hard_bytes = 2048
+state_target_bytes = 1024
+hook_output_hard_bytes = 4096
+
+[document_profiles]
+status = "current-snapshot"
+todo = "user-and-agent-queues"
+state = "current-focus-and-active-incidents"
+conventions = "quick-reference-and-stable-numbered-entries"
+sessions = "append-only-monthly-log"
+bugs = "stable-three-digit-records-and-index"
+
+[credentials]
+allowed_reference_kinds = ["environment-variable", "secret-name", "openbao-path", "retrieval-reference"]
+blocked_value_labels = ["password", "token", "private-key", "secret-value"]

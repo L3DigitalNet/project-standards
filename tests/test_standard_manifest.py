@@ -484,6 +484,16 @@ def test_real_manifests_validate(real: Path) -> None:
     load_standard_manifest(real)
 
 
+def test_agent_handoff_manifest_is_discovered_and_packaged_identically() -> None:
+    repository = Path(__file__).resolve().parent.parent
+    canonical = repository / "standards/agent-handoff/standard.toml"
+    packaged = repository / "src/project_standards/bundles/agent-handoff/standard.toml"
+
+    assert canonical in _REAL_MANIFESTS
+    load_standard_manifest(canonical)
+    assert packaged.read_bytes() == canonical.read_bytes()
+
+
 # --- schema-vs-fixture semantic tests (the generated schema is a permissive view) ---
 # Invalid fixtures the JSON Schema ALSO rejects. The remaining invalid fixtures are model-only:
 # cross-field or custom-validator rules Pydantic does not emit to JSON Schema (latest-in-supported,

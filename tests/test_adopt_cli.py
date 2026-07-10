@@ -115,6 +115,7 @@ def test_bundle_ids_align_with_registry_contract_versions() -> None:
         "markdown-tooling": reg.markdown_tooling_default,
         "cli-documentation": reg.cli_documentation_default,
         "project-spec": reg.project_spec_default,
+        "agent-handoff": reg.agent_handoff_default,
     }
     assert bundle_ids == set(_ADOPTABLE_STANDARD_IDS)
     assert set(_VERSION_TRACKED_STANDARD_IDS) == set(version_tracked_registry_ids)

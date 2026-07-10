@@ -1,0 +1,164 @@
+[standard]
+id = "agent-handoff"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/STATUS.md"
+dest = "docs/STATUS.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/STATUS.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/TODO.md"
+dest = "docs/TODO.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/TODO.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/state.md"
+dest = "docs/handoff/state.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/state.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/deployed.md"
+dest = "docs/handoff/deployed.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/deployed.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/architecture.md"
+dest = "docs/handoff/architecture.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/architecture.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/credentials.md"
+dest = "docs/handoff/credentials.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/credentials.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/conventions.md"
+dest = "docs/handoff/conventions.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/conventions.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/specs-plans.md"
+dest = "docs/handoff/specs-plans.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/specs-plans.md"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/sessions/.gitkeep"
+dest = "docs/handoff/sessions/.gitkeep"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/sessions/.gitkeep"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "templates/handoff/bugs/.gitkeep"
+dest = "docs/handoff/bugs/.gitkeep"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/templates/handoff/bugs/.gitkeep"
+install_policy = "create-only"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "hooks/session-start/session_start.py"
+dest = ".agents/hooks/agent-handoff/session_start.py"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/hooks/session-start/session_start.py"
+install_policy = "managed"
+mode = "0755"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "skills/agent-handoff/SKILL.md"
+dest = ".agents/skills/agent-handoff/SKILL.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/skills/agent-handoff/SKILL.md"
+install_policy = "managed"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "skills/agent-handoff/agents/openai.yaml"
+dest = ".agents/skills/agent-handoff/agents/openai.yaml"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/skills/agent-handoff/agents/openai.yaml"
+install_policy = "managed"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "resources/integration/project-config.yml"
+target = ".project-standards.yml"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/resources/integration/project-config.yml"
+install_policy = "managed"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "resources/integration/agent-instructions.md"
+target = "AGENTS.md"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/resources/integration/agent-instructions.md"
+install_policy = "managed"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "resources/integration/claude-session-start.json"
+target = ".claude/settings.json"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/resources/integration/claude-session-start.json"
+install_policy = "managed"
+
+[[artifact]]
+kind = "fragment"
+owner = true
+source = "resources/integration/codex-session-start.toml"
+target = ".codex/config.toml"
+provenance = "source-owned"
+canonical = "standards/agent-handoff/resources/integration/codex-session-start.toml"
+install_policy = "managed"
+
+[[artifact]]
+kind = "file"
+owner = true
+source = "runtime/provenance-lock.json"
+dest = ".agents/agent-handoff/manifest.json"
+provenance = "package-owned"
+install_policy = "managed"

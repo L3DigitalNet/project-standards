@@ -33,6 +33,14 @@ def test_registry_bundles_cli_documentation_default() -> None:
     assert not reg.is_known_cli_documentation("9.9")
 
 
+def test_registry_bundles_agent_handoff_default() -> None:
+    reg = load_registry()
+    assert reg.agent_handoff_default == "1.0"
+    assert reg.agent_handoff_versions == ["1.0"]
+    assert reg.is_known_agent_handoff("1.0")
+    assert not reg.is_known_agent_handoff("9.9")
+
+
 def _run_with_config(tmp_path: Path, version_yaml: str) -> int:
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text(version_yaml, encoding="utf-8")

@@ -28,6 +28,7 @@ def test_available_standards_lists_released_adoptable_standards_excludes_shared(
         "python-tooling",
         "cli-documentation",
         "project-spec",
+        "agent-handoff",
     }
     assert "_shared" not in ids
 
