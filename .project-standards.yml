@@ -15,6 +15,7 @@ markdown:
       - "CHANGELOG.md"
       - "UPGRADING.md"
       - "docs/usage.md"
+      - "docs/workflows/**/*.md"
       - "meta/**/*.md"
       # ADRs are managed docs (the ADR standard says never exclude docs/adr/**);
       # this repo dogfoods that by validating its own architecture decisions. The

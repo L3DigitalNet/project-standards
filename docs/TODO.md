@@ -90,9 +90,13 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
 
-- [ ] Integrate `docs/workflows/` as managed project documentation.
+- [x] 2026-07-10 - Integrated `docs/workflows/` as managed project documentation.
 
-  Preserve the current untracked drafts. Add conformant frontmatter, current links, and project-level routing guidance. Decide whether workflow authority requires an ADR and create one if useful.
+  Preserved the drafts, added them to the managed frontmatter scope, and added conformant metadata with current relationships.
+
+- [ ] Define project-level routing and authority for `docs/workflows/`.
+
+  Add repository-level routing guidance. Decide whether workflow authority requires an ADR and create one if useful.
 
 - [ ] Reconcile the stale GitHub issue and pull-request queue.
 
