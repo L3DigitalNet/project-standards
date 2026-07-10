@@ -118,11 +118,11 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [ ] Supersede the Standard Bundle Authoring contract with `SPEC-BA02`.
 
-  Preserve implemented `SPEC-BA01` as history. Specify immutable versioned payloads, package option schemas, catalog channels, migrations, semantic contributions, trusted providers, central-lock ownership, and the reduced package-specific adoption-guide role before control-plane implementation.
+  Draft `SPEC-BA02` now defines the Full V2 authoring contract: family indexes, immutable payloads, fixed package-option namespaces, repository catalog channels, migrations, semantic contributions, trusted bounded providers, integrity, and the reduced adoption-guide role. Preserve implemented `SPEC-BA01` as active history until owner review and approval supersede it.
 
 - [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and the affected decision/versioning reconciliation are complete; `SPEC-BA02` is the remaining design prerequisite.
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 are complete; `SPEC-BA02` is drafted and still requires review and approval before implementation planning.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
