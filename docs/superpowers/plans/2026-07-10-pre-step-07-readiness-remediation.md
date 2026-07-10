@@ -32,7 +32,7 @@ Before every commit, run `git status --short`, stage only the files named by tha
 - Modify: `standards/agent-handoff/resources/policy.toml`
 - Modify: `src/project_standards/bundles/agent-handoff/resources/policy.toml`
 
-- [ ] **Step 1: Add the policy regression assertion**
+- [x] **Step 1: Add the policy regression assertion**
 
 Extend `tests/agent_handoff/test_policy.py` with:
 
@@ -44,7 +44,7 @@ def test_bug_profile_targets_numbered_records_only(policy: HandoffPolicy) -> Non
     assert "docs/handoff/bugs/*.md" not in documents
 ```
 
-- [ ] **Step 2: Add failing repository-shape tests**
+- [x] **Step 2: Add failing repository-shape tests**
 
 Import the validation module, `load_policy`, and define a policy path plus a helper in `tests/agent_handoff/test_validation.py`:
 
@@ -120,7 +120,7 @@ def test_shape_check_rejects_glob_in_directory_component(
     )
 ```
 
-- [ ] **Step 3: Run the tests and verify the red state**
+- [x] **Step 3: Run the tests and verify the red state**
 
 Run:
 
@@ -134,7 +134,7 @@ uv run pytest \
 
 Expected: failures for the broad policy glob, `INDEX.md` warning, bracket-only literal routing, and unsafe directory glob.
 
-- [ ] **Step 4: Implement generic glob detection and boundary validation**
+- [x] **Step 4: Implement generic glob detection and boundary validation**
 
 In `policy.py`, import `has_magic` from `glob` and change `_document_config` so any standard glob metacharacter is recognized:
 
@@ -176,7 +176,7 @@ def _shape_targets(repository: RepositoryRoot, pattern: str) -> tuple[tuple[str,
     return tuple(targets)
 ```
 
-- [ ] **Step 5: Narrow both canonical and packaged policy copies**
+- [x] **Step 5: Narrow both canonical and packaged policy copies**
 
 Change the bug profile key in both TOML files to:
 
@@ -188,7 +188,7 @@ required = false
 severity = "advisory"
 ```
 
-- [ ] **Step 6: Run focused verification**
+- [x] **Step 6: Run focused verification**
 
 Run:
 
@@ -203,7 +203,7 @@ uv run project-standards agent-handoff shape-check --repo .
 
 Expected: tests pass, policy copies are byte-identical, and no `bugs/INDEX.md` `Cause`/`Fix`/`Lesson` warnings remain.
 
-- [ ] **Step 7: Commit the shape fix**
+- [x] **Step 7: Commit the shape fix**
 
 ```bash
 git add \
@@ -224,7 +224,7 @@ git commit -m "fix(v5): target numbered handoff bug records"
 - Create: `.github/workflows/validate-standards-graph.yml`
 - Create: `tests/test_standards_graph_workflow.py`
 
-- [ ] **Step 1: Write the workflow contract test**
+- [x] **Step 1: Write the workflow contract test**
 
 Create `tests/test_standards_graph_workflow.py`:
 
@@ -282,13 +282,13 @@ def test_repository_graph_workflow_contract() -> None:
     ]["with"]["version"]
 ```
 
-- [ ] **Step 2: Run the test and verify it fails because the workflow is absent**
+- [x] **Step 2: Run the test and verify it fails because the workflow is absent**
 
 Run `uv run pytest tests/test_standards_graph_workflow.py -v`.
 
 Expected: failure while reading `.github/workflows/validate-standards-graph.yml`.
 
-- [ ] **Step 3: Create the dedicated workflow**
+- [x] **Step 3: Create the dedicated workflow**
 
 Create `.github/workflows/validate-standards-graph.yml`:
 
@@ -331,7 +331,7 @@ jobs:
         run: uv run project-standards standards render-catalog --root . --check
 ```
 
-- [ ] **Step 4: Verify the workflow contract and live commands**
+- [x] **Step 4: Verify the workflow contract and live commands**
 
 Run:
 
@@ -347,7 +347,7 @@ npx prettier --check .github/workflows/validate-standards-graph.yml
 
 Expected: all tests pass, graph output is `OK standards graph`, and catalog output is `OK generated catalog`.
 
-- [ ] **Step 5: Commit the repository-only gate**
+- [x] **Step 5: Commit the repository-only gate**
 
 ```bash
 git add .github/workflows/validate-standards-graph.yml tests/test_standards_graph_workflow.py
@@ -365,11 +365,11 @@ git commit -m "ci(v5): validate standards graph on testing"
 - Modify: `src/project_standards/standard_manifest.py`
 - Modify: `src/project_standards/schemas/standard.schema.json`
 
-- [ ] **Step 1: Correct the current repository counts**
+- [x] **Step 1: Correct the current repository counts**
 
 Replace “eight current bundles” and “six ship packaged adopt-artifact manifests” with “nine current bundles” and “seven ship packaged adopt-artifact manifests.” Preserve the distinction between seven released/staged standards and the two reference/unreleased bundles.
 
-- [ ] **Step 2: Make ADRs 0017-0022 explicit contract owners**
+- [x] **Step 2: Make ADRs 0017-0022 explicit contract owners**
 
 Add concise links at the relevant rules:
 
@@ -394,7 +394,7 @@ In `standards/standard-bundle-authoring/templates/standard.toml`, add the corres
 # agent_summary = "agent-summary.md" # optional: compact view; otherwise explain omission in README
 ```
 
-- [ ] **Step 3: Remove obsolete Step 04 future tense**
+- [x] **Step 3: Remove obsolete Step 04 future tense**
 
 In `standards/standard-bundle-authoring/standard.toml`, replace the opening comment with:
 
@@ -407,7 +407,7 @@ In `standards/standard-bundle-authoring/standard.toml`, replace the opening comm
 
 In `standard_manifest.py`, revise the module and class descriptions so they describe the current graph validator and current loader boundary. Remove all phrases that call Step 04 future work without changing runtime behavior or public names.
 
-- [ ] **Step 4: Regenerate the schema after model-description changes**
+- [x] **Step 4: Regenerate the schema after model-description changes**
 
 Run:
 
@@ -415,7 +415,7 @@ Run:
 uv run python -c "from pathlib import Path; from project_standards.standard_manifest import standard_schema_json; Path('src/project_standards/schemas/standard.schema.json').write_text(standard_schema_json(), encoding='utf-8')"
 ```
 
-- [ ] **Step 5: Verify authoring and manifest coherence**
+- [x] **Step 5: Verify authoring and manifest coherence**
 
 Run:
 
@@ -428,7 +428,7 @@ npx markdownlint-cli2 --no-globs standards/standard-bundle-authoring/README.md
 
 Expected: schema drift test, real-manifest tests, graph validation, and targeted Markdown checks pass.
 
-- [ ] **Step 6: Commit authoring-contract reconciliation**
+- [x] **Step 6: Commit authoring-contract reconciliation**
 
 ```bash
 git add \
@@ -447,7 +447,7 @@ git commit -m "docs(v5): reconcile standard bundle authoring"
 
 - Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
-- [ ] **Step 1: Update the Definition of Done from current evidence**
+- [x] **Step 1: Update the Definition of Done from current evidence**
 
 Check every §17.1 item except these Step-07 outcomes:
 
@@ -458,7 +458,7 @@ Check every §17.1 item except these Step-07 outcomes:
 
 The documentation aggregate stays open because the readiness report/checklist deliverable remains open.
 
-- [ ] **Step 2: Replace the §17.3 traceability matrix**
+- [x] **Step 2: Replace the §17.3 traceability matrix**
 
 Use the following evidence and statuses:
 
@@ -489,11 +489,11 @@ Use the following evidence and statuses:
 | FR-022 | Relationship enums/schema; `tests/test_standard_manifest.py::test_relations_rejects_requires_key`. | Passing |
 ```
 
-- [ ] **Step 3: Check only documentation deliverables with current evidence**
+- [x] **Step 3: Check only documentation deliverables with current evidence**
 
 In §18.7, check the first six deliverables through the updated adopt guides. Leave both `UPGRADING.md / migration notes` and `MCP-readiness report template/checklist` unchecked until their evidence exists.
 
-- [ ] **Step 4: Resolve settled open questions without erasing real choices**
+- [x] **Step 4: Resolve settled open questions without erasing real choices**
 
 Set these outcomes in §21:
 
@@ -506,7 +506,7 @@ Set these outcomes in §21:
 - OQ-007 `Resolved`: no blocking graph findings, all manifests present, accepted core ADRs, fresh catalog, and Step-07 report.
 - OQ-008 `Resolved`: independent package plus companion by default; `extends` only with explicit ADR metadata.
 
-- [ ] **Step 5: Replace the placeholder deviation row**
+- [x] **Step 5: Replace the placeholder deviation row**
 
 Use:
 
@@ -516,7 +516,7 @@ Use:
 | — | N/A | No implementation deviations recorded through Step 06. | Implemented behavior follows the accepted ADRs and requirements. | N/A |
 ```
 
-- [ ] **Step 6: Validate the reconciled specification**
+- [x] **Step 6: Validate the reconciled specification**
 
 Run:
 
@@ -529,7 +529,7 @@ npx markdownlint-cli2 --no-globs docs/superpowers/specs/2026-07-07-project-stand
 
 Expected: validation and strict lint pass; FR-013, FR-015, and FR-019 remain visible rather than being marked complete.
 
-- [ ] **Step 7: Commit traceability reconciliation**
+- [x] **Step 7: Commit traceability reconciliation**
 
 ```bash
 git add docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
@@ -545,7 +545,7 @@ git commit -m "docs(v5): reconcile spec mt01 traceability"
 - Modify: `UPGRADING.md`
 - Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
-- [ ] **Step 1: Add classified `[Unreleased]` entries**
+- [x] **Step 1: Add classified `[Unreleased]` entries**
 
 Under `### Added`, add separate bullets for:
 
@@ -555,7 +555,7 @@ Under `### Added`, add separate bullets for:
 
 Under `### Changed`, state that seven artifact-bearing standards now link their `standard.toml` metadata plane to packaged `adopt.toml` manifests with validated provenance while non-adoptable bundles remain explicit.
 
-- [ ] **Step 2: Add the v5 manifest/graph migration posture**
+- [x] **Step 2: Add the v5 manifest/graph migration posture**
 
 Set `UPGRADING.md` frontmatter `updated: '2026-07-10'`, add `standards/standard-bundle-authoring/README.md` to `related`, and add a section after the Agent Handoff preparation section with this contract:
 
@@ -574,7 +574,7 @@ project-standards standards render-catalog --root . --check
 Existing consumers continue to use their selected standard's `adopt.md`, config fragment, and reusable workflow. Re-pinning to v5 does not enable graph validation against the consumer repository unless that repository deliberately adopts the authoring contract.
 ````
 
-- [ ] **Step 3: Promote FR-015 only after its evidence exists**
+- [x] **Step 3: Promote FR-015 only after its evidence exists**
 
 Replace the temporary FR-015 traceability row with:
 
@@ -584,7 +584,7 @@ Replace the temporary FR-015 traceability row with:
 
 Check the §18.7 `UPGRADING.md / migration notes` deliverable. Keep the MCP-readiness report/checklist deliverable and the aggregate §17.1 documentation item unchecked for Step 07.
 
-- [ ] **Step 4: Verify changed release documents**
+- [x] **Step 4: Verify changed release documents**
 
 Run:
 
@@ -602,7 +602,7 @@ npx markdownlint-cli2 --no-globs \
   docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
-- [ ] **Step 5: Commit release guidance**
+- [x] **Step 5: Commit release guidance**
 
 ```bash
 git add \
@@ -621,11 +621,11 @@ git commit -m "docs(v5): document standards graph migration"
 - Modify: `docs/handoff/specs-plans.md`
 - Modify: `docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md`
 
-- [ ] **Step 1: Mark the implemented Step 06 plan accurately**
+- [x] **Step 1: Mark the implemented Step 06 plan accurately**
 
 Change every Task 1-7 checkbox in `2026-07-09-dogfood-catalog-artifact-linkage.md` from `[ ]` to `[x]`. Do not alter task prose.
 
-- [ ] **Step 2: Reconcile plan pointers**
+- [x] **Step 2: Reconcile plan pointers**
 
 In `docs/handoff/specs-plans.md`:
 
@@ -635,11 +635,11 @@ In `docs/handoff/specs-plans.md`:
 - mark this remediation plan as implemented with its commit range at closeout;
 - retain Step 07 as the next work item.
 
-- [ ] **Step 3: Reconcile the Agent Handoff retirement inventory**
+- [x] **Step 3: Reconcile the Agent Handoff retirement inventory**
 
 Set frontmatter `updated: '2026-07-10'`. Change only the `project-standards` ledger row to state that migration and package adoption are integrated on `testing`, validation passes on `testing`, and the remaining repository-specific gate is v5 promotion plus published-artifact recheck. Do not alter other repository rows or claim engine deletion is unblocked.
 
-- [ ] **Step 4: Validate the reconciled pointers**
+- [x] **Step 4: Validate the reconciled pointers**
 
 Run:
 
@@ -651,7 +651,7 @@ uv run project-standards validate --config .project-standards.yml
 
 Expected: no fatal findings; historical session-shape and instruction-size advisories may remain.
 
-- [ ] **Step 5: Commit current-pointer reconciliation**
+- [x] **Step 5: Commit current-pointer reconciliation**
 
 Stage only the three files named by this task and commit:
 
@@ -675,13 +675,13 @@ git commit -m "docs(v5): reconcile pre-step 07 handoff"
 - Modify: `docs/STATUS.md`
 - Modify: `docs/TODO.md`
 
-- [ ] **Step 1: Install the locked Node dependencies for coherence checks**
+- [x] **Step 1: Install the locked Node dependencies for coherence checks**
 
 Run `npm ci`.
 
 Expected: install succeeds without modifying `package.json` or `package-lock.json`.
 
-- [ ] **Step 2: Run focused feature verification**
+- [x] **Step 2: Run focused feature verification**
 
 ```bash
 uv run pytest tests/agent_handoff/test_policy.py tests/agent_handoff/test_validation.py -q
@@ -695,7 +695,7 @@ uv run project-standards standards render-catalog --root . --check
 
 Expected: focused tests pass, graph JSON has zero findings, and the catalog is fresh.
 
-- [ ] **Step 3: Run the complete Python and coherence gates**
+- [x] **Step 3: Run the complete Python and coherence gates**
 
 ```bash
 uv run python scripts/check.py
@@ -716,11 +716,11 @@ uv run project-standards agent-handoff drift-check --repo .
 
 Expected: all commands exit zero. Advisory warnings are reported honestly and do not become errors.
 
-- [ ] **Step 5: Run changed-Markdown hygiene without touching deferred drafts**
+- [x] **Step 5: Run changed-Markdown hygiene without touching deferred drafts**
 
 Build the explicit changed-Markdown file list from `git diff --name-only e5eccea..HEAD`, remove `docs/future-standards/**`, and run targeted Prettier and markdownlint. Do not run either formatter with `--write`.
 
-- [ ] **Step 6: Append one compact correction/session row**
+- [x] **Step 6: Append one compact correction/session row**
 
 Append a new row to `docs/handoff/sessions/2026-07.md` that records:
 
@@ -732,7 +732,7 @@ Append a new row to `docs/handoff/sessions/2026-07.md` that records:
 
 Do not rewrite historical `this commit` or `this closeout` rows.
 
-- [ ] **Step 7: Update current status, tasks, and completion markers**
+- [x] **Step 7: Update current status, tasks, and completion markers**
 
 In `docs/STATUS.md`, add the verified pre-Step-07 reconciliation outcome and hosted workflow posture while keeping Step 07 next. In the durable v5 tracker in `docs/TODO.md`:
 
@@ -760,7 +760,7 @@ git status --short --branch
 
 Confirm that the only unrelated worktree changes are the owner-authored `docs/future-standards/` rename.
 
-- [ ] **Step 9: Commit closeout facts**
+- [x] **Step 9: Commit closeout facts**
 
 ```bash
 git add \
