@@ -49,7 +49,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `ClaudeCodeStatusLine` | `main` | Instruction reference plus `handoff.md` | Determine locally | — | Pending | Classify evidence before adoption |
 | `HomeBase` | `main` | Migrated from dual hooks and root companions | Dual | `ec3df46` | Pass | Recheck with published v5 before deletion |
 | `Markdown-Keeper` | `main` | Migrated from dual hooks and root companions | Dual | `d373df1` | Pass | Recheck with published v5 before deletion |
-| `Russ-Estate-Paperwork` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
+| `Russ-Estate-Paperwork` | `main` | Migrated from dual hooks and root companions | Dual | `ab71b83` | Pass | Recheck with published v5 before deletion |
 | `agent-configs` | `main` | Dual registrations/hooks, engine references, root companions | Dual | — | Pending | Dirty owner work; inventory-only |
 | `agent-handoff-v3` | `main` | Deprecated engine checkout itself | Not a consumer | — | Not applicable | Final deletion target; owner checkpoint required |
 | `agent-pseudocode` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
@@ -72,7 +72,7 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `website-aboutme` | `main` | Migrated on required `testing` branch; `main` remains legacy | Dual | `ab6bc3d` (`testing`) | Pass on `testing` | Merge `testing` through the repo's protected flow; recheck published v5 |
 | `website-l3digital.net` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 
-Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Seven repositories validate on v1 on their integration branch; `website-aboutme` also validates on `testing` but still needs its protected merge. Fourteen concrete-evidence default branches remain.
+Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Eight repositories validate on v1 on their integration branch; `website-aboutme` also validates on `testing` but still needs its protected merge. Thirteen concrete-evidence default branches remain.
 
 ## Installed-wheel verification
 

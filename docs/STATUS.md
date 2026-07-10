@@ -18,3 +18,4 @@
 - `website-aboutme` validates on `testing` (`ab6bc3d`) with a clean Astro build; branch policy still requires integration to `main`.
 - `Markdown-Keeper` is migrated (`d373df1`); 174 unit tests and the dual profile pass on `main`.
 - `HomeBase` is migrated (`ec3df46`); 466 tests and the dual profile pass on `main`.
+- `Russ-Estate-Paperwork` is migrated (`ab71b83`); the dual profile passes and current task metadata no longer carries financial identifiers.
