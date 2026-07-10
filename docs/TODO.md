@@ -20,6 +20,18 @@ Pre-release owner work is tracked in the durable v5.0.0 project tracker below.
 
 ## Agent tasks
 
+### P2 — Parallel, non-release-blocking work
+
+- [ ] Complete Agent Handoff consumer retirement from the tracked inventory.
+
+  Finish the remaining protected default-branch integrations. After v5 ships, verify the published artifact, run the final dependency search, and obtain owner approval before deleting the old engine.
+
+- [ ] Continue the MCP enablement program after the readiness gate.
+
+  Recheck MCP protocol, Python SDK, licensing, and client capabilities before SPEC-MS01 MS-0. Keep server code blocked until Step 07 passes.
+
+### P3 — Deferred maintenance
+
 - [ ] `spec new` symlinked-parent edge cases.
 
   Informational, non-blocking. Revisit only if `new` adds engine-style path pre-validation beyond the current Linux target assumptions.
@@ -28,17 +40,9 @@ Pre-release owner work is tracked in the durable v5.0.0 project tracker below.
 
   Informational, non-blocking. Templates cite the unpinned OpenAPI Specification; pin only when a spec needs a specific contract dialect.
 
-- [ ] MCP enablement program.
+- [ ] Triage the held `check` drift implementation plan.
 
-  Specs are ingested. Do not start MCP server code until the SPEC-MT01 readiness gate passes. Recheck MCP spec and SDK versions before SPEC-MS01 MS-0.
-
-  SPEC-MT01 ADRs 0001-0013 are authored and accepted. SPEC-MS01 server ADRs remain deferred to the server phase.
-
-  Future ADR themes: MCP boundary, resources-before-tools, SDK adapter, remote transport deferral, manifest resources, and plan-first controlled writes.
-
-- [ ] Complete Agent Handoff consumer retirement from the tracked inventory.
-
-  Migrate one repo per reviewed change. Delete the old engine only after every row validates, v5 is published, the final dependency search is clean, and the owner explicitly approves.
+  Decide after v5 whether `docs/superpowers/plans/2026-06-08-check-drift.md` is still needed, should be respecified, or is superseded by newer graph, adoption, and Agent Handoff drift tooling.
 
 ## 🚀 v5.0.0 Project Tracker — Meta-Repo Standards Platform (DURABLE)
 
@@ -80,7 +84,25 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [x] 2026-07-10 - Pre-Step-07 readiness remediation completed (`70b20ee`…`342a802`).
 
-V5 standard and repository prerequisites — complete before the Step 07 readiness gate:
+#### P0 — Establish a verified v5 baseline
+
+- [ ] Publish the current `testing` baseline and verify hosted CI.
+
+  Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
+
+- [ ] Integrate `docs/workflows/` as managed project documentation.
+
+  Preserve the current untracked drafts. Add conformant frontmatter, current links, and project-level routing guidance. Decide whether workflow authority requires an ADR and create one if useful.
+
+- [ ] Reconcile the stale GitHub issue and pull-request queue.
+
+  Issue #3 is implemented by v4.1/v4.2 and PR #4 is obsolete. Close them after review. Decide whether to rebase, replace, or close action-upgrade PRs #1 and #2 for v5.
+
+#### P1 — Finalize the v5 standard architecture
+
+- [ ] Resolve root-artifact ownership and placement across standards.
+
+  Determine whether Python Tooling, Markdown Tooling, and the future repository-governance package can consolidate root artifacts without breaking tool discovery or consumer contracts.
 
 - [ ] Create and release the `agent-managed-repo` standard for v5.0.0.
 
@@ -88,15 +110,17 @@ V5 standard and repository prerequisites — complete before the Step 07 readine
 
 - [ ] Reconcile the Standard Bundle Authoring Standard with the final v5 architecture.
 
-  Audit recent meta-repo ADRs and structural changes, then update the standard, manifest guidance, templates, and examples where required.
+  Perform this after the artifact-placement and `agent-managed-repo` decisions. Update manifest guidance, templates, examples, and meta-repo ADR alignment where required.
 
-- [ ] Resolve root-artifact placement for both tooling standards.
+- [ ] Reconcile GitHub repository settings with `agent-managed-repo`.
 
-  Determine whether Python Tooling and Markdown Tooling artifacts can share a consolidated location without breaking tool discovery or consumer contracts. Implement the approved design before release.
+  Keep policy changes paused until the standard is approved. Then apply its required-review, required-check, action-security, Dependabot, and release-policy rules to this repository.
+
+#### P2 — Close v5 documentation and readiness
 
 - [ ] Normalize every v5 specification into a clean final baseline.
 
-  Reconcile final ADR and design decisions, including MCP changes. Remove amendment-style narration and release no spec with unresolved deviations.
+  Reconcile final ADR and design decisions, stale status rows, unchecked implemented DoD items, and open questions. Resolve or explicitly defer SPEC-MT01 OQ-005. Release no spec with unexplained deviations.
 
 - [ ] Confirm every v5 standard is ready for later MCP exposure.
 
@@ -104,23 +128,24 @@ V5 standard and repository prerequisites — complete before the Step 07 readine
 
 - [ ] Complete the pre-release housekeeping and repository-hygiene sweep.
 
-- [ ] Bring `docs/workflows/` into managed-document scope.
-
-  Add conformant frontmatter, current links and references, and project-level agent guidance that routes relevant work through these workflow documents.
-
-- [ ] Decide whether repository workflows require an ADR.
-
-  If an ADR materially improves workflow authority and consistency, create and accept it before completing the workflow documentation task.
-
-- [ ] Reconcile GitHub repository settings with `agent-managed-repo`.
-
-  Keep repository-policy changes paused. After the standard is approved, define required-review and required-check behavior there, then apply the resulting v5 policy to this repository.
+  Run the workflow checklist; classify retained plans, reviews, and provisional future-standard documents; refresh indexes and status; address current-document shape warnings; preserve append-only history.
 
 - [ ] Step 07 - MCP-readiness gate passes.
 
-Release cut (after readiness is complete):
+  Produce the readiness report and checklist. Confirm no blocking graph, package, documentation, migration, or standard-compatibility gaps remain.
 
-- [ ] Promote CHANGELOG `[Unreleased]` to `## [5.0.0]`.
-- [ ] Bump registry contracts, per-standard metadata, `pyproject`, and `uv.lock`.
-- [ ] Run the `meta/versioning.md` release checklist.
-- [ ] Lift the release freeze in `meta/versioning.md` and `docs/handoff/state.md`.
+#### P3 — Cut and publish v5.0.0
+
+- [ ] Prepare the v5 release commit for `main`.
+
+  Bump v5 workflow and adoption refs, registry contracts, per-standard metadata, `pyproject.toml`, and `uv.lock`. Promote CHANGELOG `[Unreleased]` and rewrite `UPGRADING.md` for v4 to v5.
+
+- [ ] Run the complete release checklist and land the release commit on `main`.
+
+  Follow `meta/versioning.md`, run local and hosted gates, and ensure the exact release commit exists on `main` before creating tags.
+
+- [ ] Sign and publish `v5.0.0`, advance the `v5` tag, and publish the GitHub release.
+
+- [ ] Lift the release freeze and record deployed v5 truth.
+
+  Update `meta/versioning.md`, `docs/handoff/state.md`, deployment/status records, and the retained v5 tracker only after the release refs are live.
