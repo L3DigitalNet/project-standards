@@ -66,13 +66,13 @@ This is the deletion gate for the deprecated Agent Handoff engine. It inventorie
 | `l3digital` | `main` | None | Not a legacy consumer | — | Not applicable | None |
 | `network-infrastructure` | `main` | None | Not a legacy consumer | — | Not applicable | None |
 | `network-infrastructure-schema` | `main` | None | Not a legacy consumer | — | Not applicable | None |
-| `progressive-apparel` | `main` | Codex registration/hook; root status/tasks | Codex | — | Pending | Repo-local reviewed migration |
+| `progressive-apparel` | `main` | Migrated from Codex hook and root companions | Codex | `2b062b6` | Pass | Recheck with published v5 before deletion |
 | `project-standards` | `main` | Old layout remains in dirty `testing` checkout; feature branch migrated | Dual | `bd3cee5` | Pass on feature branch | Integrate v5 feature branch |
 | `star-trek-retro-remake` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `website-aboutme` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 | `website-l3digital.net` | `main` | Dual registrations/hooks; root status/tasks | Dual | — | Pending | Repo-local reviewed migration |
 
-Summary: 21 repositories have concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. Only the `project-standards` feature branch currently validates on v1.
+Summary: 21 repositories had concrete legacy layout or registration evidence, two rows require classification (`ClaudeCodeStatusLine` and the deprecated engine itself), and three have no legacy evidence. `project-standards` and `progressive-apparel` now validate on v1; 19 concrete-evidence consumers remain.
 
 ## Installed-wheel verification
 
