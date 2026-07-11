@@ -68,6 +68,16 @@ def test_standards_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     assert proc.returncode == 0, proc.stderr
 
 
+def test_package_authoring_subcommand_via_wrapper(installed_venv: Path) -> None:
+    proc = _run(installed_venv, "project-standards", "standards", "validate-packages", "--help")
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_package_release_subcommand_via_wrapper(installed_venv: Path) -> None:
+    proc = _run(installed_venv, "project-standards", "packages", "check-release", "--help")
+    assert proc.returncode == 0, proc.stderr
+
+
 def test_agent_handoff_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     proc = _run(installed_venv, "project-standards", "agent-handoff", "--help")
     assert proc.returncode == 0, proc.stderr

@@ -1,4 +1,4 @@
-"""Unified `project-standards` CLI: adopt | list | validate.
+"""Unified `project-standards` command dispatcher.
 
 `validate` runs `validate-frontmatter` (schema), `validate-id` (id format), and
 `validate-references` (cross-file, opt-in) so consumers get the full contract check
@@ -316,6 +316,11 @@ def main(argv: list[str] | None = None) -> int:
 
         return _standards_run(args_list[1:])
 
+    if args_list and args_list[0] == "packages":
+        from project_standards.package_contract.cli import run_packages
+
+        return run_packages(args_list[1:])
+
     parser = argparse.ArgumentParser(prog="project-standards")
     parser.add_argument("--version", action="store_true", help="print the package version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -326,7 +331,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("fix", help="format frontmatter + fix ids, then re-validate")
     sub.add_parser("spec", help="validate|lint|extract|next|new|upgrade over project specs")
-    sub.add_parser("standards", help="validate-graph over standard manifests")
+    sub.add_parser("standards", help="validate and generate V1/V2 standards artifacts")
+    sub.add_parser("packages", help="check released V2 package payloads")
     sub.add_parser(
         "agent-handoff",
         help="validate, inspect, and upgrade an agent-handoff installation",

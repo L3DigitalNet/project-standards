@@ -16,7 +16,11 @@ from project_standards.standards_graph.discovery import build_graph
 from project_standards.standards_graph.model import findings_to_jsonable, format_findings
 from project_standards.standards_graph.validators import validate_graph
 
-_USAGE = "usage: project-standards standards {validate-graph,render-catalog} ..."
+_USAGE = (
+    "usage: project-standards standards "
+    "{validate-graph,render-catalog,validate-packages,render-consumer-catalog,"
+    "generate-package-schemas,sync-payload-projection} ..."
+)
 
 
 class _ArgparseError(Exception):
@@ -111,11 +115,24 @@ def run(argv: list[str] | None = None) -> int:
         print(_USAGE)
         print("  validate-graph   validate standard manifests as one graph")
         print("  render-catalog   write or freshness-check standards/catalog.md")
+        print("  validate-packages          validate V2 package repositories")
+        print("  render-consumer-catalog    render or check a selected V2 consumer catalog")
+        print("  generate-package-schemas   write or check V2 JSON Schemas")
+        print("  sync-payload-projection    write or check installed payload projection")
         return 0
     command, rest = args[0], args[1:]
     if command == "validate-graph":
         return _run_validate_graph(rest)
     if command == "render-catalog":
         return _run_render_catalog(rest)
+    if command in {
+        "validate-packages",
+        "render-consumer-catalog",
+        "generate-package-schemas",
+        "sync-payload-projection",
+    }:
+        from project_standards.package_contract.cli import run_standards
+
+        return run_standards([command, *rest])
     print(_USAGE, file=sys.stderr)
     return 2

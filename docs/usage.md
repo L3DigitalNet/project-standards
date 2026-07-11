@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-09'
-reviewed: null
+updated: '2026-07-10'
+reviewed: '2026-07-10'
 owner: ''
 consumer: 'mix'
 tags:
@@ -28,7 +28,7 @@ license: null
 
 ## NAME
 
-`project-standards` — validate and fix managed Markdown frontmatter, work with project specs, materialize packaged standards, and maintain Agent Handoff repositories.
+`project-standards` — validate and author standards packages, work with project specs, materialize packaged standards, and maintain Agent Handoff repositories.
 
 ## SYNOPSIS
 
@@ -41,17 +41,18 @@ project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual |
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
 project-standards standards <verb> [<args>...]
+project-standards packages <verb> [<args>...]
 project-standards agent-handoff <verb> [<args>...]
 project-standards {--help | --version}
 ```
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes eighteen leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), two `standards` operations (`validate-graph`, `render-catalog`), six `spec` verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`), and six `agent-handoff` verbs (`validate`, `drift-check`, `size-report`, `shape-check`, `legacy-report`, `upgrade`).
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes twenty-three leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), two adoption operations (`adopt`, `list`), six `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — eighteen leaf commands plus the `spec`, `standards`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — twenty-three leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
@@ -212,10 +213,10 @@ project-standards agent-handoff upgrade [--repo <dir>] [--dry-run] [--json]
 
 ### `standards`
 
-Command group for graph validation and the manifest-generated standards catalog. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
+Command group for V1 graph/catalog maintenance and V2 package authoring. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
 
 ```text
-project-standards standards {validate-graph | render-catalog} [<args>...]
+project-standards standards {validate-graph | render-catalog | validate-packages | render-consumer-catalog | generate-package-schemas | sync-payload-projection} [<args>...]
 ```
 
 There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
@@ -251,6 +252,101 @@ Options:
 - **`--check`** — Compare the output file with a fresh render without writing it. Default: off.
 
 Exit status: `0` catalog written or fresh · `1` graph findings or stale output · `2` invalid invocation, unsafe output path, or load/write error.
+
+### `standards validate-packages`
+
+Validate every discovered V2 package family, immutable payload, catalog source, and cross-package graph without executing providers or writing files.
+
+```text
+project-standards standards validate-packages [--root <path>] [--json]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root to inspect. Default: the current directory. Symlinked or non-directory roots are rejected.
+- **`--json`** — Emit the stable `{ok, findings}` envelope instead of human-readable diagnostics.
+
+Exit status: `0` repository clean · `1` contract findings · `2` invalid invocation or unsafe/load-boundary error.
+
+### `standards render-consumer-catalog`
+
+Render the package/version/channel/digest portion of the selected catalog for the consumer control plane. The output path is required; there is no implicit repository destination.
+
+```text
+project-standards standards render-consumer-catalog --catalog-major <major> --output <path> [--root <path>] [--tool-release <version>] [--check] [--json]
+```
+
+Options:
+
+- **`--catalog-major <major>`** — Catalog source to render from `catalogs/<major>.toml`. Required.
+- **`--output <path>`** — Caller-selected output inside the repository root. Required. A symlink or escaping path is rejected.
+- **`--root <path>`** — Repository root. Default: the current directory.
+- **`--tool-release <version>`** — Release metadata to record. Default: the installed `project-standards` version.
+- **`--check`** — Compare regenerated bytes without creating or changing the output.
+- **`--json`** — Emit a machine-readable result or finding envelope.
+
+Exit status: `0` written or fresh · `1` package findings or stale output · `2` invalid invocation, unsafe output, or load/write error.
+
+### `standards generate-package-schemas`
+
+Generate the strict family, payload, and catalog-source JSON Schemas from their typed models.
+
+```text
+project-standards standards generate-package-schemas [--root <path>] [--check] [--json]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root. Default: the current directory.
+- **`--check`** — Compare all three checked-in schemas without writing them.
+- **`--json`** — Emit a machine-readable result.
+
+Exit status: `0` written or fresh · `1` stale generated schemas · `2` invalid invocation or unsafe output boundary.
+
+### `standards sync-payload-projection`
+
+Synchronize relative file symlinks from canonical `standards/<id>/versions/<version>/` payloads into the installed package-data path. It never copies or edits canonical payload bytes.
+
+```text
+project-standards standards sync-payload-projection [--root <path>] [--check] [--json]
+```
+
+Options:
+
+- **`--root <path>`** — Repository root. Default: the current directory.
+- **`--check`** — Report missing, stale, unsafe, or non-symlink projection members without mutation.
+- **`--json`** — Emit the stable finding envelope.
+
+Apply mode removes stale projection symlinks and empty directories. It refuses regular files and directory symlinks instead of deleting them.
+
+Exit status: `0` synchronized or fresh · `1` projection drift in check mode · `2` invalid invocation or an unsafe projection shape that apply mode refuses.
+
+### `packages`
+
+Repository-only release workflow group. It is separate from reusable standard-package authoring commands because it compares the working repository with this repository's Git release history.
+
+```text
+project-standards packages {check-release} [<args>...]
+```
+
+### `packages check-release`
+
+Compare every previously released payload and catalog selection with a tagged baseline, then classify the proposed change under ADR 0024.
+
+```text
+project-standards packages check-release --baseline <ref> [--root <path>] [--previous-version <version>] [--json]
+```
+
+Options:
+
+- **`--baseline <ref>`** — Released Git tag or commit to compare. Required. Option-like and unresolved refs are rejected.
+- **`--root <path>`** — Repository root. Default: the current directory.
+- **`--previous-version <version>`** — Baseline tool SemVer. Required when `<ref>` is not a `vMAJOR.MINOR.PATCH` tag; otherwise derived from the tag.
+- **`--json`** — Emit classification and stable findings as JSON.
+
+The command reads the baseline through argument-vector Git calls and only loads catalog-declared family and payload paths. It never changes versions, catalogs, tags, or payloads.
+
+Exit status: `0` allowed `patch`, `minor`, or `major` classification · `1` forbidden transition or current package findings · `2` invalid invocation, unsafe ref/root, or unavailable baseline evidence.
 
 ### `spec`
 

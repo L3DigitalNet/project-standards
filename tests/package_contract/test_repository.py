@@ -3,7 +3,11 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from project_standards.package_contract.repository import build_package_repository
+from project_standards.package_contract import (
+    PackageRepository,
+    build_package_repository,
+    validate_package_repository,
+)
 from tests.package_contract.helpers import (
     clone_demo_family,
     copy_minimal_repository,
@@ -21,6 +25,8 @@ def test_builds_a_version_qualified_repository_with_selected_catalog(tmp_path: P
     assert repository.payloads[0].manifest.payload.version.value == "1.2"
     assert repository.catalog is not None
     assert repository.catalog.catalog_major == 5
+    assert isinstance(repository, PackageRepository)
+    assert validate_package_repository(repository) == ()
 
 
 def test_empty_v2_discovery_is_a_non_vacuous_finding(tmp_path: Path) -> None:

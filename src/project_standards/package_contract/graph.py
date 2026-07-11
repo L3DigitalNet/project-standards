@@ -499,3 +499,10 @@ def validate_package_graph(repository: PackageRepository) -> tuple[PackageFindin
     findings.extend(_validate_outputs(payloads))
     findings.extend(_validate_migrations(repository, payloads))
     return tuple(sort_findings(findings))
+
+
+def validate_package_repository(
+    repository: PackageRepository,
+) -> tuple[PackageFinding, ...]:
+    """Validate the complete normalized repository without executing providers."""
+    return validate_package_graph(repository)
