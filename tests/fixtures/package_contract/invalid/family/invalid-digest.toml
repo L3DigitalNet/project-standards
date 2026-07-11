@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "demo"
+name = "Demo"
+summary = "Invalid digest."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:not-a-digest"

@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "demo"
+name = "Demo"
+summary = "A minimal valid V2 package family fixture."
+status = "active"
+
+[[versions]]
+version = "1.2"
+payload = "versions/1.2/payload.toml"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"

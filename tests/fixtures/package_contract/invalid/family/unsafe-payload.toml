@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "demo"
+name = "Demo"
+summary = "Unsafe payload path."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "../payload.toml"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
