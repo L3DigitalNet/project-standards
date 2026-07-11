@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Continue the approved control-plane core plan inline at Task 9; Tasks 1-8 are committed through `6bd74b3`.
+- Continue the approved control-plane core plan inline at Task 11; Tasks 1-10 are committed through `078b53b`.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.
