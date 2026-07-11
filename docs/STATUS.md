@@ -14,10 +14,11 @@
 - `SPEC-CP01` is approved rev 0.5; rev 0.5 reconciles its examples with the later owner-approved/implemented BA02 fixed option namespace and payload tree without changing scope.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` is approved at rev 0.6; revs 0.4-0.5 pin digest bytes and complete relation/legacy-state declarations, while rev 0.6 records foundation evidence without changing scope. SPEC-BA01 is superseded history.
-- The BA02 package-contract foundation is implemented (`4e507d6` through this closeout): strict authoring models, integrity, graph validation, CLI, and installed projection.
-- Acceptance passes offline wheel parity, the 100/1,000/10,000 scale gate, 1,693 tests, and 93% branch coverage.
+- The BA02 package-contract foundation is implemented (`4e507d6` through `477cbbf`): strict authoring models, integrity, graph validation, CLI, and installed projection.
+- Control-plane core Tasks 1-4 are implemented (`90debb5`…`d23a10b`): state/codecs, nine schemas, installed content, and directory locking.
+- Current acceptance passes offline wheel parity, repeated lock contention, strict static checks, and 1,744 tests; prior BA02 scale/coverage gates remain green.
 - Provider execution, live semantic mutation, current-package reconstruction, and V5 activation remain in the two follow-on plans.
-- The reviewed 18-task control-plane core plan is approved for inline execution; current-package migration and release activation remain in the final plan.
+- The 18-task control-plane core plan is executing inline; Task 5 neutral initialization is next. Package migration and release activation remain in the final plan.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
