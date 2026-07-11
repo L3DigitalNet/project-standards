@@ -18,10 +18,11 @@
 - Control-plane core Tasks 1-5 (`90debb5`…`2d8d831`) implement state/codecs, installed content, locking, and neutral initialization.
 - Tasks 6-8 (`2b6a359`…`6bd74b3`) add preserving config edits, catalog-scoped resolution, referenced inputs, and bounded providers.
 - Tasks 9-13 (`0ca5fd8`…`03e80f5`) add read-once snapshots, whole-file lifecycle, and syntax-preserving TOML, JSON/JSONC, YAML, EditorConfig, and Markdown composition.
+- Tasks 14-15 (`75fba70`, `954a493`) add complete virtual-tree planning, partitioned central-lock convergence, shared references, and package-local lifecycle safety.
 - Core acceptance covers locking, candidate tracks, preserving edits, referenced-input containment, modes, stable identities, bounded removals, and formatter-stable round trips.
-- Immutable provider inputs, schema/resource bounds, live-write detection, strict static checks, pinned Prettier range exclusion, and 1,919 tests pass.
-- Aggregate virtual-tree planning, current-package reconstruction, and V5 activation remain in the core and package-migration follow-on work.
-- The core plan is executing inline: Tasks 1-13 are complete; Task 14 aggregate reconciliation planning is next. Package migration/release remain in the final plan.
+- Immutable planning, conflict preflight, package-namespace drift checks, strict static checks, generated schemas, and 1,949 tests pass.
+- Executor/recovery, current-package reconstruction, and V5 activation remain in the core and package-migration follow-on work.
+- The core plan is executing inline: Tasks 1-15 are complete; Task 16 transactional apply and recovery is next. Package migration/release remain in the final plan.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
