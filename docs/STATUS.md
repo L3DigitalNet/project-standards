@@ -17,11 +17,11 @@
 - The BA02 package-contract foundation is implemented (`4e507d6` through `477cbbf`): strict authoring models, integrity, graph validation, CLI, and installed projection.
 - Control-plane core Tasks 1-5 (`90debb5`…`2d8d831`) implement state/codecs, installed content, locking, and neutral initialization.
 - Tasks 6-8 (`2b6a359`…`6bd74b3`) add preserving config edits, catalog-scoped resolution, referenced inputs, and bounded providers.
-- Tasks 9-10 (`0ca5fd8`…`078b53b`) add read-once snapshots, whole-file lifecycle, and syntax-preserving TOML composition.
-- Core acceptance covers lock contention, candidate tracks, preserving edits, referenced-input containment, exact mode ownership, and TOML round trips.
-- Immutable provider inputs, schema/resource bounds, live-write detection, strict static checks, and 1,856 tests pass.
-- Live semantic mutation, current-package reconstruction, and V5 activation remain in the core and package-migration follow-on work.
-- The 18-task control-plane core plan is executing inline; Tasks 1-10 are complete and Task 11 JSON/JSONC composition is next. Package migration/release remain in the final plan.
+- Tasks 9-13 (`0ca5fd8`…`03e80f5`) add read-once snapshots, whole-file lifecycle, and syntax-preserving TOML, JSON/JSONC, YAML, EditorConfig, and Markdown composition.
+- Core acceptance covers locking, candidate tracks, preserving edits, referenced-input containment, modes, stable identities, bounded removals, and formatter-stable round trips.
+- Immutable provider inputs, schema/resource bounds, live-write detection, strict static checks, pinned Prettier range exclusion, and 1,919 tests pass.
+- Aggregate virtual-tree planning, current-package reconstruction, and V5 activation remain in the core and package-migration follow-on work.
+- The core plan is executing inline: Tasks 1-13 are complete; Task 14 aggregate reconciliation planning is next. Package migration/release remain in the final plan.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
