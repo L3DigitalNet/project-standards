@@ -18,8 +18,9 @@ from project_standards.standards_graph.validators import validate_graph
 
 _USAGE = (
     "usage: project-standards standards "
-    "{validate-graph,render-catalog,validate-packages,render-consumer-catalog,"
-    "generate-package-schemas,sync-payload-projection} ..."
+    "{list,show,enable,disable,version,validate-graph,render-catalog,"
+    "validate-packages,render-consumer-catalog,generate-package-schemas,"
+    "sync-payload-projection} ..."
 )
 
 
@@ -105,6 +106,127 @@ def _run_render_catalog(argv: list[str]) -> int:
         return _emit_error(False, "catalog_error", str(exc))
 
 
+def _control_parser(command: str) -> _Parser:
+    parser = _Parser(prog=f"project-standards standards {command}")
+    if command != "list":
+        parser.add_argument("standard_id")
+    if command == "version":
+        parser.add_argument("version")
+    elif command == "enable":
+        parser.add_argument("--version")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    return parser
+
+
+def _standard_view(
+    views: list[dict[str, object]],
+    standard_id: str,
+) -> dict[str, object] | None:
+    return next((view for view in views if view["id"] == standard_id), None)
+
+
+def _run_control_inspection(command: str, argv: list[str]) -> int:
+    parser = _control_parser(command)
+    try:
+        args = parser.parse_args(argv)
+        from project_standards.control_plane.config_edit import standard_views
+
+        views = standard_views(cast("Path", args.repo).resolve())
+        if command == "list":
+            if cast("bool", args.json):
+                print(json.dumps({"ok": True, "standards": views}, indent=2))
+            else:
+                for view in views:
+                    marker = "enabled" if view["enabled"] else "disabled"
+                    print(f"{view['id']}  {marker}  requested={view['requested'] or '-'}")
+            return 0
+
+        standard_id = cast("str", args.standard_id)
+        view = _standard_view(views, standard_id)
+        if view is None:
+            return _emit_error(
+                cast("bool", args.json),
+                "unknown_standard",
+                f"standard is not present in the installed catalog: {standard_id}",
+            )
+        if cast("bool", args.json):
+            print(json.dumps({"ok": True, "standard": view}, indent=2))
+        else:
+            print(json.dumps(view, indent=2))
+        return 0
+    except _ArgparseError as exc:
+        return _emit_error("--json" in argv, "bad_args", str(exc))
+    except (OSError, ValueError) as exc:
+        return _emit_error("--json" in argv, "control_state_error", str(exc))
+
+
+def _run_control_edit(command: str, argv: list[str]) -> int:
+    parser = _control_parser(command)
+    try:
+        args = parser.parse_args(argv)
+        from project_standards.control_plane.config_edit import (
+            set_standard_selection,
+            standard_views,
+        )
+
+        repo = cast("Path", args.repo).resolve()
+        standard_id = cast("str", args.standard_id)
+        views = standard_views(repo)
+        view = _standard_view(views, standard_id)
+        if view is None:
+            return _emit_error(
+                cast("bool", args.json),
+                "unknown_standard",
+                f"standard is not present in the installed catalog: {standard_id}",
+            )
+        if command == "enable" and not view["selectable"]:
+            return _emit_error(
+                cast("bool", args.json),
+                "not_selectable",
+                f"standard is catalog-visible but not consumer-selectable: {standard_id}",
+            )
+
+        requested_version = cast("str | None", getattr(args, "version", None))
+        if requested_version not in {None, "latest"} and requested_version not in cast(
+            "list[str]", view["available"]
+        ):
+            return _emit_error(
+                cast("bool", args.json),
+                "version_unavailable",
+                f"version is not advertised for {standard_id}: {requested_version}",
+            )
+
+        if command == "enable":
+            set_standard_selection(
+                repo,
+                standard_id,
+                enabled=True,
+                version=requested_version,
+            )
+        elif command == "disable":
+            set_standard_selection(repo, standard_id, enabled=False)
+        else:
+            set_standard_selection(repo, standard_id, version=requested_version)
+
+        result = {
+            "ok": True,
+            "standard_id": standard_id,
+            "enabled": command == "enable" if command != "version" else view["enabled"],
+            "version": requested_version if requested_version is not None else view["requested"],
+            "reconciliation": "pending",
+        }
+        if cast("bool", args.json):
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"Updated {standard_id}; reconciliation is pending.")
+        return 0
+    except _ArgparseError as exc:
+        return _emit_error("--json" in argv, "bad_args", str(exc))
+    except (OSError, ValueError) as exc:
+        return _emit_error("--json" in argv, "config_edit_error", str(exc))
+
+
 def run(argv: list[str] | None = None) -> int:
     """Run the nested standards command group."""
     args = list(sys.argv[1:] if argv is None else argv)
@@ -113,6 +235,11 @@ def run(argv: list[str] | None = None) -> int:
         return 2
     if args[0] in {"--help", "-h"}:
         print(_USAGE)
+        print("  list             show the complete installed catalog inventory")
+        print("  show             show catalog, desired, and applied state for one standard")
+        print("  enable           enable one consumer-selectable standard")
+        print("  disable          disable one standard while preserving its configuration")
+        print("  version          set one standard's desired version selector")
         print("  validate-graph   validate standard manifests as one graph")
         print("  render-catalog   write or freshness-check standards/catalog.md")
         print("  validate-packages          validate V2 package repositories")
@@ -121,6 +248,10 @@ def run(argv: list[str] | None = None) -> int:
         print("  sync-payload-projection    write or check installed payload projection")
         return 0
     command, rest = args[0], args[1:]
+    if command in {"list", "show"}:
+        return _run_control_inspection(command, rest)
+    if command in {"enable", "disable", "version"}:
+        return _run_control_edit(command, rest)
     if command == "validate-graph":
         return _run_validate_graph(rest)
     if command == "render-catalog":
