@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-5 are complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-6 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -196,13 +196,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 ### Task 6: Reference-Only Python Coding Reconstruction
 
-**Files:** Replace `standards/python-coding/standard.toml`; create `standards/python-coding/versions/0.5/**`; add compatibility fixtures/tests.
+**Files:** Create `standards/python-coding/versions/0.5/**`; add compatibility fixtures/tests. Keep the operational V1 `standard.toml` unchanged until Task 14.
 
-- [ ] Write a red package test for a `reference-only` payload with canonical docs, agent summary, closed empty option schema, no adoption guide, no root artifacts, and documentation-only semantic-review capability.
-- [ ] Reconstruct only `python-coding@0.5`. Declare the existing Python Tooling companion relationship without creating a hidden dependency.
-- [ ] Prove the package is catalog-visible, cannot be enabled, writes no consumer path, and remains byte-identical through source and installed-wheel discovery.
-- [ ] Run focused package and control-plane visibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct python coding package`
+**Execution correction:** Plan-pinned contract #11 also governs this reconstruction. Task 6 validates the exact V2 family index, catalog role, projection, and wheel in isolation; Task 14 performs the repository-root cutover after all nine payloads validate together.
+
+- [x] Write a red package test for a `reference-only` payload with canonical docs, agent summary, closed empty option schema, no adoption guide, no root artifacts, and documentation-only semantic-review capability.
+- [x] Reconstruct only `python-coding@0.5`. Declare the existing Python Tooling companion relationship without creating a hidden dependency.
+- [x] Prove the package is catalog-visible, cannot be enabled, writes no consumer path, and remains byte-identical through source and installed-wheel discovery.
+- [x] Run focused package and control-plane visibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct python coding package`
 
 ### Task 7: Markdown Frontmatter Reconstruction and Unified Validators
 
