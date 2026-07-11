@@ -278,6 +278,7 @@ def write_consumer_catalog(output: Path, content: bytes, *, check: bool) -> bool
     temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "wb") as stream:
+            os.fchmod(stream.fileno(), 0o644)
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())

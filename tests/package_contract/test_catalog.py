@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import stat
 import tomllib
 from pathlib import Path
 
@@ -272,6 +273,7 @@ def test_consumer_catalog_write_is_atomic_and_check_is_read_only(tmp_path: Path)
 
     assert write_consumer_catalog(output, content, check=False)
     assert output.read_bytes() == content
+    assert stat.S_IMODE(output.stat().st_mode) == 0o644
     assert write_consumer_catalog(output, content, check=True)
     stale = output.read_bytes() + b"# stale\n"
     output.write_bytes(stale)
