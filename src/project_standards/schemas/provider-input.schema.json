@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderOperation": {
+      "enum": [
+        "validate",
+        "verify",
+        "fix",
+        "lint",
+        "drift-check",
+        "id-next",
+        "extract",
+        "render",
+        "scaffold",
+        "upgrade",
+        "migrate",
+        "semantic-review"
+      ],
+      "title": "ProviderOperation",
+      "type": "string"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/provider-input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "JSON-safe immutable facts supplied to one selected package provider.",
+  "properties": {
+    "config": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Config",
+      "type": "object"
+    },
+    "operation": {
+      "$ref": "#/$defs/ProviderOperation"
+    },
+    "resources": {
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "title": "Resources",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "snapshots": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Snapshots",
+      "type": "object"
+    },
+    "standard_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "title": "Standard Id",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "standard_id",
+    "version",
+    "operation"
+  ],
+  "title": "ProviderInputSchema",
+  "type": "object"
+}

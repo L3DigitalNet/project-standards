@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import stat
 import tomllib
 from pathlib import Path
@@ -260,6 +261,12 @@ def test_consumer_catalog_rendering_is_canonical_and_contains_no_enabled_state()
     assert first == second
     assert b"enabled" not in first
     parsed = tomllib.loads(first.decode("utf-8"))
+    without_digest = b"".join(
+        line for line in first.splitlines(keepends=True) if not line.startswith(b"digest = ")
+    )
+    assert parsed["project_standards"]["digest"] == (
+        "sha256:" + hashlib.sha256(without_digest).hexdigest()
+    )
     standard = parsed["standards"]["demo"]
     assert standard["available"] == ["1.1", "1.2", "2.0"]
     assert standard["default"] == "1.2"

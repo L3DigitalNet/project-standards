@@ -13,6 +13,10 @@ from pydantic import ValidationError
 from project_standards.package_contract.paths import PackageVersion
 
 
+class ControlPlaneError(ValueError):
+    """Report an invalid control-plane boundary without leaking input content."""
+
+
 class ActionKind(StrEnum):
     """Repository mutation or preservation decisions emitted by planning."""
 

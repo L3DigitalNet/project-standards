@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "ActionKind": {
+      "description": "Repository mutation or preservation decisions emitted by planning.",
+      "enum": [
+        "create",
+        "adopt",
+        "update",
+        "remove",
+        "preserve",
+        "no-op"
+      ],
+      "title": "ActionKind",
+      "type": "string"
+    },
+    "AdapterKind": {
+      "description": "Semantic container adapters supported by the V1 contribution contract.",
+      "enum": [
+        "whole-file",
+        "toml",
+        "json",
+        "jsonc",
+        "yaml",
+        "editorconfig",
+        "markdown-block"
+      ],
+      "title": "AdapterKind",
+      "type": "string"
+    },
+    "MutationActionSchema": {
+      "additionalProperties": false,
+      "description": "One bounded repository mutation returned to the platform executor.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "content_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Digest"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActionKind"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "pattern": "^0[0-7]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        },
+        "scope": {
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "target",
+        "adapter",
+        "scope"
+      ],
+      "title": "MutationActionSchema",
+      "type": "object"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/mutation-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Typed mutation intent returned by a package provider.",
+  "properties": {
+    "actions": {
+      "items": {
+        "$ref": "#/$defs/MutationActionSchema"
+      },
+      "title": "Actions",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "standard_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "title": "Standard Id",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "standard_id",
+    "version"
+  ],
+  "title": "MutationPlanSchema",
+  "type": "object"
+}

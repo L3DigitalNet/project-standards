@@ -230,7 +230,15 @@ def _run_generate_package_schemas(argv: list[str]) -> int:
         args = parser.parse_args(argv)
         root = _safe_root(cast("Path", args.root))
         check = cast("bool", args.check)
-        fresh = generate_package_schemas(root, check=check)
+        # Import upward only at this integration boundary; the lower-level
+        # package schema module remains independent of the consumer plane.
+        from project_standards.control_plane.schemas import (
+            generate_control_plane_schemas,
+        )
+
+        package_fresh = generate_package_schemas(root, check=check)
+        control_plane_fresh = generate_control_plane_schemas(root, check=check)
+        fresh = package_fresh and control_plane_fresh
         if not fresh:
             if cast("bool", args.json):
                 print(json.dumps({"ok": False, "code": "stale"}))

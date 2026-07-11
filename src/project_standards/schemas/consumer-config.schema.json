@@ -1,0 +1,125 @@
+{
+  "$defs": {
+    "ControlHeader": {
+      "additionalProperties": false,
+      "description": "Consumer-owned schema and catalog-major intent.",
+      "properties": {
+        "catalog": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Catalog",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "catalog"
+      ],
+      "title": "ControlHeader",
+      "type": "object"
+    },
+    "DesiredPackage": {
+      "additionalProperties": false,
+      "description": "Desired enablement, payload selector, and package-owned options.",
+      "properties": {
+        "config": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Config",
+          "type": "object"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "version": {
+          "$ref": "#/$defs/VersionSelector"
+        }
+      },
+      "required": [
+        "enabled",
+        "version"
+      ],
+      "title": "DesiredPackage",
+      "type": "object"
+    },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "VersionSelector": {
+      "anyOf": [
+        {
+          "const": "latest",
+          "type": "string"
+        },
+        {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/consumer-config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Complete consumer-owned desired state.",
+  "properties": {
+    "project_standards": {
+      "$ref": "#/$defs/ControlHeader"
+    },
+    "standards": {
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "$ref": "#/$defs/DesiredPackage"
+        }
+      },
+      "title": "Standards",
+      "type": "object"
+    }
+  },
+  "required": [
+    "project_standards"
+  ],
+  "title": "DesiredConfig",
+  "type": "object"
+}

@@ -1,0 +1,492 @@
+{
+  "$defs": {
+    "AcceptedTrack": {
+      "additionalProperties": false,
+      "description": "Durable authorization evidence for one non-default package major.",
+      "properties": {
+        "authorized_catalog": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Authorized Catalog",
+          "type": "string"
+        },
+        "major": {
+          "minimum": 1,
+          "title": "Major",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "major",
+        "authorized_catalog"
+      ],
+      "title": "AcceptedTrack",
+      "type": "object"
+    },
+    "ActionKind": {
+      "description": "Repository mutation or preservation decisions emitted by planning.",
+      "enum": [
+        "create",
+        "adopt",
+        "update",
+        "remove",
+        "preserve",
+        "no-op"
+      ],
+      "title": "ActionKind",
+      "type": "string"
+    },
+    "AdapterKind": {
+      "description": "Semantic container adapters supported by the V1 contribution contract.",
+      "enum": [
+        "whole-file",
+        "toml",
+        "json",
+        "jsonc",
+        "yaml",
+        "editorconfig",
+        "markdown-block"
+      ],
+      "title": "AdapterKind",
+      "type": "string"
+    },
+    "AppliedPackage": {
+      "additionalProperties": false,
+      "description": "Resolved facts for one enabled package; authorization lives elsewhere.",
+      "properties": {
+        "effective_config_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Effective Config Digest",
+          "type": "string"
+        },
+        "payload_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Digest",
+          "type": "string"
+        },
+        "requested": {
+          "$ref": "#/$defs/VersionSelector"
+        },
+        "resolved": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Resolved",
+          "type": "string"
+        },
+        "selection": {
+          "$ref": "#/$defs/SelectionKind"
+        }
+      },
+      "required": [
+        "requested",
+        "resolved",
+        "selection",
+        "payload_digest",
+        "effective_config_digest"
+      ],
+      "title": "AppliedPackage",
+      "type": "object"
+    },
+    "ArtifactPolicy": {
+      "description": "Lifecycle policies supported by managed package outputs.",
+      "enum": [
+        "managed",
+        "create-only"
+      ],
+      "title": "ArtifactPolicy",
+      "type": "string"
+    },
+    "CentralLock": {
+      "additionalProperties": false,
+      "description": "Complete tool-owned applied, authorization, ownership, and input state.",
+      "properties": {
+        "accepted_tracks": {
+          "patternProperties": {
+            "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+              "$ref": "#/$defs/AcceptedTrack"
+            }
+          },
+          "title": "Accepted Tracks",
+          "type": "object"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/LockedUnit"
+          },
+          "title": "Artifacts",
+          "type": "array"
+        },
+        "project_standards": {
+          "$ref": "#/$defs/LockHeader"
+        },
+        "referenced_inputs": {
+          "items": {
+            "$ref": "#/$defs/LockedInput"
+          },
+          "title": "Referenced Inputs",
+          "type": "array"
+        },
+        "standards": {
+          "patternProperties": {
+            "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+              "$ref": "#/$defs/AppliedPackage"
+            }
+          },
+          "title": "Standards",
+          "type": "object"
+        }
+      },
+      "required": [
+        "project_standards"
+      ],
+      "title": "CentralLock",
+      "type": "object"
+    },
+    "LockHeader": {
+      "additionalProperties": false,
+      "description": "Digests binding applied state to one tool release, catalog, and config.",
+      "properties": {
+        "catalog": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Catalog",
+          "type": "string"
+        },
+        "catalog_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Catalog Digest",
+          "type": "string"
+        },
+        "config_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Config Digest",
+          "type": "string"
+        },
+        "release": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Release",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "catalog",
+        "release",
+        "catalog_digest",
+        "config_digest"
+      ],
+      "title": "LockHeader",
+      "type": "object"
+    },
+    "LockedInput": {
+      "additionalProperties": false,
+      "description": "Consumer-owned referenced input tracked without managed ownership.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "extension_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Extension Id",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "extension_id",
+        "path",
+        "digest"
+      ],
+      "title": "LockedInput",
+      "type": "object"
+    },
+    "LockedUnit": {
+      "additionalProperties": false,
+      "description": "Central ownership and drift record for one normalized semantic unit.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "content_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "created_container": {
+          "title": "Created Container",
+          "type": "boolean"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "pattern": "^0[0-7]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        },
+        "owners": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Owners",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ArtifactPolicy"
+        },
+        "provenance": {
+          "$ref": "#/$defs/UnitProvenance"
+        },
+        "scope": {
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "semantic_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Semantic Digest",
+          "type": "string"
+        },
+        "versions": {
+          "patternProperties": {
+            "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "title": "Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "path",
+        "adapter",
+        "scope",
+        "owners",
+        "versions",
+        "provenance",
+        "policy",
+        "semantic_digest",
+        "content_digest",
+        "created_container"
+      ],
+      "title": "LockedUnit",
+      "type": "object"
+    },
+    "PublicActionSchema": {
+      "additionalProperties": false,
+      "description": "Content-safe action fields included in public reconciliation output.",
+      "properties": {
+        "adapter": {
+          "title": "Adapter",
+          "type": "string"
+        },
+        "after_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Digest"
+        },
+        "before_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before Digest"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActionKind"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "standard_id": {
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "target",
+        "adapter",
+        "scope",
+        "standard_id",
+        "summary"
+      ],
+      "title": "PublicActionSchema",
+      "type": "object"
+    },
+    "PublicFindingSchema": {
+      "additionalProperties": false,
+      "description": "Content-safe finding fields included in public reconciliation output.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "hint": {
+          "title": "Hint",
+          "type": "string"
+        },
+        "identity": {
+          "title": "Identity",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "standard_id": {
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "standard_id",
+        "version",
+        "path",
+        "identity",
+        "message",
+        "hint"
+      ],
+      "title": "PublicFindingSchema",
+      "type": "object"
+    },
+    "SelectionKind": {
+      "description": "Resolution channel recorded for an applied package.",
+      "enum": [
+        "stable",
+        "retained",
+        "breaking-candidate",
+        "exact"
+      ],
+      "title": "SelectionKind",
+      "type": "string"
+    },
+    "UnitProvenance": {
+      "description": "Origin of an applied semantic unit's materialized value.",
+      "enum": [
+        "source",
+        "provider",
+        "generated",
+        "package",
+        "external"
+      ],
+      "title": "UnitProvenance",
+      "type": "string"
+    },
+    "VersionSelector": {
+      "anyOf": [
+        {
+          "const": "latest",
+          "type": "string"
+        },
+        {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/reconciliation-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Stable JSON surface for a complete reconciliation preview.",
+  "properties": {
+    "actions": {
+      "items": {
+        "$ref": "#/$defs/PublicActionSchema"
+      },
+      "title": "Actions",
+      "type": "array"
+    },
+    "applicable": {
+      "title": "Applicable",
+      "type": "boolean"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/PublicFindingSchema"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "proposed_lock": {
+      "$ref": "#/$defs/CentralLock"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "applicable",
+    "proposed_lock"
+  ],
+  "title": "ReconciliationPlanSchema",
+  "type": "object"
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -259,6 +260,9 @@ def render_consumer_catalog(
                     "",
                 ]
             )
+    without_digest = ("\n".join(lines).rstrip() + "\n").encode()
+    digest = f"sha256:{hashlib.sha256(without_digest).hexdigest()}"
+    lines.insert(4, f"digest = {_toml_string(digest)}")
     return ("\n".join(lines).rstrip() + "\n").encode()
 
 

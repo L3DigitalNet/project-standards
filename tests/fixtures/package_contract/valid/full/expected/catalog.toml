@@ -2,6 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "4.3.0"
+digest = "sha256:ec52ebfc9f8cd2968166c14f5cc12f8347a24680075c4e858da0c19d7f079eaa"
 
 [standards.alpha]
 status = "active"

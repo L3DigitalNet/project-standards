@@ -1,0 +1,175 @@
+{
+  "$defs": {
+    "CatalogChannel": {
+      "description": "Resolution channel assigned to one advertised payload.",
+      "enum": [
+        "stable",
+        "retained",
+        "breaking-candidate",
+        "reference-only",
+        "internal"
+      ],
+      "title": "CatalogChannel",
+      "type": "string"
+    },
+    "CatalogHeader": {
+      "additionalProperties": false,
+      "description": "Installed tool release and self-digest for one catalog snapshot.",
+      "properties": {
+        "catalog": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Catalog",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "release": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Release",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "catalog",
+        "release",
+        "digest"
+      ],
+      "title": "CatalogHeader",
+      "type": "object"
+    },
+    "CatalogStandard": {
+      "additionalProperties": false,
+      "description": "Complete version index for one standard in a catalog snapshot.",
+      "properties": {
+        "available": {
+          "items": {
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Available",
+          "type": "array"
+        },
+        "candidates": {
+          "items": {
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "status": {
+          "$ref": "#/$defs/FamilyStatus"
+        },
+        "versions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CatalogVersion"
+          },
+          "minProperties": 1,
+          "title": "Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "status",
+        "available",
+        "versions"
+      ],
+      "title": "CatalogStandard",
+      "type": "object"
+    },
+    "CatalogVersion": {
+      "additionalProperties": false,
+      "description": "Channel, availability, and payload identity for one exact version.",
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/PayloadAvailability"
+        },
+        "channel": {
+          "$ref": "#/$defs/CatalogChannel"
+        },
+        "payload_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "availability",
+        "payload_digest"
+      ],
+      "title": "CatalogVersion",
+      "type": "object"
+    },
+    "FamilyStatus": {
+      "description": "Lifecycle states shared by every package family.",
+      "enum": [
+        "draft",
+        "review",
+        "active",
+        "deprecated",
+        "archived",
+        "superseded"
+      ],
+      "title": "FamilyStatus",
+      "type": "string"
+    },
+    "PayloadAvailability": {
+      "description": "Whether a payload is selectable by consumers or catalog-only.",
+      "enum": [
+        "consumer",
+        "reference-only",
+        "internal"
+      ],
+      "title": "PayloadAvailability",
+      "type": "string"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/consumer-catalog.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Tool-owned complete catalog snapshot.",
+  "properties": {
+    "project_standards": {
+      "$ref": "#/$defs/CatalogHeader"
+    },
+    "standards": {
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "$ref": "#/$defs/CatalogStandard"
+        }
+      },
+      "title": "Standards",
+      "type": "object"
+    }
+  },
+  "required": [
+    "project_standards",
+    "standards"
+  ],
+  "title": "ConsumerCatalog",
+  "type": "object"
+}
