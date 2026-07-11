@@ -196,8 +196,8 @@ def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
 def test_no_yaml_fence_in_standards_docs_contains_tabs() -> None:
     # YAML forbids tab indentation; a tab-indented scaffold fence ships a broken
     # artifact to manual copy-adopters (python-tooling §15 did exactly that until
-    # 2026-07-01). The shared .editorconfig defaults Markdown to tabs, so this is
-    # an easy authoring mistake to reintroduce.
+    # 2026-07-01). Keep the check even though EditorConfig now gives Markdown a
+    # space override: copied or generated fences can still carry literal tabs.
     for md in (_REPO / "standards").rglob("*.md"):
         for block in re.findall(r"```ya?ml\n(.*?)```", md.read_text(), re.DOTALL):
             assert "\t" not in block, md

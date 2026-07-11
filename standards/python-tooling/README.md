@@ -907,10 +907,12 @@ indent_style = space
 indent_size = 2
 
 [*.md]
+indent_style = space
+indent_size = 2
 trim_trailing_whitespace = false
 ```
 
-Policy decision: the global `indent_style = tab` makes JSON/JSONC and Markdown tab-indented to match Prettier (which emits tabs), while the language toolchains pin their own indentation — Python and TOML use 4 spaces (PEP 8 / ruff), and YAML uses 2 spaces because the YAML spec forbids tabs in indentation. This **reconciles** the previously documented "spaces for `*.{toml,yml,yaml,json,md}`" rule with the Markdown Tooling floor so the two standards share a single `.editorconfig`; because Python Tooling is copy-adopt (never inherited automatically), the change to JSON/Markdown indentation cannot newly-fail an existing consumer. Markdown trailing whitespace is not trimmed because Markdown uses trailing spaces intentionally for hard line breaks.
+Policy decision: the global `indent_style = tab` makes JSON/JSONC tab-indented to match Prettier, while the language toolchains pin their own indentation. Python and TOML use 4 spaces (PEP 8 / Ruff), YAML uses 2 spaces because its syntax forbids tab indentation, and Markdown uses 2 spaces because Prettier's Markdown printer emits column-sensitive CommonMark list indentation with spaces even when `useTabs` is enabled. The Markdown override also matches MD007's `indent: 2`, so typed indentation, formatting, and linting agree. Markdown trailing whitespace is not trimmed because trailing spaces intentionally create hard line breaks.
 
 ---
 

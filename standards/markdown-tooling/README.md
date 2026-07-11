@@ -240,10 +240,14 @@ EditorConfig is the floor under both tools — every editor agrees on charset, l
 
 ```ini
 [*.md]
+indent_style = space
+indent_size = 2
 trim_trailing_whitespace = false
 ```
 
-Two trailing spaces are a **Markdown hard line break**, which Prettier preserves. Stripping them on save (the EditorConfig default for `trim_trailing_whitespace`) would make the editor and Prettier disagree: the editor would delete the break, Prettier would expect it. `trim_trailing_whitespace = false` for `[*.md]` keeps them. EditorConfig supports exactly this property and the `[*.md]` glob-section targeting [S07].
+Prettier's Markdown printer aligns nested list content with spaces even when `useTabs` is enabled, because CommonMark list indentation is column-sensitive. The Markdown override therefore uses two spaces, matching MD007's configured `indent: 2`, so typed indentation, formatting, and linting agree.
+
+Two trailing spaces are a **Markdown hard line break**, which Prettier preserves. Stripping them on save (the EditorConfig default for `trim_trailing_whitespace`) would make the editor and Prettier disagree: the editor would delete the break, Prettier would expect it. `trim_trailing_whitespace = false` for `[*.md]` keeps them. EditorConfig supports these properties and the `[*.md]` glob-section targeting [S07].
 
 ---
 
