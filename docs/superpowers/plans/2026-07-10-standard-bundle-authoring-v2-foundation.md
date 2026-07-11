@@ -45,7 +45,7 @@ This plan implements the authoring/declaration portions of BA02 FR-001–FR-25 a
 | FR-026–FR-031 | Follow-on V5 package migration/release plan | Not Started, except reusable declaration primitives |
 | FR-032 | Task 11 generated schemas and drift tests | Passing |
 | FR-033 | Tasks 9–10 synthetic-package and architecture tests | Passing for authoring core; rechecked in control-plane core |
-| FR-034, IR-007, DR-008 | Task 13 source/sdist/wheel parity | Passing |
+| FR-034, IR-007, DR-008 | Task 13 source/sdist/wheel parity | Passing for the projection mechanism with a synthetic payload; rechecked against every real payload in the V5 migration plan |
 | NFR-001, NFR-003, NFR-004, NFR-007–NFR-009 | Tasks 1, 6–11, and 14 | Passing for authoring layer |
 | NFR-002, NFR-005–NFR-006 | Task 14 offline discovery plus follow-on provider/adapter execution suites | Partial |
 
@@ -80,8 +80,8 @@ findings = validate_package_repository(repository)
 ```bash
 project-standards standards validate-packages --root .
 project-standards standards validate-packages --root . --json
-project-standards standards render-consumer-catalog --root . --catalog-major 5
-project-standards standards render-consumer-catalog --root . --catalog-major 5 --check
+project-standards standards render-consumer-catalog --root . --catalog-major 5 --output PATH
+project-standards standards render-consumer-catalog --root . --catalog-major 5 --output PATH --check
 project-standards standards sync-payload-projection --root . --check
 project-standards standards generate-package-schemas --root . --check
 ```
@@ -90,7 +90,7 @@ Exit codes remain `0` for success, `1` for contract findings or stale generated 
 
 ## Target File Structure
 
-Create:
+Create the following new files and directories. `src/project_standards/schemas/` already exists; add only the three named V2 schema files beside its V1 contents.
 
 ```text
 src/project_standards/package_contract/
@@ -109,7 +109,7 @@ src/project_standards/package_contract/
 ├── repository.py
 └── schemas.py
 
-src/project_standards/schemas/
+src/project_standards/schemas/  # existing directory
 ├── standard-family.schema.json
 ├── standard-payload.schema.json
 └── standards-catalog-source.schema.json
@@ -237,16 +237,20 @@ The loader must wrap `TOMLDecodeError`, `UnicodeDecodeError`, `OSError`, and `Va
 ```python
 class PayloadManifest(StrictModel):
     schema_version: Literal["1.0"]
-    standard: PayloadIdentity
+    payload: PayloadIdentity
+    config: ConfigDeclaration
     capabilities: CapabilityDeclaration
-    relations: RelationDeclaration = RelationDeclaration()
+    relations: RelationDeclaration = Field(default_factory=RelationDeclaration)
     resources: list[ResourceDeclaration]
-    artifacts: list[WholeArtifactDeclaration] = []
-    contributions: list[ContributionDeclaration] = []
-    providers: list[ProviderDeclaration] = []
-    extensions: list[ExtensionDeclaration] = []
-    migrations: list[MigrationDeclaration] = []
+    artifacts: list[WholeArtifactDeclaration] = Field(default_factory=list)
+    contributions: list[ContributionDeclaration] = Field(default_factory=list)
+    providers: list[ProviderDeclaration] = Field(default_factory=list)
+    extensions: list[ExtensionDeclaration] = Field(default_factory=list)
+    migrations: list[MigrationDeclaration] = Field(default_factory=list)
+    legacy_signatures: list[LegacySignatureDeclaration] = Field(default_factory=list)
 ```
+
+The root field names above match the normative TOML tables exactly: `[payload]`, `[config]`, and `[[legacy_signatures]]`. Nested declarations are expanded in Tasks 3–5 rather than inferred from this abbreviated root sketch.
 
 - [ ] Verify no model contains catalog roles or a `latest` field.
 - [ ] Run focused tests and strict checks; expect pass.
@@ -297,14 +301,15 @@ class PayloadManifest(StrictModel):
 - [ ] Implement streaming SHA-256 and canonical aggregate digest:
 
 ```text
-sha256(
-  UTF8("payload.toml\0" + sha256(raw_payload_toml) + "\n")
-  + for each declared path sorted by UTF-8 bytes:
-      UTF8(path + "\0" + declared_sha256 + "\n")
-)
+entries = for payload.toml and every other declared file:
+    UTF8(normalized_path) + NUL + ASCII("sha256:" + lowercase_hex_digest) + LF
+
+aggregate = "sha256:" + lowercase_hex(SHA256(concatenate(
+    entries sorted together by normalized UTF-8 path bytes
+)))
 ```
 
-Use the exact separator/encoding defined in SPEC-BA02 §9; if the prose and the example disagree, stop and amend the approved spec before implementation.
+Use the exact separator, digest form, ordering, and golden vector defined in SPEC-BA02 §9. The independent test oracle must reproduce the spec's two-file aggregate `sha256:eb5608592b65f5e627a592e1af5db67222a43fb0fadd6002f77f5cda3f10943a`. If the normative prose and vector disagree, stop and amend the approved spec before implementation.
 
 - [ ] Test a one-byte change in every payload file class and prove failure occurs before graph/provider work.
 - [ ] Run focused tests; expect pass.
@@ -330,6 +335,8 @@ class CatalogSource(StrictModel):
 ```
 
 - [ ] Implement deterministic generation of the package/version/channel/digest portion required by SPEC-CP01 `.standards/catalog.toml`. Do not generate consumer enabled state or locks.
+- [ ] Require `--output PATH`; there is no repository-default consumer-catalog destination. Write mode atomically replaces that caller-selected file. `--check` is read-only and compares regenerated bytes with that same path.
+- [ ] Track a golden output only at `tests/fixtures/package_contract/valid/full/expected/catalog.toml`. Production authoring inputs remain `catalogs/{catalog-major}.toml`; the control-plane runtime later owns each consumer's committed `.standards/catalog.toml`.
 - [ ] Prove repeated rendering and randomized input order produce byte-identical TOML.
 - [ ] Commit: `feat(v5): validate catalog scoped package channels`
 
@@ -454,7 +461,9 @@ uv build --wheel dist/project_standards-*.tar.gz --out-dir dist/from-sdist
 
 - Create: `tests/package_contract/test_end_to_end.py`
 - Create: `tests/package_contract/test_scale.py`
-- Complete synthetic valid repositories under `tests/fixtures/package_contract/valid/`.
+- Create: `tests/fixtures/package_contract/valid/full/`
+- Create: `tests/fixtures/package_contract/valid/full/expected/catalog.toml`
+- Complete the other synthetic valid repositories under `tests/fixtures/package_contract/valid/`.
 
 - [ ] Create at least three data-only synthetic packages covering consumer, reference-only, and internal availability; all output declaration types; a shared contribution; provider declarations; referenced extension; automatic/manual migrations; and default/retained/candidate roles.
 - [ ] Validate source, render consumer catalog, build/install wheel, rediscover installed payloads offline, and compare normalized repository facts.

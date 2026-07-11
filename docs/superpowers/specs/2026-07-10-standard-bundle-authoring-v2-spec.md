@@ -44,6 +44,7 @@ related:
 | 0.1 | 2026-07-10 | Coding agent with owner-approved design | Initial Full specification for the V2 package-family index, immutable payload, catalog-channel, semantic-contribution, provider, migration, and conformance contract. |
 | 0.2 | 2026-07-10 | Coding agent with round-1 review | Corrected provider phase vocabulary and goal traceability; sourced the 11-family V5 estimate; defined exact legacy managed-block signatures and migration behavior; normalized catalog placeholders and legacy current-state terminology. |
 | 0.3 | 2026-07-10 | Chris Purcell / L3DigitalNet | Owner approval after round-1 remediation; SPEC-BA01 superseded and implementation planning authorized. |
+| 0.4 | 2026-07-10 | Coding agent with foundation-plan review | Clarified the existing aggregate-digest algorithm: every inventory entry uses the full lowercase `sha256:` digest form, all entries sort together, and one exact golden vector fixes the byte contract. No scope or requirement changed. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
@@ -614,11 +615,20 @@ Each referenced regular file declares a lowercase SHA-256 digest. Validation rec
 The aggregate digest is computed from a canonical inventory:
 
 1. Compute the raw-byte SHA-256 of `payload.toml`.
-2. Create an entry for `payload.toml` and one entry for every other declared file as `NORMALIZED_PATH NUL SHA256_DIGEST LF`.
-3. Sort entries by normalized UTF-8 path bytes.
+2. Create an entry for `payload.toml` and one entry for every other declared file as `NORMALIZED_PATH NUL SHA256_DIGEST LF`, where `NORMALIZED_PATH` is encoded as UTF-8 and `SHA256_DIGEST` is the full lowercase ASCII form `sha256:` followed by 64 lowercase hexadecimal digits.
+3. Sort the complete entry set—including `payload.toml`—by normalized UTF-8 path bytes.
 4. SHA-256 the concatenated entries and encode `sha256:LOWERCASE_HEX`.
 
 The family index and every catalog reference carry this aggregate. `payload.toml` does not carry its own aggregate, avoiding a self-reference.
+
+The following algorithm-only golden vector fixes the exact bytes independently of payload-shape validation:
+
+| Path | Raw bytes | File digest |
+| --- | --- | --- |
+| `README.md` | UTF-8 `# Demo` followed by LF | `sha256:31ca6c61ca3fcc54029a62bd082448b88718b913d24e195794969dd2d123b990` |
+| `payload.toml` | UTF-8 `schema_version = "1.0"` followed by LF | `sha256:c78775ad9c87559888ed09f8d82522c0f210fd3faae238de83a8118502569180` |
+
+Byte sorting places `README.md` before `payload.toml`. Concatenating both `PATH NUL DIGEST LF` entries produces aggregate `sha256:eb5608592b65f5e627a592e1af5db67222a43fb0fadd6002f77f5cda3f10943a`.
 
 ### Catalog Source
 

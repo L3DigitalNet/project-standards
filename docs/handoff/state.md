@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Review and then execute the BA02 package-contract foundation plan; write the control-plane core and current-package migration plans at their declared boundaries.
+- Independently re-review, then execute, the remediated BA02 package-contract foundation plan.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.
