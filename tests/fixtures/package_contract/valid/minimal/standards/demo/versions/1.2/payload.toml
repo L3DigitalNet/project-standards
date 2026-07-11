@@ -22,25 +22,25 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+digest = "sha256:a93f5b9b457c3de71ea4ba360cdb4f340afd8b5b5036b2eedb5bf731acaf6ab8"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+digest = "sha256:ac255a07dacf456408b7ab354a65ccf881345f8a0442492a9c8917724de0bb06"
 
 [[resources]]
 id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+digest = "sha256:4a1ebb65d6b50f3f6f9300fc41a594ba278bce382d913df89a588394944effe4"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+digest = "sha256:1f038c7aa945f9b928301b6092f92c3dfb88177ad8dbd4193ddf7945a4d8b1e4"
