@@ -1,0 +1,29 @@
+---
+name: "CI"
+on: # GitHub treats this key as text.
+  push:
+
+env: &shared
+  KEEP: "yes"
+
+jobs:
+  consumer:
+    runs-on: ubuntu-latest # consumer runner
+    steps:
+      - run: echo "${{ github.ref }}" # preserve expression
+  check:
+    name: 'Lint'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv run ruff check . # lint command
+
+hooks:
+  - id: consumer
+    command: "echo keep" # consumer hook
+  - id: session-start
+    command: python3 .agents/hooks/session_start.py
+
+settings:
+  inherited: *shared
+...

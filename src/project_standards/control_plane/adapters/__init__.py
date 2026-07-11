@@ -10,6 +10,7 @@ from project_standards.control_plane.adapters.jsonc import JsonAdapter, JsoncAda
 from project_standards.control_plane.adapters.registry import AdapterRegistry
 from project_standards.control_plane.adapters.toml import TomlAdapter
 from project_standards.control_plane.adapters.whole_file import WholeFileAdapter
+from project_standards.control_plane.adapters.yaml import YamlAdapter
 
 __all__ = [
     "AdapterRegistry",
@@ -21,4 +22,5 @@ __all__ = [
     "TomlAdapter",
     "UnitChange",
     "WholeFileAdapter",
+    "YamlAdapter",
 ]

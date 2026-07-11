@@ -1,0 +1,5 @@
+hooks:
+  - id: session-start
+    command: one
+  - id: session-start
+    command: two

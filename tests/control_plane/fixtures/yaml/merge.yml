@@ -1,0 +1,6 @@
+defaults: &defaults
+  runs-on: ubuntu-latest
+jobs:
+  check:
+    <<: *defaults
+    steps: []
