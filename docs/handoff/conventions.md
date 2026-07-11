@@ -17,6 +17,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 9 | Doc-embedded scaffolds are byte-locked to their bundle twin | Editing a copy-paste scaffold fence inside a standard doc |
 | 10 | V1 and V2 manifests coexist through a preamble boundary | Discovering package-family indexes during the V5 migration |
 | 11 | Installed V2 payloads use a symlink-only source projection | Adding or packaging canonical versioned payloads |
+| 12 | Managed Markdown ranges use paired Prettier guards | Composing formatter-stable package blocks in consumer Markdown |
 
 ## 1. Dogfood the standards
 
@@ -177,3 +178,27 @@ For YAML fences:
 **Sources:** `project_standards.package_contract.projection`; SPEC-BA02 FR-034 and IR-007.
 
 **Related:** 3, 4, 6, 10.
+
+## 12. Managed Markdown ranges use paired Prettier guards
+
+**Applies when:** a standards package owns one bounded block inside consumer Markdown.
+
+**Rule:** wrap each exact `BEGIN project-standards:BLOCK_ID` / `END project-standards:BLOCK_ID` block in top-level `<!-- prettier-ignore-start -->` and `<!-- prettier-ignore-end -->` comments. Keep a blank line before each Prettier range marker. The Markdown adapter rejects inline, nested, duplicate, orphaned, or partially guarded layouts.
+
+```markdown
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:example -->
+Managed bytes stay formatter-stable.
+<!-- END project-standards:example -->
+
+<!-- prettier-ignore-end -->
+```
+
+Use the existing bare `<!-- prettier-ignore -->` convention only for one following Markdown node, such as a byte-locked YAML fence. It does not protect a multi-node managed range.
+
+**Why:** Prettier 3.8.3 preserves the managed bytes only when the range markers are top-level and correctly separated. The adapter test runs the pinned formatter and verifies that the block digest and raw bytes remain unchanged.
+
+**Sources:** Prettier range-ignore documentation; SPEC-CP01 Task 13 verification fixture.
+
+**Related:** 3, 7, 9.

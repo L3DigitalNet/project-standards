@@ -1,0 +1,11 @@
+# Consumer-wide settings.
+root = true
+
+[ *.{py,pyi} ]
+indent_style = space
+indent_size: 4
+# Keep this local rule.
+max_line_length = 100
+
+[*.md]
+trim_trailing_whitespace = false
