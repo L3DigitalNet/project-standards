@@ -10,9 +10,15 @@ from project_standards.control_plane.cli import run, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, ApplyResult
+from project_standards.control_plane.migration import (
+    apply_legacy_migration,
+    plan_legacy_migration,
+)
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
 from project_standards.package_contract.payload import ProviderEffect
 from tests.control_plane.helpers import installed_distribution
+
+_FULL_ALPHA = Path("tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0")
 
 
 def _use_distribution(
@@ -23,6 +29,20 @@ def _use_distribution(
         return distribution
 
     monkeypatch.setattr(InstalledDistribution, "current", staticmethod(current))
+
+
+def _legacy_repo(root: Path, *, extra_yaml: str = "") -> Path:
+    repo = root / "consumer"
+    repo.mkdir(parents=True)
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nalpha:\n  enabled: true\n" + extra_yaml,
+        encoding="utf-8",
+    )
+    (repo / "legacy-alpha.md").write_bytes((_FULL_ALPHA / "legacy.md").read_bytes())
+    extension = repo / "config/alpha-options.toml"
+    extension.parent.mkdir(parents=True)
+    extension.write_text("consumer = true\n", encoding="utf-8")
+    return repo
 
 
 def test_reconcile_help_documents_mutation_and_recovery_flags(
@@ -80,6 +100,217 @@ def test_init_json_reports_created_and_idempotent(
     invalid = capsys.readouterr()
     assert invalid.err == ""
     assert '"code": "CP-ARGUMENT"' in invalid.out
+
+
+def test_init_migration_help_and_incompatible_apply_flag(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert project_standards_main(["init", "--help"]) == 0
+    help_output = capsys.readouterr().out
+    assert "--migrate" in help_output
+    assert "--apply" in help_output
+
+    assert project_standards_main(["init", "--catalog", "5", "--apply", "--json"]) == 2
+    invalid = capsys.readouterr()
+    assert invalid.err == ""
+    assert '"code": "CP-ARGUMENT"' in invalid.out
+
+
+def test_init_migration_preview_apply_and_repeat_apply_json_contract(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    _use_distribution(monkeypatch, distribution)
+    repo = _legacy_repo(tmp_path)
+
+    assert (
+        project_standards_main(
+            ["init", "--catalog", "5", "--migrate", "--repo", str(repo), "--json"]
+        )
+        == 1
+    )
+    preview = capsys.readouterr()
+    assert preview.err == ""
+    assert '"mode": "migration-plan"' in preview.out
+    assert '"applicable": true' in preview.out
+    assert not (repo / ".standards").exists()
+
+    assert (
+        project_standards_main(
+            [
+                "init",
+                "--catalog",
+                "5",
+                "--migrate",
+                "--apply",
+                "--repo",
+                str(repo),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    applied = capsys.readouterr()
+    assert applied.err == ""
+    assert '"mode": "migration-apply"' in applied.out
+    assert '"success": true' in applied.out
+    assert not (repo / ".project-standards.yml").exists()
+
+    assert (
+        project_standards_main(
+            [
+                "init",
+                "--catalog",
+                "5",
+                "--migrate",
+                "--apply",
+                "--repo",
+                str(repo),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    repeated = capsys.readouterr()
+    assert repeated.err == ""
+    assert '"mode": "migration-noop"' in repeated.out
+
+
+def test_init_migration_state_and_nonapplicable_exit_codes(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    _use_distribution(monkeypatch, distribution)
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    assert (
+        project_standards_main(
+            ["init", "--catalog", "5", "--migrate", "--repo", str(empty), "--json"]
+        )
+        == 2
+    )
+    assert '"code": "CP-MIGRATION-STATE"' in capsys.readouterr().out
+
+    blocked = _legacy_repo(tmp_path / "blocked", extra_yaml="unknown: true\n")
+    assert (
+        project_standards_main(
+            ["init", "--catalog", "5", "--migrate", "--repo", str(blocked), "--json"]
+        )
+        == 1
+    )
+    nonapplicable = capsys.readouterr().out
+    assert '"applicable": false' in nonapplicable
+    assert "CP-MIGRATION-UNCLAIMED-SETTING" in nonapplicable
+
+    dual = _legacy_repo(tmp_path / "dual")
+    (dual / ".standards").mkdir()
+    assert (
+        project_standards_main(
+            ["init", "--catalog", "5", "--migrate", "--repo", str(dual), "--json"]
+        )
+        == 1
+    )
+    recoverable = capsys.readouterr().out
+    assert '"mode": "migration-recovery-plan"' in recoverable
+
+    assert (
+        project_standards_main(
+            [
+                "init",
+                "--catalog",
+                "5",
+                "--migrate",
+                "--apply",
+                "--repo",
+                str(dual),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    recovered = capsys.readouterr().out
+    assert '"mode": "migration-apply"' in recovered
+    assert '"success": true' in recovered
+    assert not (dual / ".project-standards.yml").exists()
+
+
+def test_init_migration_apply_recovers_a_prior_process_lock_prefix(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    _use_distribution(monkeypatch, distribution)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    def fail_after_lock(phase: str, identity: str) -> None:
+        if (phase, identity) == ("published", ".standards/lock.toml"):
+            raise RuntimeError("injected prior-process fault")
+
+    failed = apply_legacy_migration(plan, fault_hook=fail_after_lock)
+    assert not failed.success
+    assert (repo / ".project-standards.yml").exists()
+
+    assert (
+        project_standards_main(
+            [
+                "init",
+                "--catalog",
+                "5",
+                "--migrate",
+                "--apply",
+                "--repo",
+                str(repo),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert '"success": true' in output
+    assert not (repo / ".project-standards.yml").exists()
+
+
+def test_init_migration_recovery_preserves_original_container_provenance(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    _use_distribution(monkeypatch, distribution)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    def fail_after_first_artifact(phase: str, identity: str) -> None:
+        if (phase, identity) == ("published", ".editorconfig"):
+            raise RuntimeError("injected prior-process fault")
+
+    failed = apply_legacy_migration(plan, fault_hook=fail_after_first_artifact)
+    assert not failed.success
+
+    assert (
+        project_standards_main(
+            [
+                "init",
+                "--catalog",
+                "5",
+                "--migrate",
+                "--apply",
+                "--repo",
+                str(repo),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert (repo / ".standards/lock.toml").read_bytes() == plan.lock_content
 
 
 def test_legacy_list_and_adopt_emit_v5_deprecation_notices(

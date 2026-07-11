@@ -16,12 +16,14 @@ import secrets
 import stat
 from collections.abc import Callable
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
 from project_standards.control_plane.codec import render_lock
 from project_standards.control_plane.diagnostics import (
     ActionKind,
+    ControlAction,
     ControlFinding,
     ControlPlaneError,
     sort_findings,
@@ -43,13 +45,16 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     invoke_provider,
 )
-from project_standards.control_plane.snapshot import RepositorySnapshot
+from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot
 from project_standards.package_contract.paths import SafeRelativePath
 from project_standards.package_contract.payload import (
     JsonObject,
     ProviderEffect,
     ProviderOperation,
 )
+
+if TYPE_CHECKING:
+    from project_standards.control_plane.migration import LegacyMigrationPlan
 
 type FaultHook = Callable[[str, str], None]
 type VerificationRunner = Callable[[ProviderInvocation], ProviderResult]
@@ -106,7 +111,7 @@ def _fault(request: ApplyRequest, phase: str, identity: str) -> None:
         request.fault_hook(phase, identity)
 
 
-def _plan_fingerprint(plan: ReconciliationPlan) -> str:
+def reconciliation_fingerprint(plan: ReconciliationPlan) -> str:
     digest = hashlib.sha256()
     digest.update(
         json.dumps(
@@ -388,10 +393,10 @@ def _verify(
     snapshots = _verification_snapshot(request.planner.repo, plan)
     findings: list[ControlFinding] = []
     for verification in plan.verification_requests:
-        _fault(request, "verify", verification.provider_id)
         package = packages[verification.standard_id]
         payload = payloads[(verification.standard_id, verification.version)]
         try:
+            _fault(request, "verify", verification.provider_id)
             result = runner(
                 ProviderInvocation(
                     repo=request.planner.repo,
@@ -449,7 +454,8 @@ def _apply_locked(
         if (
             not request.expected_plan.applicable
             or not current.applicable
-            or _plan_fingerprint(current) != _plan_fingerprint(request.expected_plan)
+            or reconciliation_fingerprint(current)
+            != reconciliation_fingerprint(request.expected_plan)
         ):
             return ApplyResult(False, (), False, "CP-STALE-PLAN")
         plan = current
@@ -517,3 +523,392 @@ def apply_reconciliation(request: ApplyRequest) -> ApplyResult:
     except (_ApplyFailure, ControlPlaneError, ValueError, OSError) as exc:
         code = exc.code if isinstance(exc, _ApplyFailure) else "CP-APPLY-FAILED"
         return ApplyResult(False, (), False, code)
+
+
+def _migration_plan_current(plan: LegacyMigrationPlan) -> bool:
+    from project_standards.control_plane.migration import (
+        legacy_migration_content_fingerprint,
+        plan_legacy_migration,
+    )
+
+    if plan.repo != plan.planner.repo or not plan.applicable:
+        return False
+    if plan.reconciliation_fingerprint != reconciliation_fingerprint(plan.reconciliation):
+        return False
+    if plan.content_fingerprint != legacy_migration_content_fingerprint(
+        plan.repo,
+        plan.reconciliation_fingerprint,
+        plan.legacy_preconditions,
+        plan.config_content,
+        plan.catalog_content,
+        plan.lock_content,
+    ):
+        return False
+    try:
+        if plan.repo.resolve(strict=True) != plan.repo:
+            return False
+        installed = plan.distribution.load_catalog(
+            plan.catalog.project_standards.catalog,
+        )
+        if (
+            plan.distribution.consumer_catalog(plan.catalog.project_standards.catalog)
+            != plan.catalog
+        ):
+            return False
+    except ControlPlaneError, OSError, ValueError:
+        return False
+    expected_lineage = tuple(
+        (
+            payload.manifest.payload.standard,
+            payload.manifest.payload.version.value,
+            payload.integrity.aggregate_digest.value,
+        )
+        for payload in plan.planner.payloads
+    )
+    installed_lineage = tuple(
+        (
+            payload.manifest.payload.standard,
+            payload.manifest.payload.version.value,
+            payload.integrity.aggregate_digest.value,
+        )
+        for payload in installed.payloads
+    )
+    if installed_lineage != expected_lineage:
+        return False
+    if (plan.repo / ".standards").exists() or (plan.repo / ".standards").is_symlink():
+        return True
+    try:
+        current = plan_legacy_migration(
+            plan.repo,
+            plan.distribution,
+            plan.catalog.project_standards.catalog,
+        )
+    except ControlPlaneError, OSError, ValueError:
+        return False
+    current_lineage = tuple(
+        (
+            payload.manifest.payload.standard,
+            payload.manifest.payload.version.value,
+            payload.integrity.aggregate_digest.value,
+        )
+        for payload in current.planner.payloads
+    )
+    return (
+        current.applicable
+        and current.repo == plan.repo
+        and current.to_jsonable() == plan.to_jsonable()
+        and current.config_content == plan.config_content
+        and current.catalog_content == plan.catalog_content
+        and current.lock_content == plan.lock_content
+        and current.legacy_preconditions == plan.legacy_preconditions
+        and reconciliation_fingerprint(current.reconciliation)
+        == reconciliation_fingerprint(plan.reconciliation)
+        and current_lineage == expected_lineage
+    )
+
+
+def _legacy_preconditions_current(
+    plan: LegacyMigrationPlan,
+    *,
+    allow_removed: bool,
+) -> bool:
+    paths = tuple(SafeRelativePath.parse(path) for path, _digest in plan.legacy_preconditions)
+    try:
+        snapshot = RepositorySnapshot.capture(plan.repo, paths)
+    except ControlPlaneError, OSError, ValueError:
+        return False
+    removable = {action.target for action in plan.legacy_removals}
+    for path, digest in plan.legacy_preconditions:
+        entry = snapshot.entry(SafeRelativePath.parse(path))
+        if entry.kind is EntryKind.MISSING and allow_removed and path in removable:
+            continue
+        if entry.content_digest != digest:
+            return False
+    return True
+
+
+def _remaining_reconciliation(plan: LegacyMigrationPlan) -> ReconciliationPlan:
+    targets = {target.target: target for target in plan.reconciliation.targets}
+    remaining: list[ControlAction] = []
+    for action in plan.reconciliation.actions:
+        if action.kind not in _MUTATING_ACTIONS:
+            continue
+        relative = SafeRelativePath.parse(action.target)
+        observed = RepositorySnapshot.capture(plan.repo, (relative,)).entry(relative)
+        if action.kind is ActionKind.REMOVE:
+            if observed.kind is EntryKind.MISSING:
+                continue
+        else:
+            target = targets[action.target]
+            desired = hashlib.sha256(target.content).hexdigest()
+            desired_digest = f"sha256:{desired}"
+            desired_mode = target.mode
+            if (
+                observed.content_digest is not None
+                and observed.content_digest.value == desired_digest
+                and (desired_mode is None or observed.mode == desired_mode)
+            ):
+                continue
+        if observed.precondition_digest.value != _precondition(
+            plan.reconciliation,
+            action.target,
+        ):
+            raise _ApplyFailure(
+                "CP-STALE-PLAN",
+                "migration target differs from both its preview and proposed state",
+            )
+        remaining.append(action)
+    names = {action.target for action in remaining}
+    prunes = tuple(
+        namespace
+        for namespace in plan.reconciliation.namespace_prunes
+        if (plan.repo / namespace).exists()
+    )
+    return replace(
+        plan.reconciliation,
+        actions=tuple(remaining),
+        targets=tuple(target for target in plan.reconciliation.targets if target.target in names),
+        namespace_prunes=prunes,
+    )
+
+
+def _publish_control_file(
+    request: ApplyRequest,
+    control: LockedControlDirectory,
+    temporary: str,
+    destination: str,
+) -> None:
+    _fault(request, "publish", f".standards/{destination}")
+    if control.file_kind(destination) != "missing" or not control.is_current():
+        raise _ApplyFailure("CP-PRECONDITION", "migration control state changed during apply")
+    try:
+        os.replace(
+            temporary,
+            destination,
+            src_dir_fd=control.descriptor,
+            dst_dir_fd=control.descriptor,
+        )
+        os.fsync(control.descriptor)
+    except OSError as exc:
+        raise _ApplyFailure("CP-APPLY-PUBLISH", "control file replacement failed") from exc
+    _fault(request, "published", f".standards/{destination}")
+
+
+def _remove_legacy(
+    request: ApplyRequest,
+    plan: LegacyMigrationPlan,
+    root_descriptor: int,
+    applied: list[str],
+) -> None:
+    expected = dict(plan.legacy_preconditions)
+    for action in plan.legacy_removals:
+        _fault(request, "remove", action.target)
+        relative = SafeRelativePath.parse(action.target)
+        snapshot = RepositorySnapshot.capture(plan.repo, (relative,)).entry(relative)
+        if snapshot.kind is EntryKind.MISSING:
+            continue
+        if snapshot.content_digest != expected.get(action.target):
+            raise _ApplyFailure("CP-PRECONDITION", "legacy state changed during apply")
+        parent = _open_parent(root_descriptor, relative.normalized.parent, [])
+        try:
+            os.unlink(relative.normalized.name, dir_fd=parent)
+            os.fsync(parent)
+        except OSError as exc:
+            raise _ApplyFailure("CP-MIGRATION-REMOVE", "legacy state removal failed") from exc
+        finally:
+            os.close(parent)
+        applied.append(action.target)
+        _fault(request, "removed", action.target)
+
+
+def apply_legacy_migration(
+    plan: LegacyMigrationPlan,
+    *,
+    fault_hook: FaultHook | None = None,
+    verification_runner: VerificationRunner | None = None,
+) -> ApplyResult:
+    """Publish one exact migration plan and retire legacy authority after verification."""
+    if not _migration_plan_current(plan):
+        return ApplyResult(False, (), False, "CP-STALE-PLAN")
+
+    control_path = plan.repo / ".standards"
+    created_control = False
+    if control_path.is_symlink():
+        return ApplyResult(False, (), False, "CP-APPLY-PATH")
+    if not control_path.exists():
+        try:
+            control_path.mkdir(mode=0o755)
+            created_control = True
+        except OSError:
+            return ApplyResult(False, (), False, "CP-APPLY-PATH")
+    elif not control_path.is_dir():
+        return ApplyResult(False, (), False, "CP-APPLY-PATH")
+
+    request = ApplyRequest(
+        planner=plan.planner,
+        expected_plan=plan.reconciliation,
+        fault_hook=fault_hook,
+        verification_runner=verification_runner,
+    )
+    applied: list[str] = []
+    verification_findings: tuple[ControlFinding, ...] = ()
+    staged: dict[str, _StagedTarget] = {}
+    control_staged: dict[str, str] = {}
+    created: list[PurePosixPath] = []
+    published = False
+    lock_written = False
+    root: Path | None = None
+    root_descriptor: int | None = None
+    control_cleanup_descriptor: int | None = None
+    try:
+        with control_plane_lock(plan.repo, LockMode.WRITE) as control:
+            control_cleanup_descriptor = os.dup(control.descriptor)
+            lock_kind = control.file_kind("lock.toml")
+            if lock_kind not in {"missing", "regular"}:
+                raise _ApplyFailure("CP-STALE-PLAN", "migration central lock is unsafe")
+            if lock_kind == "regular":
+                if control.read_bytes("lock.toml") != plan.lock_content:
+                    raise _ApplyFailure("CP-STALE-PLAN", "migration central lock is unexpected")
+                lock_written = True
+            intent_name = ".migration-lock.toml"
+            intent_kind = control.file_kind(intent_name)
+            if intent_kind not in {"missing", "regular"}:
+                raise _ApplyFailure("CP-STALE-PLAN", "migration recovery intent is unsafe")
+            intent_ready = intent_kind == "regular"
+            if intent_ready and control.read_bytes(intent_name) != plan.lock_content:
+                raise _ApplyFailure("CP-STALE-PLAN", "migration recovery intent is unexpected")
+            if lock_written and intent_ready:
+                raise _ApplyFailure("CP-STALE-PLAN", "migration has duplicate lock state")
+            if not _legacy_preconditions_current(plan, allow_removed=lock_written):
+                raise _ApplyFailure("CP-STALE-PLAN", "legacy state changed after planning")
+            root, root_descriptor = _open_repository(plan.repo)
+            _fault(request, "before-staging", "$migration")
+            for name, content in (
+                ("config.toml", plan.config_content),
+                ("catalog.toml", plan.catalog_content),
+                ("lock.toml", plan.lock_content),
+            ):
+                if name == "lock.toml" and (lock_written or intent_ready):
+                    continue
+                kind = control.file_kind(name)
+                if kind == "regular":
+                    if control.read_bytes(name) != content:
+                        raise _ApplyFailure(
+                            "CP-STALE-PLAN",
+                            "migration control file differs from its proposed state",
+                        )
+                    continue
+                if kind != "missing":
+                    raise _ApplyFailure("CP-STALE-PLAN", "migration control file is unsafe")
+                control_staged[name] = _stage_bytes(
+                    control.descriptor,
+                    name,
+                    content,
+                    "0644",
+                )
+            remaining = _remaining_reconciliation(plan)
+            staged = _stage_targets(
+                request,
+                remaining,
+                root_descriptor,
+                created,
+            )
+            if (
+                not _legacy_preconditions_current(plan, allow_removed=lock_written)
+                or not control.is_current()
+            ):
+                raise _ApplyFailure("CP-PRECONDITION", "migration authority changed after staging")
+
+            if not lock_written and not intent_ready:
+                _fault(request, "intent", f".standards/{intent_name}")
+                if control.file_kind(intent_name) != "missing" or not control.is_current():
+                    raise _ApplyFailure("CP-PRECONDITION", "migration intent changed during apply")
+                try:
+                    os.replace(
+                        control_staged["lock.toml"],
+                        intent_name,
+                        src_dir_fd=control.descriptor,
+                        dst_dir_fd=control.descriptor,
+                    )
+                    os.fsync(control.descriptor)
+                except OSError as exc:
+                    raise _ApplyFailure(
+                        "CP-APPLY-PUBLISH",
+                        "migration recovery intent could not be published",
+                    ) from exc
+                intent_ready = True
+                published = True
+                _fault(request, "published", f".standards/{intent_name}")
+
+            _publish_targets(
+                request,
+                remaining,
+                staged,
+                applied,
+                root_descriptor,
+            )
+            published = published or bool(applied)
+            for name in ("config.toml", "catalog.toml"):
+                if name not in control_staged:
+                    continue
+                _publish_control_file(request, control, control_staged[name], name)
+                published = True
+                applied.append(f".standards/{name}")
+
+            verification_findings = _verify(request, plan.reconciliation)
+
+            if not lock_written:
+                _fault(request, "lock", ".standards/lock.toml")
+                if control.file_kind("lock.toml") != "missing" or not control.is_current():
+                    raise _ApplyFailure("CP-PRECONDITION", "central lock changed during migration")
+                try:
+                    os.replace(
+                        intent_name,
+                        "lock.toml",
+                        src_dir_fd=control.descriptor,
+                        dst_dir_fd=control.descriptor,
+                    )
+                    os.fsync(control.descriptor)
+                except OSError as exc:
+                    raise _ApplyFailure(
+                        "CP-APPLY-PUBLISH",
+                        "central lock replacement failed",
+                    ) from exc
+                lock_written = True
+                applied.append(".standards/lock.toml")
+                _fault(request, "published", ".standards/lock.toml")
+
+            _remove_legacy(request, plan, root_descriptor, applied)
+            return ApplyResult(
+                True,
+                tuple(applied),
+                True,
+                verification_findings=verification_findings,
+            )
+    except ControlPlaneBusyError:
+        return ApplyResult(False, tuple(applied), lock_written, "CP-BUSY")
+    except _ApplyFailure as exc:
+        return ApplyResult(
+            False,
+            tuple(applied),
+            lock_written,
+            exc.code,
+            exc.findings or verification_findings,
+        )
+    except ControlPlaneError, OSError, ValueError:
+        return ApplyResult(False, tuple(applied), lock_written, "CP-APPLY-FAILED")
+    except BaseException:
+        return ApplyResult(False, tuple(applied), lock_written, "CP-APPLY-FAILED")
+    finally:
+        if root_descriptor is not None:
+            os.close(root_descriptor)
+        if root is not None:
+            _cleanup_staged(staged, root, created)
+        if control_cleanup_descriptor is not None:
+            for temporary in control_staged.values():
+                with suppress(OSError):
+                    os.unlink(temporary, dir_fd=control_cleanup_descriptor)
+            os.close(control_cleanup_descriptor)
+        if created_control and not published:
+            with suppress(OSError):
+                control_path.rmdir()

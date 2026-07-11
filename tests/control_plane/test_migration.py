@@ -23,19 +23,24 @@ from project_standards.control_plane.distribution import (
     InstalledPayload,
     ParsedToolRelease,
 )
+from project_standards.control_plane.executor import reconciliation_fingerprint
 from project_standards.control_plane.migration import (
     LegacyClaim,
     LegacyDisposition,
     MigratedPackage,
     MigrationFinding,
     MigrationReport,
+    apply_legacy_migration,
+    legacy_migration_content_fingerprint,
     migration_report_to_jsonable,
     plan_legacy_migration,
     render_migration_report,
 )
 from project_standards.control_plane.models import ConsumerCatalog, DesiredConfig
 from project_standards.control_plane.paths import CatalogMajor
+from project_standards.control_plane.planner import VerificationRequest
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
+from project_standards.control_plane.state import StateKind, detect_control_plane_state
 from project_standards.package_contract.paths import SafeRelativePath
 from project_standards.package_contract.payload import (
     LegacySignatureDeclaration,
@@ -396,6 +401,229 @@ def test_legacy_migration_preview_is_complete_and_performs_no_writes(
     assert plan.reconciliation.next_lock.referenced_inputs[0].path.original == (
         "config/alpha-options.toml"
     )
+
+
+def test_apply_legacy_migration_publishes_unified_state_and_retires_legacy(
+    tmp_path: Path,
+) -> None:
+    import project_standards.control_plane.migration as migration_module
+
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    retained = repo / "notes.txt"
+    retained.write_text("consumer-owned\n", encoding="utf-8")
+    legacy_signature = (repo / "legacy-alpha.md").read_bytes()
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    apply = getattr(migration_module, "apply_legacy_migration", None)
+    assert apply is not None, "migration apply boundary is not implemented"
+    result = apply(plan)
+
+    assert result.success
+    assert result.error_code is None
+    assert result.lock_written
+    assert not (repo / ".project-standards.yml").exists()
+    assert (repo / ".standards/config.toml").read_bytes() == plan.config_content
+    assert (repo / ".standards/catalog.toml").read_bytes() == plan.catalog_content
+    assert (repo / ".standards/lock.toml").read_bytes() == plan.lock_content
+    for target in plan.reconciliation.targets:
+        assert (repo / target.target).read_bytes() == target.content
+    assert retained.read_text(encoding="utf-8") == "consumer-owned\n"
+    assert (repo / "legacy-alpha.md").read_bytes() == legacy_signature
+    assert not tuple(repo.rglob("*.tmp"))
+    assert (
+        detect_control_plane_state(
+            repo,
+            tool_release=distribution.tool_release.value,
+        ).kind
+        is StateKind.INITIALIZED
+    )
+
+
+def test_apply_legacy_migration_refuses_a_stale_preview_without_writing(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nalpha:\n  enabled: false\n",
+        encoding="utf-8",
+    )
+
+    result = apply_legacy_migration(plan)
+
+    assert not result.success
+    assert result.error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards").exists()
+    assert (repo / ".project-standards.yml").exists()
+
+
+def test_apply_legacy_migration_refuses_nonapplicable_foreign_and_unbound_plans(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    blocked_repo = _legacy_repo(
+        tmp_path / "blocked",
+        "standards_version: v4\nalpha:\n  enabled: true\nunknown: true\n",
+    )
+    blocked = plan_legacy_migration(blocked_repo, distribution, "5")
+    assert not blocked.applicable
+    assert apply_legacy_migration(blocked).error_code == "CP-STALE-PLAN"
+    assert not (blocked_repo / ".standards").exists()
+
+    repo = _legacy_repo(tmp_path / "applicable")
+    plan = plan_legacy_migration(repo, distribution, "5")
+    foreign_repo = tmp_path / "foreign"
+    foreign_repo.mkdir()
+    foreign = replace(plan, repo=foreign_repo)
+    assert apply_legacy_migration(foreign).error_code == "CP-STALE-PLAN"
+    assert not (foreign_repo / ".standards").exists()
+
+    unbound = replace(plan, planner=replace(plan.planner, payloads=()))
+    assert apply_legacy_migration(unbound).error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards").exists()
+
+    (repo / ".standards").mkdir()
+    tampered = replace(plan, config_content=plan.config_content + b"\n")
+    assert apply_legacy_migration(tampered).error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards/config.toml").exists()
+
+
+def test_apply_legacy_migration_faults_preserve_recoverable_authority(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+
+    def injected_fault(expected: tuple[str, str]):
+        def fail(phase: str, identity: str) -> None:
+            if (phase, identity) == expected:
+                raise RuntimeError("injected migration fault")
+
+        return fail
+
+    cases = [
+        ("before-staging", "$migration"),
+        ("published", ".standards/.migration-lock.toml"),
+        ("published", ".editorconfig"),
+        ("published", ".standards/alpha/config.toml"),
+        ("published", ".standards/generated.toml"),
+        ("published", ".standards/config.toml"),
+        ("published", ".standards/catalog.toml"),
+        ("lock", ".standards/lock.toml"),
+        ("published", ".standards/lock.toml"),
+        ("remove", ".project-standards.yml"),
+        ("removed", ".project-standards.yml"),
+    ]
+
+    for index, expected in enumerate(cases):
+        repo = _legacy_repo(tmp_path / str(index))
+        plan = plan_legacy_migration(repo, distribution, "5")
+
+        result = apply_legacy_migration(plan, fault_hook=injected_fault(expected))
+
+        assert not result.success, expected
+        if expected[0] == "removed":
+            assert not (repo / ".project-standards.yml").exists()
+        else:
+            assert (repo / ".project-standards.yml").exists(), expected
+        state = detect_control_plane_state(
+            repo,
+            tool_release=distribution.tool_release.value,
+        )
+        if expected[0] == "removed":
+            assert state.kind is StateKind.INITIALIZED
+        elif expected[0] == "before-staging":
+            assert state.kind is StateKind.LEGACY_ONLY
+        else:
+            assert state.kind in {StateKind.LEGACY_ONLY, StateKind.DUAL_AUTHORITY}
+        recovery_plan = (
+            plan_legacy_migration(repo, distribution, "5")
+            if state.kind is StateKind.LEGACY_ONLY
+            else plan
+        )
+        recovered = apply_legacy_migration(recovery_plan)
+        assert recovered.success, (expected, recovered)
+        assert not (repo / ".project-standards.yml").exists()
+
+
+def test_apply_legacy_migration_verification_failure_keeps_legacy_authority(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+    reconciliation = replace(
+        plan.reconciliation,
+        verification_requests=(VerificationRequest("alpha", "2.0", "verify-alpha"),),
+    )
+    fingerprint = reconciliation_fingerprint(reconciliation)
+    plan = replace(
+        plan,
+        reconciliation=reconciliation,
+        reconciliation_fingerprint=fingerprint,
+        content_fingerprint=legacy_migration_content_fingerprint(
+            plan.repo,
+            fingerprint,
+            plan.legacy_preconditions,
+            plan.config_content,
+            plan.catalog_content,
+            plan.lock_content,
+        ),
+    )
+    (repo / ".standards").mkdir()
+
+    def fail_verification(phase: str, identity: str) -> None:
+        if (phase, identity) == ("verify", "verify-alpha"):
+            raise RuntimeError("injected verification fault")
+
+    failed = apply_legacy_migration(plan, fault_hook=fail_verification)
+
+    assert not failed.success
+    assert failed.error_code == "CP-VERIFY"
+    assert not (repo / ".standards/lock.toml").exists()
+    assert (repo / ".project-standards.yml").exists()
+    assert (
+        detect_control_plane_state(
+            repo,
+            tool_release=distribution.tool_release.value,
+        ).kind
+        is StateKind.DUAL_AUTHORITY
+    )
+
+    def verified(_invocation: ProviderInvocation) -> ProviderResult:
+        return ProviderResult(ProviderEffect.FINDINGS)
+
+    recovered = apply_legacy_migration(plan, verification_runner=verified)
+
+    assert recovered.success
+    assert not (repo / ".project-standards.yml").exists()
+
+
+def test_apply_legacy_migration_recovery_rejects_unsafe_legacy_replacement(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    def fail_after_lock(phase: str, identity: str) -> None:
+        if (phase, identity) == ("published", ".standards/lock.toml"):
+            raise RuntimeError("injected migration fault")
+
+    failed = apply_legacy_migration(plan, fault_hook=fail_after_lock)
+    assert not failed.success
+    legacy = repo / ".project-standards.yml"
+    legacy.unlink()
+    outside = tmp_path / "outside.yml"
+    outside.write_text("standards_version: v4\n", encoding="utf-8")
+    legacy.symlink_to(outside)
+
+    recovered = apply_legacy_migration(plan)
+
+    assert not recovered.success
+    assert recovered.error_code == "CP-STALE-PLAN"
+    assert legacy.is_symlink()
 
 
 def test_legacy_migration_is_deterministic_across_yaml_and_file_order(

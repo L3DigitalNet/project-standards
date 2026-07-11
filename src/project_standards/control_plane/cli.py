@@ -21,6 +21,7 @@ from project_standards.control_plane.distribution import (
 )
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.models import CentralLock
+from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
     PlannerRequest,
     ReconciliationPlan,
@@ -155,6 +156,174 @@ def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> 
     else:
         print(f"error: {message}", file=sys.stderr)
     return exit_code
+
+
+def _migration_plan_payload(plan: object, *, mode: str) -> dict[str, object]:
+    from project_standards.control_plane.migration import LegacyMigrationPlan
+
+    if not isinstance(plan, LegacyMigrationPlan):
+        raise TypeError("migration report requires a legacy migration plan")
+    return {
+        "ok": plan.applicable,
+        "mode": mode,
+        "applicable": plan.applicable,
+        "plan": plan.to_jsonable(),
+    }
+
+
+def _emit_migration_plan(
+    plan: object,
+    *,
+    mode: str,
+    json_mode: bool,
+) -> int:
+    from project_standards.control_plane.migration import LegacyMigrationPlan
+
+    if not isinstance(plan, LegacyMigrationPlan):
+        raise TypeError("migration report requires a legacy migration plan")
+    if json_mode:
+        print(json.dumps(_migration_plan_payload(plan, mode=mode), indent=2))
+    else:
+        for action in plan.actions:
+            print(f"{action.kind.value:<8} {action.target}  {action.summary}")
+        for finding in plan.findings:
+            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+    return 1
+
+
+def run_init(
+    argv: list[str] | None = None,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> int:
+    """Initialize neutral state or explicitly preview/apply legacy migration."""
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+    from project_standards.control_plane.migration import (
+        apply_legacy_migration,
+        plan_legacy_migration,
+        plan_legacy_migration_recovery,
+    )
+
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    parser = _Parser(prog="project-standards init")
+
+    def catalog_major(value: str) -> CatalogMajor:
+        try:
+            return CatalogMajor(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                "catalog must be a canonical positive integer"
+            ) from exc
+
+    parser.add_argument("--catalog", required=True, type=catalog_major)
+    parser.add_argument("--migrate", action="store_true", help="preview legacy migration")
+    parser.add_argument("--apply", action="store_true", help="apply an explicit migration")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    try:
+        args = parser.parse_args(arguments)
+    except (_ArgumentError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code == 0:
+            return 0
+        message = str(exc) if isinstance(exc, _ArgumentError) else "invalid arguments"
+        return _emit_error("--json" in arguments, "CP-ARGUMENT", message, exit_code=2)
+
+    json_mode = cast("bool", args.json)
+    if cast("bool", args.apply) and not cast("bool", args.migrate):
+        return _emit_error(
+            json_mode,
+            "CP-ARGUMENT",
+            "--apply requires --migrate",
+            exit_code=2,
+        )
+    repo = cast("Path", args.repo).resolve()
+    major = cast("CatalogMajor", args.catalog)
+    selected_distribution = distribution or InstalledDistribution.current()
+    try:
+        if not cast("bool", args.migrate):
+            result = initialize_control_plane(
+                repo,
+                major,
+                distribution=selected_distribution,
+            )
+            if json_mode:
+                print(
+                    json.dumps(
+                        {
+                            "ok": True,
+                            "created": result.created,
+                            "repo": str(result.repo),
+                            "files": [f".standards/{name}" for name in result.files],
+                        },
+                        indent=2,
+                    )
+                )
+            else:
+                action = "Initialized" if result.created else "OK"
+                print(f"{action} standards control plane: {result.repo / '.standards'}")
+            return 0
+
+        state = detect_control_plane_state(
+            repo,
+            tool_release=selected_distribution.tool_release.value,
+        )
+        if state.kind is StateKind.INITIALIZED:
+            if (
+                state.config is None
+                or state.catalog is None
+                or state.config.project_standards.catalog != major
+                or selected_distribution.consumer_catalog(major) != state.catalog
+            ):
+                return _emit_error(
+                    json_mode,
+                    "CP-MIGRATION-STATE",
+                    "initialized control plane does not match the requested catalog",
+                    exit_code=2,
+                )
+            if json_mode:
+                print(json.dumps({"ok": True, "mode": "migration-noop"}, indent=2))
+            else:
+                print("OK legacy migration is already complete")
+            return 0
+        if state.kind is StateKind.LEGACY_ONLY:
+            plan = plan_legacy_migration(repo, selected_distribution, major)
+            mode = "migration-plan"
+        elif state.kind is StateKind.DUAL_AUTHORITY:
+            plan = plan_legacy_migration_recovery(repo, selected_distribution, major)
+            mode = "migration-recovery-plan"
+        else:
+            return _emit_error(
+                json_mode,
+                "CP-MIGRATION-STATE",
+                state.detail or f"control-plane state is {state.kind.value}",
+                exit_code=2,
+            )
+        if not cast("bool", args.apply) or not plan.applicable:
+            return _emit_migration_plan(plan, mode=mode, json_mode=json_mode)
+
+        result = apply_legacy_migration(plan)
+        if json_mode:
+            print(
+                json.dumps(
+                    {
+                        **_migration_plan_payload(plan, mode="migration-apply"),
+                        "ok": result.success,
+                        "success": result.success,
+                        "applied_action_ids": list(result.applied_action_ids),
+                        "lock_written": result.lock_written,
+                        "error_code": result.error_code,
+                        "findings": findings_to_jsonable(result.verification_findings),
+                    },
+                    indent=2,
+                )
+            )
+        elif result.success:
+            print("Applied legacy migration; unified lock published before legacy retirement.")
+        else:
+            print(f"error: migration failed ({result.error_code})", file=sys.stderr)
+        return 0 if result.success else 1
+    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+        return _emit_error(json_mode, "CP-MIGRATION-STATE", str(exc), exit_code=2)
 
 
 def _emit_plan(

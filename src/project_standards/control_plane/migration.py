@@ -12,7 +12,7 @@ import stat
 import tomllib
 import unicodedata
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
@@ -23,6 +23,7 @@ from yaml.nodes import MappingNode
 from yaml.tokens import AliasToken, AnchorToken
 
 from project_standards.control_plane.codec import (
+    parse_lock,
     render_catalog,
     render_lock,
     semantic_digest,
@@ -77,7 +78,12 @@ from project_standards.package_contract.payload import (
 )
 
 if TYPE_CHECKING:
-    from project_standards.control_plane.planner import ReconciliationPlan
+    from project_standards.control_plane.executor import (
+        ApplyResult,
+        FaultHook,
+        VerificationRunner,
+    )
+    from project_standards.control_plane.planner import PlannerRequest, ReconciliationPlan
 
 type LegacyOwnership = Literal[
     "managed",
@@ -354,8 +360,13 @@ class LegacyMigrationPlan:
     findings: tuple[ControlFinding, ...]
     desired_config: DesiredConfig
     catalog: ConsumerCatalog
+    distribution: InstalledDistribution = field(repr=False, compare=False)
+    planner: PlannerRequest = field(repr=False, compare=False)
     reconciliation: ReconciliationPlan
+    reconciliation_fingerprint: str
+    content_fingerprint: str
     legacy_removals: tuple[ControlAction, ...]
+    legacy_preconditions: tuple[tuple[str, Sha256Digest], ...]
     config_content: bytes = field(repr=False)
     catalog_content: bytes = field(repr=False)
     lock_content: bytes = field(repr=False)
@@ -381,8 +392,52 @@ class LegacyMigrationPlan:
         }
 
 
+def apply_legacy_migration(
+    plan: LegacyMigrationPlan,
+    *,
+    fault_hook: FaultHook | None = None,
+    verification_runner: VerificationRunner | None = None,
+) -> ApplyResult:
+    """Apply one reviewed legacy migration through the sole repository writer."""
+    from project_standards.control_plane.executor import apply_legacy_migration as apply
+
+    return apply(
+        plan,
+        fault_hook=fault_hook,
+        verification_runner=verification_runner,
+    )
+
+
 def _digest(content: bytes) -> Sha256Digest:
     return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
+
+
+def legacy_migration_content_fingerprint(
+    repo: Path,
+    reconciliation_fingerprint: str,
+    legacy_preconditions: tuple[tuple[str, Sha256Digest], ...],
+    config_content: bytes,
+    catalog_content: bytes,
+    lock_content: bytes,
+) -> str:
+    """Bind one preview's repository, lineage, preconditions, and private output bytes."""
+    digest = hashlib.sha256()
+    values = (
+        str(repo).encode(),
+        reconciliation_fingerprint.encode("ascii"),
+        json.dumps(
+            [(path, observed.value) for path, observed in legacy_preconditions],
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode(),
+        config_content,
+        catalog_content,
+        lock_content,
+    )
+    for value in values:
+        digest.update(len(value).to_bytes(8, "big"))
+        digest.update(value)
+    return digest.hexdigest()
 
 
 def _safe_repo(repo: Path) -> Path:
@@ -984,10 +1039,12 @@ def _removal_actions(
     return tuple(sort_actions(actions))
 
 
-def plan_legacy_migration(
+def _plan_legacy_migration(
     repo: Path,
     distribution: InstalledDistribution,
     catalog_major: CatalogMajor | str,
+    *,
+    allowed_states: frozenset[StateKind],
 ) -> LegacyMigrationPlan:
     """Plan complete replacement of one legacy-only authority without writing."""
     from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
@@ -998,8 +1055,8 @@ def plan_legacy_migration(
         normalized,
         tool_release=distribution.tool_release.value,
     )
-    if state.kind is not StateKind.LEGACY_ONLY:
-        raise ControlPlaneError("legacy migration requires legacy-only repository authority")
+    if state.kind not in allowed_states:
+        raise ControlPlaneError("repository state cannot produce this legacy migration plan")
     legacy_path = normalized / ".project-standards.yml"
     legacy_content = _read_regular_file(legacy_path, kind="legacy config")
     legacy = _load_legacy_yaml(legacy_content)
@@ -1123,19 +1180,56 @@ def plan_legacy_migration(
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
-    reconciliation = plan_reconciliation(
-        PlannerRequest(
-            repo=normalized,
-            resolution=resolution,
-            payloads=installed.payloads,
-        )
+    planner = PlannerRequest(
+        repo=normalized,
+        resolution=resolution,
+        payloads=installed.payloads,
     )
+    reconciliation = plan_reconciliation(planner)
+    if state.kind is StateKind.DUAL_AUTHORITY:
+        control = normalized / ".standards"
+        intent_path = control / ".migration-lock.toml"
+        live_lock_path = control / "lock.toml"
+        recovery_lock_path = intent_path if intent_path.exists() else live_lock_path
+        if recovery_lock_path.exists() and not recovery_lock_path.is_symlink():
+            live_lock = parse_lock(
+                _read_regular_file(recovery_lock_path, kind="migration recovery lock")
+            )
+            normalized_live = live_lock.model_copy(
+                update={
+                    "artifacts": [
+                        artifact.model_copy(update={"created_container": False})
+                        for artifact in live_lock.artifacts
+                    ]
+                }
+            )
+            normalized_planned = reconciliation.next_lock.model_copy(
+                update={
+                    "artifacts": [
+                        artifact.model_copy(update={"created_container": False})
+                        for artifact in reconciliation.next_lock.artifacts
+                    ]
+                }
+            )
+            if normalized_live == normalized_planned:
+                # A published migration lock retains whether the original apply
+                # created each container. Recovery planning observes those paths as
+                # preexisting, so it must restore that provenance before comparison.
+                reconciliation = replace(reconciliation, next_lock=live_lock)
+    from project_standards.control_plane.executor import reconciliation_fingerprint
+
+    reconciliation_digest = reconciliation_fingerprint(reconciliation)
     findings.extend(reconciliation.findings)
     ordered_findings = _dedupe_findings(findings)
     applicable = reconciliation.applicable and not any(
         finding.severity == "error" for finding in ordered_findings
     )
     removals = _removal_actions(ordered_reports) if applicable else ()
+    legacy_preconditions = tuple(
+        (path, _digest(content)) for path, content in sorted(legacy_files.items())
+    )
+    catalog_content = render_catalog(catalog)
+    lock_content = render_lock(reconciliation.next_lock)
     return LegacyMigrationPlan(
         repo=normalized,
         applicable=applicable,
@@ -1143,9 +1237,49 @@ def plan_legacy_migration(
         findings=ordered_findings,
         desired_config=desired,
         catalog=catalog,
+        distribution=distribution,
+        planner=planner,
         reconciliation=reconciliation,
+        reconciliation_fingerprint=reconciliation_digest,
+        content_fingerprint=legacy_migration_content_fingerprint(
+            normalized,
+            reconciliation_digest,
+            legacy_preconditions,
+            config_content,
+            catalog_content,
+            lock_content,
+        ),
         legacy_removals=removals,
+        legacy_preconditions=legacy_preconditions,
         config_content=config_content,
-        catalog_content=render_catalog(catalog),
-        lock_content=render_lock(reconciliation.next_lock),
+        catalog_content=catalog_content,
+        lock_content=lock_content,
+    )
+
+
+def plan_legacy_migration(
+    repo: Path,
+    distribution: InstalledDistribution,
+    catalog_major: CatalogMajor | str,
+) -> LegacyMigrationPlan:
+    """Plan complete replacement of one legacy-only authority without writing."""
+    return _plan_legacy_migration(
+        repo,
+        distribution,
+        catalog_major,
+        allowed_states=frozenset({StateKind.LEGACY_ONLY}),
+    )
+
+
+def plan_legacy_migration_recovery(
+    repo: Path,
+    distribution: InstalledDistribution,
+    catalog_major: CatalogMajor | str,
+) -> LegacyMigrationPlan:
+    """Reconstruct a migration plan from an explicit dual-authority prefix."""
+    return _plan_legacy_migration(
+        repo,
+        distribution,
+        catalog_major,
+        allowed_states=frozenset({StateKind.DUAL_AUTHORITY}),
     )

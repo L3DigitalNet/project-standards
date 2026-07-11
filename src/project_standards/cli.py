@@ -12,7 +12,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import NoReturn
 
 from project_standards import (
     format_frontmatter,
@@ -76,15 +75,6 @@ _V5_LIST_DEPRECATION = (
 _V5_ADOPT_DEPRECATION = (
     "warning: 'adopt' is deprecated; V5 adoption uses the standards control plane"
 )
-
-
-class _CliArgumentError(ValueError):
-    """Return parser errors through the CLI's structured boundary."""
-
-
-class _CliParser(argparse.ArgumentParser):
-    def error(self, message: str) -> NoReturn:
-        raise _CliArgumentError(message)
 
 
 def _extract_config_path(args: list[str]) -> Path:
@@ -305,61 +295,9 @@ def main(argv: list[str] | None = None) -> int:
         return _reconcile_run(args_list[1:])
 
     if args_list and args_list[0] == "init":
-        from project_standards.control_plane.bootstrap import initialize_control_plane
-        from project_standards.control_plane.distribution import InstalledDistribution
-        from project_standards.control_plane.paths import CatalogMajor
+        from project_standards.control_plane.cli import run_init as _init_run
 
-        init_parser = _CliParser(prog="project-standards init")
-
-        def catalog_major(value: str) -> CatalogMajor:
-            try:
-                return CatalogMajor(value)
-            except ValueError as exc:
-                raise argparse.ArgumentTypeError(
-                    "catalog must be a canonical positive integer"
-                ) from exc
-
-        init_parser.add_argument("--catalog", required=True, type=catalog_major)
-        init_parser.add_argument("--repo", type=Path, default=Path.cwd())
-        init_parser.add_argument("--json", action="store_true")
-        try:
-            init_args = init_parser.parse_args(args_list[1:])
-        except _CliArgumentError as exc:
-            if "--json" in args_list:
-                print(json.dumps({"ok": False, "code": "CP-ARGUMENT", "error": str(exc)}))
-            else:
-                print(f"error: {exc}", file=sys.stderr)
-            return 2
-        except SystemExit as exc:
-            return exc.code if isinstance(exc.code, int) else 1
-        try:
-            result = initialize_control_plane(
-                init_args.repo,
-                init_args.catalog,
-                distribution=InstalledDistribution.current(),
-            )
-        except ValueError as exc:
-            if init_args.json:
-                print(json.dumps({"ok": False, "code": "CP-INIT", "error": str(exc)}))
-            else:
-                print(f"error: {exc}", file=sys.stderr)
-            return 2
-        if init_args.json:
-            print(
-                json.dumps(
-                    {
-                        "ok": True,
-                        "created": result.created,
-                        "repo": str(result.repo),
-                        "files": [f".standards/{name}" for name in result.files],
-                    },
-                    indent=2,
-                )
-            )
-            return 0
-        action = "Initialized" if result.created else "OK"
-        print(f"{action} standards control plane: {result.repo / '.standards'}")
-        return 0
+        return _init_run(args_list[1:])
 
     if args_list and args_list[0] == "agent-handoff":
         from project_standards.agent_handoff.cli import run as _agent_handoff_run

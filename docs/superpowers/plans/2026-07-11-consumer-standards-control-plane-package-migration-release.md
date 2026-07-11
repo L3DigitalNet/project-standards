@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-2 are complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-3 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -157,15 +157,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Modify `src/project_standards/control_plane/{bootstrap,cli,executor,migration}.py` and `src/project_standards/cli.py`; expand `tests/control_plane/{test_bootstrap,test_cli,test_executor,test_migration}.py` and installed-wrapper tests.
 
-- [ ] Write the complete CLI matrix for `project-standards init --catalog 5 --migrate [--apply] [--json] --repo PATH`, including incompatible flags, missing legacy state, already unified state, dual authority, preview, apply, repeat apply, and exit codes `0/1/2`.
-- [ ] Add fault-injection tests before staging, after each artifact/control publication, before/after central-lock replacement, during verification, and before each legacy removal. Every failure must retain enough explicit state for a subsequent preview/recovery and must never delete legacy authority before unified validation succeeds.
-- [ ] Extract executor staging/publication helpers only where migration and ordinary reconciliation require the same containment, precondition, mode, fsync, and cleanup behavior.
-- [ ] Implement `apply_legacy_migration(plan)` under one exclusive `.standards/` directory lock. Re-read every legacy digest, stage every output, publish planned artifacts plus config/catalog, replace the central lock last, run selected verification providers, then remove `.project-standards.yml` and successfully imported package locks before releasing the lock.
-- [ ] Refuse application when the preview is stale, non-applicable, missing its exact catalog/payload lineage, or produced by another repository path.
-- [ ] Preserve unrelated consumer files and bounded-block surroundings byte-for-byte. A failed legacy-file removal reports recoverable dual authority and never edits either configuration file to hide it.
-- [ ] Build and extract the test wheel, deny network, migrate a representative all-namespace repository, and assert a second reconciliation is a byte-level no-op.
-- [ ] Run focused CLI/executor/migration and installed-wrapper tests; expect pass.
-- [ ] Commit: `feat(v5): apply explicit control-plane migrations`
+- [x] Write the complete CLI matrix for `project-standards init --catalog 5 --migrate [--apply] [--json] --repo PATH`, including incompatible flags, missing legacy state, already unified state, dual authority, preview, apply, repeat apply, and exit codes `0/1/2`.
+- [x] Add fault-injection tests before staging, after each artifact/control publication, before/after central-lock replacement, during verification, and before each legacy removal. Every failure must retain enough explicit state for a subsequent preview/recovery and must never delete legacy authority before unified validation succeeds.
+- [x] Extract executor staging/publication helpers only where migration and ordinary reconciliation require the same containment, precondition, mode, fsync, and cleanup behavior.
+- [x] Implement `apply_legacy_migration(plan)` under one exclusive `.standards/` directory lock. Re-read every legacy digest, stage every output, publish planned artifacts plus config/catalog, replace the central lock last, run selected verification providers, then remove `.project-standards.yml` and successfully imported package locks before releasing the lock.
+- [x] Refuse application when the preview is stale, non-applicable, missing its exact catalog/payload lineage, or produced by another repository path.
+- [x] Preserve unrelated consumer files and bounded-block surroundings byte-for-byte. A failed legacy-file removal reports recoverable dual authority and never edits either configuration file to hide it.
+- [x] Build and extract the test wheel, deny network, migrate a representative all-namespace repository, and assert a second reconciliation is a byte-level no-op.
+- [x] Run focused CLI/executor/migration and installed-wrapper tests; expect pass.
+- [x] Commit: `feat(v5): apply explicit control-plane migrations`
 
 ### Task 4: Same-Major Catalog Refresh
 
