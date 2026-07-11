@@ -68,6 +68,16 @@ def test_standards_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     assert proc.returncode == 0, proc.stderr
 
 
+def test_control_plane_subcommands_via_wrapper(installed_venv: Path) -> None:
+    reconcile = _run(installed_venv, "project-standards", "reconcile", "--help")
+    assert reconcile.returncode == 0, reconcile.stderr
+    assert "--repair-state" in reconcile.stdout
+
+    catalog = _run(installed_venv, "project-standards", "standards", "list", "--help")
+    assert catalog.returncode == 0, catalog.stderr
+    assert "--json" in catalog.stdout
+
+
 def test_package_authoring_subcommand_via_wrapper(installed_venv: Path) -> None:
     proc = _run(installed_venv, "project-standards", "standards", "validate-packages", "--help")
     assert proc.returncode == 0, proc.stderr

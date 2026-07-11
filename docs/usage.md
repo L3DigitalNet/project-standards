@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-11'
+reviewed: '2026-07-11'
 owner: ''
 consumer: 'mix'
 tags:
@@ -36,6 +36,8 @@ license: null
 project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
+project-standards init --catalog <major> [--repo <dir>] [--json]
+project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--dry-run] [--json]
 project-standards list [--json]
@@ -48,11 +50,11 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes twenty-three leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), two adoption operations (`adopt`, `list`), six `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes thirty leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), four control/adoption operations (`init`, `reconcile`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — twenty-three leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — thirty leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
@@ -84,7 +86,9 @@ Options (all flags are forwarded unchanged to every validator):
 - **`--no-require-frontmatter`** — Do not fail files that have no frontmatter block. Frontmatter-only; no effect on the id or reference passes.
 - **`-q`, `--quiet`** — Suppress per-file success output. Exit code is unaffected.
 
-Exit status: `0` all valid · `1` validation findings · `2` operator error (missing config, bad schema, registry problem).
+When `.standards/` exists, `validate` also checks unified desired, applied, catalog, and artifact state without writing. Drift or dual authority exits 1. A legacy-only `.project-standards.yml` remains readable in V5 but emits a migration warning.
+
+Exit status: `0` all valid · `1` validation or control-plane findings · `2` operator error (missing config, bad schema, registry problem).
 
 ### `fix`
 
@@ -105,9 +109,50 @@ Safety: `fix` writes to disk (frontmatter reformatting and id rewrites are in-pl
 
 Exit status: `0` success (or skipped under a custom schema) · `1` findings remain after the fix · `2` operator error (missing/broken config).
 
+### `init`
+
+Create the neutral `.standards/` scaffold for one catalog major. It creates only `config.toml`, `catalog.toml`, and `lock.toml`, with no enabled standards.
+
+```text
+project-standards init --catalog <major> [--repo <dir>] [--json]
+```
+
+Options:
+
+- **`--catalog <major>`** — Positive catalog major supplied by the installed distribution. Required.
+- **`--repo <dir>`** — Repository to initialize. Default: current directory.
+- **`--json`** — Emit the created/idempotent state and exact three-file inventory.
+
+The command is idempotent only when all three existing files describe the same neutral state. Legacy YAML, partial state, symlinks, or different content fail closed.
+
+Exit status: `0` created or already identical · `2` invalid arguments, unsafe paths, unavailable catalog, legacy authority, or inconsistent existing state.
+
+### `reconcile`
+
+Build one complete plan from `.standards/config.toml`, the committed catalog and lock, installed package payloads, and live repository content. Planning and checking are read-only. Only `--apply` publishes a conflict-free plan, runs read-only verification providers, and replaces the central lock last.
+
+```text
+project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
+```
+
+Options:
+
+- **`--check`** — Report pending mutations, lock changes, or conflicts without writing. Mutually exclusive with `--apply`.
+- **`--apply`** — Apply the current conflict-free plan. The executor rechecks each precondition and does not retry automatically.
+- **`--allow-major <standard>@<major>`** — Authorize one exact package and target major for this invocation. Repeat for independent authorizations.
+- **`--repair-state`** — Preview a sanctioned missing-catalog or missing-lock recovery. Recovery writes require both this flag and `--apply`. Missing user config is never inferred.
+- **`--repo <dir>`** — Repository to reconcile. Default: current directory.
+- **`--json`** — Emit stable plan, action, finding, recovery, or apply fields without proposed file content.
+
+The default mode displays the plan. Exit 1 means drift, a conflict, an authorization refusal, or a recoverable apply failure. Exit 2 means the command or control authority is invalid.
+
+Exit status: `0` reconciled or apply succeeded · `1` drift/findings/apply failure · `2` invocation, authority, package, or filesystem boundary error.
+
 ### `adopt`
 
-Materialize one or more standards' artifacts into a destination directory. Runs a registry/bundle parity guard before planning, so drifted metadata fails cleanly instead of writing a partial result.
+Compatibility command for existing adoption scripts. It emits a V5 deprecation notice on every invocation.
+
+When every requested standard is consumer-selectable in the installed V2 catalog, the command wraps `init`, desired-state enablement, and `reconcile --apply`. Otherwise it retains the V1 packaged-bundle path until those real packages are activated by the follow-on migration. V5 routing never honors `--force`; reconciliation conflicts remain authoritative.
 
 ```text
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
@@ -119,7 +164,7 @@ Options:
 - **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`, `agent-handoff`). Required.
 - **`--dest <dir>`** — Destination directory to write artifacts into. Default: the current directory. Must already exist unless `--dry-run` is given (a non-existent `--dest` without `--dry-run` exits 2).
 - **`--force`** — Overwrite existing managed files that would otherwise be skipped. Create-only artifacts remain skipped. Safety: destructive for generic managed files — prefer `--dry-run` first.
-- **`--dry-run`** — Show what would be written without making any changes. Depends on nothing; when set, a non-existent `--dest` is accepted because nothing is written.
+- **`--dry-run`** — Show what the V1 bundle path would write without changing files. For a V5-advertised package, use explicit `init`, `standards enable`, and `reconcile` preview instead; the wrapper refuses V5 `--dry-run` so it cannot create the initial scaffold during a nominally read-only call.
 - **`--manual`** — Agent Handoff only. Select manual startup and declare no automatic harness. Mutually exclusive with `--harness`; one selection is required.
 - **`--harness {claude-code | codex}`** — Agent Handoff only. Select an automatic startup profile. Repeat for both harnesses. Values must be unique; mutually exclusive with `--manual`.
 - **`--json`** — Agent Handoff only. Emit the aggregate plan/report schema instead of human-readable changes.
@@ -130,7 +175,7 @@ Agent Handoff adoption performs a complete non-mutating preflight before writes,
 
 ### `list`
 
-List standards that have packaged adopt artifacts. Applies the same registry/bundle parity guard as `adopt` before emitting anything.
+List standards that have V1 packaged adopt artifacts. This compatibility command emits a deprecation notice. Use `project-standards standards list` for the complete installed V5 catalog inventory.
 
 ```text
 project-standards list [--json]
@@ -213,13 +258,57 @@ project-standards agent-handoff upgrade [--repo <dir>] [--dry-run] [--json]
 
 ### `standards`
 
-Command group for V1 graph/catalog maintenance and V2 package authoring. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
+Command group for V5 catalog selection plus V1 graph/catalog maintenance and V2 package authoring. Running `project-standards standards` with no verb prints usage to standard error and exits 2; `project-standards standards --help` prints usage and exits 0.
 
 ```text
-project-standards standards {validate-graph | render-catalog | validate-packages | render-consumer-catalog | generate-package-schemas | sync-payload-projection} [<args>...]
+project-standards standards {list | show | enable | disable | version | validate-graph | render-catalog | validate-packages | render-consumer-catalog | generate-package-schemas | sync-payload-projection} [<args>...]
 ```
 
 There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
+
+### `standards list`
+
+List the complete committed catalog with desired and applied summaries.
+
+```text
+project-standards standards list [--repo <dir>] [--json]
+```
+
+### `standards show`
+
+Show catalog, desired, applied, and configuration-path facts for one standard.
+
+```text
+project-standards standards show <standard> [--repo <dir>] [--json]
+```
+
+### `standards enable`
+
+Enable a consumer-selectable standard and optionally set its desired selector. This edits only `.standards/config.toml`.
+
+```text
+project-standards standards enable <standard> [--version <latest|major.minor>] [--repo <dir>] [--json]
+```
+
+### `standards disable`
+
+Disable a standard while preserving its selector and options. This edits only `.standards/config.toml`.
+
+```text
+project-standards standards disable <standard> [--repo <dir>] [--json]
+```
+
+### `standards version`
+
+Change one standard's desired selector while preserving its enablement and options. This edits only `.standards/config.toml`.
+
+```text
+project-standards standards version <standard> <latest|major.minor> [--repo <dir>] [--json]
+```
+
+Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes.
+
+Exit status: `0` inspection/edit succeeded · `2` invalid invocation, unknown or non-selectable standard, unavailable version, or unsafe control state.
 
 ### `standards validate-graph`
 
@@ -289,7 +378,7 @@ Exit status: `0` written or fresh · `1` package findings or stale output · `2`
 
 ### `standards generate-package-schemas`
 
-Generate the strict family, payload, and catalog-source JSON Schemas from their typed models.
+Generate the three package-contract and six control-plane JSON Schemas from their strict typed models.
 
 ```text
 project-standards standards generate-package-schemas [--root <path>] [--check] [--json]
@@ -298,10 +387,10 @@ project-standards standards generate-package-schemas [--root <path>] [--check] [
 Options:
 
 - **`--root <path>`** — Repository root. Default: the current directory.
-- **`--check`** — Compare all three checked-in schemas without writing them.
+- **`--check`** — Compare all nine checked-in schemas without writing them.
 - **`--json`** — Emit a machine-readable result.
 
-Exit status: `0` written or fresh · `1` stale generated schemas · `2` invalid invocation or unsafe output boundary.
+Exit status: `0` written or fresh · `1` any of the nine generated schemas is stale · `2` invalid invocation or unsafe output boundary.
 
 ### `standards sync-payload-projection`
 

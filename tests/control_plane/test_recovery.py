@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 from pathlib import Path
 from typing import cast
 
@@ -24,22 +23,7 @@ from project_standards.control_plane.recovery import (
 )
 from project_standards.control_plane.resolution import MajorAuthorization
 from project_standards.package_contract.payload import JsonValue
-from project_standards.package_contract.projection import sync_payload_projection
-
-_FULL = Path("tests/fixtures/package_contract/valid/full")
-
-
-def _distribution(tmp_path: Path) -> InstalledDistribution:
-    repository = tmp_path / "repository"
-    shutil.copytree(_FULL / "standards", repository / "standards")
-    shutil.copytree(_FULL / "catalogs", repository / "catalogs")
-    package = repository / "src/project_standards"
-    package.mkdir(parents=True)
-    (package / "__init__.py").write_text("", encoding="utf-8")
-    assert sync_payload_projection(repository, check=False) == ()
-    installed = tmp_path / "installed/project_standards"
-    shutil.copytree(package, installed)
-    return InstalledDistribution(installed, tool_release="5.0.0")
+from tests.control_plane.helpers import installed_distribution
 
 
 def _empty_lock(distribution: InstalledDistribution, config: bytes) -> CentralLock:
@@ -75,7 +59,7 @@ def _control(repo: Path) -> Path:
 def test_missing_user_config_refuses_inference_or_apply(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     catalog = distribution.consumer_catalog("5")
     (control / "catalog.toml").write_bytes(render_catalog(catalog))
     (control / "lock.toml").write_bytes(
@@ -98,7 +82,7 @@ def test_missing_catalog_regenerates_only_matching_installed_snapshot(
 ) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     config = render_empty_config("5")
     (control / "config.toml").write_bytes(config)
     (control / "lock.toml").write_bytes(render_lock(_empty_lock(distribution, config)))
@@ -126,7 +110,7 @@ def test_missing_catalog_staging_failure_cleans_temporary_file(
 ) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     config = render_empty_config("5")
     (control / "config.toml").write_bytes(config)
     (control / "lock.toml").write_bytes(render_lock(_empty_lock(distribution, config)))
@@ -151,7 +135,7 @@ def test_missing_lock_builds_evidence_backed_plan_without_accepted_tracks(
 ) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     config = render_empty_config("5")
     (control / "config.toml").write_bytes(config)
     (control / "catalog.toml").write_bytes(render_catalog(distribution.consumer_catalog("5")))
@@ -179,7 +163,7 @@ def test_missing_lock_candidate_requires_fresh_matching_authorization(
 ) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     config = b"""[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n\n[standards.alpha]\nenabled = true\nversion = "3.0"\n"""
     (control / "config.toml").write_bytes(config)
     (control / "catalog.toml").write_bytes(render_catalog(distribution.consumer_catalog("5")))
@@ -219,7 +203,7 @@ def test_several_missing_authorities_fail_closed(
 ) -> None:
     repo = tmp_path / "repo"
     control = _control(repo)
-    distribution = _distribution(tmp_path)
+    distribution = installed_distribution(tmp_path)
     config = render_empty_config("5")
     files = {
         "config.toml": config,

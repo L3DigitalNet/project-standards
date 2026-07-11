@@ -13,8 +13,29 @@ from project_standards.specs.cli import (
 _USAGE = Path("docs/usage.md").read_text(encoding="utf-8")
 
 # Top-level leaves are argparse-registered in cli.py; keep in sync with the parser.
-_TOP_LEVEL_LEAVES = ("validate", "fix", "adopt", "list", "standards", "agent-handoff")
-_STANDARDS_VERBS = ("validate-graph", "render-catalog")
+_TOP_LEVEL_LEAVES = (
+    "validate",
+    "fix",
+    "init",
+    "reconcile",
+    "adopt",
+    "list",
+    "standards",
+    "agent-handoff",
+)
+_STANDARDS_VERBS = (
+    "list",
+    "show",
+    "enable",
+    "disable",
+    "version",
+    "validate-graph",
+    "render-catalog",
+    "validate-packages",
+    "render-consumer-catalog",
+    "generate-package-schemas",
+    "sync-payload-projection",
+)
 _AGENT_HANDOFF_VERBS = (
     "validate",
     "drift-check",

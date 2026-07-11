@@ -12,6 +12,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from project_standards import (
     format_frontmatter,
@@ -67,6 +68,23 @@ _VERSION_TRACKED_STANDARD_IDS = (
     "project-spec",
     "agent-handoff",
 )
+
+_V5_LIST_DEPRECATION = (
+    "warning: top-level 'list' is deprecated and remains V1-only; "
+    "use 'project-standards standards list' for the complete V5 catalog"
+)
+_V5_ADOPT_DEPRECATION = (
+    "warning: 'adopt' is deprecated; V5 adoption uses the standards control plane"
+)
+
+
+class _CliArgumentError(ValueError):
+    """Return parser errors through the CLI's structured boundary."""
+
+
+class _CliParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        raise _CliArgumentError(message)
 
 
 def _extract_config_path(args: list[str]) -> Path:
@@ -174,12 +192,83 @@ def _cmd_list(as_json: bool) -> int:
     return 0
 
 
+def _try_v5_adopt(
+    standards: list[str],
+    dest: Path,
+    *,
+    force: bool,
+    dry_run: bool,
+) -> int | None:
+    """Route only fully advertised V2 selections through the control plane."""
+    from project_standards.control_plane.distribution import InstalledDistribution
+    from project_standards.package_contract.diagnostics import PackageContractError
+
+    try:
+        distribution = InstalledDistribution.current()
+        major = str(distribution.tool_release.major)
+    except PackageContractError, OSError, ValueError:
+        return None
+    projection = distribution.package_root / f"catalogs/{major}.toml"
+    try:
+        if not projection.exists() and not projection.is_symlink():
+            return None
+        if projection.is_symlink() or not projection.is_file():
+            raise PackageContractError("installed V2 catalog projection is unsafe")
+        catalog = distribution.consumer_catalog(major)
+    except (PackageContractError, OSError, ValueError) as exc:
+        print(f"error: installed V2 catalog is invalid: {exc}", file=sys.stderr)
+        return 2
+    selected = [catalog.standards.get(standard_id) for standard_id in standards]
+    if not any(item is not None for item in selected):
+        return None
+    if any(item is None for item in selected):
+        print("error: V1 and V2 standards cannot be mixed in one adopt call", file=sys.stderr)
+        return 2
+    if not all(
+        any(version.availability.value == "consumer" for version in item.versions.values())
+        for item in selected
+        if item is not None
+    ):
+        print("error: requested V2 standard is not consumer-selectable", file=sys.stderr)
+        return 2
+    if dry_run:
+        print(
+            "error: V5 adopt dry-run requires explicit init, enable, and reconcile preview",
+            file=sys.stderr,
+        )
+        return 2
+    if force:
+        print("error: --force cannot bypass V5 reconciliation conflicts", file=sys.stderr)
+        return 2
+
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+    from project_standards.control_plane.cli import run as reconcile
+    from project_standards.control_plane.config_edit import set_standard_enabled
+
+    try:
+        initialize_control_plane(dest, major, distribution=distribution)
+        for standard_id in standards:
+            set_standard_enabled(dest, standard_id, True)
+        return reconcile(["--repo", str(dest), "--apply"], distribution=distribution)
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
 def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> int:
     """Materialize *standards* into *dest*; apply registry/bundle parity guard before planning."""
     if not dry_run and not dest.is_dir():
         # Dry run writes nothing, so a non-existent dest is fine — skip this guard.
         print(f"error: --dest is not a directory: {dest}", file=sys.stderr)
         return 2
+    v5_result = _try_v5_adopt(
+        standards,
+        dest,
+        force=force,
+        dry_run=dry_run,
+    )
+    if v5_result is not None:
+        return v5_result
     _assert_registry_bundle_parity(load_registry())  # same drift guard as `list`
     plan = build_plan(standards)
     report = execute_plan(plan, dest, force=force, dry_run=dry_run)
@@ -204,12 +293,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"project-standards {package_version()}")
         return 0
 
+    if args_list and args_list[0] == "list":
+        print(_V5_LIST_DEPRECATION, file=sys.stderr)
+
+    if args_list and args_list[0] == "adopt":
+        print(_V5_ADOPT_DEPRECATION, file=sys.stderr)
+
+    if args_list and args_list[0] == "reconcile":
+        from project_standards.control_plane.cli import run as _reconcile_run
+
+        return _reconcile_run(args_list[1:])
+
     if args_list and args_list[0] == "init":
         from project_standards.control_plane.bootstrap import initialize_control_plane
         from project_standards.control_plane.distribution import InstalledDistribution
         from project_standards.control_plane.paths import CatalogMajor
 
-        init_parser = argparse.ArgumentParser(prog="project-standards init")
+        init_parser = _CliParser(prog="project-standards init")
 
         def catalog_major(value: str) -> CatalogMajor:
             try:
@@ -221,8 +321,15 @@ def main(argv: list[str] | None = None) -> int:
 
         init_parser.add_argument("--catalog", required=True, type=catalog_major)
         init_parser.add_argument("--repo", type=Path, default=Path.cwd())
+        init_parser.add_argument("--json", action="store_true")
         try:
             init_args = init_parser.parse_args(args_list[1:])
+        except _CliArgumentError as exc:
+            if "--json" in args_list:
+                print(json.dumps({"ok": False, "code": "CP-ARGUMENT", "error": str(exc)}))
+            else:
+                print(f"error: {exc}", file=sys.stderr)
+            return 2
         except SystemExit as exc:
             return exc.code if isinstance(exc.code, int) else 1
         try:
@@ -232,8 +339,24 @@ def main(argv: list[str] | None = None) -> int:
                 distribution=InstalledDistribution.current(),
             )
         except ValueError as exc:
-            print(f"error: {exc}", file=sys.stderr)
+            if init_args.json:
+                print(json.dumps({"ok": False, "code": "CP-INIT", "error": str(exc)}))
+            else:
+                print(f"error: {exc}", file=sys.stderr)
             return 2
+        if init_args.json:
+            print(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "created": result.created,
+                        "repo": str(result.repo),
+                        "files": [f".standards/{name}" for name in result.files],
+                    },
+                    indent=2,
+                )
+            )
+            return 0
         action = "Initialized" if result.created else "OK"
         print(f"{action} standards control plane: {result.repo / '.standards'}")
         return 0
@@ -309,7 +432,10 @@ def main(argv: list[str] | None = None) -> int:
         rc_frontmatter = validate_frontmatter.main(validator_args)
         rc_id = validate_id.main(validator_args)
         rc_refs = validate_references.main(validator_args)
-        return max(rc_frontmatter, rc_id, rc_refs)
+        from project_standards.control_plane.cli import validate_repository
+
+        rc_control = validate_repository(Path.cwd())
+        return max(rc_frontmatter, rc_id, rc_refs, rc_control)
 
     if args_list and args_list[0] == "fix":
         fix_args = args_list[1:]
@@ -372,6 +498,7 @@ def main(argv: list[str] | None = None) -> int:
         help="validate, inspect, and upgrade an agent-handoff installation",
     )
     sub.add_parser("init", help="create the neutral .standards control plane")
+    sub.add_parser("reconcile", help="plan, check, apply, or recover unified standards state")
 
     p_adopt = sub.add_parser(
         "adopt",
