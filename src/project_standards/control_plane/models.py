@@ -20,6 +20,7 @@ from project_standards.package_contract.payload import (
     JsonValue,
     PayloadAvailability,
     PosixMode,
+    SharedIdentity,
     normalize_scope,
 )
 
@@ -274,6 +275,7 @@ class LockedUnit(StrictModel):
     adapter: AdapterKind
     scope: str = Field(min_length=1)
     owners: tuple[KebabId, ...] = Field(min_length=1)
+    shared_identity: SharedIdentity | None = None
     versions: dict[KebabId, PackageVersion]
     provenance: UnitProvenance
     policy: ArtifactPolicy
@@ -288,6 +290,15 @@ class LockedUnit(StrictModel):
             raise ValueError("locked unit contains a duplicate owner")
         if set(self.versions) != set(self.owners):
             raise ValueError("locked unit version keys must exactly match owners")
+        if len(self.owners) > 1 and self.shared_identity is None:
+            raise ValueError("shared_identity is required for several owners")
+        if len(self.owners) > 1 and self.adapter is AdapterKind.WHOLE_FILE:
+            raise ValueError("whole-file units cannot have shared owners")
+        package_prefix = ".standards/packages/"
+        if self.path.original.startswith(package_prefix):
+            namespace = self.path.original.removeprefix(package_prefix).split("/", 1)[0]
+            if self.owners != (namespace,):
+                raise ValueError("package namespace must be owned by its matching standard")
         ordered_owners = tuple(sorted(self.owners))
         object.__setattr__(self, "owners", ordered_owners)
         object.__setattr__(self, "versions", _sorted_mapping(self.versions))

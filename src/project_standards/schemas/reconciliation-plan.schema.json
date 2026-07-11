@@ -271,6 +271,19 @@
           "title": "Semantic Digest",
           "type": "string"
         },
+        "shared_identity": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:[./_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Identity"
+        },
         "versions": {
           "patternProperties": {
             "^[a-z0-9]+(?:-[a-z0-9]+)*$": {

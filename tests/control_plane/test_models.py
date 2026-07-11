@@ -69,7 +69,7 @@ def _unit(
     owners: list[str] | None = None,
 ) -> dict[str, object]:
     selected_owners = ["python-tooling"] if owners is None else owners
-    return {
+    unit: dict[str, object] = {
         "path": path,
         "adapter": "toml",
         "scope": scope,
@@ -82,6 +82,9 @@ def _unit(
         "mode": "0644",
         "created_container": False,
     }
+    if len(selected_owners) > 1:
+        unit["shared_identity"] = "shared-unit"
+    return unit
 
 
 def test_desired_config_is_strict_frozen_and_deterministically_ordered() -> None:
@@ -304,6 +307,7 @@ def test_central_lock_keeps_applied_and_authorized_state_separate() -> None:
     assert list(lock.accepted_tracks) == ["demo"]
     assert [unit.path.original for unit in lock.artifacts] == ["a.toml", "z.toml"]
     assert lock.artifacts[1].owners == ("alpha", "zeta")
+    assert lock.artifacts[1].shared_identity == "shared-unit"
     assert lock.accepted_tracks["demo"].major == 2
 
 

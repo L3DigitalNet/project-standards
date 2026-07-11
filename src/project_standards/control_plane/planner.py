@@ -9,6 +9,8 @@ whole-file preconditions and proposed bytes in a later phase.
 from __future__ import annotations
 
 import hashlib
+import os
+import stat
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass, replace
@@ -129,6 +131,7 @@ class PlannedUnit:
     adapter: str
     scope: str
     owners: tuple[str, ...]
+    shared_identity: str | None
     versions: tuple[tuple[str, str], ...]
     provenance: UnitProvenance
     before_digest: str | None
@@ -167,6 +170,7 @@ class ReconciliationPlan:
     resolution: ResolutionResult
     verification_requests: tuple[VerificationRequest, ...]
     provider_notices: tuple[ProviderNotice, ...]
+    namespace_prunes: tuple[str, ...]
     next_lock: CentralLock
 
     def proposed_content(self, target: str) -> bytes:
@@ -185,7 +189,6 @@ class ReconciliationPlan:
                     JsonValue,
                     package.applied.model_dump(mode="json"),
                 ),
-                "effective_config": cast(JsonValue, package.effective_config),
             }
             for package in self.resolution.packages
         ]
@@ -222,6 +225,7 @@ class ReconciliationPlan:
                 JsonValue,
                 [asdict(item) for item in self.provider_notices],
             ),
+            "namespace_prunes": list(self.namespace_prunes),
             "next_lock": cast(JsonValue, self.next_lock.model_dump(mode="json")),
         }
 
@@ -253,6 +257,7 @@ class _DesiredGroup:
     adapter: AdapterKind
     scope: str
     owners: tuple[str, ...]
+    shared_identity: SharedIdentity | None
     versions: tuple[tuple[str, str], ...]
     policy: ArtifactPolicy
     mode: str | None
@@ -754,6 +759,7 @@ def _group_desired(
                 adapter=first.intent.adapter,
                 scope=first.intent.scope,
                 owners=tuple(sorted(item.intent.standard_id for item in items)),
+                shared_identity=first.intent.shared_identity,
                 versions=tuple(
                     sorted((item.intent.standard_id, item.intent.version) for item in items)
                 ),
@@ -800,6 +806,7 @@ def _unit_plan(
         adapter=group.adapter.value,
         scope=group.scope,
         owners=group.owners,
+        shared_identity=group.shared_identity,
         versions=group.versions,
         provenance=group.provenance,
         before_digest=current.semantic_digest.value if current else None,
@@ -886,6 +893,7 @@ def _classify_removed(
         adapter=previous.adapter.value,
         scope=previous.scope,
         owners=previous.owners,
+        shared_identity=previous.shared_identity,
         versions=versions,
         provenance=previous.provenance,
         before_digest=current.semantic_digest.value if current else None,
@@ -1133,6 +1141,7 @@ def _locked_after(
                     adapter=group.adapter,
                     scope=group.scope,
                     owners=group.owners,
+                    shared_identity=group.shared_identity,
                     versions={owner: PackageVersion(version) for owner, version in group.versions},
                     provenance=group.provenance,
                     policy=group.policy,
@@ -1217,6 +1226,134 @@ def _referenced_inputs(
     return tuple(sorted(result, key=lambda item: item.natural_key))
 
 
+def _package_namespace(path: str) -> str | None:
+    prefix = ".standards/packages/"
+    if not path.startswith(prefix):
+        return None
+    remainder = path.removeprefix(prefix)
+    standard_id, separator, _relative = remainder.partition("/")
+    return standard_id if standard_id and separator else None
+
+
+def _namespace_findings(
+    repo: Path,
+    selected: tuple[tuple[ResolvedPackage, InstalledPayload], ...],
+    previous_lock: CentralLock,
+) -> tuple[ControlFinding, ...]:
+    declared: set[str] = {
+        unit.path.original
+        for unit in previous_lock.artifacts
+        if _package_namespace(unit.path.original) is not None
+    }
+    for _package, payload in selected:
+        declared.update(
+            artifact.target.original
+            for artifact in payload.manifest.artifacts
+            if _package_namespace(artifact.target.original) is not None
+        )
+        declared.update(
+            contribution.target.original
+            for contribution in payload.manifest.contributions
+            if _package_namespace(contribution.target.original) is not None
+        )
+    root = repo / ".standards/packages"
+    if not root.exists() and not root.is_symlink():
+        return ()
+    findings: list[ControlFinding] = []
+    try:
+        if root.is_symlink() or not root.is_dir():
+            return (
+                _finding(
+                    "CP-UNDECLARED-PACKAGE-CONTENT",
+                    target=".standards/packages",
+                    identity="$namespace",
+                    standard_id="project-standards",
+                    version="",
+                    message="package namespace root is not a regular directory",
+                ),
+            )
+        entries = sorted(
+            root.rglob("*"),
+            key=lambda item: item.relative_to(repo).as_posix().encode("utf-8"),
+        )
+        for entry in entries:
+            relative = entry.relative_to(repo).as_posix()
+            if entry.is_dir() and not entry.is_symlink():
+                continue
+            if relative in declared and entry.is_file() and not entry.is_symlink():
+                continue
+            standard_id = _package_namespace(relative) or "project-standards"
+            code = (
+                "CP-DUPLICATE-PACKAGE-LOCK"
+                if entry.name in {"lock.json", "lock.toml", "provenance.lock"}
+                else "CP-UNDECLARED-PACKAGE-CONTENT"
+            )
+            identity = "$namespace"
+            if entry.is_file() and not entry.is_symlink():
+                identity = f"$namespace:{_safe_undeclared_digest(entry).value}"
+            findings.append(
+                _finding(
+                    code,
+                    target=relative,
+                    identity=identity,
+                    standard_id=standard_id,
+                    version="",
+                    message="package namespace contains an undeclared durable entry",
+                )
+            )
+    except OSError as exc:
+        raise ControlPlaneError("package namespaces could not be inspected safely") from exc
+    return tuple(sort_findings(findings))
+
+
+def _safe_undeclared_digest(path: Path) -> Sha256Digest:
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ControlPlaneError("undeclared package entry could not be opened safely") from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ControlPlaneError("undeclared package entry changed type during inspection")
+        chunks: list[bytes] = []
+        while chunk := os.read(descriptor, 1024 * 1024):
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise ControlPlaneError("undeclared package entry could not be read safely") from exc
+    finally:
+        os.close(descriptor)
+    stable = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_mode")
+    if any(getattr(before, field) != getattr(after, field) for field in stable):
+        raise ControlPlaneError("undeclared package entry changed during inspection")
+    return _digest(b"".join(chunks))
+
+
+def _namespace_prunes(
+    repo: Path,
+    selected: tuple[tuple[ResolvedPackage, InstalledPayload], ...],
+    units: tuple[PlannedUnit, ...],
+    findings: tuple[ControlFinding, ...],
+) -> tuple[str, ...]:
+    enabled = {package.standard_id for package, _payload in selected}
+    blocked = {finding.path for finding in findings}
+    candidates: list[str] = []
+    root = repo / ".standards/packages"
+    if not root.is_dir() or root.is_symlink():
+        return ()
+    for namespace in sorted(root.iterdir(), key=lambda item: item.name.encode("utf-8")):
+        if namespace.name in enabled or namespace.is_symlink() or not namespace.is_dir():
+            continue
+        prefix = f".standards/packages/{namespace.name}/"
+        namespace_units = [unit for unit in units if unit.target.startswith(prefix)]
+        if not namespace_units or any(path.startswith(prefix) for path in blocked):
+            continue
+        if all(unit.kind is ActionKind.REMOVE for unit in namespace_units):
+            candidates.append(prefix.removesuffix("/"))
+    return tuple(candidates)
+
+
 def _next_lock(
     request: PlannerRequest,
     resolution: ResolutionResult,
@@ -1278,6 +1415,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     groups, group_findings = _group_desired(desired)
     findings.extend(group_findings)
     findings.extend(_historical_overlap_findings(request.resolution.previous_lock, groups))
+    findings.extend(_namespace_findings(request.repo, selected, request.resolution.previous_lock))
     actions, units, target_findings, targets = _render_targets(
         snapshot=snapshot,
         groups=groups,
@@ -1288,6 +1426,12 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     findings.extend(target_findings)
     ordered_findings = tuple(sort_findings(findings))
     applicable = not any(finding.severity == "error" for finding in ordered_findings)
+    namespace_prunes = _namespace_prunes(
+        request.repo,
+        selected,
+        units,
+        ordered_findings,
+    )
     if applicable:
         artifacts = _locked_after(
             groups=groups,
@@ -1322,5 +1466,6 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
                 key=lambda item: (item.standard_id, item.version, item.provider_id),
             )
         ),
+        namespace_prunes=namespace_prunes,
         next_lock=next_lock,
     )

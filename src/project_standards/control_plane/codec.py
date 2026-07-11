@@ -185,6 +185,12 @@ def render_lock(lock: CentralLock) -> bytes:
                 f"adapter = {_toml_string(artifact.adapter.value)}",
                 f"scope = {_toml_string(artifact.scope)}",
                 f"owners = {_toml_array(artifact.owners)}",
+            ]
+        )
+        if artifact.shared_identity is not None:
+            lines.append(f"shared_identity = {_toml_string(artifact.shared_identity)}")
+        lines.extend(
+            [
                 f"versions = {_render_inline_versions(artifact.versions)}",
                 f"provenance = {_toml_string(artifact.provenance.value)}",
                 f"policy = {_toml_string(artifact.policy.value)}",
