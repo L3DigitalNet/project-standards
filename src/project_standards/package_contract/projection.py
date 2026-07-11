@@ -1,4 +1,4 @@
-"""Symlink-only projection from canonical payloads into installed package data."""
+"""Symlink-only projection from canonical package facts into installed data."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import os
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from project_standards.package_contract.diagnostics import (
     PackageContractError,
@@ -26,14 +27,16 @@ class ProjectionLink:
     target: str
     standard_id: str
     version: str
+    kind: Literal["payload", "catalog"]
 
 
 @dataclass(frozen=True, slots=True)
 class ProjectionPlan:
-    """Complete deterministic projection for every indexed V2 payload file."""
+    """Complete deterministic projection for catalog sources and V2 payload files."""
 
     root: Path
     projection_root: Path
+    catalog_projection_root: Path
     links: tuple[ProjectionLink, ...]
 
 
@@ -46,83 +49,132 @@ def _safe_root(root: Path) -> Path:
         raise PackageContractError("projection root could not be resolved") from exc
 
 
-def _projection_root(root: Path) -> Path:
-    projection = root / "src/project_standards/payloads"
+def _projection_roots(root: Path) -> tuple[Path, Path]:
+    payloads = root / "src/project_standards/payloads"
+    catalogs = root / "src/project_standards/catalogs"
     try:
         for path in (
             root / "src",
             root / "src/project_standards",
-            projection,
+            payloads,
+            catalogs,
         ):
             if path.is_symlink():
                 raise PackageContractError("projection path cannot contain a directory symlink")
     except OSError as exc:
         raise PackageContractError("projection path could not be inspected") from exc
-    return projection
+    return payloads, catalogs
+
+
+def _catalog_sources(root: Path) -> tuple[Path, ...]:
+    catalogs = root / "catalogs"
+    try:
+        if not catalogs.exists():
+            return ()
+        if catalogs.is_symlink() or not catalogs.is_dir():
+            raise PackageContractError("catalog source path must be a regular directory")
+        sources: list[Path] = []
+        for path in catalogs.iterdir():
+            if path.suffix != ".toml":
+                continue
+            if path.is_symlink() or not path.is_file():
+                raise PackageContractError("catalog source must be a regular file")
+            try:
+                major = int(path.stem)
+            except ValueError:
+                continue
+            if major >= 1 and str(major) == path.stem:
+                sources.append(path)
+        return tuple(sorted(sources, key=lambda path: path.name.encode("utf-8")))
+    except OSError as exc:
+        raise PackageContractError("catalog sources could not be inspected") from exc
 
 
 def plan_payload_projection(root: Path) -> ProjectionPlan:
     """Plan exact relative file links without modifying source or projection trees."""
     normalized_root = _safe_root(root)
-    projection = _projection_root(normalized_root)
+    projection, catalog_projection = _projection_roots(normalized_root)
     discovery = discover_v2_families(normalized_root)
     if discovery.findings:
         raise PackageContractError("V2 family discovery is not clean enough to project")
-    if not discovery.paths:
-        return ProjectionPlan(normalized_root, projection, ())
-
-    allowlist = [path.parent.name for path in discovery.paths]
-    repository = build_package_repository(
-        normalized_root,
-        family_allowlist=allowlist,
-    )
-    if repository.findings:
-        raise PackageContractError("V2 package repository is not clean enough to project")
 
     links: list[ProjectionLink] = []
-    for payload in repository.payloads:
-        standard_id = payload.manifest.payload.standard
-        version = payload.manifest.payload.version.value
-        canonical_root = normalized_root / f"standards/{standard_id}/versions/{version}"
-        runtime_root = projection / standard_id / version
-        for entry in payload.integrity.inventory:
-            relative_file = entry.path.normalized.as_posix()
-            source = canonical_root / entry.path.normalized
-            destination = runtime_root / entry.path.normalized
-            target = Path(os.path.relpath(source, start=destination.parent)).as_posix()
-            links.append(
-                ProjectionLink(
-                    relative_path=f"{standard_id}/{version}/{relative_file}",
-                    destination=destination,
-                    source=source,
-                    target=target,
-                    standard_id=standard_id,
-                    version=version,
+    if discovery.paths:
+        allowlist = [path.parent.name for path in discovery.paths]
+        repository = build_package_repository(
+            normalized_root,
+            family_allowlist=allowlist,
+        )
+        if repository.findings:
+            raise PackageContractError("V2 package repository is not clean enough to project")
+
+        for payload in repository.payloads:
+            standard_id = payload.manifest.payload.standard
+            version = payload.manifest.payload.version.value
+            canonical_root = normalized_root / f"standards/{standard_id}/versions/{version}"
+            runtime_root = projection / standard_id / version
+            for entry in payload.integrity.inventory:
+                relative_file = entry.path.normalized.as_posix()
+                source = canonical_root / entry.path.normalized
+                destination = runtime_root / entry.path.normalized
+                target = Path(os.path.relpath(source, start=destination.parent)).as_posix()
+                links.append(
+                    ProjectionLink(
+                        relative_path=f"{standard_id}/{version}/{relative_file}",
+                        destination=destination,
+                        source=source,
+                        target=target,
+                        standard_id=standard_id,
+                        version=version,
+                        kind="payload",
+                    )
                 )
+    for source in _catalog_sources(normalized_root):
+        destination = catalog_projection / source.name
+        links.append(
+            ProjectionLink(
+                relative_path=f"catalogs/{source.name}",
+                destination=destination,
+                source=source,
+                target=Path(os.path.relpath(source, start=destination.parent)).as_posix(),
+                standard_id="project-standards",
+                version=source.stem,
+                kind="catalog",
             )
+        )
     return ProjectionPlan(
         normalized_root,
         projection,
+        catalog_projection,
         tuple(sorted(links, key=lambda link: link.relative_path.encode("utf-8"))),
     )
 
 
 def _finding(code: str, plan: ProjectionPlan, path: Path, message: str) -> PackageFinding:
     try:
-        relative = path.relative_to(plan.projection_root)
-        parts = relative.parts
+        relative = path.relative_to(plan.catalog_projection_root)
+        standard_id = "project-standards"
+        version = relative.stem
+        identity = "catalog-projection"
     except ValueError:
-        relative = path.relative_to(plan.root)
-        parts = ()
+        try:
+            relative = path.relative_to(plan.projection_root)
+            parts = relative.parts
+            standard_id = parts[0] if len(parts) >= 1 else "project-standards"
+            version = parts[1] if len(parts) >= 2 else ""
+        except ValueError:
+            standard_id = "project-standards"
+            version = ""
+        identity = "payload-projection"
     return PackageFinding(
         code=code,
         severity="error",
-        standard_id=parts[0] if len(parts) >= 1 else "project-standards",
-        version=parts[1] if len(parts) >= 2 else "",
+        standard_id=standard_id,
+        version=version,
         path=path.relative_to(plan.root).as_posix(),
-        identity="payload-projection",
+        identity=identity,
         message=message,
-        hint="regenerate the symlink-only installed payload projection",
+        hint="regenerate the symlink-only installed package projection",
     )
 
 
@@ -131,18 +183,22 @@ def projection_findings(root: Path) -> tuple[PackageFinding, ...]:
     plan = plan_payload_projection(root)
     expected = {link.destination: link for link in plan.links}
     canonical_roots = {
-        plan.root / f"standards/{link.standard_id}/versions/{link.version}" for link in plan.links
+        plan.root / f"standards/{link.standard_id}/versions/{link.version}"
+        for link in plan.links
+        if link.kind == "payload"
     }
+    canonical_roots.add(plan.root / "catalogs")
     findings: list[PackageFinding] = []
     valid: set[Path] = set()
     try:
-        entries = (
-            sorted(
-                plan.projection_root.rglob("*"),
-                key=lambda path: path.as_posix().encode("utf-8"),
-            )
-            if plan.projection_root.is_dir()
-            else []
+        entries = sorted(
+            (
+                path
+                for root in (plan.projection_root, plan.catalog_projection_root)
+                if root.is_dir()
+                for path in root.rglob("*")
+            ),
+            key=lambda path: path.as_posix().encode("utf-8"),
         )
     except OSError as exc:
         raise PackageContractError("projection tree could not be enumerated") from exc
@@ -275,10 +331,11 @@ def sync_payload_projection(
         )
 
     expected = {link.destination: link for link in plan.links}
-    if plan.projection_root.is_dir():
-        for entry in sorted(plan.projection_root.rglob("*"), reverse=True):
-            if entry.is_symlink() and entry not in expected:
-                entry.unlink()
+    for projection_root in (plan.projection_root, plan.catalog_projection_root):
+        if projection_root.is_dir():
+            for entry in sorted(projection_root.rglob("*"), reverse=True):
+                if entry.is_symlink() and entry not in expected:
+                    entry.unlink()
     for link in plan.links:
         link.destination.parent.mkdir(parents=True, exist_ok=True)
         if link.destination.is_symlink():
@@ -291,4 +348,5 @@ def sync_payload_projection(
             )
         link.destination.symlink_to(link.target)
     _remove_empty_directories(plan.projection_root)
+    _remove_empty_directories(plan.catalog_projection_root)
     return projection_findings(plan.root)

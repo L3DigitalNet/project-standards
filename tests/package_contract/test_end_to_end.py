@@ -145,6 +145,9 @@ source-include = ["standards/**", "catalogs/**"]
     monkeypatch.setattr(socket, "socket", _deny_network)
     monkeypatch.setattr(socket, "create_connection", _deny_network)
     assert _installed_facts(installed / "project_standards/payloads") == _repository_facts(_FULL)
+    assert (installed / "project_standards/catalogs/5.toml").read_bytes() == (
+        _FULL / "catalogs/5.toml"
+    ).read_bytes()
 
 
 def test_randomized_discovery_is_byte_deterministic(

@@ -45,6 +45,7 @@ def test_projection_plan_and_apply_create_only_relative_file_symlinks(
 
     plan = plan_payload_projection(root)
     assert [link.relative_path for link in plan.links] == [
+        "catalogs/5.toml",
         "demo/1.2/README.md",
         "demo/1.2/adopt.md",
         "demo/1.2/agent-summary.md",
@@ -55,6 +56,11 @@ def test_projection_plan_and_apply_create_only_relative_file_symlinks(
     assert projection_findings(root) == ()
     assert sync_payload_projection(root, check=True) == ()
     assert _snapshot(root / "standards") == canonical
+
+    catalog_link = root / "src/project_standards/catalogs/5.toml"
+    assert catalog_link.is_symlink()
+    assert not catalog_link.readlink().is_absolute()
+    assert catalog_link.resolve(strict=True).read_bytes() == (root / "catalogs/5.toml").read_bytes()
 
     projection = root / "src/project_standards/payloads"
     links = sorted(path for path in projection.rglob("*") if path.is_symlink())
