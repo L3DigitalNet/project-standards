@@ -128,7 +128,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   The approved 18-task mechanism-level core is complete through `e069c34`: neutral initialization, unified config and lock state, catalog-scoped resolution, bounded providers, semantic composition, lifecycle planning, transactional apply/recovery, and public reconciliation commands. Reconstruct and convert the current packages, implement legacy migration and same-major catalog refresh, prove compatibility for every current standard, then complete activation and release.
 
-  The 18-task follow-on plan is drafted at `docs/superpowers/plans/2026-07-11-consumer-standards-control-plane-package-migration-release.md` and awaits adversarial review plus owner approval before execution.
+  The 18-task follow-on plan is drafted at `docs/superpowers/plans/2026-07-11-consumer-standards-control-plane-package-migration-release.md`. Round 1 audit findings CR-001 through CR-003 are remediated; convergence re-audit and owner approval remain before execution.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 

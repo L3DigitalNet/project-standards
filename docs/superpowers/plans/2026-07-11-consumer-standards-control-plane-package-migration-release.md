@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Ready for adversarial plan review. Do not execute until the review converges and the owner approves execution.
+**Status:** Round 1 audit findings CR-001 through CR-003 are remediated in this revision. Do not execute until the convergence audit passes and the owner approves execution.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -55,6 +55,7 @@ These choices apply the approved specifications without adding new product behav
 11. **Current repository activation is late.** Root `standard.toml` files switch to V2 family indexes, catalog 5 is added, and payload projection is synchronized only after every package payload validates in an isolated reconstruction fixture.
 12. **Release actions stay separate.** This plan prepares version/pin/changelog/upgrade evidence only to the point required for a release commit review; the retained P3 tracker controls the actual version bump, merge, tags, GitHub release, and freeze lift.
 13. **Dogfood uses a disposable release-cut checkout.** The versioning contract requires `pyproject.toml` to remain `4.3.0` on `testing` and move to `5.0.0` only in the atomic release commit on `main`. Therefore this plan proves the exact root migration in a temporary tracked-tree copy whose package metadata is changed to `5.0.0` before building the wheel. The source checkout retains `.project-standards.yml` until the release commit applies the already-proven migration.
+14. **The complete `.standards/` tree is tracked after migration.** SPEC-CP01 A-001, FR-001, and IR-006 require `config.toml`, `catalog.toml`, `lock.toml`, declared package-owned entries, and consumer extensions to be committed and reviewable. This repository does not add `.standards/` to `.gitignore`; the directory first materializes in the disposable dogfood checkout, then in the real repository through the atomic v5 release commit.
 
 ## Requirement Allocation
 
@@ -131,7 +132,7 @@ Existing package resources remain canonical only when copied into a version dire
 
 - [ ] Write failing model/schema tests for a `migration-report` provider effect, deterministic package results, recognized setting paths, legacy claims, artifact/lock dispositions, warnings/errors, duplicate claims, unsafe paths, undeclared signatures, and secret-value redaction.
 - [ ] Run `uv run pytest tests/package_contract/test_payload_execution_contracts.py tests/control_plane/test_schemas.py tests/control_plane/test_migration.py -q`; expect import/schema failures.
-- [ ] Extend the closed provider operation table so `ProviderOperation.MIGRATE` requires `ProviderPhase.PLAN` plus `ProviderEffect.MIGRATION_REPORT`. Do not weaken the existing `mutation-plan` contract for `fix`, `scaffold`, or `upgrade`.
+- [ ] Remap the existing closed contract for `ProviderOperation.MIGRATE` from `(ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN)` to `(ProviderPhase.PLAN, ProviderEffect.MIGRATION_REPORT)`. Update the existing assertions in `tests/package_contract/test_payload_execution_contracts.py`, provider-result tests in `tests/control_plane/test_providers.py`, both full-fixture migrate providers under `tests/fixtures/package_contract/valid/full/`, and the automatic-migration provider check around `payload.py`'s legacy-endpoint validation. Do not weaken the `mutation-plan` contract for `fix`, `scaffold`, or `upgrade`.
 - [ ] Define frozen `MigratedPackage`, `LegacyClaim`, `LegacyDisposition`, `MigrationFinding`, and `MigrationReport` models in `control_plane/migration.py`. `MigratedPackage` contains `standard_id`, exact payload `version`, `selector`, validated package `config`, and recognized legacy JSON-pointer paths. `LegacyClaim` contains the payload-declared signature ID, target, observed digest, ownership class, and proposed disposition.
 - [ ] Add `migration-report.schema.json` to the generated control-plane schemas and make provider result validation select the schema implied by the declared effect.
 - [ ] Add human/JSON serialization that exposes paths, IDs, dispositions, and digests but no source content or configured secret value.
@@ -297,6 +298,7 @@ Existing package resources remain canonical only when copied into a version dire
 - [ ] Regenerate the human standards index/catalog from V2 families, payloads, roles, capabilities, resources, providers, outputs, and relations.
 - [ ] Run `standards sync-payload-projection --root .`, review every generated relative-file symlink, and update package-data inclusion only if the built wheel otherwise omits a projected catalog/family/payload member.
 - [ ] Activate the V5 adopt wrapper only after the installed catalog exposes all seven consumer defaults. V1 fallback remains available only for legacy-only installations or package versions not advertised by catalog 5.
+- [ ] Keep `.standards/` absent from the source checkout and absent from `.gitignore` on `testing`. Assert the atomic v5 release patch later adds the complete tracked control plane together; a catalog-only directory is never a valid intermediate state.
 - [ ] Prove source checkout and extracted wheel discover identical catalog/family/payload bytes and that no catalog-advertised resource is missing.
 - [ ] Run package, graph/catalog, projection, registry, adoption, and installed-wrapper tests; expect pass.
 - [ ] Commit: `feat(v5): activate current package catalog`
@@ -315,16 +317,18 @@ Existing package resources remain canonical only when copied into a version dire
 
 ### Task 16: Real Package Compatibility Matrix
 
-**Files:** Create `tests/package_compatibility/**` and fixtures; update package-specific tests where matrix failures expose contract defects.
+**Files:** Create `tests/package_compatibility/**`, including `test_performance.py`, and fixtures; update package-specific tests where matrix failures expose contract defects.
 
 - [ ] Build a table-driven list from catalog 5 rather than hardcoding a count. Assert every consumer default passes fresh enable/apply/validate/disable/re-enable alone.
 - [ ] Generate every unordered pair from the consumer-default list. Exercise fresh and migrated apply, all declared validators, shared ownership, removal, and second-apply byte identity.
-- [ ] Exercise the full supported set from fresh and all-namespace legacy fixtures. Randomize requested/discovery order 100 times and compare reports, config/catalog/lock, planned actions, and final files.
+- [ ] Exercise the full supported set once per fresh and all-namespace legacy correctness fixture under the ordinary non-performance gate.
+- [ ] Mark only the 100-order requested/discovery permutation sweep as `performance`. Compare reports, config/catalog/lock, planned actions, and final files, and require completion within 30 seconds on the normal Linux CI runner.
 - [ ] Add targeted mandatory matrices: Python Tooling + Agent Handoff + Markdown Tooling; ADR + Frontmatter; Project Spec + Frontmatter; every package contributing to VS Code, EditorConfig, workflows, or agent instructions.
 - [ ] Assert a failure in any package row excludes that package from catalog 5 rather than weakening or skipping the row.
-- [ ] Build/extract the wheel, deny network, rerun the individual/pair/full matrix against installed payloads, and compare source/wheel results.
+- [ ] Build/extract one session-scoped wheel, deny network, rerun the individual/pair/full correctness matrix against that shared installed payload tree, and compare source/wheel results. Do not rebuild the wheel per matrix row.
+- [ ] Put repeated wheel build/extract cycles in `test_performance.py` under the `performance` marker; keep one installed-wheel individual/pair/full correctness pass in the default gate.
 - [ ] Add performance assertions that the real catalog remains within the existing 100-package/1,000-artifact planning threshold.
-- [ ] Run `uv run pytest tests/package_compatibility -q`; expect every derived row pass.
+- [ ] Run `uv run pytest tests/package_compatibility -m 'not performance' -q`; expect every correctness row pass. Run `uv run pytest tests/package_compatibility/test_performance.py -m performance -q` separately; expect the 100-order and repeated-wheel budgets to pass.
 - [ ] Commit: `test(v5): prove current package compatibility`
 
 ### Task 17: Disposable Release-Cut Dogfood and Refresh Proof
@@ -332,18 +336,19 @@ Existing package resources remain canonical only when copied into a version dire
 **Files:** Create a release-candidate checkout helper and dogfood/refresh tests under `tests/package_compatibility/`; update release-checklist documentation. Do not replace the source checkout's `.project-standards.yml` in this task.
 
 - [ ] Copy only the tracked repository tree to a temporary checkout, set its package metadata and lock to `5.0.0`, build/extract the wheel there, and assert the installed CLI reports `project-standards 5.0.0`. Never edit version metadata in the source checkout.
-- [ ] Preview the temporary checkout's full legacy migration and save the human/JSON evidence in the implementation review record. Resolve every ambiguity in package declarations or explicit repository intent before apply.
+- [ ] Preview the temporary checkout's full legacy migration and save the human/JSON evidence in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. Resolve every ambiguity in package declarations or explicit repository intent before apply.
 - [ ] Apply the reviewed migration in the temporary checkout. Verify `.project-standards.yml` is removed only after unified validation, the Agent Handoff package lock is retired/imported, consumer-authored handoff knowledge remains byte-preserved, and every planned artifact is centrally locked.
 - [ ] Run all validators and package commands through unified state in the temporary checkout. Confirm a second reconciliation produces no actions and changes no bytes.
+- [ ] In the migrated disposable checkout, run `render-consumer-catalog --output .standards/catalog.toml --check` with its installed `5.0.0` tool release and require exact agreement with the tracked catalog. This is the real control-plane catalog drift check; it never runs against `.standards/` in the legacy-authority source checkout.
 - [ ] Build a second same-major catalog snapshot in a fixture, preview/apply refresh, and prove compatible defaults update while exact pins, options, accepted tracks, and unrelated files remain unchanged.
 - [ ] Search tracked runtime, workflow, docs, tests, and installed-wheel content for active `.project-standards.yml`, V1 manifest, package-specific lock, or direct-writer dependencies. Classify retained v5 fallback references explicitly; remove unintended active dependencies.
-- [ ] Record the exact reviewed migration command and resulting tracked patch that the atomic v5 release commit must apply after changing the tool version to `5.0.0`. Assert applying that patch to a fresh temporary checkout yields the same digests as the dogfood run.
+- [ ] Record the exact reviewed migration command, changed-path inventory, patch SHA-256, control-plane file digests, and replay result in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. The test may retain the generated patch only as a temporary artifact; assert replaying it against a fresh temporary checkout yields the same digests as the dogfood run.
 - [ ] Run dogfood validation, migration, drift, projection, catalog-refresh, and installed-wheel tests; expect pass.
 - [ ] Commit: `test(v5): prove release-cut control-plane migration`
 
 ### Task 18: Documentation, Traceability, and Release-Ready Closeout
 
-**Files:** Update SPEC-CP01/SPEC-BA02 traceability and deviations; `README.md`, `standards/README.md`, `standards/catalog.md`, `docs/usage.md`, package adoption guides, `CHANGELOG.md`, `UPGRADING.md`, `meta/versioning.md` only where pre-release policy text changes, and canonical handoff/status/task/session pointers.
+**Files:** Update SPEC-CP01/SPEC-BA02 traceability and deviations; `README.md`, `AGENTS.md`, `standards/README.md`, `standards/catalog.md`, `docs/usage.md`, package adoption guides, `CHANGELOG.md`, `UPGRADING.md`, `meta/versioning.md` only where pre-release policy text changes, `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`, and canonical handoff/status/task/session pointers.
 
 - [ ] Update every package adoption guide to package-specific suitability, options, outputs, migration, verification, and troubleshooting. Remove active V1 fragment/install instructions while preserving clearly labeled v5 legacy migration guidance.
 - [ ] Document `init --migrate`, preview/apply ordering, ambiguity handling, same-major refresh, package versus contract selectors, provider-backed commands, and the v6 fallback-removal gate.
@@ -377,17 +382,28 @@ uv run project-standards spec lint --config .project-standards.yml --strict
 uv run project-standards standards validate-packages --root . --json
 uv run project-standards standards validate-graph --root . --require-all-manifests --json
 uv run project-standards standards generate-package-schemas --root . --check
-TOOL_RELEASE="$(uv run python -c 'from project_standards._version import package_version; print(package_version())')"
+TARGET_TOOL_RELEASE="5.0.0"
+CATALOG_SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$CATALOG_SCRATCH"' EXIT
 uv run project-standards standards render-consumer-catalog \
   --root . \
   --catalog-major 5 \
-  --output .standards/catalog.toml \
-  --tool-release "$TOOL_RELEASE" \
+  --output "$CATALOG_SCRATCH/catalog.toml" \
+  --tool-release "$TARGET_TOOL_RELEASE"
+uv run project-standards standards render-consumer-catalog \
+  --root . \
+  --catalog-major 5 \
+  --output "$CATALOG_SCRATCH/catalog.toml" \
+  --tool-release "$TARGET_TOOL_RELEASE" \
   --check
+rm -rf "$CATALOG_SCRATCH"
+trap - EXIT
+test ! -e .standards
 uv run project-standards standards sync-payload-projection --root . --check
 uv run project-standards agent-handoff validate --repo .
 uv run project-standards agent-handoff drift-check --repo .
-uv run pytest tests/package_compatibility -q
+uv run pytest tests/package_compatibility -m 'not performance' -q
+uv run pytest tests/package_compatibility/test_performance.py -m performance -q
 uv build
 git diff --check
 ```
@@ -397,6 +413,7 @@ Expected results:
 - All tests pass at or above the repository branch-coverage floor.
 - Every catalog-derived individual, pairwise, full-set, migrated, and installed-wheel compatibility row passes.
 - The exact same source and installed distribution payload/catalog digests are reported.
+- Source-tree catalog rendering/checking uses only a cleaned temporary directory and leaves `.standards/` absent while legacy authority remains active.
 - Migration preview is read-only; apply retires legacy authority only after unified verification.
 - Same-major refresh preserves pins, options, and accepted-track boundaries.
 - The disposable v5 release-cut checkout's second reconciliation is a byte-level no-op.
@@ -417,4 +434,5 @@ Expected results:
 - Real individual, pairwise, full-set, migrated, randomized-order, and installed-wheel matrices pass.
 - SPEC-CP01 MS-4 is complete; the pre-release MS-5 evidence and exact root migration patch are release-ready.
 - This source checkout deliberately retains `.project-standards.yml` while its package metadata remains `4.3.0`; the disposable `5.0.0` checkout proves `.standards/` as the sole post-migration authority.
+- The atomic release patch adds the complete `.standards/` tree as tracked state; neither the source-tree gate nor `.gitignore` creates a catalog-only intermediate authority.
 - Actual v5 version bump, root-authority migration, `main` merge, signing, tag movement, GitHub release, and freeze lift remain controlled by the retained P3 release tasks.
