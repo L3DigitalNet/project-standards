@@ -1,0 +1,816 @@
+{
+  "$defs": {
+    "AdapterKind": {
+      "description": "Semantic container adapters supported by the V1 contribution contract.",
+      "enum": [
+        "whole-file",
+        "toml",
+        "json",
+        "jsonc",
+        "yaml",
+        "editorconfig",
+        "markdown-block"
+      ],
+      "title": "AdapterKind",
+      "type": "string"
+    },
+    "ArtifactPolicy": {
+      "description": "Lifecycle policies supported by managed package outputs.",
+      "enum": [
+        "managed",
+        "create-only"
+      ],
+      "title": "ArtifactPolicy",
+      "type": "string"
+    },
+    "CapabilityDeclaration": {
+      "additionalProperties": false,
+      "description": "Version-specific behavior supplied by and requested from the platform.",
+      "properties": {
+        "consumes_platform": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:[-.][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Consumes Platform",
+          "type": "array"
+        },
+        "provides": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:[-.][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Provides",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provides",
+        "consumes_platform"
+      ],
+      "title": "CapabilityDeclaration",
+      "type": "object"
+    },
+    "ConfigDeclaration": {
+      "additionalProperties": false,
+      "description": "Bind package options to one declared schema resource.",
+      "properties": {
+        "schema_resource": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Resource",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_resource"
+      ],
+      "title": "ConfigDeclaration",
+      "type": "object"
+    },
+    "ContributionDeclaration": {
+      "additionalProperties": false,
+      "description": "Declare ownership of one normalized semantic unit in a shared file.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ArtifactPolicy"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "shared_identity": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:[./_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Identity"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "source_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Digest"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "target",
+        "adapter",
+        "scope",
+        "policy"
+      ],
+      "title": "ContributionDeclaration",
+      "type": "object"
+    },
+    "ExtensionDeclaration": {
+      "additionalProperties": false,
+      "description": "Bind one package option to a consumer-owned repository input.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "media_type": {
+          "pattern": "^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "option": {
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+          "title": "Option",
+          "type": "string"
+        },
+        "path_policy": {
+          "$ref": "#/$defs/ExtensionPathPolicy"
+        },
+        "preferred_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preferred Root"
+        }
+      },
+      "required": [
+        "id",
+        "option",
+        "media_type",
+        "path_policy"
+      ],
+      "title": "ExtensionDeclaration",
+      "type": "object"
+    },
+    "ExtensionPathPolicy": {
+      "enum": [
+        "repository-relative"
+      ],
+      "title": "ExtensionPathPolicy",
+      "type": "string"
+    },
+    "LegacySignatureDeclaration": {
+      "additionalProperties": false,
+      "description": "Recognize only exact previously shipped whole files or bounded blocks.",
+      "properties": {
+        "begin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Begin"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LegacySignatureFormat"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/LegacySignatureKind"
+        },
+        "known_content_digests": {
+          "items": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Known Content Digests",
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "targets",
+        "known_content_digests"
+      ],
+      "title": "LegacySignatureDeclaration",
+      "type": "object"
+    },
+    "LegacySignatureFormat": {
+      "enum": [
+        "markdown",
+        "toml",
+        "yaml"
+      ],
+      "title": "LegacySignatureFormat",
+      "type": "string"
+    },
+    "LegacySignatureKind": {
+      "enum": [
+        "whole-file",
+        "bounded-block"
+      ],
+      "title": "LegacySignatureKind",
+      "type": "string"
+    },
+    "LegacyStateDeclaration": {
+      "additionalProperties": false,
+      "description": "Register one package-local conceptual state accepted by migrations.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "LegacyStateDeclaration",
+      "type": "object"
+    },
+    "MigrationDeclaration": {
+      "additionalProperties": false,
+      "description": "Declare one bounded package or legacy-state transition.",
+      "properties": {
+        "affected": {
+          "items": {
+            "pattern": "^(?:config:\\*|artifact:[a-z0-9]+(?:-[a-z0-9]+)*|contribution:[a-z0-9]+(?:-[a-z0-9]+)*)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Affected",
+          "type": "array"
+        },
+        "from": {
+          "pattern": "^(?:package:(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)|legacy:([a-z0-9]+(?:-[a-z0-9]+)*))$",
+          "title": "From",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "instructions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instructions"
+        },
+        "mode": {
+          "$ref": "#/$defs/MigrationMode"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "reversible": {
+          "title": "Reversible",
+          "type": "boolean"
+        },
+        "signatures": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Signatures",
+          "type": "array"
+        },
+        "to": {
+          "pattern": "^(?:package:(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)|legacy:([a-z0-9]+(?:-[a-z0-9]+)*))$",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "to",
+        "mode",
+        "reversible",
+        "affected"
+      ],
+      "title": "MigrationDeclaration",
+      "type": "object"
+    },
+    "MigrationMode": {
+      "enum": [
+        "automatic",
+        "manual"
+      ],
+      "title": "MigrationMode",
+      "type": "string"
+    },
+    "PayloadAvailability": {
+      "description": "Whether a payload is selectable by consumers or catalog-only.",
+      "enum": [
+        "consumer",
+        "reference-only",
+        "internal"
+      ],
+      "title": "PayloadAvailability",
+      "type": "string"
+    },
+    "PayloadIdentity": {
+      "additionalProperties": false,
+      "description": "Exact package identity carried by one immutable payload.",
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/PayloadAvailability"
+        },
+        "standard": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard",
+        "version",
+        "availability"
+      ],
+      "title": "PayloadIdentity",
+      "type": "object"
+    },
+    "ProviderDeclaration": {
+      "additionalProperties": false,
+      "description": "Declare one phase-bounded provider implemented by payload resources.",
+      "properties": {
+        "effect": {
+          "$ref": "#/$defs/ProviderEffect"
+        },
+        "entrypoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entrypoint"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "input_schema": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Schema"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProviderKind"
+        },
+        "operation": {
+          "$ref": "#/$defs/ProviderOperation"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Schema"
+        },
+        "phase": {
+          "$ref": "#/$defs/ProviderPhase"
+        },
+        "resources": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Resources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "operation",
+        "kind",
+        "phase",
+        "effect",
+        "resources"
+      ],
+      "title": "ProviderDeclaration",
+      "type": "object"
+    },
+    "ProviderEffect": {
+      "enum": [
+        "findings",
+        "content",
+        "mutation-plan"
+      ],
+      "title": "ProviderEffect",
+      "type": "string"
+    },
+    "ProviderKind": {
+      "enum": [
+        "python",
+        "command",
+        "workflow",
+        "documentation-only"
+      ],
+      "title": "ProviderKind",
+      "type": "string"
+    },
+    "ProviderOperation": {
+      "enum": [
+        "validate",
+        "verify",
+        "fix",
+        "lint",
+        "drift-check",
+        "id-next",
+        "extract",
+        "render",
+        "scaffold",
+        "upgrade",
+        "migrate",
+        "semantic-review"
+      ],
+      "title": "ProviderOperation",
+      "type": "string"
+    },
+    "ProviderPhase": {
+      "enum": [
+        "plan",
+        "inspect",
+        "validate",
+        "verify",
+        "authoring"
+      ],
+      "title": "ProviderPhase",
+      "type": "string"
+    },
+    "RelationDeclaration": {
+      "additionalProperties": false,
+      "description": "Explicit package-family relationships; independence is the empty default.",
+      "properties": {
+        "companions": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Companions",
+          "type": "array"
+        },
+        "conflicts": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        },
+        "extends": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Extends",
+          "type": "array"
+        }
+      },
+      "title": "RelationDeclaration",
+      "type": "object"
+    },
+    "RelationEvidenceDeclaration": {
+      "additionalProperties": false,
+      "description": "Bind one constraining relationship to immutable decision evidence.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/RelationEvidenceKind"
+        },
+        "resource": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Resource",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "target",
+        "resource"
+      ],
+      "title": "RelationEvidenceDeclaration",
+      "type": "object"
+    },
+    "RelationEvidenceKind": {
+      "description": "Relationship kinds whose composition constraints require an ADR.",
+      "enum": [
+        "extends",
+        "conflicts"
+      ],
+      "title": "RelationEvidenceKind",
+      "type": "string"
+    },
+    "ResourceDeclaration": {
+      "additionalProperties": false,
+      "description": "Address one immutable payload-relative resource by stable metadata.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "media_type": {
+          "pattern": "^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "path",
+        "media_type",
+        "digest"
+      ],
+      "title": "ResourceDeclaration",
+      "type": "object"
+    },
+    "WholeArtifactDeclaration": {
+      "additionalProperties": false,
+      "description": "Declare exclusive ownership of one complete repository file.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "pattern": "^0[0-7]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        },
+        "policy": {
+          "$ref": "#/$defs/ArtifactPolicy"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "target",
+        "source",
+        "digest",
+        "policy"
+      ],
+      "title": "WholeArtifactDeclaration",
+      "type": "object"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/standard-payload.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The declarative payload contract; later tasks add execution declarations.",
+  "properties": {
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/WholeArtifactDeclaration"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/CapabilityDeclaration"
+    },
+    "config": {
+      "$ref": "#/$defs/ConfigDeclaration"
+    },
+    "contributions": {
+      "items": {
+        "$ref": "#/$defs/ContributionDeclaration"
+      },
+      "title": "Contributions",
+      "type": "array"
+    },
+    "extensions": {
+      "items": {
+        "$ref": "#/$defs/ExtensionDeclaration"
+      },
+      "title": "Extensions",
+      "type": "array"
+    },
+    "legacy_signatures": {
+      "items": {
+        "$ref": "#/$defs/LegacySignatureDeclaration"
+      },
+      "title": "Legacy Signatures",
+      "type": "array"
+    },
+    "legacy_states": {
+      "items": {
+        "$ref": "#/$defs/LegacyStateDeclaration"
+      },
+      "title": "Legacy States",
+      "type": "array"
+    },
+    "migrations": {
+      "items": {
+        "$ref": "#/$defs/MigrationDeclaration"
+      },
+      "title": "Migrations",
+      "type": "array"
+    },
+    "payload": {
+      "$ref": "#/$defs/PayloadIdentity"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/$defs/ProviderDeclaration"
+      },
+      "title": "Providers",
+      "type": "array"
+    },
+    "relation_evidence": {
+      "items": {
+        "$ref": "#/$defs/RelationEvidenceDeclaration"
+      },
+      "title": "Relation Evidence",
+      "type": "array"
+    },
+    "relations": {
+      "$ref": "#/$defs/RelationDeclaration"
+    },
+    "resources": {
+      "items": {
+        "$ref": "#/$defs/ResourceDeclaration"
+      },
+      "minItems": 1,
+      "title": "Resources",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "payload",
+    "config",
+    "capabilities",
+    "resources"
+  ],
+  "title": "PayloadManifest",
+  "type": "object"
+}

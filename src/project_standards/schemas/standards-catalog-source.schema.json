@@ -1,0 +1,79 @@
+{
+  "$defs": {
+    "CatalogPackageEntry": {
+      "additionalProperties": false,
+      "description": "Bind one indexed package version and digest to a catalog role.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/CatalogRole"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "digest",
+        "role"
+      ],
+      "title": "CatalogPackageEntry",
+      "type": "object"
+    },
+    "CatalogRole": {
+      "description": "Catalog-major selection role assigned to one exact payload.",
+      "enum": [
+        "default",
+        "retained",
+        "candidate",
+        "reference-only",
+        "internal"
+      ],
+      "title": "CatalogRole",
+      "type": "string"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/standards-catalog-source.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Strict author-owned source for one catalog major.",
+  "properties": {
+    "catalog_major": {
+      "minimum": 1,
+      "title": "Catalog Major",
+      "type": "integer"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/CatalogPackageEntry"
+      },
+      "minItems": 1,
+      "title": "Packages",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "catalog_major",
+    "packages"
+  ],
+  "title": "CatalogSource",
+  "type": "object"
+}

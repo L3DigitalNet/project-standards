@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "FamilyStatus": {
+      "description": "Lifecycle states shared by every package family.",
+      "enum": [
+        "draft",
+        "review",
+        "active",
+        "deprecated",
+        "archived",
+        "superseded"
+      ],
+      "title": "FamilyStatus",
+      "type": "string"
+    },
+    "StandardIdentity": {
+      "additionalProperties": false,
+      "description": "Stable identity and lifecycle metadata for one package family.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/FamilyStatus"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "summary",
+        "status"
+      ],
+      "title": "StandardIdentity",
+      "type": "object"
+    },
+    "VersionIndexEntry": {
+      "additionalProperties": false,
+      "description": "Bind one exact package version to its manifest and aggregate digest.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "payload": {
+          "title": "Payload",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "payload",
+        "digest"
+      ],
+      "title": "VersionIndexEntry",
+      "type": "object"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/standard-family.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The complete strict `standards/{id}/standard.toml` V2 family index.",
+  "properties": {
+    "schema_version": {
+      "const": "2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "standard": {
+      "$ref": "#/$defs/StandardIdentity"
+    },
+    "versions": {
+      "items": {
+        "$ref": "#/$defs/VersionIndexEntry"
+      },
+      "minItems": 1,
+      "title": "Versions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "standard",
+    "versions"
+  ],
+  "title": "FamilyManifest",
+  "type": "object"
+}
