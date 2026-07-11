@@ -1,0 +1,8 @@
+schema_version = "1.0"
+catalog_major = 5
+
+[[packages]]
+id = "demo"
+version = "1.2"
+digest = "sha256:1ec8d07e07de0defe61804181b75e9139a7d6e9ed8540f677138efa8d2335dcb"
+role = "default"
