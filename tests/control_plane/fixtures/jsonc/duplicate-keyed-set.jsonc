@@ -1,0 +1,6 @@
+{
+  "tasks": [
+    {"label": "lint", "command": "one"},
+    {"label": "lint", "command": "two"},
+  ],
+}

@@ -1,0 +1,27 @@
+{
+  // Consumer settings stay in their original order.
+  "editor.formatOnSave" : false, // keep this spacing
+  "files.exclude": { "**/.cache": true },
+  "tasks": [
+    { "label": "consumer", "type": "shell", "command": "echo \"keep\"" }, // consumer task
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "ruff check .", /* lint note */
+    },
+  ],
+  "recommendations": [
+    "consumer.extension", // consumer recommendation
+    "ms-python.python",
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "id": "agent-handoff",
+        "command": "python3 .agents/hooks/session_start.py",
+      },
+      { "id": "consumer", "command": "echo keep" },
+    ],
+  },
+  "escaped/key": "quoted \"value\"",
+}
