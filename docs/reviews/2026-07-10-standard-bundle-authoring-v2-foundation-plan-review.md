@@ -1,6 +1,6 @@
 # Review: Standard Bundle Authoring V2 Foundation Implementation Plan
 
-**Plan:** `docs/superpowers/plans/2026-07-10-standard-bundle-authoring-v2-foundation.md` **Governing spec:** `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02, rev 0.3, approved) **Review target state:** clean working tree at commit `0b839bf` on `testing` **Reviewer:** Claude session 2026-07-10 **Status:** findings open — handed off for independent (Codex) disposition; no plan or spec edits applied by this review
+**Plan:** `docs/superpowers/plans/2026-07-10-standard-bundle-authoring-v2-foundation.md` **Governing spec:** `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02, rev 0.3, approved) **Review target state:** clean working tree at commit `0b839bf` on `testing` **Reviewer:** Claude session 2026-07-10 **Status:** Round 1 findings resolved in `afa4465`; Round 2 convergence verdict **APPROVED FOR EXECUTION** (see Round 2 below)
 
 ## Verdict
 
@@ -104,3 +104,47 @@ The directory already holds the V1 artifacts `standard.schema.json`, `markdown-f
 | F4 `render-consumer-catalog --check` target unspecified | 🟢 | No | Name output path + tracked status in Task 7 |
 | F5 `valid/full` fixture never named | 🟢 | No | Add as explicit Task 14 deliverable |
 | F6 schemas directory listed as Create | 🟢 | No | Annotate as existing directory |
+
+## Round 2 (convergence)
+
+**Review target state:** clean working tree at commit `afa4465` on `testing` **Reviewer:** Claude session 2026-07-10 — same reviewer as Round 1, with independent recomputation of every byte-level claim introduced by the remediation
+
+### Verdict
+
+**APPROVED FOR EXECUTION** — all six Round 1 findings are correctly and completely resolved in `afa4465`. The SPEC-BA02 rev 0.4 amendment is clarification-only as its revision row claims: the diff touches only the revision table and the §9 Integrity algorithm text; no requirement, scope, vocabulary, or acceptance criterion changed. One new 🟢 observation (F7), non-blocking.
+
+### Disposition verification
+
+- **F1 ✅ resolved.** The plan's Task 6 formula now builds one entry per file including `payload.toml`, uses the full lowercase `sha256:` entry form, and sorts the complete entry set by normalized UTF-8 path bytes — matching spec rev 0.4 exactly. **The golden vector was independently reproduced by this review:** computing from the stated raw bytes (`# Demo` + LF; `schema_version = "1.0"` + LF) yields file digests `31ca6c61…` and `c78775ad…` and aggregate `sha256:eb5608592b65f5e627a592e1af5db67222a43fb0fadd6002f77f5cda3f10943a`, all matching the spec table. The vector also discriminates: the Round 1 wrong ordering (`payload.toml` first) yields `sha256:f7317e8f…` and bare-hex entry digests yield `sha256:ff38d12f…`, so no wrong implementation of either ambiguity can satisfy the vector.
+- **F2 ✅ resolved.** `PayloadManifest` now declares `payload: PayloadIdentity`, `config: ConfigDeclaration`, and `legacy_signatures`, uses `Field(default_factory=…)`, and carries an explicit note that root field names match the normative TOML tables while nested declarations expand in Tasks 3–5.
+- **F3 ✅ resolved.** The FR-034/IR-007/DR-008 allocation row now reads "Passing for the projection mechanism with a synthetic payload; rechecked against every real payload in the V5 migration plan" — mirroring the FR-033 treatment as recommended.
+- **F4 ✅ resolved.** `render-consumer-catalog` now requires `--output PATH` with atomic replacement in write mode and read-only `--check` against the same path; the only tracked golden lives at `tests/fixtures/package_contract/valid/full/expected/catalog.toml`, with authority boundaries (authoring `catalogs/{catalog-major}.toml` vs. control-plane-owned consumer `.standards/catalog.toml`) stated explicitly.
+- **F5 ✅ resolved.** `tests/fixtures/package_contract/valid/full/` and its `expected/catalog.toml` are now explicit Task 14 deliverables, so the verification-gate command cannot dangle.
+- **F6 ✅ resolved.** The Target File Structure preamble and tree annotation now mark `src/project_standards/schemas/` as an existing directory receiving only the three named V2 schema files.
+
+### Round 2 verification (new ground truth checked; do not re-check unless it moves)
+
+- **Spec rev 0.4 diff scope confirmed:** `git show afa4465` on the spec touches only the revision-history row and §9 Integrity (entry encoding, complete-set sorting, golden-vector table). The "no scope or requirement changed" claim holds.
+- **All documentation gates pass at `afa4465`:** `spec validate`, `spec lint --strict`, `validate-frontmatter` (33 files), prettier, and markdownlint on the amended plan, spec, and this review.
+- **Exit-code claim verified against V1 code:** `src/project_standards/standards_graph/cli.py` returns exactly 0 (clean), 1 (findings), and 2 (invocation errors), so the plan's "exit codes remain 0/1/2" statement is accurate, not aspirational.
+
+### F7 🟢 — Expected results claim "catalog checks report fresh output," but the gate lists no catalog `--check` command
+
+**Plan location:** Verification Gates command list and the "Schema, catalog, and projection checks report fresh output" expected-results bullet.
+
+The gate runs `generate-package-schemas --check` and `sync-payload-projection --check` but never invokes `render-consumer-catalog … --check`, so nothing in the gate exercises catalog freshness even though the expected results claim it. Now that Task 7 defines a tracked golden, either add to the gate:
+
+```bash
+uv run project-standards standards render-consumer-catalog --root tests/fixtures/package_contract/valid/full --catalog-major <fixture major> --output tests/fixtures/package_contract/valid/full/expected/catalog.toml --check
+```
+
+or drop "catalog" from the expected-results bullet. Non-blocking: Task 14's end-to-end test renders and compares the catalog regardless, so the gap is a gate-coverage nicety, not a correctness hole.
+
+**Executor note (not a finding):** `expected/` lives inside the `valid/full` fixture repository root. Discovery is load-only (family indexes, indexed payloads, declared files, selected catalog source), so the directory is inert to `validate-packages` — its placement is intentional, not stray fixture content.
+
+### Round 2 disposition summary
+
+| Item | Severity | Blocking? | Action |
+| --- | --- | --- | --- |
+| F1–F6 | — | — | Verified resolved in `afa4465`; no residue |
+| F7 gate lacks catalog `--check` despite expected-results claim | 🟢 | No | Add the gate command or trim the bullet; executor may fold into Task 7/14 |

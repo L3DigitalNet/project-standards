@@ -14,7 +14,7 @@
 - `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and ADRs 0023-0024 record its control-plane and version-channel decisions.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` remains approved at rev 0.4; the non-scope revision pins canonical digest bytes and a golden vector. SPEC-BA01 is superseded history.
-- The BA02 foundation plan has completed round-1 remediation; independent convergence review is next. Control-plane and package migration stay separate.
+- The BA02 foundation plan converged in review round 2 and is approved for execution. Task 1 is next; later platform layers remain separate.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

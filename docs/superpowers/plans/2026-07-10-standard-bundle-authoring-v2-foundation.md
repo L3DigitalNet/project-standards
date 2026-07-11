@@ -514,6 +514,7 @@ uv run project-standards spec lint --config .project-standards.yml --strict
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards validate-packages --root tests/fixtures/package_contract/valid/full --json
 uv run project-standards standards generate-package-schemas --root . --check
+uv run project-standards standards render-consumer-catalog --root tests/fixtures/package_contract/valid/full --catalog-major 5 --output tests/fixtures/package_contract/valid/full/expected/catalog.toml --check
 uv run project-standards standards sync-payload-projection --root . --check
 ```
 
