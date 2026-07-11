@@ -577,7 +577,8 @@ def format_text(
 from project_standards.validate_frontmatter import (  # noqa: E402
     ConfigError,
     collect_paths,
-    load_config,
+    emit_legacy_config_warning,
+    load_cli_config,
     schema_value_is_path,
 )
 
@@ -633,10 +634,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(Path.cwd(), explicit_legacy=args.config)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     if args.schema is not None or schema_value_is_path(config.schema):
         if not args.quiet:

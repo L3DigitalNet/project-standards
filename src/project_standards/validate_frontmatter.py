@@ -47,6 +47,8 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 from project_standards._version import package_version
+from project_standards.control_plane.codec import parse_config
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.registry import Registry, RegistryError, load_registry
 
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
@@ -58,6 +60,7 @@ _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", 
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
 _DEFAULT_CONFIG = Path(".project-standards.yml")
+_legacy_warning_emitted = False
 
 
 class FrontmatterParseError(ValueError):
@@ -484,6 +487,7 @@ class ProjectConfig:
         cli_documentation_version: str | None = None,
         project_spec_version: str | None = None,
         references_enabled: bool = False,
+        unified_authority: bool = False,
     ) -> None:
         self.schema = schema
         self.include = include
@@ -497,6 +501,7 @@ class ProjectConfig:
         self.cli_documentation_version = cli_documentation_version
         self.project_spec_version = project_spec_version
         self.references_enabled = references_enabled
+        self.unified_authority = unified_authority
 
 
 def resolve_effective_schema(
@@ -516,7 +521,7 @@ def resolve_effective_schema(
         return args_schema
     schema_value = config.schema
     custom_path = schema_value_is_path(schema_value)
-    if custom_path and config.frontmatter_version is not None:
+    if custom_path and config.frontmatter_version is not None and not config.unified_authority:
         raise ConfigError(
             "set markdown.frontmatter.schema (a custom path) or "
             "markdown.frontmatter.version, not both"
@@ -684,6 +689,137 @@ def load_config(path: Path) -> ProjectConfig:
     )
 
 
+def _unified_string(value: object, *, option: str, default: str) -> str:
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string")
+    return value
+
+
+def _unified_string_list(value: object, *, option: str, default: list[str]) -> list[str]:
+    if value is None:
+        return list(default)
+    if not isinstance(value, list):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string array")
+    items = cast("list[object]", value)
+    if not all(isinstance(item, str) for item in items):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string array")
+    return list(cast("list[str]", items))
+
+
+def _config_from_unified_options(options: dict[str, object]) -> ProjectConfig:
+    contract_version = _unified_string(
+        options.get("contract_version"),
+        option="contract_version",
+        default="1.1",
+    )
+    schema_selection = _unified_string(
+        options.get("schema"),
+        option="schema",
+        default="markdown-frontmatter",
+    )
+    schema_path = options.get("schema_path")
+    if schema_selection == "custom":
+        if not isinstance(schema_path, str):
+            raise ConfigError("custom frontmatter schema selection requires schema_path")
+        schema = schema_path
+    elif schema_selection == "markdown-frontmatter":
+        if schema_path is not None:
+            raise ConfigError("bundled frontmatter schema selection forbids schema_path")
+        schema = schema_selection
+    else:
+        raise ConfigError(f"unknown frontmatter schema selection {schema_selection!r}")
+
+    required = options.get("required", True)
+    if not isinstance(required, bool):
+        raise ConfigError("markdown-frontmatter option required must be a boolean")
+    references = options.get("references", {"enabled": False})
+    if not isinstance(references, dict):
+        raise ConfigError("markdown-frontmatter option references must be a table")
+    references_table = cast("dict[str, object]", references)
+    references_enabled = references_table.get("enabled", False)
+    if not isinstance(references_enabled, bool):
+        raise ConfigError("markdown-frontmatter option references.enabled must be a boolean")
+
+    return ProjectConfig(
+        schema=schema,
+        include=_unified_string_list(
+            options.get("include"),
+            option="include",
+            default=["README.md", "docs/**/*.md"],
+        ),
+        exclude=_unified_string_list(
+            options.get("exclude"),
+            option="exclude",
+            default=[
+                "**/*.template.md",
+                "AGENTS.md",
+                "CLAUDE.md",
+                ".agents/**",
+                ".claude/**",
+                ".codex/**",
+                ".github/**",
+                "node_modules/**",
+            ],
+        ),
+        required=required,
+        require_adr_sections=False,
+        frontmatter_version=contract_version,
+        references_enabled=references_enabled,
+        unified_authority=True,
+    )
+
+
+def load_cli_config(
+    repo: Path,
+    *,
+    explicit_legacy: Path | None,
+) -> tuple[ProjectConfig, bool]:
+    """Resolve unified authority by repository root or an explicit legacy/debug file."""
+    try:
+        root = repo.resolve(strict=True)
+    except OSError as exc:
+        raise ConfigError(f"cannot resolve repository root {repo}") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise ConfigError(f"repository root is not a regular directory: {repo}")
+
+    control = root / ".standards"
+    default_legacy = root / ".project-standards.yml"
+    if control.exists() or control.is_symlink():
+        if explicit_legacy is not None or default_legacy.exists() or default_legacy.is_symlink():
+            raise ConfigError("dual authority: unified and legacy configuration both exist")
+        config_path = control / "config.toml"
+        try:
+            if config_path.is_symlink() or not config_path.is_file():
+                raise ConfigError("unified control plane is missing config.toml")
+            desired = parse_config(config_path.read_bytes())
+        except OSError as exc:
+            raise ConfigError(f"cannot read unified config {config_path}") from exc
+        except ControlPlaneError as exc:
+            raise ConfigError(str(exc)) from exc
+        selected = desired.standards.get("markdown-frontmatter")
+        if selected is None or not selected.enabled:
+            raise ConfigError("markdown-frontmatter is not enabled in unified config")
+        return _config_from_unified_options(cast("dict[str, object]", selected.config)), False
+
+    legacy_path = explicit_legacy if explicit_legacy is not None else default_legacy
+    return load_config(legacy_path), legacy_path.exists()
+
+
+def emit_legacy_config_warning() -> None:
+    """Emit the process-wide V5 legacy-authority warning at most once."""
+    global _legacy_warning_emitted
+    if _legacy_warning_emitted:
+        return
+    print(
+        "warning: legacy .project-standards.yml remains read-only; "
+        "migrate before using the V5 control plane",
+        file=sys.stderr,
+    )
+    _legacy_warning_emitted = True
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -759,10 +895,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(Path.cwd(), explicit_legacy=args.config)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     # The registry is loaded only when a gate actually consults it (version keys,
     # ADR flags). A wheel with a corrupted registry.json must not break the

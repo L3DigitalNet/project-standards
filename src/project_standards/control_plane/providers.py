@@ -105,7 +105,13 @@ def resolve_referenced_inputs(
     managed = {_canonical_target(root, target) for target in managed_targets}
     inputs: list[LockedInput] = []
     for extension in sorted(extensions, key=lambda item: item.id):
-        configured = config.get(extension.option)
+        if extension.option not in config:
+            raise ControlPlaneError(
+                f"referenced input option is missing or not a path: {extension.option}"
+            )
+        configured = config[extension.option]
+        if configured is None:
+            continue
         if not isinstance(configured, str):
             raise ControlPlaneError(
                 f"referenced input option is missing or not a path: {extension.option}"

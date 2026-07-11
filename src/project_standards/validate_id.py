@@ -67,7 +67,8 @@ from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
     collect_paths,
-    load_config,
+    emit_legacy_config_warning,
+    load_cli_config,
     parse_frontmatter,
     reconfigure_output_streams,
     resolve_effective_schema,
@@ -544,10 +545,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(Path.cwd(), explicit_legacy=args.config)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     # Skip id-format validation when a custom (non-bundled) schema is in use — either
     # via the --schema CLI flag or via a config-level path. Custom schemas are

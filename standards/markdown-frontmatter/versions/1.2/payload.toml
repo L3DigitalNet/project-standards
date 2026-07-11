@@ -1,0 +1,221 @@
+schema_version = "1.0"
+
+[payload]
+standard = "markdown-frontmatter"
+version = "1.2"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = [
+  "markdown.frontmatter.format",
+  "markdown.frontmatter.schema",
+  "markdown.id.validate",
+  "markdown.references.validate",
+]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["adr", "markdown-tooling"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:324a1065225bdf8db699fc54854205e0257ce735191bf5dd4c04fd04cdab5e68"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:071b37833f9a181fd7bf09b11860b3d1221691ec9a09cafe082d2a4f3107aa19"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:f091d20a7e2e9121c301c3932ae4228c5d920d415b5d019f3056e166d5508412"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:24a0fbf9df0c14b979f998fd7144d4e3974e3f6743d5083220609d20db20a77e"
+
+[[resources]]
+id = "structure"
+role = "standard-reference"
+path = "structure.md"
+media_type = "text/markdown"
+digest = "sha256:ba5f4a24759f576a69b40bca5ccbd1cb0c7e0dc3a02fc81cbe4e78e57309c06f"
+
+[[resources]]
+id = "field-values"
+role = "standard-reference"
+path = "field-values.md"
+media_type = "text/markdown"
+digest = "sha256:4784990b4158695f76b73b2833a7d621f77d9320f44aef8b1f4d3b6456e4f7d1"
+
+[[resources]]
+id = "example-concept"
+role = "example"
+path = "examples/concept.example.md"
+media_type = "text/markdown"
+digest = "sha256:32abd4154a13b175539719630422d80e1a0f6e5d997ba9e24bbd1ec0f67d5054"
+
+[[resources]]
+id = "example-note"
+role = "example"
+path = "examples/note.example.md"
+media_type = "text/markdown"
+digest = "sha256:e8bdd86aa1aa9752026b5fae95d96173e4a0d483d3857ea07e9c41a0867bc649"
+
+[[resources]]
+id = "example-runbook"
+role = "example"
+path = "examples/runbook.example.md"
+media_type = "text/markdown"
+digest = "sha256:191db9e43be66b6be2090692dac8894519f24524ea14d9d05c074d5dbba939c2"
+
+[[resources]]
+id = "template-concept"
+role = "template"
+path = "templates/concept.md"
+media_type = "text/markdown"
+digest = "sha256:da5c245deb4f24d4b16cadf297e18ae644ac81568cd71182d5a688e7e0dc0e93"
+
+[[resources]]
+id = "template-frontmatter-minimal"
+role = "template"
+path = "templates/frontmatter-minimal.yml"
+media_type = "application/yaml"
+digest = "sha256:f70f6d427ac363b1c6120abb1d9d784e5be2d992da55021f27cc2ebf48da3e4f"
+
+[[resources]]
+id = "template-frontmatter-standard"
+role = "template"
+path = "templates/frontmatter-standard.yml"
+media_type = "application/yaml"
+digest = "sha256:258c9ff79ee979fe4dc98ec61d4ec1d27ced04c6467a1a3b75a209d33586d2bb"
+
+[[resources]]
+id = "template-note"
+role = "template"
+path = "templates/note.md"
+media_type = "text/markdown"
+digest = "sha256:ce829ed6212724ad25f48f75d5da8e9f61bbd815e30efe804dcf115c2d5b8e4a"
+
+[[resources]]
+id = "template-repo-pages"
+role = "template"
+path = "templates/repo-pages/README.directory.template.md"
+media_type = "text/markdown"
+digest = "sha256:6f768ad2f9252c5e9aefc245eff70c11992e6d4798ee3de58ff530d3e949ec69"
+
+[[resources]]
+id = "template-repository-frontmatter-adr"
+role = "template"
+path = "templates/repository-frontmatter-adr.md"
+media_type = "text/markdown"
+digest = "sha256:0ba09afbf9f67a86eea5d88c2a2ab37d255de98077badb021a7f30beecf62d9b"
+
+[[resources]]
+id = "template-research"
+role = "template"
+path = "templates/research.md"
+media_type = "text/markdown"
+digest = "sha256:a12ebca295de61926116573dffb7fb318abcb09d696acd8b5059063f41e2c693"
+
+[[resources]]
+id = "template-runbook"
+role = "template"
+path = "templates/runbook.md"
+media_type = "text/markdown"
+digest = "sha256:a20853026421ba50ace3081a43dea2f1cb80c3c3becb66b34515f9e70583bd4c"
+
+[[resources]]
+id = "template-spec"
+role = "template"
+path = "templates/spec.md"
+media_type = "text/markdown"
+digest = "sha256:7a04528f6588e947a8c1e0229c04f39a8acdd8da86263e66f0286aaa626a0a52"
+
+[[resources]]
+id = "workflow-caller"
+role = "workflow-template"
+path = "validate-markdown-frontmatter.caller.yml"
+media_type = "application/yaml"
+digest = "sha256:7754532412100bc5ea81fa61ffaf21542a75f8ba826370a952f479eb93cc8a09"
+
+[[artifacts]]
+id = "agent-summary-package"
+target = ".standards/packages/markdown-frontmatter/agent-summary.md"
+source = "artifacts/agent-summary.md"
+digest = "sha256:071b37833f9a181fd7bf09b11860b3d1221691ec9a09cafe082d2a4f3107aa19"
+policy = "managed"
+
+[[artifacts]]
+id = "skill"
+target = ".agents/skills/markdown-frontmatter/SKILL.md"
+source = "skills/markdown-frontmatter/SKILL.md"
+digest = "sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/markdown-frontmatter/agents/openai.yaml"
+source = "skills/markdown-frontmatter/agents/openai.yaml"
+digest = "sha256:d63c2c63683e78fa9adb10e7004fe9315b18a069240c4457e39cdc167951716c"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-new-doc-id"
+target = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
+source = "skills/markdown-frontmatter/scripts/new-doc-id"
+digest = "sha256:0f80ec4d966b59d8310f88f4d45478a1272b3b94491cf2a44efb9765bbbe2edc"
+policy = "managed"
+mode = "0755"
+
+[[contributions]]
+id = "workflow-name"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/name"
+policy = "create-only"
+source = "workflow-name.yml"
+source_digest = "sha256:1fb1ff15ea473a338ab301633364d875a68837e547e148e0c5a6ce6ccfc576c2"
+shared_identity = "github-workflow/validate-standards-name"
+
+[[contributions]]
+id = "workflow-on"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/on"
+policy = "create-only"
+source = "workflow-on.yml"
+source_digest = "sha256:a30345f577f7e40934be6a9f7be3cf9f36f8da457d990e3d8b30613ea1750a86"
+shared_identity = "github-workflow/validate-standards-triggers"
+
+[[contributions]]
+id = "workflow-frontmatter-job"
+target = ".github/workflows/validate-standards.yml"
+adapter = "yaml"
+scope = "key:/jobs/frontmatter"
+policy = "managed"
+source = "workflow-job.yml"
+source_digest = "sha256:c8ae642866c287e945d1df8b2db0b6270fdb9131bdf3161f12a20d95a0ba5fb8"
+
+[[extensions]]
+id = "custom-schema"
+option = "schema_path"
+media_type = "application/schema+json"
+path_policy = "repository-relative"
+preferred_root = ".standards/extensions/markdown-frontmatter/"

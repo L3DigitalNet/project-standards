@@ -980,7 +980,16 @@ def _validate_extension_options(
     properties = _object_properties(schema)
     for extension in extensions:
         option_schema = properties.get(extension.option)
-        if not isinstance(option_schema, dict) or option_schema.get("type") != "string":
+        if not isinstance(option_schema, dict):
+            raise PackageContractError(
+                "extension option must identify a declared string package option"
+            )
+        option_type = option_schema.get("type")
+        nullable_string = isinstance(option_type, list) and set(option_type) == {
+            "null",
+            "string",
+        }
+        if option_type != "string" and not nullable_string:
             raise PackageContractError(
                 "extension option must identify a declared string package option"
             )

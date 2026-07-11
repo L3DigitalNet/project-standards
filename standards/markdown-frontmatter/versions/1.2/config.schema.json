@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "enum": ["1.1"],
+      "default": "1.1"
+    },
+    "schema": {
+      "type": "string",
+      "enum": ["markdown-frontmatter", "custom"],
+      "default": "markdown-frontmatter"
+    },
+    "schema_path": {
+      "type": ["string", "null"],
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!\\.standards/packages/).+\\.json$",
+      "default": null
+    },
+    "required": {
+      "type": "boolean",
+      "default": true
+    },
+    "include": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": ["README.md", "docs/**/*.md"]
+    },
+    "exclude": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": [
+        "**/*.template.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".agents/**",
+        ".claude/**",
+        ".codex/**",
+        ".github/**",
+        "node_modules/**"
+      ]
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false }
+      },
+      "default": { "enabled": false }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "schema": { "const": "custom" } } },
+      "then": {
+        "required": ["schema_path"],
+        "properties": { "schema_path": { "type": "string" } }
+      }
+    },
+    {
+      "if": { "properties": { "schema": { "const": "markdown-frontmatter" } } },
+      "then": { "properties": { "schema_path": { "type": "null" } } }
+    }
+  ]
+}

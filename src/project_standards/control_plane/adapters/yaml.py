@@ -513,6 +513,13 @@ def _append_mapping_entry(
     fragment: str,
 ) -> str:
     if parent.flow_style:
+        if parent is document.root and not parent.value and document.text.strip() == "{}":
+            newline = _newline(document.text)
+            key_text = _canonical_key(key)
+            if _fragment_is_block_collection(fragment_document):
+                value = _indent_fragment(fragment, 2, newline)
+                return f"{key_text}:{newline}  {value}{newline}"
+            return f"{key_text}: {_normalize_newlines(fragment, newline)}{newline}"
         raise ControlPlaneError("YAML flow mappings are not independently editable")
     newline = _newline(document.text)
     indent = _mapping_indent(parent)
@@ -633,6 +640,30 @@ class YamlAdapter:
                 raise ControlPlaneError("YAML key scope must identify a mapping entry")
             parent = _node_at(document.root, spec.path[:-1])
             if parent is None:
+                parent_depth = len(spec.path) - 1
+                while parent_depth >= 0:
+                    candidate = _node_at(document.root, spec.path[:parent_depth])
+                    if candidate is not None:
+                        if not isinstance(candidate, MappingNode):
+                            raise ControlPlaneError("YAML creation parent is not a mapping")
+                        nested = fragment
+                        nested_document = fragment_document
+                        for key in reversed(spec.path[parent_depth + 1 :]):
+                            newline = _newline(nested_document.text)
+                            if _fragment_is_block_collection(nested_document):
+                                value = _indent_fragment(nested, 2, newline)
+                                nested = f"{_canonical_key(key)}:{newline}  {value}"
+                            else:
+                                nested = f"{_canonical_key(key)}: {nested}"
+                            nested_document = _parse(nested.encode(), fragment=True)
+                        return _append_mapping_entry(
+                            document,
+                            candidate,
+                            spec.path[parent_depth],
+                            nested_document,
+                            nested,
+                        )
+                    parent_depth -= 1
                 raise ControlPlaneError("YAML creation parent scope is not present")
             if not isinstance(parent, MappingNode):
                 raise ControlPlaneError("YAML creation parent is not a mapping")

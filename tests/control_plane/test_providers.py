@@ -184,6 +184,20 @@ def test_disabled_reference_is_removed_from_state_but_consumer_file_is_preserved
     assert target.read_text(encoding="utf-8") == "consumer-owned"
 
 
+def test_optional_reference_is_absent_when_nullable_option_is_unset(tmp_path: Path) -> None:
+    inputs = resolve_referenced_inputs(
+        tmp_path,
+        standard_id="demo",
+        version=PackageVersion("1.2"),
+        config={"extra_rules_file": None},
+        extensions=(_extension(preferred=False),),
+        managed_targets=(),
+        enabled=True,
+    )
+
+    assert inputs == ()
+
+
 def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
     if effect is ProviderEffect.MIGRATION_REPORT:
         return control_plane_schema_documents()["migration-report.schema.json"]

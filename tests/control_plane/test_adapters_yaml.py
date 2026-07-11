@@ -305,11 +305,16 @@ def test_yaml_rejects_impossible_lifecycle_and_unbounded_container_changes() -> 
         )
     with pytest.raises(ControlPlaneError, match="not present"):
         adapter.render(state, (UnitChange(ActionKind.REMOVE, "key:/missing"),))
-    with pytest.raises(ControlPlaneError, match="parent scope"):
-        adapter.render(
-            state,
-            (UnitChange(ActionKind.CREATE, "key:/missing/child", content=b"2\n", value=2),),
-        )
+    nested = adapter.render(
+        state,
+        (UnitChange(ActionKind.CREATE, "key:/missing/child", content=b"2\n", value=2),),
+    )
+    assert yaml.safe_load(nested) == {
+        "value": 1,
+        "items": [],
+        "flow": {"existing": True},
+        "missing": {"child": 2},
+    }
     with pytest.raises(ControlPlaneError, match="parent is not a mapping"):
         adapter.render(
             state,
