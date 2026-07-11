@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import random
 import shutil
 import socket
@@ -22,6 +21,7 @@ from project_standards.package_contract.integrity import validate_payload_integr
 from project_standards.package_contract.payload import PayloadManifest
 from project_standards.package_contract.projection import sync_payload_projection
 from project_standards.package_contract.schemas import package_schema_bytes
+from tests.wheel_helpers import extract_pure_python_wheel
 
 _FULL = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/full"
 
@@ -140,12 +140,7 @@ source-include = ["standards/**", "catalogs/**"]
     )
     (wheel,) = distribution.glob("*.whl")
     installed = tmp_path / "installed"
-    subprocess.run(
-        ["uv", "pip", "install", "--offline", "--no-deps", "--target", str(installed), str(wheel)],
-        check=True,
-        capture_output=True,
-        env={**os.environ, "UV_OFFLINE": "1"},
-    )
+    extract_pure_python_wheel(wheel, installed)
 
     monkeypatch.setattr(socket, "socket", _deny_network)
     monkeypatch.setattr(socket, "create_connection", _deny_network)

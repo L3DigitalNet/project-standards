@@ -17,7 +17,7 @@
 - The BA02 package-contract foundation is implemented (`4e507d6` through this closeout): strict authoring models, integrity, graph validation, CLI, and installed projection.
 - Acceptance passes offline wheel parity, the 100/1,000/10,000 scale gate, 1,693 tests, and 93% branch coverage.
 - Provider execution, live semantic mutation, current-package reconstruction, and V5 activation remain in the two follow-on plans.
-- The 18-task control-plane core plan covers generic MS-1–MS-3; current-package migration and release activation remain in the final plan.
+- The reviewed 18-task control-plane core plan is approved for inline execution; current-package migration and release activation remain in the final plan.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
