@@ -225,13 +225,13 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/adr/standard.toml`; create `standards/adr/versions/1.1/**`; update ADR provider/config tests and compatibility fixtures.
 
-- [ ] Write red option-schema tests for `contract_version` and `require_sections`, plus an independence test proving ADR does not require Frontmatter adoption merely because both can inspect ADR documents.
-- [ ] Reconstruct `adr@1.1` with canonical docs, templates/examples, option schema, create-only scaffold, and version-selected validation providers.
-- [ ] Map legacy `markdown.adr` into `config.require_sections` and `config.contract_version`; remove the printed `.project-standards.yml` fragment from active V2 outputs.
-- [ ] Declare Frontmatter only as a companion and encode any shared compatibility metadata without a hidden capability or artifact dependency.
-- [ ] Prove ADR alone, ADR plus Frontmatter, fresh adoption, legacy migration, disable/removal, and second-apply behavior.
-- [ ] Run ADR, graph, provider, and focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct adr package`
+- [x] Write red option-schema tests for `contract_version` and `require_sections`, plus an independence test proving ADR does not require Frontmatter adoption merely because both can inspect ADR documents.
+- [x] Reconstruct `adr@1.1` with canonical docs, templates/examples, option schema, create-only scaffold, and version-selected validation providers.
+- [x] Map legacy `markdown.adr` into `config.require_sections` and `config.contract_version`; remove the printed `.project-standards.yml` fragment from active V2 outputs.
+- [x] Declare Frontmatter only as a companion and encode any shared compatibility metadata without a hidden capability or artifact dependency.
+- [x] Prove ADR alone, ADR plus Frontmatter, fresh adoption, legacy migration, disable/removal, and second-apply behavior.
+- [x] Run ADR, graph, provider, and focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct adr package`
 
 ### Task 9: CLI Documentation Reconstruction
 

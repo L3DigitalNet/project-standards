@@ -128,7 +128,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   The approved 18-task mechanism-level core is complete through `e069c34`: neutral initialization, unified config and lock state, catalog-scoped resolution, bounded providers, semantic composition, lifecycle planning, transactional apply/recovery, and public reconciliation commands. Reconstruct and convert the current packages, implement legacy migration and same-major catalog refresh, prove compatibility for every current standard, then complete activation and release.
 
-  The 18-task follow-on plan at `docs/superpowers/plans/2026-07-11-consumer-standards-control-plane-package-migration-release.md` passed the scratch-path convergence audit and is owner-approved. Execution is underway on `feature/v5-package-migration`; Tasks 1-7 provide typed reports, deterministic migration/apply, catalog refresh and recovery, Authoring 2.0 self-hosting, reference-only Python Coding 0.5, and Markdown Frontmatter 1.2 reconstruction. Task 8 reconstructs ADR 1.1 next; root family activation remains deferred to Task 14.
+  The 18-task follow-on plan at `docs/superpowers/plans/2026-07-11-consumer-standards-control-plane-package-migration-release.md` passed the scratch-path convergence audit and is owner-approved. Execution is underway on `feature/v5-package-migration`; Tasks 1-8 provide typed reports, deterministic migration/apply, catalog refresh and recovery, Authoring 2.0 self-hosting, reference-only Python Coding 0.5, Markdown Frontmatter 1.2, and ADR 1.1 reconstruction. Task 9 reconstructs CLI Documentation 1.1 next; root family activation remains deferred to Task 14.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 

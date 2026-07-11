@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "LegacyClaim": {
+      "additionalProperties": false,
+      "description": "Identify one legacy signature match without retaining its source bytes.",
+      "properties": {
+        "disposition": {
+          "$ref": "#/$defs/LegacyDisposition"
+        },
+        "observed_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Observed Digest",
+          "type": "string"
+        },
+        "ownership": {
+          "$ref": "#/$defs/LegacyOwnership"
+        },
+        "signature_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Signature Id",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signature_id",
+        "target",
+        "observed_digest",
+        "ownership",
+        "disposition"
+      ],
+      "title": "LegacyClaim",
+      "type": "object"
+    },
+    "LegacyDisposition": {
+      "description": "Proposed treatment of one exactly recognized legacy object.",
+      "enum": [
+        "adopt",
+        "preserve",
+        "remove",
+        "import-lock"
+      ],
+      "title": "LegacyDisposition",
+      "type": "string"
+    },
+    "LegacyOwnership": {
+      "enum": [
+        "managed",
+        "create-only",
+        "shared",
+        "consumer-owned",
+        "package-lock"
+      ],
+      "type": "string"
+    },
+    "MigratedPackage": {
+      "additionalProperties": false,
+      "description": "Validated desired-state contribution produced for one selected payload.",
+      "properties": {
+        "config": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Config",
+          "type": "object"
+        },
+        "recognized_settings": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Recognized Settings",
+          "type": "array"
+        },
+        "selector": {
+          "$ref": "#/$defs/VersionSelector"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "version",
+        "selector"
+      ],
+      "title": "MigratedPackage",
+      "type": "object"
+    },
+    "MigrationFinding": {
+      "additionalProperties": false,
+      "description": "Content-free warning or error about one recognized migration identity.",
+      "properties": {
+        "code": {
+          "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "identity": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "path",
+        "identity"
+      ],
+      "title": "MigrationFinding",
+      "type": "object"
+    },
+    "VersionSelector": {
+      "anyOf": [
+        {
+          "const": "latest",
+          "type": "string"
+        },
+        {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/src/project_standards/schemas/migration-report.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One deterministic, schema-valid result from a selected migrate provider.",
+  "properties": {
+    "claims": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/LegacyClaim"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/MigrationFinding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "package": {
+      "$ref": "#/$defs/MigratedPackage"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "package"
+  ],
+  "title": "MigrationReport",
+  "type": "object"
+}
