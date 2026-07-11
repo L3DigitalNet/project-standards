@@ -383,6 +383,7 @@ class CatalogSource(StrictModel):
 - Create: `tests/package_contract/test_graph.py`
 
 - [ ] Write red graph tests for missing relation targets, self-relations, relation cycles, extends/conflicts without ADR evidence, hidden requirements, output overlap, shared-identity agreement, migration endpoint reachability, advertised package-major entry/exit paths, and catalog-role consistency.
+- [ ] Enforce SPEC-BA02 revision 0.5 payload-owned `relation_evidence` and `legacy_states` declarations; reject missing/orphan evidence and unregistered/unused legacy-state endpoints without equating state IDs to signature IDs.
 - [ ] Implement pure validators returning findings, never raising for ordinary contract defects.
 - [ ] Add a synthetic unknown package and assert shared code contains no comparison against its package ID.
 - [ ] Add request/discovery permutation tests over packages, payloads, contributions, providers, and migrations.

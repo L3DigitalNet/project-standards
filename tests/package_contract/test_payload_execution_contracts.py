@@ -347,6 +347,7 @@ def test_payload_accepts_a_complete_automatic_legacy_migration() -> None:
             "known_content_digests": [f"sha256:{'d' * 64}"],
         }
     ]
+    data["legacy_states"] = [{"id": "v4-demo"}]
     data["migrations"] = [
         {
             "id": "legacy-v4-to-1-2",

@@ -45,6 +45,7 @@ related:
 | 0.2 | 2026-07-10 | Coding agent with round-1 review | Corrected provider phase vocabulary and goal traceability; sourced the 11-family V5 estimate; defined exact legacy managed-block signatures and migration behavior; normalized catalog placeholders and legacy current-state terminology. |
 | 0.3 | 2026-07-10 | Chris Purcell / L3DigitalNet | Owner approval after round-1 remediation; SPEC-BA01 superseded and implementation planning authorized. |
 | 0.4 | 2026-07-10 | Coding agent with foundation-plan review | Clarified the existing aggregate-digest algorithm: every inventory entry uses the full lowercase `sha256:` digest form, all entries sort together, and one exact golden vector fixes the byte contract. No scope or requirement changed. |
+| 0.5 | 2026-07-10 | Chris Purcell / L3DigitalNet with coding agent | Added the missing declaration mechanisms already required by FR-006 and FR-018: payload-owned relation evidence and explicit legacy-state registration. Also corrected the semantic-contribution example to use the normative TOML selector grammar. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
@@ -194,7 +195,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-003 | Family indexes and payloads shall not declare `latest`, default, retained, candidate, reference-only, or internal catalog roles. | One immutable payload can have different roles across catalog majors. | Negative fixtures reject channel fields outside catalog declarations. | Must |
 | FR-004 | Each indexed version shall provide `payload.toml`, `config.schema.json`, `README.md`, and `agent-summary.md`; consumer-available payloads shall also provide `adopt.md`. | Every resolved package needs complete version-specific behavior and documentation. | Payload-tree validation rejects missing required resources and rejects `adopt.md` for reference-only or internal payloads. | Must |
 | FR-005 | `payload.toml` shall use `schema_version = "1.0"` and declare exact standard ID, exact package version, and availability of `consumer`, `reference-only`, or `internal`. | The legacy adoption-mode enum no longer describes unified control-plane packages. | Schema fixtures reject legacy `validator`, `copy-adopt`, `cli`, and `none` values and mismatches with the family index. | Must |
-| FR-006 | A payload shall declare version-specific capabilities, platform capabilities consumed, and companion/extends/conflicts relations; independent shall remain the undeclared default and `requires` shall be invalid. | Capabilities and relationships may evolve between package versions without hidden dependencies. | Graph fixtures validate relationships per payload, require ADR evidence for extends/conflicts, and reject hidden requirements. | Must |
+| FR-006 | A payload shall declare version-specific capabilities, platform capabilities consumed, and companion/extends/conflicts relations; independent shall remain the undeclared default and `requires` shall be invalid. Every extends/conflicts relation shall identify one payload-owned, digest-covered ADR evidence resource. | Capabilities and relationships may evolve between package versions without hidden dependencies, while constraining relations need immutable justification. | Graph fixtures validate relationships per payload, require exact non-orphan ADR evidence for extends/conflicts, and reject hidden requirements. | Must |
 | FR-007 | Every payload shall publish a Draft 2020-12 JSON Schema for its package options, with `additionalProperties: false`; options shall resolve only under `standards.STANDARD_ID.config`. | Package settings need one version-aware and collision-free authority. | Schema/default tests reject unknown options and any package claim over another namespace or control-plane meta key. | Must |
 | FR-008 | Every configurable option shall be required or carry a deterministic default; a schema/behavior selector such as `contract_version` shall be an ordinary package option distinct from package version. | Effective config must be complete and package/contract versions must remain separate. | Default extraction and migration fixtures prove deterministic effective config and independent selectors. | Must |
 | FR-009 | Every payload resource shall declare a stable resource ID, role, safe payload-relative path, media type, and SHA-256 digest. | Documentation and future MCP consumers need version-correct content-addressed resources. | Resource fixtures reject invalid IDs, unsafe paths, missing files, media mismatches, and digest drift. | Must |
@@ -206,7 +207,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-015 | Each provider shall declare stable ID, generic operation, kind, phase, allowed effect, payload-resource entrypoint, input/output schema, and referenced resources. | Provider behavior must be version-correct, typed, and schedulable. | Schema and installed-wheel tests resolve entrypoints only inside the selected payload and reject undeclared phases/effects or global/unqualified implementations. | Must |
 | FR-016 | Read-only providers shall return findings or content from declared immutable snapshots; mutation-intent providers shall return typed mutation plans and shall never write the live repository. | The platform executor is the sole reconciliation writer. | Filesystem/network spies cover every provider; direct writes, undeclared reads, and undeclared effects fail conformance. | Must |
 | FR-017 | Each referenced extension shall bind one config option to an allowed content type, repository-relative path policy, and optional preferred `.standards/extensions/{id}/` location while retaining consumer ownership. | Specialized inputs need reproducibility without managed ownership. | Path/digest/disable fixtures reject package-namespace and output overlap and preserve extension content. | Must |
-| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, affected config/artifact/contribution identities, and any exact legacy signatures it recognizes. | Version and legacy transitions need explicit bounded plans. | Migration graph validation rejects unknown endpoints/signatures, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
+| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, affected config/artifact/contribution identities, and any exact legacy signatures it recognizes. Every legacy endpoint shall resolve to an explicit payload-owned legacy-state declaration. | Version and legacy transitions need explicit bounded plans, and state tokens must not become typo-tolerant implicit registrations. | Migration graph validation rejects unknown package versions, unregistered legacy states, unknown signatures, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
 | FR-019 | Every advertised package-major entry and exit shall have a declared path; a non-automatic rollback shall identify its exact manual instructions and limitations. | Candidate authorization is useful only when transition consequences are known. | Candidate fixtures cover forward entry, exact-target exit, automatic rollback, manual rollback, and missing-path rejection. | Must |
 | FR-020 | Every regular file inside an indexed payload directory shall be declared and digested, except `payload.toml`, which is included directly in the aggregate inventory. | Undeclared content would escape catalog integrity and lifecycle rules. | Inventory fixtures reject undeclared, missing, duplicate, and symlink-escaped files. | Must |
 | FR-021 | The family index aggregate digest shall be SHA-256 over a canonical sorted inventory containing the raw `payload.toml` digest and every declared path/digest pair. | Catalogs and locks need a deterministic non-self-referential payload identity. | Independent implementations produce the same lowercase `sha256:HEX` value and detect any byte change. | Must |
@@ -419,9 +420,16 @@ consumes_platform = ["project-standards.reconcile"]
 
 [relations]
 companions = ["python-coding"]
-extends = []
+extends = ["base-standard"]
 conflicts = []
+
+[[relation_evidence]]
+kind = "extends" # extends | conflicts
+target = "base-standard"
+resource = "base-standard-extension-adr"
 ```
+
+`companions` need no decision evidence. Every `(kind, target)` pair in `extends` or `conflicts` has exactly one `[[relation_evidence]]` entry; duplicate, missing, or orphan evidence is invalid. `resource` identifies a declared `relation-evidence` Markdown resource in the same immutable payload. The evidence records why the relationship is necessary without creating a hidden installation dependency.
 
 All resources use array-of-table entries so each carries typed metadata:
 
@@ -446,9 +454,16 @@ role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
 digest = "sha256:..."
+
+[[resources]]
+id = "base-standard-extension-adr"
+role = "relation-evidence"
+path = "decisions/base-standard-extension.md"
+media_type = "text/markdown"
+digest = "sha256:..."
 ```
 
-Resource IDs are unique lowercase kebab tokens. Required roles are `canonical-standard`, `agent-summary`, `config-schema`, and, for consumer availability, `adoption-guide`. Additional roles may describe templates, examples, policies, schemas, migration instructions, or package-local resources.
+Resource IDs are unique lowercase kebab tokens. Required roles are `canonical-standard`, `agent-summary`, `config-schema`, and, for consumer availability, `adoption-guide`. A relation-evidence entry requires a same-payload resource with role `relation-evidence` and media type `text/markdown`. Additional roles may describe templates, examples, policies, schemas, migration instructions, or package-local resources.
 
 ### Managed Outputs and Extensions
 
@@ -471,7 +486,7 @@ Semantic contributions declare the smallest adapter-owned unit:
 id = "ruff-config"
 target = "pyproject.toml"
 adapter = "toml"
-scope = "tool.ruff"
+scope = "table:/tool/ruff"
 source = "resources/ruff.toml"
 source_digest = "sha256:..."
 policy = "managed"
@@ -553,6 +568,9 @@ Every declared executable provider implementation must be present. Optional pack
 Migration endpoints use `package:MAJOR.MINOR` or a registered `legacy:STATE` token:
 
 ```toml
+[[legacy_states]]
+id = "v4-python-tooling"
+
 [[migrations]]
 id = "legacy-v4-to-2"
 from = "legacy:v4-python-tooling"
@@ -572,6 +590,8 @@ instructions = "migrations/rollback-2-to-1.md"
 reversible = false
 affected = ["config:*", "contribution:ruff-config"]
 ```
+
+Legacy states are package-local conceptual pre-V2 conditions, not artifact signatures. Each `legacy_states.id` is a unique lowercase kebab token. Every `legacy:STATE` endpoint names a state declared in the same payload, and every state declaration is used by at least one migration. A state may have zero, one, or several observable signatures; the migration's `signatures` list retains that exact mapping without duplicating it in the state declaration.
 
 Exactly one of `provider` or `instructions` is required according to mode. At least one package endpoint equals the containing payload version. `affected` uses typed identity prefixes and must cover every returned action. Manual transitions remain plan-visible and block automatic apply until their declared prerequisites are satisfied.
 
@@ -872,7 +892,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | Graph/composition | Relations, overlaps, shared identities, migrations, channel constraints | Individual, pairs, full catalog, randomized order | Yes |
 | Adapter/preservation | Whole/TOML/JSONC/YAML/EditorConfig/Markdown adapters | Create/equal/update/remove/conflict plus byte preservation | Yes |
 | Provider security | Phase/effect/input/output bounds and installed entrypoints | Mutation/network/undeclared-read spies and malformed output | Yes |
-| Migration | Legacy and package-version transitions | Fresh, forward, exact-target exit, automatic/manual rollback, exact legacy block signatures, and modified-block refusal | Yes |
+| Migration | Legacy and package-version transitions | Registered legacy states, fresh, forward, exact-target exit, automatic/manual rollback, exact legacy block signatures, and modified-block refusal | Yes |
 | Installed wheel | Packaged payload completeness and offline execution | Every advertised version and provider | Yes |
 | Release regression | Historical immutability and catalog-diff classification | Every published payload/catalog baseline | Yes |
 | Documentation | Family/payload authority, summary limit, adoption-guide scope, links | Every payload | Yes |
@@ -886,7 +906,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-003 | Forbidden family/payload channel-field fixtures | Not Started |
 | FR-004 | Required payload-tree resource fixtures | Not Started |
 | FR-005 | Payload availability and legacy-mode rejection tests | Not Started |
-| FR-006 | Per-payload capability and relationship graph tests | Not Started |
+| FR-006 | Per-payload capability, relationship evidence, and relationship graph tests | Not Started |
 | FR-007 | Package option-schema namespace and closed-object tests | Not Started |
 | FR-008 | Effective-default and internal-contract selector tests | Not Started |
 | FR-009 | Resource identity/path/media/digest tests | Not Started |
@@ -898,7 +918,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-015 | Provider declaration, entrypoint, phase/effect, and wheel-resolution tests | Not Started |
 | FR-016 | Provider filesystem/network spy and typed-output tests | Not Started |
 | FR-017 | Referenced-extension path/digest/disable preservation tests | Not Started |
-| FR-018 | Migration endpoint/signature/effect-inventory schema tests | Not Started |
+| FR-018 | Migration endpoint, legacy-state registration, signature, and effect-inventory schema tests | Not Started |
 | FR-019 | Candidate entry, exact-target exit, and rollback-path tests | Not Started |
 | FR-020 | Complete payload inventory and symlink rejection tests | Not Started |
 | FR-021 | Canonical aggregate-digest golden tests | Not Started |

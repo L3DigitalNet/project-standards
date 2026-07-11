@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tomllib
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pydantic import ValidationError
@@ -126,6 +127,126 @@ def test_payload_rejects_duplicate_capability_or_relation() -> None:
     capabilities["provides"] = ["demo.validate", "demo.validate"]
 
     with pytest.raises(ValidationError, match="duplicate capability"):
+        PayloadManifest.model_validate(data)
+
+
+def _add_relation_evidence(data: dict[str, object]) -> None:
+    relations = cast("dict[str, object]", data["relations"])
+    resources = cast("list[dict[str, object]]", data["resources"])
+    relations["extends"] = ["base-standard"]
+    resources.append(
+        {
+            "id": "base-standard-extension-adr",
+            "role": "relation-evidence",
+            "path": "decisions/base-standard-extension.md",
+            "media_type": "text/markdown",
+            "digest": _digest("4"),
+        }
+    )
+    data["relation_evidence"] = [
+        {
+            "kind": "extends",
+            "target": "base-standard",
+            "resource": "base-standard-extension-adr",
+        }
+    ]
+
+
+def test_payload_accepts_payload_owned_relation_evidence() -> None:
+    data = _payload_data()
+    _add_relation_evidence(data)
+
+    manifest = PayloadManifest.model_validate(data)
+
+    assert manifest.relation_evidence[0].target == "base-standard"
+    assert manifest.relation_evidence[0].resource == "base-standard-extension-adr"
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ("missing", "exactly match"),
+        ("orphan", "exactly match"),
+        ("duplicate", "duplicate relation evidence"),
+        ("missing-resource", "relation-evidence resource"),
+        ("wrong-role", "relation-evidence resource"),
+        ("wrong-media", "relation-evidence resource"),
+    ],
+)
+def test_payload_rejects_missing_or_invalid_relation_evidence(mutation: str, expected: str) -> None:
+    data = _payload_data()
+    _add_relation_evidence(data)
+    evidence = cast("list[dict[str, object]]", data["relation_evidence"])
+    relations = cast("dict[str, object]", data["relations"])
+    resources = cast("list[dict[str, object]]", data["resources"])
+    if mutation == "missing":
+        evidence.clear()
+    elif mutation == "orphan":
+        relations["extends"] = []
+    elif mutation == "duplicate":
+        evidence.append(dict(evidence[0]))
+    elif mutation == "missing-resource":
+        evidence[0]["resource"] = "unknown"
+    else:
+        resource = resources[-1]
+        if mutation == "wrong-role":
+            resource["role"] = "decision"
+        else:
+            resource["media_type"] = "application/json"
+
+    with pytest.raises(ValidationError, match=expected):
+        PayloadManifest.model_validate(data)
+
+
+def _add_legacy_state_migration(data: dict[str, object]) -> None:
+    data["legacy_states"] = [{"id": "v4-demo"}]
+    data["migrations"] = [
+        {
+            "id": "legacy-v4-to-1",
+            "from": "legacy:v4-demo",
+            "to": "package:1.2",
+            "mode": "manual",
+            "instructions": "README.md",
+            "reversible": False,
+            "affected": ["config:*"],
+            "signatures": [],
+        }
+    ]
+
+
+def test_payload_accepts_an_explicit_registered_legacy_state() -> None:
+    data = _payload_data()
+    _add_legacy_state_migration(data)
+
+    manifest = PayloadManifest.model_validate(data)
+
+    assert manifest.legacy_states[0].id == "v4-demo"
+    assert manifest.migrations[0].from_endpoint.legacy_state == "v4-demo"
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ("unknown", "registered legacy state"),
+        ("unused", "unused legacy state"),
+        ("duplicate", "duplicate legacy state"),
+    ],
+)
+def test_payload_rejects_unknown_unused_or_duplicate_legacy_states(
+    mutation: str, expected: str
+) -> None:
+    data = _payload_data()
+    _add_legacy_state_migration(data)
+    states = cast("list[dict[str, object]]", data["legacy_states"])
+    migrations = cast("list[dict[str, object]]", data["migrations"])
+    if mutation == "unknown":
+        migrations[0]["from"] = "legacy:unknown"
+    elif mutation == "unused":
+        states.append({"id": "unused"})
+    else:
+        states.append({"id": "v4-demo"})
+
+    with pytest.raises(ValidationError, match=expected):
         PayloadManifest.model_validate(data)
 
 

@@ -127,6 +127,21 @@ class RelationDeclaration(StrictModel):
         return _sorted_unique(value, kind="relation")
 
 
+class RelationEvidenceKind(StrEnum):
+    """Relationship kinds whose composition constraints require an ADR."""
+
+    EXTENDS = "extends"
+    CONFLICTS = "conflicts"
+
+
+class RelationEvidenceDeclaration(StrictModel):
+    """Bind one constraining relationship to immutable decision evidence."""
+
+    kind: RelationEvidenceKind
+    target: KebabId
+    resource: ResourceId
+
+
 class ResourceDeclaration(StrictModel):
     """Address one immutable payload-relative resource by stable metadata."""
 
@@ -567,6 +582,12 @@ class LegacySignatureDeclaration(StrictModel):
         return self
 
 
+class LegacyStateDeclaration(StrictModel):
+    """Register one package-local conceptual state accepted by migrations."""
+
+    id: ResourceId
+
+
 def _scope_parts(scope: str) -> tuple[str, str, str]:
     kind, body = scope.split(":", 1) if ":" in scope else (scope, "")
     if kind == "set":
@@ -602,6 +623,15 @@ def _scopes_overlap(left: ContributionDeclaration, right: ContributionDeclaratio
     return left_pointer == right_pointer and left_kind != right_kind
 
 
+def contributions_overlap(left: ContributionDeclaration, right: ContributionDeclaration) -> bool:
+    """Return whether two normalized declarations claim intersecting semantic units."""
+    if left.target != right.target:
+        return False
+    if left.adapter is not right.adapter:
+        return True
+    return _scopes_overlap(left, right)
+
+
 class PayloadManifest(StrictModel):
     """The declarative payload contract; later tasks add execution declarations."""
 
@@ -610,11 +640,13 @@ class PayloadManifest(StrictModel):
     config: ConfigDeclaration
     capabilities: CapabilityDeclaration
     relations: RelationDeclaration = Field(default_factory=RelationDeclaration)
+    relation_evidence: list[RelationEvidenceDeclaration] = Field(default_factory=list)
     resources: list[ResourceDeclaration] = Field(min_length=1)
     artifacts: list[WholeArtifactDeclaration] = Field(default_factory=list)
     contributions: list[ContributionDeclaration] = Field(default_factory=list)
     providers: list[ProviderDeclaration] = Field(default_factory=list)
     extensions: list[ExtensionDeclaration] = Field(default_factory=list)
+    legacy_states: list[LegacyStateDeclaration] = Field(default_factory=list)
     migrations: list[MigrationDeclaration] = Field(default_factory=list)
     legacy_signatures: list[LegacySignatureDeclaration] = Field(default_factory=list)
 
@@ -657,6 +689,28 @@ class PayloadManifest(StrictModel):
             if expected_media is not None and resource.media_type != expected_media:
                 raise ValueError("required resource role has the wrong media type")
 
+        evidence_keys = [
+            (evidence.kind.value, evidence.target) for evidence in self.relation_evidence
+        ]
+        if len(evidence_keys) != len(set(evidence_keys)):
+            raise ValueError("payload contains duplicate relation evidence")
+        expected_evidence = {
+            (RelationEvidenceKind.EXTENDS.value, target) for target in self.relations.extends
+        } | {(RelationEvidenceKind.CONFLICTS.value, target) for target in self.relations.conflicts}
+        if set(evidence_keys) != expected_evidence:
+            raise ValueError("relation evidence must exactly match extends and conflicts relations")
+        resources_by_id = {resource.id: resource for resource in self.resources}
+        for evidence in self.relation_evidence:
+            resource = resources_by_id.get(evidence.resource)
+            if (
+                resource is None
+                or resource.role != "relation-evidence"
+                or resource.media_type != "text/markdown"
+            ):
+                raise ValueError(
+                    "relation evidence must identify a Markdown relation-evidence resource"
+                )
+
         artifact_ids: set[str] = set()
         artifact_targets: set[str] = set()
         for artifact in self.artifacts:
@@ -682,7 +736,7 @@ class PayloadManifest(StrictModel):
                     continue
                 if other.adapter is not contribution.adapter:
                     raise ValueError("one semantic target declares more than one adapter")
-                if _scopes_overlap(other, contribution):
+                if contributions_overlap(other, contribution):
                     raise ValueError("semantic contribution scopes overlap")
             if contribution.shared_identity is not None:
                 signature = (
@@ -749,7 +803,14 @@ class PayloadManifest(StrictModel):
                 raise ValueError("payload contains a duplicate legacy signature ID")
             signature_ids.add(signature.id)
 
+        legacy_state_ids: set[str] = set()
+        for state in self.legacy_states:
+            if state.id in legacy_state_ids:
+                raise ValueError("payload contains a duplicate legacy state")
+            legacy_state_ids.add(state.id)
+
         migration_ids: set[str] = set()
+        used_legacy_states: set[str] = set()
         for migration in self.migrations:
             if migration.id in migration_ids:
                 raise ValueError("payload contains a duplicate migration ID")
@@ -757,6 +818,12 @@ class PayloadManifest(StrictModel):
             endpoints = (migration.from_endpoint, migration.to_endpoint)
             if not any(endpoint.package_version == self.payload.version for endpoint in endpoints):
                 raise ValueError("migration must connect to the containing payload version")
+            for endpoint in endpoints:
+                if endpoint.legacy_state is None:
+                    continue
+                if endpoint.legacy_state not in legacy_state_ids:
+                    raise ValueError("migration references an unregistered legacy state")
+                used_legacy_states.add(endpoint.legacy_state)
             if migration.provider is not None:
                 provider = provider_by_id.get(migration.provider)
                 if provider is None or provider.operation is not ProviderOperation.MIGRATE:
@@ -768,6 +835,8 @@ class PayloadManifest(StrictModel):
                 raise ValueError("manual migration instructions must be a declared resource")
             if not set(migration.signatures).issubset(signature_ids):
                 raise ValueError("migration references an unknown legacy signature")
+        if legacy_state_ids - used_legacy_states:
+            raise ValueError("payload contains an unused legacy state")
         return self
 
 
