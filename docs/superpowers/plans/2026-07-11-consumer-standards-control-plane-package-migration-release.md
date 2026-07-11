@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Round 1 audit findings CR-001 through CR-003 are remediated in this revision. Do not execute until the convergence audit passes and the owner approves execution.
+**Status:** Round 1 findings CR-001 through CR-003 and Round 2 finding CR-NEW-001 are remediated. Do not execute until the scratch-path convergence audit passes and the owner approves execution.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -383,7 +383,10 @@ uv run project-standards standards validate-packages --root . --json
 uv run project-standards standards validate-graph --root . --require-all-manifests --json
 uv run project-standards standards generate-package-schemas --root . --check
 TARGET_TOOL_RELEASE="5.0.0"
-CATALOG_SCRATCH="$(mktemp -d)"
+git check-ignore -q build/catalog-scratch.probe
+test ! -L build
+mkdir -p build
+CATALOG_SCRATCH="$(mktemp -d build/catalog-scratch.XXXXXX)"
 trap 'rm -rf "$CATALOG_SCRATCH"' EXIT
 uv run project-standards standards render-consumer-catalog \
   --root . \
