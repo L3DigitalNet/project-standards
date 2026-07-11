@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Plan the control-plane core follow-on now that the BA02 package-contract foundation is implemented.
+- Review and approve the drafted control-plane core plan, then execute it after convergence.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.

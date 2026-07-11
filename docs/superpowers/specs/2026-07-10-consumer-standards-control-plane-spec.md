@@ -52,6 +52,7 @@ related:
 | 0.2 | 2026-07-10 | Codex with specification review | Resolve round-1 findings and follow-up consistency gaps across recovery, migration, version transitions, provider phases, concurrency, package-local state, referenced extensions, ADR coverage, and examples. |
 | 0.3 | 2026-07-10 | Codex with owner-approved round-2 review | Separate persistent accepted-major authorization from enabled/applied package state and define the exact three-file plain-init scaffold. |
 | 0.4 | 2026-07-10 | Codex with converged review and owner direction | Clarify the audit-only role of accepted-track catalog lineage and approve the specification for implementation planning. |
+| 0.5 | 2026-07-10 | Codex with owner-approved SPEC-BA02 reconciliation | Align desired config and package-payload examples with the fixed option namespace, canonical V2 payload tree, and installed projection already approved and implemented by SPEC-BA02; no behavior or scope changes. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -74,11 +75,11 @@ The resulting control plane is the foundation for a separate `project-toolbox` s
 ### 2.1 In Scope
 
 - A neutral `project-standards init --catalog CATALOG_MAJOR` bootstrap that creates `.standards/` without enabling any standard.
-- A unified `.standards/config.toml` for catalog selection, desired package state, version selectors, and namespaced package options.
+- A unified `.standards/config.toml` for catalog selection, desired package state, version selectors, and package options under `standards.STANDARD_ID.config`.
 - Tool-managed `.standards/catalog.toml` and `.standards/lock.toml` files.
 - Package-owned resources and durable state under `.standards/packages/STANDARD_ID/` when no external discovery path is required.
 - Optional consumer-owned referenced extensions under `.standards/extensions/STANDARD_ID/` when no conventional external path is required.
-- Versioned configuration schemas for each consumer-facing standard namespace.
+- Versioned configuration schemas for each consumer-facing package's fixed option namespace.
 - Embedded, immutable payloads for every catalog-advertised installable package version.
 - Catalog-scoped non-breaking defaults and opt-in breaking-candidate package versions.
 - A read-only reconciliation planner and explicit apply path for install, update, repair, and removal.
@@ -243,8 +244,8 @@ Files that external tools discover at fixed paths remain there. The lock records
 | --- | --- | --- | --- | --- |
 | FR-001 | The system shall provide `project-standards init --catalog CATALOG_MAJOR` to create `.standards/` and exactly three regular files—`config.toml`, `catalog.toml`, and `lock.toml`—when no legacy or unified control-plane authority exists. | Consumers need one neutral, Git-trackable bootstrap with no placeholder state. | A fresh-repository fixture initializes successfully, enumerates exactly those three files, and validates all three schemas. | Must |
 | FR-002 | Initialization shall enable no standard and shall write no other path inside or outside `.standards/` unless legacy migration is explicitly requested; plain init shall stop without writes when it detects legacy authority. If init fails before publishing any scaffold file, it shall remove the transient empty `.standards/` directory created solely for locking. | Bootstrap must not impose a policy bundle, create split authority, or leave failed-init debris. | Filesystem assertions prove successful plain init creates only FR-001's three files—no optional directory, placeholder, ignore file, or lock artifact—and every pre-publication failure restores the prior tree. | Must |
-| FR-003 | `config.toml` shall declare the expected catalog major, each standard's enabled state and version selector, and package settings under owned `config` namespaces. | Desired state and options need one user-owned source. | Schema fixtures accept valid selectors/settings and reject unknown or misplaced keys. | Must |
-| FR-004 | Every consumer-facing package version shall publish a machine-readable configuration schema with defaults and namespace ownership. | Options must be version-aware and collision-free. | Catalog validation rejects missing schemas, duplicate namespaces, invalid defaults, and undeclared settings. | Must |
+| FR-003 | `config.toml` shall declare the expected catalog major and, under each `standards.STANDARD_ID` record, the enabled state, version selector, and package settings in its `config` table. | Desired state and options need one user-owned source. | Schema fixtures accept valid selectors/settings and reject unknown or misplaced keys. | Must |
+| FR-004 | Every consumer-facing package version shall publish a machine-readable configuration schema with defaults for its fixed `standards.STANDARD_ID.config` namespace. | Options must be version-aware and collision-free. | Catalog validation rejects missing schemas, invalid defaults, and options outside the selected package record. | Must |
 | FR-005 | `catalog.toml` shall list every package available in the installed distribution, including non-enabled, reference-only, internal, stable, retained, and candidate versions. | Users and tools need complete local discovery. | The generated catalog matches packaged manifests and includes all graph nodes and version channels. | Must |
 | FR-006 | `lock.toml` shall record the exact tool release, catalog major and digest, config digest, enabled-package applied records, effective-option digests, artifact ownership/provenance/hashes, referenced-input paths/digests, shared references, and accepted package-major tracks in a separate persistent authorization partition. | Applied state and authorization history must be reproducible without conflating disabled packages with installed ones. | Lock schema and reconciliation tests detect every material mismatch, keep disabled packages out of applied records, retain their accepted tracks, and assign no managed ownership to referenced inputs. | Must |
 | FR-007 | `project-standards reconcile` shall build and display a complete read-only plan from config, catalog, lock, live repository state, and a virtual tree containing every planned semantic contribution. | Users must inspect changes before mutation, and cross-package conflicts must be known before writes. | Plan fixtures cover create, semantic merge, update, repair, remove, preserve, no-op, and conflict actions without filesystem writes. | Must |
@@ -300,7 +301,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | IR-002 | CLI package selection | The system shall expose the `standards list`, `show`, `enable`, `disable`, and `version` operations. | Edits only `.standards/config.toml`; supports human and JSON output. | CLI/manual-edit plan equivalence passes. |
 | IR-003 | CLI reconciliation | The system shall expose `project-standards reconcile [--check] [--apply] [--allow-major ID@MAJOR] [--repair-state]`. | Plan by default; check is read-only; apply mutates; repeatable authorization is package-and-target-major scoped; repair is explicit. | Full command matrix, ambiguous-candidate, and exit-code tests pass. |
 | IR-004 | CLI validation | Existing validators and generic providers shall resolve unified config by repository root and accept explicit override only for supported migration/debug use. | `.standards/config.toml` is canonical; legacy fallback is v5-only. | Every validator and reusable workflow passes unified-config fixtures. |
-| IR-005 | Desired-state file | `.standards/config.toml` shall use a versioned TOML schema with platform, standards, and config containers. | UTF-8 TOML; repository-relative references only. | Schema, formatter, migration, and round-trip tests pass. |
+| IR-005 | Desired-state file | `.standards/config.toml` shall use a versioned TOML schema with a platform container and package-keyed `standards` records whose `config` tables are validated by the selected payload. | UTF-8 TOML; repository-relative references only. | Schema, formatter, migration, and round-trip tests pass. |
 | IR-006 | Catalog and lock files | `.standards/catalog.toml` and `.standards/lock.toml` shall use generated canonical TOML with stable ordering. | Tool-owned UTF-8 TOML; committed and reviewable. | Generation is deterministic and parser/generator round trips are lossless. |
 
 ### 7.4 Data Requirements
@@ -349,21 +350,21 @@ flowchart LR
 ```text
 standards/STANDARD_ID/
 ├── README.md
-├── standard.toml
-└── releases/
+├── standard.toml               # V2 family index
+└── versions/
     └── PACKAGE_VERSION/
-        ├── package.toml
-        ├── adopt.toml
+        ├── payload.toml
         ├── config.schema.json
-        ├── resources/
-        ├── providers/
-        └── migrations/
+        ├── README.md
+        ├── agent-summary.md
+        ├── adopt.md             # consumer availability only
+        └── ...                  # every additional regular file is declared
 
-src/project_standards/bundles/STANDARD_ID/versions/PACKAGE_VERSION/
-└── immutable distribution mirror of the released payload
+src/project_standards/payloads/STANDARD_ID/PACKAGE_VERSION/
+└── relative file symlinks to the canonical payload
 ```
 
-The top-level `standard.toml` describes the package series and catalog channels. Each released `package.toml` freezes the version-specific contract and points only within its payload. Provenance validation proves canonical-to-distribution parity or a declared deterministic transform.
+The top-level `standard.toml` indexes immutable package versions and their aggregate digests. Repository-owned `catalogs/CATALOG_MAJOR.toml` assigns version channels separately. Each version's `payload.toml` freezes its identity, options, outputs, providers, migrations, and complete resource inventory. The symlink-only installed projection preserves one authored source while wheel tests prove byte-identical payload parity.
 
 #### 8.2.3 Component View
 
@@ -497,14 +498,14 @@ catalog = '5'
 enabled = true
 version = 'latest'
 
-[config.markdown.frontmatter]
+[standards.markdown-frontmatter.config]
 contract_version = '1.1'
 required = true
 include = ['docs/**/*.md']
 exclude = ['docs/generated/**']
 ```
 
-`project_standards`, `standards`, and `config` are platform containers. Package IDs own their package-payload selection records under `standards`. Standard manifests continue to declare dotted option namespaces beneath `config`. A package-owned `contract_version` or equivalent selects that standard's consumer schema/behavior contract independently from the package payload. Omitted package options receive version-specific schema defaults. When a package schema permits a referenced extension, the option contains a repository-relative path to consumer-owned input outside `.standards/packages/`; `.standards/extensions/STANDARD_ID/` is preferred when no external convention dictates another path. The file stores desired intent only; it does not claim that installation succeeded.
+`project_standards` and `standards` are platform containers. Each package ID owns one package-payload selection record and its nested `config` table under `standards`. A package-owned `contract_version` or equivalent selects that standard's consumer schema/behavior contract independently from the package payload. Omitted package options receive version-specific schema defaults. When a package schema permits a referenced extension, the option contains a repository-relative path to consumer-owned input outside `.standards/packages/`; `.standards/extensions/STANDARD_ID/` is preferred when no external convention dictates another path. The file stores desired intent only; it does not claim that installation succeeded.
 
 ### Catalog Snapshot
 
@@ -519,21 +520,22 @@ digest = 'sha256:catalog-content-digest'
 
 [standards.markdown-frontmatter]
 status = 'active'
-adoption = 'validator'
 available = ['1.2', '2.0']
 default = '1.2'
 candidates = ['2.0']
 
 [standards.markdown-frontmatter.versions.'1.2']
 channel = 'stable'
+availability = 'consumer'
 payload_digest = 'sha256:stable-payload-digest'
 
 [standards.markdown-frontmatter.versions.'2.0']
 channel = 'breaking-candidate'
+availability = 'consumer'
 payload_digest = 'sha256:candidate-payload-digest'
 ```
 
-The catalog is generated from the installed distribution and committed. It includes packages that cannot be enabled (`adoption = 'none'`) so humans and tools see the complete standards graph. Volatile generation timestamps are excluded to preserve deterministic output.
+The catalog is generated from the installed distribution and committed. It includes `reference-only` and `internal` payloads that cannot be enabled so humans and tools see the complete standards graph. Volatile generation timestamps are excluded to preserve deterministic output.
 
 ### Central Lock
 
@@ -572,12 +574,10 @@ On successful disable, the package's applied, artifact, and referenced-input rec
 
 Each immutable release payload contains:
 
-- `package.toml`: version identity, lifecycle channel, config schema, capabilities, authorities, relations, resources, provider phase/effect contracts, migrations, and artifact-manifest pointer.
-- `adopt.toml`: materialized artifacts with destinations, owners, provenance, install policies, modes, and transforms.
+- `payload.toml`: version identity and availability; config-schema pointer; capabilities; relations; complete resources; whole artifacts; semantic contributions; provider phase/effect contracts; referenced extensions; legacy signatures/state; and migrations.
 - `config.schema.json`: accepted options and defaults for this version.
-- Version-specific documentation and resources.
-- Version-selected read-only planning/verification provider and migration declarations.
-- A digest manifest covering every payload file.
+- Version-specific canonical documentation, agent summary, consumer adoption guide when applicable, provider code/schemas, migration evidence, and other declared resources.
+- Per-resource digests plus the family index's aggregate payload digest, covering every regular file including `payload.toml`.
 
 Top-level `standard.toml` remains the package-series manifest and catalog authoring source. A released snapshot is immutable; a correction requires a new package version.
 
@@ -903,8 +903,8 @@ There is no daemon, database, background worker, or network listener.
 | `project_standards.catalog` | Yes | Supplied explicitly to init | Expected `project-standards` catalog major. |
 | `standards.STANDARD_ID.enabled` | Yes for selected record | `false` when absent | Desired package presence. |
 | `standards.STANDARD_ID.version` | Yes when enabled | `latest` | Exact package version or catalog-default selector. |
-| `config.NAMESPACE` | Package-specific | Version-specific defaults | User-selectable standard options. |
-| `config.NAMESPACE.REFERENCE_OPTION` | Package-specific exception | None | Typed repository-relative reference to consumer-owned specialized input; preferred under `.standards/extensions/STANDARD_ID/` when no conventional path is required. |
+| `standards.STANDARD_ID.config` | Package-specific | Version-specific defaults | User-selectable standard options validated by the selected payload. |
+| `standards.STANDARD_ID.config.REFERENCE_OPTION` | Package-specific exception | None | Typed repository-relative reference to consumer-owned specialized input; preferred under `.standards/extensions/STANDARD_ID/` when no conventional path is required. |
 
 The executing tool's exact release is not user-configured as an applied fact; it is discovered and recorded in catalog/lock. Accepted-major tracks are also tool-owned lock authorization, never config options. `standards disable` preserves the user-owned selector and options while changing only `enabled`. External package and workflow pins remain the authority for installing the tool release.
 
@@ -1057,7 +1057,7 @@ No implementation-blocking design question remains after owner review.
 | OQ-007 | Candidate retention | resolved | Preserve an accepted package major independently of enablement and never silently forget or downgrade it. |
 | OQ-008 | Payload distribution | resolved | Embed every advertised immutable package payload for offline use. |
 | OQ-009 | Applied-state ownership | resolved | Use one central lock with separate enabled-package applied and persistent accepted-track partitions; retire package-specific provenance locks. |
-| OQ-010 | Package options | resolved | Express ordinary options under owned `config.toml` namespaces with versioned schemas. |
+| OQ-010 | Package options | resolved | Express ordinary options under the fixed `standards.STANDARD_ID.config` namespace with versioned schemas. |
 | OQ-011 | Existing consumers | resolved | Provide explicit migration, v5 read-only fallback, dual-authority rejection, and v6 fallback removal. |
 | OQ-012 | `project-toolbox` scope | resolved | Specify and implement it separately after this control-plane contract. |
 | OQ-013 | Provider mutation boundary | resolved | Read-only providers consume snapshots; `fix`/`scaffold`/`upgrade` return typed mutation plans; the platform executor alone performs supported repository writes. |
