@@ -39,7 +39,10 @@ jobs:
         run: uv run basedpyright
 
       - name: Test with coverage
-        run: uv run coverage run -m pytest
+        run: uv run coverage run -m pytest -m "not performance"
+
+      - name: Package contract performance gate
+        run: uv run pytest -m performance
 
       - name: Coverage report
         run: uv run coverage report

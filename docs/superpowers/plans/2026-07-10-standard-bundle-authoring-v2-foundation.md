@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** Implemented inline on `testing` (`4e507d6` through the foundation closeout commit); the 1,693-test final gate passes at 93% branch coverage. The unchecked procedural boxes below are retained as the approved execution script, not as an open-work ledger.
+
 **Goal:** Implement SPEC-BA02 MS-1 and the declaration-only foundation of MS-2: strict versioned-package models, generated schemas, integrity and discovery validation, catalog-source validation, generic graph checks, authoring CLI commands, and byte-identical installed payload projection.
 
 **Architecture:** Add a new `project_standards.package_contract` boundary beside the legacy V1 manifest/graph code. It loads immutable family, payload, and catalog declarations into strict Pydantic models; validates complete payload inventories and cross-package graph invariants without executing providers; and emits stable structured findings. Canonical payload bytes remain under `standards/{id}/versions/{version}/`. A checked-in file-symlink projection under `src/project_standards/payloads/` gives `uv_build` the required wheel path without creating a second editable payload tree. The legacy V1 runtime remains unchanged until the later migration plan activates V2.
@@ -515,7 +517,7 @@ uv run project-standards spec lint --config .project-standards.yml --strict
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards validate-packages --root tests/fixtures/package_contract/valid/full --json
 uv run project-standards standards generate-package-schemas --root . --check
-uv run project-standards standards render-consumer-catalog --root tests/fixtures/package_contract/valid/full --catalog-major 5 --output tests/fixtures/package_contract/valid/full/expected/catalog.toml --check
+uv run project-standards standards render-consumer-catalog --root tests/fixtures/package_contract/valid/full --catalog-major 5 --output expected/catalog.toml --check
 uv run project-standards standards sync-payload-projection --root . --check
 ```
 

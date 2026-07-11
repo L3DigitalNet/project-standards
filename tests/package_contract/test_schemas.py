@@ -99,6 +99,17 @@ def test_generated_schema_bytes_are_canonical_and_checked_in() -> None:
         assert (_SCHEMA_DIR / name).read_bytes() == content
 
 
+def test_prettier_does_not_own_generated_schema_or_fixture_bytes() -> None:
+    ignores = set(Path(".prettierignore").read_text(encoding="utf-8").splitlines())
+
+    assert {
+        "src/project_standards/schemas/standard-family.schema.json",
+        "src/project_standards/schemas/standard-payload.schema.json",
+        "src/project_standards/schemas/standards-catalog-source.schema.json",
+        "tests/fixtures/package_contract/",
+    } <= ignores
+
+
 @pytest.mark.parametrize("schema_name", sorted(_MODELS))
 def test_valid_toml_fixtures_pass_their_generated_schema(schema_name: str) -> None:
     validator = _validator(package_schema_documents()[schema_name])

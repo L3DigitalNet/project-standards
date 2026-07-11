@@ -15,6 +15,8 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 7 | Style gates exclude generated/template content | Wiring or debugging markdownlint / Prettier / frontmatter gates |
 | 8 | `except A, B:` is ruff-canonical — NOT a Python-2 bug | Reviewing/fixing multi-exception clauses in `src/` |
 | 9 | Doc-embedded scaffolds are byte-locked to their bundle twin | Editing a copy-paste scaffold fence inside a standard doc |
+| 10 | V1 and V2 manifests coexist through a preamble boundary | Discovering package-family indexes during the V5 migration |
+| 11 | Installed V2 payloads use a symlink-only source projection | Adding or packaging canonical versioned payloads |
 
 ## 1. Dogfood the standards
 
@@ -151,3 +153,27 @@ For YAML fences:
 **Sources:** 2026-07-01 python-tooling review and same-day markdown-standards sweep.
 
 **Related:** 1, 5, 6.
+
+## 10. V1 and V2 manifests coexist through a preamble boundary
+
+**Applies when:** discovering `standards/{id}/standard.toml` while V1 and V2 package data coexist during the V5 migration.
+
+**Rule:** V2 discovery may inspect only the bounded beginning of a regular `standard.toml` and selects a family only when that preamble declares `schema_version = "2.0"`. It must not parse a V1 manifest and reinterpret its fields as V2 facts. An explicit family allowlist still requires the selected path to be a regular file and reports a missing family instead of falling back to V1 behavior.
+
+**Why:** the migration keeps the operational V1 runtime intact until current packages are reconstructed. A format probe provides one deterministic authority boundary without merging V1 and V2 models or requiring package-ID exceptions.
+
+**Sources:** `project_standards.package_contract.discovery`; SPEC-BA02 foundation implementation.
+
+**Related:** 4, 6, 11.
+
+## 11. Installed V2 payloads use a symlink-only source projection
+
+**Applies when:** adding canonical files under `standards/{id}/versions/{version}/` or changing package-data build behavior.
+
+**Rule:** authored payload bytes exist only under the canonical version directory. `src/project_standards/payloads/{id}/{version}/` may contain relative file symlinks and directories, never regular files or directory symlinks. Regenerate with `project-standards standards sync-payload-projection --root .`; use `--check` in validation. The build must prove direct-wheel and sdist-to-wheel members are byte-identical to canonical payloads.
+
+**Why:** `uv_build` needs package data under `src/`, while authors and release checks need one editable authority. Relative file links provide the build path without creating a second maintained payload tree.
+
+**Sources:** `project_standards.package_contract.projection`; SPEC-BA02 FR-034 and IR-007.
+
+**Related:** 3, 4, 6, 10.

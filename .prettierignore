@@ -24,6 +24,13 @@ docs/TODO.md
 # short arrays) diverges from that, so letting Prettier own it would create a
 # two-master conflict with the drift test. Hand-authored schemas stay gated.
 src/project_standards/schemas/standard.schema.json
+src/project_standards/schemas/standard-family.schema.json
+src/project_standards/schemas/standard-payload.schema.json
+src/project_standards/schemas/standards-catalog-source.schema.json
+
+# Package-contract fixtures are integrity inputs: their exact raw bytes and
+# declared digests are one test contract, not formatter-owned source documents.
+tests/fixtures/package_contract/
 
 # Manifest-generated catalog: the Python renderer and its checked-in freshness
 # test own the exact bytes, so formatting it would create a second generator.

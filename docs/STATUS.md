@@ -13,8 +13,10 @@
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
 - `SPEC-CP01` is approved rev 0.4; adversarial review converged in round 3, and ADRs 0023-0024 record its control-plane and version-channel decisions.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` remains approved at rev 0.4; the non-scope revision pins canonical digest bytes and a golden vector. SPEC-BA01 is superseded history.
-- The BA02 foundation plan converged in review round 2 and is approved for execution. Task 1 is next; later platform layers remain separate.
+- `SPEC-BA02` is approved at rev 0.6; revs 0.4-0.5 pin digest bytes and complete relation/legacy-state declarations, while rev 0.6 records foundation evidence without changing scope. SPEC-BA01 is superseded history.
+- The BA02 package-contract foundation is implemented (`4e507d6` through this closeout): strict authoring models, integrity, graph validation, CLI, and installed projection.
+- Acceptance passes offline wheel parity, the 100/1,000/10,000 scale gate, 1,693 tests, and 93% branch coverage.
+- Provider execution, live semantic mutation, current-package reconstruction, and V5 activation remain in the two follow-on plans.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

@@ -118,11 +118,15 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 - [x] 2026-07-10 - Superseded the Standard Bundle Authoring design contract with approved `SPEC-BA02`.
 
-  `SPEC-BA02` rev 0.4 defines the Full V2 authoring contract: family indexes, immutable payloads, fixed package-option namespaces, repository catalog channels, migrations, semantic contributions, trusted bounded providers, integrity, and the reduced adoption-guide role. Rev 0.4 is a non-scope clarification that pins the aggregate-digest byte contract and golden vector. SPEC-BA01 remains superseded implementation history until V2 execution replaces its package.
+  `SPEC-BA02` defines the Full V2 authoring contract: family indexes, immutable payloads, fixed package-option namespaces, repository catalog channels, migrations, semantic contributions, trusted bounded providers, integrity, and the reduced adoption-guide role. Revs 0.4-0.5 pin the aggregate-digest contract and complete relation/legacy-state declarations; rev 0.6 records implementation evidence only. SPEC-BA01 remains superseded implementation history until V2 execution replaces its package.
+
+- [x] 2026-07-10 - Implemented the BA02 package-contract foundation (`4e507d6` through this closeout).
+
+  Added strict V2 family, payload, option, catalog, integrity, release, graph, schema, CLI, and installed-projection boundaries. A three-family/five-payload fixture proves channel roles and declaration shapes; offline wheel rediscovery, 100-order determinism, and the explicit 100-family/1,000-payload/10,000-unit CI scale gate pass. Runtime providers/adapters and current-package migration remain deliberately unclaimed.
 
 - [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024 and approved `SPEC-BA02` are complete. The first of three implementation plans—BA02's package-contract foundation—converged in review round 2 and is approved for execution; control-plane core and current-package migration/release plans follow.
+  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024, approved `SPEC-BA02`, and the first of three implementation layers (the BA02 package-contract foundation) are complete. Write and execute the control-plane core plan next, then the current-package migration/release plan.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
