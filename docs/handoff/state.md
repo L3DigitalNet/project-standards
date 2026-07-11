@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Plan the follow-on for package reconstruction, migration, activation, catalog refresh, and release; the 18-task core is complete.
+- Review and approve the 18-task CP01 package-migration/release-readiness follow-on plan; the mechanism-level core is complete.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.

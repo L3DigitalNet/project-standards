@@ -23,6 +23,7 @@
 - Task 18 closes the core with offline wheel repair, an all-adapter fixed point, 100-order determinism, package-ID neutrality, and scale evidence.
 - The final gate passes 2,000 tests at 90% coverage; planning 100 packages and 1,000 artifacts remains below five seconds.
 - The approved 18-task core plan is complete. Real-package reconstruction, migration, conversion, refresh, activation, and release remain.
+- The 18-task CP01 package-migration/release-readiness plan is drafted; adversarial review and owner approval are next.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
