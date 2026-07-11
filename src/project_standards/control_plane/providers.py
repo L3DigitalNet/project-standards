@@ -19,6 +19,7 @@ from pydantic import ValidationError
 
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
+from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import LockedInput
 from project_standards.control_plane.schemas import MutationPlanSchema, ProviderInputSchema
 from project_standards.package_contract.paths import (
@@ -149,6 +150,7 @@ class ProviderResult:
     findings: tuple[ControlFinding, ...] = ()
     content: bytes | None = None
     mutation_plan: MutationPlanSchema | None = None
+    migration_report: MigrationReport | None = None
     output_notice: str | None = None
 
 
@@ -343,6 +345,25 @@ def _typed_result(
         if plan.standard_id != invocation.standard_id or plan.version != invocation.version:
             raise ControlPlaneError("mutation plan identity does not match selected payload")
         return ProviderResult(effect, mutation_plan=plan, output_notice=notice)
+    if effect is ProviderEffect.MIGRATION_REPORT:
+        try:
+            report = MigrationReport.model_validate(output)
+        except ValidationError as exc:
+            raise ControlPlaneError("migration provider returned an invalid report") from exc
+        if (
+            report.package.standard_id != invocation.standard_id
+            or report.package.version != invocation.version
+        ):
+            raise ControlPlaneError("migration report identity does not match selected payload")
+        declared_signatures = {
+            signature
+            for migration in invocation.payload.manifest.migrations
+            if migration.provider == invocation.provider_id
+            for signature in migration.signatures
+        }
+        if any(claim.signature_id not in declared_signatures for claim in report.claims):
+            raise ControlPlaneError("migration provider claimed an undeclared legacy signature")
+        return ProviderResult(effect, migration_report=report, output_notice=notice)
     raise ControlPlaneError("provider declared an unsupported effect")
 
 

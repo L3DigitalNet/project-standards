@@ -10,13 +10,13 @@ role = "retained"
 [[packages]]
 id = "alpha"
 version = "2.0"
-digest = "sha256:da20673172d64fd986916fdab14a05111e0a6201b2212eea869ebd152e045d6b"
+digest = "sha256:2246abb3a956f0bdea7d3460495e67f738b66eeb304e672ad75eb8b2fdb75dd0"
 role = "default"
 
 [[packages]]
 id = "alpha"
 version = "3.0"
-digest = "sha256:21fda428a50867f1bfcf6d6d3aad909fbb1f1d826e2d2b48046cdff5ea73a805"
+digest = "sha256:465f6d8324d22b8cf01ccc1520ff4616f1e8fc9bfbe100fe2de6efa8d3ba6383"
 role = "candidate"
 
 [[packages]]

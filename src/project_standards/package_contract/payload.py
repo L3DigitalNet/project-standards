@@ -348,6 +348,7 @@ class ProviderEffect(StrEnum):
     FINDINGS = "findings"
     CONTENT = "content"
     MUTATION_PLAN = "mutation-plan"
+    MIGRATION_REPORT = "migration-report"
 
 
 _OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect]] = {
@@ -361,7 +362,7 @@ _OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect
     ProviderOperation.RENDER: (ProviderPhase.PLAN, ProviderEffect.CONTENT),
     ProviderOperation.SCAFFOLD: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
     ProviderOperation.UPGRADE: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
-    ProviderOperation.MIGRATE: (ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.MIGRATE: (ProviderPhase.PLAN, ProviderEffect.MIGRATION_REPORT),
     ProviderOperation.SEMANTIC_REVIEW: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
 }
 
@@ -826,7 +827,11 @@ class PayloadManifest(StrictModel):
                 used_legacy_states.add(endpoint.legacy_state)
             if migration.provider is not None:
                 provider = provider_by_id.get(migration.provider)
-                if provider is None or provider.operation is not ProviderOperation.MIGRATE:
+                if (
+                    provider is None
+                    or provider.operation is not ProviderOperation.MIGRATE
+                    or provider.effect is not ProviderEffect.MIGRATION_REPORT
+                ):
                     raise ValueError("automatic migration must identify a migrate provider")
             if (
                 migration.instructions is not None

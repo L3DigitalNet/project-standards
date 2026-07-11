@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Round 1 findings CR-001 through CR-003 and Round 2 finding CR-NEW-001 are remediated. Do not execute until the scratch-path convergence audit passes and the owner approves execution.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Task 1 is complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -130,14 +130,14 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Modify `src/project_standards/package_contract/payload.py`, `src/project_standards/control_plane/{schemas,providers}.py`, and generated schemas; create `src/project_standards/control_plane/migration.py`; create `tests/control_plane/test_migration.py`; modify package-contract/provider schema tests.
 
-- [ ] Write failing model/schema tests for a `migration-report` provider effect, deterministic package results, recognized setting paths, legacy claims, artifact/lock dispositions, warnings/errors, duplicate claims, unsafe paths, undeclared signatures, and secret-value redaction.
-- [ ] Run `uv run pytest tests/package_contract/test_payload_execution_contracts.py tests/control_plane/test_schemas.py tests/control_plane/test_migration.py -q`; expect import/schema failures.
-- [ ] Remap the existing closed contract for `ProviderOperation.MIGRATE` from `(ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN)` to `(ProviderPhase.PLAN, ProviderEffect.MIGRATION_REPORT)`. Update the existing assertions in `tests/package_contract/test_payload_execution_contracts.py`, provider-result tests in `tests/control_plane/test_providers.py`, both full-fixture migrate providers under `tests/fixtures/package_contract/valid/full/`, and the automatic-migration provider check around `payload.py`'s legacy-endpoint validation. Do not weaken the `mutation-plan` contract for `fix`, `scaffold`, or `upgrade`.
-- [ ] Define frozen `MigratedPackage`, `LegacyClaim`, `LegacyDisposition`, `MigrationFinding`, and `MigrationReport` models in `control_plane/migration.py`. `MigratedPackage` contains `standard_id`, exact payload `version`, `selector`, validated package `config`, and recognized legacy JSON-pointer paths. `LegacyClaim` contains the payload-declared signature ID, target, observed digest, ownership class, and proposed disposition.
-- [ ] Add `migration-report.schema.json` to the generated control-plane schemas and make provider result validation select the schema implied by the declared effect.
-- [ ] Add human/JSON serialization that exposes paths, IDs, dispositions, and digests but no source content or configured secret value.
-- [ ] Run the focused tests, `uv run project-standards standards generate-package-schemas --root . --check`, Ruff, and BasedPyright; expect pass.
-- [ ] Commit: `feat(v5): define legacy migration reports`
+- [x] Write failing model/schema tests for a `migration-report` provider effect, deterministic package results, recognized setting paths, legacy claims, artifact/lock dispositions, warnings/errors, duplicate claims, unsafe paths, undeclared signatures, and secret-value redaction.
+- [x] Run `uv run pytest tests/package_contract/test_payload_execution_contracts.py tests/control_plane/test_schemas.py tests/control_plane/test_migration.py -q`; expect import/schema failures.
+- [x] Remap the existing closed contract for `ProviderOperation.MIGRATE` from `(ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN)` to `(ProviderPhase.PLAN, ProviderEffect.MIGRATION_REPORT)`. Update the existing assertions in `tests/package_contract/test_payload_execution_contracts.py`, provider-result tests in `tests/control_plane/test_providers.py`, both full-fixture migrate providers under `tests/fixtures/package_contract/valid/full/`, and the automatic-migration provider check around `payload.py`'s legacy-endpoint validation. Do not weaken the `mutation-plan` contract for `fix`, `scaffold`, or `upgrade`.
+- [x] Define frozen `MigratedPackage`, `LegacyClaim`, `LegacyDisposition`, `MigrationFinding`, and `MigrationReport` models in `control_plane/migration.py`. `MigratedPackage` contains `standard_id`, exact payload `version`, `selector`, validated package `config`, and recognized legacy JSON-pointer paths. `LegacyClaim` contains the payload-declared signature ID, target, observed digest, ownership class, and proposed disposition.
+- [x] Add `migration-report.schema.json` to the generated control-plane schemas and make provider result validation select the schema implied by the declared effect.
+- [x] Add human/JSON serialization that exposes paths, IDs, dispositions, and digests but no source content or configured secret value.
+- [x] Run the focused tests, `uv run project-standards standards generate-package-schemas --root . --check`, Ruff, and BasedPyright; expect pass.
+- [x] Commit: `feat(v5): define legacy migration reports`
 
 ### Task 2: Read-Only Legacy Discovery and Whole-Migration Planning
 

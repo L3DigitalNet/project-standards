@@ -185,6 +185,8 @@ def test_disabled_reference_is_removed_from_state_but_consumer_file_is_preserved
 
 
 def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
+    if effect is ProviderEffect.MIGRATION_REPORT:
+        return control_plane_schema_documents()["migration-report.schema.json"]
     if effect is ProviderEffect.MUTATION_PLAN:
         return control_plane_schema_documents()["mutation-plan.schema.json"]
     if effect is ProviderEffect.CONTENT:
@@ -240,6 +242,25 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
     elif behavior == "wrong-output":
         body = "return {'unexpected': 'shape'}"
         imports = ""
+    elif behavior == "undeclared-signature":
+        digest = "sha256:" + ("a" * 64)
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': {{}}, "
+            "'recognized_settings': ['/demo']}, 'claims': [{'signature_id': "
+            "'undeclared-signature', 'target': 'legacy.yml', 'observed_digest': "
+            f"'{digest}', 'ownership': 'managed', 'disposition': "
+            "'adopt'}], 'findings': []}"
+        )
+        imports = ""
+    elif behavior == "secret-config":
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': "
+            "{'api_token': 'do-not-echo-this-value'}, 'recognized_settings': ['/demo']}, "
+            "'claims': [], 'findings': []}"
+        )
+        imports = ""
     elif effect is ProviderEffect.CONTENT:
         body = (
             "print('private stdout')\n"
@@ -254,10 +275,17 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
             "'hint': 'inspect'}]}"
         )
         imports = ""
-    else:
+    elif effect is ProviderEffect.MUTATION_PLAN:
         body = (
             "return {'schema_version': '1.0', 'standard_id': 'demo', "
             f"'version': '{marker}', 'actions': []}}"
+        )
+        imports = ""
+    else:
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': {{'mode': 'strict'}}, "
+            "'recognized_settings': ['/demo']}, 'claims': [], 'findings': []}"
         )
         imports = ""
     return f"{imports}\ndef run(request, resources):\n    {body}\n"
@@ -323,6 +351,7 @@ def _write_provider_payload(
     phase = {
         ProviderOperation.RENDER: "plan",
         ProviderOperation.VALIDATE: "validate",
+        ProviderOperation.FIX: "authoring",
         ProviderOperation.MIGRATE: "plan",
     }[operation]
     manifest = PayloadManifest.model_validate(
@@ -431,7 +460,9 @@ def test_provider_receives_immutable_input_and_only_declared_resource_bytes(
         invoke_provider(_invocation(repo, payload))
 
 
-def test_provider_returns_typed_findings_and_mutation_plan(tmp_path: Path) -> None:
+def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     findings_payload = _write_provider_payload(
@@ -442,17 +473,55 @@ def test_provider_returns_typed_findings_and_mutation_plan(tmp_path: Path) -> No
     plan_payload = _write_provider_payload(
         tmp_path / "plan",
         version="2.0",
-        operation=ProviderOperation.MIGRATE,
+        operation=ProviderOperation.FIX,
         effect=ProviderEffect.MUTATION_PLAN,
+    )
+    migration_payload = _write_provider_payload(
+        tmp_path / "migration",
+        version="2.0",
+        operation=ProviderOperation.MIGRATE,
+        effect=ProviderEffect.MIGRATION_REPORT,
     )
 
     findings = invoke_provider(_invocation(repo, findings_payload))
     plan = invoke_provider(_invocation(repo, plan_payload))
+    migration = invoke_provider(_invocation(repo, migration_payload))
 
     assert findings.findings[0].code == "DEMO"
     assert findings.findings[0].standard_id == "demo"
     assert plan.mutation_plan is not None
     assert plan.mutation_plan.version.value == "2.0"
+    assert migration.migration_report is not None
+    assert migration.migration_report.package.version.value == "2.0"
+
+
+@pytest.mark.parametrize(
+    ("behavior", "message", "hidden"),
+    [
+        ("undeclared-signature", "undeclared legacy signature", None),
+        ("secret-config", "invalid report", "do-not-echo-this-value"),
+    ],
+)
+def test_migration_provider_rejects_undeclared_signatures_and_secret_values(
+    tmp_path: Path,
+    behavior: str,
+    message: str,
+    hidden: str | None,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "migration",
+        operation=ProviderOperation.MIGRATE,
+        effect=ProviderEffect.MIGRATION_REPORT,
+        behavior=behavior,
+    )
+
+    with pytest.raises(ControlPlaneError, match=message) as caught:
+        invoke_provider(_invocation(repo, payload))
+
+    if hidden is not None:
+        assert hidden not in str(caught.value)
 
 
 @pytest.mark.parametrize("behavior", ["raise", "network"])

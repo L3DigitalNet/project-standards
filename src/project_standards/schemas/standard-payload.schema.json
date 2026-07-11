@@ -517,7 +517,8 @@
       "enum": [
         "findings",
         "content",
-        "mutation-plan"
+        "mutation-plan",
+        "migration-report"
       ],
       "title": "ProviderEffect",
       "type": "string"

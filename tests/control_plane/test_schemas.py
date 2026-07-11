@@ -15,6 +15,7 @@ _SCHEMA_NAMES = {
     "consumer-catalog.schema.json",
     "consumer-config.schema.json",
     "consumer-lock.schema.json",
+    "migration-report.schema.json",
     "mutation-plan.schema.json",
     "provider-input.schema.json",
     "reconciliation-plan.schema.json",
@@ -59,10 +60,10 @@ def test_control_plane_schema_generator_writes_checks_and_detects_drift(
     assert not generate_control_plane_schemas(tmp_path, check=True)
 
 
-def test_existing_schema_cli_checks_all_nine_schemas_for_drift(tmp_path: Path) -> None:
+def test_existing_schema_cli_checks_all_ten_schemas_for_drift(tmp_path: Path) -> None:
     assert run_standards(["generate-package-schemas", "--root", str(tmp_path)]) == 0
     output = tmp_path / "src/project_standards/schemas"
-    assert len(list(output.glob("*.schema.json"))) == 9
+    assert len(list(output.glob("*.schema.json"))) == 10
 
     changed = output / "provider-input.schema.json"
     original = changed.read_bytes()

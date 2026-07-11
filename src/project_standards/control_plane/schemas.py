@@ -11,6 +11,7 @@ from typing import Literal, cast
 from pydantic import BaseModel, Field
 
 from project_standards.control_plane.diagnostics import ActionKind
+from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import (
     CentralLock,
     ConsumerCatalog,
@@ -110,6 +111,7 @@ _SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
     ("consumer-catalog.schema.json", ConsumerCatalog),
     ("consumer-config.schema.json", DesiredConfig),
     ("consumer-lock.schema.json", CentralLock),
+    ("migration-report.schema.json", MigrationReport),
     ("mutation-plan.schema.json", MutationPlanSchema),
     ("provider-input.schema.json", ProviderInputSchema),
     ("reconciliation-plan.schema.json", ReconciliationPlanSchema),
