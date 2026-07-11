@@ -6,8 +6,8 @@ description: 'Recurring procedure for reviewing repository hygiene, metadata, in
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-10'
-reviewed: null
+updated: '2026-07-11'
+reviewed: '2026-07-11'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -38,11 +38,23 @@ Before working through the checklist, identify from the repository's own convent
 
 Do not assume locations from memory — repository layouts change; the repository's current config and instructions are authoritative.
 
+## Cleanup Loose Files
+
+Loose files accumulate outside of their intended locations. Identify and move them to the correct location. Loose files may include:
+
+### Research
+
+Research belongs in `docs/research/`. This includes durable reports generated at the user's request, by a skill, or through a similar workflow. Specs, plans, and reviews keep their dedicated locations.
+
+### Scratch
+
+Scratch material belongs in `docs/scratch/` unless a standard, ADR, or convention governs its location. Add `docs/scratch/` to `.gitignore`. If the directory is absent, create it with a single `scratch.md` placeholder.
+
 ## File Deletion
 
 - [ ] Delete completed plans. Plans are ephemeral; specs are the historical record.
 - [ ] Delete completed reviews. Reviews are ephemeral; once findings are resolved, the target document is the record.
-- [ ] Move loose scratch files to `docs/scratch/`. Do not delete files in `docs/scratch/` unless they are genuinely stale or irrelevant and were not user-authered.
+- [ ] Move loose scratch files to `docs/scratch/`. Do not delete files in `docs/scratch/` unless they are genuinely stale or irrelevant and were not user-authored.
 - [ ] Identify and delete stale specs.
   - Stale specs are those that have been superseded by a newer spec, or that are no longer relevant to the repository's current state.
   - Before deleting a spec, ensure that it is not referenced by any other document or index in the repository.

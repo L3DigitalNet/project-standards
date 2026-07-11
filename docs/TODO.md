@@ -124,13 +124,15 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   Added strict V2 family, payload, option, catalog, integrity, release, graph, schema, CLI, and installed-projection boundaries. A three-family/five-payload fixture proves channel roles and declaration shapes; offline wheel rediscovery, 100-order determinism, and the explicit 100-family/1,000-payload/10,000-unit CI scale gate pass. Runtime providers/adapters and current-package migration remain deliberately unclaimed.
 
-- [ ] Implement the approved Consumer Standards Control Plane (`SPEC-CP01`) for v5.
+- [ ] Complete the Consumer Standards Control Plane (`SPEC-CP01`) follow-on for v5.
 
-  Establish the neutral `.standards/` scaffold, unified TOML config, catalog and central lock, explicit reconciliation, catalog-scoped package channels, immutable versioned payloads, semantic contributions, legacy migration, and compatibility for every current standard. ADRs 0023-0024, approved `SPEC-BA02`, and the first of three implementation layers (the BA02 package-contract foundation) are complete. Write and execute the control-plane core plan next, then the current-package migration/release plan.
+  The approved 18-task mechanism-level core is complete through `e069c34`: neutral initialization, unified config and lock state, catalog-scoped resolution, bounded providers, semantic composition, lifecycle planning, transactional apply/recovery, and public reconciliation commands. Reconstruct and convert the current packages, implement legacy migration and same-major catalog refresh, prove compatibility for every current standard, then complete activation and release.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
   Specify this only after `SPEC-CP01` is approved. V1 packages the four proven workflows plus one routing skill, installs managed core workflows under `.agents/workflows/project-toolbox/`, keeps `docs/workflows/` for local extensions, and documents the later operational-suite and extension-framework waves.
+
+  - [ ] Convert the installed Codex `review-orchestrator` skill into a managed workflow under `.agents/workflows/project-toolbox/`.
 
 - [ ] Create and release the `agent-managed-repo` standard for v5.0.0.
 
