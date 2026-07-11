@@ -5,12 +5,16 @@ from __future__ import annotations
 import copy
 import json
 import math
+import re
 import tomllib
+import unicodedata
+from collections import Counter
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal, Protocol, cast
+from urllib.parse import unquote_to_bytes
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as JsonSchemaError
@@ -47,6 +51,11 @@ CapabilityId = Annotated[
 MediaType = Annotated[
     str,
     StringConstraints(pattern=r"^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$"),
+]
+PosixMode = Annotated[str, StringConstraints(pattern=r"^0[0-7]{3}$")]
+SharedIdentity = Annotated[
+    str,
+    StringConstraints(pattern=r"^[a-z0-9]+(?:[./_-][a-z0-9]+)*$"),
 ]
 
 
@@ -113,8 +122,205 @@ class ResourceDeclaration(StrictModel):
     digest: Sha256Digest
 
 
+class ArtifactPolicy(StrEnum):
+    """Lifecycle policies supported by managed package outputs."""
+
+    MANAGED = "managed"
+    CREATE_ONLY = "create-only"
+
+
+class AdapterKind(StrEnum):
+    """Semantic container adapters supported by the V1 contribution contract."""
+
+    WHOLE_FILE = "whole-file"
+    TOML = "toml"
+    JSON = "json"
+    JSONC = "jsonc"
+    YAML = "yaml"
+    EDITORCONFIG = "editorconfig"
+    MARKDOWN_BLOCK = "markdown-block"
+
+
+class WholeArtifactDeclaration(StrictModel):
+    """Declare exclusive ownership of one complete repository file."""
+
+    id: ResourceId
+    target: SafeRelativePath
+    source: SafeRelativePath
+    digest: Sha256Digest
+    policy: ArtifactPolicy
+    mode: PosixMode | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticAddress:
+    """Identify the smallest normalized semantic unit owned by a contribution."""
+
+    target: SafeRelativePath
+    adapter: AdapterKind
+    scope: str
+
+
+_BAD_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-F]{2})")
+_COMPONENT_DELIMITERS = frozenset("%#=")
+
+
+def _canonical_component(value: str) -> str:
+    if not value or _BAD_PERCENT_ESCAPE.search(value):
+        raise ValueError("selector component is empty or has an invalid percent escape")
+    try:
+        decoded = unquote_to_bytes(value).decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("selector component is not valid percent-encoded UTF-8") from exc
+    if not decoded.isprintable() or unicodedata.normalize("NFC", decoded) != decoded:
+        raise ValueError("selector component is not canonical printable UTF-8")
+    canonical_parts: list[str] = []
+    for character in decoded:
+        if character not in _COMPONENT_DELIMITERS:
+            canonical_parts.append(character)
+            continue
+        canonical_parts.extend(f"%{byte:02X}" for byte in character.encode("utf-8"))
+    canonical = "".join(canonical_parts)
+    if canonical != value:
+        raise ValueError("selector component must use canonical percent encoding")
+    return canonical
+
+
+def _json_pointer(value: str) -> str:
+    if not value.startswith("/") or not value.isprintable():
+        raise ValueError("selector must contain a non-root RFC 6901 JSON Pointer")
+    if unicodedata.normalize("NFC", value) != value:
+        raise ValueError("JSON Pointer must use NFC spelling")
+    for segment in value.split("/")[1:]:
+        index = 0
+        while index < len(segment):
+            if segment[index] == "~":
+                if index + 1 >= len(segment) or segment[index + 1] not in {"0", "1"}:
+                    raise ValueError("JSON Pointer contains an invalid RFC 6901 escape")
+                index += 2
+            else:
+                index += 1
+    return value
+
+
+def _keyed_set_scope(body: str) -> str:
+    if "#" not in body:
+        raise ValueError("keyed-set selector requires an identity key and value")
+    pointer, binding = body.rsplit("#", 1)
+    if "=" not in binding:
+        raise ValueError("keyed-set selector requires an identity key and value")
+    key, identity = binding.split("=", 1)
+    return f"keyed-set:{_json_pointer(pointer)}#{_canonical_component(key)}={_canonical_component(identity)}"
+
+
+def normalize_scope(adapter: AdapterKind, scope: str) -> str:
+    """Validate and return one canonical selector for its declared adapter."""
+    if adapter is AdapterKind.WHOLE_FILE:
+        if scope != "$file":
+            raise ValueError("whole-file adapter requires the $file selector")
+        return scope
+
+    if adapter is AdapterKind.TOML:
+        for prefix in ("key:", "table:"):
+            if scope.startswith(prefix):
+                return f"{prefix}{_json_pointer(scope.removeprefix(prefix))}"
+        raise ValueError("TOML selector must own one key or table")
+
+    if adapter in {AdapterKind.JSON, AdapterKind.JSONC, AdapterKind.YAML}:
+        if scope.startswith("key:"):
+            return f"key:{_json_pointer(scope.removeprefix('key:'))}"
+        if scope.startswith("keyed-set:"):
+            return _keyed_set_scope(scope.removeprefix("keyed-set:"))
+        if adapter in {AdapterKind.JSON, AdapterKind.JSONC} and scope.startswith("set:"):
+            body = scope.removeprefix("set:")
+            marker = "#value="
+            if marker not in body:
+                raise ValueError("set selector requires a stable value identity")
+            pointer, identity = body.rsplit(marker, 1)
+            return f"set:{_json_pointer(pointer)}{marker}{_canonical_component(identity)}"
+        raise ValueError("structured selector is not supported by its adapter")
+
+    if adapter is AdapterKind.EDITORCONFIG:
+        if not scope.startswith("property:") or "#" not in scope:
+            raise ValueError("EditorConfig selector requires a section/property pair")
+        section, key = scope.removeprefix("property:").rsplit("#", 1)
+        return f"property:{_canonical_component(section)}#{_canonical_component(key)}"
+
+    if adapter is AdapterKind.MARKDOWN_BLOCK:
+        if not scope.startswith("block:"):
+            raise ValueError("Markdown selector requires one block ID")
+        return f"block:{_canonical_component(scope.removeprefix('block:'))}"
+
+    raise ValueError("unknown semantic adapter")
+
+
+class ContributionDeclaration(StrictModel):
+    """Declare ownership of one normalized semantic unit in a shared file."""
+
+    id: ResourceId
+    target: SafeRelativePath
+    adapter: AdapterKind
+    scope: str
+    policy: ArtifactPolicy
+    source: SafeRelativePath | None = None
+    source_digest: Sha256Digest | None = None
+    provider: ResourceId | None = None
+    shared_identity: SharedIdentity | None = None
+
+    @model_validator(mode="after")
+    def _source_and_scope_contract(self) -> ContributionDeclaration:
+        has_source = self.source is not None
+        has_provider = self.provider is not None
+        if has_source == has_provider:
+            raise ValueError("contribution requires exactly one source or provider")
+        if has_source != (self.source_digest is not None):
+            raise ValueError("static contribution source and source_digest must appear together")
+        object.__setattr__(self, "scope", normalize_scope(self.adapter, self.scope))
+        return self
+
+    @property
+    def address(self) -> SemanticAddress:
+        """Return the normalized ownership address used for overlap checks."""
+        return SemanticAddress(self.target, self.adapter, self.scope)
+
+
+def _scope_parts(scope: str) -> tuple[str, str, str]:
+    kind, body = scope.split(":", 1) if ":" in scope else (scope, "")
+    if kind == "set":
+        pointer, identity = body.rsplit("#value=", 1)
+        return (kind, pointer, identity)
+    if kind == "keyed-set":
+        pointer, identity = body.rsplit("#", 1)
+        return (kind, pointer, identity)
+    if kind in {"key", "table"}:
+        return (kind, body, "")
+    return (kind, body, "")
+
+
+def _pointer_contains(parent: str, child: str) -> bool:
+    return parent == child or child.startswith(f"{parent}/")
+
+
+def _scopes_overlap(left: ContributionDeclaration, right: ContributionDeclaration) -> bool:
+    if left.scope == right.scope:
+        return True
+    if left.adapter is AdapterKind.WHOLE_FILE or right.adapter is AdapterKind.WHOLE_FILE:
+        return True
+    if left.adapter in {AdapterKind.EDITORCONFIG, AdapterKind.MARKDOWN_BLOCK}:
+        return False
+
+    left_kind, left_pointer, _ = _scope_parts(left.scope)
+    right_kind, right_pointer, _ = _scope_parts(right.scope)
+    owner_kinds = {"key", "table"}
+    if left_kind in owner_kinds and _pointer_contains(left_pointer, right_pointer):
+        return True
+    if right_kind in owner_kinds and _pointer_contains(right_pointer, left_pointer):
+        return True
+    return left_pointer == right_pointer and left_kind != right_kind
+
+
 class PayloadManifest(StrictModel):
-    """The Task 3 payload slice; later tasks add outputs and execution contracts."""
+    """The declarative payload contract; later tasks add execution declarations."""
 
     schema_version: Literal["1.0"]
     payload: PayloadIdentity
@@ -122,6 +328,8 @@ class PayloadManifest(StrictModel):
     capabilities: CapabilityDeclaration
     relations: RelationDeclaration = Field(default_factory=RelationDeclaration)
     resources: list[ResourceDeclaration] = Field(min_length=1)
+    artifacts: list[WholeArtifactDeclaration] = Field(default_factory=list)
+    contributions: list[ContributionDeclaration] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _resource_identity_and_config_schema(self) -> PayloadManifest:
@@ -137,6 +345,71 @@ class PayloadManifest(StrictModel):
         ]
         if len(schema_matches) != 1 or schema_matches[0].role != "config-schema":
             raise ValueError("config schema_resource must identify one config-schema resource")
+
+        required_media = {
+            "canonical-standard": "text/markdown",
+            "agent-summary": "text/markdown",
+            "config-schema": "application/schema+json",
+            "adoption-guide": "text/markdown",
+        }
+        role_counts = Counter(resource.role for resource in self.resources)
+        required_roles = {"canonical-standard", "agent-summary", "config-schema"}
+        if any(role_counts[role] == 0 for role in required_roles):
+            raise ValueError("payload is missing a required resource role")
+        if any(role_counts[role] != 1 for role in required_roles):
+            raise ValueError("payload must declare exactly one of each required resource role")
+        has_adoption = role_counts["adoption-guide"] > 0
+        if role_counts["adoption-guide"] > 1:
+            raise ValueError("payload must declare exactly one adoption-guide when present")
+        if self.payload.availability is PayloadAvailability.CONSUMER and not has_adoption:
+            raise ValueError("consumer payload requires an adoption-guide resource")
+        if self.payload.availability is not PayloadAvailability.CONSUMER and has_adoption:
+            raise ValueError("non-consumer payload must not declare an adoption-guide resource")
+        for resource in self.resources:
+            expected_media = required_media.get(resource.role)
+            if expected_media is not None and resource.media_type != expected_media:
+                raise ValueError("required resource role has the wrong media type")
+
+        artifact_ids: set[str] = set()
+        artifact_targets: set[str] = set()
+        for artifact in self.artifacts:
+            if artifact.id in artifact_ids:
+                raise ValueError("payload contains a duplicate artifact ID")
+            artifact_ids.add(artifact.id)
+            target = artifact.target.normalized.as_posix()
+            if target in artifact_targets:
+                raise ValueError("whole artifacts overlap one repository target")
+            artifact_targets.add(target)
+
+        contribution_ids: set[str] = set()
+        shared: dict[str, tuple[object, ...]] = {}
+        for index, contribution in enumerate(self.contributions):
+            if contribution.id in contribution_ids:
+                raise ValueError("payload contains a duplicate contribution ID")
+            contribution_ids.add(contribution.id)
+            target = contribution.target.normalized.as_posix()
+            if target in artifact_targets:
+                raise ValueError("whole artifact overlaps a semantic contribution target")
+            for other in self.contributions[:index]:
+                if other.target != contribution.target:
+                    continue
+                if other.adapter is not contribution.adapter:
+                    raise ValueError("one semantic target declares more than one adapter")
+                if _scopes_overlap(other, contribution):
+                    raise ValueError("semantic contribution scopes overlap")
+            if contribution.shared_identity is not None:
+                signature = (
+                    target,
+                    contribution.adapter.value,
+                    contribution.scope,
+                    contribution.source.original if contribution.source else None,
+                    contribution.source_digest.value if contribution.source_digest else None,
+                    contribution.provider,
+                    contribution.policy.value,
+                )
+                previous = shared.setdefault(contribution.shared_identity, signature)
+                if previous != signature:
+                    raise ValueError("shared identity declarations do not normalize identically")
         return self
 
 
