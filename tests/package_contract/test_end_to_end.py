@@ -148,6 +148,12 @@ source-include = ["standards/**", "catalogs/**"]
     assert (installed / "project_standards/catalogs/5.toml").read_bytes() == (
         _FULL / "catalogs/5.toml"
     ).read_bytes()
+    assert (installed / "project_standards/families/alpha/standard.toml").read_bytes() == (
+        _FULL / "standards/alpha/standard.toml"
+    ).read_bytes()
+    assert (installed / "project_standards/families/alpha/README.md").read_bytes() == (
+        _FULL / "standards/alpha/README.md"
+    ).read_bytes()
 
 
 def test_randomized_discovery_is_byte_deterministic(

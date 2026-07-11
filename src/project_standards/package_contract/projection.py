@@ -27,7 +27,7 @@ class ProjectionLink:
     target: str
     standard_id: str
     version: str
-    kind: Literal["payload", "catalog"]
+    kind: Literal["payload", "catalog", "family"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +37,7 @@ class ProjectionPlan:
     root: Path
     projection_root: Path
     catalog_projection_root: Path
+    family_projection_root: Path
     links: tuple[ProjectionLink, ...]
 
 
@@ -49,21 +50,23 @@ def _safe_root(root: Path) -> Path:
         raise PackageContractError("projection root could not be resolved") from exc
 
 
-def _projection_roots(root: Path) -> tuple[Path, Path]:
+def _projection_roots(root: Path) -> tuple[Path, Path, Path]:
     payloads = root / "src/project_standards/payloads"
     catalogs = root / "src/project_standards/catalogs"
+    families = root / "src/project_standards/families"
     try:
         for path in (
             root / "src",
             root / "src/project_standards",
             payloads,
             catalogs,
+            families,
         ):
             if path.is_symlink():
                 raise PackageContractError("projection path cannot contain a directory symlink")
     except OSError as exc:
         raise PackageContractError("projection path could not be inspected") from exc
-    return payloads, catalogs
+    return payloads, catalogs, families
 
 
 def _catalog_sources(root: Path) -> tuple[Path, ...]:
@@ -93,7 +96,7 @@ def _catalog_sources(root: Path) -> tuple[Path, ...]:
 def plan_payload_projection(root: Path) -> ProjectionPlan:
     """Plan exact relative file links without modifying source or projection trees."""
     normalized_root = _safe_root(root)
-    projection, catalog_projection = _projection_roots(normalized_root)
+    projection, catalog_projection, family_projection = _projection_roots(normalized_root)
     discovery = discover_v2_families(normalized_root)
     if discovery.findings:
         raise PackageContractError("V2 family discovery is not clean enough to project")
@@ -129,6 +132,21 @@ def plan_payload_projection(root: Path) -> ProjectionPlan:
                         kind="payload",
                     )
                 )
+        for family_path in discovery.paths:
+            standard_id = family_path.parent.name
+            for source in (family_path.parent / "README.md", family_path):
+                destination = family_projection / standard_id / source.name
+                links.append(
+                    ProjectionLink(
+                        relative_path=f"families/{standard_id}/{source.name}",
+                        destination=destination,
+                        source=source,
+                        target=Path(os.path.relpath(source, start=destination.parent)).as_posix(),
+                        standard_id=standard_id,
+                        version="",
+                        kind="family",
+                    )
+                )
     for source in _catalog_sources(normalized_root):
         destination = catalog_projection / source.name
         links.append(
@@ -146,6 +164,7 @@ def plan_payload_projection(root: Path) -> ProjectionPlan:
         normalized_root,
         projection,
         catalog_projection,
+        family_projection,
         tuple(sorted(links, key=lambda link: link.relative_path.encode("utf-8"))),
     )
 
@@ -158,14 +177,21 @@ def _finding(code: str, plan: ProjectionPlan, path: Path, message: str) -> Packa
         identity = "catalog-projection"
     except ValueError:
         try:
-            relative = path.relative_to(plan.projection_root)
+            relative = path.relative_to(plan.family_projection_root)
             parts = relative.parts
-            standard_id = parts[0] if len(parts) >= 1 else "project-standards"
-            version = parts[1] if len(parts) >= 2 else ""
-        except ValueError:
-            standard_id = "project-standards"
+            standard_id = parts[0] if parts else "project-standards"
             version = ""
-        identity = "payload-projection"
+            identity = "family-projection"
+        except ValueError:
+            try:
+                relative = path.relative_to(plan.projection_root)
+                parts = relative.parts
+                standard_id = parts[0] if len(parts) >= 1 else "project-standards"
+                version = parts[1] if len(parts) >= 2 else ""
+            except ValueError:
+                standard_id = "project-standards"
+                version = ""
+            identity = "payload-projection"
     return PackageFinding(
         code=code,
         severity="error",
@@ -188,13 +214,20 @@ def projection_findings(root: Path) -> tuple[PackageFinding, ...]:
         if link.kind == "payload"
     }
     canonical_roots.add(plan.root / "catalogs")
+    canonical_roots.update(
+        plan.root / "standards" / link.standard_id for link in plan.links if link.kind == "family"
+    )
     findings: list[PackageFinding] = []
     valid: set[Path] = set()
     try:
         entries = sorted(
             (
                 path
-                for root in (plan.projection_root, plan.catalog_projection_root)
+                for root in (
+                    plan.projection_root,
+                    plan.catalog_projection_root,
+                    plan.family_projection_root,
+                )
                 if root.is_dir()
                 for path in root.rglob("*")
             ),
@@ -331,7 +364,11 @@ def sync_payload_projection(
         )
 
     expected = {link.destination: link for link in plan.links}
-    for projection_root in (plan.projection_root, plan.catalog_projection_root):
+    for projection_root in (
+        plan.projection_root,
+        plan.catalog_projection_root,
+        plan.family_projection_root,
+    ):
         if projection_root.is_dir():
             for entry in sorted(projection_root.rglob("*"), reverse=True):
                 if entry.is_symlink() and entry not in expected:
@@ -349,4 +386,5 @@ def sync_payload_projection(
         link.destination.symlink_to(link.target)
     _remove_empty_directories(plan.projection_root)
     _remove_empty_directories(plan.catalog_projection_root)
+    _remove_empty_directories(plan.family_projection_root)
     return projection_findings(plan.root)

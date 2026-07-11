@@ -204,6 +204,40 @@ def main(argv: list[str] | None = None) -> int:
         print(f"project-standards {package_version()}")
         return 0
 
+    if args_list and args_list[0] == "init":
+        from project_standards.control_plane.bootstrap import initialize_control_plane
+        from project_standards.control_plane.distribution import InstalledDistribution
+        from project_standards.control_plane.paths import CatalogMajor
+
+        init_parser = argparse.ArgumentParser(prog="project-standards init")
+
+        def catalog_major(value: str) -> CatalogMajor:
+            try:
+                return CatalogMajor(value)
+            except ValueError as exc:
+                raise argparse.ArgumentTypeError(
+                    "catalog must be a canonical positive integer"
+                ) from exc
+
+        init_parser.add_argument("--catalog", required=True, type=catalog_major)
+        init_parser.add_argument("--repo", type=Path, default=Path.cwd())
+        try:
+            init_args = init_parser.parse_args(args_list[1:])
+        except SystemExit as exc:
+            return exc.code if isinstance(exc.code, int) else 1
+        try:
+            result = initialize_control_plane(
+                init_args.repo,
+                init_args.catalog,
+                distribution=InstalledDistribution.current(),
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        action = "Initialized" if result.created else "OK"
+        print(f"{action} standards control plane: {result.repo / '.standards'}")
+        return 0
+
     if args_list and args_list[0] == "agent-handoff":
         from project_standards.agent_handoff.cli import run as _agent_handoff_run
 
@@ -337,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
         "agent-handoff",
         help="validate, inspect, and upgrade an agent-handoff installation",
     )
+    sub.add_parser("init", help="create the neutral .standards control plane")
 
     p_adopt = sub.add_parser(
         "adopt",

@@ -9,9 +9,12 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.control_plane.codec import render_catalog
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.package_contract import PackageContractError
+from project_standards.package_contract.catalog import render_consumer_catalog
 from project_standards.package_contract.projection import sync_payload_projection
+from project_standards.package_contract.repository import build_package_repository
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _FULL = Path("tests/fixtures/package_contract/valid/full")
@@ -38,6 +41,10 @@ def test_loads_one_installed_catalog_and_verifies_every_payload(tmp_path: Path) 
     catalog = distribution.load_catalog("5")
 
     assert catalog.source.catalog_major == 5
+    assert {
+        standard_id: family.standard.status.value
+        for standard_id, family in catalog.family_map.items()
+    } == {"alpha": "active", "beta": "active", "gamma": "review"}
     assert list(catalog.payload_map) == [
         ("alpha", "1.0"),
         ("alpha", "2.0"),
@@ -50,6 +57,25 @@ def test_loads_one_installed_catalog_and_verifies_every_payload(tmp_path: Path) 
         for entry in catalog.source.packages
         for payload in [catalog.payload_map[(entry.id, entry.version.value)]]
     )
+
+
+def test_installed_facts_render_the_source_catalog_golden_byte_for_byte(
+    tmp_path: Path,
+) -> None:
+    installed = _installed_fixture(tmp_path)
+    distribution = InstalledDistribution(installed, tool_release="5.0.0")
+    source = build_package_repository(_FULL, catalog_major=5)
+    assert source.catalog is not None
+
+    rendered = render_catalog(distribution.consumer_catalog("5"))
+    expected = render_consumer_catalog(
+        source.catalog,
+        source.family_map,
+        source.payload_map,
+        tool_release="5.0.0",
+    )
+
+    assert rendered == expected
 
 
 def test_installed_distribution_accepts_only_compatible_release_lineage(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import tomllib
+from collections import defaultdict
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
@@ -12,14 +13,18 @@ from pydantic import ValidationError
 
 import project_standards
 from project_standards._version import package_version
+from project_standards.control_plane.codec import bind_catalog_digest
 from project_standards.control_plane.diagnostics import validation_summary
+from project_standards.control_plane.models import ConsumerCatalog
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.package_contract.catalog import (
+    CatalogPackageEntry,
     CatalogRole,
     CatalogSource,
     load_catalog_source,
 )
 from project_standards.package_contract.diagnostics import PackageContractError
+from project_standards.package_contract.family import FamilyManifest, load_family_manifest
 from project_standards.package_contract.integrity import (
     PayloadIntegrity,
     validate_payload_integrity,
@@ -72,7 +77,13 @@ class InstalledCatalog:
     """One embedded catalog source and all of its verified payloads."""
 
     source: CatalogSource
+    families: tuple[FamilyManifest, ...]
     payloads: tuple[InstalledPayload, ...]
+
+    @property
+    def family_map(self) -> dict[str, FamilyManifest]:
+        """Return installed family identity and lifecycle facts by standard ID."""
+        return {family.standard.id: family for family in self.families}
 
     @property
     def payload_map(self) -> dict[tuple[str, str], InstalledPayload]:
@@ -187,8 +198,30 @@ class InstalledDistribution:
         if source.catalog_major != major.major:
             raise PackageContractError("installed catalog identity does not match the request")
 
+        families: list[FamilyManifest] = []
+        for standard_id in sorted({entry.id for entry in source.packages}):
+            family_path = self.package_root / f"families/{standard_id}/standard.toml"
+            try:
+                if family_path.is_symlink() or not family_path.is_file():
+                    raise PackageContractError("installed package family is unavailable")
+            except OSError as exc:
+                raise PackageContractError(
+                    "installed package family could not be inspected"
+                ) from exc
+            families.append(load_family_manifest(family_path))
+        family_map = {family.standard.id: family for family in families}
+
         payloads: list[InstalledPayload] = []
         for entry in source.packages:
+            family = family_map[entry.id]
+            indexed = next(
+                (item for item in family.versions if item.version == entry.version),
+                None,
+            )
+            if indexed is None or indexed.digest != entry.digest:
+                raise PackageContractError(
+                    "installed catalog disagrees with its package family index"
+                )
             payload_root = self.package_root / "payloads" / entry.id / entry.version.value
             manifest = _load_installed_payload(payload_root)
             if manifest.payload.standard != entry.id or manifest.payload.version != entry.version:
@@ -200,4 +233,55 @@ class InstalledDistribution:
                 expected_digest=entry.digest,
             )
             payloads.append(InstalledPayload(payload_root, manifest, integrity))
-        return InstalledCatalog(source, tuple(payloads))
+        return InstalledCatalog(source, tuple(families), tuple(payloads))
+
+    def consumer_catalog(self, catalog: CatalogMajor | str) -> ConsumerCatalog:
+        """Build the complete deterministic consumer snapshot from installed facts."""
+        installed = self.load_catalog(catalog)
+        grouped: dict[str, list[CatalogPackageEntry]] = defaultdict(list)
+        for entry in installed.source.packages:
+            grouped[entry.id].append(entry)
+        payloads = installed.payload_map
+        standards: dict[str, object] = {}
+        channels = {
+            CatalogRole.DEFAULT: "stable",
+            CatalogRole.RETAINED: "retained",
+            CatalogRole.CANDIDATE: "breaking-candidate",
+            CatalogRole.REFERENCE_ONLY: "reference-only",
+            CatalogRole.INTERNAL: "internal",
+        }
+        for standard_id, entries in sorted(grouped.items()):
+            defaults = [
+                entry.version.value for entry in entries if entry.role is CatalogRole.DEFAULT
+            ]
+            standards[standard_id] = {
+                "status": installed.family_map[standard_id].standard.status.value,
+                "available": [entry.version.value for entry in entries],
+                **({"default": defaults[0]} if defaults else {}),
+                "candidates": [
+                    entry.version.value for entry in entries if entry.role is CatalogRole.CANDIDATE
+                ],
+                "versions": {
+                    entry.version.value: {
+                        "channel": channels[entry.role],
+                        "availability": payloads[
+                            (entry.id, entry.version.value)
+                        ].manifest.payload.availability.value,
+                        "payload_digest": entry.digest.value,
+                    }
+                    for entry in entries
+                },
+            }
+        major = catalog if isinstance(catalog, CatalogMajor) else CatalogMajor(catalog)
+        snapshot = ConsumerCatalog.model_validate(
+            {
+                "project_standards": {
+                    "schema_version": "1.0",
+                    "catalog": major.value,
+                    "release": self.tool_release.value,
+                    "digest": f"sha256:{'0' * 64}",
+                },
+                "standards": standards,
+            }
+        )
+        return bind_catalog_digest(snapshot)
