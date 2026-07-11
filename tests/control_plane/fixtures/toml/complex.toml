@@ -1,0 +1,21 @@
+# consumer preamble
+title = "Consumer"
+tool."coverage.py".branch = true
+
+["tool".ruff]
+"line-length" = 88  # keep this inline comment
+select = [
+  "E",
+  "F", # nested comment
+]
+message = """
+hash # and brackets [stay] inside the string
+"""
+inline = { z = 1, note = "x#y" }
+
+[tool.ruff.lint]
+ignore = ["E501"]
+
+[project]
+name = 'demo'
+# consumer trailer
