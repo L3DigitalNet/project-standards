@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-3 are complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-5 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -182,15 +182,17 @@ Existing package resources remain canonical only when copied into a version dire
 
 ### Task 5: V2 Authoring Standard Self-Hosting Package
 
-**Files:** Replace `standards/standard-bundle-authoring/standard.toml`; create `standards/standard-bundle-authoring/versions/2.0/**`; update its root README/templates and package-contract tests.
+**Files:** Create `standards/standard-bundle-authoring/versions/2.0/**`; update its root README/templates and package-contract tests. Keep the operational V1 `standard.toml` unchanged until Task 14.
 
-- [ ] Write red self-hosting tests requiring `standard-bundle-authoring@2.0` to be an `internal` payload with canonical standard, agent summary, closed empty option schema, V2 family/payload/catalog templates, and no consumer artifacts or executable providers.
-- [ ] Create the `2.0` payload from SPEC-BA02. Include exact templates for `standard.toml`, `payload.toml`, `config.schema.json`, catalog entries, providers, contributions, extensions, migrations, and legacy signatures.
-- [ ] Replace the root singleton manifest with a V2 family index whose only advertised reconstruction is `2.0`; compute and pin its aggregate digest.
-- [ ] Update the root README authority notice: family landing guidance is current, while `versions/2.0/README.md` is normative for payload `2.0`.
-- [ ] Add authoring workflow tests for create, validate, digest, index, catalog, projection, installed-wheel parity, and immutable-baseline checking.
-- [ ] Run package validation and focused documentation/link tests; expect pass.
-- [ ] Commit: `feat(v5): self-host bundle authoring v2`
+**Execution correction:** Plan-pinned contract #11 controls the earlier contradictory root-replacement wording. Task 5 validates the exact V2 family index, projection, and wheel in an isolated reconstruction. Task 14 performs the repository-root family-index and projection cutover only after all nine reconstructions validate together.
+
+- [x] Write red self-hosting tests requiring `standard-bundle-authoring@2.0` to be an `internal` payload with canonical standard, agent summary, closed empty option schema, V2 family/payload/catalog templates, and no consumer artifacts or executable providers.
+- [x] Create the `2.0` payload from SPEC-BA02. Include exact templates for `standard.toml`, `payload.toml`, `config.schema.json`, catalog entries, providers, contributions, extensions, migrations, and legacy signatures.
+- [x] Create and validate an isolated V2 family index whose only reconstruction is `2.0`; compute its aggregate digest from the live payload inventory. Retain the operational V1 root manifest for the Task 14 cutover.
+- [x] Update the root README authority notice: family landing guidance is current, while `versions/2.0/README.md` is normative for payload `2.0`.
+- [x] Add authoring workflow tests for create, validate, digest, index, catalog, projection, installed-wheel parity, and immutable-baseline checking.
+- [x] Run isolated package validation and focused documentation/link tests; expect pass.
+- [x] Commit: `feat(v5): self-host bundle authoring v2`
 
 ### Task 6: Reference-Only Python Coding Reconstruction
 

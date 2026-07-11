@@ -1,0 +1,47 @@
+# Copy to standards/<id>/versions/<major.minor>/payload.toml.
+schema_version = "1.0"
+
+[payload]
+standard = "example-standard"
+version = "1.0"
+availability = "consumer" # consumer | reference-only | internal
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = []
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
