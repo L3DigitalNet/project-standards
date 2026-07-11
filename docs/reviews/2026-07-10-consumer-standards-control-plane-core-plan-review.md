@@ -61,8 +61,32 @@ Two blocking findings, both with surgical fixes: one verification-gate command f
 
 **Defect:** Task 18 lists CI among its files, yet the existing unscoped `uv run pytest -m performance` CI step automatically picks up the new `tests/control_plane/test_scale.py`, and no other plan gate is CI-enforced today (check.yml runs only ruff/basedpyright/pytest/coverage/pip-audit — the CLI validators, Prettier, markdownlint, and coherence gates are local-only). As written the implementer cannot tell what CI edit is intended. **Fix:** Either state the intended CI change in Task 18 (e.g. "no change needed — confirm the unscoped performance step covers the new marker") or drop `check.yml` from the file list.
 
+## Round 2 — 2026-07-10
+
+Verdict: **APPROVE — converged**
+
+**Review target state:** working tree after `106047c` (`docs(v5): resolve control-plane core plan review`); only uncommitted changes remain the same user-authored `docs/TODO.md` / `docs/workflows/housekeeping.md` hunks from Round 1. All eight Round 1 findings were re-verified against ground truth — the failing checks were re-run, not accepted on assertion. No finding survives and no new finding was introduced. Round 1's convergence condition (F2 fixed via the recommended stdlib mechanism) was met exactly, so this round is the confirming record.
+
+### Fix verification
+
+- **F1 ✅ fixed and re-run.** The gate now reads `standards validate-packages --root tests/fixtures/package_contract/valid/full --json`. Executed verbatim → `{"ok": true, "findings": []}`, exit 0 (was exit 1 `PC-NO-FAMILIES` at `de8f2bb`).
+- **F2 ✅ fixed and re-run.** The revision follows the recommended route precisely: new shared `tests/wheel_helpers.py` (`extract_pure_python_wheel`, stdlib `zipfile`, contract documented in the docstring), the existing call site in `tests/package_contract/test_end_to_end.py` converted from the `uv pip install --offline` subprocess to the helper, and Tasks 3/5/18 rewritten to name `tests.wheel_helpers.extract_pure_python_wheel` explicitly. Full suite re-run in the shim environment: **1693 passed, 0 failed** (was 1 failed / 1692 passed). The helper and modified test pass `ruff format --check`, `ruff check`, and BasedPyright strict (0 errors). The socket-deny monkeypatch still guards the post-extract phase, and extraction is offline by construction.
+- **F3 ✅ fixed by trace.** Task 2's Files line and the "Also modify" list now include `package_contract/cli.py`; the new step registers the control-plane generator into the existing `generate-package-schemas` path so one command checks all nine generated schemas (3 existing + 6 new), explicitly without making `package_contract.schemas` import the control plane; a new red step asserts the mutated-schema → exit 1 / restored → exit 0 drift behavior.
+- **F4 ✅ fixed by trace.** Task 6 now creates `control_plane/adapters/{__init__,toml}.py`; Task 9's Files line changed to "extend `adapters/__init__.py`". No implicit namespace package at any commit; matches the Target File Structure.
+- **F5 ✅ fixed and re-run.** The gate now derives `TOOL_RELEASE` from `project_standards._version.package_version`. Executed verbatim → prints `4.3.0`, and the render gate with the derived value exits 0 (`OK consumer catalog: expected/catalog.toml`).
+- **F6 ✅ fixed by trace.** Task 17 adds the top-level `list` deprecation notice in the same task, with an explicit division: `standards list` is the supported catalog inventory; legacy `list` keeps its V1 scope until the follow-on.
+- **F7 ✅ fixed by trace.** Task 13's Files line adds `docs/handoff/conventions.md` and a step recording the verified range-exclusion pattern, distinguished from the single-node `prettier-ignore` convention. (`docs/handoff/**` is exempt from the Prettier/markdownlint gates, so the edit adds no gate exposure.)
+- **F8 ✅ fixed by trace.** `check.yml` was removed from Task 18's Files line and the "Also modify" list, replaced by an explicit confirm-only step that the existing unscoped `-m performance` CI step discovers the new scale test.
+
+### New-content checks (this round)
+
+- The revised plan document and the committed review file pass Prettier and markdownlint; `validate-frontmatter` remains green.
+- The commit's collateral edits (`docs/STATUS.md`, `docs/handoff/state.md`, `docs/handoff/specs-plans.md`, session log) are bookkeeping consistent with the plan revision; the new plan Status line accurately restates Round 1's convergence condition.
+- Commit-granular consistency holds after the edits: `package_contract/cli.py` appears in both Task 2's Files line and the "Also modify" list; the pre-landed `tests/wheel_helpers.py` is documented in the plan as a remediation prerequisite rather than a task deliverable, so no task re-creates it.
+
 ### Round tracking
 
 | Round | Date       | 🔴  | 🟡  | 🟢  | Verdict                |
 | ----- | ---------- | --- | --- | --- | ---------------------- |
 | 1     | 2026-07-10 | 2   | 2   | 4   | APPROVE AFTER REVISION |
+| 2     | 2026-07-10 | 0   | 0   | 0   | APPROVE — converged    |
