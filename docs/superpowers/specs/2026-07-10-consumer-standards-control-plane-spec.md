@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-10'
+last_reviewed: '2026-07-11'
 supersedes: null
 superseded_by: null
 related:
@@ -53,6 +53,7 @@ related:
 | 0.3 | 2026-07-10 | Codex with owner-approved round-2 review | Separate persistent accepted-major authorization from enabled/applied package state and define the exact three-file plain-init scaffold. |
 | 0.4 | 2026-07-10 | Codex with converged review and owner direction | Clarify the audit-only role of accepted-track catalog lineage and approve the specification for implementation planning. |
 | 0.5 | 2026-07-10 | Codex with owner-approved SPEC-BA02 reconciliation | Align desired config and package-payload examples with the fixed option namespace, canonical V2 payload tree, and installed projection already approved and implemented by SPEC-BA02; no behavior or scope changes. |
+| 0.6 | 2026-07-11 | Codex implementation closeout | Record mechanism-level core evidence in requirement traceability; retain Partial or Not Started status for real-package migration, conversion, compatibility, catalog refresh, and activation work. No requirement or scope changes. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -855,28 +856,28 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 
 | Requirement IDs | Planned Verification | Status |
 | --- | --- | --- |
-| FR-001, FR-002, IR-001 | Init CLI, exact three-file enumeration, absent optional/placeholder/lock paths, failure cleanup, idempotency, and filesystem-boundary tests | Not Started |
-| FR-003, FR-004, FR-005, FR-006, IR-005, IR-006, DR-001, DR-002, DR-003 | Config/catalog/partitioned-lock schema, enabled-versus-authorized state, generation, strictness, digest, and round-trip tests | Not Started |
-| FR-007, FR-008, FR-009, FR-010, IR-002, IR-003, NFR-001, NFR-002, NFR-003, NFR-004 | Planner/executor/removal, disable config preservation, applied-record removal, accepted-track retention, conflict, and fault-injection suites | Not Started |
-| FR-011, FR-012, FR-013, FR-014, FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Not Started |
-| FR-016, FR-028, DR-004 | Versioned-payload completeness, parity, digest, and offline installed-wheel tests | Not Started |
-| FR-017, FR-026 | Unified entrypoint, adoption-wrapper, non-destructive config-edit, and CLI contract tests | Not Started |
-| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Not Started |
+| FR-001, FR-002, IR-001 | Init CLI, exact three-file enumeration, absent optional/placeholder/lock paths, failure cleanup, idempotency, and filesystem-boundary tests | Complete (core) |
+| FR-003, FR-004, FR-005, FR-006, IR-005, IR-006, DR-001, DR-002, DR-003 | Config/catalog/partitioned-lock schema, enabled-versus-authorized state, generation, strictness, digest, and round-trip tests | Complete (core) |
+| FR-007, FR-008, FR-009, FR-010, IR-002, IR-003, NFR-001, NFR-002, NFR-003, NFR-004 | Planner/executor/removal, disable config preservation, applied-record removal, accepted-track retention, conflict, and fault-injection suites | Complete (core) |
+| FR-011, FR-012, FR-013, FR-014, FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Complete (core) |
+| FR-016, FR-028, DR-004 | Versioned-payload completeness, parity, digest, and offline installed-wheel tests | Partial — synthetic catalog complete; real package payload activation deferred |
+| FR-017, FR-026 | Unified entrypoint, adoption-wrapper, non-destructive config-edit, and CLI contract tests | Complete (core) |
+| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Partial — generic mechanisms complete; current provider and Agent Handoff conversion deferred |
 | FR-021, FR-022, DR-006 | Legacy namespace/artifact migration, ambiguity, fallback, and dual-authority tests | Not Started |
-| FR-023, NFR-006, NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Not Started |
-| FR-024, FR-036, DR-007 | Versioned package-option schema, referenced-extension ownership/canonical-path/output-collision/hash, default, external materialization, preservation, and option-migration tests | Not Started |
+| FR-023, NFR-006, NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Partial — synthetic composition and no-hardcode proof complete; real and migrated package matrices deferred |
+| FR-024, FR-036, DR-007 | Versioned package-option schema, referenced-extension ownership/canonical-path/output-collision/hash, default, external materialization, preservation, and option-migration tests | Partial — schema, extension, and ownership mechanisms complete; real option migrations deferred |
 | FR-025 | Same-major catalog refresh and compatible-update tests | Not Started |
 | FR-027 | Package adoption-guide inventory and content review | Not Started |
-| FR-029 | Virtual-tree semantic contribution, all-pairs real-apply, collision, and no-partial-write tests | Not Started |
-| FR-030 | Package-version versus consumer-contract migration, resolver, config, and validator tests | Not Started |
-| FR-031 | SPEC-BA02 approval, index, supersession, and traceability review | Not Started |
-| FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Not Started |
-| FR-033 | Candidate-major `latest`/pinned entry, exact exit before/after disable, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, authorization-record replacement/removal, and subsequent-`latest` tests | Not Started |
-| NFR-005 | 100-package/1,000-artifact planning benchmark | Not Started |
-| NFR-008 | Human/JSON output and exit-code contract tests | Not Started |
-| NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Not Started |
+| FR-029 | Virtual-tree semantic contribution, all-pairs real-apply, collision, and no-partial-write tests | Partial — all-adapter synthetic fixed point complete; real all-pairs apply deferred |
+| FR-030 | Package-version versus consumer-contract migration, resolver, config, and validator tests | Partial — version/contract separation is modeled; real migration and validator integration deferred |
+| FR-031 | SPEC-BA02 approval, index, supersession, and traceability review | Complete |
+| FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Complete (core) |
+| FR-033 | Candidate-major `latest`/pinned entry, exact exit before/after disable, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, authorization-record replacement/removal, and subsequent-`latest` tests | Complete (core) |
+| NFR-005 | 100-package/1,000-artifact planning benchmark | Complete |
+| NFR-008 | Human/JSON output and exit-code contract tests | Complete (core) |
+| NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Complete (core) |
 | IR-004 | Every validator/provider/reusable-workflow unified-config fixture | Not Started |
-| NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, error contract, and recovery suites | Not Started |
+| NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, error contract, and recovery suites | Partial — core boundaries and recovery complete; legacy migration and real-package failures deferred |
 
 ---
 

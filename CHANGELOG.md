@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-10'
+updated: '2026-07-11'
 reviewed: null
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -41,6 +41,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Added
 
+- **Consumer standards control-plane core.** The V5 platform now initializes the neutral three-file `.standards/` scaffold, exposes catalog inspection and preserving desired-state edits, resolves default/pinned/candidate/accepted tracks, composes whole-file, TOML, JSON/JSONC, YAML, EditorConfig, and Markdown units in one deterministic virtual tree, applies reviewed plans through one lock-last executor, validates drift without writes, and provides sanctioned missing-state recovery. `reconcile` supports plan/check/apply, package-major authorization, structured JSON, and explicit repair; the deprecated `adopt` and top-level `list` commands retain V1 compatibility until real package activation. Synthetic installed-wheel, interruption-repair, no-hardcode, 100-order determinism, and 100-package/1,000-artifact scale tests cover the mechanism; real-package migration and activation remain deferred.
 - **Versioned package-contract authoring foundation.** A new V2 boundary validates strict family indexes, immutable payload manifests and option schemas, catalog-major channel sources, complete SHA-256 inventories, release-baseline immutability, cross-package ownership/relationship/migration graphs, and generated Draft 2020-12 schemas without activating V2 in the existing runtime. New authoring commands validate packages, render consumer-catalog facts, check generated schemas, synchronize a symlink-only installed payload projection, and classify repository releases. Synthetic source, direct-wheel, and sdist-to-wheel tests prove offline byte parity and deterministic output; CI includes a 100-family/1,000-payload/10,000-unit scale gate.
 - **Unified consumer standards control-plane architecture.** ADR 0023 establishes a neutral `.standards/` desired/applied-state plane with explicit reconciliation, a central provenance lock, immutable package payloads, conventional-path integration, and typed semantic composition of consumer-owned shared files. ADR 0024 defines catalog-scoped package channels: ordinary `latest` remains non-breaking within the selected catalog major, while breaking package candidates require explicit package-major authorization until a later catalog-major promotion. The decisions supersede the conflicting legacy adoption, namespace, manifest, and package-versioning ADRs and reconcile the retained lifecycle, provenance, skill, hook, frontmatter, and repository versioning policies.
 - **Compact agent summaries for all nine standard packages.** Every manifested standard now provides a canonical-linked `agent-summary.md`, declares it as `resources.agent_summary`, and exposes a generated `standards://<id>/agent_summary` catalog URI. Repository readiness enforces nine-of-nine coverage, the canonical-authority notice, and a 3,000 UTF-8 byte maximum while keeping each README normative.

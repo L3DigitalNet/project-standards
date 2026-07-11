@@ -11,7 +11,7 @@
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
-- `SPEC-CP01` is approved rev 0.5; rev 0.5 reconciles its examples with the later owner-approved/implemented BA02 fixed option namespace and payload tree without changing scope.
+- `SPEC-CP01` is approved rev 0.6; rev 0.5 reconciles BA02 examples and rev 0.6 records conservative core evidence without changing requirements or scope.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` is approved at rev 0.6; revs 0.4-0.5 pin digest bytes and complete relation/legacy-state declarations, while rev 0.6 records foundation evidence without changing scope. SPEC-BA01 is superseded history.
 - The BA02 package-contract foundation is implemented (`4e507d6` through `477cbbf`): strict authoring models, integrity, graph validation, CLI, and installed projection.
@@ -19,10 +19,10 @@
 - Tasks 6-8 (`2b6a359`…`6bd74b3`) add preserving config edits, catalog-scoped resolution, referenced inputs, and bounded providers.
 - Tasks 9-13 (`0ca5fd8`…`03e80f5`) add read-once snapshots, whole-file lifecycle, and syntax-preserving TOML, JSON/JSONC, YAML, EditorConfig, and Markdown composition.
 - Tasks 14-15 (`75fba70`, `954a493`) add complete virtual-tree planning, partitioned central-lock convergence, shared references, and package-local lifecycle safety.
-- Core acceptance covers locking, candidate tracks, preserving edits, referenced-input containment, modes, stable identities, bounded removals, and formatter-stable round trips.
-- Immutable planning, conflict preflight, package-namespace drift checks, strict static checks, generated schemas, and 1,949 tests pass.
-- Executor/recovery, current-package reconstruction, and V5 activation remain in the core and package-migration follow-on work.
-- The core plan is executing inline: Tasks 1-15 are complete; Task 16 transactional apply and recovery is next. Package migration/release remain in the final plan.
+- Tasks 16-17 (`000ba43`, `6876ba4`) add transactional apply/recovery, public CLI contracts, and the catalog-aware V5 wrapper with V1 fallback.
+- Task 18 closes the core with offline wheel repair, an all-adapter fixed point, 100-order determinism, package-ID neutrality, and scale evidence.
+- The final gate passes 2,000 tests at 90% coverage; planning 100 packages and 1,000 artifacts remains below five seconds.
+- The approved 18-task core plan is complete. Real-package reconstruction, migration, conversion, refresh, activation, and release remain.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

@@ -27,10 +27,20 @@ src/project_standards/schemas/standard.schema.json
 src/project_standards/schemas/standard-family.schema.json
 src/project_standards/schemas/standard-payload.schema.json
 src/project_standards/schemas/standards-catalog-source.schema.json
+src/project_standards/schemas/consumer-catalog.schema.json
+src/project_standards/schemas/consumer-config.schema.json
+src/project_standards/schemas/consumer-lock.schema.json
+src/project_standards/schemas/mutation-plan.schema.json
+src/project_standards/schemas/provider-input.schema.json
+src/project_standards/schemas/reconciliation-plan.schema.json
 
 # Package-contract fixtures are integrity inputs: their exact raw bytes and
 # declared digests are one test contract, not formatter-owned source documents.
 tests/fixtures/package_contract/
+
+# Control-plane parser fixtures intentionally preserve consumer formatting,
+# malformed syntax, duplicate keys, and other bytes that Prettier must not own.
+tests/control_plane/fixtures/
 
 # Manifest-generated catalog: the Python renderer and its checked-in freshness
 # test own the exact bytes, so formatting it would create a second generator.
