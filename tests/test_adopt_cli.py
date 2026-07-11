@@ -396,15 +396,8 @@ def test_adopt_adr_existing_config_with_exclusion_validates(
 
 
 # ---------------------------------------------------------------------------
-# CLI plumbing: --config extraction, registry/bundle parity, empty dry-run
+# CLI plumbing: registry/bundle parity and empty dry-run
 # ---------------------------------------------------------------------------
-
-
-def test_extract_config_path_supports_equals_and_default() -> None:
-    from project_standards.cli import _extract_config_path  # pyright: ignore[reportPrivateUsage]
-
-    assert _extract_config_path(["--config=custom.yml"]) == Path("custom.yml")
-    assert _extract_config_path([]) == Path(".project-standards.yml")
 
 
 def test_main_list_registry_bundle_drift_exits_2(

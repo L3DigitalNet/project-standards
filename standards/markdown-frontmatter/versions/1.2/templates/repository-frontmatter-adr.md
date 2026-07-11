@@ -19,7 +19,7 @@ aliases:
   - 'ADR 0000'
   - 'Frontmatter value policy'
 related:
-  - '.project-standards.yml'
+  - '.standards/config.toml'
 supersedes: []
 superseded_by: null
 source:
@@ -67,7 +67,7 @@ This ADR establishes the repo-local conventions for frontmatter values. It does 
 
 ### Governed Scope
 
-When this ADR is accepted and migration is performed, `.project-standards.yml` should govern these Markdown paths:
+When this ADR is accepted and reconciliation is applied, the `markdown-frontmatter` options in `.standards/config.toml` should govern these Markdown paths:
 
 ```yaml
 include:
@@ -229,7 +229,7 @@ Repo-local tags are allowed when they are documented here or in a tag registry. 
 3. Exclude operational, temporary, harness-owned, generated, vendored, and fixture files.
 4. Add or repair frontmatter while validation scope is still narrow.
 5. Review semantic fields: `owner`, `consumer`, `doc_type`, `status`, `tags`, `aliases`, `related`, `source`, `confidence`, and `visibility`.
-6. Widen `.project-standards.yml` only after target files are ready.
+6. Widen the package `include` option only after target files are ready.
 7. Run formatting and validation.
 
 ### Confirmation
@@ -237,7 +237,7 @@ Repo-local tags are allowed when they are documented here or in a tag registry. 
 This decision is confirmed when:
 
 - this ADR is accepted;
-- `.project-standards.yml` expresses the approved scope;
+- `.standards/config.toml` expresses the approved package scope;
 - governed files carry conformant frontmatter;
 - excluded files carry no project-standard frontmatter unless they intentionally use another metadata contract;
 - validation exits `0`.

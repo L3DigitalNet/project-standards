@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import socket
@@ -289,6 +290,47 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
             "'hint': 'inspect'}]}"
         )
         imports = ""
+    elif effect is ProviderEffect.MUTATION_PLAN and behavior != "success":
+        replacement = b"updated\n"
+        action = {
+            "kind": "update",
+            "target": "README.md",
+            "adapter": "whole-file",
+            "scope": "$file",
+            "summary": "update document",
+            "precondition_digest": _digest(b"repo\n"),
+            "content_digest": _digest(replacement),
+            "content_base64": base64.b64encode(replacement).decode("ascii"),
+            "mode": "0644",
+        }
+        if behavior == "undeclared-target":
+            action["target"] = "other.md"
+        elif behavior == "wrong-precondition":
+            action["precondition_digest"] = "sha256:" + ("c" * 64)
+        elif behavior == "create-over-regular":
+            action["kind"] = "create"
+        elif behavior == "remove":
+            action = {
+                "kind": "remove",
+                "target": "README.md",
+                "adapter": "whole-file",
+                "scope": "$file",
+                "summary": "remove document",
+                "precondition_digest": _digest(b"repo\n"),
+            }
+        elif behavior == "wrong-adapter":
+            action["adapter"] = "toml"
+            action["scope"] = "key:/document"
+        actions = [action, action] if behavior == "duplicate-target" else [action]
+        body = "return " + repr(
+            {
+                "schema_version": "1.0",
+                "standard_id": "demo",
+                "version": marker,
+                "actions": actions,
+            }
+        )
+        imports = ""
     elif effect is ProviderEffect.MUTATION_PLAN:
         body = (
             "return {'schema_version': '1.0', 'standard_id': 'demo', "
@@ -406,6 +448,30 @@ def _invocation(repo: Path, payload: InstalledPayload) -> ProviderInvocation:
     )
 
 
+def _fix_invocation(
+    repo: Path, payload: InstalledPayload, *, kind: str = "regular"
+) -> ProviderInvocation:
+    invocation = _invocation(repo, payload)
+    return ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "documents": [
+                {
+                    "path": "README.md",
+                    "kind": kind,
+                    "precondition_digest": _digest(b"repo\n"),
+                }
+            ]
+        },
+    )
+
+
 def test_provider_is_selected_from_exact_integrity_checked_payload(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -507,6 +573,67 @@ def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
     assert plan.mutation_plan.version.value == "2.0"
     assert migration.migration_report is not None
     assert migration.migration_report.package.version.value == "2.0"
+
+
+def test_fix_mutation_plan_is_bound_to_immutable_document_snapshot(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    result = invoke_provider(_fix_invocation(repo, payload))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].target.original == "README.md"
+
+
+@pytest.mark.parametrize(
+    ("behavior", "message"),
+    [
+        ("undeclared-target", "undeclared target"),
+        ("duplicate-target", "duplicate target"),
+        ("wrong-precondition", "precondition"),
+        ("create-over-regular", "action kind"),
+        ("remove", "removal"),
+        ("wrong-adapter", "whole-file"),
+    ],
+)
+def test_fix_mutation_plan_rejects_actions_not_bound_to_document_snapshot(
+    tmp_path: Path,
+    behavior: str,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / behavior,
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior=behavior,
+    )
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(_fix_invocation(repo, payload))
+
+
+def test_fix_mutation_plan_allows_create_only_for_missing_snapshot(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "create",
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="create-over-regular",
+    )
+
+    result = invoke_provider(_fix_invocation(repo, payload, kind="missing"))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].kind.value == "create"
 
 
 @pytest.mark.parametrize(

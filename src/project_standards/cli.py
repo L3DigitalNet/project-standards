@@ -14,7 +14,6 @@ import sys
 from pathlib import Path
 
 from project_standards import (
-    format_frontmatter,
     validate_frontmatter,
     validate_id,
     validate_references,
@@ -75,21 +74,6 @@ _V5_LIST_DEPRECATION = (
 _V5_ADOPT_DEPRECATION = (
     "warning: 'adopt' is deprecated; V5 adoption uses the standards control plane"
 )
-
-
-def _extract_config_path(args: list[str]) -> Path:
-    """Pull the --config value out of a forwarded argv (default .project-standards.yml)."""
-    for i, a in enumerate(args):
-        if a == "--config" and i + 1 < len(args):
-            return Path(args[i + 1])
-        if a.startswith("--config="):
-            return Path(a.split("=", 1)[1])
-    return Path(".project-standards.yml")
-
-
-def _has_schema_flag(args: list[str]) -> bool:
-    """True if a forwarded argv passes --schema (custom-schema mode) — CR-001."""
-    return any(a == "--schema" or a.startswith("--schema=") for a in args)
 
 
 def _adopt_positional_standards(args: list[str]) -> tuple[str, ...]:
@@ -344,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
             _p.add_argument(
                 "--config",
                 metavar="PATH",
-                help="Project config file (default: .project-standards.yml).",
+                help="Explicit legacy/debug config; unified config resolves from .standards/.",
             )
             _p.add_argument(
                 "--schema",
@@ -384,25 +368,72 @@ def main(argv: list[str] | None = None) -> int:
                 "Skips entirely under a custom schema."
             )
             return 0
-        # Custom-schema preflight (CR-001): fix is bundled-only, like format/validate-id.
+        fix_parser = argparse.ArgumentParser(prog="project-standards fix", add_help=False)
+        fix_parser.add_argument("files", nargs="*", type=Path)
+        fix_parser.add_argument("--config", type=Path, default=None)
+        fix_parser.add_argument("--schema", type=Path, default=None)
+        fix_parser.add_argument("--glob")
+        fix_parser.add_argument("--quiet", "-q", action="store_true")
+        fix_parser.add_argument("--no-require-frontmatter", action="store_true")
+        parsed_fix = fix_parser.parse_args(fix_args)
+        if parsed_fix.config is not None and not parsed_fix.config.exists():
+            print(f"error: config file not found: {parsed_fix.config}", file=sys.stderr)
+            return 2
         try:
-            fix_cfg = validate_frontmatter.load_config(_extract_config_path(fix_args))
+            fix_cfg, legacy = validate_frontmatter.load_cli_config(
+                Path.cwd(),
+                explicit_legacy=parsed_fix.config,
+                allow_unlocked_custom_schema=parsed_fix.schema is not None,
+            )
         except validate_frontmatter.ConfigError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        if _has_schema_flag(fix_args) or validate_frontmatter.schema_value_is_path(fix_cfg.schema):
+        if legacy:
+            validate_frontmatter.emit_legacy_config_warning()
+        if parsed_fix.schema is not None or validate_frontmatter.schema_value_is_path(
+            fix_cfg.schema
+        ):
             print("note: custom schema in use; skipping fix", file=sys.stderr)
             return 0
-        rc_format = format_frontmatter.main(["--write", *fix_args])
-        rc_idfix = validate_id.main(["--fix", *fix_args])
+        try:
+            paths = validate_frontmatter.collect_paths(
+                list(parsed_fix.files),
+                parsed_fix.glob,
+                fix_cfg.include,
+                fix_cfg.exclude,
+            )
+            from project_standards.control_plane.executor import apply_authoring_plan
+            from project_standards.frontmatter_authoring import plan_frontmatter_fix
+            from project_standards.package_contract.paths import PackageVersion
+
+            planned = plan_frontmatter_fix(
+                Path.cwd(),
+                tuple(paths),
+                version=PackageVersion(fix_cfg.selected_package_version),
+            )
+        except (validate_frontmatter.ConfigError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        for path, warning in planned.warnings:
+            print(f"{path}: {warning}", file=sys.stderr)
+        if planned.refused_paths:
+            return 2
+        applied = apply_authoring_plan(Path.cwd(), planned.plan)
+        if not applied.success:
+            print(f"error: frontmatter apply failed: {applied.error_code}", file=sys.stderr)
+            return 2
+        if not parsed_fix.quiet:
+            for path in planned.formatted_paths:
+                print(f"formatted: {path}")
+            for path, document_id in planned.fixed_ids:
+                print(f"fixed: {path} -> {document_id}")
         # Final postcondition = the SAME contract as `project-standards validate`,
         # references included, so a "successful" fix cannot hide a reference error (CR-001).
-        rc_check = max(
+        return max(
             validate_frontmatter.main(fix_args),
             validate_id.main(fix_args),
             validate_references.main(fix_args),
         )
-        return max(rc_format, rc_idfix, rc_check)
 
     if args_list and args_list[0] == "spec":
         from project_standards.specs.cli import run as _spec_run

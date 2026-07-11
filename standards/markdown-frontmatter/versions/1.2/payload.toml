@@ -27,14 +27,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:324a1065225bdf8db699fc54854205e0257ce735191bf5dd4c04fd04cdab5e68"
+digest = "sha256:92bb6b444a3d2922be51b6b17cdb8ac4fdca45a2b6deec4f32e985e12d15e3fa"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:071b37833f9a181fd7bf09b11860b3d1221691ec9a09cafe082d2a4f3107aa19"
+digest = "sha256:eb78b5237e21c9f249d4581c8d0f771457ae56bf3b05ef980248fe036a203f6f"
 
 [[resources]]
 id = "config-schema"
@@ -48,14 +48,14 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:24a0fbf9df0c14b979f998fd7144d4e3974e3f6743d5083220609d20db20a77e"
+digest = "sha256:bf1dc54fcb652f58536d438c913fcf6e94c519386f4c474417a052578d0ddb84"
 
 [[resources]]
 id = "structure"
 role = "standard-reference"
 path = "structure.md"
 media_type = "text/markdown"
-digest = "sha256:ba5f4a24759f576a69b40bca5ccbd1cb0c7e0dc3a02fc81cbe4e78e57309c06f"
+digest = "sha256:3cae9ada75f381ce8b11495ed4f0c4409660fe25479262f30b42d587c29aa299"
 
 [[resources]]
 id = "field-values"
@@ -125,7 +125,7 @@ id = "template-repository-frontmatter-adr"
 role = "template"
 path = "templates/repository-frontmatter-adr.md"
 media_type = "text/markdown"
-digest = "sha256:0ba09afbf9f67a86eea5d88c2a2ab37d255de98077badb021a7f30beecf62d9b"
+digest = "sha256:0d8453cd5072c83340812c1653de34c5e79fe80f8aa25143a493934cd0cb5a2d"
 
 [[resources]]
 id = "template-research"
@@ -153,20 +153,69 @@ id = "workflow-caller"
 role = "workflow-template"
 path = "validate-markdown-frontmatter.caller.yml"
 media_type = "application/yaml"
-digest = "sha256:7754532412100bc5ea81fa61ffaf21542a75f8ba826370a952f479eb93cc8a09"
+digest = "sha256:c45e0a4a5673841add51cfecb988f80360bbb43f8d91da07a76589d54f1774b0"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/frontmatter.py"
+media_type = "text/x-python"
+digest = "sha256:9d3ea9a3ce410b8bd69069bd74a650df1dbf08e0b7f924644e346c06c8088f4d"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:757553cf8b9d8bf98fdc2ee184629f120ec0aa888c370293be4c3fe45c6b9944"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:871b6ac48d8c825aab2a58f04fd861f5cbd4386fa8c35a9e69ed14cf838ace4b"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:f336defed2101ade1c77d058aa8bbee9cb9982ffa67402cee0c68a220b98a85e"
+
+[[resources]]
+id = "provider-mutation-plan"
+role = "provider-resource"
+path = "schemas/mutation-plan.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:a46e3734ba32f98c184977e76d93ada988860f3a96f3fb7dc41fac5eb016ab5e"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:482a2e283abec47830289ca792ef9c7a59745330d6e4c74d50ee6a75a2db8833"
+
+[[resources]]
+id = "frontmatter-schema"
+role = "provider-resource"
+path = "schemas/markdown-frontmatter.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:f19943b7f68c02bedd25214d7184b2e5a8909b9d8a9aef236794b2b389e9952a"
 
 [[artifacts]]
 id = "agent-summary-package"
 target = ".standards/packages/markdown-frontmatter/agent-summary.md"
 source = "artifacts/agent-summary.md"
-digest = "sha256:071b37833f9a181fd7bf09b11860b3d1221691ec9a09cafe082d2a4f3107aa19"
+digest = "sha256:138e206e882782a26ff04f3235b85090f9fb0fbd72e56b03df922741d8095cdf"
 policy = "managed"
 
 [[artifacts]]
 id = "skill"
 target = ".agents/skills/markdown-frontmatter/SKILL.md"
 source = "skills/markdown-frontmatter/SKILL.md"
-digest = "sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"
+digest = "sha256:b60815276714957c4b090328c1735fd78794c31045f9f6c7f624179d496de777"
 policy = "managed"
 
 [[artifacts]]
@@ -180,7 +229,7 @@ policy = "managed"
 id = "skill-new-doc-id"
 target = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
 source = "skills/markdown-frontmatter/scripts/new-doc-id"
-digest = "sha256:0f80ec4d966b59d8310f88f4d45478a1272b3b94491cf2a44efb9765bbbe2edc"
+digest = "sha256:cd35b1bcbd0630e18c9560aa40e579555204918f26b73c9da7ae3f0d48958f95"
 policy = "managed"
 mode = "0755"
 
@@ -211,7 +260,7 @@ adapter = "yaml"
 scope = "key:/jobs/frontmatter"
 policy = "managed"
 source = "workflow-job.yml"
-source_digest = "sha256:c8ae642866c287e945d1df8b2db0b6270fdb9131bdf3161f12a20d95a0ba5fb8"
+source_digest = "sha256:c3e9fce5de356b728481c565f1262f0421b1eb9652018f0022a741ba48fdd1c0"
 
 [[extensions]]
 id = "custom-schema"
@@ -219,3 +268,84 @@ option = "schema_path"
 media_type = "application/schema+json"
 path_policy = "repository-relative"
 preferred_root = ".standards/extensions/markdown-frontmatter/"
+
+[[providers]]
+id = "validate-frontmatter"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["frontmatter-schema"]
+
+[[providers]]
+id = "id-next"
+operation = "id-next"
+kind = "python"
+phase = "inspect"
+effect = "content"
+entrypoint = "payload:provider-code#run_id_next"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["frontmatter-schema"]
+
+[[providers]]
+id = "fix-frontmatter"
+operation = "fix"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_fix"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = []
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-markdown-frontmatter"
+
+[[migrations]]
+id = "legacy-v4-to-1-2"
+from = "legacy:v4-markdown-frontmatter"
+to = "package:1.2"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "artifact:skill",
+  "artifact:skill-new-doc-id",
+  "artifact:skill-openai",
+  "config:*",
+  "contribution:workflow-frontmatter-job",
+]
+signatures = ["legacy-skill", "legacy-skill-script", "legacy-workflow"]
+
+[[legacy_signatures]]
+id = "legacy-skill"
+kind = "whole-file"
+targets = [".agents/skills/markdown-frontmatter/SKILL.md"]
+known_content_digests = ["sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"]
+
+[[legacy_signatures]]
+id = "legacy-skill-script"
+kind = "whole-file"
+targets = [".agents/skills/markdown-frontmatter/scripts/new-doc-id"]
+known_content_digests = ["sha256:0f80ec4d966b59d8310f88f4d45478a1272b3b94491cf2a44efb9765bbbe2edc"]
+
+[[legacy_signatures]]
+id = "legacy-workflow"
+kind = "whole-file"
+targets = [".github/workflows/validate-markdown-frontmatter.yml"]
+known_content_digests = ["sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e"]

@@ -46,7 +46,12 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     invoke_provider,
 )
-from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot
+from project_standards.control_plane.schemas import MutationPlanSchema
+from project_standards.control_plane.snapshot import (
+    EntryKind,
+    RepositorySnapshot,
+    SnapshotEntry,
+)
 from project_standards.package_contract.paths import SafeRelativePath
 from project_standards.package_contract.payload import (
     JsonObject,
@@ -84,6 +89,15 @@ class ApplyResult:
     lock_written: bool
     error_code: str | None = None
     verification_findings: tuple[ControlFinding, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class AuthoringApplyResult:
+    """Report the exact target prefix completed by one authoring plan."""
+
+    success: bool
+    applied_targets: tuple[str, ...]
+    error_code: str | None = None
 
 
 @dataclass(slots=True)
@@ -281,6 +295,131 @@ def _cleanup_staged(
     for relative in sorted(created, key=lambda item: len(item.parts), reverse=True):
         with suppress(OSError):
             (root / relative).rmdir()
+
+
+def _authoring_entries(
+    repo: Path,
+    plan: MutationPlanSchema,
+) -> dict[str, SnapshotEntry]:
+    targets = tuple(action.target for action in plan.actions)
+    if len(targets) != len(set(targets)):
+        raise _ApplyFailure("CP-AUTHORING-PLAN", "authoring plan repeats a target")
+    if any(
+        action.adapter.value != "whole-file" or action.scope != "$file" for action in plan.actions
+    ):
+        raise _ApplyFailure(
+            "CP-AUTHORING-PLAN",
+            "authoring executor requires complete whole-file actions",
+        )
+    snapshot = RepositorySnapshot.capture(repo, targets)
+    entries = {entry.path.original: entry for entry in snapshot.entries}
+    for action in plan.actions:
+        entry = entries[action.target.original]
+        if entry.precondition_digest != action.precondition_digest:
+            raise _ApplyFailure("CP-PRECONDITION", "authoring target changed after planning")
+        if action.kind is ActionKind.CREATE and entry.kind is not EntryKind.MISSING:
+            raise _ApplyFailure("CP-PRECONDITION", "authoring create target already exists")
+        if (
+            action.kind in {ActionKind.UPDATE, ActionKind.REMOVE}
+            and entry.kind is not EntryKind.REGULAR
+        ):
+            raise _ApplyFailure("CP-PRECONDITION", "authoring target is not a regular file")
+    return entries
+
+
+def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApplyResult:
+    """Apply one complete provider plan through contained, preconditioned replacements."""
+    applied: list[str] = []
+    staged: dict[str, _StagedTarget] = {}
+    created: list[PurePosixPath] = []
+    root: Path | None = None
+    root_descriptor: int | None = None
+    try:
+        root, root_descriptor = _open_repository(repo)
+        entries = _authoring_entries(root, plan)
+        for action in plan.actions:
+            if action.kind is ActionKind.REMOVE:
+                continue
+            relative = action.target
+            parent_descriptor = _open_parent(
+                root_descriptor,
+                relative.normalized.parent,
+                created,
+            )
+            entry = entries[relative.original]
+            mode = action.mode or entry.mode or "0644"
+            try:
+                temporary = _stage_bytes(
+                    parent_descriptor,
+                    relative.normalized.name,
+                    action.content_bytes or b"",
+                    mode,
+                )
+            except BaseException:
+                os.close(parent_descriptor)
+                raise
+            staged[relative.original] = _StagedTarget(
+                relative.original,
+                parent_descriptor,
+                parent_descriptor,
+                temporary,
+                relative.normalized.name,
+            )
+
+        # All target snapshots are rechecked before the first publication, so a
+        # stale action cannot leave an earlier action applied as a partial fix.
+        _authoring_entries(root, plan)
+        for action in plan.actions:
+            relative = action.target
+            item = staged.get(relative.original)
+            if item is not None:
+                _assert_parent_current(root, relative.normalized.parent, item.parent_descriptor)
+            if action.kind is ActionKind.REMOVE:
+                parent_descriptor = _open_parent(
+                    root_descriptor,
+                    relative.normalized.parent,
+                    [],
+                )
+                try:
+                    os.unlink(relative.normalized.name, dir_fd=parent_descriptor)
+                    os.fsync(parent_descriptor)
+                except OSError as exc:
+                    raise _ApplyFailure(
+                        "CP-AUTHORING-PUBLISH",
+                        "authoring target removal failed",
+                    ) from exc
+                finally:
+                    os.close(parent_descriptor)
+            else:
+                if item is None:
+                    raise _ApplyFailure(
+                        "CP-AUTHORING-PLAN",
+                        "authoring replacement was not staged",
+                    )
+                try:
+                    os.replace(
+                        item.temporary,
+                        item.destination,
+                        src_dir_fd=item.source_descriptor,
+                        dst_dir_fd=item.parent_descriptor,
+                    )
+                    os.fsync(item.parent_descriptor)
+                except OSError as exc:
+                    raise _ApplyFailure(
+                        "CP-AUTHORING-PUBLISH",
+                        "authoring target replacement failed",
+                    ) from exc
+            applied.append(relative.original)
+        return AuthoringApplyResult(True, tuple(applied))
+    except _ApplyFailure as exc:
+        return AuthoringApplyResult(False, tuple(applied), exc.code)
+    except ControlPlaneError, OSError, ValueError:
+        return AuthoringApplyResult(False, tuple(applied), "CP-AUTHORING-PLAN")
+    finally:
+        if root is not None:
+            _cleanup_staged(staged, root, created)
+        if root_descriptor is not None:
+            os.close(root_descriptor)
 
 
 def _precondition(plan: ReconciliationPlan, target: str) -> str:

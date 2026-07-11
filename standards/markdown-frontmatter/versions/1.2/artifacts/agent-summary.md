@@ -1,12 +1,12 @@
 # Markdown Frontmatter Standard: Agent Summary
 
-The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
+The canonical [Markdown Frontmatter 1.2 standard](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/README.md) is authoritative and wins if this summary conflicts with it.
 
-Lifecycle: active. Adoption: `validator`.
+Lifecycle: active. Package: `markdown-frontmatter@1.2`.
 
 ## Use this summary when
 
-Add, repair, or validate metadata on Markdown paths managed by `.project-standards.yml`.
+Add, repair, or validate metadata on Markdown paths selected by the `markdown-frontmatter` package options in `.standards/config.toml`.
 
 ## Core rules
 
@@ -19,13 +19,13 @@ Add, repair, or validate metadata on Markdown paths managed by `.project-standar
 ## Commands and artifacts
 
 ```bash
-project-standards validate --config .project-standards.yml
-format-frontmatter --check --config .project-standards.yml
-validate-id --config .project-standards.yml
-validate-references --config .project-standards.yml
+project-standards validate
+format-frontmatter --check
+validate-id
+validate-references
 ```
 
-The aggregate validator covers schema, ID, and enabled reference checks. `format-frontmatter` checks or fixes canonical source style. The repo-local [agent skill](skills/markdown-frontmatter/SKILL.md) guides authoring and ID generation in adopting repositories.
+The aggregate validator covers schema, ID, and enabled reference checks. `format-frontmatter` checks or fixes canonical source style. The repo-local skill at `.agents/skills/markdown-frontmatter/SKILL.md` guides authoring and ID generation.
 
 ## Boundaries and companions
 
@@ -33,4 +33,4 @@ This standard governs metadata, not Markdown body formatting. Markdown Tooling i
 
 ## Canonical resources
 
-Use the [standard](README.md), [structure rules](structure.md), [field-value policy](field-values.md), and [adoption guide](adopt.md) for complete requirements.
+Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5/standards/markdown-frontmatter/versions/1.2) for complete requirements.

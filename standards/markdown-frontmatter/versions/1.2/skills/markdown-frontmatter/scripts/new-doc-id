@@ -2,8 +2,8 @@
 # new-doc-id - generate a standard-conformant document id for the
 # markdown-frontmatter skill:  {doc_type}-{base36-6}-{document-name}
 #
-# This is the id format project-standards v4 enforces via `validate-id`
-# (run by `project-standards validate` and the v4 CI workflow): an id whose
+# This is the id format package 1.2 enforces via `validate-id`
+# (run by `project-standards validate` and the V5 CI workflow): an id whose
 # leading segment is not a valid doc_type is REJECTED. The prefix therefore
 # is the doc_type, not the repo name (a repo-name prefix fails validation).
 #

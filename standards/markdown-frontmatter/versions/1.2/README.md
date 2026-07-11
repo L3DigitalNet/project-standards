@@ -1,6 +1,6 @@
 # Markdown Frontmatter Standard
 
-**Contract version:** `1.1` (declared per document as `schema_version`; selected by consumers via `markdown.frontmatter.version`). See [Versioning](#versioning).
+**Package version:** `1.2`. **Document contract:** `1.1` (declared per document as `schema_version`; selected independently through `standards.markdown-frontmatter.config.contract_version`). See [Versioning](#versioning).
 
 ## Purpose
 
@@ -8,7 +8,7 @@ This standard defines a portable YAML frontmatter profile for project Markdown d
 
 It is not an Obsidian schema, a Hugo/Jekyll/Quarto schema, or a publishing schema. Publishing-specific and project-specific data belongs in the sanctioned extension objects described in [Field Values](field-values.md#extensions).
 
-A **managed document** is any Markdown file this standard governs. Consuming repositories choose managed paths with `.project-standards.yml`; managed files must carry conformant frontmatter and validate against the bundled schema.
+A **managed document** is any Markdown file this standard governs. Consuming repositories choose managed paths through the selected package options in `.standards/config.toml`; managed files must carry conformant frontmatter and validate against the selected schema.
 
 ## Standard Layout
 
@@ -81,7 +81,7 @@ Agent-instruction and agent-skill files are harness configuration, not managed d
 - `.agents/**`
 - `.codex/**`
 
-Exclude those files in `.project-standards.yml` instead of adding document metadata to them. A repository may also exclude its root `README.md` if it prefers not to render a frontmatter table on its public landing page.
+Exclude those files through the package's `exclude` option instead of adding document metadata to them. A repository may also exclude its root `README.md` if it prefers not to render a frontmatter table on its public landing page.
 
 ## Repo-Local Skill
 
@@ -89,7 +89,7 @@ This standard owns the `markdown-frontmatter` agent skill at [`skills/markdown-f
 
 The installed skill is intentionally excluded from managed-document frontmatter validation via `.agents/**`. Its `SKILL.md` carries agent-skill metadata, not this standard's document metadata profile.
 
-This standard is deliberately tool-neutral about the Markdown body. Body formatting and linting live in the companion [Markdown Tooling Standard](../markdown-tooling/README.md).
+This standard is deliberately tool-neutral about the Markdown body. Body formatting and linting live in the companion [Markdown Tooling Standard](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-tooling/README.md).
 
 ## Repository Policy ADR
 
@@ -103,25 +103,28 @@ Structural conformance is not enough for consistent metadata. Each consuming rep
 - relationship-field and source-field conventions;
 - migration and confirmation steps.
 
-This repo dogfoods that expectation in [`docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md`](../../docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md).
+This repo dogfoods that expectation in [ADR 0014](https://github.com/L3DigitalNet/project-standards/blob/v5/docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md).
 
 ## Versioning
 
-Two version numbers are in play:
+Three independent identities are in play:
 
-- **`schema_version`** is the metadata schema contract. It changes when the field set or controlled vocabularies change. This standard currently uses `1.1`.
-- **The repository release tag** versions the published standards, schema, validator, workflows, and package together.
+- **Package payload `1.2`** selects these immutable package resources, providers, and managed outputs through the consumer catalog.
+- **Document contract `1.1`** is selected by `contract_version` and recorded in each document as `schema_version`. It changes when the metadata fields or controlled vocabularies change.
+- **Tool/catalog release `5.x`** identifies the control-plane implementation and catalog snapshot that resolved and applied the package. It does not replace either package or document-contract versioning.
+
+Catalog roles and defaults decide which package payload a selector such as `latest` resolves to; they are release-channel metadata, not another document contract.
 
 This documentation split and ADR-template addition do not add fields, remove fields, or change controlled vocabularies. New documents should still set `schema_version: '1.1'`.
 
-Release classification and the previously-passing rule are defined in [`meta/versioning.md`](../../meta/versioning.md).
+Release classification and the previously-passing rule are defined in the [Versioning Standard](https://github.com/L3DigitalNet/project-standards/blob/v5/meta/versioning.md).
 
 ## Validation
 
 Run schema, ID, and reference validation from a consuming repo:
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 That command runs schema validation, ID-format validation, and cross-file reference validation. Reference validation is a no-op unless the repo enables it.
@@ -129,15 +132,15 @@ That command runs schema validation, ID-format validation, and cross-file refere
 Run the formatter check when you need to verify canonical source style, including quote style, key order, and list layout:
 
 ```bash
-uv run format-frontmatter --check --config .project-standards.yml
+uv run format-frontmatter --check
 ```
 
 The standalone commands are also available:
 
 ```bash
-uv run validate-frontmatter --config .project-standards.yml
-uv run validate-id --config .project-standards.yml
-uv run validate-references --config .project-standards.yml
+uv run validate-frontmatter
+uv run validate-id
+uv run validate-references
 ```
 
 See [Structure Requirements](structure.md#validation) for exit codes and validation scope.

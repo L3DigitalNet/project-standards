@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import json
 import os
 import tempfile
 from pathlib import Path
 from typing import Literal, cast
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from project_standards.control_plane.diagnostics import ActionKind
 from project_standards.control_plane.migration import MigrationReport
@@ -29,6 +32,7 @@ from project_standards.package_contract.payload import (
     JsonValue,
     PosixMode,
     ProviderOperation,
+    normalize_scope,
 )
 
 type SchemaDocument = dict[str, object]
@@ -58,8 +62,42 @@ class MutationActionSchema(StrictModel):
     target: SafeRelativePath
     adapter: AdapterKind
     scope: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    precondition_digest: Sha256Digest
     content_digest: Sha256Digest | None = None
+    content_base64: str | None = None
     mode: PosixMode | None = None
+
+    @model_validator(mode="after")
+    def _complete_bounded_action(self) -> MutationActionSchema:
+        if self.kind not in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}:
+            raise ValueError("mutation plan action must mutate one bounded target")
+        object.__setattr__(self, "scope", normalize_scope(self.adapter, self.scope))
+        if self.kind is ActionKind.REMOVE:
+            if self.content_digest is not None or self.content_base64 is not None:
+                raise ValueError("mutation plan removal cannot carry replacement content")
+            if self.mode is not None:
+                raise ValueError("mutation plan removal cannot carry a replacement mode")
+            return self
+        if self.content_digest is None or self.content_base64 is None:
+            raise ValueError("mutation plan replacement requires complete content")
+        try:
+            content = base64.b64decode(self.content_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("mutation plan content must be canonical base64") from exc
+        if base64.b64encode(content).decode("ascii") != self.content_base64:
+            raise ValueError("mutation plan content must be canonical base64")
+        digest = f"sha256:{hashlib.sha256(content).hexdigest()}"
+        if digest != self.content_digest.value:
+            raise ValueError("mutation plan content does not match its digest")
+        return self
+
+    @property
+    def content_bytes(self) -> bytes | None:
+        """Return validated replacement bytes, or no bytes for removal."""
+        if self.content_base64 is None:
+            return None
+        return base64.b64decode(self.content_base64, validate=True)
 
 
 class MutationPlanSchema(StrictModel):

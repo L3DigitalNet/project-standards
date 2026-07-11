@@ -49,6 +49,8 @@ from project_standards.control_plane.models import (
     ConsumerCatalog,
     DesiredConfig,
     DesiredPackage,
+    LockedUnit,
+    UnitProvenance,
     VersionSelector,
 )
 from project_standards.control_plane.paths import CatalogMajor
@@ -67,6 +69,8 @@ from project_standards.package_contract.paths import (
     Sha256Digest,
 )
 from project_standards.package_contract.payload import (
+    AdapterKind,
+    ArtifactPolicy,
     JsonObject,
     JsonValue,
     LegacySignatureDeclaration,
@@ -988,6 +992,52 @@ def _empty_lock(
     )
 
 
+def _adopted_legacy_units(
+    reports: tuple[MigrationReport, ...],
+    observed: Mapping[tuple[str, str], _ObservedSignature],
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+) -> tuple[LockedUnit, ...]:
+    """Authorize exact legacy whole files that the selected package will replace."""
+    units: list[LockedUnit] = []
+    for report in reports:
+        package = report.package
+        payload = payloads[(package.standard_id, package.version.value)]
+        signatures = {item.id: item for item in payload.manifest.legacy_signatures}
+        artifacts = {item.target: item for item in payload.manifest.artifacts}
+        for claim in report.claims:
+            if claim.disposition is not LegacyDisposition.ADOPT or claim.ownership != "managed":
+                continue
+            observed_item = observed.get((claim.signature_id, claim.target.original))
+            signature = signatures.get(claim.signature_id)
+            artifact = artifacts.get(claim.target)
+            if (
+                observed_item is None
+                or not observed_item.known
+                or observed_item.digest != claim.observed_digest
+                or signature is None
+                or signature.kind is not LegacySignatureKind.WHOLE_FILE
+                or artifact is None
+                or artifact.policy is not ArtifactPolicy.MANAGED
+            ):
+                continue
+            units.append(
+                LockedUnit(
+                    path=claim.target,
+                    adapter=AdapterKind.WHOLE_FILE,
+                    scope="$file",
+                    owners=(package.standard_id,),
+                    versions={package.standard_id: package.version},
+                    provenance=UnitProvenance.PACKAGE,
+                    policy=artifact.policy,
+                    semantic_digest=claim.observed_digest,
+                    content_digest=claim.observed_digest,
+                    mode=None,
+                    created_container=False,
+                )
+            )
+    return tuple(sorted(units, key=lambda item: item.natural_key))
+
+
 def _dedupe_findings(findings: list[ControlFinding]) -> tuple[ControlFinding, ...]:
     unique = {
         (
@@ -1171,7 +1221,9 @@ def _plan_legacy_migration(
         }
     )
     config_content = _render_config(desired)
-    previous_lock = _empty_lock(distribution, catalog, desired)
+    previous_lock = _empty_lock(distribution, catalog, desired).model_copy(
+        update={"artifacts": list(_adopted_legacy_units(ordered_reports, observed, payloads))}
+    )
     resolution = ResolutionRequest(
         desired=desired,
         catalog=catalog,

@@ -208,16 +208,18 @@ Existing package resources remain canonical only when copied into a version dire
 
 ### Task 7: Markdown Frontmatter Reconstruction and Unified Validators
 
-**Files:** Replace `standards/markdown-frontmatter/standard.toml`; create `standards/markdown-frontmatter/versions/1.2/**`; modify frontmatter/id/reference/format CLI config-loading boundaries and tests.
+**Files:** Create `standards/markdown-frontmatter/versions/1.2/**`; modify frontmatter/id/reference/format CLI config-loading boundaries and tests. Keep the operational V1 `standard.toml` unchanged until Task 14.
 
-- [ ] Write red option-schema tests for `contract_version`, schema selection, `required`, `include`, `exclude`, and reference-validation options. Reject executable paths and keep the package selector separate from the contract selector.
-- [ ] Reconstruct `markdown-frontmatter@1.2` with canonical docs, templates, skill/script files, caller workflow, option schema, whole/create-only artifacts, semantic config/workflow contributions, and version-selected validate/inspect/fix providers.
-- [ ] Add a declared legacy YAML endpoint that recognizes `markdown.frontmatter`, its installed workflow/skill signatures, and exact known managed bytes. Unknown or modified content must block migration.
-- [ ] Refactor existing validators to resolve selected unified config by repository root. Retain explicit `--config` only for supported legacy/debug use, emit the v5 legacy warning, and reject dual authority.
-- [ ] Convert formatter/fix behavior to return a typed mutation plan; route the public command through the platform executor while preserving its documented flags and exit codes.
-- [ ] Prove fresh, legacy-migrated, custom-schema-reference, workflow, skill, and second-apply fixtures.
-- [ ] Run all frontmatter/id/reference/formatter tests plus focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct frontmatter package`
+**Execution correction:** Plan-pinned contract #11 governs this reconstruction. Task 7 validates the exact V2 family index, providers, migration, projection, and wheel in isolation; Task 14 performs the repository-root family-index and projection cutover after all nine payloads validate together.
+
+- [x] Write red option-schema tests for `contract_version`, schema selection, `required`, `include`, `exclude`, and reference-validation options. Reject executable paths and keep the package selector separate from the contract selector.
+- [x] Reconstruct `markdown-frontmatter@1.2` with canonical docs, templates, skill/script files, caller workflow, option schema, whole/create-only artifacts, semantic config/workflow contributions, and version-selected validate/inspect/fix providers.
+- [x] Add a declared legacy YAML endpoint that recognizes `markdown.frontmatter`, its installed workflow/skill signatures, and exact known managed bytes. Unknown or modified content must block migration.
+- [x] Refactor existing validators to resolve selected unified config by repository root. Retain explicit `--config` only for supported legacy/debug use, emit the v5 legacy warning, and reject dual authority.
+- [x] Convert formatter/fix behavior to return a typed mutation plan; route the public command through the platform executor while preserving its documented flags and exit codes.
+- [x] Prove fresh, legacy-migrated, custom-schema-reference, workflow, skill, and second-apply fixtures.
+- [x] Run all frontmatter/id/reference/formatter tests plus focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct frontmatter package`
 
 ### Task 8: ADR Reconstruction and Frontmatter Composition
 

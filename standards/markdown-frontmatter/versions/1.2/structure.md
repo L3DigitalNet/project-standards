@@ -273,7 +273,7 @@ Universal fields stay at the top level. Repo-local fields do not.
 Run schema, ID, and reference validation:
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 This invokes:
@@ -285,7 +285,7 @@ This invokes:
 Run the formatter check for source-style requirements, including quote style, key order, and list layout:
 
 ```bash
-uv run format-frontmatter --check --config .project-standards.yml
+uv run format-frontmatter --check
 ```
 
 Exit codes:
@@ -309,4 +309,4 @@ markdown:
 
 The `schema_version` field versions the metadata schema's field set and controlled vocabularies. Version `1.1` is the current version for new documents. Existing `1.0` documents remain accepted by the bundled schema.
 
-Adding optional fields or enum values is a compatible schema change. Removing a field or enum value, making a field required, or tightening a pattern is a breaking schema change. Release classification follows [`meta/versioning.md`](../../meta/versioning.md).
+Adding optional fields or enum values is a compatible schema change. Removing a field or enum value, making a field required, or tightening a pattern is a breaking schema change. Release classification follows the [Versioning Standard](https://github.com/L3DigitalNet/project-standards/blob/v5/meta/versioning.md).

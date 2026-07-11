@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 from pathlib import Path
 from typing import cast
 
+import pytest
+from pydantic import ValidationError
+
 from project_standards.control_plane.schemas import (
+    MutationPlanSchema,
     control_plane_schema_bytes,
     control_plane_schema_documents,
     generate_control_plane_schemas,
@@ -72,3 +78,71 @@ def test_existing_schema_cli_checks_all_ten_schemas_for_drift(tmp_path: Path) ->
 
     changed.write_bytes(original)
     assert run_standards(["generate-package-schemas", "--root", str(tmp_path), "--check"]) == 0
+
+
+def test_mutation_plan_carries_complete_bytes_and_snapshot_preconditions() -> None:
+    content = b"---\ntitle: Fixed\n---\n"
+    digest = f"sha256:{hashlib.sha256(content).hexdigest()}"
+    plan = MutationPlanSchema.model_validate(
+        {
+            "schema_version": "1.0",
+            "standard_id": "markdown-frontmatter",
+            "version": "1.2",
+            "actions": [
+                {
+                    "kind": "update",
+                    "target": "docs/example.md",
+                    "adapter": "whole-file",
+                    "scope": "$file",
+                    "summary": "format frontmatter and repair its document id",
+                    "precondition_digest": f"sha256:{'a' * 64}",
+                    "content_digest": digest,
+                    "content_base64": base64.b64encode(content).decode("ascii"),
+                    "mode": "0644",
+                }
+            ],
+        }
+    )
+
+    assert plan.actions[0].content_bytes == content
+
+    invalid = plan.model_dump(mode="json")
+    del cast("list[dict[str, object]]", invalid["actions"])[0]["precondition_digest"]
+    with pytest.raises(ValidationError):
+        MutationPlanSchema.model_validate(invalid)
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"kind": "preserve"},
+        {"scope": "file"},
+        {"content_base64": "not base64", "content_digest": f"sha256:{'a' * 64}"},
+        {"content_base64": None},
+    ],
+)
+def test_mutation_plan_rejects_incomplete_or_unbounded_actions(
+    override: dict[str, object],
+) -> None:
+    content = b"replacement\n"
+    action: dict[str, object] = {
+        "kind": "update",
+        "target": "README.md",
+        "adapter": "whole-file",
+        "scope": "$file",
+        "summary": "update one document",
+        "precondition_digest": f"sha256:{'b' * 64}",
+        "content_digest": f"sha256:{hashlib.sha256(content).hexdigest()}",
+        "content_base64": base64.b64encode(content).decode("ascii"),
+    }
+    action.update(override)
+
+    with pytest.raises(ValidationError):
+        MutationPlanSchema.model_validate(
+            {
+                "schema_version": "1.0",
+                "standard_id": "markdown-frontmatter",
+                "version": "1.2",
+                "actions": [action],
+            }
+        )

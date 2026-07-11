@@ -840,6 +840,24 @@ def test_main_non_utf8_file_reports_error_not_traceback(
     assert "cannot read" in err.lower()
 
 
+def test_main_write_refuses_a_leaf_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    outside = tmp_path / "outside.md"
+    original = _doc(title="X").replace("title: 'X'", "title: X")
+    outside.write_text(original)
+    link = tmp_path / "doc.md"
+    link.symlink_to(outside)
+    cfg = _cfg(tmp_path)
+
+    rc = main(["--write", "--config", str(cfg), str(link)])
+
+    assert rc == 2
+    assert outside.read_text() == original
+    assert "not a regular file" in capsys.readouterr().err
+
+
 def test_main_malformed_config_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1060,33 +1078,6 @@ def test_bump_updated_skips_multiline_updated(tmp_path: Path) -> None:
     assert changed is True
     assert "title: 'needs quoting'\n" in new
     assert "updated:\n  nested: '2026-01-01'\n" in new
-
-
-# ---------------------------------------------------------------------------
-# _atomic_write: interrupt cleanup
-# ---------------------------------------------------------------------------
-
-
-def test_atomic_write_cleans_tmp_on_keyboard_interrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # An interrupt mid-write must leave the original file untouched, remove the
-    # temp file, and re-raise — never swallow the interrupt.
-    from project_standards.format_frontmatter import (
-        _atomic_write,  # pyright: ignore[reportPrivateUsage]
-    )
-
-    target = tmp_path / "doc.md"
-    target.write_text("original")
-
-    def boom(*_a: object, **_k: object) -> object:
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr("os.fdopen", boom)
-    with pytest.raises(KeyboardInterrupt):
-        _atomic_write(target, "new")
-    assert target.read_text() == "original"
-    assert list(tmp_path.iterdir()) == [target]
 
 
 # ---------------------------------------------------------------------------

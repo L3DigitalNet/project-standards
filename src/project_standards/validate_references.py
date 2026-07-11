@@ -31,8 +31,6 @@ from project_standards.validate_id import (
     _ADR_ID_RE,  # pyright: ignore[reportPrivateUsage]  # one grammar, one owner
 )
 
-_DEFAULT_CONFIG = Path(".project-standards.yml")
-
 # The frontmatter fields whose values are document references. applies_to is
 # deliberately absent: the standard defines it as free-form scope identifiers
 # (services, components, environments), not links — including it would warn on
@@ -292,7 +290,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config, legacy = load_cli_config(Path.cwd(), explicit_legacy=args.config)
+        config, legacy = load_cli_config(
+            Path.cwd(),
+            explicit_legacy=args.config,
+            allow_unlocked_custom_schema=args.schema is not None,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
