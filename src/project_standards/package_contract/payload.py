@@ -10,7 +10,7 @@ import tomllib
 import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal, Protocol, cast
@@ -18,7 +18,15 @@ from urllib.parse import unquote_to_bytes
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as JsonSchemaError
-from pydantic import Field, StringConstraints, ValidationError, field_validator, model_validator
+from pydantic import (
+    Field,
+    GetCoreSchemaHandler,
+    StringConstraints,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import CoreSchema, core_schema
 
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId, StrictModel
@@ -56,6 +64,13 @@ PosixMode = Annotated[str, StringConstraints(pattern=r"^0[0-7]{3}$")]
 SharedIdentity = Annotated[
     str,
     StringConstraints(pattern=r"^[a-z0-9]+(?:[./_-][a-z0-9]+)*$"),
+]
+OptionName = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")]
+AffectedIdentity = Annotated[
+    str,
+    StringConstraints(
+        pattern=r"^(?:config:\*|artifact:[a-z0-9]+(?:-[a-z0-9]+)*|contribution:[a-z0-9]+(?:-[a-z0-9]+)*)$"
+    ),
 ]
 
 
@@ -284,6 +299,274 @@ class ContributionDeclaration(StrictModel):
         return SemanticAddress(self.target, self.adapter, self.scope)
 
 
+class ProviderOperation(StrEnum):
+    VALIDATE = "validate"
+    VERIFY = "verify"
+    FIX = "fix"
+    LINT = "lint"
+    DRIFT_CHECK = "drift-check"
+    ID_NEXT = "id-next"
+    EXTRACT = "extract"
+    RENDER = "render"
+    SCAFFOLD = "scaffold"
+    UPGRADE = "upgrade"
+    MIGRATE = "migrate"
+    SEMANTIC_REVIEW = "semantic-review"
+
+
+class ProviderKind(StrEnum):
+    PYTHON = "python"
+    COMMAND = "command"
+    WORKFLOW = "workflow"
+    DOCUMENTATION_ONLY = "documentation-only"
+
+
+class ProviderPhase(StrEnum):
+    PLAN = "plan"
+    INSPECT = "inspect"
+    VALIDATE = "validate"
+    VERIFY = "verify"
+    AUTHORING = "authoring"
+
+
+class ProviderEffect(StrEnum):
+    FINDINGS = "findings"
+    CONTENT = "content"
+    MUTATION_PLAN = "mutation-plan"
+
+
+_OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect]] = {
+    ProviderOperation.VALIDATE: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
+    ProviderOperation.VERIFY: (ProviderPhase.VERIFY, ProviderEffect.FINDINGS),
+    ProviderOperation.FIX: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.LINT: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
+    ProviderOperation.DRIFT_CHECK: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
+    ProviderOperation.ID_NEXT: (ProviderPhase.INSPECT, ProviderEffect.CONTENT),
+    ProviderOperation.EXTRACT: (ProviderPhase.INSPECT, ProviderEffect.CONTENT),
+    ProviderOperation.RENDER: (ProviderPhase.PLAN, ProviderEffect.CONTENT),
+    ProviderOperation.SCAFFOLD: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.UPGRADE: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.MIGRATE: (ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.SEMANTIC_REVIEW: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
+}
+
+_PAYLOAD_ENTRYPOINT = re.compile(r"^payload:([a-z0-9]+(?:-[a-z0-9]+)*)#([A-Za-z_][A-Za-z0-9_]*)$")
+
+
+class ProviderDeclaration(StrictModel):
+    """Declare one phase-bounded provider implemented by payload resources."""
+
+    id: ResourceId
+    operation: ProviderOperation
+    kind: ProviderKind
+    phase: ProviderPhase
+    effect: ProviderEffect
+    entrypoint: str | None = None
+    input_schema: ResourceId | None = None
+    output_schema: ResourceId | None = None
+    resources: list[ResourceId]
+
+    @field_validator("resources")
+    @classmethod
+    def _unique_sorted_resources(cls, value: list[str]) -> list[str]:
+        return _sorted_unique(value, kind="provider resource")
+
+    @model_validator(mode="after")
+    def _closed_execution_contract(self) -> ProviderDeclaration:
+        expected = _OPERATION_CONTRACT[self.operation]
+        if (self.phase, self.effect) != expected:
+            raise ValueError("provider operation has an invalid phase/effect contract")
+        if self.kind is ProviderKind.DOCUMENTATION_ONLY:
+            if any(
+                value is not None
+                for value in (self.entrypoint, self.input_schema, self.output_schema)
+            ):
+                raise ValueError("documentation-only provider cannot declare execution fields")
+            return self
+        if self.entrypoint is None or _PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint) is None:
+            raise ValueError("executable provider requires a payload-qualified entrypoint")
+        if self.input_schema is None or self.output_schema is None:
+            raise ValueError("executable provider requires input and output schemas")
+        return self
+
+    @property
+    def entrypoint_resource(self) -> str | None:
+        """Return the version-scoped implementation resource, when executable."""
+        if self.entrypoint is None:
+            return None
+        match = _PAYLOAD_ENTRYPOINT.fullmatch(self.entrypoint)
+        return match.group(1) if match is not None else None
+
+
+class ExtensionPathPolicy(StrEnum):
+    REPOSITORY_RELATIVE = "repository-relative"
+
+
+class ExtensionDeclaration(StrictModel):
+    """Bind one package option to a consumer-owned repository input."""
+
+    id: ResourceId
+    option: OptionName
+    media_type: MediaType
+    path_policy: ExtensionPathPolicy
+    preferred_root: str | None = None
+
+    @field_validator("preferred_root")
+    @classmethod
+    def _safe_extension_root(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value.endswith("/"):
+            raise ValueError("extension preferred_root must be a directory path ending in slash")
+        normalized = SafeRelativePath.parse(value[:-1]).original
+        if not normalized.startswith(".standards/extensions/"):
+            raise ValueError("extension preferred_root must use .standards/extensions")
+        return value
+
+
+_MIGRATION_ENDPOINT = re.compile(
+    r"^(?:package:(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)|legacy:([a-z0-9]+(?:-[a-z0-9]+)*))$"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MigrationEndpoint:
+    """Represent one exact package version or registered legacy-state endpoint."""
+
+    value: str
+    package_version: PackageVersion | None = field(init=False)
+    legacy_state: str | None = field(init=False)
+
+    def __post_init__(self) -> None:
+        match = _MIGRATION_ENDPOINT.fullmatch(self.value)
+        if match is None:
+            raise ValueError("migration endpoint must be package:VERSION or legacy:STATE")
+        package_version = (
+            PackageVersion(f"{match.group(1)}.{match.group(2)}")
+            if match.group(1) is not None
+            else None
+        )
+        object.__setattr__(self, "package_version", package_version)
+        object.__setattr__(self, "legacy_state", match.group(3))
+
+    @classmethod
+    def _from_string(cls, value: str) -> MigrationEndpoint:
+        return cls(value)
+
+    @staticmethod
+    def _to_string(value: MigrationEndpoint) -> str:
+        return value.value
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: type[MigrationEndpoint],
+        _handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        string_schema = core_schema.str_schema(pattern=_MIGRATION_ENDPOINT.pattern, strict=True)
+        validated = core_schema.no_info_after_validator_function(cls._from_string, string_schema)
+        return core_schema.json_or_python_schema(
+            json_schema=validated,
+            python_schema=core_schema.union_schema(
+                [core_schema.is_instance_schema(cls), validated]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._to_string,
+                return_schema=core_schema.str_schema(),
+                when_used="always",
+            ),
+        )
+
+
+class MigrationMode(StrEnum):
+    AUTOMATIC = "automatic"
+    MANUAL = "manual"
+
+
+class MigrationDeclaration(StrictModel):
+    """Declare one bounded package or legacy-state transition."""
+
+    id: ResourceId
+    from_endpoint: MigrationEndpoint = Field(alias="from")
+    to_endpoint: MigrationEndpoint = Field(alias="to")
+    mode: MigrationMode
+    provider: ResourceId | None = None
+    instructions: SafeRelativePath | None = None
+    reversible: bool
+    affected: list[AffectedIdentity] = Field(min_length=1)
+    signatures: list[ResourceId] = Field(default_factory=list)
+
+    @field_validator("affected", "signatures")
+    @classmethod
+    def _unique_sorted_references(cls, value: list[str]) -> list[str]:
+        return _sorted_unique(value, kind="migration reference")
+
+    @model_validator(mode="after")
+    def _mode_contract(self) -> MigrationDeclaration:
+        if self.from_endpoint == self.to_endpoint:
+            raise ValueError("migration endpoints must differ")
+        if self.mode is MigrationMode.AUTOMATIC:
+            if self.provider is None or self.instructions is not None:
+                raise ValueError("automatic migration requires only a provider")
+        elif self.instructions is None or self.provider is not None:
+            raise ValueError("manual migration requires only instructions")
+        return self
+
+
+class LegacySignatureKind(StrEnum):
+    WHOLE_FILE = "whole-file"
+    BOUNDED_BLOCK = "bounded-block"
+
+
+class LegacySignatureFormat(StrEnum):
+    MARKDOWN = "markdown"
+    TOML = "toml"
+    YAML = "yaml"
+
+
+class LegacySignatureDeclaration(StrictModel):
+    """Recognize only exact previously shipped whole files or bounded blocks."""
+
+    id: ResourceId
+    kind: LegacySignatureKind
+    format: LegacySignatureFormat | None = None
+    targets: list[SafeRelativePath] = Field(min_length=1)
+    begin: str | None = None
+    end: str | None = None
+    known_content_digests: list[Sha256Digest] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _signature_shape(self) -> LegacySignatureDeclaration:
+        validate_path_collection(self.targets)
+        object.__setattr__(
+            self,
+            "targets",
+            sorted(self.targets, key=lambda target: target.normalized.as_posix()),
+        )
+        digests = [digest.value for digest in self.known_content_digests]
+        if len(digests) != len(set(digests)):
+            raise ValueError("legacy signature contains a duplicate content digest")
+        object.__setattr__(
+            self,
+            "known_content_digests",
+            sorted(self.known_content_digests, key=lambda digest: digest.value),
+        )
+        if self.kind is LegacySignatureKind.WHOLE_FILE:
+            if any(value is not None for value in (self.format, self.begin, self.end)):
+                raise ValueError("whole-file legacy signature cannot declare block fields")
+            return self
+        if self.format is None or self.begin is None or self.end is None:
+            raise ValueError("bounded-block legacy signature requires format and delimiters")
+        if (
+            not self.begin
+            or not self.end
+            or self.begin == self.end
+            or any(character in self.begin + self.end for character in "\r\n")
+        ):
+            raise ValueError("legacy block delimiters must be distinct nonempty single lines")
+        return self
+
+
 def _scope_parts(scope: str) -> tuple[str, str, str]:
     kind, body = scope.split(":", 1) if ":" in scope else (scope, "")
     if kind == "set":
@@ -330,6 +613,10 @@ class PayloadManifest(StrictModel):
     resources: list[ResourceDeclaration] = Field(min_length=1)
     artifacts: list[WholeArtifactDeclaration] = Field(default_factory=list)
     contributions: list[ContributionDeclaration] = Field(default_factory=list)
+    providers: list[ProviderDeclaration] = Field(default_factory=list)
+    extensions: list[ExtensionDeclaration] = Field(default_factory=list)
+    migrations: list[MigrationDeclaration] = Field(default_factory=list)
+    legacy_signatures: list[LegacySignatureDeclaration] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _resource_identity_and_config_schema(self) -> PayloadManifest:
@@ -410,6 +697,77 @@ class PayloadManifest(StrictModel):
                 previous = shared.setdefault(contribution.shared_identity, signature)
                 if previous != signature:
                     raise ValueError("shared identity declarations do not normalize identically")
+
+        resource_ids = {resource.id for resource in self.resources}
+        resource_paths = {resource.path.original for resource in self.resources}
+        provider_ids: set[str] = set()
+        provider_by_id: dict[str, ProviderDeclaration] = {}
+        for provider in self.providers:
+            if provider.id in provider_ids:
+                raise ValueError("payload contains a duplicate provider ID")
+            provider_ids.add(provider.id)
+            provider_by_id[provider.id] = provider
+            referenced = {
+                provider.entrypoint_resource,
+                provider.input_schema,
+                provider.output_schema,
+                *provider.resources,
+            }
+            missing = {item for item in referenced if item is not None} - resource_ids
+            if missing:
+                raise ValueError("provider references an undeclared resource")
+        for contribution in self.contributions:
+            if contribution.provider is not None:
+                provider = provider_by_id.get(contribution.provider)
+                if provider is None or provider.operation is not ProviderOperation.RENDER:
+                    raise ValueError("contribution provider must identify a render provider")
+
+        extension_ids: set[str] = set()
+        extension_roots: list[str] = []
+        expected_extension_root = f".standards/extensions/{self.payload.standard}/"
+        for extension in self.extensions:
+            if extension.id in extension_ids:
+                raise ValueError("payload contains a duplicate extension ID")
+            extension_ids.add(extension.id)
+            if extension.preferred_root is not None:
+                if extension.preferred_root != expected_extension_root:
+                    raise ValueError("extension preferred_root must match the package namespace")
+                extension_roots.append(extension.preferred_root.removesuffix("/"))
+        output_targets = artifact_targets | {
+            contribution.target.normalized.as_posix() for contribution in self.contributions
+        }
+        if any(
+            target == root or target.startswith(f"{root}/")
+            for root in extension_roots
+            for target in output_targets
+        ):
+            raise ValueError("managed output overlaps a consumer-owned extension root")
+
+        signature_ids: set[str] = set()
+        for signature in self.legacy_signatures:
+            if signature.id in signature_ids:
+                raise ValueError("payload contains a duplicate legacy signature ID")
+            signature_ids.add(signature.id)
+
+        migration_ids: set[str] = set()
+        for migration in self.migrations:
+            if migration.id in migration_ids:
+                raise ValueError("payload contains a duplicate migration ID")
+            migration_ids.add(migration.id)
+            endpoints = (migration.from_endpoint, migration.to_endpoint)
+            if not any(endpoint.package_version == self.payload.version for endpoint in endpoints):
+                raise ValueError("migration must connect to the containing payload version")
+            if migration.provider is not None:
+                provider = provider_by_id.get(migration.provider)
+                if provider is None or provider.operation is not ProviderOperation.MIGRATE:
+                    raise ValueError("automatic migration must identify a migrate provider")
+            if (
+                migration.instructions is not None
+                and migration.instructions.original not in resource_paths
+            ):
+                raise ValueError("manual migration instructions must be a declared resource")
+            if not set(migration.signatures).issubset(signature_ids):
+                raise ValueError("migration references an unknown legacy signature")
         return self
 
 
@@ -541,6 +899,19 @@ def _validate_declared_defaults(schema: Mapping[str, JsonValue]) -> None:
             _validate_declared_defaults(child)
 
 
+def _validate_extension_options(
+    schema: Mapping[str, JsonValue],
+    extensions: Iterable[ExtensionDeclaration],
+) -> None:
+    properties = _object_properties(schema)
+    for extension in extensions:
+        option_schema = properties.get(extension.option)
+        if not isinstance(option_schema, dict) or option_schema.get("type") != "string":
+            raise PackageContractError(
+                "extension option must identify a declared string package option"
+            )
+
+
 def _schema_error_location(error_path: Iterable[object]) -> str:
     parts = [str(part) for part in error_path]
     return ".".join(parts) or "<root>"
@@ -604,6 +975,7 @@ def load_option_schema(
     except JsonSchemaError as exc:
         raise PackageContractError("option schema is not a valid Draft 2020-12 schema") from exc
     _validate_declared_defaults(document)
+    _validate_extension_options(document, manifest.extensions)
 
     return PackageOptionSchema(
         standard_id=manifest.payload.standard,
