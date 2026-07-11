@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "default": "2026.1"
+    },
+    "strict": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

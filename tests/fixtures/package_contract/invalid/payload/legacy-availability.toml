@@ -1,0 +1,20 @@
+schema_version = "1.0"
+
+[payload]
+standard = "demo"
+version = "1.2"
+availability = "copy-adopt"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = []
+consumes_platform = []
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
