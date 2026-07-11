@@ -29,7 +29,8 @@ from project_standards.control_plane.adapters import (
     YamlAdapter,
 )
 from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
-from project_standards.control_plane.codec import semantic_digest
+from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
+from project_standards.control_plane.codec import render_catalog, semantic_digest
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -103,6 +104,7 @@ class PlannerRequest:
     resolution: ResolutionRequest
     payloads: tuple[InstalledPayload, ...]
     provider_runner: ProviderRunner | None = None
+    catalog_refresh: CatalogRefreshPlan | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +173,7 @@ class ReconciliationPlan:
     verification_requests: tuple[VerificationRequest, ...]
     provider_notices: tuple[ProviderNotice, ...]
     namespace_prunes: tuple[str, ...]
+    catalog_refresh: CatalogRefreshPlan | None
     next_lock: CentralLock
 
     def proposed_content(self, target: str) -> bytes:
@@ -226,6 +229,7 @@ class ReconciliationPlan:
                 [asdict(item) for item in self.provider_notices],
             ),
             "namespace_prunes": list(self.namespace_prunes),
+            "catalog_refresh": _catalog_refresh_json(self.catalog_refresh),
             "next_lock": cast(JsonValue, self.next_lock.model_dump(mode="json")),
         }
 
@@ -277,6 +281,33 @@ def _transition_json(transition: AcceptedTrackTransition) -> dict[str, JsonValue
             JsonValue,
             transition.current.model_dump(mode="json") if transition.current else None,
         ),
+    }
+
+
+def _catalog_refresh_json(refresh: CatalogRefreshPlan | None) -> JsonValue:
+    if refresh is None:
+        return None
+    return {
+        "changed": refresh.changed,
+        "classification": refresh.classification.value,
+        "before": {
+            "catalog": refresh.before.catalog,
+            "release": refresh.before.release,
+            "digest": refresh.before.digest.value,
+        },
+        "after": {
+            "catalog": refresh.after.catalog,
+            "release": refresh.after.release,
+            "digest": refresh.after.digest.value,
+        },
+        "affected_selections": [
+            {
+                "standard_id": item.standard_id,
+                "previous": item.previous.value if item.previous is not None else None,
+                "current": item.current.value,
+            }
+            for item in refresh.affected_selections
+        ],
     }
 
 
@@ -1380,12 +1411,60 @@ def _next_lock(
     )
 
 
+def _catalog_refresh_target(
+    refresh: CatalogRefreshPlan,
+    snapshot: RepositorySnapshot,
+) -> tuple[ControlAction | None, PlannedTarget | None, ControlFinding | None]:
+    path = SafeRelativePath.parse(".standards/catalog.toml")
+    entry = snapshot.entry(path)
+    committed = render_catalog(refresh.committed)
+    installed = render_catalog(refresh.installed)
+    if entry.kind is not EntryKind.REGULAR or entry.content != committed:
+        return (
+            None,
+            None,
+            _finding(
+                "CP-CATALOG-PRECONDITION",
+                target=path.original,
+                identity="$catalog",
+                standard_id="project-standards",
+                version="",
+                message="committed catalog changed before refresh planning",
+            ),
+        )
+    return (
+        ControlAction(
+            kind=ActionKind.UPDATE,
+            target=path.original,
+            adapter=AdapterKind.WHOLE_FILE.value,
+            scope="$catalog",
+            standard_id="project-standards",
+            summary=(
+                f"refresh catalog {refresh.before.catalog} from "
+                f"{refresh.before.release} to {refresh.after.release}"
+            ),
+            before_digest=entry.precondition_digest.value,
+            after_digest=_digest(installed).value,
+            content=installed,
+        ),
+        PlannedTarget(path.original, installed, "0644"),
+        None,
+    )
+
+
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
     resolution = resolve_packages(request.resolution)
     payloads = _payload_map(request.payloads)
     selected = _selected_payloads(resolution, payloads)
     paths = _target_paths(selected, request.resolution.previous_lock)
+    if request.catalog_refresh is not None and request.catalog_refresh.changed:
+        paths = tuple(
+            sorted(
+                (*paths, SafeRelativePath.parse(".standards/catalog.toml")),
+                key=lambda item: item.original.encode("utf-8"),
+            )
+        )
     snapshot = RepositorySnapshot.capture(request.repo, paths)
     referenced_inputs = _referenced_inputs(request, selected)
     notices: list[ProviderNotice] = []
@@ -1424,6 +1503,18 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
     )
     findings.extend(target_findings)
+    if request.catalog_refresh is not None and request.catalog_refresh.changed:
+        catalog_action, catalog_target, catalog_finding = _catalog_refresh_target(
+            request.catalog_refresh,
+            snapshot,
+        )
+        if catalog_finding is not None:
+            findings.append(catalog_finding)
+        if catalog_action is not None and catalog_target is not None:
+            actions = tuple(sort_actions((*actions, catalog_action)))
+            targets = tuple(
+                sorted((*targets, catalog_target), key=lambda item: item.target.encode("utf-8"))
+            )
     ordered_findings = tuple(sort_findings(findings))
     applicable = not any(finding.severity == "error" for finding in ordered_findings)
     namespace_prunes = _namespace_prunes(
@@ -1467,5 +1558,6 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             )
         ),
         namespace_prunes=namespace_prunes,
+        catalog_refresh=request.catalog_refresh,
         next_lock=next_lock,
     )

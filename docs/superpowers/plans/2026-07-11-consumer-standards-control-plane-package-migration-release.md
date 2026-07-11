@@ -169,16 +169,16 @@ Existing package resources remain canonical only when copied into a version dire
 
 ### Task 4: Same-Major Catalog Refresh
 
-**Files:** Create `src/project_standards/control_plane/catalog_refresh.py`; modify `control_plane/{cli,executor,planner,resolution,state}.py`; create `tests/control_plane/test_catalog_refresh.py`; expand resolver/executor/end-to-end tests.
+**Files:** Create `src/project_standards/control_plane/catalog_refresh.py`; modify `control_plane/{cli,distribution,executor,planner,recovery,resolution,state}.py`; create `tests/control_plane/test_catalog_refresh.py`; expand resolver/executor/recovery/end-to-end tests.
 
-- [ ] Write failing tests for a newer installed release on catalog 5, a byte-identical catalog, compatible default updates, retained exact pins, accepted tracks, disabled packages, unavailable pins/tracks, older installed releases, changed catalog major, and release/digest tampering.
-- [ ] Implement a pure `plan_catalog_refresh(committed, installed, desired, lock)` boundary. It accepts only a newer release on the same catalog major, validates the package-contract release diff, and returns old/new catalog lineage plus affected selections.
-- [ ] Change reconciliation planning to resolve against the validated installed snapshot while retaining the committed catalog and lock as preconditions. Include `.standards/catalog.toml` as a tool-owned planned target only when bytes differ.
-- [ ] Stage catalog refresh with artifact changes, verify the old catalog precondition immediately before publication, and write the new catalog digest/release to the central lock last.
-- [ ] Prove default-track packages advance only compatibly, exact pins remain exact, accepted tracks do not normalize, and an unavailable selection blocks every write.
-- [ ] Add human/JSON actions for catalog refresh without embedding catalog content.
-- [ ] Run focused refresh, resolver, executor, recovery, and end-to-end tests; expect pass.
-- [ ] Commit: `feat(v5): reconcile same-major catalog refreshes`
+- [x] Write failing tests for a newer installed release on catalog 5, a byte-identical catalog, compatible default updates, retained exact pins, accepted tracks, disabled packages, unavailable pins/tracks, older installed releases, changed catalog major, and release/digest tampering.
+- [x] Implement a pure `plan_catalog_refresh(committed, installed, desired, lock)` boundary. It accepts only a newer release on the same catalog major, validates the package-contract release diff, and returns old/new catalog lineage plus affected selections.
+- [x] Change reconciliation planning to resolve against the validated installed snapshot while retaining the committed catalog and lock as preconditions. Include `.standards/catalog.toml` as a tool-owned planned target only when bytes differ.
+- [x] Stage catalog refresh with artifact changes, verify the old catalog precondition immediately before publication, and write the new catalog digest/release to the central lock last.
+- [x] Prove default-track packages advance only compatibly, exact pins remain exact, accepted tracks do not normalize, and an unavailable selection blocks every write.
+- [x] Add human/JSON actions for catalog refresh without embedding catalog content.
+- [x] Run focused refresh, resolver, executor, recovery, and end-to-end tests; expect pass.
+- [x] Commit: `feat(v5): reconcile same-major catalog refreshes`
 
 ### Task 5: V2 Authoring Standard Self-Hosting Package
 

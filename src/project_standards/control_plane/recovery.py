@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import secrets
 from contextlib import suppress
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
+from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import (
     parse_catalog,
     parse_config,
@@ -58,6 +60,8 @@ from project_standards.package_contract.payload import (
     load_option_schema,
 )
 
+_STAGED_TEMPORARY = re.compile(r"^\.project-standards-[0-9a-f]{16}\.tmp$", re.ASCII)
+
 
 class RecoveryKind(StrEnum):
     """Sanctioned or refused incomplete-state recovery classes."""
@@ -65,6 +69,7 @@ class RecoveryKind(StrEnum):
     MISSING_CONFIG = "missing-config"
     MISSING_CATALOG = "missing-catalog"
     MISSING_LOCK = "missing-lock"
+    CATALOG_REFRESH = "catalog-refresh"
     UNRECOVERABLE = "unrecoverable"
 
 
@@ -89,6 +94,7 @@ class RecoveryPlan:
     reconciliation: ReconciliationPlan | None = None
     planner: PlannerRequest | None = None
     authority_preconditions: tuple[tuple[str, str], ...] = ()
+    cleanup_targets: tuple[str, ...] = ()
 
 
 def _finding(code: str, message: str, hint: str) -> ControlFinding:
@@ -251,10 +257,109 @@ def _lock_recovery(
     )
 
 
+def _catalog_refresh_recovery(
+    control: LockedControlDirectory,
+) -> RecoveryPlan:
+    try:
+        config = parse_config(control.read_bytes("config.toml"))
+        catalog = parse_catalog(control.read_bytes("catalog.toml"))
+        previous = parse_catalog(control.read_bytes(CATALOG_REFRESH_BACKUP))
+        lock = parse_lock(control.read_bytes("lock.toml"))
+    except ValueError:
+        return _refused(
+            RecoveryKind.CATALOG_REFRESH,
+            "CP-RECOVERY-CATALOG-REFRESH",
+            "catalog refresh recovery evidence is invalid",
+            "restore catalog and lock authorities from version control",
+        )
+    majors = {
+        config.project_standards.catalog,
+        catalog.project_standards.catalog,
+        previous.project_standards.catalog,
+        lock.project_standards.catalog,
+    }
+    if len(majors) != 1:
+        return _refused(
+            RecoveryKind.CATALOG_REFRESH,
+            "CP-RECOVERY-CATALOG-REFRESH",
+            "catalog refresh recovery evidence disagrees on catalog major",
+            "restore matching catalog and lock authorities from version control",
+        )
+    lock_lineage = (
+        lock.project_standards.release,
+        lock.project_standards.catalog_digest,
+    )
+    current_lineage = (
+        catalog.project_standards.release,
+        catalog.project_standards.digest,
+    )
+    previous_lineage = (
+        previous.project_standards.release,
+        previous.project_standards.digest,
+    )
+    # Enumerate through the locked directory descriptor. Path.iterdir() would
+    # reopen the pathname and lose the rename-race protection held by recovery.
+    names = os.listdir(control.descriptor)  # noqa: PTH208
+    temporaries = tuple(sorted(name for name in names if _STAGED_TEMPORARY.fullmatch(name)))
+    if any(control.file_kind(name) != "regular" for name in temporaries):
+        return _refused(
+            RecoveryKind.CATALOG_REFRESH,
+            "CP-RECOVERY-UNSAFE",
+            "catalog refresh staged evidence is unsafe",
+            "remove unsafe entries and restore authorities from version control",
+        )
+    preconditions = _preconditions(
+        control,
+        (
+            "config.toml",
+            "catalog.toml",
+            "lock.toml",
+            CATALOG_REFRESH_BACKUP,
+            *temporaries,
+        ),
+    )
+    cleanup = (*temporaries, CATALOG_REFRESH_BACKUP)
+    if current_lineage == lock_lineage:
+        return RecoveryPlan(
+            True,
+            RecoveryKind.CATALOG_REFRESH,
+            (),
+            target=f".standards/{CATALOG_REFRESH_BACKUP}",
+            authority_preconditions=preconditions,
+            cleanup_targets=cleanup,
+        )
+    if previous_lineage == lock_lineage:
+        return RecoveryPlan(
+            True,
+            RecoveryKind.CATALOG_REFRESH,
+            (),
+            target=".standards/catalog.toml",
+            proposed_content=render_catalog(previous),
+            authority_preconditions=preconditions,
+            cleanup_targets=cleanup,
+        )
+    return _refused(
+        RecoveryKind.CATALOG_REFRESH,
+        "CP-RECOVERY-CATALOG-REFRESH",
+        "neither live nor backed-up catalog matches retained lock lineage",
+        "restore matching catalog and lock authorities from version control",
+    )
+
+
 def _plan_locked(
     request: RecoveryRequest,
     control: LockedControlDirectory,
 ) -> RecoveryPlan:
+    backup_kind = control.file_kind(CATALOG_REFRESH_BACKUP)
+    if backup_kind == "unsafe":
+        return _refused(
+            RecoveryKind.UNRECOVERABLE,
+            "CP-RECOVERY-UNSAFE",
+            "catalog refresh backup is unsafe",
+            "restore safe control-plane files from version control",
+        )
+    if backup_kind == "regular":
+        return _catalog_refresh_recovery(control)
     kinds = {name: control.file_kind(name) for name in ("config.toml", "catalog.toml", "lock.toml")}
     if "unsafe" in kinds.values():
         return _refused(
@@ -355,6 +460,65 @@ def _publish_catalog(
         return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
 
 
+def _publish_catalog_refresh_recovery(
+    request: RecoveryRequest,
+    plan: RecoveryPlan,
+) -> ApplyResult:
+    cleanup = plan.cleanup_targets
+    if CATALOG_REFRESH_BACKUP not in cleanup:
+        return ApplyResult(False, (), False, "CP-RECOVERY-INCOMPLETE")
+    try:
+        with control_plane_lock(request.repo, LockMode.WRITE) as control:
+            for name, expected in plan.authority_preconditions:
+                if (
+                    control.file_kind(name) != "regular"
+                    or _digest(control.read_bytes(name)) != expected
+                ):
+                    return ApplyResult(False, (), False, "CP-STALE-PLAN")
+            applied: list[str] = []
+            temporary: str | None = None
+            try:
+                if plan.proposed_content is not None:
+                    temporary = f".project-standards-{secrets.token_hex(8)}.tmp"
+                    descriptor = os.open(
+                        temporary,
+                        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                        0o600,
+                        dir_fd=control.descriptor,
+                    )
+                    try:
+                        os.fchmod(descriptor, 0o644)
+                        remaining = memoryview(plan.proposed_content)
+                        while remaining:
+                            written = os.write(descriptor, remaining)
+                            if written == 0:
+                                raise OSError("zero-byte catalog recovery write")
+                            remaining = remaining[written:]
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+                    os.replace(
+                        temporary,
+                        "catalog.toml",
+                        src_dir_fd=control.descriptor,
+                        dst_dir_fd=control.descriptor,
+                    )
+                    temporary = None
+                    os.fsync(control.descriptor)
+                    applied.append(".standards/catalog.toml")
+                for name in cleanup:
+                    os.unlink(name, dir_fd=control.descriptor)
+                    applied.append(f"remove:.standards/{name}")
+                os.fsync(control.descriptor)
+            finally:
+                if temporary is not None:
+                    with suppress(OSError):
+                        os.unlink(temporary, dir_fd=control.descriptor)
+            return ApplyResult(True, tuple(applied), False)
+    except ValueError, OSError:
+        return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
+
+
 def apply_recovery(
     request: RecoveryRequest,
     plan: RecoveryPlan,
@@ -370,6 +534,8 @@ def apply_recovery(
         return ApplyResult(False, (), False, code)
     if plan.kind is RecoveryKind.MISSING_CATALOG:
         return _publish_catalog(request, plan)
+    if plan.kind is RecoveryKind.CATALOG_REFRESH:
+        return _publish_catalog_refresh_recovery(request, plan)
     if (
         plan.kind is RecoveryKind.MISSING_LOCK
         and plan.planner is not None

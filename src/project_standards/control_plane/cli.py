@@ -9,6 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn, cast
 
+from project_standards.control_plane.catalog_refresh import plan_catalog_refresh
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
@@ -39,7 +40,11 @@ from project_standards.control_plane.resolution import (
     ResolutionPayload,
     ResolutionRequest,
 )
-from project_standards.control_plane.state import StateKind, detect_control_plane_state
+from project_standards.control_plane.state import (
+    ControlPlaneState,
+    StateKind,
+    detect_control_plane_state,
+)
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import load_option_schema
 
@@ -113,7 +118,7 @@ def _transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
     return frozenset(transitions)
 
 
-def _planner_request(
+def build_planner_request(
     repo: Path,
     distribution: InstalledDistribution,
     allowed_majors: frozenset[MajorAuthorization],
@@ -130,17 +135,24 @@ def _planner_request(
         state.config.project_standards.catalog,
         recorded_release=state.catalog.project_standards.release,
     )
-    if distribution.consumer_catalog(state.config.project_standards.catalog) != state.catalog:
-        raise ControlPlaneError("committed catalog does not match the installed distribution")
+    refresh = plan_catalog_refresh(
+        state.catalog,
+        distribution.consumer_catalog(
+            state.config.project_standards.catalog,
+            installed=installed,
+        ),
+        state.config,
+        state.lock,
+    )
     resolution = ResolutionRequest(
         desired=state.config,
-        catalog=state.catalog,
+        catalog=refresh.installed,
         previous_lock=state.lock,
         allowed_majors=allowed_majors,
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
-    return PlannerRequest(repo, resolution, installed.payloads)
+    return PlannerRequest(repo, resolution, installed.payloads, catalog_refresh=refresh)
 
 
 def _drift(plan: ReconciliationPlan, previous_lock: CentralLock) -> bool:
@@ -156,6 +168,48 @@ def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> 
     else:
         print(f"error: {message}", file=sys.stderr)
     return exit_code
+
+
+def _inspect_tool_mismatch(
+    state: ControlPlaneState,
+    *,
+    apply: bool,
+    json_mode: bool,
+) -> int:
+    detail = state.detail or "installed tool major does not match configured catalog major"
+    if apply:
+        return _emit_error(
+            json_mode,
+            "CP-CATALOG-MAJOR-MISMATCH",
+            detail,
+            exit_code=2,
+        )
+    if state.catalog is None:
+        return _emit_error(json_mode, "CP-CONTROL-STATE", detail, exit_code=2)
+    header = state.catalog.project_standards
+    if json_mode:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "mode": "inspection",
+                    "state": state.kind.value,
+                    "mutable": False,
+                    "catalog": {
+                        "major": header.catalog.value,
+                        "release": header.release,
+                    },
+                    "error": detail,
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(
+            f"Inspection only: catalog {header.catalog.value} at {header.release}; {detail}.",
+            file=sys.stderr,
+        )
+    return 1
 
 
 def _migration_plan_payload(plan: object, *, mode: str) -> dict[str, object]:
@@ -464,7 +518,7 @@ def run(
             repo,
             tool_release=selected_distribution.tool_release.value,
         )
-        if state.kind is StateKind.INCOMPLETE:
+        if state.kind in {StateKind.INCOMPLETE, StateKind.INTERRUPTED_REFRESH}:
             if not cast("bool", args.repair_state):
                 return _emit_error(
                     json_mode,
@@ -486,7 +540,13 @@ def run(
                 "control plane is not in a sanctioned incomplete state",
                 exit_code=2,
             )
-        planner = _planner_request(repo, selected_distribution, allowed_majors)
+        if state.kind is StateKind.TOOL_MISMATCH:
+            return _inspect_tool_mismatch(
+                state,
+                apply=cast("bool", args.apply),
+                json_mode=json_mode,
+            )
+        planner = build_planner_request(repo, selected_distribution, allowed_majors)
         plan = plan_reconciliation(planner)
         if cast("bool", args.apply):
             if not plan.applicable:
@@ -568,7 +628,7 @@ def validate_repository(
                 file=sys.stderr,
             )
             return 1
-        planner = _planner_request(repo.resolve(), selected_distribution, frozenset())
+        planner = build_planner_request(repo.resolve(), selected_distribution, frozenset())
         plan = plan_reconciliation(planner)
         drift = _drift(plan, planner.resolution.previous_lock)
         for finding in plan.findings:

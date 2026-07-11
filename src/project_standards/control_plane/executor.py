@@ -20,6 +20,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import render_lock
 from project_standards.control_plane.diagnostics import (
     ActionKind,
@@ -88,6 +89,7 @@ class ApplyResult:
 @dataclass(slots=True)
 class _StagedTarget:
     target: str
+    source_descriptor: int
     parent_descriptor: int
     temporary: str
     destination: str
@@ -226,6 +228,8 @@ def _stage_targets(
     plan: ReconciliationPlan,
     root_descriptor: int,
     created: list[PurePosixPath],
+    *,
+    staging_descriptor: int | None = None,
 ) -> dict[str, _StagedTarget]:
     targets = {target.target: target for target in plan.targets}
     staged: dict[str, _StagedTarget] = {}
@@ -235,10 +239,18 @@ def _stage_targets(
         _fault(request, "stage", action.target)
         relative = SafeRelativePath.parse(action.target)
         parent_descriptor = _open_parent(root_descriptor, relative.normalized.parent, created)
+        source_descriptor = (
+            staging_descriptor if staging_descriptor is not None else parent_descriptor
+        )
         target = targets[action.target]
         try:
+            if os.fstat(source_descriptor).st_dev != os.fstat(parent_descriptor).st_dev:
+                raise _ApplyFailure(
+                    "CP-APPLY-STAGE",
+                    "catalog refresh targets must share the control-plane filesystem",
+                )
             temporary = _stage_bytes(
-                parent_descriptor,
+                source_descriptor,
                 relative.normalized.name,
                 target.content,
                 target.mode,
@@ -248,6 +260,7 @@ def _stage_targets(
             raise
         staged[action.target] = _StagedTarget(
             action.target,
+            source_descriptor,
             parent_descriptor,
             temporary,
             relative.normalized.name,
@@ -262,7 +275,7 @@ def _cleanup_staged(
 ) -> None:
     for item in staged.values():
         with suppress(OSError):
-            os.unlink(item.temporary, dir_fd=item.parent_descriptor)
+            os.unlink(item.temporary, dir_fd=item.source_descriptor)
         with suppress(OSError):
             os.close(item.parent_descriptor)
     for relative in sorted(created, key=lambda item: len(item.parts), reverse=True):
@@ -341,7 +354,7 @@ def _publish_targets(
                 os.replace(
                     item.temporary,
                     item.destination,
-                    src_dir_fd=item.parent_descriptor,
+                    src_dir_fd=item.source_descriptor,
                     dst_dir_fd=item.parent_descriptor,
                 )
                 os.fsync(item.parent_descriptor)
@@ -424,6 +437,37 @@ def _verify(
     return ordered
 
 
+def _restore_catalog_before_lock(
+    control: LockedControlDirectory,
+    backup: str,
+    committed: bytes,
+    applied: list[str],
+) -> None:
+    """Restore committed catalog authority after a handled pre-lock failure."""
+    if (
+        control.file_kind("catalog.toml") == "regular"
+        and control.read_bytes("catalog.toml") == committed
+    ):
+        with suppress(OSError):
+            os.unlink(backup, dir_fd=control.descriptor)
+        return
+    try:
+        os.replace(
+            backup,
+            "catalog.toml",
+            src_dir_fd=control.descriptor,
+            dst_dir_fd=control.descriptor,
+        )
+        os.fsync(control.descriptor)
+    except OSError as exc:
+        raise _ApplyFailure(
+            "CP-CATALOG-ROLLBACK",
+            "committed catalog could not be restored after apply failure",
+        ) from exc
+    with suppress(ValueError):
+        applied.remove(".standards/catalog.toml")
+
+
 def _apply_locked(
     request: ApplyRequest,
     control: LockedControlDirectory,
@@ -432,6 +476,10 @@ def _apply_locked(
     verification_findings: tuple[ControlFinding, ...] = ()
     staged: dict[str, _StagedTarget] = {}
     created: list[PurePosixPath] = []
+    catalog_backup_temporary: str | None = None
+    catalog_backup_published = False
+    committed_catalog: bytes | None = None
+    lock_published = False
     root, root_descriptor = _open_repository(request.planner.repo)
     try:
         expected_lock = render_lock(request.planner.resolution.previous_lock)
@@ -463,12 +511,53 @@ def _apply_locked(
         lock_changed = live_lock != new_lock
         lock_temporary: str | None = None
         try:
+            refresh = plan.catalog_refresh
+            if refresh is not None and refresh.changed:
+                if control.file_kind(CATALOG_REFRESH_BACKUP) != "missing":
+                    raise _ApplyFailure(
+                        "CP-STALE-PLAN",
+                        "catalog refresh recovery evidence already exists",
+                    )
+                committed_catalog = control.read_bytes("catalog.toml")
+                catalog_backup_temporary = _stage_bytes(
+                    control.descriptor,
+                    "catalog.toml",
+                    committed_catalog,
+                    "0644",
+                )
+                _fault(
+                    request,
+                    "publish",
+                    f".standards/{CATALOG_REFRESH_BACKUP}",
+                )
+                os.replace(
+                    catalog_backup_temporary,
+                    CATALOG_REFRESH_BACKUP,
+                    src_dir_fd=control.descriptor,
+                    dst_dir_fd=control.descriptor,
+                )
+                os.fsync(control.descriptor)
+                catalog_backup_temporary = None
+                catalog_backup_published = True
+                _fault(
+                    request,
+                    "published",
+                    f".standards/{CATALOG_REFRESH_BACKUP}",
+                )
             lock_temporary = (
                 _stage_bytes(control.descriptor, "lock.toml", new_lock, "0644")
                 if lock_changed
                 else None
             )
-            staged = _stage_targets(request, plan, root_descriptor, created)
+            staged = _stage_targets(
+                request,
+                plan,
+                root_descriptor,
+                created,
+                staging_descriptor=(
+                    control.descriptor if refresh is not None and refresh.changed else None
+                ),
+            )
             _publish_targets(request, plan, staged, applied, root_descriptor)
             verification_findings = _verify(request, plan)
             if lock_temporary is not None:
@@ -486,8 +575,9 @@ def _apply_locked(
                     dst_dir_fd=control.descriptor,
                 )
                 os.fsync(control.descriptor)
-                _fault(request, "published", ".standards/lock.toml")
+                lock_published = True
                 lock_temporary = None
+                _fault(request, "published", ".standards/lock.toml")
             return ApplyResult(
                 True,
                 tuple(applied),
@@ -495,19 +585,59 @@ def _apply_locked(
                 verification_findings=verification_findings,
             )
         except _ApplyFailure as exc:
+            if not lock_published and catalog_backup_published and committed_catalog is not None:
+                try:
+                    _restore_catalog_before_lock(
+                        control,
+                        CATALOG_REFRESH_BACKUP,
+                        committed_catalog,
+                        applied,
+                    )
+                    catalog_backup_published = False
+                except _ApplyFailure as rollback:
+                    return ApplyResult(
+                        False,
+                        tuple(applied),
+                        False,
+                        rollback.code,
+                        exc.findings or verification_findings,
+                    )
             return ApplyResult(
                 False,
                 tuple(applied),
-                False,
+                lock_published,
                 exc.code,
                 exc.findings or verification_findings,
             )
         except BaseException:
-            return ApplyResult(False, tuple(applied), False, "CP-APPLY-FAILED")
+            if not lock_published and catalog_backup_published and committed_catalog is not None:
+                try:
+                    _restore_catalog_before_lock(
+                        control,
+                        CATALOG_REFRESH_BACKUP,
+                        committed_catalog,
+                        applied,
+                    )
+                    catalog_backup_published = False
+                except _ApplyFailure as rollback:
+                    return ApplyResult(False, tuple(applied), False, rollback.code)
+            return ApplyResult(
+                False,
+                tuple(applied),
+                lock_published,
+                "CP-APPLY-FAILED",
+            )
         finally:
             if lock_temporary is not None:
                 with suppress(OSError):
                     os.unlink(lock_temporary, dir_fd=control.descriptor)
+            if catalog_backup_temporary is not None:
+                with suppress(OSError):
+                    os.unlink(catalog_backup_temporary, dir_fd=control.descriptor)
+            if lock_published and catalog_backup_published:
+                with suppress(OSError):
+                    os.unlink(CATALOG_REFRESH_BACKUP, dir_fd=control.descriptor)
+                    os.fsync(control.descriptor)
     finally:
         os.close(root_descriptor)
         _cleanup_staged(staged, root, created)
