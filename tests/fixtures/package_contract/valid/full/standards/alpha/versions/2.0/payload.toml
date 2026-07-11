@@ -1,0 +1,177 @@
+schema_version = "1.0"
+
+[payload]
+standard = "alpha"
+version = "2.0"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["alpha.render", "alpha.validate"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["gamma"]
+extends = ["beta"]
+conflicts = []
+
+[[relation_evidence]]
+kind = "extends"
+target = "beta"
+resource = "relation-beta"
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:2608325231a798db6e00da69529879d525fad11c56ec6ef813f138719a3508fd"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:22e4d75dd03aca23404bc8fa85f5fb473b8bc237f2d95ef334d02286f310589f"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:37c04612e7108b568680c4d3b58c30f72345c1d4e74fa876adff17057027d816"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:257c59f5e652808f6e9db9bb5a9f8d284c11567ef055c4081dc84cd301e8421a"
+
+[[resources]]
+id = "provider-code"
+role = "provider"
+path = "provider.py"
+media_type = "text/x-python"
+digest = "sha256:038a2f2f4f64fd8dc04bf9ba2443ce81ba9786171c5aa8cc1a57edd7c88f1e81"
+
+[[resources]]
+id = "provider-input"
+role = "provider-input-schema"
+path = "provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:61e568843e73d95da3e018d7fb42c3dc4524ac1ed199efff6e84b902ad277deb"
+
+[[resources]]
+id = "provider-output"
+role = "provider-output-schema"
+path = "provider-output.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:61e568843e73d95da3e018d7fb42c3dc4524ac1ed199efff6e84b902ad277deb"
+
+[[resources]]
+id = "relation-beta"
+role = "relation-evidence"
+path = "relation.md"
+media_type = "text/markdown"
+digest = "sha256:2632de48fa41de326abe1d2ba60ca2d8a2caf76d3a6df42b954983ee13116456"
+
+[[resources]]
+id = "migration-guide"
+role = "migration-guide"
+path = "migration.md"
+media_type = "text/markdown"
+digest = "sha256:a67b8797c8070bdaef0b03ba32eed967eabdb3028ffac72683a1b1cb289440b7"
+
+[[resources]]
+id = "legacy-reference"
+role = "legacy-reference"
+path = "legacy.md"
+media_type = "text/markdown"
+digest = "sha256:c9e8af84d208648598d673f039dea59091a9141a6150c3a2efbeb458689937ca"
+
+[[artifacts]]
+id = "alpha-config"
+target = ".standards/alpha/config.toml"
+source = "alpha.toml"
+digest = "sha256:cf792e512e6f204463ec31b284abc11e637347bc6805bab0ecaf2f47f17c0179"
+policy = "managed"
+mode = "0644"
+
+[[contributions]]
+id = "shared-indent"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#indent_style"
+policy = "create-only"
+source = "shared.ini"
+source_digest = "sha256:b5e99fb069268581b96b1ec78d520fcb7e7d5048b891d58a31f29dee989af6b9"
+shared_identity = "editorconfig/indent-style"
+
+[[contributions]]
+id = "generated-alpha"
+target = ".standards/generated.toml"
+adapter = "toml"
+scope = "table:/alpha"
+policy = "managed"
+provider = "render-alpha"
+
+[[providers]]
+id = "render-alpha"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#render"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["provider-code"]
+
+[[providers]]
+id = "migrate-alpha"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#migrate"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["provider-code"]
+
+[[extensions]]
+id = "local-options"
+option = "extension_path"
+media_type = "application/toml"
+path_policy = "repository-relative"
+preferred_root = ".standards/extensions/alpha/"
+
+[[legacy_states]]
+id = "v4-alpha"
+
+[[migrations]]
+id = "alpha-one-to-two"
+from = "package:1.0"
+to = "package:2.0"
+mode = "manual"
+instructions = "migration.md"
+reversible = true
+affected = ["config:*"]
+signatures = []
+
+[[migrations]]
+id = "legacy-alpha-to-two"
+from = "legacy:v4-alpha"
+to = "package:2.0"
+mode = "automatic"
+provider = "migrate-alpha"
+reversible = false
+affected = ["config:*"]
+signatures = ["legacy-alpha"]
+
+[[legacy_signatures]]
+id = "legacy-alpha"
+kind = "whole-file"
+targets = ["legacy-alpha.md"]
+known_content_digests = ["sha256:c9e8af84d208648598d673f039dea59091a9141a6150c3a2efbeb458689937ca"]

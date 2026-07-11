@@ -1,0 +1,83 @@
+schema_version = "1.0"
+
+[payload]
+standard = "alpha"
+version = "3.0"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["alpha.validate"]
+consumes_platform = ["project-standards.reconcile"]
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:a4d77243e179c3e27bdb029e33ce7aeb8b4aa4b155ec6550bd9d7fd836419112"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:9b974afdb6ef78803989b491b3589a81a6266bf4d41865842ca9814d3dc85f68"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:6257dab7d91308de6c3bcf8178bc8fe82f62f5d74453648bde3f91703cb3d4d8"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:9a6df90830c56bbd5ced3714694fc440765f99a86e54ba9e62e2b9b5df3c7eb8"
+
+[[resources]]
+id = "provider-code"
+role = "provider"
+path = "provider.py"
+media_type = "text/x-python"
+digest = "sha256:1ec5d2ea91bf901daea850efc940f3cf78b6baca253081553ce104595db15ab3"
+
+[[resources]]
+id = "provider-input"
+role = "provider-input-schema"
+path = "provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:61e568843e73d95da3e018d7fb42c3dc4524ac1ed199efff6e84b902ad277deb"
+
+[[resources]]
+id = "provider-output"
+role = "provider-output-schema"
+path = "provider-output.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:61e568843e73d95da3e018d7fb42c3dc4524ac1ed199efff6e84b902ad277deb"
+
+[[providers]]
+id = "migrate-alpha"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#migrate"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["provider-code"]
+
+[[migrations]]
+id = "alpha-two-to-three"
+from = "package:2.0"
+to = "package:3.0"
+mode = "automatic"
+provider = "migrate-alpha"
+reversible = true
+affected = ["config:*"]
+signatures = []

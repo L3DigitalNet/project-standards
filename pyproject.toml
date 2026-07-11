@@ -68,6 +68,9 @@ failOnWarnings = true
 minversion = "9.0"
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "performance: deterministic scale gates run explicitly in CI",
+]
 
 [tool.coverage.run]
 branch = true

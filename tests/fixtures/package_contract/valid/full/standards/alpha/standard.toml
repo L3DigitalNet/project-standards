@@ -1,0 +1,22 @@
+schema_version = "2.0"
+
+[standard]
+id = "alpha"
+name = "Alpha"
+summary = "Synthetic consumer family with retained and candidate versions."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:b57e4f6856d849af49fa7dc118d0616690730374c30202b8dafd9db028007366"
+
+[[versions]]
+version = "2.0"
+payload = "versions/2.0/payload.toml"
+digest = "sha256:da20673172d64fd986916fdab14a05111e0a6201b2212eea869ebd152e045d6b"
+
+[[versions]]
+version = "3.0"
+payload = "versions/3.0/payload.toml"
+digest = "sha256:21fda428a50867f1bfcf6d6d3aad909fbb1f1d826e2d2b48046cdff5ea73a805"

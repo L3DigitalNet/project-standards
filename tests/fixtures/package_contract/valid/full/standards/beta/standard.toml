@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "beta"
+name = "Beta"
+summary = "Synthetic reference-only family."
+status = "active"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:f238bfa21708aa4c48a65ea4948ba58209d8888434fb8f60a47ba145c0baab80"

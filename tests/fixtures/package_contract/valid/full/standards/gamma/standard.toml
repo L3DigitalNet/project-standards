@@ -1,0 +1,12 @@
+schema_version = "2.0"
+
+[standard]
+id = "gamma"
+name = "Gamma"
+summary = "Synthetic internal family."
+status = "review"
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:ed68da0a1c2be2e0afba4035ead1297a4222031207ff4a910be82a1a13628928"

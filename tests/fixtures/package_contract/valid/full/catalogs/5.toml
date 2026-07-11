@@ -1,0 +1,32 @@
+schema_version = "1.0"
+catalog_major = 5
+
+[[packages]]
+id = "alpha"
+version = "1.0"
+digest = "sha256:b57e4f6856d849af49fa7dc118d0616690730374c30202b8dafd9db028007366"
+role = "retained"
+
+[[packages]]
+id = "alpha"
+version = "2.0"
+digest = "sha256:da20673172d64fd986916fdab14a05111e0a6201b2212eea869ebd152e045d6b"
+role = "default"
+
+[[packages]]
+id = "alpha"
+version = "3.0"
+digest = "sha256:21fda428a50867f1bfcf6d6d3aad909fbb1f1d826e2d2b48046cdff5ea73a805"
+role = "candidate"
+
+[[packages]]
+id = "beta"
+version = "1.0"
+digest = "sha256:f238bfa21708aa4c48a65ea4948ba58209d8888434fb8f60a47ba145c0baab80"
+role = "reference-only"
+
+[[packages]]
+id = "gamma"
+version = "1.0"
+digest = "sha256:ed68da0a1c2be2e0afba4035ead1297a4222031207ff4a910be82a1a13628928"
+role = "internal"
