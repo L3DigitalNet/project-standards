@@ -15,6 +15,7 @@ from project_standards.control_plane.migration import (
     plan_legacy_migration,
 )
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import ProviderEffect
 from tests.control_plane.helpers import installed_distribution
 
@@ -76,6 +77,111 @@ def test_top_level_dispatches_reconcile_and_advertises_it(
         project_standards_main(["--help"])
     assert exc_info.value.code == 0
     assert "reconcile" in capsys.readouterr().out
+
+
+def test_render_emits_selected_provider_content_without_planning_inputs_or_writes(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_enabled(repo, "alpha", True)
+    _use_distribution(monkeypatch, distribution)
+    before = {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    }
+
+    assert project_standards_main(["render", "alpha", "render-alpha", "--repo", str(repo)]) == 0
+
+    assert capsys.readouterr().out == "[alpha]\nenabled = true\n"
+    assert not (repo / "config/alpha-options.toml").exists()
+    assert {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    } == before
+
+
+def test_render_json_and_selection_boundary_failures(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _use_distribution(monkeypatch, distribution)
+
+    assert (
+        project_standards_main(["render", "alpha", "render-alpha", "--repo", str(repo), "--json"])
+        == 2
+    )
+    assert '"ok": false' in capsys.readouterr().out
+
+    set_standard_enabled(repo, "alpha", True)
+    assert (
+        project_standards_main(["render", "alpha", "render-alpha", "--repo", str(repo), "--json"])
+        == 0
+    )
+    rendered = capsys.readouterr().out
+    assert '"standard_id": "alpha"' in rendered
+    assert '"provider_id": "render-alpha"' in rendered
+    assert '"content": "[alpha]\\nenabled = true\\n"' in rendered
+
+    for standard_id, provider_id in (
+        ("missing", "render-alpha"),
+        ("alpha", "missing"),
+        ("alpha", "migrate-alpha"),
+    ):
+        assert (
+            project_standards_main(
+                [
+                    "render",
+                    standard_id,
+                    provider_id,
+                    "--repo",
+                    str(repo),
+                    "--json",
+                ]
+            )
+            == 2
+        )
+        assert '"ok": false' in capsys.readouterr().out
+
+
+def test_render_distribution_discovery_failure_uses_public_error_boundary(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable() -> InstalledDistribution:
+        raise PackageContractError("distribution unavailable")
+
+    monkeypatch.setattr(InstalledDistribution, "current", staticmethod(unavailable))
+
+    assert (
+        project_standards_main(
+            [
+                "render",
+                "alpha",
+                "render-alpha",
+                "--repo",
+                str(tmp_path),
+                "--json",
+            ]
+        )
+        == 2
+    )
+    result = capsys.readouterr()
+    assert result.err == ""
+    assert '"code": "CP-RENDER"' in result.out
+    assert "distribution unavailable" in result.out
 
 
 def test_init_json_reports_created_and_idempotent(

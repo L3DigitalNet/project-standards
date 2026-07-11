@@ -278,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
 
         return _reconcile_run(args_list[1:])
 
+    if args_list and args_list[0] == "render":
+        from project_standards.control_plane.cli import run_render as _render_run
+
+        return _render_run(args_list[1:])
+
     if args_list and args_list[0] == "init":
         from project_standards.control_plane.cli import run_init as _init_run
 
@@ -468,6 +473,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("init", help="create the neutral .standards control plane")
     sub.add_parser("reconcile", help="plan, check, apply, or recover unified standards state")
+    sub.add_parser("render", help="render one enabled package provider to stdout")
 
     p_adopt = sub.add_parser(
         "adopt",

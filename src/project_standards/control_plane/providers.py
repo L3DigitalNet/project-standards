@@ -8,7 +8,7 @@ import io
 import json
 import os
 import stat
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -137,6 +137,10 @@ def read_locked_input_bytes(repo: Path, locked: LockedInput) -> bytes:
 def materialize_referenced_input_snapshots(
     repo: Path,
     snapshots: JsonObject,
+    *,
+    standard_id: str | None = None,
+    config: Mapping[str, JsonValue] | None = None,
+    extensions: Sequence[ExtensionDeclaration] | None = None,
 ) -> JsonObject:
     """Attach immutable bytes for every lock-declared referenced input."""
     raw_inputs = snapshots.get("referenced_inputs")
@@ -153,6 +157,29 @@ def materialize_referenced_input_snapshots(
     keys = [item.natural_key for item in locked_inputs]
     if len(keys) != len(set(keys)):
         raise ControlPlaneError("provider referenced-input snapshot contains a duplicate")
+    if standard_id is not None and config is not None and extensions is not None:
+        declared = {extension.id: extension for extension in extensions}
+        for locked in locked_inputs:
+            if locked.standard_id != standard_id:
+                raise ControlPlaneError(
+                    "provider referenced input does not match the selected package"
+                )
+            extension = declared.get(locked.extension_id)
+            if extension is None:
+                raise ControlPlaneError("provider referenced input uses an undeclared extension")
+            configured = config.get(extension.option)
+            if not isinstance(configured, str):
+                raise ControlPlaneError("provider referenced input has no configured path")
+            try:
+                configured_path = SafeRelativePath.parse(configured)
+            except ValueError as exc:
+                raise ControlPlaneError(
+                    "provider referenced input configured path is not canonical"
+                ) from exc
+            if configured_path != locked.path:
+                raise ControlPlaneError(
+                    "provider referenced input does not match its configured path"
+                )
     materialized: list[JsonValue] = []
     for locked in sorted(locked_inputs, key=lambda item: item.natural_key):
         content = read_locked_input_bytes(repo, locked)
@@ -571,7 +598,13 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
     }
     effective_invocation = replace(
         invocation,
-        snapshots=materialize_referenced_input_snapshots(root, invocation.snapshots),
+        snapshots=materialize_referenced_input_snapshots(
+            root,
+            invocation.snapshots,
+            standard_id=invocation.standard_id,
+            config=invocation.effective_config,
+            extensions=payload.manifest.extensions,
+        ),
     )
     provider_input = _provider_input(effective_invocation, provider_resource_bytes)
     input_value = cast(JsonValue, provider_input.model_dump(mode="json"))

@@ -203,6 +203,90 @@ def test_whole_file_mode_only_change_is_an_update(tmp_path: Path) -> None:
     assert plan.targets[0].mode == "0755"
 
 
+@pytest.mark.parametrize("enabled", [True, False])
+def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
+    tmp_path: Path,
+    enabled: bool,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    installed = b"installed\n"
+    edited = b"consumer edit\n"
+    path = repo / "usage.md"
+    path.write_bytes(edited)
+    path.chmod(0o644)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "usage",
+                "target": "usage.md",
+                "content": installed,
+                "policy": "create-only",
+            }
+        ],
+    )
+    locked = locked_unit(
+        path="usage.md",
+        adapter="whole-file",
+        scope="$file",
+        owners=["demo"],
+        semantic_digest=digest(installed),
+        content_digest=digest(installed),
+        created_container=True,
+    )
+    locked["policy"] = "create-only"
+    lock = previous_lock(locked)
+    resolution = resolution_request((payload,), previous_lock=lock)
+    if not enabled:
+        desired = resolution.desired.model_copy(
+            update={
+                "standards": {
+                    "demo": resolution.desired.standards["demo"].model_copy(
+                        update={"enabled": False}
+                    )
+                }
+            }
+        )
+        resolution = replace(resolution, desired=desired)
+
+    plan = plan_reconciliation(
+        PlannerRequest(repo=repo, resolution=resolution, payloads=(payload,))
+    )
+
+    assert plan.applicable
+    assert plan.findings == ()
+    assert _action(plan, "usage.md").kind is ActionKind.PRESERVE
+    assert plan.proposed_content("usage.md") == edited
+
+
+def test_preexisting_create_only_file_is_preserved_without_a_lock(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    edited = b"consumer edit\n"
+    (repo / "usage.md").write_bytes(edited)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "usage",
+                "target": "usage.md",
+                "content": b"package template\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+
+    assert plan.applicable
+    assert plan.findings == ()
+    assert _action(plan, "usage.md").kind is ActionKind.PRESERVE
+    assert plan.proposed_content("usage.md") == edited
+
+
 @pytest.mark.parametrize("created", [True, False])
 def test_disabled_package_removes_created_and_preserves_adopted_file(
     tmp_path: Path,
@@ -414,6 +498,61 @@ def test_provider_output_extension_input_and_package_local_output_are_planned(
             "digest": digest(extension.read_bytes()),
         }
     ]
+
+
+def test_render_providers_receive_only_package_local_referenced_inputs(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payloads: list[InstalledPayload] = []
+    configs: dict[str, dict[str, JsonValue]] = {}
+    for standard_id in ("alpha", "beta"):
+        extension = repo / f"config/{standard_id}.json"
+        extension.parent.mkdir(exist_ok=True)
+        extension.write_text(f'{{"package": "{standard_id}"}}\n', encoding="utf-8")
+        payloads.append(
+            write_payload(
+                tmp_path / standard_id,
+                standard_id,
+                contributions=[
+                    {
+                        "id": "provider-key",
+                        "target": f"generated/{standard_id}.json",
+                        "adapter": "json",
+                        "scope": "key:/generated",
+                        "provider": f"render-{standard_id}",
+                    }
+                ],
+                extensions=[
+                    {
+                        "id": "settings",
+                        "option": "settings_path",
+                        "media_type": "application/json",
+                        "path_policy": "repository-relative",
+                    }
+                ],
+                render_providers=[f"render-{standard_id}"],
+            )
+        )
+        configs[standard_id] = {"settings_path": extension.relative_to(repo).as_posix()}
+    calls: list[ProviderInvocation] = []
+
+    def render(invocation: ProviderInvocation) -> ProviderResult:
+        calls.append(invocation)
+        return ProviderResult(ProviderEffect.CONTENT, content=b'{"generated": true}\n')
+
+    plan = plan_reconciliation(_request(repo, payloads, configs=configs, provider_runner=render))
+
+    assert plan.applicable
+    assert len(calls) == 2
+    for invocation in calls:
+        referenced = invocation.snapshots["referenced_inputs"]
+        assert isinstance(referenced, list)
+        assert len(referenced) == 1
+        item = referenced[0]
+        assert isinstance(item, dict)
+        assert item["standard_id"] == invocation.standard_id
 
 
 def test_overlapping_historical_lock_scopes_block_before_render(tmp_path: Path) -> None:

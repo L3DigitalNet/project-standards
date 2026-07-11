@@ -354,6 +354,7 @@ def _write_provider_payload(
     operation: ProviderOperation = ProviderOperation.RENDER,
     effect: ProviderEffect = ProviderEffect.CONTENT,
     behavior: str = "success",
+    extensions: tuple[ExtensionDeclaration, ...] = (),
 ) -> InstalledPayload:
     root.mkdir(parents=True)
     input_schema = control_plane_schema_documents()["provider-input.schema.json"]
@@ -430,6 +431,7 @@ def _write_provider_payload(
                     "resources": ["provider-data"],
                 }
             ],
+            "extensions": [extension.model_dump(mode="json") for extension in extensions],
         }
     )
     return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
@@ -503,6 +505,54 @@ def test_provider_rejects_operation_mismatch_before_invocation(tmp_path: Path) -
                 operation=ProviderOperation.VALIDATE,
                 effective_config=invocation.effective_config,
                 snapshots=invocation.snapshots,
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("standard_id", "extension_id", "path", "message"),
+    [
+        ("other", "extra-rules", "rules.toml", "selected package"),
+        ("demo", "undeclared", "rules.toml", "undeclared extension"),
+        ("demo", "extra-rules", "other.toml", "configured path"),
+    ],
+)
+def test_provider_rejects_unscoped_referenced_input_before_reading(
+    tmp_path: Path,
+    standard_id: str,
+    extension_id: str,
+    path: str,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "rules.toml").write_text("safe", encoding="utf-8")
+    payload = _write_provider_payload(
+        tmp_path / "payload",
+        extensions=(_extension(preferred=False),),
+    )
+    invocation = _invocation(repo, payload)
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(
+            ProviderInvocation(
+                repo=invocation.repo,
+                payload=invocation.payload,
+                standard_id=invocation.standard_id,
+                version=invocation.version,
+                provider_id=invocation.provider_id,
+                operation=invocation.operation,
+                effective_config={"extra_rules_file": "rules.toml"},
+                snapshots={
+                    "referenced_inputs": [
+                        {
+                            "standard_id": standard_id,
+                            "extension_id": extension_id,
+                            "path": path,
+                            "digest": _digest(b"safe"),
+                        }
+                    ]
+                },
             )
         )
 

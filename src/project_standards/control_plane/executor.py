@@ -513,10 +513,14 @@ def _publish_targets(
         applied.append(f"prune:{namespace}")
 
 
-def _verification_snapshot(repo: Path, plan: ReconciliationPlan) -> JsonObject:
+def _verification_snapshot(
+    repo: Path,
+    plan: ReconciliationPlan,
+    standard_id: str,
+) -> JsonObject:
     targets = tuple(SafeRelativePath.parse(item.target) for item in plan.preconditions)
     snapshot = RepositorySnapshot.capture(repo, targets)
-    return {
+    result: JsonObject = {
         entry.path.original: {
             "kind": entry.kind.value,
             "content_digest": entry.content_digest.value if entry.content_digest else None,
@@ -524,6 +528,17 @@ def _verification_snapshot(repo: Path, plan: ReconciliationPlan) -> JsonObject:
         }
         for entry in snapshot.entries
     }
+    result["referenced_inputs"] = [
+        {
+            "standard_id": item.standard_id,
+            "extension_id": item.extension_id,
+            "path": item.path.original,
+            "digest": item.digest.value,
+        }
+        for item in plan.next_lock.referenced_inputs
+        if item.standard_id == standard_id
+    ]
+    return result
 
 
 def _selected_payloads(request: ApplyRequest) -> dict[tuple[str, str], InstalledPayload]:
@@ -542,7 +557,6 @@ def _verify(
     runner = request.verification_runner or invoke_provider
     packages = {item.standard_id: item for item in plan.resolution.packages}
     payloads = _selected_payloads(request)
-    snapshots = _verification_snapshot(request.planner.repo, plan)
     findings: list[ControlFinding] = []
     for verification in plan.verification_requests:
         package = packages[verification.standard_id]
@@ -558,7 +572,11 @@ def _verify(
                     provider_id=verification.provider_id,
                     operation=ProviderOperation.VERIFY,
                     effective_config=package.effective_config,
-                    snapshots=snapshots,
+                    snapshots=_verification_snapshot(
+                        request.planner.repo,
+                        plan,
+                        verification.standard_id,
+                    ),
                 )
             )
         except BaseException as exc:

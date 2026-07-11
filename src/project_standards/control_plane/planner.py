@@ -474,11 +474,16 @@ def _desired_intents(
     notices: list[ProviderNotice],
 ) -> tuple[_Intent, ...]:
     snapshots = _snapshot_json(snapshot)
-    snapshots["referenced_inputs"] = [
-        cast(JsonValue, item.model_dump(mode="json")) for item in referenced_inputs
-    ]
     intents: list[_Intent] = []
     for package, payload in selected:
+        package_snapshots: JsonObject = {
+            **snapshots,
+            "referenced_inputs": [
+                cast(JsonValue, item.model_dump(mode="json"))
+                for item in referenced_inputs
+                if item.standard_id == package.standard_id
+            ],
+        }
         intents.extend(
             _artifact_intent(package, payload, artifact) for artifact in payload.manifest.artifacts
         )
@@ -488,7 +493,7 @@ def _desired_intents(
                 package=package,
                 payload=payload,
                 contribution=contribution,
-                snapshots=snapshots,
+                snapshots=package_snapshots,
                 notices=notices,
             )
             intents.append(
@@ -856,6 +861,8 @@ def _classify_desired(
             return _unit_plan(ActionKind.CREATE, group, current), None
         if current.semantic_digest == group.unit.semantic_digest:
             return _unit_plan(ActionKind.ADOPT, group, current), None
+        if group.policy is ArtifactPolicy.CREATE_ONLY and entry.kind is EntryKind.REGULAR:
+            return _unit_plan(ActionKind.PRESERVE, group, current), None
         return None, _finding(
             "CP-CONSUMER-CONFLICT",
             target=group.target.original,
@@ -873,6 +880,8 @@ def _classify_desired(
             version=group.versions[0][1],
             message="locked unit identity does not match the selected declaration",
         )
+    if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        return _unit_plan(ActionKind.PRESERVE, group, current), None
     if current is None:
         if entry.kind is EntryKind.MISSING and previous.created_container:
             return _unit_plan(ActionKind.CREATE, group, current), None
@@ -902,8 +911,6 @@ def _classify_desired(
             version=group.versions[0][1],
             message="managed semantic value differs from the central lock",
         )
-    if previous.policy is ArtifactPolicy.CREATE_ONLY:
-        return _unit_plan(ActionKind.PRESERVE, group, current), None
     if current.semantic_digest == group.unit.semantic_digest:
         if group.mode is not None and entry.mode != group.mode:
             return _unit_plan(ActionKind.UPDATE, group, current), None
@@ -930,6 +937,8 @@ def _classify_removed(
         before_digest=current.semantic_digest.value if current else None,
         after_digest=None,
     )
+    if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        return replace(unit, kind=ActionKind.PRESERVE), None
     if current is None:
         if entry.kind is EntryKind.MISSING:
             return unit, None
@@ -950,7 +959,7 @@ def _classify_removed(
             version=versions[0][1],
             message="managed semantic value differs from the central lock",
         )
-    if previous.policy is ArtifactPolicy.CREATE_ONLY or not previous.created_container:
+    if not previous.created_container:
         return replace(unit, kind=ActionKind.PRESERVE), None
     return unit, None
 

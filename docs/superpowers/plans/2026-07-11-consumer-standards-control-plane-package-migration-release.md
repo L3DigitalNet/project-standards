@@ -56,6 +56,7 @@ These choices apply the approved specifications without adding new product behav
 12. **Release actions stay separate.** This plan prepares version/pin/changelog/upgrade evidence only to the point required for a release commit review; the retained P3 tracker controls the actual version bump, merge, tags, GitHub release, and freeze lift.
 13. **Dogfood uses a disposable release-cut checkout.** The versioning contract requires `pyproject.toml` to remain `4.3.0` on `testing` and move to `5.0.0` only in the atomic release commit on `main`. Therefore this plan proves the exact root migration in a temporary tracked-tree copy whose package metadata is changed to `5.0.0` before building the wheel. The source checkout retains `.project-standards.yml` until the release commit applies the already-proven migration.
 14. **The complete `.standards/` tree is tracked after migration.** SPEC-CP01 A-001, FR-001, and IR-006 require `config.toml`, `catalog.toml`, `lock.toml`, declared package-owned entries, and consumer extensions to be committed and reviewable. This repository does not add `.standards/` to `.gitignore`; the directory first materializes in the disposable dogfood checkout, then in the real repository through the atomic v5 release commit.
+15. **CLI identity is not executable configuration.** CP01 NG-003 and FR-018 prohibit desired config from naming commands or provider entrypoints. CLI Documentation therefore records the documented wrapper as inert `command_name` metadata, takes runtime wrapper selection from reviewed consumer-owned CI state, and bootstraps generated workflow bytes through the generic stdout-only `render` command before reconciliation locks the workflow as a referenced input.
 
 ## Requirement Allocation
 
@@ -237,13 +238,13 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/cli-documentation/standard.toml`; create `standards/cli-documentation/versions/1.1/**`; update CLI-doc workflow/provider tests and fixtures.
 
-- [ ] Write red option-schema tests for profile, entrypoint, CI enablement, and workflow runner/language assumptions. Defaults must support the current simple Python profile without making Python or GitHub mandatory.
-- [ ] Reconstruct `cli-documentation@1.1` with canonical docs, examples/templates, create-only usage documentation, and generated or semantically contributed workflow content.
-- [ ] Map legacy `cli_documentation.version` into `contract_version`; recognize exact installed usage/workflow/config-fragment states and preserve edited usage documents as consumer-owned ambiguity.
-- [ ] Bind workflow verification to the resolved payload and make disabled CI produce no workflow ownership.
-- [ ] Prove Python, non-Python, CI-disabled, fresh, migrated, drift, disable, and second-apply cases.
-- [ ] Run CLI Documentation and focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct cli documentation package`
+- [x] Write red option-schema tests for profile, inert documented command identity (`command_name`), referenced workflow path, CI enablement, and workflow runner/language assumptions. Defaults support a neutral script profile without making Python or GitHub mandatory; consumer config cannot name an executable or provider entrypoint.
+- [x] Reconstruct `cli-documentation@1.1` with canonical docs, examples/templates, create-only usage documentation, and generated workflow content exposed through the generic stdout-only `render` command.
+- [x] Map legacy `cli_documentation.version` into `contract_version`; recognize exact installed usage/workflow/config-fragment states and preserve edited usage documents as consumer-owned ambiguity.
+- [x] Bind workflow verification and referenced-input bytes to the resolved payload, isolate them per package, and make disabled CI produce no workflow ownership.
+- [x] Prove Python, non-Python, CI-disabled, fresh, migrated, drift, disable, safe no-clobber publication, and second-apply cases.
+- [x] Run CLI Documentation and focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct cli documentation package`
 
 ### Task 10: Markdown Tooling Reconstruction and Shared Configuration
 

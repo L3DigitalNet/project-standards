@@ -13,13 +13,20 @@ from project_standards.specs.cli import (
 _USAGE = Path("docs/usage.md").read_text(encoding="utf-8")
 
 # Top-level leaves are argparse-registered in cli.py; keep in sync with the parser.
-_TOP_LEVEL_LEAVES = (
+_FRONTMATTER_LEAVES = (
     "validate",
     "fix",
+)
+_CONTROL_LEAVES = (
     "init",
     "reconcile",
+    "render",
     "adopt",
     "list",
+)
+_TOP_LEVEL_LEAVES = (
+    *_FRONTMATTER_LEAVES,
+    *_CONTROL_LEAVES,
     "standards",
     "agent-handoff",
 )
@@ -68,6 +75,33 @@ def test_every_console_script_documented() -> None:
 def test_every_top_level_leaf_documented() -> None:
     missing = [name for name in _TOP_LEVEL_LEAVES if not _has_entry(name)]
     assert not missing, f"top-level commands missing from docs/usage.md: {missing}"
+
+
+def test_usage_summary_and_render_contract_match_live_inventory() -> None:
+    leaf_count = (
+        len(_FRONTMATTER_LEAVES)
+        + len(_CONTROL_LEAVES)
+        + len(_STANDARDS_VERBS)
+        + 1
+        + len(_VERBS)
+        + len(_AGENT_HANDOFF_VERBS)
+    )
+
+    assert f"exposes {leaf_count} leaf commands" in _USAGE
+    assert f"{len(_CONTROL_LEAVES)} control/adoption operations" in _USAGE
+    assert (
+        "project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]"
+    ) in _USAGE
+    assert "`render` writes rendered bytes only to standard output" in _USAGE
+    assert "scratch=$(mktemp" in _USAGE
+    assert "trap 'rm -f -- \"$scratch\"' EXIT" in _USAGE
+    assert 'actionlint "$scratch"' in _USAGE
+    assert '(set -o noclobber; cat -- "$scratch" >"$workflow_path")' in _USAGE
+    assert (
+        'project-standards render cli-documentation render-workflow --repo . >"$workflow_path"'
+    ) not in _USAGE
+    assert "detected provider mutation is an integrity incident" in _USAGE
+    assert "not an automatic rollback" in _USAGE
 
 
 def test_spec_group_and_every_verb_documented() -> None:

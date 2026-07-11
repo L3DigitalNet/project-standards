@@ -28,6 +28,7 @@ from project_standards.control_plane.planner import (
     ReconciliationPlan,
     plan_reconciliation,
 )
+from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.control_plane.recovery import (
     RecoveryPlan,
     RecoveryRequest,
@@ -39,6 +40,7 @@ from project_standards.control_plane.resolution import (
     MajorAuthorization,
     ResolutionPayload,
     ResolutionRequest,
+    resolve_packages,
 )
 from project_standards.control_plane.state import (
     ControlPlaneState,
@@ -46,7 +48,11 @@ from project_standards.control_plane.state import (
     detect_control_plane_state,
 )
 from project_standards.package_contract.diagnostics import PackageContractError
-from project_standards.package_contract.payload import load_option_schema
+from project_standards.package_contract.payload import (
+    ProviderEffect,
+    ProviderOperation,
+    load_option_schema,
+)
 
 
 class _ArgumentError(ValueError):
@@ -153,6 +159,88 @@ def build_planner_request(
         transition_paths=_transitions(installed),
     )
     return PlannerRequest(repo, resolution, installed.payloads, catalog_refresh=refresh)
+
+
+def run_render(
+    argv: list[str] | None = None,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> int:
+    """Render one selected package provider to stdout without planning changes."""
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    parser = _Parser(prog="project-standards render")
+    parser.add_argument("standard_id", metavar="STANDARD_ID")
+    parser.add_argument("provider_id", metavar="PROVIDER_ID")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    try:
+        args = parser.parse_args(arguments)
+    except (_ArgumentError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code == 0:
+            return 0
+        message = str(exc) if isinstance(exc, _ArgumentError) else "invalid arguments"
+        return _emit_error("--json" in arguments, "CP-ARGUMENT", message, exit_code=2)
+
+    json_mode = cast("bool", args.json)
+    standard_id = cast("str", args.standard_id)
+    provider_id = cast("str", args.provider_id)
+    try:
+        repo = cast("Path", args.repo).resolve()
+        selected_distribution = distribution or InstalledDistribution.current()
+        planner = build_planner_request(repo, selected_distribution, frozenset())
+        resolution = resolve_packages(planner.resolution)
+        package = next(
+            (item for item in resolution.packages if item.standard_id == standard_id),
+            None,
+        )
+        if package is None:
+            raise ControlPlaneError("render standard must be selected and enabled")
+        payload = next(
+            (
+                item
+                for item in planner.payloads
+                if item.manifest.payload.standard == standard_id
+                and item.manifest.payload.version == package.applied.resolved
+            ),
+            None,
+        )
+        if payload is None:
+            raise ControlPlaneError("selected render payload is unavailable")
+        result = invoke_provider(
+            ProviderInvocation(
+                repo=repo,
+                payload=payload,
+                standard_id=standard_id,
+                version=package.applied.resolved,
+                provider_id=provider_id,
+                operation=ProviderOperation.RENDER,
+                effective_config=package.effective_config,
+                snapshots={},
+            )
+        )
+        if result.effect is not ProviderEffect.CONTENT or result.content is None:
+            raise ControlPlaneError("render provider did not return content")
+        try:
+            content = result.content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ControlPlaneError("render provider content is not UTF-8 text") from exc
+        if json_mode:
+            print(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "standard_id": standard_id,
+                        "provider_id": provider_id,
+                        "content": content,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            sys.stdout.write(content)
+        return 0
+    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+        return _emit_error(json_mode, "CP-RENDER", str(exc), exit_code=2)
 
 
 def _drift(plan: ReconciliationPlan, previous_lock: CentralLock) -> bool:

@@ -38,6 +38,7 @@ project-standards validate [<file>...] [--config <path>] [--schema <path>] [--gl
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 project-standards init --catalog <major> [--repo <dir>] [--json]
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
+project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--dry-run] [--json]
 project-standards list [--json]
@@ -50,15 +51,15 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes thirty leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), four control/adoption operations (`init`, `reconcile`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 31 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
 `validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — thirty leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 31 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
-`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, `spec`, `standards`, specialized Agent Handoff adoption, and `agent-handoff` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
+`--version` is recognized only as the **first** argument (`project-standards --version`). The control-plane commands (`init`, `reconcile`, and `render`), `validate`, `fix`, `spec`, `standards`, `packages`, `agent-handoff`, and specialized Agent Handoff adoption are dispatched before the top-level argument parser runs. A `--version` placed after one of those commands belongs to the dispatched command rather than the top level — see [NOTES](#notes).
 
 ## OPTIONS
 
@@ -147,6 +148,41 @@ Options:
 The default mode displays the plan. Exit 1 means drift, a conflict, an authorization refusal, or a recoverable apply failure. Exit 2 means the command or control authority is invalid.
 
 Exit status: `0` reconciled or apply succeeded · `1` drift/findings/apply failure · `2` invocation, authority, package, or filesystem boundary error.
+
+### `render`
+
+Render content from one enabled package's manifest-declared `render` provider. The command resolves the selected package and its effective configuration without building a reconciliation plan or resolving referenced-input files. This permits bootstrapping a consumer-owned file that the selected configuration names but that does not exist yet.
+
+```text
+project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
+```
+
+Arguments and options:
+
+- **`<standard-id>`** — Enabled standard whose selected payload declares the provider. Required.
+- **`<provider-id>`** — Provider declared by that exact selected payload with the `render` operation. Required.
+- **`--repo <dir>`** — Initialized repository whose selected package state supplies the provider configuration. Default: current directory.
+- **`--json`** — Emit `{ok, standard_id, provider_id, content}` instead of the raw rendered content.
+
+`render` writes rendered bytes only to standard output through its public interface and has no destination or output-path option. Installed provider resources are integrity-verified and providers are forbidden to write repository files. The runner refuses a provider when it detects a repository mutation, but detected provider mutation is an integrity incident, not an automatic rollback; inspect and restore any affected path before continuing.
+
+To create a consumer-owned file, render first to an external scratch file, review and validate those complete bytes, and then publish with a no-clobber redirection. Shell redirection is the explicit consumer-owned materialization step:
+
+```bash
+set -euo pipefail
+workflow_path=.github/workflows/cli-docs-check.yml
+scratch=$(mktemp "${TMPDIR:-/tmp}/cli-docs-check.XXXXXX")
+trap 'rm -f -- "$scratch"' EXIT
+project-standards render cli-documentation render-workflow --repo . >"$scratch"
+less "$scratch"
+actionlint "$scratch"
+mkdir -p "$(dirname "$workflow_path")"
+(set -o noclobber; cat -- "$scratch" >"$workflow_path")
+```
+
+If rendering or validation fails, `set -e` stops before publication and the trap removes the scratch file. If the destination already exists, Bash's `noclobber` open fails without truncating or overwriting the consumer file. The bounded provider runner also rejects an undeclared provider, a non-render operation, or a payload-selection mismatch.
+
+Exit status: `0` content rendered · `2` invalid arguments, uninitialized or disabled state, unavailable package/provider, provider refusal, or non-UTF-8 content.
 
 ### `adopt`
 
@@ -580,6 +616,7 @@ No command reads an application-specific environment variable for configuration:
 
 ## FILES
 
+- `.standards/` — Desired, catalog, and lock state created by `init` and read by `reconcile`, `render`, and V5 catalog commands. `reconcile --apply` may replace managed state. `render` exposes no state-write path; if a provider violates its write prohibition, detection refuses the invocation but does not roll back the mutation.
 - `.project-standards.yml` — Default project config, read by `validate`, `fix`, the `spec` verbs, and the standalone validators. Overridable with `--config`.
 - `.vscode/settings.json` — Read and written by `sync-vscode-colors` / `sync-standards-include` (the `folder-color.pathColors` block).
 - Bundled schemas and spec templates ship inside the installed package (`project_standards/schemas/`, `project_standards/specs/templates/`) and are resolved automatically; they are not user-edited files.
@@ -772,7 +809,7 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## NOTES
 
-- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `validate`, `fix`, `spec`, and `standards` are early-dispatched before the top-level parser is built, so a trailing `--version` is handled by the dispatched target: after `validate` it is forwarded to the validators (which print a version and exit 0), while after `adopt` it is an argparse usage error and after `spec` or `standards` it is an unknown verb — both exit 2. Put `--version` first.
+- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `init`, `reconcile`, `render`, `agent-handoff`, `validate`, `fix`, `spec`, `standards`, and `packages` are early-dispatched before the top-level parser is built; specialized Agent Handoff adoption is also dispatched early. A trailing `--version` is therefore handled or rejected by the selected command rather than treated as the top-level version flag. For example, `validate --version` forwards the flag to the validators and exits 0, while `render --version`, generic `adopt --version`, `spec --version`, and `standards --version` are usage errors and exit 2. Put `--version` first.
 - **`validate-references` scope.** The cross-file pass is repo-wide by design; scoping it to a subset would let a duplicate id or broken reference in an unselected document slip through. `<file>` / `--glob` are therefore forwarded but ignored by this stage even though `validate-frontmatter` and `validate-id` honor them.
 - **Custom schemas disable id and format work.** When a custom (non-bundled) schema is selected, `validate-id`, `format-frontmatter`, `fix`, and `validate-references` skip their bundled-convention checks and exit 0 with a note — a custom-schema repository owns those conventions itself.
 - **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--help`/`-h` and `--version` as flags (intercepted before any positional is read); every other leading token is read as the first positional (a file path).
