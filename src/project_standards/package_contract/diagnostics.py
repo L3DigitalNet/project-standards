@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
+
+from project_standards.package_contract.paths import PackageVersion
 
 
 class PackageContractError(ValueError):
@@ -25,17 +28,29 @@ class PackageFinding:
     hint: str
 
 
-def finding_sort_key(finding: PackageFinding) -> tuple[str, ...]:
-    """Return the total ordering key used by package reports."""
+def _version_sort_key(value: str) -> tuple[int, int, int, str, str]:
+    try:
+        version = PackageVersion(value)
+    except ValueError:
+        return (1, 0, 0, unicodedata.normalize("NFC", value).casefold(), value)
+    return (0, version.major, version.minor, "", "")
+
+
+def finding_sort_key(
+    finding: PackageFinding,
+) -> tuple[str, int, int, int, str, str, str, str, str, str, str, str, str]:
+    """Return a total semantic ordering key that remains safe for invalid findings."""
+    version_key = _version_sort_key(finding.version)
     return (
-        finding.code,
-        finding.standard_id,
-        finding.version,
-        finding.path,
+        unicodedata.normalize("NFC", finding.standard_id).casefold(),
+        *version_key,
         finding.identity,
-        finding.message,
+        finding.path,
+        finding.code,
         finding.severity,
+        finding.message,
         finding.hint,
+        finding.standard_id,
     )
 
 

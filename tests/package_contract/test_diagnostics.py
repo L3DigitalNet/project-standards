@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import itertools
 from typing import Literal, get_type_hints
 
 import project_standards.package_contract as package_contract
@@ -13,14 +14,22 @@ from project_standards.package_contract import (
 )
 
 
-def _finding(*, code: str, severity: Literal["error", "warning"] = "error") -> PackageFinding:
+def _finding(
+    *,
+    code: str,
+    severity: Literal["error", "warning"] = "error",
+    standard_id: str = "markdown-tooling",
+    version: str = "5.0",
+    identity: str = "standard:markdown-tooling",
+    path: str = "standards/markdown-tooling/standard.toml",
+) -> PackageFinding:
     return PackageFinding(
         code=code,
         severity=severity,
-        standard_id="markdown-tooling",
-        version="5.0",
-        path="standards/markdown-tooling/standard.toml",
-        identity="standard:markdown-tooling",
+        standard_id=standard_id,
+        version=version,
+        path=path,
+        identity=identity,
         message=f"message for {code}",
         hint=f"hint for {code}",
     )
@@ -67,19 +76,43 @@ def test_finding_sort_is_independent_of_input_order() -> None:
     assert sort_findings([second, first]) == sort_findings([first, second]) == [first, second]
 
 
-def test_finding_sort_key_preserves_v1_leading_order_with_total_tie_breakers() -> None:
-    finding = _finding(code="PKG001", severity="warning")
-
-    assert finding_sort_key(finding) == (
-        finding.code,
-        finding.standard_id,
-        finding.version,
-        finding.path,
-        finding.identity,
-        finding.message,
-        finding.severity,
-        finding.hint,
+def test_finding_sort_uses_numeric_versions_for_every_input_permutation() -> None:
+    findings = tuple(
+        _finding(code=f"PKG{index:03d}", version=version)
+        for index, version in enumerate(("10.0", "2.10", "2.2"), start=1)
     )
+
+    for permutation in itertools.permutations(findings):
+        assert [finding.version for finding in sort_findings(permutation)] == [
+            "2.2",
+            "2.10",
+            "10.0",
+        ]
+
+
+def test_finding_sort_handles_malformed_versions_with_deterministic_fallback() -> None:
+    versions = ("bad", "", "BAD", "1.02")
+    findings = tuple(
+        _finding(code="PKG001", version=version, identity="same") for version in versions
+    )
+
+    expected = ["", "1.02", "BAD", "bad"]
+    for permutation in itertools.permutations(findings):
+        assert [finding.version for finding in sort_findings(permutation)] == expected
+
+
+def test_finding_sort_uses_normalized_standard_id_and_original_spelling_fallback() -> None:
+    lowercase = _finding(code="PKG001", standard_id="alpha", identity="same")
+    uppercase = _finding(code="PKG001", standard_id="ALPHA", identity="same")
+    later = _finding(code="PKG001", standard_id="beta", identity="same")
+
+    assert sort_findings([later, lowercase, uppercase]) == [uppercase, lowercase, later]
+
+
+def test_finding_sort_key_never_parses_invalid_version_eagerly() -> None:
+    finding = _finding(code="PKG001", version="not-a-version")
+
+    assert finding_sort_key(finding)[1] == 1
 
 
 def test_findings_to_jsonable_is_sorted_and_uses_exact_fields() -> None:

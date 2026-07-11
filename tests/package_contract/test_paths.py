@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
+import json
+import unicodedata
 from pathlib import PurePosixPath
 
 import pytest
+from pydantic import BaseModel, ConfigDict
 
 from project_standards.package_contract import (
     PackageVersion,
@@ -11,6 +14,17 @@ from project_standards.package_contract import (
     Sha256Digest,
     validate_path_collection,
 )
+
+_PACKAGE_VERSION_JSON_PATTERN = r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
+_SHA256_JSON_PATTERN = r"^sha256:[0-9a-f]{64}$"
+
+
+class _StrictScalarModel(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    version: PackageVersion
+    digest: Sha256Digest
+    path: SafeRelativePath
 
 
 @pytest.mark.parametrize(
@@ -86,6 +100,58 @@ def test_sha256_digest_rejects_noncanonical_values(value: str) -> None:
         Sha256Digest(value)
 
 
+def test_pydantic_strict_model_validates_raw_strings_and_existing_instances() -> None:
+    digest_text = f"sha256:{'0123456789abcdef' * 4}"
+    raw = {
+        "version": "2.10",
+        "digest": digest_text,
+        "path": "standards/markdown-tooling/standard.toml",
+    }
+
+    parsed = _StrictScalarModel.model_validate(raw)
+
+    assert isinstance(parsed.version, PackageVersion)
+    assert isinstance(parsed.digest, Sha256Digest)
+    assert isinstance(parsed.path, SafeRelativePath)
+    assert parsed.version.value == "2.10"
+    assert parsed.digest.value == digest_text
+    assert parsed.path.original == raw["path"]
+
+    existing_version = PackageVersion("2.10")
+    existing_digest = Sha256Digest(digest_text)
+    existing_path = SafeRelativePath.parse("README.md")
+    existing = _StrictScalarModel.model_validate(
+        {
+            "version": existing_version,
+            "digest": existing_digest,
+            "path": existing_path,
+        }
+    )
+    assert existing.version is existing_version
+    assert existing.digest is existing_digest
+    assert existing.path is existing_path
+
+
+def test_pydantic_serializes_scalars_as_strings_and_publishes_string_schemas() -> None:
+    digest_text = f"sha256:{'0' * 64}"
+    model = _StrictScalarModel.model_validate(
+        {"version": "2.10", "digest": digest_text, "path": "README.md"}
+    )
+
+    assert json.loads(model.model_dump_json()) == {
+        "version": "2.10",
+        "digest": digest_text,
+        "path": "README.md",
+    }
+    properties = _StrictScalarModel.model_json_schema()["properties"]
+    assert properties["version"]["type"] == "string"
+    assert properties["version"]["pattern"] == _PACKAGE_VERSION_JSON_PATTERN
+    assert properties["digest"]["type"] == "string"
+    assert properties["digest"]["pattern"] == _SHA256_JSON_PATTERN
+    assert properties["path"]["type"] == "string"
+    assert "pattern" not in properties["path"]
+
+
 @pytest.mark.parametrize(
     "value",
     ["README.md", "standards/markdown-tooling/standard.toml", ".github/workflows/lint.yml"],
@@ -124,6 +190,15 @@ def test_safe_relative_path_is_immutable(field_name: str) -> None:
         "C:Windows/system.ini",
         "\\\\server\\share",
         "docs/bad\x00name",
+        "docs/line\nbreak.md",
+        "docs/tab\tname.md",
+        "docs/right-to-left-override-\N{RIGHT-TO-LEFT OVERRIDE}.md",
+        "docs/report:stream",
+        "docs/*.md",
+        "docs/CON",
+        "docs/con.txt",
+        "docs/trailing.",
+        "docs/trailing ",
     ],
 )
 def test_safe_relative_path_rejects_unsafe_or_noncanonical_spelling(value: str) -> None:
@@ -132,6 +207,16 @@ def test_safe_relative_path_rejects_unsafe_or_noncanonical_spelling(value: str) 
 
     if value:
         assert value not in str(exc_info.value)
+
+
+def test_safe_relative_path_accepts_nfc_and_rejects_equivalent_nfd_spelling() -> None:
+    nfc = "docs/café.md"
+    nfd = unicodedata.normalize("NFD", nfc)
+
+    assert SafeRelativePath.parse(nfc).original == nfc
+    with pytest.raises(ValueError) as exc_info:
+        SafeRelativePath.parse(nfd)
+    assert nfd not in str(exc_info.value)
 
 
 def test_validate_path_collection_preserves_input_order() -> None:

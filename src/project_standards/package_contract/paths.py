@@ -2,15 +2,43 @@
 
 from __future__ import annotations
 
+import ntpath
 import re
-from collections.abc import Iterable
+import unicodedata
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Self
 
-_PACKAGE_VERSION_PATTERN = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", re.ASCII)
-_SHA256_PATTERN = re.compile(r"sha256:[0-9a-f]{64}", re.ASCII)
-_WINDOWS_DRIVE_PATTERN = re.compile(r"[A-Za-z]:")
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+
+_PACKAGE_VERSION_PATTERN_TEXT = r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
+_SHA256_PATTERN_TEXT = r"^sha256:[0-9a-f]{64}$"
+_PACKAGE_VERSION_PATTERN = re.compile(_PACKAGE_VERSION_PATTERN_TEXT, re.ASCII)
+_SHA256_PATTERN = re.compile(_SHA256_PATTERN_TEXT, re.ASCII)
+
+
+def _pydantic_string_schema[T](
+    scalar_type: type[T],
+    validator: Callable[[str], T],
+    serializer: Callable[[T], str],
+    *,
+    pattern: str | None = None,
+) -> CoreSchema:
+    string_schema = core_schema.str_schema(pattern=pattern, strict=True)
+    validated_string = core_schema.no_info_after_validator_function(validator, string_schema)
+    return core_schema.json_or_python_schema(
+        json_schema=validated_string,
+        python_schema=core_schema.union_schema(
+            [core_schema.is_instance_schema(scalar_type), validated_string]
+        ),
+        serialization=core_schema.plain_serializer_function_ser_schema(
+            serializer,
+            return_schema=core_schema.str_schema(),
+            when_used="always",
+        ),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +61,28 @@ class PackageVersion:
         """Return numeric components suitable for deterministic version ordering."""
         return (self.major, self.minor)
 
+    @classmethod
+    def _from_string(cls, value: str) -> Self:
+        return cls(value)
+
+    @staticmethod
+    def _to_string(value: PackageVersion) -> str:
+        return value.value
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: type[Self],
+        _handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        """Expose the scalar's strict validation and serialization contract to Pydantic."""
+        return _pydantic_string_schema(
+            cls,
+            cls._from_string,
+            cls._to_string,
+            pattern=_PACKAGE_VERSION_PATTERN_TEXT,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Sha256Digest:
@@ -44,19 +94,46 @@ class Sha256Digest:
         if _SHA256_PATTERN.fullmatch(self.value) is None:
             raise ValueError("digest must be lowercase sha256 followed by 64 hexadecimal digits")
 
+    @classmethod
+    def _from_string(cls, value: str) -> Self:
+        return cls(value)
+
+    @staticmethod
+    def _to_string(value: Sha256Digest) -> str:
+        return value.value
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: type[Self],
+        _handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        """Expose the scalar's strict validation and serialization contract to Pydantic."""
+        return _pydantic_string_schema(
+            cls,
+            cls._from_string,
+            cls._to_string,
+            pattern=_SHA256_PATTERN_TEXT,
+        )
+
 
 def _normalize_relative_path(value: str) -> PurePosixPath:
     if (
         not value
-        or "\x00" in value
+        or not value.isprintable()
         or "\\" in value
         or value.startswith("/")
-        or _WINDOWS_DRIVE_PATTERN.match(value) is not None
+        or unicodedata.normalize("NFC", value) != value
     ):
         raise ValueError("package path is not a safe canonical relative POSIX path")
 
     segments = value.split("/")
     if any(segment in {"", ".", ".."} for segment in segments):
+        raise ValueError("package path is not a safe canonical relative POSIX path")
+
+    # The neutral prefix keeps a drive-like first segment inside the path so
+    # ntpath applies its reserved-character rule to the colon as well.
+    if ntpath.isreserved(f"_/{value}"):
         raise ValueError("package path is not a safe canonical relative POSIX path")
 
     normalized = PurePosixPath(value)
@@ -80,11 +157,28 @@ class SafeRelativePath:
         """Validate one untrusted string before any filesystem access."""
         return cls(value)
 
+    @classmethod
+    def _from_string(cls, value: str) -> Self:
+        return cls.parse(value)
+
+    @staticmethod
+    def _to_string(value: SafeRelativePath) -> str:
+        return value.original
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: type[Self],
+        _handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        """Expose the scalar's strict validation and serialization contract to Pydantic."""
+        return _pydantic_string_schema(cls, cls._from_string, cls._to_string)
+
 
 def validate_path_collection(
     paths: Iterable[SafeRelativePath],
 ) -> tuple[SafeRelativePath, ...]:
-    """Preserve path order while rejecting normalized and case-folded collisions."""
+    """Preserve order while rejecting exact and NFC-normalized case-fold collisions."""
     result: list[SafeRelativePath] = []
     normalized_paths: set[str] = set()
     casefolded_paths: set[str] = set()
@@ -92,7 +186,7 @@ def validate_path_collection(
         normalized = path.normalized.as_posix()
         if normalized in normalized_paths:
             raise ValueError("package path collection contains a normalized-path collision")
-        casefolded = normalized.casefold()
+        casefolded = unicodedata.normalize("NFC", normalized).casefold()
         if casefolded in casefolded_paths:
             raise ValueError("package path collection contains a case-folded collision")
         normalized_paths.add(normalized)
