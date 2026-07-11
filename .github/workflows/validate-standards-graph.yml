@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
@@ -33,3 +35,29 @@ jobs:
 
       - name: Check standards catalog freshness
         run: uv run project-standards standards render-catalog --root . --check
+
+      - name: Resolve released V2 baseline
+        id: v2-baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(
+            git for-each-ref --sort=-version:refname --format='%(refname:short)' 'refs/tags/v[0-9]*' |
+              while IFS= read -r tag; do
+                if git ls-tree -r --name-only "$tag" -- catalogs |
+                  grep -Eq '^catalogs/[1-9][0-9]*\.toml$'; then
+                  printf '%s\n' "$tag"
+                  break
+                fi
+              done
+          )"
+          if [[ -n "$baseline" ]]; then
+            printf 'ref=%s\n' "$baseline" >> "$GITHUB_OUTPUT"
+          else
+            echo 'No released V2 catalog baseline exists.'
+            printf 'ref=\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check released V2 payloads
+        if: steps.v2-baseline.outputs.ref != ''
+        run: uv run project-standards packages check-release --root . --baseline "${{ steps.v2-baseline.outputs.ref }}"

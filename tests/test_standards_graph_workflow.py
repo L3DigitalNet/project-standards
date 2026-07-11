@@ -39,11 +39,24 @@ def test_repository_graph_workflow_contract() -> None:
         "uv run project-standards standards validate-graph --root . --require-all-manifests"
     ) in commands
     assert "uv run project-standards standards render-catalog --root . --check" in commands
+    baseline = next(step for step in job["steps"] if step.get("id") == "v2-baseline")
+    assert baseline["shell"] == "bash"
+    assert "git for-each-ref" in baseline["run"]
+    assert "git ls-tree" in baseline["run"]
+    release_gate = next(
+        step for step in job["steps"] if step.get("name") == "Check released V2 payloads"
+    )
+    assert release_gate["if"] == "steps.v2-baseline.outputs.ref != ''"
+    assert release_gate["run"] == (
+        "uv run project-standards packages check-release --root . "
+        '--baseline "${{ steps.v2-baseline.outputs.ref }}"'
+    )
 
     actual = _uses_steps(workflow)
     expected = _uses_steps(reusable_gate)
     for action in ("actions/checkout", "actions/setup-python", "astral-sh/setup-uv"):
         assert actual[action]["uses"] == expected[action]["uses"]
+    assert actual["actions/checkout"]["with"]["fetch-depth"] == 0
     assert (
         actual["astral-sh/setup-uv"]["with"]["version"]
         == expected["astral-sh/setup-uv"]["with"]["version"]
