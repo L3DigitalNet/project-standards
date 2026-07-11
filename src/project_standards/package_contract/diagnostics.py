@@ -6,8 +6,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
-type Severity = Literal["error", "warning"]
-
 
 class PackageContractError(ValueError):
     """Report malformed package input without leaking boundary implementation errors."""
@@ -18,7 +16,7 @@ class PackageFinding:
     """Describe one package-contract violation in a stable report shape."""
 
     code: str
-    severity: Severity
+    severity: Literal["error", "warning"]
     standard_id: str
     version: str
     path: str

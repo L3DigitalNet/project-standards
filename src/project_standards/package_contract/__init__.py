@@ -3,7 +3,6 @@
 from project_standards.package_contract.diagnostics import (
     PackageContractError,
     PackageFinding,
-    Severity,
     finding_sort_key,
     findings_to_jsonable,
     sort_findings,
@@ -20,7 +19,6 @@ __all__ = [
     "PackageFinding",
     "PackageVersion",
     "SafeRelativePath",
-    "Severity",
     "Sha256Digest",
     "finding_sort_key",
     "findings_to_jsonable",

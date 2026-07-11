@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import PurePosixPath
 
 import pytest
@@ -94,6 +95,14 @@ def test_safe_relative_path_preserves_original_and_normalized_path(value: str) -
 
     assert path.original == value
     assert path.normalized == PurePosixPath(value)
+
+
+@pytest.mark.parametrize("field_name", ["original", "normalized"])
+def test_safe_relative_path_is_immutable(field_name: str) -> None:
+    path = SafeRelativePath.parse("README.md")
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        setattr(path, field_name, "changed.md")
 
 
 @pytest.mark.parametrize(

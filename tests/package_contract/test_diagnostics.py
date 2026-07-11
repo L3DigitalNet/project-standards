@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Literal
+from typing import Literal, get_type_hints
 
+import project_standards.package_contract as package_contract
 from project_standards.package_contract import (
     PackageContractError,
     PackageFinding,
@@ -40,6 +41,11 @@ def test_package_finding_has_the_stable_public_field_contract() -> None:
         "hint",
     ]
     assert finding.severity == "warning"
+    assert get_type_hints(PackageFinding)["severity"] == Literal["error", "warning"]
+
+
+def test_package_root_does_not_export_internal_severity_alias() -> None:
+    assert not hasattr(package_contract, "Severity")
 
 
 def test_package_finding_is_frozen_and_slotted() -> None:
@@ -93,8 +99,23 @@ def test_findings_to_jsonable_is_sorted_and_uses_exact_fields() -> None:
         }
         for finding in (first, second)
     ]
-    assert findings_to_jsonable([second, first]) == expected
-    assert findings_to_jsonable([first, second]) == expected
+    reverse_result = findings_to_jsonable([second, first])
+    forward_result = findings_to_jsonable([first, second])
+
+    assert reverse_result == expected
+    assert forward_result == expected
+    expected_keys = [
+        "code",
+        "severity",
+        "standard_id",
+        "version",
+        "path",
+        "identity",
+        "message",
+        "hint",
+    ]
+    assert [list(item) for item in reverse_result] == [expected_keys, expected_keys]
+    assert [list(item) for item in forward_result] == [expected_keys, expected_keys]
 
 
 def test_package_contract_error_is_a_value_error() -> None:
