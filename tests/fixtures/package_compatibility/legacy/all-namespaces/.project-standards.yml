@@ -1,0 +1,24 @@
+standards_version: v4
+markdown:
+  frontmatter:
+    version: "1.1"
+    schema: markdown-frontmatter
+    required: true
+    include: ["docs/**/*.md"]
+    exclude: ["README.md"]
+  adr:
+    version: "1.0"
+    require_sections: true
+python_tooling:
+  version: "1.0"
+markdown_tooling:
+  version: "1.1"
+cli_documentation:
+  version: "1.0"
+spec:
+  version: "1.0"
+  include: ["docs/specs/**/*.md"]
+agent_handoff:
+  version: "1.0"
+  startup: automatic
+  harnesses: [claude-code, codex]

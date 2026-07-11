@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Task 1 is complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-2 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -143,15 +143,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Modify `src/project_standards/control_plane/migration.py`; create `tests/fixtures/package_compatibility/legacy/`; expand `tests/control_plane/test_migration.py`.
 
-- [ ] Add red fixtures for every current YAML namespace, unrelated top-level YAML, comments/anchors, malformed YAML, unknown namespaces/keys, recognized and modified bounded blocks, create-only files, centrally manageable files, referenced inputs, and the Agent Handoff provenance lock.
-- [ ] Add a red filesystem-spy test proving migration preview performs zero writes, renames, chmods, directory creation, network access, or direct provider mutation.
-- [ ] Implement `plan_legacy_migration(repo, distribution, catalog_major) -> LegacyMigrationPlan`. It loads `.project-standards.yml` once, selects only catalog-advertised default payloads with declared legacy endpoints, invokes each migration provider with immutable YAML/artifact/lock snapshots, and merges results in package-ID order.
-- [ ] Validate every provider-returned option object against the selected payload's `config.schema.json`. Preserve package-level `contract_version` values inside config and use `version = "latest"` for ordinary migrated selections.
-- [ ] Reject overlapping setting claims, undeclared YAML remainder, duplicate artifact claims, unknown signature digests, legacy symlinks, unsafe paths, modified managed content, and conflicting ownership before producing an applicable plan.
-- [ ] Render the complete proposed `config.toml`, installed catalog, initial central lock, artifact reconciliation plan, and visible legacy-removal actions without writing them.
-- [ ] Prove shuffled YAML mappings, provider discovery, filesystem enumeration, and package order yield byte-identical report/config/catalog/lock/plan output.
-- [ ] Run the focused migration tests; expect pass.
-- [ ] Commit: `feat(v5): plan complete legacy migrations`
+- [x] Add red fixtures for every current YAML namespace, unrelated top-level YAML, comments/anchors, malformed YAML, unknown namespaces/keys, recognized and modified bounded blocks, create-only files, centrally manageable files, referenced inputs, and the Agent Handoff provenance lock.
+- [x] Add a red filesystem-spy test proving migration preview performs zero writes, renames, chmods, directory creation, network access, or direct provider mutation.
+- [x] Implement `plan_legacy_migration(repo, distribution, catalog_major) -> LegacyMigrationPlan`. It loads `.project-standards.yml` once, selects only catalog-advertised default payloads with declared legacy endpoints, invokes each migration provider with immutable YAML/artifact/lock snapshots, and merges results in package-ID order.
+- [x] Validate every provider-returned option object against the selected payload's `config.schema.json`. Preserve package-level `contract_version` values inside config and use `version = "latest"` for ordinary migrated selections.
+- [x] Reject overlapping setting claims, undeclared YAML remainder, duplicate artifact claims, unknown signature digests, legacy symlinks, unsafe paths, modified managed content, and conflicting ownership before producing an applicable plan.
+- [x] Render the complete proposed `config.toml`, installed catalog, initial central lock, artifact reconciliation plan, and visible legacy-removal actions without writing them.
+- [x] Prove shuffled YAML mappings, provider discovery, filesystem enumeration, and package order yield byte-identical report/config/catalog/lock/plan output.
+- [x] Run the focused migration tests; expect pass.
+- [x] Commit: `feat(v5): plan complete legacy migrations`
 
 ### Task 3: Explicit Migration Apply and `init --migrate`
 

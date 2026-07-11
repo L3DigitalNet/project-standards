@@ -1,0 +1,7 @@
+standards_version: v4
+agent_handoff:
+  version: "1.0"
+  startup: automatic
+  harnesses: [claude-code, codex]
+markdown_tooling:
+  version: "1.1"

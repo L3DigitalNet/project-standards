@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Execute the approved CP01 package-migration plan; Task 1 report contracts are complete, and Task 2 read-only planning is next.
+- Execute the approved CP01 package-migration plan; Tasks 1-2 are complete, and Task 3 explicit migration apply/CLI is next.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.

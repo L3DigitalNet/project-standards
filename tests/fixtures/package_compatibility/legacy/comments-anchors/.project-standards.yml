@@ -1,0 +1,4 @@
+# Comments are harmless legacy presentation.
+shared: &shared
+  version: "1.0"
+python_tooling: *shared
