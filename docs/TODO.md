@@ -86,9 +86,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 #### P0 — Establish a verified v5 baseline
 
-- [ ] Publish the current `testing` baseline and verify hosted CI.
+- [x] 2026-07-11 - Published the current `testing` baseline and verified hosted CI (`5d21517`).
 
-  Push the local commits, confirm the first hosted Standards graph and catalog run, and record any remote-only failure before further architecture work.
+  Hosted Standards graph and catalog run `29145160155` passed for the published baseline.
 
 - [x] 2026-07-10 - Re-reviewed and approved Consumer Standards Control Plane `SPEC-CP01`.
 

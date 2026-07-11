@@ -10,7 +10,7 @@
 - SPEC-MT01 Steps 00-06 are complete; Step 07 remains the MCP-readiness gate before SPEC-MS01 server work.
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
-- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; its first hosted run awaits the next branch push.
+- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29145160155` passed for the published v5 baseline at `5d21517`.
 - `SPEC-CP01` is approved rev 0.6; rev 0.5 reconciles BA02 examples and rev 0.6 records conservative core evidence without changing requirements or scope.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` is approved at rev 0.6; revs 0.4-0.5 pin digest bytes and complete relation/legacy-state declarations, while rev 0.6 records foundation evidence without changing scope. SPEC-BA01 is superseded history.
