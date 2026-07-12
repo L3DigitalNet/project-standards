@@ -159,6 +159,39 @@ class ArtifactPolicy(StrEnum):
     CREATE_ONLY = "create-only"
 
 
+class MaterializationPredicate(StrictModel):
+    """Match one resolved package option without embedding executable policy."""
+
+    option: OptionName
+    equals: bool | int | float | str | None = None
+    contains: bool | int | float | str | None = None
+
+    @model_validator(mode="after")
+    def _one_operator(self) -> MaterializationPredicate:
+        if (self.equals is None) == (self.contains is None):
+            raise ValueError("materialization predicate requires exactly one operator")
+        return self
+
+    def matches(self, config: Mapping[str, JsonValue]) -> bool:
+        """Return whether the resolved option satisfies this closed predicate."""
+        observed = config.get(self.option)
+        if self.equals is not None:
+            return type(observed) is type(self.equals) and observed == self.equals
+        return isinstance(observed, list) and any(
+            type(item) is type(self.contains) and item == self.contains for item in observed
+        )
+
+
+class ConditionalMaterialization(StrictModel):
+    """Allow a declaration to exist only for selected resolved profiles."""
+
+    when_any: list[MaterializationPredicate] = Field(default_factory=list)
+
+    def materializes(self, config: Mapping[str, JsonValue]) -> bool:
+        """Return whether the declaration belongs in the desired virtual tree."""
+        return not self.when_any or any(predicate.matches(config) for predicate in self.when_any)
+
+
 class AdapterKind(StrEnum):
     """Semantic container adapters supported by the V1 contribution contract."""
 
@@ -171,7 +204,7 @@ class AdapterKind(StrEnum):
     MARKDOWN_BLOCK = "markdown-block"
 
 
-class WholeArtifactDeclaration(StrictModel):
+class WholeArtifactDeclaration(ConditionalMaterialization):
     """Declare exclusive ownership of one complete repository file."""
 
     id: ResourceId
@@ -254,7 +287,9 @@ def normalize_scope(adapter: AdapterKind, scope: str) -> str:
         for prefix in ("key:", "table:"):
             if scope.startswith(prefix):
                 return f"{prefix}{_json_pointer(scope.removeprefix(prefix))}"
-        raise ValueError("TOML selector must own one key or table")
+        if scope.startswith("keyed-set:"):
+            return _keyed_set_scope(scope.removeprefix("keyed-set:"))
+        raise ValueError("TOML selector must own one key, table, or keyed-set entry")
 
     if adapter in {AdapterKind.JSON, AdapterKind.JSONC, AdapterKind.YAML}:
         if scope.startswith("key:"):
@@ -284,7 +319,7 @@ def normalize_scope(adapter: AdapterKind, scope: str) -> str:
     raise ValueError("unknown semantic adapter")
 
 
-class ContributionDeclaration(StrictModel):
+class ContributionDeclaration(ConditionalMaterialization):
     """Declare ownership of one normalized semantic unit in a shared file."""
 
     id: ResourceId

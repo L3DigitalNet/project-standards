@@ -9,6 +9,7 @@ the next planner can classify and repair the incomplete transition.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -530,6 +531,11 @@ def _verification_snapshot(
         entry.path.original: {
             "kind": entry.kind.value,
             "content_digest": entry.content_digest.value if entry.content_digest else None,
+            "content_base64": (
+                base64.b64encode(entry.content).decode("ascii")
+                if entry.content is not None
+                else None
+            ),
             "mode": entry.mode,
         }
         for entry in snapshot.entries
@@ -544,7 +550,38 @@ def _verification_snapshot(
         for item in plan.next_lock.referenced_inputs
         if item.standard_id == standard_id
     ]
+    result["managed_units"] = [
+        {
+            "target": item.path.original,
+            "adapter": item.adapter.value,
+            "scope": item.scope,
+            "semantic_digest": item.semantic_digest.value,
+            "content_digest": item.content_digest.value,
+            "mode": item.mode,
+        }
+        for item in plan.next_lock.artifacts
+        if standard_id in item.owners
+    ]
     return result
+
+
+def _verify_published_targets(repo: Path, plan: ReconciliationPlan) -> None:
+    """Recheck every published target against the reviewed virtual tree."""
+    paths = tuple(SafeRelativePath.parse(item.target) for item in plan.targets)
+    snapshot = RepositorySnapshot.capture(repo, paths)
+    removed = {action.target for action in plan.actions if action.kind is ActionKind.REMOVE}
+    for planned in plan.targets:
+        entry = snapshot.entry(SafeRelativePath.parse(planned.target))
+        if planned.target in removed:
+            if entry.kind is not EntryKind.MISSING:
+                raise _ApplyFailure("CP-VERIFY", "published removal changed before verification")
+            continue
+        if (
+            entry.kind is not EntryKind.REGULAR
+            or entry.content != planned.content
+            or (planned.mode is not None and entry.mode != planned.mode)
+        ):
+            raise _ApplyFailure("CP-VERIFY", "published target changed before verification")
 
 
 def _selected_payloads(request: ApplyRequest) -> dict[tuple[str, str], InstalledPayload]:
@@ -558,6 +595,7 @@ def _verify(
     request: ApplyRequest,
     plan: ReconciliationPlan,
 ) -> tuple[ControlFinding, ...]:
+    _verify_published_targets(request.planner.repo, plan)
     if not plan.verification_requests:
         return ()
     runner = request.verification_runner or invoke_provider

@@ -168,6 +168,70 @@ def test_toml_creates_a_nested_key_in_an_empty_document_without_leading_noise() 
     assert after == b"[tool.ruff]\nline-length = 88\n"
 
 
+def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> None:
+    before = (
+        b'model = "consumer"\n\n'
+        b"[[hooks.SessionStart]]\n"
+        b'matcher = "consumer-event"\n'
+        b"[[hooks.SessionStart.hooks]]\n"
+        b'type = "command"\n'
+        b'command = "echo consumer"\n\n'
+    )
+    desired = (
+        b"[[hooks.SessionStart]]\n"
+        b'matcher = "startup|resume|clear|compact"\n'
+        b"[[hooks.SessionStart.hooks]]\n"
+        b'type = "command"\n'
+        b'command = "run handoff"\n'
+    )
+    scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
+    adapter = TomlAdapter()
+    desired_unit = _unit(adapter, desired, scope)
+
+    created = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, desired_unit.raw, desired_unit.value),),
+    )
+
+    parsed = tomllib.loads(created.decode())
+    assert [entry["matcher"] for entry in parsed["hooks"]["SessionStart"]] == [
+        "consumer-event",
+        "startup|resume|clear|compact",
+    ]
+    assert b'command = "echo consumer"' in created
+    assert _unit(adapter, created, scope).value == desired_unit.value
+
+    updated_fragment = desired.replace(b'command = "run handoff"', b'command = "run updated"')
+    updated_unit = _unit(adapter, updated_fragment, scope)
+    updated = adapter.render(
+        adapter.inspect(created, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, updated_unit.raw, updated_unit.value),),
+    )
+    assert b'command = "echo consumer"' in updated
+    assert b'command = "run updated"' in updated
+
+    removed = adapter.render(
+        adapter.inspect(updated, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+    assert tomllib.loads(removed.decode())["hooks"]["SessionStart"] == [
+        {
+            "matcher": "consumer-event",
+            "hooks": [{"type": "command", "command": "echo consumer"}],
+        }
+    ]
+    assert b"run updated" not in removed
+
+
+def test_toml_keyed_set_rejects_duplicate_identity() -> None:
+    content = (
+        b"[[hooks.SessionStart]]\nmatcher = 'owned'\n[[hooks.SessionStart]]\nmatcher = 'owned'\n"
+    )
+
+    with pytest.raises(ControlPlaneError, match="duplicate keyed-set identity"):
+        TomlAdapter().inspect(content, ("keyed-set:/hooks/SessionStart#matcher=owned",))
+
+
 def test_toml_table_update_preserves_unowned_bytes_and_reaches_fixed_point() -> None:
     before = _fixture("complex.toml")
     desired = _fixture("desired-ruff.toml")

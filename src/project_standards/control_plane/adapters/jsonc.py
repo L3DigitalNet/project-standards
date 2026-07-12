@@ -383,6 +383,20 @@ def _parse(content: bytes, kind: AdapterKind, *, fragment: bool = False) -> Json
     return JsonDocument(text, root)
 
 
+def container_value_without_comments(content: bytes, kind: AdapterKind) -> JsonValue | None:
+    """Return container semantics only when deleting it cannot discard JSONC comments."""
+    if kind not in {AdapterKind.JSON, AdapterKind.JSONC}:
+        raise ControlPlaneError("JSON container inspection requires a JSON-family adapter")
+    text = _decode(content, kind.value.upper())
+    try:
+        tokens = _lex(text, allow_comments=kind is AdapterKind.JSONC)
+    except ValueError as exc:
+        raise ControlPlaneError("content is not valid JSON-family syntax") from exc
+    if any(token.kind == "comment" for token in tokens):
+        return None
+    return _parse(content, kind).root.value
+
+
 def _pointer(value: str) -> tuple[str, ...]:
     return tuple(
         component.replace("~1", "/").replace("~0", "~") for component in value.split("/")[1:]
@@ -735,7 +749,20 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("JSON set container is not present")
             parent = _node_at(document.root, spec.path[:-1])
             if parent is None:
-                raise ControlPlaneError("JSON set container parent is not present")
+                if spec.kind != "keyed-set":
+                    raise ControlPlaneError("JSON set container parent is not present")
+                grandparent = _node_at(document.root, spec.path[:-2])
+                if grandparent is None:
+                    raise ControlPlaneError("JSON set container parent is not present")
+                if grandparent.kind != "object":
+                    raise ControlPlaneError("JSON set container grandparent is not an object")
+                parent_key = json.dumps(spec.path[-2], ensure_ascii=False)
+                member_key = json.dumps(spec.path[-1], ensure_ascii=False)
+                return _append(
+                    grandparent,
+                    document.text,
+                    f"{parent_key}: {{{member_key}: [{fragment}]}}",
+                )
             if parent.kind != "object":
                 raise ControlPlaneError("JSON set container parent is not an object")
             member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: [{fragment}]"

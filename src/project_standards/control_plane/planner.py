@@ -29,6 +29,7 @@ from project_standards.control_plane.adapters import (
     YamlAdapter,
 )
 from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
+from project_standards.control_plane.adapters.jsonc import container_value_without_comments
 from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
 from project_standards.control_plane.codec import render_catalog, semantic_digest
 from project_standards.control_plane.diagnostics import (
@@ -106,6 +107,7 @@ class PlannerRequest:
     provider_runner: ProviderRunner | None = None
     catalog_refresh: CatalogRefreshPlan | None = None
     retired_targets: frozenset[SafeRelativePath] = frozenset()
+    retired_content: tuple[tuple[SafeRelativePath, bytes], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -486,9 +488,13 @@ def _desired_intents(
             ],
         }
         intents.extend(
-            _artifact_intent(package, payload, artifact) for artifact in payload.manifest.artifacts
+            _artifact_intent(package, payload, artifact)
+            for artifact in payload.manifest.artifacts
+            if artifact.materializes(package.effective_config)
         )
         for contribution in payload.manifest.contributions:
+            if not contribution.materializes(package.effective_config):
+                continue
             content, provenance = _contribution_content(
                 request=request,
                 package=package,
@@ -960,7 +966,7 @@ def _classify_removed(
             version=versions[0][1],
             message="managed semantic value differs from the central lock",
         )
-    if not previous.created_container:
+    if previous.adapter is AdapterKind.WHOLE_FILE and not previous.created_container:
         return replace(unit, kind=ActionKind.PRESERVE), None
     return unit, None
 
@@ -984,10 +990,13 @@ def _target_action(
     adapter: AdapterKind,
     rendered: bytes,
     units: tuple[PlannedUnit, ...],
+    remove_container: bool = False,
 ) -> ControlAction:
     if entry.kind is EntryKind.MISSING:
         kind = ActionKind.CREATE if rendered else ActionKind.NOOP
-    elif adapter is AdapterKind.WHOLE_FILE and rendered == b"" and entry.kind is EntryKind.REGULAR:
+    elif remove_container or (
+        adapter is AdapterKind.WHOLE_FILE and rendered == b"" and entry.kind is EntryKind.REGULAR
+    ):
         kind = ActionKind.REMOVE
     elif entry.content == rendered:
         kinds = {unit.kind for unit in units}
@@ -1013,6 +1022,56 @@ def _target_action(
         after_digest=after,
         content=rendered,
     )
+
+
+def _nested_empty(path: tuple[str, ...], leaf: JsonValue) -> JsonObject:
+    nested: JsonValue = leaf
+    for component in reversed(path):
+        nested = {component: nested}
+    return cast(JsonObject, nested)
+
+
+def _merge_empty_scaffold(target: JsonObject, addition: JsonObject) -> None:
+    for key, value in addition.items():
+        current = target.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            _merge_empty_scaffold(current, value)
+        elif current is None:
+            target[key] = value
+        elif current != value:
+            raise ControlPlaneError("removed JSON scopes imply incompatible empty scaffolds")
+
+
+def _json_empty_scaffold(scopes: tuple[str, ...]) -> JsonObject:
+    result: JsonObject = {}
+    for scope in scopes:
+        prefix, body = scope.split(":", 1)
+        pointer = body.split("#", 1)[0]
+        path = tuple(
+            component.replace("~1", "/").replace("~0", "~") for component in pointer.split("/")[1:]
+        )
+        if prefix == "key":
+            scaffold = _nested_empty(path[:-1], {})
+        elif prefix in {"set", "keyed-set"}:
+            scaffold = _nested_empty(path, [])
+        else:
+            raise ControlPlaneError("JSON removal scope cannot define an empty scaffold")
+        _merge_empty_scaffold(result, scaffold)
+    return result
+
+
+def _container_is_package_empty(
+    adapter: AdapterKind,
+    rendered: bytes,
+    scopes: tuple[str, ...],
+) -> bool:
+    """Return whether removing the file cannot discard a consumer-owned unit."""
+    if not rendered.strip():
+        return True
+    if adapter in {AdapterKind.JSON, AdapterKind.JSONC}:
+        value = container_value_without_comments(rendered, adapter)
+        return value == _json_empty_scaffold(scopes)
+    return False
 
 
 def _render_targets(
@@ -1116,11 +1175,26 @@ def _render_targets(
             for unit in sorted(target_units, key=lambda item: item.scope.encode("utf-8"))
         )
         rendered = adapter.render(adapter.inspect(current_content, scopes), changes)
+        # `created_container` alone is insufficient: consumers may have added
+        # unrelated units after adoption. Prune only the exact empty scaffold
+        # left by removing every managed unit, and preserve any comment or value.
+        remove_container = (
+            not desired
+            and bool(previous)
+            and all(
+                item.created_container and item.policy is ArtifactPolicy.MANAGED
+                for item in previous
+            )
+            and _container_is_package_empty(adapter_kind, rendered, scopes)
+        )
+        if remove_container:
+            rendered = b""
         action = _target_action(
             entry=entry,
             adapter=adapter_kind,
             rendered=rendered,
             units=tuple(target_units),
+            remove_container=remove_container,
         )
         actions.append(action)
         unit_plans.extend(target_units)
@@ -1476,25 +1550,40 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             )
         )
     snapshot = RepositorySnapshot.capture(request.repo, paths)
-    if request.retired_targets:
+    if request.retired_targets or request.retired_content:
         # Migration replacement plans must not parse retired whole-file bytes as
-        # consumer content, but apply still binds to those exact live bytes.
+        # consumer content. Bounded legacy blocks instead expose their preserved
+        # outside bytes. Apply still binds either view to the exact live file.
         retired = {path.original for path in request.retired_targets}
+        replacement_content = {path.original: content for path, content in request.retired_content}
         snapshot = RepositorySnapshot(
             snapshot.root,
             snapshot.targets,
             tuple(
-                SnapshotEntry(
-                    path=entry.path,
-                    kind=EntryKind.MISSING,
-                    content=None,
-                    mode=entry.mode,
-                    link_target=None,
-                    content_digest=None,
-                    precondition_digest=entry.precondition_digest,
+                (
+                    SnapshotEntry(
+                        path=entry.path,
+                        kind=EntryKind.MISSING,
+                        content=None,
+                        mode=entry.mode,
+                        link_target=None,
+                        content_digest=None,
+                        precondition_digest=entry.precondition_digest,
+                    )
+                    if entry.path.original in retired and entry.kind is EntryKind.REGULAR
+                    else SnapshotEntry(
+                        path=entry.path,
+                        kind=EntryKind.REGULAR,
+                        content=replacement_content[entry.path.original],
+                        mode=entry.mode,
+                        link_target=None,
+                        content_digest=_digest(replacement_content[entry.path.original]),
+                        precondition_digest=entry.precondition_digest,
+                    )
+                    if entry.path.original in replacement_content
+                    and entry.kind is EntryKind.REGULAR
+                    else entry
                 )
-                if entry.path.original in retired and entry.kind is EntryKind.REGULAR
-                else entry
                 for entry in snapshot.entries
             ),
         )

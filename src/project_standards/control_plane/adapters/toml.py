@@ -8,6 +8,7 @@ import re
 import tomllib
 from dataclasses import dataclass
 from typing import Literal, cast
+from urllib.parse import unquote
 
 from project_standards.control_plane.adapters.base import (
     AdapterState,
@@ -39,6 +40,17 @@ class TomlStatement:
     value_start: int
     value_end: int
     array_table: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ScopeSpec:
+    """One normalized TOML selector decomposed for bounded source lookup."""
+
+    normalized: str
+    kind: Literal["key", "table", "keyed-set"]
+    path: tuple[str, ...]
+    identity_key: str | None = None
+    identity: str | None = None
 
 
 def _logical_spans(text: str) -> list[tuple[int, int]]:
@@ -273,16 +285,31 @@ def _json_value(value: object) -> JsonValue:
     raise ControlPlaneError("selected TOML value is not JSON-compatible")
 
 
-def _pointer_path(scope: str) -> tuple[Literal["key", "table"], tuple[str, ...]]:
+def _pointer(value: str) -> tuple[str, ...]:
+    return tuple(segment.replace("~1", "/").replace("~0", "~") for segment in value.split("/")[1:])
+
+
+def _scope(scope: str) -> ScopeSpec:
     try:
         normalized = normalize_scope(AdapterKind.TOML, scope)
     except ValueError as exc:
         raise ControlPlaneError("TOML scope is not canonical") from exc
-    prefix, pointer = normalized.split(":", 1)
-    path = tuple(
-        segment.replace("~1", "/").replace("~0", "~") for segment in pointer.split("/")[1:]
+    if normalized.startswith(("key:", "table:")):
+        prefix, pointer = normalized.split(":", 1)
+        return ScopeSpec(
+            normalized,
+            cast("Literal['key', 'table']", prefix),
+            _pointer(pointer),
+        )
+    pointer, binding = normalized.removeprefix("keyed-set:").rsplit("#", 1)
+    identity_key, identity = binding.split("=", 1)
+    return ScopeSpec(
+        normalized,
+        "keyed-set",
+        _pointer(pointer),
+        unquote(identity_key),
+        unquote(identity),
     )
-    return cast("Literal['key', 'table']", prefix), path
 
 
 def _value_at(root: object, path: tuple[str, ...]) -> object:
@@ -316,6 +343,70 @@ def _reject_array_ambiguity(
             kind == "table" and _is_prefix(path, statement.table)
         ):
             raise ControlPlaneError("selected TOML scope crosses an array-of-tables")
+
+
+def _keyed_values(root: object, spec: ScopeSpec) -> tuple[list[object], int | None]:
+    value = _value_at(root, spec.path)
+    if value is _MISSING:
+        return [], None
+    if not isinstance(value, list):
+        raise ControlPlaneError("TOML keyed-set scope does not identify an array")
+    items = cast("list[object]", value)
+    matches: list[int] = []
+    identity_key = spec.identity_key
+    if identity_key is None:
+        raise ControlPlaneError("TOML keyed-set scope is missing its identity key")
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ControlPlaneError("TOML keyed-set array must contain tables")
+        table = cast("dict[str, object]", item)
+        if identity_key not in table:
+            raise ControlPlaneError("TOML keyed-set entry is missing its identity key")
+        if table[identity_key] == spec.identity:
+            matches.append(index)
+    if len(matches) > 1:
+        raise ControlPlaneError("TOML content contains a duplicate keyed-set identity")
+    return items, matches[0] if matches else None
+
+
+def _keyed_entry_statements(
+    statements: tuple[TomlStatement, ...],
+    path: tuple[str, ...],
+    entry_index: int,
+) -> tuple[TomlStatement, ...]:
+    roots = [
+        index
+        for index, statement in enumerate(statements)
+        if statement.kind == "table" and statement.array_table and statement.table == path
+    ]
+    if entry_index >= len(roots):
+        raise ControlPlaneError("TOML keyed-set entry has no bounded source statements")
+    start = roots[entry_index]
+    end = roots[entry_index + 1] if entry_index + 1 < len(roots) else len(statements)
+    selected: list[TomlStatement] = []
+    for statement in statements[start:end]:
+        if statement.kind == "table" and not _is_prefix(path, statement.table):
+            break
+        if statement.kind == "assignment":
+            full_key = _full_key(statement)
+            if full_key is None or not _is_prefix(path, full_key):
+                break
+        selected.append(statement)
+    if not selected:
+        raise ControlPlaneError("TOML keyed-set entry has no bounded source statements")
+    return tuple(selected)
+
+
+def _keyed_fragment_value(content: bytes, spec: ScopeSpec) -> tuple[JsonValue, str]:
+    text = _decode(content)
+    parsed = _parse(text)
+    items, match = _keyed_values(parsed, spec)
+    if match is None or len(items) != 1:
+        raise ControlPlaneError("TOML keyed-set fragment must define exactly one selected entry")
+    normalized = _json_value(items[match])
+    if parsed != _nested_value(spec.path, [normalized]):
+        raise ControlPlaneError("TOML keyed-set fragment exceeds its declared scope")
+    return normalized, text
 
 
 def _assignment(
@@ -367,22 +458,40 @@ def _unit_for_scope(
     statements: tuple[TomlStatement, ...],
     scope: str,
 ) -> AdapterUnit | None:
-    kind, path = _pointer_path(scope)
-    _reject_array_ambiguity(statements, kind, path)
-    value = _value_at(parsed, path)
+    spec = _scope(scope)
+    if spec.kind == "keyed-set":
+        items, match = _keyed_values(parsed, spec)
+        if match is None:
+            return None
+        normalized = _json_value(items[match])
+        selected = _keyed_entry_statements(statements, spec.path, match)
+        fragment = "\n".join(text[item.start : item.end] for item in selected) + "\n"
+        isolated = _parse(fragment)
+        isolated_items, isolated_match = _keyed_values(isolated, spec)
+        if (
+            isolated_match is None
+            or len(isolated_items) != 1
+            or _json_value(isolated_items[isolated_match]) != normalized
+        ):
+            raise ControlPlaneError("selected TOML keyed-set entry cannot be isolated safely")
+        return AdapterUnit(
+            spec.normalized, normalized, fragment.encode(), semantic_digest(normalized)
+        )
+    _reject_array_ambiguity(statements, spec.kind, spec.path)
+    value = _value_at(parsed, spec.path)
     if value is _MISSING:
         return None
     normalized = _json_value(value)
-    if kind == "key":
-        statement = _assignment(statements, path)
+    if spec.kind == "key":
+        statement = _assignment(statements, spec.path)
         if statement is None:
             raise ControlPlaneError("selected TOML key is not independently addressable")
         raw = text[statement.value_start : statement.value_end].encode()
     else:
         if not isinstance(value, dict):
             raise ControlPlaneError("selected TOML table scope does not name a table")
-        raw = _table_fragment(text, statements, path, normalized)
-    return AdapterUnit(scope, normalized, raw, semantic_digest(normalized))
+        raw = _table_fragment(text, statements, spec.path, normalized)
+    return AdapterUnit(spec.normalized, normalized, raw, semantic_digest(normalized))
 
 
 def _newline(text: str) -> str:
@@ -579,9 +688,7 @@ class TomlAdapter:
             raise ControlPlaneError("content is not valid TOML") from exc
         normalized_scopes: list[str] = []
         for scope in scopes:
-            kind, path = _pointer_path(scope)
-            normalized = f"{kind}:/{'/'.join(component.replace('~', '~0').replace('/', '~1') for component in path)}"
-            normalized_scopes.append(normalized)
+            normalized_scopes.append(_scope(scope).normalized)
         if len(normalized_scopes) != len(set(normalized_scopes)):
             raise ControlPlaneError("TOML inspection contains a duplicate scope")
         units = [
@@ -606,9 +713,14 @@ class TomlAdapter:
         new_keys: list[tuple[tuple[str, ...], str]] = []
         new_tables: list[tuple[str, str]] = []
         for change in sorted(changes, key=lambda item: item.scope.encode("utf-8")):
-            kind, path = _pointer_path(change.scope)
-            _reject_array_ambiguity(statements, kind, path)
-            current = _value_at(parsed, path)
+            spec = _scope(change.scope)
+            match: int | None = None
+            if spec.kind == "keyed-set":
+                items, match = _keyed_values(parsed, spec)
+                current = items[match] if match is not None else _MISSING
+            else:
+                _reject_array_ambiguity(statements, spec.kind, spec.path)
+                current = _value_at(parsed, spec.path)
             if change.kind in {ActionKind.NOOP, ActionKind.PRESERVE}:
                 if change.content is not None or change.value is not None:
                     raise ControlPlaneError("non-mutating TOML change cannot carry content")
@@ -618,11 +730,13 @@ class TomlAdapter:
                     raise ControlPlaneError("TOML removal cannot carry content")
                 if current is _MISSING:
                     raise ControlPlaneError("TOML removal scope is not present")
-                selected = (
-                    (_assignment(statements, path),)
-                    if kind == "key"
-                    else _table_statements(statements, path)
-                )
+                if spec.kind == "keyed-set":
+                    assert match is not None
+                    selected = _keyed_entry_statements(statements, spec.path, match)
+                elif spec.kind == "key":
+                    selected = (_assignment(statements, spec.path),)
+                else:
+                    selected = _table_statements(statements, spec.path)
                 if not selected or selected[0] is None:
                     raise ControlPlaneError("TOML removal scope is not independently addressable")
                 for statement in cast("tuple[TomlStatement, ...]", selected):
@@ -637,11 +751,13 @@ class TomlAdapter:
                 continue
             if change.content is None:
                 raise ControlPlaneError("mutating TOML change requires a bounded fragment")
-            if kind == "key":
+            if spec.kind == "key":
                 desired = _fragment_value(change.content)
                 fragment = _decode(change.content)
+            elif spec.kind == "keyed-set":
+                desired, fragment = _keyed_fragment_value(change.content, spec)
             else:
-                desired, fragment = _table_fragment_value(change.content, path)
+                desired, fragment = _table_fragment_value(change.content, spec.path)
             _check_declared_value(desired, change.value)
             if change.kind is ActionKind.ADOPT:
                 if current is _MISSING or _json_value(current) != desired:
@@ -650,8 +766,8 @@ class TomlAdapter:
             if change.kind is ActionKind.CREATE:
                 if current is not _MISSING:
                     raise ControlPlaneError("TOML creation scope already exists")
-                if kind == "key":
-                    new_keys.append((path, fragment))
+                if spec.kind == "key":
+                    new_keys.append((spec.path, fragment))
                 else:
                     new_tables.append((change.scope, fragment))
                 continue
@@ -661,13 +777,21 @@ class TomlAdapter:
                 raise ControlPlaneError("TOML update scope is not present")
             if _json_value(current) == desired:
                 continue
-            if kind == "key":
-                statement = _assignment(statements, path)
+            if spec.kind == "key":
+                statement = _assignment(statements, spec.path)
                 if statement is None:
                     raise ControlPlaneError("TOML update scope is not independently addressable")
                 edits.append((statement.value_start, statement.value_end, fragment))
+            elif spec.kind == "keyed-set":
+                assert match is not None
+                selected = _keyed_entry_statements(statements, spec.path, match)
+                for index, statement in enumerate(selected):
+                    source = text[statement.start : statement.end]
+                    preserved = _preserve_comments_and_whitespace(source)
+                    replacement = f"{fragment}{preserved}" if index == 0 else preserved
+                    edits.append((statement.start, statement.end, replacement))
             else:
-                selected = _table_statements(statements, path)
+                selected = _table_statements(statements, spec.path)
                 if not selected:
                     raise ControlPlaneError("TOML update scope is not independently addressable")
                 for index, statement in enumerate(selected):

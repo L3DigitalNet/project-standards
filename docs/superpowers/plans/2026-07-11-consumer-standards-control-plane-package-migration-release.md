@@ -290,14 +290,14 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/agent-handoff/standard.toml`; create `standards/agent-handoff/versions/1.1/**`; modify `src/project_standards/agent_handoff/**`, its CLI/tests, and compatibility fixtures.
 
-- [ ] Write options for contract version, startup mode, and harness selection. Preserve create-only project knowledge and keep non-discovered policy under `.standards/packages/agent-handoff/`.
-- [ ] Reconstruct `agent-handoff@1.1` with canonical docs, templates, skill, hook, integration sources, policy, legacy guidance, and version-selected scaffold/validate/drift/extract providers.
-- [ ] Convert scaffold/upgrade/render operations to typed plans. Keep validation/extract providers read-only and bind every provider to immutable payload resources.
-- [ ] Import recognized `.agents/agent-handoff/manifest.json` ownership into the central lock, preserve required package-local state, and remove the package-specific lock only after verification. Unknown versions, paths, owners, or digests block migration.
-- [ ] Preserve consumer knowledge outside standard-owned artifacts and managed blocks. Compose AGENTS/CLAUDE, Claude settings, Codex config, and `.project-standards.yml` retirement through bounded semantic declarations/signatures.
-- [ ] Prove all supported harness profiles, fresh adoption, legacy migration, modified knowledge preservation, drift, upgrade, disable/re-enable, lock retirement, and second apply.
-- [ ] Run the full Agent Handoff suite plus focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct agent handoff package`
+- [x] Write options for contract version, startup mode, and harness selection. Preserve create-only project knowledge and keep non-discovered policy under `.standards/packages/agent-handoff/`.
+- [x] Reconstruct `agent-handoff@1.1` with canonical docs, templates, skill, hook, integration sources, policy, legacy guidance, and version-selected scaffold/validate/drift/extract providers.
+- [x] Convert scaffold/upgrade/render operations to typed plans. Keep validation/extract providers read-only and bind every provider to immutable payload resources.
+- [x] Import recognized `.agents/agent-handoff/manifest.json` ownership into the central lock, preserve required package-local state, and remove the package-specific lock only after verification. Unknown versions, paths, owners, or digests block migration.
+- [x] Preserve consumer knowledge outside standard-owned artifacts and managed blocks. Compose AGENTS/CLAUDE, Claude settings, Codex config, and `.project-standards.yml` retirement through bounded semantic declarations/signatures.
+- [x] Prove all supported harness profiles, fresh adoption, legacy migration, modified knowledge preservation, drift, upgrade, disable/re-enable, lock retirement, and second apply.
+- [x] Run the full Agent Handoff suite plus focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct agent handoff package`
 
 ### Task 14: Real Catalog 5 Activation and V1 Manifest Cutover
 

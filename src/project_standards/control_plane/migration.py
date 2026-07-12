@@ -592,6 +592,47 @@ def _bounded_block(
     return normalized_body, False
 
 
+def _strip_bounded_block(content: bytes, signature: LegacySignatureDeclaration) -> bytes:
+    """Remove one exactly recognized legacy block while preserving outside bytes."""
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ControlPlaneError("legacy bounded content is not UTF-8") from exc
+    lines = text.splitlines(keepends=True)
+    normalized = [line.rstrip("\r\n") for line in lines]
+    assert signature.begin is not None and signature.end is not None
+    begins = [index for index, line in enumerate(normalized) if line == signature.begin]
+    ends = [index for index, line in enumerate(normalized) if line == signature.end]
+    if len(begins) != 1 or len(ends) != 1 or begins[0] >= ends[0]:
+        raise ControlPlaneError("legacy bounded content changed after signature inspection")
+    return "".join((*lines[: begins[0]], *lines[ends[0] + 1 :])).encode()
+
+
+def _retirement_views(
+    reports: tuple[MigrationReport, ...],
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+    legacy_files: Mapping[str, bytes],
+) -> tuple[frozenset[SafeRelativePath], tuple[tuple[SafeRelativePath, bytes], ...]]:
+    """Separate whole-file retirement from bounded-block semantic replacement."""
+    whole: set[SafeRelativePath] = set()
+    bounded: dict[SafeRelativePath, bytes] = {}
+    for report in reports:
+        payload = payloads[(report.package.standard_id, report.package.version.value)]
+        signatures = {item.id: item for item in payload.manifest.legacy_signatures}
+        for claim in report.claims:
+            if claim.disposition is not LegacyDisposition.REMOVE:
+                continue
+            signature = signatures[claim.signature_id]
+            if signature.kind is LegacySignatureKind.WHOLE_FILE:
+                whole.add(claim.target)
+                continue
+            current = bounded.get(claim.target, legacy_files[claim.target.original])
+            bounded[claim.target] = _strip_bounded_block(current, signature)
+    return frozenset(whole), tuple(
+        sorted(bounded.items(), key=lambda item: item[0].original.encode("utf-8"))
+    )
+
+
 def _legacy_target(repo: Path, target: SafeRelativePath) -> Path:
     current = repo
     for part in target.normalized.parts:
@@ -1010,9 +1051,50 @@ def _adopted_legacy_units(
             if item.adapter is AdapterKind.WHOLE_FILE and item.scope == "$file"
         }
         for claim in report.claims:
+            observed_item = observed.get((claim.signature_id, claim.target.original))
+            if (
+                claim.disposition is LegacyDisposition.IMPORT_LOCK
+                and claim.ownership == "package-lock"
+                and observed_item is not None
+                and observed_item.known
+                and observed_item.digest == claim.observed_digest
+            ):
+                try:
+                    lock_data = cast(object, json.loads(observed_item.content))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise ControlPlaneError("recognized legacy package lock is invalid") from exc
+                if not isinstance(lock_data, dict):
+                    raise ControlPlaneError("recognized legacy package lock must be an object")
+                managed = cast("dict[str, object]", lock_data).get("managed")
+                if not isinstance(managed, dict):
+                    raise ControlPlaneError("recognized legacy package lock has no managed map")
+                for target, raw_digest in cast("dict[str, object]", managed).items():
+                    if "#" in target:
+                        continue
+                    artifact = artifacts.get(SafeRelativePath.parse(target))
+                    if artifact is None or not isinstance(raw_digest, str):
+                        raise ControlPlaneError(
+                            "legacy package lock contains an undeclared managed whole file"
+                        )
+                    digest = Sha256Digest(f"sha256:{raw_digest}")
+                    units.append(
+                        LockedUnit(
+                            path=artifact.target,
+                            adapter=AdapterKind.WHOLE_FILE,
+                            scope="$file",
+                            owners=(package.standard_id,),
+                            versions={package.standard_id: package.version},
+                            provenance=UnitProvenance.PACKAGE,
+                            policy=ArtifactPolicy.MANAGED,
+                            semantic_digest=digest,
+                            content_digest=digest,
+                            mode=artifact.mode,
+                            created_container=True,
+                        )
+                    )
+                continue
             if claim.disposition is not LegacyDisposition.ADOPT or claim.ownership != "managed":
                 continue
-            observed_item = observed.get((claim.signature_id, claim.target.original))
             signature = signatures.get(claim.signature_id)
             artifact = artifacts.get(claim.target)
             contribution = contributions.get(claim.target)
@@ -1254,17 +1336,17 @@ def _plan_legacy_migration(
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
-    retired_targets = frozenset(
-        claim.target
-        for report in ordered_reports
-        for claim in report.claims
-        if claim.disposition is LegacyDisposition.REMOVE
+    retired_targets, retired_content = _retirement_views(
+        ordered_reports,
+        payloads,
+        legacy_files,
     )
     planner = PlannerRequest(
         repo=normalized,
         resolution=resolution,
         payloads=installed.payloads,
         retired_targets=retired_targets,
+        retired_content=retired_content,
     )
     reconciliation = plan_reconciliation(planner)
     if state.kind is StateKind.DUAL_AUTHORITY:

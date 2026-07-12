@@ -8,6 +8,7 @@ import pytest
 from project_standards.control_plane.adapters.base import AdapterUnit, UnitChange
 from project_standards.control_plane.adapters.jsonc import JsonAdapter, JsoncAdapter
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.package_contract.payload import JsonObject
 
 _FIXTURES = Path(__file__).parent / "fixtures/jsonc"
 
@@ -125,6 +126,23 @@ def test_jsonc_updates_keyed_entry_without_touching_siblings_or_comments() -> No
     assert b"/* lint note */" not in after
     assert desired in after
     assert after.endswith(b'  "escaped/key": "quoted \\"value\\"",\n}\n')
+
+
+def test_jsonc_creates_nested_keyed_set_container_from_root_object() -> None:
+    adapter = JsoncAdapter()
+    scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume"
+    desired: JsonObject = {
+        "matcher": "startup|resume",
+        "hooks": [{"type": "command", "command": "python hook.py"}],
+    }
+    content = json.dumps(desired, separators=(",", ":")).encode()
+
+    rendered = adapter.render(
+        adapter.inspect(b"{}\n", (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, content=content, value=desired),),
+    )
+
+    assert json.loads(rendered) == {"hooks": {"SessionStart": [desired]}}
 
 
 def test_jsonc_removes_set_entry_but_preserves_consumer_comments_and_trailing_comma() -> None:
