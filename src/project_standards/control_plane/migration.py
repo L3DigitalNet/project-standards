@@ -155,6 +155,12 @@ class LegacyClaim(StrictModel):
     observed_digest: Sha256Digest
     ownership: LegacyOwnership
     disposition: LegacyDisposition
+    intent_pointer: str | None = None
+
+    @field_validator("intent_pointer")
+    @classmethod
+    def _canonical_intent_pointer(cls, value: str | None) -> str | None:
+        return None if value is None else validate_json_pointer(value)
 
     @model_validator(mode="after")
     def _safe_disposition(self) -> LegacyClaim:
@@ -192,6 +198,7 @@ def _claim_sort_key(claim: LegacyClaim) -> tuple[str, ...]:
         claim.observed_digest.value,
         claim.ownership,
         claim.disposition.value,
+        claim.intent_pointer or "",
     )
 
 
@@ -226,6 +233,19 @@ class MigrationReport(StrictModel):
         return self
 
 
+def _claim_to_jsonable(claim: LegacyClaim) -> dict[str, object]:
+    result: dict[str, object] = {
+        "signature_id": claim.signature_id,
+        "target": claim.target.original,
+        "observed_digest": claim.observed_digest.value,
+        "ownership": claim.ownership,
+        "disposition": claim.disposition.value,
+    }
+    if claim.intent_pointer is not None:
+        result["intent_pointer"] = claim.intent_pointer
+    return result
+
+
 def migration_report_to_jsonable(report: MigrationReport) -> dict[str, object]:
     """Return stable public fields while withholding migrated option values."""
     selector = report.package.selector
@@ -238,16 +258,7 @@ def migration_report_to_jsonable(report: MigrationReport) -> dict[str, object]:
             "selector": selector_value,
             "recognized_settings": list(report.package.recognized_settings),
         },
-        "claims": [
-            {
-                "signature_id": claim.signature_id,
-                "target": claim.target.original,
-                "observed_digest": claim.observed_digest.value,
-                "ownership": claim.ownership,
-                "disposition": claim.disposition.value,
-            }
-            for claim in report.claims
-        ],
+        "claims": [_claim_to_jsonable(claim) for claim in report.claims],
         "findings": [
             {
                 "code": finding.code,
@@ -272,6 +283,7 @@ def render_migration_report(report: MigrationReport) -> str:
         "claim "
         f"{claim.signature_id} {claim.target.original} {claim.observed_digest.value} "
         f"{claim.ownership} {claim.disposition.value}"
+        + (f" {claim.intent_pointer}" if claim.intent_pointer is not None else "")
         for claim in report.claims
     )
     lines.extend(

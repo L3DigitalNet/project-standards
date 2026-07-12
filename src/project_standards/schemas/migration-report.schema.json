@@ -45,6 +45,18 @@
         "disposition": {
           "$ref": "#/$defs/LegacyDisposition"
         },
+        "intent_pointer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Pointer"
+        },
         "observed_digest": {
           "pattern": "^sha256:[0-9a-f]{64}$",
           "title": "Observed Digest",

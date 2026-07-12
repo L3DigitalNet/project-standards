@@ -148,6 +148,47 @@ def test_legacy_claim_rejects_unsafe_targets(target: str) -> None:
         _claim(target=target)
 
 
+def test_legacy_claim_accepts_optional_canonical_intent_pointer() -> None:
+    claim = _claim(
+        ownership="consumer-owned",
+        disposition="preserve",
+        intent_pointer="/python_tooling/workflow_ownership",
+    )
+    report = MigrationReport(
+        schema_version="1.0",
+        package=_package(),
+        claims=(claim,),
+    )
+    claims = cast(
+        "list[dict[str, object]]",
+        migration_report_to_jsonable(report)["claims"],
+    )
+
+    assert claim.intent_pointer == "/python_tooling/workflow_ownership"
+    assert claims[0]["intent_pointer"] == claim.intent_pointer
+    assert "/python_tooling/workflow_ownership" in render_migration_report(report)
+
+
+def test_known_claim_json_shape_omits_absent_intent_pointer() -> None:
+    report = MigrationReport(
+        schema_version="1.0",
+        package=_package(),
+        claims=(_claim(),),
+    )
+    claims = cast(
+        "list[dict[str, object]]",
+        migration_report_to_jsonable(report)["claims"],
+    )
+
+    assert "intent_pointer" not in claims[0]
+
+
+@pytest.mark.parametrize("pointer", ["relative", "/bad~2escape", "/trailing~"])
+def test_legacy_claim_rejects_noncanonical_intent_pointer(pointer: str) -> None:
+    with pytest.raises(ValidationError, match="intent_pointer"):
+        _claim(intent_pointer=pointer)
+
+
 def test_migration_report_rejects_duplicate_signature_target_claims() -> None:
     with pytest.raises(ValidationError, match="duplicate legacy claim"):
         MigrationReport(

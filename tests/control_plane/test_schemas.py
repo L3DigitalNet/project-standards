@@ -52,6 +52,16 @@ def test_control_plane_schema_set_is_deterministic_and_structurally_closed() -> 
         assert json.loads(control_plane_schema_bytes()[name]) == document
 
 
+def test_migration_claim_schema_exposes_optional_intent_pointer() -> None:
+    schema = control_plane_schema_documents()["migration-report.schema.json"]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    claim = cast("dict[str, object]", definitions["LegacyClaim"])
+    properties = cast("dict[str, object]", claim["properties"])
+
+    assert "intent_pointer" in properties
+    assert "intent_pointer" not in cast("list[str]", claim["required"])
+
+
 def test_control_plane_schema_generator_writes_checks_and_detects_drift(
     tmp_path: Path,
 ) -> None:
