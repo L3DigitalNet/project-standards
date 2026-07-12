@@ -84,3 +84,12 @@ Replace every placeholder in the create-only usage scaffold and cover every publ
 - README and help surfaces point to the canonical usage reference instead of duplicating its complete option catalog.
 
 The [single-file README template](templates/readme-single-file.md) is a manual reference for the Script profile. The [worked example](examples/usage.example.md) shows the full section and option-entry shape.
+
+## Troubleshooting
+
+| Finding | Resolution |
+| --- | --- |
+| Referenced workflow is missing | Render to scratch, review it, and publish with the documented no-clobber step before reconciliation. |
+| Rendered workflow differs | Reconcile the consumer-owned edit with the selected package options; the provider never overwrites it. |
+| Command name is unsafe or unavailable | Use a command basename and configure the reviewed `CLI_DOCS_COMMAND` repository variable. |
+| Provider mutation is detected | Treat it as an integrity incident, restore the repository, and do not retry until the package is verified. |

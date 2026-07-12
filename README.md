@@ -1,6 +1,6 @@
 # Project Standards
 
-Shared standards, schemas, templates, and tooling for documentation, Python projects, CLI documentation, project specifications, and repository-local agent continuity. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ them through config, reusable workflows, copy-adopted scaffolds, repo-local skills, and the `project-standards` CLI rather than vendoring their own implementations.
+Shared standards, schemas, templates, and tooling for documentation, Python projects, CLI documentation, project specifications, and repository-local agent continuity. This repository is the **single source of truth**: it _defines_ the standards, and other repositories _consume_ immutable packages through unified config/reconciliation, managed or create-only outputs, reusable workflows, repo-local skills, and the `project-standards` CLI rather than vendoring their own implementations. Copy-adopt bundles remain v5 migration fallback only.
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
@@ -21,12 +21,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
     - [Python Coding Standard (draft)](#python-coding-standard-draft)
     - [Standard Bundle Authoring Standard (internal/reference)](#standard-bundle-authoring-standard-internalreference)
   - [Consuming the standards](#consuming-the-standards)
-    - [Markdown standards (Frontmatter + ADR)](#markdown-standards-frontmatter--adr)
-    - [Python Tooling SSOT](#python-tooling-ssot)
-    - [Markdown Tooling](#markdown-tooling)
-    - [Project Specification](#project-specification)
-    - [CLI Documentation](#cli-documentation)
-    - [Agent Handoff](#agent-handoff)
+    - [Current consumer packages](#current-consumer-packages)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
@@ -40,8 +35,8 @@ project-standards/
 │   ├── README.md              #   index + bundle anatomy
 │   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/ + skills/
 │   ├── adr/                   #   standard + adopt + templates/ + examples/
-│   ├── python-tooling/        #   standard + adopt (doc-only)
-│   ├── markdown-tooling/      #   standard + adopt (doc-only)
+│   ├── python-tooling/        #   standard + immutable payload + providers
+│   ├── markdown-tooling/      #   standard + immutable payload + providers
 │   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
 │   ├── cli-documentation/     #   standard + adopt + templates/ + examples/ + resources/
 │   ├── agent-handoff/         #   standard + adopt + templates/ + skill + shared hook
@@ -85,28 +80,28 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 ### Python Tooling SSOT Standard
 
-The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, and the VS Code / agent-instruction conventions. Unlike the Markdown standards it is **not** validator-enforced and ships **no reusable workflow** — you adopt it by copying the in-doc scaffolds and running the gate.
+The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
 - **Standard:** [`standards/python-tooling/README.md`](standards/python-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/python-tooling/adopt.md)
 
 ### Markdown Tooling Standard
 
-The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The tool-specific complement to the tool-neutral Frontmatter standard; markdownlint ships the reusable `lint-markdown.yml` + a seedable rule set, and Prettier ships the opt-in reusable `format.yml` alongside its copy-adopt config (since `@v4.x`).
+The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
 - **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
 - **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
 
 ### Project Specification Standard
 
-Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and a `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) that operates on a repository's real specs. Adoption seeds the `spec:` config fragment and the reusable `validate-specs.yml` workflow caller; installing `project-standards` gives the full tool surface directly, and `new` scaffolds real specs from the package's bundled templates.
+Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
 - **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
 - **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
 
 ### CLI Documentation Standard
 
-User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and the CI checks that catch drift between them. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape, from a single-file script's `--help` + compact README up to per-command generated pages for large multi-command tools. Copy-adopt like Markdown Tooling: seed `docs/usage.md` and the `cli-docs-check.yml` workflow via `project-standards adopt cli-documentation`.
+User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
 - **Standard:** [`standards/cli-documentation/README.md`](standards/cli-documentation/README.md)
 - **Templates:** [`templates/`](standards/cli-documentation/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/adopt.md)
@@ -121,69 +116,55 @@ Repository-local project knowledge and bounded session continuity for coding age
 
 ### Python Coding Standard (draft)
 
-Code-shape and agent-behavior rules for Python — the reference companion to the Python Tooling SSOT (the SSOT standardizes the toolchain; this document standardizes the code the toolchain checks). **In-development draft (package version 0.4):** reference-only, unregistered as a consumer-selectable contract, and not adoptable via the CLI. It ships in the repository for review and early reference until released.
+Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.5`:** reference-only and not consumer-selectable.
 
 - **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the contract every standard bundle declares: a `standard.toml` manifest, authority tuples, the relationship taxonomy, dotted config-namespace ownership, providers, resources, and adoption modes. **Internal/reference (`adoption = "none"`, package version 1.0):** it governs how _this_ repository authors its own standards and is deliberately not consumer-adopted — no `adopt.md`, no `registry.json` consumer contract, and **not one of the seven released standards**. It ships its own `standard.toml` so the repository dogfoods the contract. The bundled manifest schema and standards graph validator now enforce that contract on `testing`.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.0`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
 - **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
 
 ## Consuming the standards
 
-How a repository adopts each standard. The two **Markdown frontmatter standards** (Frontmatter + ADR) share one mechanism; **Python Tooling**, **Markdown Tooling**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** each adopt on their own. Each bundle's `adopt.md` is the canonical, step-by-step runbook — this section is the map.
+V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+
+```bash
+project-standards init --catalog 5
+project-standards standards enable markdown-frontmatter --version 1.2
+project-standards reconcile
+project-standards reconcile --apply
+```
+
+Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs together. The package selector chooses an immutable payload; package options such as `contract_version` remain independent. Each bundle's `adopt.md` links to the current version-specific options, outputs, migration, verification, and troubleshooting.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
-### Markdown standards (Frontmatter + ADR)
+### Current consumer packages
 
-Add two files pinned to a major tag; starting with v5.0.0, Frontmatter adoption also installs the repo-local skill:
+| Package | Current payload | Adoption guide |
+| --- | --- | --- |
+| Markdown Frontmatter | `1.2` | [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md) |
+| ADR | `1.1` | [`standards/adr/adopt.md`](standards/adr/adopt.md) |
+| Python Tooling | `1.1` | [`standards/python-tooling/adopt.md`](standards/python-tooling/adopt.md) |
+| Markdown Tooling | `1.2` | [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md) |
+| Project Specification | `1.1` | [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) |
+| CLI Documentation | `1.1` | [`standards/cli-documentation/adopt.md`](standards/cli-documentation/adopt.md) |
+| Agent Handoff | `1.1` | [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) |
 
-1. **`.project-standards.yml`** at the repo root — declares which Markdown files are managed.
-2. **`.github/workflows/validate-standards.yml`** — calls the reusable `validate-markdown-frontmatter.yml@v4` workflow, with `standards-ref` pinned to the same major.
-3. **`.agents/skills/markdown-frontmatter/`** (v5.0.0+) — installs the standard-owned skill for both Claude Code and Codex CLI; the starter config excludes `.agents/**` from managed-document frontmatter.
-
-ADR enforcement (managed ADR docs, plus the opt-in MADR section check) rides the **same** workflow — no extra job. Optional Markdown _body_ linting is a separate opt-in workflow (`lint-markdown.yml`).
-
-- **Full runbook** (config, workflow, pinning, local validation, body-linting, compliance checklist): [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md)
-- **ADR specifics:** [`standards/adr/adopt.md`](standards/adr/adopt.md)
-
-For local tooling, use `project-standards fix` (formats frontmatter and regenerates ids in one pass), the standalone `format-frontmatter` command, or the pre-commit hooks (`.pre-commit-hooks.yaml`) — see [`src/project_standards/README.md`](src/project_standards/README.md) for the full CLI reference.
-
-### Python Tooling SSOT
-
-No config or workflow — copy the in-doc scaffolds and run the verification gate. See [`standards/python-tooling/adopt.md`](standards/python-tooling/adopt.md).
-
-### Markdown Tooling
-
-Seed `.markdownlint.json` + `.editorconfig`, copy `.prettierrc.json`, and opt into the reusable `lint-markdown.yml@v4` and `format.yml@v4` workflows. See [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md).
-
-> **Availability:** `lint-markdown.yml` is available since `@v2`; the opt-in `format.yml` since `@v4.x`. The Frontmatter/ADR `validate-markdown-frontmatter.yml` workflow is available on any major tag.
-
-### Project Specification
-
-Run `project-standards adopt project-spec` to materialize the reusable `validate-specs.yml@v4` workflow caller and report the `spec.version: '1.0'` config fragment for `.project-standards.yml`. The adopt path does not create real spec documents; use `project-standards spec new` for that. Available from `v4.0.0` onward — no earlier tag carries the standard or its workflow. See [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) for the full procedure, the `spec` CLI reference, and CI wiring.
-
-### CLI Documentation
-
-Copy-adopt like Markdown Tooling: select a profile (Script/Packaged/Packaged-deep), then run `project-standards adopt cli-documentation` to materialize a `docs/usage.md` scaffold and the `cli-docs-check.yml` drift-check workflow, plus a `cli_documentation:` config fragment to paste into `.project-standards.yml`. See [`standards/cli-documentation/adopt.md`](standards/cli-documentation/adopt.md) for profile selection and the full authoring/review checklist.
-
-### Agent Handoff
-
-Choose manual startup or one or both supported automatic harnesses, preview the full plan, and adopt from the installed package. Consumer knowledge remains create-only; the repo-local skill, optional shared hook, bounded integrations, and provenance lock are standard-managed.
+For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
 ```bash
-project-standards adopt agent-handoff --dest . --manual --dry-run --json
-project-standards agent-handoff validate --repo .
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
 ```
 
-See [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) for automatic profiles, harness trust review, validation, upgrades, and migration.
+The migration removes `.project-standards.yml` only after unified validation and lock publication. During v5, legacy-only validation remains a warned read-only fallback; v6 removes it.
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v4`), never `@main`: a repo that passed validation yesterday must not fail today because the standard changed. Breaking changes ship only as a new major (`@v5`); `@v4` receives bug fixes and backward-compatible updates. For an immutable pin, use a full version (`@v4.0.0`) or a commit SHA. The adopt guides explain the full rationale, and [`UPGRADING.md`](UPGRADING.md) is the step-by-step runbook for moving an existing repo across a major (e.g. `@v3` → `@v4`).
+Reference reusable workflows by **major tag** (`@v5` after release), never `@main`. For an immutable pin, use a full version (`@v5.0.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
@@ -191,7 +172,7 @@ For private standards repos called by private consumers, enable cross-repository
 
 Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but the contract is the **consuming repo's validation outcome** — a release's level reflects the worst-case impact of any change across the standard, schema, validator, and workflow.
 
-- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v4`); a repo that passed yesterday still passes today.
+- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v5`); a repo that passed yesterday still passes today.
 - **MAJOR** → may newly-fail a previously-passing repo (a new required field, a stricter rule, even a validator bug fix); old `vN.x` tags stay intact, and consumers migrate intentionally.
 
 See [`meta/versioning.md`](meta/versioning.md) for the full classification table, the previously-passing rule, and release requirements.

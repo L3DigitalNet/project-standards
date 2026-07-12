@@ -128,7 +128,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   The approved 18-task mechanism-level core is complete through `e069c34`: neutral initialization, unified config and lock state, catalog-scoped resolution, bounded providers, semantic composition, lifecycle planning, transactional apply/recovery, and public reconciliation commands. Reconstruct and convert the current packages, implement legacy migration and same-major catalog refresh, prove compatibility for every current standard, then complete activation and release.
 
-  The 18-task follow-on plan at `docs/superpowers/plans/2026-07-11-consumer-standards-control-plane-package-migration-release.md` passed the scratch-path convergence audit and is owner-approved. Execution is underway on `feature/v5-package-migration`; Tasks 1-17 provide typed migration/apply and refresh/recovery, all nine reconstructed payloads, catalog 5 activation, source/wheel compatibility, selected public commands, and the reviewed disposable release-cut migration/replay evidence. Task 18 closes documentation and release readiness while the atomic root migration remains in the retained P3 release task.
+  The owner-approved 18-task follow-on plan is locally complete through Task 18: MS-4 real-package compatibility covers every default, unordered pair, full set, validator, shared surface, and legacy namespace from source and wheel; the disposable 5.0.0 checkout records installed migration, same-major refresh preservation, replay digests, and fixed-point convergence. The final local gate passes 2,535 tests at 89% coverage. Keep this item open for the retained P3 atomic release-commit migration of this source checkout, v5 publication, and hosted post-push confirmation.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
@@ -146,9 +146,9 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
 #### P2 — Close v5 documentation and readiness
 
-- [ ] Normalize every v5 specification into a clean final baseline.
+- [x] Normalize every v5 specification into a clean final baseline.
 
-  Reconcile final ADR and design decisions, stale status rows, unchecked implemented DoD items, and open questions. Resolve or explicitly defer SPEC-MT01 OQ-005. Release no spec with unexplained deviations.
+  Task 18 reconciled final ADR/design decisions, stale status and DoD rows, and all implementation traceability. SPEC-MT01 OQ-005 is resolved as hand-authored, machine-checked summaries; no implementation deviation is recorded. Owner acceptance of the empty deviations logs remains a release-closeout action.
 
 - [ ] Confirm every v5 standard is ready for later MCP exposure.
 

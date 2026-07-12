@@ -29,7 +29,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:b44bdd3d430ca0ae9acbd9881279a4a9b06a413fe2e34a7d2041c1b937b47a85"
+digest = "sha256:39e232d0ccbba3343fe16a916f7bbef1c168cd254d1e5b798b0712472672b824"
 
 [[resources]]
 id = "agent-summary"
@@ -50,7 +50,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:197715d6d9f4f60b8c0d81136efb62f3ef86ebe96c5fc179f4647adc889776c5"
+digest = "sha256:592acef7c1e39f72ca9053ca837680372e38da4a8cfc2edd75f8d7b08ef9a248"
 
 [[resources]]
 id = "python-version-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:a78fb7116eeaf076f15dcc88993a6343c6d7e913569882fe5e9a22f7ddcb84c1"
+digest = "sha256:e27306e87c9c5920211bee739635e8019aca4fb608628da1d9489fb253a267e3"
 
 [[resources]]
 id = "provider-input"
@@ -648,6 +648,8 @@ targets = ["AGENTS.md"]
 known_content_digests = [
   "sha256:960e17f7c7f0980a979b48e4457de958697afeb3d6e1953c379e20a443669b92",
   "sha256:c1da8ce6520f8aaa300f37f43810a45c8a39596d5e6c2fa965eb8b3ef4702caf",
+  "sha256:f345f6167f040071b925a0c3b507cbe7e62a41b05ffc662055b25fb1f595405a",
+  "sha256:68eba3cdc1101d739ae5aafb2407f5237e3d8fdce74ff6a3cc4ba1ff37491aa2",
 ]
 
 [[legacy_signatures]]

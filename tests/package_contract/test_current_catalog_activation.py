@@ -20,7 +20,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:e764da40443b48508c593798a9b5b04ae418cb24f8ac31afa1c5706c3eac6bb7",
+        "sha256:82e9e3ae5d50a641b4b47366ef5d66fd85b13555ffda0d9ac1c99aadd1c6c719",
     ),
     "agent-handoff": (
         "Agent Handoff Standard",
@@ -28,7 +28,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:aae228bd78ce0c1b646770f4323737f45db09bd0a294a7265804fd5952b1e3f9",
+        "sha256:e5e300e761c3b95bb36a95d0e001c2fa428c21843e15cdbf66202327fdb6ded1",
     ),
     "cli-documentation": (
         "CLI Documentation Standard",
@@ -36,7 +36,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:eab56ef2c1135a31f5525d951c137937b0a748f8a55b3d17222828189848c457",
+        "sha256:dee2af37fbc2fed53b55a35209c55e4babd3f1ff2cedcef64da04222da3786d6",
     ),
     "markdown-frontmatter": (
         "Markdown Frontmatter Standard",
@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:7587b4a6dd9d4dc5273ea9b7f8f5c07f31805f5bf3545b342e3de5422d7d744c",
+        "sha256:d93fa30ea330f0a5b6b094c120a89887f40e78605a8505ddeadc0288ff83afbd",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -52,7 +52,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:07649cbf7140c9a430b66f315dba2855fba33696eb8edba274a15a7b1cfdf558",
+        "sha256:3b64ef577a2ab580c48411b67064fb15b9d520dc25fd228fec58e571ac85b490",
     ),
     "project-spec": (
         "Project Specification Standard",
@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:40779c1caeeaeaedee288b3bbc78aca37b4475393acee9a47e71e8f6f1e1653a",
+        "sha256:0b1ff8db74ffc18ead98ec3e38e8c5c4b7684fe8e68d62c1ea988a830e0db9c0",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:7e473510b8acbacc434be3edf73b8b9c14a3a47042020375286689311d767dfa",
+        "sha256:1aec6e56e107bfaeb6b82e0ca0d8da42ba36ff092314a26c26c6bb465b7db081",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",

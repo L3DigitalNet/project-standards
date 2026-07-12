@@ -54,6 +54,7 @@ related:
 | 0.4 | 2026-07-10 | Codex with converged review and owner direction | Clarify the audit-only role of accepted-track catalog lineage and approve the specification for implementation planning. |
 | 0.5 | 2026-07-10 | Codex with owner-approved SPEC-BA02 reconciliation | Align desired config and package-payload examples with the fixed option namespace, canonical V2 payload tree, and installed projection already approved and implemented by SPEC-BA02; no behavior or scope changes. |
 | 0.6 | 2026-07-11 | Codex implementation closeout | Record mechanism-level core evidence in requirement traceability; retain Partial or Not Started status for real-package migration, conversion, compatibility, catalog refresh, and activation work. No requirement or scope changes. |
+| 0.7 | 2026-07-12 | Codex package-migration closeout | Reconcile traceability with all current package, installed-wheel, migration, refresh, and disposable release-cut evidence through commit `a891973`; document the two atomic-release deferrals and record no implementation deviation. No requirement or scope changes. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -813,31 +814,31 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 
 ### 17.1 Definition of Done
 
-- [ ] All Must requirements are implemented and mapped to passing evidence in §17.3.
-- [ ] ADR 0023 records the consumer control-plane, unified configuration, explicit reconciliation, neutral bootstrap, and central-lock decisions.
-- [ ] ADR 0024 records catalog-scoped package channels, candidates, promotion, and embedded versioned payloads.
-- [ ] Conflicting ADRs and `meta/versioning.md` are amended or superseded according to §8.3.
-- [ ] SPEC-BA02 supersedes SPEC-BA01 as the reviewed implementation contract for the breaking Standard Bundle Authoring revision.
-- [ ] Config, catalog, lock, package-release, migration-report, provider-phase, referenced-extension, and package-option schemas/contracts are generated and validated.
-- [ ] Every current package migrates and passes individual, pairwise, all-packages, and installed-wheel fixtures.
-- [ ] Legacy YAML migration and v5 read-only fallback pass for every current namespace.
-- [ ] Successful migration previews and removes `.project-standards.yml` only after complete conversion and validation; failed migration preserves it.
-- [ ] Candidate authorization, retention, promotion, pinning, and no-downgrade tests pass.
-- [ ] Candidate-major entry requires matching package-and-major authorization, candidate `latest` remains compatible-trackable, exact selectors remain pinned, and exact-target exit plus catalog-major promotion preserve the documented authorization boundaries.
-- [ ] Accepted-track records are separate from enabled-package applied state, survive disable/re-enable, fail closed when unavailable, and normalize only through FR-015 or FR-033.
-- [ ] Package payload selectors and consumer contract/schema selectors remain independent in configuration, migration, resolution, and validation.
-- [ ] Semantic contributions compose against one virtual tree, and every package pair/full-set real apply completes or fails before any write.
-- [ ] Init, plan, apply, removal, interruption recovery, path safety, and no-network tests pass.
-- [ ] Plain init produces exactly the three Git-trackable TOML files with no optional directories, placeholders, ignore files, lock artifacts, or failed-init debris.
-- [ ] Missing config, catalog, and lock states produce only their sanctioned read-only recovery plans.
-- [ ] Shared/exclusive control-plane concurrency tests prevent overlapping mutation without creating a lock artifact.
-- [ ] Every package-local durable entry is committed, centrally hashed, drift-checked, and safely removed; modified or undeclared namespace content blocks package removal.
-- [ ] Every provider is phased; read-only operations use immutable snapshots, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
-- [ ] Referenced extension inputs remain consumer-owned, cannot alias managed/planned outputs, are centrally hashed without managed ownership, and survive package disable/re-enable.
-- [ ] This repository dogfoods the control plane and has no package-specific provenance lock.
-- [ ] Consumer, package-author, migration, upgrade, and release documentation is current.
-- [ ] Full repository quality and coherence gates pass.
-- [ ] Deviations Log is reviewed and accepted by the owner.
+- [x] All Must requirements are implemented and mapped to passing evidence in §17.3.
+- [x] ADR 0023 records the consumer control-plane, unified configuration, explicit reconciliation, neutral bootstrap, and central-lock decisions.
+- [x] ADR 0024 records catalog-scoped package channels, candidates, promotion, and embedded versioned payloads.
+- [x] Conflicting ADRs and `meta/versioning.md` are amended or superseded according to §8.3.
+- [x] SPEC-BA02 supersedes SPEC-BA01 as the reviewed implementation contract for the breaking Standard Bundle Authoring revision.
+- [x] Config, catalog, lock, package-release, migration-report, provider-phase, referenced-extension, and package-option schemas/contracts are generated and validated.
+- [x] Every current package migrates and passes individual, pairwise, all-packages, and installed-wheel fixtures.
+- [x] Legacy YAML migration and v5 read-only fallback pass for every current namespace.
+- [x] Successful migration previews and removes `.project-standards.yml` only after complete conversion and validation; failed migration preserves it.
+- [x] Candidate authorization, retention, promotion, pinning, and no-downgrade tests pass.
+- [x] Candidate-major entry requires matching package-and-major authorization, candidate `latest` remains compatible-trackable, exact selectors remain pinned, and exact-target exit plus catalog-major promotion preserve the documented authorization boundaries.
+- [x] Accepted-track records are separate from enabled-package applied state, survive disable/re-enable, fail closed when unavailable, and normalize only through FR-015 or FR-033.
+- [x] Package payload selectors and consumer contract/schema selectors remain independent in configuration, migration, resolution, and validation.
+- [x] Semantic contributions compose against one virtual tree, and every package pair/full-set real apply completes or fails before any write.
+- [x] Init, plan, apply, removal, interruption recovery, path safety, and no-network tests pass.
+- [x] Plain init produces exactly the three Git-trackable TOML files with no optional directories, placeholders, ignore files, lock artifacts, or failed-init debris.
+- [x] Missing config, catalog, and lock states produce only their sanctioned read-only recovery plans.
+- [x] Shared/exclusive control-plane concurrency tests prevent overlapping mutation without creating a lock artifact.
+- [x] Every package-local durable entry is committed, centrally hashed, drift-checked, and safely removed; modified or undeclared namespace content blocks package removal.
+- [x] Every provider is phased; read-only operations use immutable snapshots, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
+- [x] Referenced extension inputs remain consumer-owned, cannot alias managed/planned outputs, are centrally hashed without managed ownership, and survive package disable/re-enable.
+- [ ] This repository dogfoods the control plane and has no package-specific provenance lock. Deferred to the atomic release commit by plan contract 14; the disposable tracked-tree release cut passes the same migration first.
+- [x] Consumer, package-author, migration, upgrade, and release documentation is current; formatting, Markdown, frontmatter, spec, generated-drift, and independent review gates pass.
+- [x] Full repository quality and coherence gates pass: 2,535 non-performance tests pass at 89% coverage, all three package-compatibility performance rows pass, and the complete documentation, package, audit, build, and coherence gates are green.
+- [ ] Deviations Log is reviewed and accepted by the owner. No implementation deviation is recorded; owner acceptance remains a release-closeout action.
 
 ### 17.2 Test Strategy
 
@@ -860,24 +861,24 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | FR-003, FR-004, FR-005, FR-006, IR-005, IR-006, DR-001, DR-002, DR-003 | Config/catalog/partitioned-lock schema, enabled-versus-authorized state, generation, strictness, digest, and round-trip tests | Complete (core) |
 | FR-007, FR-008, FR-009, FR-010, IR-002, IR-003, NFR-001, NFR-002, NFR-003, NFR-004 | Planner/executor/removal, disable config preservation, applied-record removal, accepted-track retention, conflict, and fault-injection suites | Complete (core) |
 | FR-011, FR-012, FR-013, FR-014, FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Complete (core) |
-| FR-016, FR-028, DR-004 | Versioned-payload completeness, parity, digest, and offline installed-wheel tests | Partial — synthetic catalog complete; real package payload activation deferred |
+| FR-016, FR-028, DR-004 | `tests/package_compatibility/`, package projection/integrity suites, and offline installed-wheel provider execution | Passing — `06a33c1`, `a891973` |
 | FR-017, FR-026 | Unified entrypoint, adoption-wrapper, non-destructive config-edit, and CLI contract tests | Complete (core) |
-| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased provider, current direct-writer-to-plan migration, executor-only writes, path policy, package-local commit/hash/drift/removal, central-lock, and Agent Handoff migration tests | Partial — generic mechanisms complete; current provider and Agent Handoff conversion deferred |
-| FR-021, FR-022, DR-006 | Legacy namespace/artifact migration, ambiguity, fallback, and dual-authority tests | Not Started |
-| FR-023, NFR-006, NFR-007 | Individual, all-pairs, all-packages, fresh, migrated, and no-hardcode composition tests | Partial — synthetic composition and no-hardcode proof complete; real and migrated package matrices deferred |
-| FR-024, FR-036, DR-007 | Versioned package-option schema, referenced-extension ownership/canonical-path/output-collision/hash, default, external materialization, preservation, and option-migration tests | Partial — schema, extension, and ownership mechanisms complete; real option migrations deferred |
-| FR-025 | Same-major catalog refresh and compatible-update tests | Not Started |
-| FR-027 | Package adoption-guide inventory and content review | Not Started |
-| FR-029 | Virtual-tree semantic contribution, all-pairs real-apply, collision, and no-partial-write tests | Partial — all-adapter synthetic fixed point complete; real all-pairs apply deferred |
-| FR-030 | Package-version versus consumer-contract migration, resolver, config, and validator tests | Partial — version/contract separation is modeled; real migration and validator integration deferred |
+| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased providers, direct-writer inventories, executor-only authoring, package-local state, central lock, and Agent Handoff migration/removal suites | Passing — package commits `27d3e99` through `b90bfb7`; `94f3183`, `a891973` |
+| FR-021, FR-022, DR-006 | `tests/control_plane/test_migration.py`, all-namespace compatibility migration, ambiguity/fallback/dual-authority tests, and disposable installed-CLI apply | Passing — `11ef081`, `f5286d3`, `a903b54`, `06a33c1`, `a891973` |
+| FR-023, NFR-006, NFR-007 | Catalog-derived seven individual, 21 pairwise, full-set, fresh/migrated, package-ID-neutral, source/wheel matrix | Passing — `06a33c1` |
+| FR-024, FR-036, DR-007 | Closed real option schemas, option migration, referenced-extension ownership/hash/collision/preservation, and package compatibility suites | Passing — `27d3e99` through `b90bfb7`; `06a33c1`, `a891973` |
+| FR-025 | `tests/control_plane/test_catalog_refresh.py` plus disposable refresh proof preserve exact pins, options, accepted tracks, extensions, and unrelated files | Passing — `af33689`, `a891973` |
+| FR-027 | Seven family and version-specific adoption guides cover suitability, options, outputs, V4 migration, verification, and troubleshooting; docs/spec gates | Passing — Task 18 documentation/spec/generated-drift gates and independent review |
+| FR-029 | Real package pair/full-set apply, shared-identity equality/disagreement, collision, no-partial-write, removal, and fixed-point suites | Passing — `06a33c1`, `a891973` |
+| FR-030 | Real migration/config/resolver/provider command tests keep package payload and internal contract selectors independent | Passing — package commits `27d3e99` through `b90bfb7`; `94f3183`, `a891973` |
 | FR-031 | SPEC-BA02 approval, index, supersession, and traceability review | Complete |
 | FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Complete (core) |
 | FR-033 | Candidate-major `latest`/pinned entry, exact exit before/after disable, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, authorization-record replacement/removal, and subsequent-`latest` tests | Complete (core) |
 | NFR-005 | 100-package/1,000-artifact planning benchmark | Complete |
 | NFR-008 | Human/JSON output and exit-code contract tests | Complete (core) |
 | NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Complete (core) |
-| IR-004 | Every validator/provider/reusable-workflow unified-config fixture | Not Started |
-| NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, error contract, and recovery suites | Partial — core boundaries and recovery complete; legacy migration and real-package failures deferred |
+| IR-004 | Unified provider-backed Frontmatter, Project Specification, Agent Handoff, CLI Documentation, workflow, and installed command-matrix fixtures | Passing — `94f3183`, `a891973` |
+| NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, provider refusal, migration/apply/recovery, stale-plan, path/symlink, and real-package failure suites | Passing — `a903b54`, `af33689`, package reconstruction commits, `a891973` |
 
 ---
 
@@ -940,15 +941,15 @@ No separate backup system applies. The durable `.standards/` tree, including pac
 
 ### 18.7 Documentation Deliverables
 
-- [ ] Consumer control-plane guide and complete configuration reference.
-- [ ] Catalog/package authoring and version-promotion guide.
-- [ ] Legacy `.project-standards.yml` migration runbook.
-- [ ] V4-to-v5 `UPGRADING.md` instructions.
-- [ ] ADR 0023 and ADR 0024 plus the reconciliation matrix updates.
-- [ ] Revised Standard Bundle Authoring, adoption, versioning, lifecycle, provenance, skill, and hook documentation.
-- [ ] Updated adoption guide for every consumer-facing package.
-- [ ] Package compatibility matrix with implementation evidence.
-- [ ] Updated README, standards index/catalog, changelog, TODO/status, and handoff spec/plan index.
+- [x] Consumer control-plane guide and complete configuration reference.
+- [x] Catalog/package authoring and version-promotion guide.
+- [x] Legacy `.project-standards.yml` migration runbook.
+- [x] V4-to-v5 `UPGRADING.md` instructions.
+- [x] ADR 0023 and ADR 0024 plus the reconciliation matrix updates.
+- [x] Revised Standard Bundle Authoring, adoption, versioning, lifecycle, provenance, skill, and hook documentation.
+- [x] Updated adoption guide for every consumer-facing package.
+- [x] Package compatibility matrix with implementation evidence.
+- [x] Updated README, standards index/catalog, changelog, TODO/status, and handoff spec/plan index.
 
 ---
 

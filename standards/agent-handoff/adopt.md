@@ -1,102 +1,29 @@
 # Adopt the Agent Handoff Standard
 
-Adopt Agent Handoff from a released `project-standards` installation. No source checkout is required.
+The current consumer package is [`agent-handoff@1.1`](versions/1.1/adopt.md). Use it for repository-local project knowledge, manual or automatic session startup, bounded harness integrations, and centrally locked standard-owned runtime artifacts. Consumer-authored `docs/**` knowledge remains create-only.
 
-## Prerequisites
+## Configure and reconcile
 
-- Run commands from the repository being adopted or pass its path with `--dest` or `--repo`.
-- Review uncommitted changes that overlap `docs/`, `.agents/`, `.claude/`, `.codex/`, `AGENTS.md`, `CLAUDE.md`, or `.project-standards.yml`.
-- Choose exactly one startup mode.
-- For automatic mode, confirm Python 3 and Git are available to the repository-local hook.
-
-## Preview adoption
-
-Manual mode supports any agent and registers no automatic hook:
+Enable the package, then set `contract_version`, `startup`, and `harnesses` under `[standards.agent-handoff.config]`. Manual startup requires an empty harness list; automatic startup accepts `claude-code`, `codex`, or both.
 
 ```bash
-project-standards adopt agent-handoff \
-  --dest . \
-  --manual \
-  --dry-run \
-  --json
+project-standards standards enable agent-handoff --version 1.1
+project-standards reconcile
+project-standards reconcile --apply
 ```
 
-Automatic mode requires one or both supported harnesses:
+Reconciliation installs the repo-local skill, optional shared hook, bounded instruction/settings units, and `.standards/packages/agent-handoff/policy.toml`. It records them in the central lock; it does not create a package-specific provenance lock.
+
+## Migrate a V4 repository
 
 ```bash
-project-standards adopt agent-handoff \
-  --dest . \
-  --harness claude-code \
-  --harness codex \
-  --dry-run \
-  --json
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
 ```
 
-The preview is the complete aggregate plan. Another standard may share the same invocation:
+Review exact legacy markers, hook settings, and `.agents/agent-handoff/manifest.json` evidence before apply. Unknown or modified managed bytes block the whole migration. Successful apply preserves consumer knowledge and retires the legacy lock only after unified verification.
 
-```bash
-project-standards adopt agent-handoff markdown-tooling \
-  --dest . \
-  --manual \
-  --dry-run \
-  --json
-```
-
-Review every create, update, skip, blocker, and finding. A blocked preflight writes nothing.
-
-## Apply and inspect
-
-Rerun the reviewed command without `--dry-run`. Adoption:
-
-- creates missing consumer knowledge under `docs/` without replacing existing content;
-- installs the repo-local skill;
-- installs the shared hook only for automatic mode;
-- adds the strict `agent_handoff` configuration block;
-- adds bounded instructions to the selected harness files;
-- semantically merges Claude settings or a bounded Codex TOML block;
-- writes the provenance lock only after every preceding action succeeds.
-
-After adoption:
-
-```bash
-project-standards agent-handoff validate --repo .
-git status --short
-git diff --check
-git diff
-```
-
-## Formatter ownership
-
-The provenance lock owns exact bytes for the installed skill and hook, plus the exact body inside managed instruction markers. A Markdown formatter that joins or rewraps those instruction lines creates real drift even when the prose looks equivalent. The shape policy also owns task-line length and may require continuation wrapping that a formatter would rejoin.
-
-If the repository uses an automatic Markdown or structured-text formatter, exclude these paths from formatter writes:
-
-```gitignore
-AGENTS.md
-CLAUDE.md
-.agents/agent-handoff/
-.agents/skills/agent-handoff/
-docs/STATUS.md
-docs/TODO.md
-```
-
-Keep unrelated consumer-owned content under its existing formatter. Configuration integrations are validated semantically, so whitespace-only formatting of `.claude/settings.json` and the managed `.project-standards.yml` block is safe when it preserves their parsed values. After any formatter run, use `agent-handoff drift-check` before committing.
-
-## Harness trust and hook review
-
-Claude Code and Codex apply their own project trust and hook-review workflows. Agent Handoff never writes user-global trust state.
-
-For Claude Code, review the project `.claude/settings.json` handler. It invokes:
-
-```text
-${CLAUDE_PROJECT_DIR}/.agents/hooks/agent-handoff/session_start.py
-```
-
-For Codex, trust the project `.codex/` layer and review the inline `SessionStart` command. A project `.codex/hooks.json` alongside inline hooks is an adoption blocker because Codex loads both sources.
-
-Both harnesses must invoke the same executable at `.agents/hooks/agent-handoff/session_start.py`. On the next startup, confirm context is injected once and ends with `</session_context>`.
-
-## Validate and maintain
+## Verify and troubleshoot
 
 ```bash
 project-standards agent-handoff validate --repo .
@@ -105,55 +32,4 @@ project-standards agent-handoff size-report --repo .
 project-standards agent-handoff shape-check --repo .
 ```
 
-- `validate` accumulates layout, config, integration, artifact, provenance, reference, shape, size, and credential findings.
-- `drift-check` limits output to standard-owned artifacts, integrations, and the provenance lock.
-- `size-report` reports UTF-8 byte targets and caps.
-- `shape-check` reports fatal eager-document rules and advisory lazy-document rules.
-
-Exit codes are:
-
-| Code | Meaning                                   |
-| ---- | ----------------------------------------- |
-| 0    | Clean conformance or successful operation |
-| 1    | Findings or recoverable apply failure     |
-| 2    | Usage or consumer configuration error     |
-| 3    | Missing or invalid package prerequisite   |
-
-## Upgrade managed artifacts
-
-Preview an upgrade:
-
-```bash
-project-standards agent-handoff upgrade --repo . --dry-run --json
-```
-
-Apply only after reviewing the plan:
-
-```bash
-project-standards agent-handoff upgrade --repo .
-```
-
-Upgrade requires a valid provenance lock and matching on-disk hashes for every previously managed entry. Local changes to standard-owned artifacts block the entire upgrade. Consumer knowledge files are create-only and are never compared as overwrite candidates.
-
-## Migrate an older layout
-
-Run the read-only evidence report first:
-
-```bash
-project-standards agent-handoff legacy-report --repo . --json
-```
-
-Follow [`resources/legacy-migration.md`](resources/legacy-migration.md). The repository's local agent inventories and reconciles facts by lifetime. The package does not perform semantic conversion, scan global state, or delete obsolete files.
-
-## Troubleshooting
-
-| Finding | Safe next action |
-| --- | --- |
-| Unsafe or symlinked path | Replace it with a reviewed regular repository path; do not follow it automatically |
-| Malformed or duplicate markers | Reconcile the owned block manually, then preview again |
-| Existing unverified skill or hook | Compare local intent, preserve legitimate changes, and remove or restore it deliberately |
-| Claude duplicate or legacy handler | Consolidate to one exact v1 project handler |
-| Codex `hooks.json` coexistence | Consolidate project hooks into one reviewed representation |
-| Provenance drift | Restore locked content or reconcile the local change before upgrade |
-| Hook not trusted | Complete the harness's project trust and hook-review workflow |
-| State or output over budget | Route durable detail to lazy files and keep pointers in eager state |
+Unsafe paths, duplicate hooks, malformed markers, provenance drift, and size-cap violations fail closed. Restore or reconcile standard-owned bytes; route oversized consumer knowledge by lifetime. See the [version-specific guide](versions/1.1/adopt.md) for exact options, outputs, provider-backed scaffold/upgrade behavior, harness trust, disable semantics, and troubleshooting.

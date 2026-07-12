@@ -12,8 +12,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 26 | 4 | 7 |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 15 | 6 | 25 |
-| [`project-spec`](project-spec/README.md) | active | 1.1 | default | consumer | 22 | 9 | 1 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
+| [`project-spec`](project-spec/README.md) | active | 1.1 | default | consumer | 23 | 9 | 1 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | default | consumer | 13 | 3 | 52 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
@@ -138,6 +138,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.2` | `legacy-vscode-extensions` | `legacy-reference` | `standards://markdown-tooling/1.2/legacy-vscode-extensions` | `resources/legacy-vscode-extensions.json` |
 | `markdown-tooling@1.2` | `legacy-lint-caller` | `legacy-reference` | `standards://markdown-tooling/1.2/legacy-lint-caller` | `resources/legacy-lint-markdown.caller.yml` |
 | `markdown-tooling@1.2` | `legacy-format-caller` | `legacy-reference` | `standards://markdown-tooling/1.2/legacy-format-caller` | `resources/legacy-format.caller.yml` |
+| `markdown-tooling@1.2` | `self-host-lint-workflow` | `provider-resource` | `standards://markdown-tooling/1.2/self-host-lint-workflow` | `resources/self-host-lint-markdown.yml` |
+| `markdown-tooling@1.2` | `self-host-format-workflow` | `provider-resource` | `standards://markdown-tooling/1.2/self-host-format-workflow` | `resources/self-host-format.yml` |
 | `markdown-tooling@1.2` | `provider-code` | `provider-resource` | `standards://markdown-tooling/1.2/provider-code` | `providers/markdown_tooling.py` |
 | `markdown-tooling@1.2` | `provider-input` | `provider-resource` | `standards://markdown-tooling/1.2/provider-input` | `schemas/provider-input.schema.json` |
 | `markdown-tooling@1.2` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.2/provider-content` | `schemas/content.schema.json` |
@@ -154,6 +156,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.1` | `template-full` | `template` | `standards://project-spec/1.1/template-full` | `templates/spec-full-template.md` |
 | `project-spec@1.1` | `workflow-source` | `provider-resource` | `standards://project-spec/1.1/workflow-source` | `resources/validate-specs.yml` |
 | `project-spec@1.1` | `legacy-workflow` | `legacy-reference` | `standards://project-spec/1.1/legacy-workflow` | `resources/legacy-validate-specs.yml` |
+| `project-spec@1.1` | `self-host-workflow` | `provider-resource` | `standards://project-spec/1.1/self-host-workflow` | `resources/self-host-validate-specs.yml` |
 | `project-spec@1.1` | `provider-code` | `provider-resource` | `standards://project-spec/1.1/provider-code` | `providers/project_spec.py` |
 | `project-spec@1.1` | `provider-input` | `provider-resource` | `standards://project-spec/1.1/provider-input` | `schemas/provider-input.schema.json` |
 | `project-spec@1.1` | `provider-findings` | `provider-resource` | `standards://project-spec/1.1/provider-findings` | `schemas/findings.schema.json` |

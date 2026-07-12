@@ -1,41 +1,31 @@
 # Adopt the ADR Standard
 
-ADRs are **managed Markdown documents**: they carry full frontmatter and are validated by the same tooling as every other doc. There is **no separate ADR workflow**.
+The current consumer package is [`adr@1.1`](versions/1.1/adopt.md). Use it for MADR decision records, a create-only ADR scaffold, and optional required-section validation. Markdown Frontmatter is a companion, not a dependency; enable it separately when ADR metadata also needs schema and ID validation.
 
-## Quick adoption (CLI)
-
-As of `v3`, the packaged CLI drops the ADR template and reports the config knobs in one command:
+## Configure and reconcile
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
-  project-standards adopt adr
+project-standards standards enable adr --version 1.1
+project-standards reconcile
+project-standards reconcile --apply
 ```
 
-This writes the ADR template to `docs/adr/adr.template.md` (a `*.template.md` path your validation excludes, so its placeholder frontmatter never fails) and **reports** the `.project-standards.yml` additions — the `markdown.adr` block (§3) and the required `**/*.template.md` exclusion — for you to merge by hand (the CLI never edits an existing config in place). Adopt the Frontmatter Standard first (§1); the manual steps below remain the reference.
+Package options live under `[standards.adr.config]`: `contract_version` selects the document/body contract independently of package `1.1`, and `require_sections` enables the three required MADR headings. Reconciliation creates `docs/adr/adr.template.md` only when absent and never replaces consumer ADRs.
 
-## 1. Adopt the Frontmatter Standard first
+## Migrate a V4 repository
 
-Follow [`../markdown-frontmatter/adopt.md`](../markdown-frontmatter/adopt.md) to add `.project-standards.yml` and the reusable validator workflow. ADR enforcement rides on top of it.
-
-## 2. Let ADRs validate
-
-Do **not** exclude `docs/adr/**` in `.project-standards.yml` — ADRs are managed docs. Each carries frontmatter with `doc_type: adr` and an id like `adr-NNNN-repo-name-short-title` (see [the standard](README.md)). Note the id and the filename diverge: the **`id`** embeds the `repo-name` segment for global uniqueness (`adr-NNNN-repo-name-short-title`), but the **filename** omits it (`adr-NNNN-short-title.md`) — see the standard's "Body structure (MADR)" section.
-
-## 3. (Optional) enforce MADR body sections
-
-To assert every `doc_type: adr` document has the three MADR-required `##` sections, opt in:
-
-```yaml
-markdown:
-  adr:
-    version: '1.0' # OPTIONAL — pin the ADR contract version; must be compatible with the Frontmatter version
-    require_sections: true
+```bash
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
 ```
 
-This rides the same frontmatter workflow — no extra job. See [the standard](README.md) for the section list.
+Apply only after the preview has no ambiguity or conflict. Migration maps `markdown.adr` settings and claims only exact released scaffold bytes. Modified or unknown content remains untouched and blocks the atomic migration.
 
-**ADR/Frontmatter compatibility.** Each ADR contract version supports specific Frontmatter versions (ADR `1.0` supports Frontmatter `1.1`). If you also pin `markdown.frontmatter.version`, the validator rejects an incompatible pair. Omit `markdown.adr.version` to use the frozen default.
+## Verify and troubleshoot
 
-## 4. Author from a template
+```bash
+project-standards reconcile --check
+project-standards validate
+```
 
-Copy a scaffold from [`templates/`](templates/): `adr.md` (full), `adr-minimal.md`, `adr-bare.md`, `adr-bare-minimal.md`. A worked example is in [`examples/adr.example.md`](examples/adr.example.md).
+An incompatible Frontmatter contract, modified create-only scaffold, or missing MADR section is reported without overwriting the repository. Resolve the declared contract/options or preserve the consumer file and retry. See the [version-specific guide](versions/1.1/adopt.md) for the exact option schema, output policy, authoring workflow, and failure handling.

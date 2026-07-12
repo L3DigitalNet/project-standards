@@ -4,6 +4,8 @@ This directory holds the **governing standards** this repository defines. Each s
 
 The generated [standards catalog](catalog.md) exposes validated V2 family, payload, channel, capability, relationship, resource, provider, and managed-output facts. Regenerate it with `uv run project-standards standards render-catalog --root .`; use `--check` in verification to detect drift.
 
+Consumer packages are enabled through `.standards/config.toml` and reconciled as one plan. Each family `adopt.md` points to its current immutable payload guide; those guides own package-specific suitability, closed options, outputs, migration, verification, and troubleshooting. Legacy V1 fragments and copy instructions are migration evidence only, never active V5 adoption authority.
+
 | Standard | What it governs | Package | Catalog role | Bundle | Adopt |
 | --- | --- | --- | --- | --- | --- |
 | Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.2 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |

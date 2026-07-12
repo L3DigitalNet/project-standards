@@ -55,7 +55,12 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
-				"fail_under": { "type": "integer", "minimum": 0, "maximum": 100, "default": 85 },
+				"fail_under": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 100,
+					"default": 85
+				},
 				"markers": {
 					"type": "array",
 					"items": { "type": "string", "minLength": 1, "pattern": "^[^\\r\\n<>`]+$" },

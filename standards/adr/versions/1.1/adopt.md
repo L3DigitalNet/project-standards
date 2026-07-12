@@ -43,3 +43,12 @@ project-standards validate
 ```
 
 Legacy `markdown.adr.version` and `markdown.adr.require_sections` settings migrate into package options. The V2 package does not print or install a `.project-standards.yml` fragment.
+
+## Troubleshooting
+
+| Finding | Resolution |
+| --- | --- |
+| ADR and Frontmatter contracts are incompatible | Select a declared compatible contract pair; do not couple package versions manually. |
+| Existing scaffold differs from the released template | Preserve it as consumer content or restore the exact create-only scaffold before migration. |
+| Required MADR section is missing | Add the canonical heading or set `require_sections = false` intentionally. |
+| Reconciliation reports legacy ambiguity | Resolve the exact legacy setting/artifact evidence, then rerun the complete migration preview. |

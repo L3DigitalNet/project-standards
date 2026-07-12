@@ -22,6 +22,7 @@ version = "1.1"
 
 [standards.project-spec.config]
 contract_version = "1.1"
+workflow_mode = "caller"
 include_patterns = ["docs/specs/**/*.md"]
 reference_prefixes = ["RQ", "GAP"]
 default_profile = "standard"
@@ -29,6 +30,7 @@ ci = true
 ```
 
 - `contract_version` selects the document contract independently of package version `1.1`.
+- `workflow_mode` selects a reusable `v5` caller or an immutable `self-hosted` workflow.
 - `include_patterns` is the nonempty set of consumer-root-relative specification globs used by `validate` and `lint` discovery.
 - `reference_prefixes` lists uppercase external ID namespaces that may be cited but not defined by a specification. Canonical spec-local prefixes such as `FR` are rejected.
 - `default_profile` is `light`, `standard`, or `full` and is used when a provider request does not select a profile explicitly.
@@ -93,3 +95,12 @@ project-standards reconcile --apply
 - [Worked example](examples/spec.example.md)
 - [Light, Standard, and Full templates](templates/)
 - [Tooling notes](resources/tooling-notes.md)
+
+## Troubleshooting
+
+| Finding | Resolution |
+| --- | --- |
+| No specification files are selected | Correct `include_patterns` or pass explicit files; empty validation never succeeds vacuously. |
+| Markdown Frontmatter also selects a spec | Make the two package corpora disjoint; project specs use their own metadata schema. |
+| Authoring path is unsafe or already changed | Re-preview and resolve the path/precondition; do not bypass the executor. |
+| Managed workflow drift | Restore the selected caller/self-hosted bytes or change `workflow_mode` and reconcile. |

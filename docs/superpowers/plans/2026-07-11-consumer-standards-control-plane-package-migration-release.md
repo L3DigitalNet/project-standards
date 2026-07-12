@@ -361,15 +361,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Update SPEC-CP01/SPEC-BA02 traceability and deviations; `README.md`, `AGENTS.md`, `standards/README.md`, `standards/catalog.md`, `docs/usage.md`, package adoption guides, `CHANGELOG.md`, `UPGRADING.md`, `meta/versioning.md` only where pre-release policy text changes, `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`, and canonical handoff/status/task/session pointers.
 
-- [ ] Update every package adoption guide to package-specific suitability, options, outputs, migration, verification, and troubleshooting. Remove active V1 fragment/install instructions while preserving clearly labeled v5 legacy migration guidance.
-- [ ] Document `init --migrate`, preview/apply ordering, ambiguity handling, same-major refresh, package versus contract selectors, provider-backed commands, and the v6 fallback-removal gate.
-- [ ] Reconcile SPEC-CP01 and SPEC-BA02 requirement traceability with exact test/commit evidence. Mark a requirement complete only when its real-package and installed-wheel evidence passes; record every accepted deviation.
-- [ ] Normalize all v5 specs/ADRs affected by implementation. Resolve or explicitly defer SPEC-MT01 OQ-005 and leave no stale status row or unexplained unchecked implemented DoD item.
-- [ ] Add the package compatibility matrix and migration/refresh/release evidence to the durable docs without turning `docs/STATUS.md` into a changelog.
-- [ ] Run an inline adversarial implementation review. Fix every Important-or-higher finding and rerun focused evidence before the full gate.
-- [ ] Run the complete verification gate below and confirm hosted graph/catalog CI for the pushed `testing` commit.
-- [ ] Update `docs/TODO.md` without deleting the retained v5 tracker: record MS-4 and disposable dogfood evidence under the CP01 follow-on, but leave that item open for the atomic release-commit migration. Leave release publication, Step 07, MCP, toolbox, repository-governance, and Agent Handoff retirement tasks open.
-- [ ] Commit: `docs(v5): close package migration readiness`
+- [x] Update every package adoption guide to package-specific suitability, options, outputs, migration, verification, and troubleshooting. Remove active V1 fragment/install instructions while preserving clearly labeled v5 legacy migration guidance.
+- [x] Document `init --migrate`, preview/apply ordering, ambiguity handling, same-major refresh, package versus contract selectors, provider-backed commands, and the v6 fallback-removal gate.
+- [x] Reconcile SPEC-CP01 and SPEC-BA02 requirement traceability with exact test/commit evidence. Mark a requirement complete only when its real-package and installed-wheel evidence passes; record every accepted deviation.
+- [x] Normalize all v5 specs/ADRs affected by implementation. Resolve or explicitly defer SPEC-MT01 OQ-005 and leave no stale status row or unexplained unchecked implemented DoD item.
+- [x] Add the package compatibility matrix and migration/refresh/release evidence to the durable docs without turning `docs/STATUS.md` into a changelog.
+- [x] Run an inline adversarial implementation review. Fix every Important-or-higher finding and rerun focused evidence before the full gate.
+- [ ] Run the complete verification gate below and confirm hosted graph/catalog CI for the pushed `testing` commit. The complete local gate passes; hosted confirmation awaits an authorized push.
+- [x] Update `docs/TODO.md` without deleting the retained v5 tracker: record MS-4 and disposable dogfood evidence under the CP01 follow-on, but leave that item open for the atomic release-commit migration. Leave release publication, Step 07, MCP, toolbox, repository-governance, and Agent Handoff retirement tasks open.
+- [x] Commit: `docs(v5): close package migration readiness`
 
 ## Verification Gates
 

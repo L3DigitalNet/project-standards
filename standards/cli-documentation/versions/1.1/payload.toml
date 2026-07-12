@@ -29,7 +29,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:cb5aee39228087013f1fd701ca9cdb737931b2f3821f33a95a524d0591e84735"
+digest = "sha256:4c3faba5af9e2ec7e37e076c28374faa41adf36ed97e3a554bdb6a88b35e2e00"
 
 [[resources]]
 id = "agent-summary"
@@ -174,6 +174,7 @@ targets = ["docs/usage.md"]
 known_content_digests = [
   "sha256:3bf66fecb665eb9106df25e46718e3607d292d2c15d29790c04b409613eada62",
   "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5",
+  "sha256:e539c180e454db923e8b9361edb6c10cdcc835edfa9a9a805f93b12ff3633b6b",
 ]
 
 [[legacy_signatures]]

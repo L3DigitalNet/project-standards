@@ -36,7 +36,7 @@ license: null
 project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
-project-standards init --catalog <major> [--repo <dir>] [--json]
+project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
@@ -112,25 +112,31 @@ Exit status: `0` success (or skipped under a custom schema) · `1` findings rema
 
 ### `init`
 
-Create the neutral `.standards/` scaffold for one catalog major. It creates only `config.toml`, `catalog.toml`, and `lock.toml`, with no enabled standards.
+Create the neutral `.standards/` scaffold for one catalog major, or preview/apply one complete migration from legacy authority. Plain initialization creates only `config.toml`, `catalog.toml`, and `lock.toml`, with no enabled standards.
 
 ```text
-project-standards init --catalog <major> [--repo <dir>] [--json]
+project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 ```
 
 Options:
 
 - **`--catalog <major>`** — Positive catalog major supplied by the installed distribution. Required.
+- **`--migrate`** — Inspect `.project-standards.yml`, registered legacy artifacts, and package-specific provenance; emit one deterministic migration report and reconciliation plan without writing.
+- **`--apply`** — Apply the exact migration planned from the current bytes. Requires `--migrate`; a blocked or ambiguous report is never partially applied.
 - **`--repo <dir>`** — Repository to initialize. Default: current directory.
-- **`--json`** — Emit the created/idempotent state and exact three-file inventory.
+- **`--json`** — In plain-init mode, emit the created/idempotent state and exact three-file inventory. In migration mode, emit the complete package reports, findings, reconciliation plan, and apply result without proposed file content.
 
-The command is idempotent only when all three existing files describe the same neutral state. Legacy YAML, partial state, symlinks, or different content fail closed.
+Always run migration preview first, resolve every unknown version, modified signature, overlapping claim, or unclassified artifact, and rerun the preview against unchanged bytes before apply. Apply stages the unified files and package outputs, verifies the complete state, publishes the central lock, and only then retires `.project-standards.yml` and recognized package locks. A stale preview or failed verification preserves recoverable legacy authority.
 
-Exit status: `0` created or already identical · `2` invalid arguments, unsafe paths, unavailable catalog, legacy authority, or inconsistent existing state.
+The command is idempotent only when all three existing files describe the same neutral state or the requested migration is already complete. Plain init refuses legacy YAML, partial state, symlinks, or different content. During v5, legacy-only validation remains a warned read-only compatibility path; v6 removes that fallback, so migration is the required upgrade boundary.
+
+Exit status: `0` plain init succeeded, migration already complete, or migration apply succeeded · `1` migration preview has an actionable plan/findings or apply failed · `2` invalid arguments, unsafe paths, unavailable catalog, unsupported authority state, or inconsistent existing state.
 
 ### `reconcile`
 
 Build one complete plan from `.standards/config.toml`, the committed catalog and lock, installed package payloads, and live repository content. Planning and checking are read-only. Only `--apply` publishes a conflict-free plan, runs read-only verification providers, and replaces the central lock last.
+
+When the installed tool carries a newer compatible snapshot of the same configured catalog major, the plan includes a catalog refresh. Compatible `latest` selections may advance; exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files remain unchanged. An older tool, unavailable pin/track, incompatible default change, or catalog-major mismatch refuses refresh.
 
 ```text
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
@@ -188,7 +194,7 @@ Exit status: `0` content rendered · `2` invalid arguments, uninitialized or dis
 
 Compatibility command for existing adoption scripts. It emits a V5 deprecation notice on every invocation.
 
-When every requested standard is consumer-selectable in the installed V2 catalog, the command wraps `init`, desired-state enablement, and `reconcile --apply`. Otherwise it retains the V1 packaged-bundle path until those real packages are activated by the follow-on migration. V5 routing never honors `--force`; reconciliation conflicts remain authoritative.
+For every current consumer package in catalog 5, the command wraps initialization, desired-state enablement, and `reconcile --apply`. The V1 bundle path remains only as a v5 compatibility implementation for non-catalog historical surfaces and is removed with the v6 legacy gate. V5 routing never honors `--force`; reconciliation conflicts remain authoritative.
 
 ```text
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
@@ -207,11 +213,11 @@ Options:
 
 Exit status: `0` success · `1` a file write failed · `2` invalid invocation, non-directory `--dest`, or registry/bundle drift · `3` a standard's bundle manifest is missing or malformed.
 
-Agent Handoff adoption performs a complete non-mutating preflight before writes, preserves consumer knowledge, rechecks content hashes before managed updates, and writes its provenance lock last. Another standard may share the same invocation and aggregate plan.
+For a catalog-5 Agent Handoff selection, the wrapper preserves consumer knowledge and publishes ownership in the central `.standards/lock.toml` last; successful legacy migration retires the package-specific manifest. Only the retained V1 fallback writes its package provenance lock last. Another standard may share the same invocation and aggregate plan.
 
 ### `list`
 
-List standards that have V1 packaged adopt artifacts. This compatibility command emits a deprecation notice. Use `project-standards standards list` for the complete installed V5 catalog inventory.
+List standards that have V1 packaged adopt artifacts. This v5 compatibility command emits a deprecation notice and is removed with the v6 fallback. Use `project-standards standards list` for the complete installed V5 catalog inventory.
 
 ```text
 project-standards list [--json]
@@ -342,7 +348,7 @@ Change one standard's desired selector while preserving its enablement and optio
 project-standards standards version <standard> <latest|major.minor> [--repo <dir>] [--json]
 ```
 
-Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes.
+Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes. The package selector (`version = "latest"` or an exact `major.minor`) chooses an immutable payload. Package-owned options such as `contract_version` independently choose a supported document/schema behavior inside that resolved payload; `standards version` never rewrites those options.
 
 Exit status: `0` inspection/edit succeeded · `2` invalid invocation, unknown or non-selectable standard, unavailable version, or unsafe control state.
 
@@ -617,7 +623,7 @@ No command reads an application-specific environment variable for configuration:
 ## FILES
 
 - `.standards/` — Desired, catalog, and lock state created by `init` and read by `reconcile`, `render`, and V5 catalog commands. `reconcile --apply` may replace managed state. `render` exposes no state-write path; if a provider violates its write prohibition, detection refuses the invocation but does not roll back the mutation.
-- `.project-standards.yml` — Default project config, read by `validate`, `fix`, the `spec` verbs, and the standalone validators. Overridable with `--config`.
+- `.project-standards.yml` — V5 legacy-only/debug configuration read only when unified authority is absent. `validate`, `fix`, provider-backed `spec` verbs, and standalone validators resolve `.standards/config.toml` under unified authority and reject a legacy override or dual authority.
 - `.vscode/settings.json` — Read and written by `sync-vscode-colors` / `sync-standards-include` (the `folder-color.pathColors` block).
 - Bundled schemas and spec templates ship inside the installed package (`project_standards/schemas/`, `project_standards/specs/templates/`) and are resolved automatically; they are not user-edited files.
 
@@ -626,7 +632,7 @@ No command reads an application-specific environment variable for configuration:
 ### Validate the whole configured file set
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 ### Validate specific files without a config
@@ -638,19 +644,21 @@ uv run project-standards validate README.md docs/adr.md --no-require-frontmatter
 ### Fix frontmatter formatting and ids, then re-check
 
 ```bash
-uv run project-standards fix --config .project-standards.yml
+uv run project-standards fix
 ```
 
-### Preview an adoption without writing anything
+### Preview a V4 migration without writing anything
 
 ```bash
-uv run project-standards adopt markdown-tooling --dry-run
+uv run project-standards init --catalog 5 --migrate
 ```
 
-### Adopt two standards into another repository
+### Enable two packages and preview reconciliation
 
 ```bash
-uv run project-standards adopt markdown-frontmatter python-tooling --dest ../my-repo
+project-standards standards enable markdown-frontmatter --version 1.2
+project-standards standards enable python-tooling --version 1.1
+project-standards reconcile
 ```
 
 ### List standards with packaged adopt artifacts as JSON

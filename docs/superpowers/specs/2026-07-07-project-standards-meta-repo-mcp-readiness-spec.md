@@ -43,6 +43,7 @@ related:
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
 | 0.6 | 2026-07-09 | Coding agent | Aligned the manifest example, adoption-mode references, and authority tuple with the implemented ADR 0017-0021 package methodology. |
+| 0.7 | 2026-07-12 | Codex V5 documentation closeout | Resolve OQ-005 from implemented V2 package evidence: agent summaries are hand-authored immutable payload resources with machine-enforced presence, size, digest, projection, and catalog checks. Mark completed readiness/documentation DoD evidence; MCP implementation remains separately deferred. |
 | 0.5 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references after the adoption, lifecycle, provenance, versioning, and packaged-skill decisions were recorded. |
 | 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references from placeholders to recorded ADR paths. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: tightened independent-standard-package rules, relationship taxonomy, MCP-evidence alignment, and graph gates for package independence. |
@@ -736,8 +737,8 @@ No secrets are required. The repository must not add secrets for manifest valida
 - [x] Provider execution limited to first-party declarations.
 - [x] Graph validation fails closed.
 - [x] Agent summaries are not canonical replacements.
-- [ ] Required ADRs approved before readiness gate.
-- [ ] Dogfood fixtures prove no silent authority collisions.
+- [x] Required ADRs approved before readiness gate.
+- [x] Dogfood fixtures prove no silent authority collisions.
 
 ---
 
@@ -790,9 +791,9 @@ No secrets are required. The repository must not add secrets for manifest valida
 - [x] Generated standards index exists and is checked for freshness.
 - [x] Dogfood consumer fixtures pass.
 - [x] Existing CLI/adopt/frontmatter/spec tests still pass.
-- [ ] MCP-readiness report shows no blocking gaps.
+- [ ] MCP-readiness report shows no blocking gaps. Step 07 remains the explicit readiness-report gate.
 - [x] Graph validation proves active standards have no undeclared hard dependencies and that all companion/extension relationships are indexed.
-- [ ] Documentation deliverables (§18.7) complete.
+- [ ] Documentation deliverables (§18.7) complete. The Step 07 readiness report template/checklist remains pending.
 
 ### 17.2 Test Strategy
 
@@ -1013,7 +1014,7 @@ No external automation is required. CI integration is the only automation in sco
 | OQ-002 | Should `adopt.toml` be referenced from `standard.toml` or eventually merged? | Keep `standard.toml` and `adopt.toml` separate and link them, per ADR 0003. | No | Standards owner | MS-1 | Resolved |
 | OQ-003 | What is the exact capability naming convention? | Use validated dot-separated capability identifiers. | Yes | Standards owner | MS-1 | Resolved |
 | OQ-004 | How strict should graph validation be for draft standards? | Draft/reference manifests validate structurally without becoming adoptable. | No | Standards owner | MS-2 | Resolved |
-| OQ-005 | Should agent summaries be hand-authored, generated, or both? | Hand-authored first; generated checks later. | No | Documentation owner | MS-3 | Open |
+| OQ-005 | Should agent summaries be hand-authored, generated, or both? | Hand-authored canonical-linked payload resources; validators enforce presence, 3,000-byte maximum, full digests, source/wheel projection parity, and catalog discovery. | No | Documentation owner | MS-3 | Resolved 2026-07-12 |
 | OQ-006 | Should graph validation support semantic version ranges for standard contracts? | Use explicit versions only; ranges require a demonstrated compatibility need. | No | Tooling owner | MS-2 | Deferred |
 | OQ-007 | What is the minimum readiness gate before MCP design starts? | No blocking graph findings, all manifests present, accepted core ADRs, a fresh catalog, and the Step-07 report. | Yes | Standards owner | MS-5 | Resolved |
 | OQ-008 | How should the current ADR-on-frontmatter relationship be modeled without violating independence? | Use independent packages plus companion relationships by default; use `extends` only with explicit ADR metadata. | Yes | Standards owner | MS-1 | Resolved |

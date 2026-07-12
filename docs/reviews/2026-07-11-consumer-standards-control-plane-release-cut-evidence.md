@@ -36,7 +36,7 @@ The automated proof uses a source-side read-only plan for detailed expected-stat
 The binary-safe patch is `git diff --binary --no-ext-diff HEAD -- .` from a local commit of the tracked baseline after mirroring the completed disposable release tree. Its SHA-256 is:
 
 ```text
-78457f7f721ae1efe4f05ef87d1e567e555a5aec34fe681e03b1b07bd23e1792
+3c5b06b099e94d9c7fbd742c17d690e6945b5983a45c0fece5614e98f4d5e706
 ```
 
 Changed paths:
@@ -71,8 +71,8 @@ Control-plane file SHA-256 digests:
 
 ```text
 config.toml  2bce514453bb7d08fbd16136325d1d8c55c42cd9aa63d043f7fc9f89c7a2a098
-catalog.toml f832b766510241d76c76aff0de1a9c54d96c5172ab9f117c32bb0aad0c79f24c
-lock.toml    72a7b1b5ffce9e3dd27ac380395b6a5988826dbb811551f4182d08f25e2cc7a3
+catalog.toml 840051ba2a5a4cf02a6105169e24d1adb953cca046d911c7eb04778899c75dd8
+lock.toml    b122322dad56d485a10a5d26f6380e32961bd0b2a871aadb2f88452069a2594d
 ```
 
 Replaying the recorded patch with `git apply --binary -` against a fresh tracked-tree copy produces an identical complete file tree and the same three control-plane digests.

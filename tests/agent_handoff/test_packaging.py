@@ -25,7 +25,8 @@ def _v1_source_files() -> tuple[Path, ...]:
     return tuple(
         path
         for path in _source_files()
-        if path.relative_to(_SOURCE).parts[0] != "versions" and path.name != "standard.toml"
+        if path.relative_to(_SOURCE).parts[0] != "versions"
+        and path.name not in {"adopt.md", "standard.toml"}
     )
 
 
@@ -34,7 +35,7 @@ def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
     bundled_relatives = {
         path.relative_to(_BUNDLE)
         for path in _BUNDLE.rglob("*")
-        if path.is_file() and path.name not in {"adopt.toml", "standard.toml"}
+        if path.is_file() and path.name not in {"adopt.md", "adopt.toml", "standard.toml"}
     }
 
     assert source_relatives == bundled_relatives

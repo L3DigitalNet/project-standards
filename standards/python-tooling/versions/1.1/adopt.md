@@ -2,6 +2,10 @@
 
 Python Tooling 1.1 is reconciled by the V5 control plane; do not copy payload files or merge a printed `pyproject.toml` fragment.
 
+## Suitability
+
+Use this package for a Python project that wants one declared uv/build/layout/tooling baseline with managed CI and bounded editor/agent integration. It supports `uv_build`, Hatchling, or setuptools and `src` or flat layouts; select only options that match the repository's deliberate toolchain intent.
+
 ## Enable
 
 Add the package to `.standards/config.toml`:
@@ -16,9 +20,11 @@ contract_version = "1.1"
 python_version = "3.14"
 build_backend = "uv_build"
 source_layout = "src"
+additional_dev_dependencies = []
 
 [standards.python-tooling.config.ruff]
 line_length = 100
+extend_exclude = [".claude", ".agents", ".codex", ".continue"]
 
 [standards.python-tooling.config.type_checker]
 name = "basedpyright"
@@ -26,6 +32,8 @@ mode = "strict"
 
 [standards.python-tooling.config.pytest]
 fail_under = 85
+markers = []
+coverage_exclude_also = []
 
 [standards.python-tooling.config.pip_audit]
 ignore_vulnerabilities = []
@@ -59,8 +67,8 @@ Conflicting `pyproject.toml` keys or tables block before any write. Reconcile th
 For a V4 consumer, use the migration command instead of manually deleting legacy files:
 
 ```bash
-project-standards migrate --catalog 5
-project-standards migrate --catalog 5 --apply
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
 ```
 
 Modified recognized legacy files require an explicit ownership decision.
@@ -68,3 +76,12 @@ Modified recognized legacy files require an explicit ownership decision.
 ## Disable
 
 Set `enabled = false`, preview, and apply. The central lock removes only Python Tooling-owned units and preserves shared units still referenced by Markdown Tooling or another package.
+
+## Troubleshooting
+
+| Finding | Resolution |
+| --- | --- |
+| A `pyproject.toml` key conflicts | Make the repository intent explicit in the matching package option, then preview again. |
+| `uv.lock` is stale after apply | Run `uv lock` and commit it with the config, central lock, and reconciled outputs. |
+| A custom marker, coverage exclusion, Ruff exclusion, or dev dependency disappeared in preview | Add it to the corresponding closed option; migration preserves explicit supported intent only. |
+| Shared EditorConfig or VS Code unit conflicts | Reconcile only the package-owned semantic property; preserve unrelated consumer settings. |

@@ -1,59 +1,32 @@
 # Adopt the Markdown Tooling Standard
 
-The **linter** half ships a reusable workflow and a seedable rule set; the **formatter** half (Prettier) now also ships a reusable opt-in workflow alongside its copy-adopt config (DEC-10). The contract version is a validated label, not a body gate.
+The current consumer package is [`markdown-tooling@1.2`](versions/1.2/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
 
-## Quick adoption (CLI)
-
-As of `v3`, the packaged CLI materializes every artifact below in one command:
+## Configure and reconcile
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
-  project-standards adopt markdown-tooling
+project-standards standards enable markdown-tooling --version 1.2
+project-standards reconcile
+project-standards reconcile --apply
 ```
 
-This drops `.markdownlint.json`, `.prettierrc.json`, the shared `.editorconfig` and `.vscode/extensions.json`, and both the `lint-markdown.yml` and `format.yml` workflow callers (pinned to the current released major). Existing files are skipped unless you pass `--force`. The manual steps below remain the reference for what each artifact is and how to wire it by hand.
+Options under `[standards.markdown-tooling.config]` select the independent contract, lint/format behavior, CI triggers, Markdown/config globs, typed exclusions, and `workflow_mode`. Use `caller` for reusable `@v5` workflows or `self-hosted` for immutable in-repository jobs. The package owns its two configs and two workflow files, plus only its declared semantic units in shared containers.
 
-## Steps
+## Migrate a V4 repository
 
-1. **Seed the rule set + floor.** Copy `.markdownlint.json` (the markdownlint rule set) and `.editorconfig` from this repo.
+```bash
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
+```
 
-2. **Copy the formatter config (optional).** Copy `.prettierrc.json`; pin Prettier via a minimal `package.json` devDep or run `npx prettier@<version>`.
+Migration maps `markdown_tooling.version`, transfers only exact exclusive files, and adopts exact shared units semantically. Modified root configuration is preserved and reported as a conflict; resolve local intent before retrying.
 
-3. **Wire the reusable linter.** Add a job calling the workflow:
+## Verify and troubleshoot
 
-   ```yaml
-   jobs:
-     lint-markdown:
-       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
-       with:
-         globs: '**/*.md'
-   ```
+```bash
+project-standards reconcile --check
+npx --no-install markdownlint-cli2 '**/*.md'
+npx --no-install prettier --check .
+```
 
-4. **Wire the formatter workflow (opt-in).** Add a job calling the Prettier workflow (or adopt `format.caller.yml`, which the CLI writes as `.github/workflows/format.yml`):
-
-   ```yaml
-   jobs:
-     format:
-       uses: L3DigitalNet/project-standards/.github/workflows/format.yml@v4
-   ```
-
-   Format once and commit (`npx prettier@3.8.3 --write .`) before enabling the gate. Not ready to enforce yet? Pass `prettier: false` in the caller to defer — the whole job skips (a clean pass).
-
-5. **Add the VS Code recommendations:** `esbenp.prettier-vscode` + `DavidAnson.vscode-markdownlint`. When the repo uses VS Code, also merge the standard's `[markdown]`/`[json]`/`[jsonc]`/`[yaml]` formatter blocks (standard §10) into `.vscode/settings.json` — in a repo that also adopted Python Tooling, that file already exists with the Python blocks; add these alongside, do not replace it.
-
-6. **Add the agent instruction block.** Append the standard's §12 block to `AGENTS.md` (or the canonical instruction source it points to). In a repo that also adopted Python Tooling, the CLI-delivered `AGENTS.md` contains only the Python contract — the two blocks are designed to sit side by side.
-
-7. **Select the contract version (optional)** in `.project-standards.yml`:
-
-   ```yaml
-   markdown_tooling:
-     version: '1.1'
-   ```
-
-   This is validated-if-present metadata only — it runs no check by itself; the markdownlint workflow is the enforcement.
-
-8. **Run the check contract** (standard "Core contract") to confirm clean.
-
-9. **Need an exception?** Record an ADR; see the [ADR Standard](../adr/README.md).
-
-Unlike the Markdown **Frontmatter** standard, the linter half ships a reusable workflow but no Python validator runs over Markdown bodies. The formatter half now ships an opt-in reusable workflow too (DEC-10), but its enforcement is opt-in — a consumer adopts `format.caller.yml` (or `prettier: false` to defer). The contract version is a validated label surfaced in `.project-standards.yml` — it is metadata only and runs no check by itself.
+Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.2/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.

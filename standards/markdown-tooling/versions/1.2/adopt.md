@@ -7,6 +7,7 @@ This package manages the Markdown Tooling configuration, caller workflows, and b
 Configure these fields under the `markdown-tooling` package selection:
 
 - `contract_version`: the independent Markdown Tooling contract selector; package 1.2 supports `1.1`.
+- `workflow_mode`: `caller` uses reusable workflows pinned to `v5`; `self-hosted` installs immutable in-repository jobs without a remote standards dependency.
 - `lint` and `format`: enable markdownlint structure checks and Prettier physical-format checks independently.
 - `ci.lint_caller` and `ci.format_caller`: add automatic push and pull-request triggers to the corresponding managed caller. A disabled caller remains installed with only `workflow_dispatch`, so toggling enforcement does not churn ownership.
 - `markdown_globs`: Markdown included by the lint caller and described in the bounded agent guidance.
@@ -46,3 +47,18 @@ The automatic V4 migration maps only `markdown_tooling.version` into `contract_v
 Modified legacy root configuration is reported as a migration conflict and preserved. Resolve the local intent before retrying migration; the provider never writes the repository, accesses the network, or emits an active `.project-standards.yml` fragment.
 
 Generic plan, apply, update, and disable behavior is delegated to the unified control plane. The central `.standards/lock.toml` records ownership; this package creates no package-local lock.
+
+## Verify and troubleshoot
+
+```bash
+project-standards reconcile --check
+npx --no-install markdownlint-cli2 '**/*.md'
+npx --no-install prettier --check .
+```
+
+| Finding | Resolution |
+| --- | --- |
+| A disabled tool still has its CI caller enabled | Disable the matching caller option or enable the tool. |
+| Shared container contribution conflicts | Preserve unrelated content and reconcile only the declared property, recommendation, or managed block. |
+| Managed config or workflow drift | Restore the locked bytes or change package options and reconcile deliberately. |
+| V4 artifact is modified | Resolve ownership manually; automatic migration accepts only exact released bytes. |

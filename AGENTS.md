@@ -6,7 +6,7 @@
 
 ## Repo Purpose
 
-This repo is the **single source of truth** for reusable project standards. It defines seven released or v5-staged standards — **Markdown Frontmatter**, **ADR**, **Project Specification**, **Markdown Tooling** (copy-adopt markdownlint/Prettier/EditorConfig + optional `lint-markdown.yml`/`format.yml`), **Python Tooling SSOT**, **CLI Documentation**, and **Agent Handoff** — plus two unreleased/reference documents: **Python Coding** and **Standard Bundle Authoring** (`adoption = "none"`, defines `standard.toml`). Consumers use config + reusable workflows or copy-adopt scaffolds rather than vendoring standards. See [README.md](README.md) for the full surface.
+This repo is the **single source of truth** for reusable project standards. Catalog 5 contains seven consumer-selectable packages — **Markdown Frontmatter**, **ADR**, **Project Specification**, **Markdown Tooling**, **Python Tooling**, **CLI Documentation**, and **Agent Handoff** — plus reference-only **Python Coding** and internal **Standard Bundle Authoring 2.0**. Consumers select immutable packages through `.standards/config.toml`; reconciliation composes managed and consumer-owned surfaces under one central lock. See [README.md](README.md) for the full surface.
 
 ## Structure
 
@@ -26,6 +26,7 @@ This repo is the **single source of truth** for reusable project standards. It d
 - **Dogfood the standards.** Managed Markdown (`CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `docs/workflows/**`, `meta/**`, `docs/adr/**`) must validate: `uv run project-standards validate --config .project-standards.yml`. `standards/**` is excluded from this repo's local frontmatter scope by ADR 0015 so standard packages do not ship repo-local metadata.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
 - **Keep the toolchain green** before committing validator/test changes: `uv run ruff format --check .`, `uv run ruff check .`, `uv run basedpyright`, `uv run coverage run -m pytest`, `uv run coverage report`, `uv run pip-audit`, `uv run pytest tests/coherence` (the markdownlint/Prettier co-satisfaction gate; needs `npm ci`).
+- **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`. Keep `.standards/` absent until atomic v5 release commit.
 - **The schema is a versioned contract** — see `docs/handoff/conventions.md` #4.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.
 
