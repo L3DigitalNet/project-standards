@@ -278,13 +278,13 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/python-tooling/standard.toml`; create `standards/python-tooling/versions/1.1/**`; update tooling/coherence tests and fixtures.
 
-- [ ] Write a closed option schema for contract version, Python version, build backend, source layout, Ruff, type checker, pytest/coverage, pip-audit, CI, VS Code, and agent instructions. Type-checker selection must fan out coherently to `pyproject.toml`, workflow, editor tasks/settings, and instructions.
-- [ ] Reconstruct `python-tooling@1.1` with canonical docs, build-backend guidance, workflow/script files, static sources, and semantic contributions for `pyproject.toml`, `.editorconfig`, VS Code, and bounded agent instructions.
-- [ ] Preflight every claimed `pyproject.toml` key/table. Preserve conflicting consumer values and reject parent/child scope overlap before any write.
-- [ ] Map legacy `python_tooling.version` plus exact V1 files. Whole agent-instruction and VS Code ownership must become bounded contributions; no package may replace the complete shared container.
-- [ ] Prove real apply with Agent Handoff and Markdown Tooling, multiple type-checker selections, fresh/migrated state, disable/reference-count removal, drift, and second apply.
-- [ ] Run Python Tooling, coherence, BasedPyright, Ruff, and focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct python tooling package`
+- [x] Write a closed option schema for contract version, Python version, build backend, source layout, Ruff, type checker, pytest/coverage, pip-audit, CI, VS Code, and agent instructions. Type-checker selection must fan out coherently to `pyproject.toml`, workflow, editor tasks/settings, and instructions.
+- [x] Reconstruct `python-tooling@1.1` with canonical docs, build-backend guidance, workflow/script files, static sources, and semantic contributions for `pyproject.toml`, `.editorconfig`, VS Code, and bounded agent instructions.
+- [x] Preflight every claimed `pyproject.toml` key/table. Preserve conflicting consumer values and reject parent/child scope overlap before any write.
+- [x] Map legacy `python_tooling.version` plus exact V1 files. Whole agent-instruction and VS Code ownership must become bounded contributions; no package may replace the complete shared container.
+- [x] Prove real apply with Agent Handoff and Markdown Tooling, multiple type-checker selections, fresh/migrated state, disable/reference-count removal, drift, and second apply.
+- [x] Run Python Tooling, coherence, BasedPyright, Ruff, and focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct python tooling package`
 
 ### Task 13: Agent Handoff Reconstruction and Lock Retirement
 

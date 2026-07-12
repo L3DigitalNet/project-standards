@@ -1076,6 +1076,7 @@ def _dedupe_findings(findings: list[ControlFinding]) -> tuple[ControlFinding, ..
 
 def _removal_actions(
     reports: tuple[MigrationReport, ...],
+    replacement_targets: frozenset[str] = frozenset(),
 ) -> tuple[ControlAction, ...]:
     actions = [
         ControlAction(
@@ -1093,6 +1094,8 @@ def _removal_actions(
                 LegacyDisposition.REMOVE,
                 LegacyDisposition.IMPORT_LOCK,
             }:
+                continue
+            if claim.target.original in replacement_targets:
                 continue
             actions.append(
                 ControlAction(
@@ -1251,10 +1254,17 @@ def _plan_legacy_migration(
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
+    retired_targets = frozenset(
+        claim.target
+        for report in ordered_reports
+        for claim in report.claims
+        if claim.disposition is LegacyDisposition.REMOVE
+    )
     planner = PlannerRequest(
         repo=normalized,
         resolution=resolution,
         payloads=installed.payloads,
+        retired_targets=retired_targets,
     )
     reconciliation = plan_reconciliation(planner)
     if state.kind is StateKind.DUAL_AUTHORITY:
@@ -1295,7 +1305,8 @@ def _plan_legacy_migration(
     applicable = reconciliation.applicable and not any(
         finding.severity == "error" for finding in ordered_findings
     )
-    removals = _removal_actions(ordered_reports) if applicable else ()
+    replacement_targets = frozenset(target.target for target in reconciliation.targets)
+    removals = _removal_actions(ordered_reports, replacement_targets) if applicable else ()
     legacy_preconditions = tuple(
         (path, _digest(content)) for path, content in sorted(legacy_files.items())
     )

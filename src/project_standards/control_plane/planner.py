@@ -105,6 +105,7 @@ class PlannerRequest:
     payloads: tuple[InstalledPayload, ...]
     provider_runner: ProviderRunner | None = None
     catalog_refresh: CatalogRefreshPlan | None = None
+    retired_targets: frozenset[SafeRelativePath] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1475,6 +1476,28 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             )
         )
     snapshot = RepositorySnapshot.capture(request.repo, paths)
+    if request.retired_targets:
+        # Migration replacement plans must not parse retired whole-file bytes as
+        # consumer content, but apply still binds to those exact live bytes.
+        retired = {path.original for path in request.retired_targets}
+        snapshot = RepositorySnapshot(
+            snapshot.root,
+            snapshot.targets,
+            tuple(
+                SnapshotEntry(
+                    path=entry.path,
+                    kind=EntryKind.MISSING,
+                    content=None,
+                    mode=entry.mode,
+                    link_target=None,
+                    content_digest=None,
+                    precondition_digest=entry.precondition_digest,
+                )
+                if entry.path.original in retired and entry.kind is EntryKind.REGULAR
+                else entry
+                for entry in snapshot.entries
+            ),
+        )
     referenced_inputs = _referenced_inputs(request, selected)
     notices: list[ProviderNotice] = []
     intents = _desired_intents(

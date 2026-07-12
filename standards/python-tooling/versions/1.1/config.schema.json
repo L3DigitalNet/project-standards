@@ -1,0 +1,82 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"contract_version": { "enum": ["1.0", "1.1"], "default": "1.1" },
+		"python_version": {
+			"type": "string",
+			"enum": ["3.11", "3.12", "3.13", "3.14", "3.15"],
+			"default": "3.14"
+		},
+		"build_backend": {
+			"enum": ["uv_build", "hatchling", "setuptools"],
+			"default": "uv_build"
+		},
+		"source_layout": { "enum": ["src", "flat"], "default": "src" },
+		"ruff": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"line_length": {
+					"type": "integer",
+					"minimum": 79,
+					"maximum": 120,
+					"default": 100
+				}
+			},
+			"default": { "line_length": 100 }
+		},
+		"type_checker": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"name": { "enum": ["basedpyright", "pyright"], "default": "basedpyright" },
+				"mode": { "enum": ["basic", "standard", "strict"], "default": "strict" }
+			},
+			"default": { "name": "basedpyright", "mode": "strict" }
+		},
+		"pytest": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"fail_under": { "type": "integer", "minimum": 0, "maximum": 100, "default": 85 }
+			},
+			"default": { "fail_under": 85 }
+		},
+		"pip_audit": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"ignore_vulnerabilities": {
+					"type": "array",
+					"items": { "type": "string", "pattern": "^(?:GHSA|PYSEC)-[A-Za-z0-9-]+$" },
+					"uniqueItems": true,
+					"default": []
+				}
+			},
+			"default": { "ignore_vulnerabilities": [] }
+		},
+		"ci": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"enabled": { "type": "boolean", "default": true },
+				"performance": { "type": "boolean", "default": true }
+			},
+			"default": { "enabled": true, "performance": true }
+		},
+		"vscode": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": { "format_on_save": { "type": "boolean", "default": true } },
+			"default": { "format_on_save": true }
+		},
+		"agent_instructions": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": { "include_fix_commands": { "type": "boolean", "default": true } },
+			"default": { "include_fix_commands": true }
+		}
+	}
+}
