@@ -171,7 +171,10 @@ signatures = ["legacy-usage", "legacy-workflow"]
 id = "legacy-usage"
 kind = "whole-file"
 targets = ["docs/usage.md"]
-known_content_digests = ["sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5"]
+known_content_digests = [
+  "sha256:3bf66fecb665eb9106df25e46718e3607d292d2c15d29790c04b409613eada62",
+  "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5",
+]
 
 [[legacy_signatures]]
 id = "legacy-workflow"

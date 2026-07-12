@@ -160,7 +160,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/frontmatter.py"
 media_type = "text/x-python"
-digest = "sha256:8e14e9ee820a776ebc9289773310be3fcaeab2159df7d6b37033f14154e649c9"
+digest = "sha256:fb042d7e53fb43e205bb1b7866b274f49324d5f07f8caa6b20daef46546f38c7"
 
 [[resources]]
 id = "provider-input"

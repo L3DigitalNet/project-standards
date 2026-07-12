@@ -839,7 +839,15 @@ def run_validate(
     policy = _policy(resources)
     findings = _managed_findings(request, resources)
     findings.extend(_layout_findings(snapshots, policy))
-    findings.extend(_shape_findings(snapshots, policy))
+    shape = _shape_findings(snapshots, policy)
+    if _config(request).get("contract_version") == "1.0":
+        # Contract 1.0 predates fatal document-shape enforcement. Preserve its
+        # diagnostics as advisory until the consumer explicitly selects 1.1.
+        shape = [
+            {**finding, "severity": "warning"} if finding.get("code") == "AH-SHAPE" else finding
+            for finding in shape
+        ]
+    findings.extend(shape)
     findings.extend(_reference_findings(snapshots, policy))
     findings.extend(_credential_findings(snapshots, policy))
     findings.extend(_integration_findings(request, snapshots))

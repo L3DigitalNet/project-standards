@@ -540,6 +540,30 @@ def test_agent_handoff_validate_enforces_layout_shape_credentials_and_integratio
     assert "AH-SHAPE" in {finding.code for finding in shaped.findings}
     assert "AH-SIZE-CAP" not in {finding.code for finding in shaped.findings}
 
+    legacy_shaped = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        _options(contract_version="1.0"),
+        tmp_path,
+        shape_invalid,
+    )
+    legacy_shape = [finding for finding in legacy_shaped.findings if finding.code == "AH-SHAPE"]
+    assert legacy_shape
+    assert {finding.severity for finding in legacy_shape} == {"warning"}
+
+    oversized = _valid_handoff_snapshots(_options(contract_version="1.0"))
+    oversized["docs/handoff/state.md"] = _content_snapshot(b"# State\n" + b"x" * 5000)
+    legacy_oversized = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        _options(contract_version="1.0"),
+        tmp_path,
+        oversized,
+    )
+    assert {(finding.code, finding.severity) for finding in legacy_oversized.findings} >= {
+        ("AH-SIZE-CAP", "error")
+    }
+
 
 @pytest.mark.parametrize(
     ("config", "stale_paths"),

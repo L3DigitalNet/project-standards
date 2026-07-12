@@ -328,9 +328,11 @@ def run_upgrade(request: Mapping[str, object], resources: Mapping[str, bytes]) -
 
 
 def run_render_workflow(
-    request: Mapping[str, object], _resources: Mapping[str, bytes]
+    request: Mapping[str, object], resources: Mapping[str, bytes]
 ) -> dict[str, str]:
     """Render the stable caller with a config-selected job gate."""
+    if _config(request).get("workflow_mode") == "self-hosted":
+        return {"content": resources["self-host-workflow"].decode()}
     enabled = "true" if _config(request).get("ci") is True else "false"
     return {
         "content": (
@@ -405,6 +407,11 @@ def run_migrate(
                 continue
             digest = state.get("digest")
             if isinstance(digest, str):
+                if (
+                    digest
+                    == "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
+                ):
+                    config["workflow_mode"] = "self-hosted"
                 claims.append(
                     {
                         "signature_id": signature_id,

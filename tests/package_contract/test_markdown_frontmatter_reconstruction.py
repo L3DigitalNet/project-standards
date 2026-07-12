@@ -462,7 +462,7 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         "schema": "markdown-frontmatter",
         "required": True,
         "include": ["docs/**/*.md"],
-        "exclude": ["README.md"],
+        "exclude": ["**/*.template.md", "README.md"],
         "references": {"enabled": True},
     }
     assert report.package.recognized_settings == (

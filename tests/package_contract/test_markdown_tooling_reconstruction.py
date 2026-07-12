@@ -116,6 +116,7 @@ def test_markdown_tooling_options_are_closed_and_explicitly_typed() -> None:
 
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
+        "workflow_mode": "caller",
         "lint": True,
         "format": True,
         "ci": {"lint_caller": True, "format_caller": True},
@@ -177,6 +178,47 @@ def test_markdown_tooling_options_are_closed_and_explicitly_typed() -> None:
     for options in invalid:
         with pytest.raises(PackageContractError, match="package options violate schema"):
             schema.resolve_options(options)
+
+
+def test_markdown_tooling_self_host_mode_renders_immutable_workflows() -> None:
+    config = load_option_schema(_PAYLOAD, _payload().manifest).resolve_options(
+        {"workflow_mode": "self-hosted"}
+    )
+    for provider_id, resource in (
+        ("render-lint-caller", "resources/self-host-lint-markdown.yml"),
+        ("render-format-caller", "resources/self-host-format.yml"),
+    ):
+        result = invoke_provider(_invocation(provider_id, ProviderOperation.RENDER, config))
+        assert result.content == (_PAYLOAD / resource).read_bytes()
+
+
+def test_markdown_tooling_partial_self_host_pair_blocks_migration() -> None:
+    payload = _payload()
+    signatures = {item.id: item for item in payload.manifest.legacy_signatures}
+    result = invoke_provider(
+        _invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {"markdown_tooling": {"version": "1.1"}},
+                "legacy_signatures": {
+                    "legacy-format-caller": {
+                        ".github/workflows/format.yml": {
+                            "known": True,
+                            "digest": signatures["legacy-format-caller"]
+                            .known_content_digests[0]
+                            .value,
+                        }
+                    }
+                },
+            },
+        )
+    )
+    assert result.migration_report is not None
+    assert [finding.code for finding in result.migration_report.findings] == [
+        "MT-LEGACY-WORKFLOW-MODE"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -589,7 +631,7 @@ def test_markdown_tooling_migration_maps_yaml_and_exact_v1_artifacts() -> None:
         signature.id: {
             signature.targets[0].original: {
                 "known": True,
-                "digest": signature.known_content_digests[0].value,
+                "digest": signature.known_content_digests[-1].value,
             }
         }
         for signature in payload.manifest.legacy_signatures

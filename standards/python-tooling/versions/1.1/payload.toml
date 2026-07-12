@@ -50,7 +50,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:4703487338f584af263aae2039ed274d78b55db1e001740ceca08a4a3e124941"
+digest = "sha256:197715d6d9f4f60b8c0d81136efb62f3ef86ebe96c5fc179f4647adc889776c5"
 
 [[resources]]
 id = "python-version-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:4bb32f0ee748a216f457b6f2de3ab49af2ac21c4d01a41ea7753308c592c4e29"
+digest = "sha256:a78fb7116eeaf076f15dcc88993a6343c6d7e913569882fe5e9a22f7ddcb84c1"
 
 [[resources]]
 id = "provider-input"
@@ -645,7 +645,10 @@ signatures = [
 id = "legacy-agents"
 kind = "whole-file"
 targets = ["AGENTS.md"]
-known_content_digests = ["sha256:c1da8ce6520f8aaa300f37f43810a45c8a39596d5e6c2fa965eb8b3ef4702caf"]
+known_content_digests = [
+  "sha256:960e17f7c7f0980a979b48e4457de958697afeb3d6e1953c379e20a443669b92",
+  "sha256:c1da8ce6520f8aaa300f37f43810a45c8a39596d5e6c2fa965eb8b3ef4702caf",
+]
 
 [[legacy_signatures]]
 id = "legacy-check-script"
@@ -663,7 +666,10 @@ known_content_digests = ["sha256:16a65f2bdc06adfc814786201ec32937bad4b5930cbf2bf
 id = "legacy-claude"
 kind = "whole-file"
 targets = ["CLAUDE.md"]
-known_content_digests = ["sha256:8da15c367a9863310000a48ad49f46bff7e67734d2e860face27016e3e6df806"]
+known_content_digests = [
+  "sha256:21cd73316ba5128b5a0bc66a34de4563dcf8af6b049f22ff4409f40c496850c0",
+  "sha256:8da15c367a9863310000a48ad49f46bff7e67734d2e860face27016e3e6df806",
+]
 
 [[legacy_signatures]]
 id = "legacy-editorconfig"
@@ -687,10 +693,16 @@ known_content_digests = ["sha256:ca0a0311bb9598fc948d8265f5621b591ff3d0c8205b0fd
 id = "legacy-vscode-settings"
 kind = "whole-file"
 targets = [".vscode/settings.json"]
-known_content_digests = ["sha256:83e90eb79fc75e1bcd13dc83283a608aea1cdc322ccb11fcefc5cc29f0e82f4e"]
+known_content_digests = [
+  "sha256:22f598ebf1f24e29041289891b3c56131f0acc4dddfed802d92a6a3802eab55f",
+  "sha256:83e90eb79fc75e1bcd13dc83283a608aea1cdc322ccb11fcefc5cc29f0e82f4e",
+]
 
 [[legacy_signatures]]
 id = "legacy-vscode-tasks"
 kind = "whole-file"
 targets = [".vscode/tasks.json"]
-known_content_digests = ["sha256:17ba0089915fafae10400a63675808ed67e532e4952544dd8d49cac3348128c1"]
+known_content_digests = [
+  "sha256:17ba0089915fafae10400a63675808ed67e532e4952544dd8d49cac3348128c1",
+  "sha256:8dcb4880139bb708bf20819479bcb7898bb5d1dabd8d79e43b7d64bb3e4b3b08",
+]

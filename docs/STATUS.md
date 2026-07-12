@@ -23,10 +23,10 @@
 - Task 18 closes the core with offline wheel repair, an all-adapter fixed point, 100-order determinism, package-ID neutrality, and scale evidence.
 - The final gate passes 2,000 tests at 90% coverage; planning 100 packages and 1,000 artifacts remains below five seconds.
 - The approved 18-task core plan is complete. Real-package reconstruction, migration, conversion, refresh, activation, and release remain.
-- CP01 follow-on Tasks 1-16 are complete: all nine payloads are reconstructed, catalog 5 is active, and the real package compatibility matrix passes from source and wheel.
+- CP01 follow-on Tasks 1-17 are complete: all nine payloads are reconstructed, catalog 5 is active, the real package compatibility matrix passes from source and wheel, and the disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
 - Task 16 passes 56 compatibility rows plus three explicit performance rows across source and wheel.
-- Every default, unordered pair, full set, validator, shared surface, and legacy migration is covered; Task 17 proves the disposable release cut next.
+- Every default, unordered pair, full set, validator, shared surface, and legacy migration is covered; Task 18 now owns documentation, traceability, and release-ready closeout.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

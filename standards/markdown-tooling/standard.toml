@@ -9,4 +9,4 @@ status = "active"
 [[versions]]
 version = "1.2"
 payload = "versions/1.2/payload.toml"
-digest = "sha256:07649cbf7140c9a430b66f315dba2855fba33696eb8edba274a15a7b1cfdf558"
+digest = "sha256:94ed1ae921f3c456fff00395323e9be9d8c01dbc9c98632fb0f0b79ad0fcb7f4"

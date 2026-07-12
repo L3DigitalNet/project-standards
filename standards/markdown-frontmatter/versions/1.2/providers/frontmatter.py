@@ -602,6 +602,15 @@ def run_migrate(
             if "enabled" in references:
                 config["references"] = {"enabled": references["enabled"]}
                 recognized.append("/markdown/frontmatter/references/enabled")
+        elif key == "exclude":
+            exclusions = frontmatter[key]
+            if not isinstance(exclusions, Sequence) or isinstance(exclusions, str | bytes):
+                raise ValueError("legacy frontmatter exclude must be an array")
+            values = cast("Sequence[object]", exclusions)
+            if not all(isinstance(item, str) for item in values):
+                raise ValueError("legacy frontmatter exclude entries must be strings")
+            config[key] = list(dict.fromkeys(("**/*.template.md", *cast("Sequence[str]", values))))
+            recognized.append("/markdown/frontmatter/exclude")
         else:
             config[key] = frontmatter[key]
             recognized.append(f"/markdown/frontmatter/{key}")

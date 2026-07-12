@@ -14,6 +14,12 @@
 			"default": "uv_build"
 		},
 		"source_layout": { "enum": ["src", "flat"], "default": "src" },
+		"additional_dev_dependencies": {
+			"type": "array",
+			"items": { "type": "string", "minLength": 1, "pattern": "^[^\\s<>`]+$" },
+			"uniqueItems": true,
+			"default": []
+		},
 		"ruff": {
 			"type": "object",
 			"additionalProperties": false,
@@ -23,9 +29,18 @@
 					"minimum": 79,
 					"maximum": 120,
 					"default": 100
+				},
+				"extend_exclude": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1, "pattern": "^[^\\r\\n<>`]+$" },
+					"uniqueItems": true,
+					"default": [".claude", ".agents", ".codex", ".continue"]
 				}
 			},
-			"default": { "line_length": 100 }
+			"default": {
+				"line_length": 100,
+				"extend_exclude": [".claude", ".agents", ".codex", ".continue"]
+			}
 		},
 		"type_checker": {
 			"type": "object",
@@ -40,9 +55,21 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
-				"fail_under": { "type": "integer", "minimum": 0, "maximum": 100, "default": 85 }
+				"fail_under": { "type": "integer", "minimum": 0, "maximum": 100, "default": 85 },
+				"markers": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1, "pattern": "^[^\\r\\n<>`]+$" },
+					"uniqueItems": true,
+					"default": []
+				},
+				"coverage_exclude_also": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1, "pattern": "^[^\\r\\n<>`]+$" },
+					"uniqueItems": true,
+					"default": []
+				}
 			},
-			"default": { "fail_under": 85 }
+			"default": { "fail_under": 85, "markers": [], "coverage_exclude_also": [] }
 		},
 		"pip_audit": {
 			"type": "object",

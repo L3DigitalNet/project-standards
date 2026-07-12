@@ -43,7 +43,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:07620671a1748f481f1d9d4dcc7f0400872c8364e3b19bf87cdf4f7c24db5b84"
+digest = "sha256:f0be1e85f7a6bb87c697bf3b6db80bdd710409101bebe9c28d5f115a52729c73"
 
 [[resources]]
 id = "example"
@@ -95,11 +95,18 @@ media_type = "text/yaml"
 digest = "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"
 
 [[resources]]
+id = "self-host-workflow"
+role = "provider-resource"
+path = "resources/self-host-validate-specs.yml"
+media_type = "text/yaml"
+digest = "sha256:6a606cb3820add46cfe22bf1730c28ced1b03f6977c6636221da7a7a36be8e76"
+
+[[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:c171d702dcc886ef768a1d77901c31fa513fb360c9ee34f9e55a8df1ef63614b"
+digest = "sha256:6b9bd80439347337dce054963fc3da388b039f955daf5e12df92084cd4eee7ac"
 
 [[resources]]
 id = "provider-input"
@@ -254,7 +261,7 @@ effect = "content"
 entrypoint = "payload:provider-code#run_render_workflow"
 input_schema = "provider-input"
 output_schema = "provider-content"
-resources = []
+resources = ["self-host-workflow"]
 
 [[providers]]
 id = "render-preview"
@@ -295,4 +302,7 @@ signatures = ["legacy-workflow"]
 id = "legacy-workflow"
 kind = "whole-file"
 targets = [".github/workflows/validate-specs.yml"]
-known_content_digests = ["sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"]
+known_content_digests = [
+  "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
+  "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447",
+]

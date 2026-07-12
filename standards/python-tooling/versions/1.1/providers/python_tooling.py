@@ -15,6 +15,17 @@ def _table(value: object, *, name: str) -> Mapping[str, object]:
     return cast("Mapping[str, object]", value)
 
 
+def _json_value(value: object) -> object:
+    """Copy frozen legacy snapshots into provider-returnable JSON containers."""
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        return {str(key): _json_value(item) for key, item in mapping.items()}
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        sequence = cast("Sequence[object]", value)
+        return [_json_value(item) for item in sequence]
+    return value
+
+
 def _config(request: Mapping[str, object]) -> Mapping[str, object]:
     return _table(request.get("config"), name="config")
 
@@ -80,6 +91,10 @@ def _build_system(config: Mapping[str, object]) -> str:
 def _dependencies(config: Mapping[str, object]) -> str:
     checker, _mode = _checker(config)
     values = [checker, "coverage[toml]", "pip-audit", "pytest>=9.0", "ruff>=0.14.11"]
+    additional = config.get("additional_dev_dependencies")
+    if not isinstance(additional, Sequence) or isinstance(additional, str | bytes):
+        raise ValueError("config.additional_dev_dependencies must be an array")
+    values.extend(cast("Sequence[str]", additional))
     return "[dependency-groups]\ndev = " + _toml_array(values)
 
 
@@ -92,7 +107,7 @@ def _ruff_table(config: Mapping[str, object]) -> str:
         f"target-version = {json.dumps(target)}\n"
         f"line-length = {ruff.get('line_length')}\n"
         f"src = {json.dumps(include)}\n"
-        'extend-exclude = [".claude", ".agents", ".codex", ".continue"]\n\n'
+        f"extend-exclude = {json.dumps(ruff.get('extend_exclude'))}\n\n"
         "[tool.ruff.lint]\n"
         'select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE", "PTH", "RET", "RUF"]\n'
         'ignore = ["E501"]\n\n'
@@ -119,14 +134,16 @@ def _checker_table(config: Mapping[str, object], table: str) -> str:
     )
 
 
-def _pytest_table(_config: Mapping[str, object]) -> str:
+def _pytest_table(config: Mapping[str, object]) -> str:
     testpaths = ["tests"]
-    return (
+    rendered = (
         "[tool.pytest.ini_options]\n"
         'minversion = "9.0"\n'
         f"testpaths = {json.dumps(testpaths)}\n"
         'addopts = ["-ra", "--strict-markers", "--strict-config"]\n'
     )
+    markers = _section(config, "pytest").get("markers")
+    return rendered + (f"markers = {json.dumps(markers)}\n" if markers else "")
 
 
 def _coverage_run(config: Mapping[str, object]) -> str:
@@ -135,13 +152,16 @@ def _coverage_run(config: Mapping[str, object]) -> str:
 
 
 def _coverage_report(config: Mapping[str, object]) -> str:
-    threshold = _section(config, "pytest").get("fail_under")
-    return (
+    pytest = _section(config, "pytest")
+    threshold = pytest.get("fail_under")
+    rendered = (
         "[tool.coverage.report]\n"
         "show_missing = true\n"
         "skip_covered = true\n"
         f"fail_under = {threshold}\n"
     )
+    exclusions = pytest.get("coverage_exclude_also")
+    return rendered + (f"exclude_also = {json.dumps(exclusions)}\n" if exclusions else "")
 
 
 def _audit_command(config: Mapping[str, object]) -> tuple[str, ...]:
@@ -307,9 +327,13 @@ _DEFAULT_CONFIG: dict[str, object] = {
     "python_version": "3.14",
     "build_backend": "uv_build",
     "source_layout": "src",
-    "ruff": {"line_length": 100},
+    "additional_dev_dependencies": [],
+    "ruff": {
+        "line_length": 100,
+        "extend_exclude": [".claude", ".agents", ".codex", ".continue"],
+    },
     "type_checker": {"name": "basedpyright", "mode": "strict"},
-    "pytest": {"fail_under": 85},
+    "pytest": {"fail_under": 85, "markers": [], "coverage_exclude_also": []},
     "pip_audit": {"ignore_vulnerabilities": []},
     "ci": {"enabled": True, "performance": True},
     "vscode": {"format_on_save": True},
@@ -564,6 +588,13 @@ _SIGNATURES = {
     "legacy-vscode-tasks": (".vscode/tasks.json", "managed", "remove"),
 }
 
+_PRESERVED_CONTAINER_DIGESTS = {
+    "sha256:960e17f7c7f0980a979b48e4457de958697afeb3d6e1953c379e20a443669b92",
+    "sha256:21cd73316ba5128b5a0bc66a34de4563dcf8af6b049f22ff4409f40c496850c0",
+    "sha256:22f598ebf1f24e29041289891b3c56131f0acc4dddfed802d92a6a3802eab55f",
+    "sha256:8dcb4880139bb708bf20819479bcb7898bb5d1dabd8d79e43b7d64bb3e4b3b08",
+}
+
 
 def run_migrate(
     request: Mapping[str, object],
@@ -578,6 +609,10 @@ def run_migrate(
     if "version" in namespace:
         config["contract_version"] = namespace["version"]
         recognized.append("/python_tooling/version")
+    for key in ("additional_dev_dependencies", "ruff", "pytest"):
+        if key in namespace:
+            config[key] = _json_value(namespace[key])
+            recognized.append(f"/python_tooling/{key}")
 
     signatures = _table(snapshots.get("legacy_signatures"), name="legacy signatures")
     claims: list[dict[str, object]] = []
@@ -592,13 +627,16 @@ def run_migrate(
         state = cast("Mapping[str, object]", observed)
         digest = state.get("digest")
         if state.get("known") is True and isinstance(digest, str):
+            resolved_disposition = (
+                "preserve" if digest in _PRESERVED_CONTAINER_DIGESTS else disposition
+            )
             claims.append(
                 {
                     "signature_id": signature_id,
                     "target": target,
                     "observed_digest": digest,
                     "ownership": ownership,
-                    "disposition": disposition,
+                    "disposition": resolved_disposition,
                 }
             )
         elif isinstance(digest, str):

@@ -43,7 +43,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:4035ccde273cd8ef8c7fda4e4052ab7d3370ddbc530d47881d29415f6974f771"
+digest = "sha256:75de3c1edd89bce172729054309587ce192e248a206ebd0519c163992567e3c1"
 
 [[resources]]
 id = "markdownlint-source"
@@ -88,11 +88,25 @@ media_type = "application/yaml"
 digest = "sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04"
 
 [[resources]]
+id = "self-host-lint-workflow"
+role = "provider-resource"
+path = "resources/self-host-lint-markdown.yml"
+media_type = "application/yaml"
+digest = "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772"
+
+[[resources]]
+id = "self-host-format-workflow"
+role = "provider-resource"
+path = "resources/self-host-format.yml"
+media_type = "application/yaml"
+digest = "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
+
+[[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:84819f521212d6febd397c36ef1ae842e32b9768f22acd7e56dfe1c12964bf72"
+digest = "sha256:b73ceb05b87b788453870d428fe353d70a0ddd015b18a6c80fff2d6233c7f158"
 
 [[resources]]
 id = "provider-input"
@@ -338,7 +352,7 @@ effect = "content"
 entrypoint = "payload:provider-code#run_render_lint"
 input_schema = "provider-input"
 output_schema = "provider-content"
-resources = []
+resources = ["self-host-lint-workflow"]
 
 [[providers]]
 id = "render-format-caller"
@@ -349,7 +363,7 @@ effect = "content"
 entrypoint = "payload:provider-code#run_render_format"
 input_schema = "provider-input"
 output_schema = "provider-content"
-resources = []
+resources = ["self-host-format-workflow"]
 
 [[providers]]
 id = "render-semantic"
@@ -371,7 +385,7 @@ effect = "findings"
 entrypoint = "payload:provider-code#run_verify_lint"
 input_schema = "provider-input"
 output_schema = "provider-findings"
-resources = ["markdownlint-source"]
+resources = ["markdownlint-source", "self-host-lint-workflow"]
 
 [[providers]]
 id = "verify-format"
@@ -382,7 +396,7 @@ effect = "findings"
 entrypoint = "payload:provider-code#run_verify_format"
 input_schema = "provider-input"
 output_schema = "provider-findings"
-resources = ["prettier-source"]
+resources = ["prettier-source", "self-host-format-workflow"]
 
 [[providers]]
 id = "migrate-legacy"
@@ -470,10 +484,16 @@ known_content_digests = ["sha256:ca0a0311bb9598fc948d8265f5621b591ff3d0c8205b0fd
 id = "legacy-lint-caller"
 kind = "whole-file"
 targets = [".github/workflows/lint-markdown.yml"]
-known_content_digests = ["sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845"]
+known_content_digests = [
+  "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
+  "sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845",
+]
 
 [[legacy_signatures]]
 id = "legacy-format-caller"
 kind = "whole-file"
 targets = [".github/workflows/format.yml"]
-known_content_digests = ["sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04"]
+known_content_digests = [
+  "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5",
+  "sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04",
+]

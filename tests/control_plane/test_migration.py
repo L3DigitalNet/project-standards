@@ -651,6 +651,7 @@ def test_migration_does_not_bridge_unsafe_whole_file_contribution_claims(
         ),
     )
     observed = _ObservedSignature(
+        "alpha",
         signature.id,
         target,
         observed_digest,

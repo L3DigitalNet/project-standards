@@ -175,6 +175,7 @@ def test_project_spec_options_are_closed_and_explicit() -> None:
 
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
+        "workflow_mode": "caller",
         "include_patterns": ["docs/specs/**/*.md"],
         "reference_prefixes": [],
         "default_profile": "standard",
@@ -272,7 +273,7 @@ def test_project_spec_declares_the_exact_rendered_v4_workflow_only() -> None:
     assert set(signatures) == {"legacy-workflow"}
     assert (_PAYLOAD / "resources/legacy-validate-specs.yml").read_bytes() == rendered_v4
     assert b"{{ref}}" not in rendered_v4
-    assert signatures["legacy-workflow"].known_content_digests[0].value == (
+    assert signatures["legacy-workflow"].known_content_digests[-1].value == (
         f"sha256:{hashlib.sha256(rendered_v4).hexdigest()}"
     )
 
@@ -467,6 +468,22 @@ def test_project_spec_workflow_ci_false_is_a_stable_noop_caller() -> None:
     assert b"if: ${{ false }}" in result.content
 
 
+def test_project_spec_self_host_mode_renders_immutable_workflow() -> None:
+    result = _invoke(
+        "render-workflow",
+        ProviderOperation.RENDER,
+        config={
+            "contract_version": "1.1",
+            "workflow_mode": "self-hosted",
+            "include_patterns": ["docs/specs/**/*.md"],
+            "reference_prefixes": [],
+            "default_profile": "standard",
+            "ci": True,
+        },
+    )
+    assert result.content == (_PAYLOAD / "resources/self-host-validate-specs.yml").read_bytes()
+
+
 def test_project_spec_scaffold_preview_returns_content_without_a_target() -> None:
     result = _invoke(
         "render-preview",
@@ -552,7 +569,7 @@ def test_project_spec_migration_claims_only_its_semantic_config_block_and_workfl
                 "legacy-workflow": {
                     ".github/workflows/validate-specs.yml": {
                         "known": True,
-                        "digest": signature.known_content_digests[0].value,
+                        "digest": signature.known_content_digests[-1].value,
                     }
                 }
             },

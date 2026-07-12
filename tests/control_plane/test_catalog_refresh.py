@@ -539,6 +539,60 @@ def test_real_installed_default_advancement_updates_selection_compatibly(
     assert refreshed.accepted_tracks == {}
 
 
+def test_integrated_refresh_preserves_pins_tracks_options_extensions_and_unrelated_files(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    base = installed_distribution(tmp_path)
+    repositories: dict[str, Path] = {}
+    for case, selector in (("latest", "latest"), ("exact", "2.0"), ("accepted", "3.0")):
+        repo = tmp_path / f"consumer-{case}"
+        repo.mkdir()
+        initialize_control_plane(repo, "5", distribution=base)
+        extension = repo / ".standards/extensions/alpha/options.toml"
+        extension.parent.mkdir(parents=True)
+        extension.write_text("enabled = true\n", encoding="utf-8")
+        (repo / "consumer.txt").write_text(f"unrelated {case}\n", encoding="utf-8")
+        set_standard_selection(repo, "alpha", enabled=True, version=selector)
+        arguments = ["--repo", str(repo), "--apply", "--json"]
+        if case == "accepted":
+            arguments.extend(["--allow-major", "alpha@3"])
+        assert run(arguments, distribution=base) == 0
+        capsys.readouterr()
+        repositories[case] = repo
+
+    preserved = {
+        case: {
+            path: (repo / path).read_bytes()
+            for path in (
+                ".standards/config.toml",
+                ".standards/extensions/alpha/options.toml",
+                "consumer.txt",
+            )
+        }
+        for case, repo in repositories.items()
+    }
+    newer = _distribution_with_alpha_2_1(tmp_path)
+    for repo in repositories.values():
+        assert run(["--repo", str(repo), "--apply", "--json"], distribution=newer) == 0
+        capsys.readouterr()
+
+    assert {
+        case: parse_lock((repo / ".standards/lock.toml").read_bytes())
+        .standards["alpha"]
+        .resolved.value
+        for case, repo in repositories.items()
+    } == {"latest": "2.1", "exact": "2.0", "accepted": "3.0"}
+    assert (
+        parse_lock((repositories["accepted"] / ".standards/lock.toml").read_bytes())
+        .accepted_tracks["alpha"]
+        .major
+        == 3
+    )
+    for case, repo in repositories.items():
+        assert {path: (repo / path).read_bytes() for path in preserved[case]} == preserved[case]
+
+
 @pytest.mark.parametrize(
     ("failure_phase", "failure_identity"),
     [

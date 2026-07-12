@@ -262,7 +262,7 @@ def test_cli_documentation_declares_only_create_only_usage_ownership() -> None:
     legacy = next(resource for resource in manifest.resources if resource.id == "legacy-workflow")
     signature = next(item for item in manifest.legacy_signatures if item.id == "legacy-workflow")
     assert verify.resources == ["legacy-workflow"]
-    assert legacy.digest == signature.known_content_digests[0]
+    assert legacy.digest in signature.known_content_digests
     assert (_PAYLOAD / legacy.path.normalized).read_bytes() == (
         _ROOT / "src/project_standards/bundles/cli-documentation/cli-docs-check.yml"
     ).read_bytes()
@@ -497,7 +497,7 @@ def test_cli_documentation_rejects_legacy_bytes_outside_exact_migrated_state(
 def test_cli_documentation_legacy_provider_maps_exact_and_ambiguous_states() -> None:
     manifest = _payload().manifest
     digests = {
-        signature.id: signature.known_content_digests[0].value
+        signature.id: signature.known_content_digests[-1].value
         for signature in manifest.legacy_signatures
     }
     snapshots: JsonObject = {

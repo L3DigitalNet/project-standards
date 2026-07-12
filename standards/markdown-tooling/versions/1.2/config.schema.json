@@ -4,6 +4,7 @@
 	"additionalProperties": false,
 	"properties": {
 		"contract_version": { "const": "1.1", "default": "1.1" },
+		"workflow_mode": { "enum": ["caller", "self-hosted"], "default": "caller" },
 		"lint": { "type": "boolean", "default": true },
 		"format": { "type": "boolean", "default": true },
 		"ci": {

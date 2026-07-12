@@ -346,16 +346,16 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Create a release-candidate checkout helper and dogfood/refresh tests under `tests/package_compatibility/`; update release-checklist documentation. Do not replace the source checkout's `.project-standards.yml` in this task.
 
-- [ ] Copy only the tracked repository tree to a temporary checkout, set its package metadata and lock to `5.0.0`, build/extract the wheel there, and assert the installed CLI reports `project-standards 5.0.0`. Never edit version metadata in the source checkout.
-- [ ] Preview the temporary checkout's full legacy migration and save the human/JSON evidence in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. Resolve every ambiguity in package declarations or explicit repository intent before apply.
-- [ ] Apply the reviewed migration in the temporary checkout. Verify `.project-standards.yml` is removed only after unified validation, the Agent Handoff package lock is retired/imported, consumer-authored handoff knowledge remains byte-preserved, and every planned artifact is centrally locked.
-- [ ] Run all validators and package commands through unified state in the temporary checkout. Confirm a second reconciliation produces no actions and changes no bytes.
-- [ ] In the migrated disposable checkout, run `render-consumer-catalog --output .standards/catalog.toml --check` with its installed `5.0.0` tool release and require exact agreement with the tracked catalog. This is the real control-plane catalog drift check; it never runs against `.standards/` in the legacy-authority source checkout.
-- [ ] Build a second same-major catalog snapshot in a fixture, preview/apply refresh, and prove compatible defaults update while exact pins, options, accepted tracks, and unrelated files remain unchanged.
-- [ ] Search tracked runtime, workflow, docs, tests, and installed-wheel content for active `.project-standards.yml`, V1 manifest, package-specific lock, or direct-writer dependencies. Classify retained v5 fallback references explicitly; remove unintended active dependencies.
-- [ ] Record the exact reviewed migration command, changed-path inventory, patch SHA-256, control-plane file digests, and replay result in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. The test may retain the generated patch only as a temporary artifact; assert replaying it against a fresh temporary checkout yields the same digests as the dogfood run.
-- [ ] Run dogfood validation, migration, drift, projection, catalog-refresh, and installed-wheel tests; expect pass.
-- [ ] Commit: `test(v5): prove release-cut control-plane migration`
+- [x] Copy only the tracked repository tree to a temporary checkout, set its package metadata and lock to `5.0.0`, build/extract the wheel there, and assert the installed CLI reports `project-standards 5.0.0`. Never edit version metadata in the source checkout.
+- [x] Preview the temporary checkout's full legacy migration and save the human/JSON evidence in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. Resolve every ambiguity in package declarations or explicit repository intent before apply.
+- [x] Apply the reviewed migration in the temporary checkout. Verify `.project-standards.yml` is removed only after unified validation, the Agent Handoff package lock is retired/imported, consumer-authored handoff knowledge remains byte-preserved, and every planned artifact is centrally locked.
+- [x] Run all validators and package commands through unified state in the temporary checkout. Confirm a second reconciliation produces no actions and changes no bytes.
+- [x] In the migrated disposable checkout, run `render-consumer-catalog --output .standards/catalog.toml --check` with its installed `5.0.0` tool release and require exact agreement with the tracked catalog. This is the real control-plane catalog drift check; it never runs against `.standards/` in the legacy-authority source checkout.
+- [x] Build a second same-major catalog snapshot in a fixture, preview/apply refresh, and prove compatible defaults update while exact pins, options, accepted tracks, and unrelated files remain unchanged.
+- [x] Search tracked runtime, workflow, docs, tests, and installed-wheel content for active `.project-standards.yml`, V1 manifest, package-specific lock, or direct-writer dependencies. Classify retained v5 fallback references explicitly; remove unintended active dependencies.
+- [x] Record the exact reviewed migration command, changed-path inventory, patch SHA-256, control-plane file digests, and replay result in `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`. The test may retain the generated patch only as a temporary artifact; assert replaying it against a fresh temporary checkout yields the same digests as the dogfood run.
+- [x] Run dogfood validation, migration, drift, projection, catalog-refresh, and installed-wheel tests; expect pass.
+- [x] Commit: `test(v5): prove release-cut control-plane migration`
 
 ### Task 18: Documentation, Traceability, and Release-Ready Closeout
 

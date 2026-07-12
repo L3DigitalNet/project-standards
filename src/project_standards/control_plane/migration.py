@@ -343,6 +343,7 @@ _UniqueKeyLoader.add_constructor(
 
 @dataclass(frozen=True, slots=True)
 class _ObservedSignature:
+    standard_id: str
     signature_id: str
     target: SafeRelativePath
     digest: Sha256Digest
@@ -350,8 +351,8 @@ class _ObservedSignature:
     content: bytes = field(repr=False, compare=False)
 
     @property
-    def key(self) -> tuple[str, str]:
-        return (self.signature_id, self.target.original)
+    def key(self) -> tuple[str, str, str]:
+        return (self.standard_id, self.signature_id, self.target.original)
 
 
 @dataclass(frozen=True, slots=True)
@@ -647,8 +648,8 @@ def _inspect_signatures(
     payload: InstalledPayload,
     signature_ids: frozenset[str],
     file_cache: dict[str, bytes],
-) -> tuple[dict[tuple[str, str], _ObservedSignature], list[ControlFinding]]:
-    observed: dict[tuple[str, str], _ObservedSignature] = {}
+) -> tuple[dict[tuple[str, str, str], _ObservedSignature], list[ControlFinding]]:
+    observed: dict[tuple[str, str, str], _ObservedSignature] = {}
     findings: list[ControlFinding] = []
     signatures = {
         signature.id: signature
@@ -686,7 +687,14 @@ def _inspect_signatures(
                 continue
             digest = _digest(candidate)
             known = digest in signature.known_content_digests
-            item = _ObservedSignature(signature.id, target, digest, known, candidate)
+            item = _ObservedSignature(
+                payload.manifest.payload.standard,
+                signature.id,
+                target,
+                digest,
+                known,
+                candidate,
+            )
             observed[item.key] = item
             if not known:
                 findings.append(
@@ -704,10 +712,10 @@ def _inspect_signatures(
 
 
 def _signature_snapshot(
-    observed: Mapping[tuple[str, str], _ObservedSignature],
+    observed: Mapping[tuple[str, str, str], _ObservedSignature],
 ) -> JsonObject:
     snapshot: JsonObject = {}
-    for (_signature_id, _target), item in sorted(observed.items()):
+    for (_standard_id, _signature_id, _target), item in sorted(observed.items()):
         signature = cast(JsonObject, snapshot.setdefault(item.signature_id, {}))
         signature[item.target.original] = {
             "digest": item.digest.value,
@@ -881,13 +889,13 @@ def _coverage_findings(
 
 def _claim_findings(
     reports: tuple[MigrationReport, ...],
-    observed: Mapping[tuple[str, str], _ObservedSignature],
+    observed: Mapping[tuple[str, str, str], _ObservedSignature],
 ) -> list[ControlFinding]:
     findings: list[ControlFinding] = []
-    claimed: dict[tuple[str, str], str] = {}
+    claimed: dict[tuple[str, str, str], str] = {}
     for report in reports:
         for claim in report.claims:
-            key = (claim.signature_id, claim.target.original)
+            key = (report.package.standard_id, claim.signature_id, claim.target.original)
             item = observed.get(key)
             prior = claimed.get(key)
             if prior is not None:
@@ -1035,7 +1043,7 @@ def _empty_lock(
 
 def _adopted_legacy_units(
     reports: tuple[MigrationReport, ...],
-    observed: Mapping[tuple[str, str], _ObservedSignature],
+    observed: Mapping[tuple[str, str, str], _ObservedSignature],
     payloads: Mapping[tuple[str, str], InstalledPayload],
 ) -> tuple[LockedUnit, ...]:
     """Authorize exact legacy whole files that the selected package will replace."""
@@ -1051,7 +1059,9 @@ def _adopted_legacy_units(
             if item.adapter is AdapterKind.WHOLE_FILE and item.scope == "$file"
         }
         for claim in report.claims:
-            observed_item = observed.get((claim.signature_id, claim.target.original))
+            observed_item = observed.get(
+                (package.standard_id, claim.signature_id, claim.target.original)
+            )
             if (
                 claim.disposition is LegacyDisposition.IMPORT_LOCK
                 and claim.ownership == "package-lock"
@@ -1224,7 +1234,7 @@ def _plan_legacy_migration(
         raise ControlPlaneError("installed distribution cannot supply migration inputs") from exc
     payloads = installed.payload_map
     reports: list[MigrationReport] = []
-    observed: dict[tuple[str, str], _ObservedSignature] = {}
+    observed: dict[tuple[str, str, str], _ObservedSignature] = {}
     legacy_files = {".project-standards.yml": legacy_content}
     findings: list[ControlFinding] = []
     defaults = sorted(

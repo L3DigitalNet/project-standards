@@ -132,18 +132,24 @@ def _format_caller(config: Mapping[str, object]) -> str:
 
 def run_render_lint(
     request: Mapping[str, object],
-    _resources: Mapping[str, bytes],
+    resources: Mapping[str, bytes],
 ) -> dict[str, str]:
     """Render the managed lint caller for its selected enforcement state."""
-    return {"content": _lint_caller(_config(request))}
+    config = _config(request)
+    if config.get("workflow_mode") == "self-hosted":
+        return {"content": resources["self-host-lint-workflow"].decode()}
+    return {"content": _lint_caller(config)}
 
 
 def run_render_format(
     request: Mapping[str, object],
-    _resources: Mapping[str, bytes],
+    resources: Mapping[str, bytes],
 ) -> dict[str, str]:
     """Render the managed formatter caller for its selected enforcement state."""
-    return {"content": _format_caller(_config(request))}
+    config = _config(request)
+    if config.get("workflow_mode") == "self-hosted":
+        return {"content": resources["self-host-format-workflow"].decode()}
+    return {"content": _format_caller(config)}
 
 
 _EDITORCONFIG_VALUES = {
@@ -270,7 +276,14 @@ def _verify(
     if config.get(tool) is not True:
         return {"findings": []}
     snapshots = _table(request.get("snapshots"), name="snapshots")
-    if tool == "lint":
+    if config.get("workflow_mode") == "self-hosted":
+        resource_id = f"self-host-{tool}-workflow"
+        workflow = f".github/workflows/{'lint-markdown' if tool == 'lint' else 'format'}.yml"
+        expected = {workflow: _digest(resources[resource_id])}
+        config_path = ".markdownlint.json" if tool == "lint" else ".prettierrc.json"
+        source_id = "markdownlint-source" if tool == "lint" else "prettier-source"
+        expected[config_path] = _digest(resources[source_id])
+    elif tool == "lint":
         expected = {
             ".markdownlint.json": _digest(resources["markdownlint-source"]),
             ".github/workflows/lint-markdown.yml": _digest(_lint_caller(config).encode()),
@@ -336,12 +349,18 @@ def run_migrate(
         config["contract_version"] = namespace["version"]
         recognized.append("/markdown_tooling/version")
 
+    self_host_digests = {
+        "legacy-format-caller": "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5",
+        "legacy-lint-caller": "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
+    }
+
     signatures = _table(
         snapshots.get("legacy_signatures"),
         name="snapshots.legacy_signatures",
     )
     claims: list[dict[str, object]] = []
     findings: list[dict[str, str]] = []
+    self_host_matches: set[str] = set()
     for signature_id, (target, ownership, disposition) in _SIGNATURES.items():
         raw_signature = signatures.get(signature_id)
         if not isinstance(raw_signature, Mapping):
@@ -352,6 +371,8 @@ def run_migrate(
         state = cast("Mapping[str, object]", observed)
         digest = state.get("digest")
         if state.get("known") is True and isinstance(digest, str):
+            if digest == self_host_digests.get(signature_id):
+                self_host_matches.add(signature_id)
             claims.append(
                 {
                     "signature_id": signature_id,
@@ -368,6 +389,18 @@ def run_migrate(
                     "severity": "error",
                     "path": target,
                     "identity": signature_id,
+                }
+            )
+    if self_host_matches:
+        if self_host_matches == set(self_host_digests):
+            config["workflow_mode"] = "self-hosted"
+        else:
+            findings.append(
+                {
+                    "code": "MT-LEGACY-WORKFLOW-MODE",
+                    "severity": "error",
+                    "path": ".github/workflows",
+                    "identity": "self-hosted-pair",
                 }
             )
     claims.sort(key=lambda item: str(item["signature_id"]).encode())
