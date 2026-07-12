@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- CP01 is integrated; keep the release freeze and source-root migration atomic through v5, then rerun probes and dependency search.
+- Resolve owner-gated release debt, finish housekeeping, and pass SPEC-MT01 Step 07 before the atomic v5 migration.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
-- Clear documented repo debt; review catalog 5 for MCP exposure; finish housekeeping; then run SPEC-MT01 Step 07.
+- Keep the release freeze and source-root migration atomic through v5, then rerun probes and the final dependency search.
 - Hold `project-toolbox` and `agent-managed-repo` for dedicated post-v5 development cycles.
 
 ## Active incidents

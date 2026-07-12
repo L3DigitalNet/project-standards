@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; `testing` carries the unreleased v5.0.0 standards-platform work.
+- `main` remains the released v4.3.0 line; `testing` carries the unreleased v5.0.0 standards-platform work through release-readiness cleanup `a6bb970`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
@@ -11,7 +11,7 @@
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
-- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29145160155` passed for the published v5 baseline at `5d21517`.
+- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29201533025` passed for cleanup commit `a6bb970`.
 - `SPEC-CP01` is approved rev 0.7 with current-package, installed-wheel, migration, refresh, and disposable release-cut traceability.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` rev 0.8 sets the v5 launch scope to the nine catalog 5 families; their immutable payloads and compatibility evidence satisfy the authoring contract.
@@ -21,9 +21,9 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Only the atomic source-root migration in the v5 release commit remains.
+- Remaining release gates are owner-directed debt disposition, final housekeeping, SPEC-MT01 Step 07, and the atomic source-root migration.
 - The first release-debt inventory found 42 review/evidence artifacts, 15 plans, 12 future-standard drafts, two indexes, and two ignored scratch files.
-- Required validators, package gates, Prettier, markdownlint, `pip-audit`, and `npm audit` pass.
+- Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
 - GitHub issue #3 and PRs #1, #2, #4, #5, and #6 are closed with no open PRs; incomplete action bumps are consolidated into one v5-wide parity task.
 - Deferred decisions are closed: existing symlink checks and OpenAPI policy stand; catalog 5 drift tooling supersedes the old v2.2 `check` plan.
