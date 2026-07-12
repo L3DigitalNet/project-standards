@@ -728,6 +728,13 @@ cli_documentation:
 
     plan = plan_legacy_migration(repo, distribution, "5")
     assert plan.applicable, plan.findings
+    workflow_claim = next(
+        claim
+        for claim in plan.reports[0].claims
+        if claim.target.original == ".github/workflows/cli-docs-check.yml"
+    )
+    assert workflow_claim.ownership == "consumer-owned"
+    assert workflow_claim.intent_pointer is None
     assert [item.path.original for item in plan.reconciliation.next_lock.referenced_inputs] == [
         ".github/workflows/cli-docs-check.yml"
     ]

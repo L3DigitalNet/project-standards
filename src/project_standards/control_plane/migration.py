@@ -99,6 +99,7 @@ type LegacyOwnership = Literal[
 ]
 
 _BARE_TOML_KEY = re.compile(r"^[A-Za-z0-9_-]+$", re.ASCII)
+_MISSING = object()
 
 
 class LegacyDisposition(StrEnum):
@@ -279,13 +280,20 @@ def render_migration_report(report: MigrationReport) -> str:
         f"package {report.package.standard_id}@{report.package.version.value} ({selector_value})",
     ]
     lines.extend(f"setting {path}" for path in report.package.recognized_settings)
-    lines.extend(
-        "claim "
-        f"{claim.signature_id} {claim.target.original} {claim.observed_digest.value} "
-        f"{claim.ownership} {claim.disposition.value}"
-        + (f" {claim.intent_pointer}" if claim.intent_pointer is not None else "")
-        for claim in report.claims
-    )
+    for claim in report.claims:
+        line = (
+            "claim "
+            f"{claim.signature_id} {claim.target.original} {claim.observed_digest.value} "
+            f"{claim.ownership} {claim.disposition.value}"
+            + (f" {claim.intent_pointer}" if claim.intent_pointer is not None else "")
+        )
+        if (
+            claim.ownership == "consumer-owned"
+            and claim.disposition is LegacyDisposition.PRESERVE
+            and claim.intent_pointer is not None
+        ):
+            line += "; consumer-owned preserved; not semantically validated by the package"
+        lines.append(line)
     lines.extend(
         f"finding {finding.severity} {finding.code} {finding.path.original} {finding.identity}"
         for finding in report.findings
@@ -695,7 +703,7 @@ def _inspect_signatures(
                 candidate,
             )
             observed[item.key] = item
-            if not known:
+            if not known and signature.kind is not LegacySignatureKind.WHOLE_FILE:
                 findings.append(
                     _finding(
                         "CP-MIGRATION-LEGACY-DIGEST",
@@ -789,6 +797,21 @@ def _pointer_exists(document: JsonObject, pointer: str) -> bool:
         else:
             return False
     return True
+
+
+def _pointer_value(document: JsonObject, pointer: str) -> object:
+    current: object = document
+    for part in _pointer_parts(pointer):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        elif isinstance(current, list) and part.isascii() and part.isdigit():
+            index = int(part)
+            if index >= len(current):
+                return _MISSING
+            current = current[index]
+        else:
+            return _MISSING
+    return current
 
 
 def _escape_pointer(value: str) -> str:
@@ -889,13 +912,34 @@ def _coverage_findings(
 def _claim_findings(
     reports: tuple[MigrationReport, ...],
     observed: Mapping[tuple[str, str, str], _ObservedSignature],
+    legacy: JsonObject,
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+    reconciliation: ReconciliationPlan,
 ) -> list[ControlFinding]:
     findings: list[ControlFinding] = []
     claimed: dict[tuple[str, str, str], str] = {}
+    cleared_unknown: set[tuple[str, str, str]] = set()
+    resolved_packages = {
+        package.standard_id: package for package in reconciliation.resolution.packages
+    }
+    report_versions = {
+        report.package.standard_id: report.package.version.value for report in reports
+    }
+    signature_declarations = {
+        (report.package.standard_id, signature.id): signature
+        for report in reports
+        for signature in payloads[
+            (report.package.standard_id, report.package.version.value)
+        ].manifest.legacy_signatures
+    }
     for report in reports:
+        payload = payloads[(report.package.standard_id, report.package.version.value)]
+        signatures = {signature.id: signature for signature in payload.manifest.legacy_signatures}
+        resolved_package = resolved_packages.get(report.package.standard_id)
         for claim in report.claims:
             key = (report.package.standard_id, claim.signature_id, claim.target.original)
             item = observed.get(key)
+            signature = signatures.get(claim.signature_id)
             prior = claimed.get(key)
             if prior is not None:
                 findings.append(
@@ -910,20 +954,102 @@ def _claim_findings(
                     )
                 )
             claimed[key] = report.package.standard_id
-            if item is None or item.digest != claim.observed_digest or not item.known:
+            if item is not None and item.known:
+                if item.digest != claim.observed_digest:
+                    findings.append(
+                        _finding(
+                            "CP-MIGRATION-LEGACY-DIGEST",
+                            path=claim.target.original,
+                            identity=claim.signature_id,
+                            standard_id=report.package.standard_id,
+                            version=report.package.version.value,
+                            message="legacy claim does not match the observed declared signature",
+                            hint="rerun preview after restoring recognized legacy content",
+                        )
+                    )
+                if claim.intent_pointer is not None:
+                    findings.append(
+                        _finding(
+                            "CP-MIGRATION-OWNER-RESOLUTION",
+                            path=claim.target.original,
+                            identity=claim.signature_id,
+                            standard_id=report.package.standard_id,
+                            version=report.package.version.value,
+                            message="known package history cannot use owner-resolution evidence",
+                            hint="omit owner intent from claims for recognized package history",
+                        )
+                    )
+                continue
+
+            declaration_materializes = resolved_package is None or any(
+                declaration.target == claim.target
+                and declaration.materializes(resolved_package.effective_config)
+                for declaration in (
+                    *payload.manifest.artifacts,
+                    *payload.manifest.contributions,
+                )
+            )
+            valid_relinquishment = (
+                signature is not None
+                and signature.kind is LegacySignatureKind.WHOLE_FILE
+                and len(signature.targets) == 1
+                and signature.targets[0] == claim.target
+                and signature.consumer_owned_intent_pointer is not None
+                and claim.intent_pointer == signature.consumer_owned_intent_pointer
+                and claim.intent_pointer in report.package.recognized_settings
+                and _pointer_value(legacy, claim.intent_pointer) == "consumer-owned"
+                and claim.ownership == "consumer-owned"
+                and claim.disposition is LegacyDisposition.PRESERVE
+                and item is not None
+                and item.digest == claim.observed_digest
+                and not declaration_materializes
+                and not any(
+                    target.target == claim.target.original for target in reconciliation.targets
+                )
+                and not any(
+                    action.target == claim.target.original for action in reconciliation.actions
+                )
+                and not any(unit.target == claim.target.original for unit in reconciliation.units)
+                and not any(
+                    unit.path == claim.target for unit in reconciliation.next_lock.artifacts
+                )
+            )
+            if valid_relinquishment:
+                assert item is not None
+                cleared_unknown.add(item.key)
+            elif claim.intent_pointer is not None or (
+                signature is not None and signature.consumer_owned_intent_pointer is not None
+            ):
                 findings.append(
                     _finding(
-                        "CP-MIGRATION-LEGACY-DIGEST",
+                        "CP-MIGRATION-OWNER-RESOLUTION",
                         path=claim.target.original,
                         identity=claim.signature_id,
                         standard_id=report.package.standard_id,
                         version=report.package.version.value,
-                        message="legacy claim does not match the observed declared signature",
-                        hint="rerun preview after restoring recognized legacy content",
+                        message="legacy ownership relinquishment is not fully authorized",
+                        hint="restore the target-bound consumer-owned preserve contract",
                     )
                 )
-    for key, item in observed.items():
-        if item.known and key not in claimed:
+    for key, item in sorted(observed.items()):
+        signature = signature_declarations[(item.standard_id, item.signature_id)]
+        if (
+            not item.known
+            and signature.kind is LegacySignatureKind.WHOLE_FILE
+            and key not in cleared_unknown
+        ):
+            findings.append(
+                _finding(
+                    "CP-MIGRATION-LEGACY-DIGEST",
+                    path=item.target.original,
+                    identity=item.signature_id,
+                    standard_id=item.standard_id,
+                    version=report_versions[item.standard_id],
+                    message="legacy content does not match a declared signature",
+                    hint="restore known content or preserve the local version explicitly",
+                )
+            )
+        elif item.known and key not in claimed:
             findings.append(
                 _finding(
                     "CP-MIGRATION-UNCLAIMED-ARTIFACT",
@@ -1312,7 +1438,6 @@ def _plan_legacy_migration(
     if not ordered_reports:
         raise ControlPlaneError("installed catalog has no default legacy migration providers")
     findings.extend(_coverage_findings(legacy, ordered_reports))
-    findings.extend(_claim_findings(ordered_reports, observed))
     desired = DesiredConfig.model_validate(
         {
             "project_standards": {
@@ -1391,6 +1516,15 @@ def _plan_legacy_migration(
     from project_standards.control_plane.executor import reconciliation_fingerprint
 
     reconciliation_digest = reconciliation_fingerprint(reconciliation)
+    findings.extend(
+        _claim_findings(
+            ordered_reports,
+            observed,
+            legacy,
+            payloads,
+            reconciliation,
+        )
+    )
     findings.extend(reconciliation.findings)
     ordered_findings = _dedupe_findings(findings)
     applicable = reconciliation.applicable and not any(
