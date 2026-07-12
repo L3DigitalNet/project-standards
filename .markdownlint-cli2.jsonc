@@ -17,8 +17,14 @@
 	// body-linting them is churn, not quality, and would keep CI permanently red on
 	// content no human wrote to a style bar. The spec fixtures are deliberately
 	// mutated/generated Markdown used to exercise parser failures, not authored docs.
+	// Legacy compatibility fixtures likewise preserve arbitrary consumer bytes.
 	// Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
 	// ignored — they stay gated.
-	"ignores": ["docs/codex-reviews/**", "docs/handoff/**", "tests/fixtures/specs/**"],
+	"ignores": [
+		"docs/codex-reviews/**",
+		"docs/handoff/**",
+		"tests/fixtures/specs/**",
+		"tests/fixtures/package_compatibility/legacy/**"
+	],
 	"gitignore": true
 }

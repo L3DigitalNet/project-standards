@@ -40,7 +40,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:91e1556fb053be7728bab4ce7b2823ca64807c5ffa117a3e8fbba79c683a2344"
+digest = "sha256:3a0887e2c695c2d78320555b838de99deb6bb98215e61a150bf9417f58c05313"
 
 [[providers]]
 id = "semantic-review"

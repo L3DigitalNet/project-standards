@@ -278,6 +278,7 @@ class ProviderResult:
     mutation_plan: MutationPlanSchema | None = None
     migration_report: MigrationReport | None = None
     output_notice: str | None = None
+    structured_output: JsonObject | None = None
 
 
 class _OutputSink(io.TextIOBase):
@@ -437,7 +438,12 @@ def _typed_result(
         content = output.get("content")
         if not isinstance(content, str):
             raise ControlPlaneError("content provider returned an invalid result")
-        return ProviderResult(effect, content=content.encode(), output_notice=notice)
+        return ProviderResult(
+            effect,
+            content=content.encode(),
+            output_notice=notice,
+            structured_output=output,
+        )
     if effect is ProviderEffect.FINDINGS:
         raw_findings = output.get("findings")
         if not isinstance(raw_findings, list):
@@ -458,11 +464,18 @@ def _typed_result(
                         identity=cast(str, table["identity"]),
                         message=cast(str, table["message"]),
                         hint=cast(str, table["hint"]),
+                        line=cast(int | None, table.get("line")),
+                        locus=cast(str | None, table.get("locus")),
                     )
                 )
             except KeyError as exc:
                 raise ControlPlaneError("findings provider omitted a required field") from exc
-        return ProviderResult(effect, findings=tuple(findings), output_notice=notice)
+        return ProviderResult(
+            effect,
+            findings=tuple(findings),
+            output_notice=notice,
+            structured_output=output,
+        )
     if effect is ProviderEffect.MUTATION_PLAN:
         try:
             plan = MutationPlanSchema.model_validate(output)
@@ -472,7 +485,14 @@ def _typed_result(
             raise ControlPlaneError("mutation plan identity does not match selected payload")
         if invocation.operation is ProviderOperation.FIX:
             _bind_fix_actions_to_snapshots(invocation, plan)
-        return ProviderResult(effect, mutation_plan=plan, output_notice=notice)
+        elif invocation.operation in {ProviderOperation.SCAFFOLD, ProviderOperation.UPGRADE}:
+            _bind_authoring_actions_to_snapshot(invocation, plan)
+        return ProviderResult(
+            effect,
+            mutation_plan=plan,
+            output_notice=notice,
+            structured_output=output,
+        )
     if effect is ProviderEffect.MIGRATION_REPORT:
         try:
             report = MigrationReport.model_validate(output)
@@ -491,7 +511,12 @@ def _typed_result(
         }
         if any(claim.signature_id not in declared_signatures for claim in report.claims):
             raise ControlPlaneError("migration provider claimed an undeclared legacy signature")
-        return ProviderResult(effect, migration_report=report, output_notice=notice)
+        return ProviderResult(
+            effect,
+            migration_report=report,
+            output_notice=notice,
+            structured_output=output,
+        )
     raise ControlPlaneError("provider declared an unsupported effect")
 
 
@@ -549,6 +574,54 @@ def _bind_fix_actions_to_snapshots(
         )
         if expected is None or action.kind is not expected:
             raise ControlPlaneError("FIX mutation action kind does not match its document snapshot")
+
+
+def _bind_authoring_actions_to_snapshot(
+    invocation: ProviderInvocation,
+    plan: MutationPlanSchema,
+) -> None:
+    """Bind scaffold/upgrade output to one caller-authorized target snapshot."""
+    raw_authoring = invocation.snapshots.get("authoring")
+    if not isinstance(raw_authoring, dict):
+        raise ControlPlaneError("authoring provider requires one immutable target snapshot")
+    authoring = cast(dict[str, JsonValue], raw_authoring)
+    target = authoring.get("target")
+    kind = authoring.get("kind")
+    digest = authoring.get("precondition_digest")
+    mode = authoring.get("mode")
+    overwrite = authoring.get("overwrite")
+    if (
+        not isinstance(target, str)
+        or not isinstance(kind, str)
+        or not isinstance(digest, str)
+        or not (isinstance(mode, str) or mode is None)
+        or not isinstance(overwrite, bool)
+    ):
+        raise ControlPlaneError("authoring target snapshot is invalid")
+    try:
+        normalized_target = SafeRelativePath.parse(target)
+        precondition = Sha256Digest(digest)
+    except ValueError as exc:
+        raise ControlPlaneError("authoring target snapshot is invalid") from exc
+    if len(plan.actions) != 1:
+        raise ControlPlaneError("authoring provider must return exactly one target action")
+    action = plan.actions[0]
+    if (
+        action.target != normalized_target
+        or action.adapter is not AdapterKind.WHOLE_FILE
+        or action.scope != "$file"
+        or action.precondition_digest != precondition
+    ):
+        raise ControlPlaneError("authoring mutation does not match its target snapshot")
+    if action.mode != mode:
+        raise ControlPlaneError("authoring mutation mode exceeds its target authorization")
+    expected = (
+        ActionKind.CREATE if kind == "missing" else ActionKind.UPDATE if kind == "regular" else None
+    )
+    if expected is None or action.kind is not expected:
+        raise ControlPlaneError("authoring mutation kind does not match its target snapshot")
+    if expected is ActionKind.UPDATE and not overwrite:
+        raise ControlPlaneError("authoring mutation exceeds its overwrite authorization")
 
 
 def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:

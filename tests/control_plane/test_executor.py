@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+import stat
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -128,6 +129,24 @@ def test_success_stages_replaces_verifies_and_writes_lock_last(
     assert replacements[-1][1] == "lock.toml"
     assert all(source.startswith(".project-standards-") for source, _target in replacements)
     assert not list(repo.rglob(".project-standards-*.tmp"))
+
+
+@pytest.mark.parametrize("mask", [0o022, 0o027])
+def test_reconciliation_default_mode_is_independent_of_process_umask(
+    tmp_path: Path,
+    mask: int,
+) -> None:
+    repo, planner, plan = _fixture(tmp_path)
+
+    previous = os.umask(mask)
+    try:
+        result = _apply(planner, plan)
+    finally:
+        os.umask(previous)
+
+    assert result.success
+    assert stat.S_IMODE((repo / "alpha.txt").stat().st_mode) == 0o644
+    assert stat.S_IMODE((repo / "nested/beta.txt").stat().st_mode) == 0o644
 
 
 def test_verification_receives_lock_declared_referenced_inputs(tmp_path: Path) -> None:

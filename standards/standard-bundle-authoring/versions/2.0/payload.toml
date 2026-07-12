@@ -36,7 +36,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:91e1556fb053be7728bab4ce7b2823ca64807c5ffa117a3e8fbba79c683a2344"
+digest = "sha256:3a0887e2c695c2d78320555b838de99deb6bb98215e61a150bf9417f58c05313"
 
 [[resources]]
 id = "family-template"
@@ -57,7 +57,7 @@ id = "option-schema-template"
 role = "option-schema-template"
 path = "templates/config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:e8bf767962625f9f4a0ddebca7c65e7fc763f8579c458a1ebd3b7c9dde44b1a7"
+digest = "sha256:fb280bf80ce69cf307b9cce1615c54de47f07f569d4e0fb360690b08ca7b73b9"
 
 [[resources]]
 id = "catalog-template"

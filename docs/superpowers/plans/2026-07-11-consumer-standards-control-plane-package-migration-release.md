@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-10 are complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-11 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -264,13 +264,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/project-spec/standard.toml`; create `standards/project-spec/versions/1.1/**`; modify spec config/provider/command tests and fixtures.
 
-- [ ] Write red options for contract version, include patterns, external reference prefixes, default profile, and CI enablement. Keep project-spec document schemas independent from repository frontmatter schemas.
-- [ ] Reconstruct `project-spec@1.1` with canonical docs, templates/example, workflow, option schema, and version-selected validate/lint/extract/id-next/scaffold/upgrade providers.
-- [ ] Map legacy `spec` YAML and exact installed workflow/config fragment. Remove active YAML-grep behavior and bind every command to the resolved payload.
-- [ ] Convert `spec new` and `spec upgrade` to return typed mutation plans and route public commands through the platform executor without changing documented dry-run, stdout, exit-code, or path-safety behavior.
-- [ ] Prove fresh/migrated validation, scaffold, upgrade, workflow, disable, custom reference prefixes, and second-apply behavior.
-- [ ] Run the complete spec suite and focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct project spec package`
+**Implementation note:** Contract #11 keeps the root V1 family manifest unchanged until Task 14. The isolated 1.1 payload binds all inspection and authoring commands to version-selected, descriptor-relative snapshot bytes; scaffold and upgrade return typed plans for executor-only writes. Migration semantically imports the V4 `spec` configuration and exact installed workflow without retaining active YAML-grep behavior.
+
+- [x] Write red options for contract version, include patterns, external reference prefixes, default profile, and CI enablement. Keep project-spec document schemas independent from repository frontmatter schemas.
+- [x] Reconstruct `project-spec@1.1` with canonical docs, templates/example, workflow, option schema, and version-selected validate/lint/extract/id-next/scaffold/upgrade providers.
+- [x] Map legacy `spec` YAML and exact installed workflow/config fragment. Remove active YAML-grep behavior and bind every command to the resolved payload.
+- [x] Convert `spec new` and `spec upgrade` to return typed mutation plans and route public commands through the platform executor without changing documented dry-run, stdout, exit-code, or path-safety behavior.
+- [x] Prove fresh/migrated validation, scaffold, upgrade, workflow, disable, custom reference prefixes, and second-apply behavior.
+- [x] Run the complete spec suite and focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct project spec package`
 
 ### Task 12: Python Tooling Reconstruction and Cross-Package Composition
 

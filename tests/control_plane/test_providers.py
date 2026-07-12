@@ -409,6 +409,8 @@ def _write_provider_payload(
         ProviderOperation.RENDER: "plan",
         ProviderOperation.VALIDATE: "validate",
         ProviderOperation.FIX: "authoring",
+        ProviderOperation.SCAFFOLD: "authoring",
+        ProviderOperation.UPGRADE: "authoring",
         ProviderOperation.MIGRATE: "plan",
     }[operation]
     manifest = PayloadManifest.model_validate(
@@ -470,6 +472,35 @@ def _fix_invocation(
                     "precondition_digest": _digest(b"repo\n"),
                 }
             ]
+        },
+    )
+
+
+def _authoring_invocation(
+    repo: Path,
+    payload: InstalledPayload,
+    *,
+    kind: str,
+    mode: str = "0644",
+    overwrite: bool,
+) -> ProviderInvocation:
+    invocation = _invocation(repo, payload)
+    return ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "authoring": {
+                "target": "README.md",
+                "kind": kind,
+                "precondition_digest": _digest(b"repo\n"),
+                "mode": mode,
+                "overwrite": overwrite,
+            }
         },
     )
 
@@ -684,6 +715,58 @@ def test_fix_mutation_plan_allows_create_only_for_missing_snapshot(tmp_path: Pat
 
     assert result.mutation_plan is not None
     assert result.mutation_plan.actions[0].kind.value == "create"
+
+
+def test_authoring_mutation_plan_is_bound_to_mode_and_overwrite_authorization(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.SCAFFOLD,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    result = invoke_provider(_authoring_invocation(repo, payload, kind="regular", overwrite=True))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].mode == "0644"
+
+
+@pytest.mark.parametrize(
+    ("mode", "overwrite", "message"),
+    [
+        ("0600", True, "mode"),
+        ("0644", False, "overwrite authorization"),
+    ],
+)
+def test_authoring_mutation_plan_rejects_caller_authority_expansion(
+    tmp_path: Path,
+    mode: str,
+    overwrite: bool,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.SCAFFOLD,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(
+            _authoring_invocation(
+                repo,
+                payload,
+                kind="regular",
+                mode=mode,
+                overwrite=overwrite,
+            )
+        )
 
 
 @pytest.mark.parametrize(

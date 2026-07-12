@@ -214,11 +214,17 @@ def _stage_bytes(
     temporary = f".project-standards-{secrets.token_hex(8)}.tmp"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
-        descriptor = os.open(temporary, flags, 0o600, dir_fd=parent_descriptor)
+        descriptor = os.open(
+            temporary,
+            flags,
+            0o666 if mode is None else 0o600,
+            dir_fd=parent_descriptor,
+        )
     except OSError as exc:
         raise _ApplyFailure("CP-APPLY-STAGE", "target could not be staged") from exc
     try:
-        os.fchmod(descriptor, int(mode or "0644", 8))
+        if mode is not None:
+            os.fchmod(descriptor, int(mode, 8))
         remaining = memoryview(content)
         while remaining:
             written = os.write(descriptor, remaining)
@@ -267,7 +273,7 @@ def _stage_targets(
                 source_descriptor,
                 relative.normalized.name,
                 target.content,
-                target.mode,
+                target.mode or "0644",
             )
         except BaseException:
             os.close(parent_descriptor)
@@ -347,7 +353,7 @@ def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApply
                 created,
             )
             entry = entries[relative.original]
-            mode = action.mode or entry.mode or "0644"
+            mode = action.mode or entry.mode
             try:
                 temporary = _stage_bytes(
                     parent_descriptor,

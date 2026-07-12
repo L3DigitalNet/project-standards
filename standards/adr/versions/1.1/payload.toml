@@ -43,7 +43,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:e177145ac8180c1e5181d1e0f02ba2899117a555055526b9841a75bf156f6761"
+digest = "sha256:c286d1a8bf998722eb54c828265e9c07209576acfc02dfe7aa39455c32dada18"
 
 [[resources]]
 id = "example"
@@ -85,21 +85,21 @@ id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:29bdd8cefbd54f54bac5f1e642ef0791267fb78ff3465142e243264c8b9d2e16"
+digest = "sha256:8adc9d6685f3fa62d2377a542d04e13ff86eed0f24b1b953e6adf8526dd748dc"
 
 [[resources]]
 id = "provider-findings"
 role = "provider-resource"
 path = "schemas/findings.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:871b6ac48d8c825aab2a58f04fd861f5cbd4386fa8c35a9e69ed14cf838ace4b"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
 
 [[resources]]
 id = "provider-migration-report"
 role = "provider-resource"
 path = "schemas/migration-report.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:482a2e283abec47830289ca792ef9c7a59745330d6e4c74d50ee6a75a2db8833"
+digest = "sha256:ee15ffe775c7f2c8a65230d6c7be61644085531ae7a822d4ef528192b7eccac3"
 
 [[artifacts]]
 id = "adr-template"
