@@ -76,6 +76,20 @@
 			},
 			"default": { "fail_under": 85, "markers": [], "coverage_exclude_also": [] }
 		},
+		"coverage": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"parallel": { "type": "boolean", "default": false },
+				"patch": {
+					"type": "array",
+					"items": { "const": "subprocess" },
+					"uniqueItems": true,
+					"default": []
+				}
+			},
+			"default": { "parallel": false, "patch": [] }
+		},
 		"pip_audit": {
 			"type": "object",
 			"additionalProperties": false,
@@ -98,6 +112,10 @@
 			},
 			"default": { "enabled": true, "performance": true }
 		},
+		"workflow_ownership": {
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
 		"vscode": {
 			"type": "object",
 			"additionalProperties": false,
@@ -110,5 +128,26 @@
 			"properties": { "include_fix_commands": { "type": "boolean", "default": true } },
 			"default": { "include_fix_commands": true }
 		}
-	}
+	},
+	"allOf": [
+		{
+			"if": {
+				"required": ["coverage"],
+				"properties": {
+					"coverage": {
+						"required": ["patch"],
+						"properties": { "patch": { "minItems": 1 } }
+					}
+				}
+			},
+			"then": {
+				"properties": {
+					"coverage": {
+						"required": ["parallel"],
+						"properties": { "parallel": { "const": true } }
+					}
+				}
+			}
+		}
+	]
 }

@@ -50,7 +50,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:592acef7c1e39f72ca9053ca837680372e38da4a8cfc2edd75f8d7b08ef9a248"
+digest = "sha256:b98f45f211db742bf0729f8d3129be42e11f019b757bfe8c3baf4061a0a811fc"
 
 [[resources]]
 id = "python-version-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:73172515d02a477a0bc5932442840c4c8f0568db5b64666297f9cf748619b68d"
+digest = "sha256:e41b64008ee8ff012a61434e9bd791f0050f1b80d0c1e40d749c216522462aa2"
 
 [[resources]]
 id = "provider-input"

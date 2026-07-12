@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import shlex
 import shutil
@@ -183,8 +184,10 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
         },
         "type_checker": {"name": "basedpyright", "mode": "strict"},
         "pytest": {"fail_under": 85, "markers": [], "coverage_exclude_also": []},
+        "coverage": {"parallel": False, "patch": []},
         "pip_audit": {"ignore_vulnerabilities": []},
         "ci": {"enabled": True, "performance": True},
+        "workflow_ownership": "managed",
         "vscode": {"format_on_save": True},
         "agent_instructions": {"include_fix_commands": True},
     }
@@ -196,8 +199,10 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
         ruff={"line_length": 88},
         type_checker={"name": "pyright", "mode": "standard"},
         pytest={"fail_under": 92},
+        coverage={"parallel": True, "patch": ["subprocess"]},
         pip_audit={"ignore_vulnerabilities": ["GHSA-abcd-1234-efgh"]},
         ci={"enabled": False, "performance": False},
+        workflow_ownership="consumer-owned",
         vscode={"format_on_save": False},
         agent_instructions={"include_fix_commands": False},
     )
@@ -239,7 +244,12 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
         {"ruff": {"enabled": False, "line_length": 100}},
         {"pytest": {"fail_under": 101}},
         {"pytest": {"enabled": False, "fail_under": 85}},
+        {"coverage": {"parallel": False, "patch": ["subprocess"]}},
+        {"coverage": {"patch": ["subprocess"]}},
+        {"coverage": {"parallel": True, "patch": ["unknown"]}},
+        {"coverage": {"parallel": True, "patch": ["subprocess", "subprocess"]}},
         {"pip_audit": {"enabled": False}},
+        {"workflow_ownership": "shared"},
         {"vscode": {"enabled": False}},
         {"agent_instructions": {"enabled": False}},
     )
@@ -248,6 +258,90 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
     for options in invalid:
         with pytest.raises(PackageContractError, match="package options violate schema"):
             schema.resolve_options(options)
+
+
+def test_python_tooling_subprocess_patch_selects_coverage_7_10_floor() -> None:
+    default_dependencies = _render(
+        "key:/dependency-groups/dev",
+        AdapterKind.TOML,
+        _options(),
+    )
+    patched_dependencies = _render(
+        "key:/dependency-groups/dev",
+        AdapterKind.TOML,
+        _options(coverage={"parallel": True, "patch": ["subprocess"]}),
+    )
+
+    assert '"coverage[toml]"' in default_dependencies
+    assert '"coverage[toml]>=7.10.0"' not in default_dependencies
+    assert '"coverage[toml]>=7.10.0"' in patched_dependencies
+
+
+def test_python_tooling_coverage_run_renders_canonical_parallel_patch_order() -> None:
+    rendered = _render(
+        "table:/tool/coverage/run",
+        AdapterKind.TOML,
+        _options(coverage={"parallel": True, "patch": ["subprocess"]}),
+    )
+
+    assert rendered == (
+        "[tool.coverage.run]\n"
+        "branch = true\n"
+        "parallel = true\n"
+        'patch = ["subprocess"]\n'
+        'source = ["src"]\n'
+    )
+
+
+def _rendered_coverage_commands(text: str) -> list[str]:
+    return [line.strip() for line in text.splitlines() if '"coverage"' in line]
+
+
+def test_python_tooling_parallel_commands_render_erase_run_combine_report() -> None:
+    workflow = _render(
+        "$file",
+        AdapterKind.WHOLE_FILE,
+        _options(coverage={"parallel": True, "patch": ["subprocess"]}),
+        target=".github/workflows/check.yml",
+    )
+    commands = [
+        line.removeprefix("        run: ") for line in workflow.splitlines() if "coverage" in line
+    ]
+
+    assert commands == [
+        "uv run coverage erase",
+        "uv run coverage run --parallel-mode -m pytest -m 'not performance'",
+        "uv run coverage combine",
+        "uv run coverage report",
+    ]
+
+
+def test_python_tooling_parallel_local_commands_match_ci_coverage_lifecycle() -> None:
+    config = _options(coverage={"parallel": True, "patch": ["subprocess"]})
+    workflow = _render(
+        "$file",
+        AdapterKind.WHOLE_FILE,
+        config,
+        target=".github/workflows/check.yml",
+    )
+    script = _render(
+        "$file",
+        AdapterKind.WHOLE_FILE,
+        config,
+        target="scripts/check.py",
+    )
+    workflow_phases = [
+        shlex.split(line.removeprefix("        run: "))[3]
+        for line in workflow.splitlines()
+        if "coverage" in line
+    ]
+    script_phases = [
+        cast("tuple[str, ...]", ast.literal_eval(line.rstrip(",")))[3]
+        for line in _rendered_coverage_commands(script)
+    ]
+
+    assert workflow_phases == ["erase", "run", "combine", "report"]
+    assert script_phases == workflow_phases
 
 
 def test_python_tooling_manifest_uses_only_bounded_shared_container_units() -> None:

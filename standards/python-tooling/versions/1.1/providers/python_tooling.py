@@ -90,7 +90,9 @@ def _build_system(config: Mapping[str, object]) -> str:
 
 def _dependencies(config: Mapping[str, object]) -> str:
     checker, _mode = _checker(config)
-    values = [checker, "coverage[toml]", "pip-audit", "pytest>=9.0", "ruff>=0.14.11"]
+    coverage = _section(config, "coverage")
+    coverage_dependency = "coverage[toml]>=7.10.0" if coverage.get("patch") else "coverage[toml]"
+    values = [checker, coverage_dependency, "pip-audit", "pytest>=9.0", "ruff>=0.14.11"]
     additional = config.get("additional_dev_dependencies")
     if not isinstance(additional, Sequence) or isinstance(additional, str | bytes):
         raise ValueError("config.additional_dev_dependencies must be an array")
@@ -147,8 +149,15 @@ def _pytest_table(config: Mapping[str, object]) -> str:
 
 
 def _coverage_run(config: Mapping[str, object]) -> str:
+    coverage = _section(config, "coverage")
     _include, sources = _source_roots(config)
-    return f"[tool.coverage.run]\nbranch = true\nsource = {json.dumps(sources)}\n"
+    lines = ["[tool.coverage.run]", "branch = true"]
+    if coverage.get("parallel") is True:
+        lines.append("parallel = true")
+    if coverage.get("patch"):
+        lines.append('patch = ["subprocess"]')
+    lines.append(f"source = {json.dumps(sources)}")
+    return "\n".join(lines) + "\n"
 
 
 def _coverage_report(config: Mapping[str, object]) -> str:
@@ -181,6 +190,31 @@ def _audit_command(config: Mapping[str, object]) -> tuple[str, ...]:
     )
 
 
+def _coverage_commands(
+    *pytest_args: str,
+    config: Mapping[str, object],
+) -> list[tuple[str, ...]]:
+    parallel = _section(config, "coverage").get("parallel") is True
+    run = (
+        "uv",
+        "run",
+        "coverage",
+        "run",
+        *(("--parallel-mode",) if parallel else ()),
+        "-m",
+        "pytest",
+        *pytest_args,
+    )
+    if not parallel:
+        return [run, ("uv", "run", "coverage", "report")]
+    return [
+        ("uv", "run", "coverage", "erase"),
+        run,
+        ("uv", "run", "coverage", "combine"),
+        ("uv", "run", "coverage", "report"),
+    ]
+
+
 def _commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
     commands: list[tuple[str, ...]] = [
         ("uv", "run", "ruff", "format", "--check", "."),
@@ -188,12 +222,7 @@ def _commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
     ]
     checker, _mode = _checker(config)
     commands.append(("uv", "run", checker))
-    commands.extend(
-        [
-            ("uv", "run", "coverage", "run", "-m", "pytest", "-m", "not performance"),
-            ("uv", "run", "coverage", "report"),
-        ]
-    )
+    commands.extend(_coverage_commands("-m", "not performance", config=config))
     if _section(config, "ci").get("performance") is True:
         commands.append(("uv", "run", "pytest", "-m", "performance"))
     commands.append(_audit_command(config))
@@ -207,13 +236,8 @@ def _local_commands(config: Mapping[str, object]) -> list[tuple[str, ...]]:
     ]
     checker, _mode = _checker(config)
     commands.append(("uv", "run", checker))
-    commands.extend(
-        [
-            ("uv", "run", "coverage", "run", "-m", "pytest"),
-            ("uv", "run", "coverage", "report"),
-            _audit_command(config),
-        ]
-    )
+    commands.extend(_coverage_commands(config=config))
+    commands.append(_audit_command(config))
     return commands
 
 
@@ -334,8 +358,10 @@ _DEFAULT_CONFIG: dict[str, object] = {
     },
     "type_checker": {"name": "basedpyright", "mode": "strict"},
     "pytest": {"fail_under": 85, "markers": [], "coverage_exclude_also": []},
+    "coverage": {"parallel": False, "patch": []},
     "pip_audit": {"ignore_vulnerabilities": []},
     "ci": {"enabled": True, "performance": True},
+    "workflow_ownership": "managed",
     "vscode": {"format_on_save": True},
     "agent_instructions": {"include_fix_commands": True},
 }
