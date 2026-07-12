@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-6 are complete on `feature/v5-package-migration`.
+**Status:** Approved and in progress. The scratch-path convergence audit passed with no significant findings; owner approval followed on 2026-07-11. Tasks 1-10 are complete on `feature/v5-package-migration`.
 
 **Goal:** Complete SPEC-CP01 MS-4 and the pre-release portion of MS-5 by reconstructing every current standard as an immutable V2 payload, migrating legacy consumers safely, activating catalog 5 in the distribution, proving the release-cut dogfood migration, and producing release-ready v5 evidence.
 
@@ -250,13 +250,15 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Replace `standards/markdown-tooling/standard.toml`; create `standards/markdown-tooling/versions/1.2/**`; update formatter/workflow/coherence tests and fixtures.
 
-- [ ] Write red options for contract version, lint, format, CI callers, Markdown/config globs, and explicitly typed exclusions.
-- [ ] Reconstruct `markdown-tooling@1.2` with markdownlint/Prettier sources, EditorConfig and VS Code semantic contributions, lint/format callers, and version-selected verification providers.
-- [ ] Classify `.markdownlint.json` and `.prettierrc.json` as managed/extensible according to the approved ownership design. Compose `.editorconfig`, `.vscode/extensions.json`, and instruction exclusions semantically with other packages.
-- [ ] Map `markdown_tooling.version` and exact V1 artifacts without keeping a YAML fragment. Modified root configuration must be preserved and reported before ownership transfer.
-- [ ] Prove lint-only, format-only, CI-disabled, Frontmatter composition, Python Tooling composition, migrated, disable, formatter-stability, and second-apply cases.
-- [ ] Run Markdown Tooling, coherence, Prettier, markdownlint, and focused compatibility tests; expect pass.
-- [ ] Commit: `feat(v5): reconstruct markdown tooling package`
+**Implementation note:** Contract #11 keeps the root V1 family manifest unchanged until Task 14. The isolated V2 payload uses managed whole-file lint/format configs and callers, per-setting VS Code ownership, semantic EditorConfig/extensions/instruction contributions, exact legacy adoption, and safe reusable workflow inputs. Disabled tools retain stable manual-only callers whose reusable jobs are explicit no-ops.
+
+- [x] Write red options for contract version, lint, format, CI callers, Markdown/config globs, and explicitly typed exclusions.
+- [x] Reconstruct `markdown-tooling@1.2` with markdownlint/Prettier sources, EditorConfig and VS Code semantic contributions, lint/format callers, and version-selected verification providers.
+- [x] Classify `.markdownlint.json` and `.prettierrc.json` as managed/extensible according to the approved ownership design. Compose `.editorconfig`, `.vscode/extensions.json`, and instruction exclusions semantically with other packages.
+- [x] Map `markdown_tooling.version` and exact V1 artifacts without keeping a YAML fragment. Modified root configuration must be preserved and reported before ownership transfer.
+- [x] Prove lint-only, format-only, CI-disabled, Frontmatter composition, Python Tooling composition, migrated, disable, formatter-stability, and second-apply cases.
+- [x] Run Markdown Tooling, coherence, Prettier, markdownlint, and focused compatibility tests; expect pass.
+- [x] Commit: `feat(v5): reconstruct markdown tooling package`
 
 ### Task 11: Project Specification Reconstruction and Typed Authoring Plans
 

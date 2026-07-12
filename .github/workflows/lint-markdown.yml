@@ -27,11 +27,16 @@ on:
   #
   #   jobs:
   #     lint-markdown:
-  #       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
+  #       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v5
   #       with:
   #         globs: '**/*.md'
   workflow_call:
     inputs:
+      markdownlint:
+        description: "Run the Markdown lint check."
+        required: false
+        type: boolean
+        default: true
       globs:
         description: "Newline-delimited glob(s) of Markdown files to lint."
         required: false
@@ -49,6 +54,9 @@ permissions:
 jobs:
   lint:
     name: Markdown
+    # Direct events have no reusable-workflow input and therefore keep the
+    # default run behavior; an explicit typed false skips setup and linting.
+    if: ${{ format('{0}', inputs.markdownlint) != 'false' }}
     runs-on: ubuntu-latest
 
     steps:

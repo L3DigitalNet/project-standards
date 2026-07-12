@@ -713,14 +713,33 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("JSON key scope must identify an object member")
             parent = _node_at(document.root, spec.path[:-1])
             if parent is None:
-                raise ControlPlaneError("JSON creation parent scope is not present")
+                grandparent = _node_at(document.root, spec.path[:-2])
+                if grandparent is None:
+                    raise ControlPlaneError("JSON creation parent scope is not present")
+                if grandparent.kind != "object":
+                    raise ControlPlaneError("JSON creation parent is not an object")
+                parent_key = json.dumps(spec.path[-2], ensure_ascii=False)
+                member_key = json.dumps(spec.path[-1], ensure_ascii=False)
+                return _append(
+                    grandparent,
+                    document.text,
+                    f"{parent_key}: {{{member_key}: {fragment}}}",
+                )
             if parent.kind != "object":
                 raise ControlPlaneError("JSON creation parent is not an object")
             member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: {fragment}"
             return _append(parent, document.text, member)
         container = _node_at(document.root, spec.path)
         if container is None:
-            raise ControlPlaneError("JSON set container is not present")
+            if not spec.path:
+                raise ControlPlaneError("JSON set container is not present")
+            parent = _node_at(document.root, spec.path[:-1])
+            if parent is None:
+                raise ControlPlaneError("JSON set container parent is not present")
+            if parent.kind != "object":
+                raise ControlPlaneError("JSON set container parent is not an object")
+            member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: [{fragment}]"
+            return _append(parent, document.text, member)
         if container.kind != "array":
             raise ControlPlaneError("JSON set scope does not identify an array")
         return _append(container, document.text, fragment)

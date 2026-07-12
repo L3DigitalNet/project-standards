@@ -1,9 +1,9 @@
 name: Format
 
 # Dual-role: this repo's own Prettier dogfood (direct push/PR) AND the reusable
-# formatter gate consumers adopt via markdown-tooling's format.caller.yml. Runs
-# repo-wide `prettier --check .` (Prettier's own scope: md/json/jsonc/yaml),
-# honoring the caller's .prettierignore/.gitignore. Prettier is pinned inline via
+# formatter gate consumers adopt via markdown-tooling's format.caller.yml. The
+# default remains repo-wide `prettier --check .`; reusable callers can narrow
+# the checked globs and add package-declared ignore patterns. Prettier is pinned inline via
 # npx because a consumer checkout has no package.json/lockfile to `npm ci` from;
 # the pin mirrors this repo's package.json (the SSOT). Supersedes DEC-9's
 # "repo-local, not shipped" clause (see DEC-10).
@@ -18,6 +18,16 @@ on:
         required: false
         type: boolean
         default: true
+      globs:
+        description: "Newline-delimited paths or globs checked by Prettier."
+        required: false
+        type: string
+        default: "."
+      exclusions:
+        description: "Newline-delimited Prettier ignore patterns."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -42,4 +52,51 @@ jobs:
           # No `cache: npm`: a consumer checkout has no lockfile to key the cache on.
 
       - name: Check formatting (Prettier)
-        run: npx --yes prettier@3.8.3 --check . # pin mirrors package.json (SSOT)
+        env:
+          FORMAT_GLOBS: ${{ inputs.globs || '.' }}
+          FORMAT_EXCLUSIONS: ${{ inputs.exclusions || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          globs=()
+          while IFS= read -r glob; do
+            if [[ -n "$glob" ]]; then
+              if [[ "$glob" =~ [[:space:]]$ ]]; then
+                printf '%s\n' "format glob must not end in whitespace" >&2
+                exit 2
+              fi
+              globs+=("$glob")
+            fi
+          done <<< "$FORMAT_GLOBS"
+          if ((${#globs[@]} == 0)); then
+            globs=(.)
+          fi
+
+          # Keep ignore sources separate: each pattern stays anchored to its
+          # own directory, and a base file needs no terminal newline.
+          ignore_args=()
+          for ignore_path in .gitignore .prettierignore; do
+            if [[ -f "$ignore_path" ]]; then
+              ignore_args+=(--ignore-path "$ignore_path")
+            fi
+          done
+
+          exclusions=()
+          while IFS= read -r exclusion; do
+            if [[ -n "$exclusion" ]]; then
+              if [[ "$exclusion" =~ [[:space:]]$ ]]; then
+                printf '%s\n' "format exclusion must not end in whitespace" >&2
+                exit 2
+              fi
+              exclusions+=("$exclusion")
+            fi
+          done <<< "$FORMAT_EXCLUSIONS"
+          if ((${#exclusions[@]} > 0)); then
+            exclusions_file="$(mktemp .project-standards-prettier-ignore.XXXXXX)"
+            trap 'rm -f -- "$exclusions_file"' EXIT
+            printf '%s\n' "${exclusions[@]}" > "$exclusions_file"
+            ignore_args+=(--ignore-path "$exclusions_file")
+          fi
+
+          npx --yes prettier@3.8.3 --check --no-error-on-unmatched-pattern "${ignore_args[@]}" -- "${globs[@]}"

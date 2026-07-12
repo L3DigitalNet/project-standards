@@ -200,6 +200,192 @@ def test_jsonc_appends_new_set_and_keyed_entries_in_canonical_scope_order() -> N
     assert after.index(b'"label": "lint"', tasks) < after.index(b'"label":"format"', tasks)
 
 
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+@pytest.mark.parametrize(
+    ("scope", "fragment", "expected"),
+    [
+        (
+            "set:/recommendations#value=first.extension",
+            b'"first.extension"',
+            b'"recommendations": ["first.extension"]',
+        ),
+        (
+            "keyed-set:/tasks#label=check",
+            b'{"label":"check","type":"shell","command":"check"}',
+            b'"tasks": [{"label":"check","type":"shell","command":"check"}]',
+        ),
+    ],
+)
+def test_json_family_creates_first_declared_array_element_under_existing_object(
+    adapter: JsonAdapter | JsoncAdapter,
+    scope: str,
+    fragment: bytes,
+    expected: bytes,
+) -> None:
+    before = b'{"consumer": true}\n'
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, content=fragment),),
+    )
+
+    assert expected in after
+    assert b'"consumer": true' in after
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_creates_one_missing_immediate_object_parent(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    before = b'{"consumer": true}\n'
+    scope = "key:/[markdown]/editor.defaultFormatter"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b'"esbenp.prettier-vscode"',
+                value="esbenp.prettier-vscode",
+            ),
+        ),
+    )
+
+    assert json.loads(after) == {
+        "consumer": True,
+        "[markdown]": {"editor.defaultFormatter": "esbenp.prettier-vscode"},
+    }
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_composes_nested_members_and_removes_to_empty_object(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    before = b'{\n  "consumer": true\n}\n'
+    formatter = "key:/[markdown]/editor.defaultFormatter"
+    on_save = "key:/[markdown]/editor.formatOnSave"
+    changes = (
+        UnitChange(ActionKind.CREATE, on_save, content=b"true", value=True),
+        UnitChange(
+            ActionKind.CREATE,
+            formatter,
+            content=b'"esbenp.prettier-vscode"',
+            value="esbenp.prettier-vscode",
+        ),
+    )
+
+    created = adapter.render(adapter.inspect(before, (on_save, formatter)), changes)
+    assert json.loads(created)["[markdown]"] == {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": True,
+    }
+    without_formatter = adapter.render(
+        adapter.inspect(created, (formatter,)),
+        (UnitChange(ActionKind.REMOVE, formatter),),
+    )
+    emptied = adapter.render(
+        adapter.inspect(without_formatter, (on_save,)),
+        (UnitChange(ActionKind.REMOVE, on_save),),
+    )
+    assert json.loads(emptied) == {"consumer": True, "[markdown]": {}}
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_nested_key_creation_preserves_existing_siblings(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    before = b'{"[markdown]":{"editor.wordWrap":"on"}}\n'
+    scope = "key:/[markdown]/editor.defaultFormatter"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b'"esbenp.prettier-vscode"',
+                value="esbenp.prettier-vscode",
+            ),
+        ),
+    )
+
+    assert json.loads(after)["[markdown]"] == {
+        "editor.wordWrap": "on",
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+    }
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"{}\n",
+        b'{"settings":{"[markdown]":[]}}\n',
+        b'{"settings":{"[markdown]":"consumer"}}\n',
+    ],
+)
+def test_json_family_refuses_deep_or_non_object_parent_synthesis(
+    adapter: JsonAdapter | JsoncAdapter,
+    content: bytes,
+) -> None:
+    scope = "key:/settings/[markdown]/editor.defaultFormatter"
+
+    with pytest.raises(ControlPlaneError, match=r"parent|object"):
+        adapter.render(
+            adapter.inspect(content, (scope,)),
+            (UnitChange(ActionKind.CREATE, scope, content=b'"prettier"'),),
+        )
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_composes_multiple_first_entries_and_removes_to_empty_array(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    before = b'{\n  "consumer": true\n}\n'
+    alpha = "set:/recommendations#value=alpha.extension"
+    zeta = "set:/recommendations#value=zeta.extension"
+    changes = (
+        UnitChange(ActionKind.CREATE, zeta, content=b'"zeta.extension"'),
+        UnitChange(ActionKind.CREATE, alpha, content=b'"alpha.extension"'),
+    )
+
+    created = adapter.render(adapter.inspect(before, (zeta, alpha)), changes)
+
+    assert created.index(b'"alpha.extension"') < created.index(b'"zeta.extension"')
+    without_alpha = adapter.render(
+        adapter.inspect(created, (alpha,)),
+        (UnitChange(ActionKind.REMOVE, alpha),),
+    )
+    emptied = adapter.render(
+        adapter.inspect(without_alpha, (zeta,)),
+        (UnitChange(ActionKind.REMOVE, zeta),),
+    )
+    assert json.loads(emptied)["recommendations"] == []
+    assert b'"consumer": true' in emptied
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+@pytest.mark.parametrize(
+    ("content", "scope"),
+    [
+        (b"{}\n", "set:/missing/recommendations#value=x.extension"),
+        (b"[]\n", "set:/recommendations#value=x.extension"),
+        (b'{"recommendations": {}}\n', "set:/recommendations#value=x.extension"),
+    ],
+)
+def test_json_family_refuses_to_synthesize_unsafe_set_containers(
+    adapter: JsonAdapter | JsoncAdapter,
+    content: bytes,
+    scope: str,
+) -> None:
+    with pytest.raises(ControlPlaneError, match=r"array|container|parent"):
+        adapter.render(
+            adapter.inspect(content, (scope,)),
+            (UnitChange(ActionKind.CREATE, scope, content=b'"x.extension"'),),
+        )
+
+
 def test_jsonc_appends_object_key_and_preserves_crlf_house_style() -> None:
     content = b'{\r\n  "existing" : 1, // local\r\n}\r\n'
     adapter = JsoncAdapter()
@@ -342,7 +528,14 @@ def test_jsonc_rejects_unbounded_or_impossible_lifecycle_transitions() -> None:
     with pytest.raises(ControlPlaneError, match="parent scope"):
         adapter.render(
             state,
-            (UnitChange(ActionKind.CREATE, "key:/missing/child", content=b"2", value=2),),
+            (
+                UnitChange(
+                    ActionKind.CREATE,
+                    "key:/missing/parent/child",
+                    content=b"2",
+                    value=2,
+                ),
+            ),
         )
     with pytest.raises(ControlPlaneError, match="does not identify an array"):
         adapter.inspect(content, ("set:/not-array#value=x",))

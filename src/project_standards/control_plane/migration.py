@@ -1004,22 +1004,41 @@ def _adopted_legacy_units(
         payload = payloads[(package.standard_id, package.version.value)]
         signatures = {item.id: item for item in payload.manifest.legacy_signatures}
         artifacts = {item.target: item for item in payload.manifest.artifacts}
+        contributions = {
+            item.target: item
+            for item in payload.manifest.contributions
+            if item.adapter is AdapterKind.WHOLE_FILE and item.scope == "$file"
+        }
         for claim in report.claims:
             if claim.disposition is not LegacyDisposition.ADOPT or claim.ownership != "managed":
                 continue
             observed_item = observed.get((claim.signature_id, claim.target.original))
             signature = signatures.get(claim.signature_id)
             artifact = artifacts.get(claim.target)
+            contribution = contributions.get(claim.target)
+            policy = (
+                artifact.policy
+                if artifact is not None
+                else (contribution.policy if contribution is not None else None)
+            )
             if (
                 observed_item is None
                 or not observed_item.known
                 or observed_item.digest != claim.observed_digest
                 or signature is None
                 or signature.kind is not LegacySignatureKind.WHOLE_FILE
-                or artifact is None
-                or artifact.policy is not ArtifactPolicy.MANAGED
+                or policy is not ArtifactPolicy.MANAGED
             ):
                 continue
+            provenance = (
+                UnitProvenance.PACKAGE
+                if artifact is not None
+                else (
+                    UnitProvenance.PROVIDER
+                    if contribution is not None and contribution.provider is not None
+                    else UnitProvenance.SOURCE
+                )
+            )
             units.append(
                 LockedUnit(
                     path=claim.target,
@@ -1027,8 +1046,8 @@ def _adopted_legacy_units(
                     scope="$file",
                     owners=(package.standard_id,),
                     versions={package.standard_id: package.version},
-                    provenance=UnitProvenance.PACKAGE,
-                    policy=artifact.policy,
+                    provenance=provenance,
+                    policy=ArtifactPolicy.MANAGED,
                     semantic_digest=claim.observed_digest,
                     content_digest=claim.observed_digest,
                     mode=None,

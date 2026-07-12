@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import socket
 from dataclasses import replace
@@ -10,13 +11,14 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import (
     bind_catalog_digest,
     parse_catalog,
     parse_config,
     parse_lock,
 )
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import (
     InstalledCatalog,
     InstalledDistribution,
@@ -38,11 +40,12 @@ from project_standards.control_plane.migration import (
 )
 from project_standards.control_plane.models import ConsumerCatalog, DesiredConfig
 from project_standards.control_plane.paths import CatalogMajor
-from project_standards.control_plane.planner import VerificationRequest
+from project_standards.control_plane.planner import VerificationRequest, plan_reconciliation
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
 from project_standards.control_plane.state import StateKind, detect_control_plane_state
-from project_standards.package_contract.paths import SafeRelativePath
+from project_standards.package_contract.paths import SafeRelativePath, Sha256Digest
 from project_standards.package_contract.payload import (
+    ContributionDeclaration,
     LegacySignatureDeclaration,
     ProviderEffect,
     ProviderOperation,
@@ -300,10 +303,16 @@ class _FixtureDistribution:
         *,
         recorded_release: str | None = None,
     ) -> InstalledCatalog:
-        assert recorded_release is None
+        assert recorded_release in {None, "5.0.0"}
         return self._installed
 
-    def consumer_catalog(self, _catalog: CatalogMajor | str) -> ConsumerCatalog:
+    def consumer_catalog(
+        self,
+        _catalog: CatalogMajor | str,
+        *,
+        installed: InstalledCatalog | None = None,
+    ) -> ConsumerCatalog:
+        assert installed is None or installed is self._installed
         return self._catalog
 
 
@@ -457,6 +466,205 @@ def test_apply_legacy_migration_refuses_a_stale_preview_without_writing(
     assert result.error_code == "CP-STALE-PLAN"
     assert not (repo / ".standards").exists()
     assert (repo / ".project-standards.yml").exists()
+
+
+def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_update(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.providers as provider_module
+
+    base = installed_distribution(tmp_path)
+    installed = base.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    legacy_content = b"legacy = true\n"
+    legacy_digest = Sha256Digest(f"sha256:{hashlib.sha256(legacy_content).hexdigest()}")
+    contribution = ContributionDeclaration.model_validate(
+        {
+            "id": "legacy-rendered",
+            "target": "legacy-rendered.toml",
+            "adapter": "whole-file",
+            "scope": "$file",
+            "policy": "managed",
+            "provider": "render-alpha",
+        }
+    )
+    signature = alpha.manifest.legacy_signatures[0].model_copy(
+        update={
+            "targets": [SafeRelativePath.parse("legacy-rendered.toml")],
+            "known_content_digests": [legacy_digest],
+        }
+    )
+    manifest = alpha.manifest.model_copy(
+        update={
+            "contributions": [*alpha.manifest.contributions, contribution],
+            "legacy_signatures": [signature],
+        }
+    )
+    changed_alpha = InstalledPayload(alpha.root, manifest, alpha.integrity)
+    changed = InstalledCatalog(
+        installed.source,
+        installed.families,
+        tuple(changed_alpha if payload is alpha else payload for payload in installed.payloads),
+    )
+    distribution = cast(
+        InstalledDistribution,
+        _FixtureDistribution(changed, base.consumer_catalog("5")),
+    )
+    original = provider_module.invoke_provider
+
+    def migration_claim(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.operation is ProviderOperation.MIGRATE:
+            return ProviderResult(
+                effect=ProviderEffect.MIGRATION_REPORT,
+                migration_report=MigrationReport(
+                    schema_version="1.0",
+                    package=MigratedPackage.model_validate(
+                        {
+                            "standard_id": "alpha",
+                            "version": "2.0",
+                            "selector": "latest",
+                            "config": {"extension_path": "config/alpha-options.toml"},
+                            "recognized_settings": ["/alpha/enabled"],
+                        }
+                    ),
+                    claims=(
+                        LegacyClaim.model_validate(
+                            {
+                                "signature_id": signature.id,
+                                "target": "legacy-rendered.toml",
+                                "observed_digest": legacy_digest.value,
+                                "ownership": "managed",
+                                "disposition": "adopt",
+                            }
+                        ),
+                    ),
+                ),
+            )
+        return original(invocation)
+
+    monkeypatch.setattr(provider_module, "invoke_provider", migration_claim)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nalpha:\n  enabled: true\n",
+        encoding="utf-8",
+    )
+    (repo / "legacy-rendered.toml").write_bytes(legacy_content)
+    extension = repo / "config/alpha-options.toml"
+    extension.parent.mkdir()
+    extension.write_text("consumer = true\n", encoding="utf-8")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    seeded = next(
+        unit
+        for unit in plan.planner.resolution.previous_lock.artifacts
+        if unit.path.original == "legacy-rendered.toml"
+    )
+    assert seeded.adapter.value == "whole-file"
+    assert seeded.semantic_digest == legacy_digest
+    result = apply_legacy_migration(plan)
+    assert result.success, result
+    assert (repo / "legacy-rendered.toml").read_bytes() == b"[alpha]\nenabled = true\n"
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
+
+
+@pytest.mark.parametrize(
+    ("adapter", "scope", "policy", "disposition", "known", "observed_character"),
+    [
+        ("jsonc", "key:/owned", "managed", "adopt", True, "a"),
+        ("whole-file", "$file", "create-only", "adopt", True, "a"),
+        ("whole-file", "$file", "managed", "preserve", True, "a"),
+        ("whole-file", "$file", "managed", "adopt", False, "a"),
+        ("whole-file", "$file", "managed", "adopt", True, "b"),
+    ],
+)
+def test_migration_does_not_bridge_unsafe_whole_file_contribution_claims(
+    tmp_path: Path,
+    adapter: str,
+    scope: str,
+    policy: str,
+    disposition: str,
+    known: bool,
+    observed_character: str,
+) -> None:
+    from project_standards.control_plane.migration import (
+        _adopted_legacy_units,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
+        _ObservedSignature,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
+    )
+
+    distribution = installed_distribution(tmp_path)
+    alpha = distribution.load_catalog("5").payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse("legacy-rendered.toml")
+    claim_digest = Sha256Digest(_digest("a"))
+    observed_digest = Sha256Digest(_digest(observed_character))
+    contribution = ContributionDeclaration.model_validate(
+        {
+            "id": "legacy-rendered",
+            "target": target.original,
+            "adapter": adapter,
+            "scope": scope,
+            "policy": policy,
+            "provider": "render-alpha",
+        }
+    )
+    signature = alpha.manifest.legacy_signatures[0].model_copy(
+        update={"targets": [target], "known_content_digests": [claim_digest]}
+    )
+    payload = InstalledPayload(
+        alpha.root,
+        alpha.manifest.model_copy(
+            update={
+                "contributions": [*alpha.manifest.contributions, contribution],
+                "legacy_signatures": [signature],
+            }
+        ),
+        alpha.integrity,
+    )
+    report = MigrationReport(
+        schema_version="1.0",
+        package=MigratedPackage.model_validate(
+            {
+                "standard_id": "alpha",
+                "version": "2.0",
+                "selector": "latest",
+                "config": {"extension_path": "config/alpha-options.toml"},
+            }
+        ),
+        claims=(
+            LegacyClaim.model_validate(
+                {
+                    "signature_id": signature.id,
+                    "target": target.original,
+                    "observed_digest": claim_digest.value,
+                    "ownership": "managed",
+                    "disposition": disposition,
+                }
+            ),
+        ),
+    )
+    observed = _ObservedSignature(
+        signature.id,
+        target,
+        observed_digest,
+        known,
+        b"legacy",
+    )
+
+    units = _adopted_legacy_units(
+        (report,),
+        {observed.key: observed},
+        {("alpha", "2.0"): payload},
+    )
+
+    assert units == ()
 
 
 def test_apply_legacy_migration_refuses_nonapplicable_foreign_and_unbound_plans(

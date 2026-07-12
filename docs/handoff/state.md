@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- Execute the approved CP01 package-migration plan. Tasks 1-9 are complete; Task 10 is next, and Task 14 activates root V2 families.
+- Execute the approved CP01 package-migration plan. Tasks 1-10 are complete; Task 11 is next, and Task 14 activates root V2 families.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.
