@@ -14,8 +14,8 @@
 
 ## Source of Truth
 
-- `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02), especially MS-1 and MS-2.
-- `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01), for the consumer-catalog fields that authoring must supply.
+- `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02), especially MS-1 and MS-2.
+- `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01), for the consumer-catalog fields that authoring must supply.
 - `docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md`.
 - `docs/adr/adr-0023-unified-consumer-standards-control-plane.md`.
 - `docs/adr/adr-0024-catalog-scoped-package-version-channels.md`.
@@ -479,7 +479,7 @@ uv build --wheel dist/project_standards-*.tar.gz --out-dir dist/from-sdist
 
 **Files:**
 
-- Modify: `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`
+- Modify: `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`
 - Modify: `docs/handoff/specs-plans.md`
 - Modify: `docs/STATUS.md`
 - Modify: `docs/TODO.md`

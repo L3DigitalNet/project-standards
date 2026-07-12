@@ -907,14 +907,14 @@ No implementation-blocking questions remain after design approval.
 
 ### Standards
 
-- [Standard Bundle Authoring Standard](../../../standards/standard-bundle-authoring/README.md)
-- [Project Specification Standard](../../../standards/project-spec/README.md)
-- [ADR 0017 — Unified Standard Adoption](../../adr/adr-0017-unified-standard-adoption-methodology.md)
-- [ADR 0018 — Standard Package Lifecycle](../../adr/adr-0018-standard-package-lifecycle-methodology.md)
-- [ADR 0019 — Packaged Artifact Parity and Provenance](../../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
-- [ADR 0020 — Standard Package Versioning](../../adr/adr-0020-standard-package-versioning-methodology.md)
-- [ADR 0021 — Standard-Packaged Skill Installation](../../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
-- [ADR 0022 — Standard-Packaged Hook Installation (proposed)](../../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
+- [Standard Bundle Authoring Standard](../../standards/standard-bundle-authoring/README.md)
+- [Project Specification Standard](../../standards/project-spec/README.md)
+- [ADR 0017 — Unified Standard Adoption](../adr/adr-0017-unified-standard-adoption-methodology.md)
+- [ADR 0018 — Standard Package Lifecycle](../adr/adr-0018-standard-package-lifecycle-methodology.md)
+- [ADR 0019 — Packaged Artifact Parity and Provenance](../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
+- [ADR 0020 — Standard Package Versioning](../adr/adr-0020-standard-package-versioning-methodology.md)
+- [ADR 0021 — Standard-Packaged Skill Installation](../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
+- [ADR 0022 — Standard-Packaged Hook Installation (proposed)](../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
 
 ### Harness Contracts
 
@@ -927,7 +927,7 @@ No implementation-blocking questions remain after design approval.
 ### Project References
 
 - Legacy ingestion baseline: repository commit `56b24df7279572c485c2512783b0cc7e5395429b`.
-- [Prior repository-local handoff migration design](2026-06-05-handoff-v3-migration-design.md) — legacy context only, not the v1 contract.
+- [Prior repository-local handoff migration design](../superpowers/specs/2026-06-05-handoff-v3-migration-design.md) — legacy context only, not the v1 contract.
 - [MCP meta-repository readiness specification](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md)
 
 ---

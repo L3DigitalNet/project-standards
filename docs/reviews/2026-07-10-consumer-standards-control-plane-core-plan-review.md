@@ -1,6 +1,6 @@
 # Review: Consumer Standards Control Plane Core Implementation Plan
 
-**Plan:** `docs/superpowers/plans/2026-07-10-consumer-standards-control-plane-core.md` **Spec:** `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01 rev 0.5, approved) **Review target state:** working tree after `de8f2bb` (only uncommitted changes are user-authored additions to `docs/TODO.md` and `docs/workflows/housekeeping.md`) **Workflow:** `docs/workflows/review-plan.md`
+**Plan:** `docs/superpowers/plans/2026-07-10-consumer-standards-control-plane-core.md` **Spec:** `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01 rev 0.5, approved) **Review target state:** working tree after `de8f2bb` (only uncommitted changes are user-authored additions to `docs/TODO.md` and `docs/workflows/housekeeping.md`) **Workflow:** `docs/workflows/review-plan.md`
 
 ## Round 1 — 2026-07-10
 

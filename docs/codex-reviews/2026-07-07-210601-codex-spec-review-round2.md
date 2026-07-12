@@ -11,7 +11,7 @@ Needs minor specification correction before planning/implementation
 ### Audit loop status
 
 * Audit type: Follow-up audit
-* Spec path: /home/chris/projects/project-standards/docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md
+* Spec path: /home/chris/projects/project-standards/docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md
 * Prior audit issue count: 5
 * Resolved issue count: 4
 * Still open issue count: 0
@@ -90,7 +90,7 @@ No new internet research was necessary. The remaining material claim is reposito
 
 * `pwd`, `git branch --show-current`, `git status --short`, `git log --oneline -n 10`: confirmed repo root, branch `testing`, modified spec file, and prior v5/SPEC-BA01 history.
 * Read the revised spec with line numbers: confirmed FR-006, FR-012, FR-013, FR-014, DoD, and OQ corrections.
-* `git diff -- docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md`: confirmed the exact round-2 edits.
+* `git diff -- docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md`: confirmed the exact round-2 edits.
 * Inspected `standards/README.md`, `.project-standards.yml`, `registry.json`, and the Step 00 baseline inventory: confirmed current standard inventory, config namespaces, and registry gaps.
 * Inspected ADRs 0001, 0003, 0004, 0006, 0008, 0010, and 0013: confirmed manifest, authority, namespace, provider, resource, and relationship decisions.
 * Inspected SPEC-MT01 sections on manifest edge cases, security threats, and validation strategy: confirmed paths outside a bundle are expected to fail.
@@ -112,7 +112,7 @@ Claude Code should revise the specification using the findings above
 
 ### Review ledger for next loop
 
-* Spec path: /home/chris/projects/project-standards/docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md
+* Spec path: /home/chris/projects/project-standards/docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md
 * Audit round: 2
 * Open issue IDs: SA-003
 * Resolved issue IDs: SA-001, SA-002, SA-004, SA-005

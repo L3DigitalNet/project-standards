@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'agent-summary-and-canonical-standard-split'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
 supersedes: []
 superseded_by: null
@@ -34,7 +34,7 @@ project:
 
 # ADR 0009: Agent Summary and Canonical Standard Split
 
-MADR status: **accepted**. Records decision D-009 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-009 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

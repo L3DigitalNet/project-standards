@@ -171,7 +171,7 @@ fail_under = 85
 
 ### E. Code & test changes
 
-- **`find_bundled_schema`** ([validate_frontmatter.py:64](../../../tools/validate_frontmatter.py)) simplifies: with the schema in-package, source-checkout and wheel paths coincide → single candidate `Path(__file__).parent / "schemas" / filename`, with the missing-name fallback returning that canonical path (preserves the "surface a clear read error" contract + its unit test).
+- **`find_bundled_schema`** ([validate_frontmatter.py](../../../src/project_standards/validate_frontmatter.py)) simplifies: with the schema in-package, source-checkout and wheel paths coincide → single candidate `Path(__file__).parent / "schemas" / filename`, with the missing-name fallback returning that canonical path (preserves the "surface a clear read error" contract + its unit test).
 - **Imports** in `tests/test_validate_frontmatter.py`: `from tools.validate_frontmatter import ...` → `from project_standards.validate_frontmatter import ...`; `from tools import validate_frontmatter as vf` → `from project_standards import ...`.
 - **`SCHEMA_PATH`** in tests: resolve via the package, not repo root — `Path(vf.__file__).parent / "schemas" / "markdown-frontmatter.schema.json"`.
 - **`test_find_bundled_schema_resolves_installed_wheel_layout`**: rewrite for in-package resolution (the wheel and source layouts are now identical; the test asserts `<package>/schemas/` resolution).
@@ -199,7 +199,7 @@ The `tools/` → `src/project_standards/` and schema relocation touch references
 - `standards/markdown-frontmatter.md:317,360,372,382-383` — illustrative examples of repo-root-relative link _style_, not pointers to this repo's schema.
 - `tests/test_validate_frontmatter.py:425-426` — a synthetic `schemas/custom.schema.json` test input, not the real schema.
 
-**Sub-decision — schema `$id`:** [schemas/markdown-frontmatter.schema.json:3](../../../schemas/markdown-frontmatter.schema.json) sets `$id` to `…/main/schemas/markdown-frontmatter.schema.json`, which 404s after the move. The validator reads the schema from disk (never via `$id`) and no external `$ref` consumer is known, so it is low-risk. **Decided:** update `$id` to the new `…/main/src/project_standards/schemas/…` path for consistency. Tag-pinned links (e.g. `adoption.md@v1`) stay valid for the old `v1` tag and only update when a new major tag ships the new layout.
+**Sub-decision — schema `$id`:** [markdown-frontmatter.schema.json](../../../src/project_standards/schemas/markdown-frontmatter.schema.json) sets `$id` to `…/main/schemas/markdown-frontmatter.schema.json`, which 404s after the move. The validator reads the schema from disk (never via `$id`) and no external `$ref` consumer is known, so it is low-risk. **Decided:** update `$id` to the new `…/main/src/project_standards/schemas/…` path for consistency. Tag-pinned links (e.g. `adoption.md@v1`) stay valid for the old `v1` tag and only update when a new major tag ships the new layout.
 
 ### H. Working-tree cleanup
 

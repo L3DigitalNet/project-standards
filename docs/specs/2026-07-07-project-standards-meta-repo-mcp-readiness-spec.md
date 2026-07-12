@@ -1048,7 +1048,7 @@ No external automation is required. CI integration is the only automation in sco
 
 ### Project References
 
-- `docs/superpowers/specs/` — existing project-spec documents.
+- `docs/specs/` — maintained Project Specification documents.
 - `docs/adr/` — target ADR directory.
 - `.project-standards.yml` — current standards validation config.
 - `scripts/check.py` — candidate local gate integration point.

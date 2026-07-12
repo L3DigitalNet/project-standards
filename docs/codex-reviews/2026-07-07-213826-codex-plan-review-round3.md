@@ -80,7 +80,7 @@ None found.
 * External research evidence: Not applicable.
 * Why it matters: This is unlikely to break implementation because the plan body now contains the rev 0.5 substance, but stale revision labels make the audit trail ambiguous and can send the implementer to the wrong acceptance baseline.
 * Recommended action for Claude Code: Update the plan and handoff pointer to cite SPEC-BA01 rev 0.5 consistently.
-* Suggested validation: Re-run `rg -n "rev 0\\.3|rev 0\\.4|rev 0\\.5" docs/superpowers/plans/2026-07-07-standard-bundle-authoring-standard.md docs/handoff/specs-plans.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md`.
+* Suggested validation: Re-run `rg -n "rev 0\\.3|rev 0\\.4|rev 0\\.5" docs/superpowers/plans/2026-07-07-standard-bundle-authoring-standard.md docs/handoff/specs-plans.md docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md`.
 
 ### Regressions
 
@@ -122,7 +122,7 @@ After correcting and implementing the remaining documentation-scope issues:
 * `uv run project-standards spec validate --config .project-standards.yml`
 * `uv run project-standards spec lint --config .project-standards.yml`
 * `uv run python -c "import tomllib,pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path('standards/standard-bundle-authoring').rglob('*.toml')]; print('toml ok')"`
-* Run only after implementation: `./node_modules/.bin/prettier --write standards/standard-bundle-authoring/README.md standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md`
+* Run only after implementation: `./node_modules/.bin/prettier --write standards/standard-bundle-authoring/README.md standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md`
 * `./node_modules/.bin/prettier --check "standards/**/*.md" "docs/superpowers/**/*.md"`
 * `./node_modules/.bin/markdownlint-cli2`
 * `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run pytest -q`

@@ -18,7 +18,7 @@ tags:
 aliases:
   - 'agent-handoff consumer inventory'
 related:
-  - 'docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md'
+  - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
   - 'docs/superpowers/plans/2026-07-09-agent-handoff-standard-package.md'
   - 'standards/agent-handoff/resources/legacy-migration.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'

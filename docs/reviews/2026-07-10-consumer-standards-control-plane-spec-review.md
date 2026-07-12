@@ -1,6 +1,6 @@
 # Review: Consumer Standards Control Plane Specification (SPEC-CP01)
 
-**Spec:** `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md` (rev 0.1, draft, Full profile) **Review target state:** commit `40d30a0` (spec as committed; working tree changes touch only `docs/TODO.md` and `docs/workflows/`, not the spec) **Workflow:** `docs/workflows/review-spec.md` **Reviewer:** session 2026-07-10
+**Spec:** `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` (rev 0.1, draft, Full profile) **Review target state:** commit `40d30a0` (spec as committed; working tree changes touch only `docs/TODO.md` and `docs/workflows/`, not the spec) **Workflow:** `docs/workflows/review-spec.md` **Reviewer:** session 2026-07-10
 
 ## Round 1
 

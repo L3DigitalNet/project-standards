@@ -29,4 +29,4 @@ SHA-pin with a trailing version comment (GitHub/Astral hardening guidance; Depen
 ## Lesson
 
 - A GitHub Action can withdraw its moving major tag. **SHA-pin third-party actions** (with a `# vX.Y.Z` comment + Dependabot), don't trust `@vN` to persist.
-- When reviewing a standard that embeds action refs, **re-verify each ref still resolves** — `git ls-remote <repo> refs/tags/<tag>`. The Python Tooling §25 audit note now records this check.
+- Re-verify embedded action refs with `git ls-remote <repo> refs/tags/<tag>`; Python Tooling §25 records this audit check.

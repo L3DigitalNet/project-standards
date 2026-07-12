@@ -599,17 +599,17 @@ Include this ledger exactly.
 
 Use this exact structure.
 
-### Executive summary
+### Follow-up executive summary
 
 Briefly state whether the implementing agent’s corrections resolved the prior findings and whether significant findings remain.
 
 Mention whether new internet research was required.
 
-### Verdict
+### Follow-up verdict
 
 Choose exactly one verdict from the verdict list.
 
-### Audit loop status
+### Follow-up audit loop status
 
 - Audit type: Follow-up audit
 - Spec path:
@@ -621,7 +621,7 @@ Choose exactly one verdict from the verdict list.
 - Regression count:
 - Significant findings remaining: Yes / No
 
-### Adversarial review performed
+### Follow-up adversarial review performed
 
 Briefly list the adversarial passes performed in this follow-up audit, including prior fixes retested, new assumptions attacked, acceptance criteria retested, and areas that could not be checked.
 
@@ -692,7 +692,7 @@ List unresolved ambiguities or decisions that still block or affect planning/imp
 
 If none, state: None found.
 
-### Internet research performed
+### Follow-up internet research performed
 
 List any new external sources consulted during this follow-up audit.
 
@@ -700,7 +700,7 @@ If no new internet research was necessary, state why.
 
 If internet research was needed but unavailable, state what could not be verified.
 
-### Read-only validation performed
+### Follow-up read-only validation performed
 
 List the commands and inspections actually performed.
 
@@ -708,7 +708,7 @@ Do not include commands you did not run.
 
 For each command or inspection, summarize what it established.
 
-### Recommended planning/implementation validation
+### Follow-up recommended planning/implementation validation
 
 List commands or checks the implementing agent should include in the later implementation plan and run after implementation.
 
@@ -716,7 +716,7 @@ Only include commands that make sense for this repository/environment.
 
 Mark commands that may write artifacts as “run only after implementation.”
 
-### Final recommendation
+### Follow-up final recommendation
 
 State exactly what should happen next. Choose one:
 
@@ -726,7 +726,7 @@ State exactly what should happen next. Choose one:
 - The user should provide specific missing information before the implementing agent proceeds
 - No significant findings remain; the audit/fix loop can stop
 
-### Review ledger for next loop
+### Follow-up review ledger for next loop
 
 Include this ledger exactly.
 

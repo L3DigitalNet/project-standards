@@ -19,7 +19,7 @@ aliases:
   - 'ADR 0023'
   - 'Unified consumer standards control plane'
 related:
-  - 'docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md'
+  - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0004-authority-map-and-conflict-free-composition.md'
@@ -37,7 +37,7 @@ supersedes:
   - 'adr-0017-project-standards-unified-standard-adoption-methodology'
 superseded_by: null
 source:
-  - 'docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md'
+  - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
 confidence: 'high'
 visibility: 'internal'
@@ -146,6 +146,6 @@ Conformance requires schema round trips, offline installed-wheel tests, real app
 
 ## More Information
 
-- Controlling specification: [`2026-07-10-consumer-standards-control-plane-spec.md`](../superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md)
+- Controlling specification: [`2026-07-10-consumer-standards-control-plane-spec.md`](../specs/2026-07-10-consumer-standards-control-plane-spec.md)
 - Semantic composition design: [`2026-07-10-root-artifact-ownership-semantic-composition-design.md`](../superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md)
 - Version-channel decision: [`adr-0024-catalog-scoped-package-version-channels.md`](adr-0024-catalog-scoped-package-version-channels.md)

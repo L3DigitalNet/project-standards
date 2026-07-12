@@ -1,6 +1,6 @@
 # Architecture Decision Record (ADR) Standard
 
-- **Status:** Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#per-standard-contract-versions))
+- **Status:** Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#package-release-and-contract-versions))
 - **Owner:** Project standards / repository template
 - **Last updated:** 2026-07-01
 - **Last source check:** 2026-06-07

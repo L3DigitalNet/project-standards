@@ -10,26 +10,29 @@
 - SPEC-MT01 Steps 00-06 are complete; Step 07 remains the MCP-readiness gate before SPEC-MS01 server work.
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
+- The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29145160155` passed for the published v5 baseline at `5d21517`.
 - `SPEC-CP01` is approved rev 0.7 with current-package, installed-wheel, migration, refresh, and disposable release-cut traceability.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` is approved at rev 0.7; all nine immutable payloads and the real compatibility/release evidence satisfy its authoring contract. SPEC-BA01 is superseded history.
-- The BA02 package-contract foundation is implemented (`4e507d6` through `477cbbf`): strict authoring models, integrity, graph validation, CLI, and installed projection.
-- Control-plane core Tasks 1-5 (`90debb5`…`2d8d831`) implement state/codecs, installed content, locking, and neutral initialization.
-- Tasks 6-8 (`2b6a359`…`6bd74b3`) add preserving config edits, catalog-scoped resolution, referenced inputs, and bounded providers.
-- Tasks 9-13 (`0ca5fd8`…`03e80f5`) add read-once snapshots, whole-file lifecycle, and syntax-preserving TOML, JSON/JSONC, YAML, EditorConfig, and Markdown composition.
-- Tasks 14-15 (`75fba70`, `954a493`) add complete virtual-tree planning, partitioned central-lock convergence, shared references, and package-local lifecycle safety.
-- Tasks 16-17 (`000ba43`, `6876ba4`) add transactional apply/recovery, public CLI contracts, and the catalog-aware V5 wrapper with V1 fallback.
-- Task 18 closes the core with offline wheel repair, an all-adapter fixed point, 100-order determinism, package-ID neutrality, and scale evidence.
-- The final gate passes 2,000 tests at 90% coverage; planning 100 packages and 1,000 artifacts remains below five seconds.
-- The approved 18-task core plan is complete; its deferred real-package reconstruction, migration, conversion, refresh, and activation work is implemented by the follow-on below. Release remains.
-- CP01 follow-on Tasks 1-17 are committed through `a891973`: all nine payloads are reconstructed, catalog 5 is active, the real package compatibility matrix passes from source and wheel, and the disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
+- `SPEC-BA02` rev 0.8 sets the v5 launch scope to the nine catalog 5 families; their immutable payloads and compatibility evidence satisfy the authoring contract.
+- The CP01 core and package-migration follow-on are integrated on `testing` through `b6a60fc`; all nine payloads are reconstructed and catalog 5 is active.
+- The V2 control plane covers resolution, composition, lifecycle planning, transactional apply/recovery, public commands, legacy migration, and same-major refresh.
 - Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
-- Task 16 passes 56 compatibility rows plus three explicit performance rows across source and wheel.
-- Task 18 has reconciled v5 adoption, migration, CLI, upgrade, versioning, release, spec traceability, and generated catalog documentation. Independent review and the 2,535-test local gate pass; hosted run `29195839078` passes for `b6a60fc`. The atomic source-root migration remains.
-- All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
+- Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
+- The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
+- CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
+- Only the atomic source-root migration in the v5 release commit remains.
+- The first release-debt inventory found 42 review/evidence artifacts, 15 plans, 12 future-standard drafts, two indexes, and two ignored scratch files.
+- Required validators, package gates, Prettier, markdownlint, `pip-audit`, and `npm audit` pass.
+- The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
+- GitHub issue #3 and PRs #1, #2, #4, #5, and #6 are closed with no open PRs; incomplete action bumps are consolidated into one v5-wide parity task.
+- Deferred decisions are closed: existing symlink checks and OpenAPI policy stand; catalog 5 drift tooling supersedes the old v2.2 `check` plan.
+- Current handoff instructions, architecture, and bug lessons meet size and shape targets; only accepted append-only session warnings remain.
+- All 15 retained Project Specification documents now live under `docs/specs/`, are indexed, and pass validate/lint; future package specs remain post-v5.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
-- Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.
+- Durable implementation history is in `docs/handoff/sessions/2026-07.md`.
+- `project-toolbox` and `agent-managed-repo` are dedicated post-v5 programs, not v5 release prerequisites.
+- The reconciled v5 scope and catalog 5 MCP review are complete; final housekeeping remains before Step 07.
 - Nineteen known consumers validate on v1 branches; six concrete-evidence default branches, a published v5 wheel check, the final dependency search, and owner approval remain.
 - `progressive-apparel` is the first migrated consumer (`2b062b6`); its Codex-only profile validates cleanly on `main`.
 - `doc-proc-scripts` is migrated (`e1db276`); its full 532-test, 100%-coverage gate and Codex profile pass on `main`.

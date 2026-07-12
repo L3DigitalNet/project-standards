@@ -1,6 +1,8 @@
-# Design Specs
+# Design Archive
 
-Design documents and brainstorming outputs for `project-standards`. Each spec captures the problem, options considered, and the chosen approach before implementation begins.
+Historical design and brainstorming documents for `project-standards`. Maintained Project Specification Standard documents live in [`../../specs/`](../../specs/README.md).
+
+The BA02 filename retained here is a compatibility symlink for an immutable catalog 5 payload link; its maintained target is `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`.
 
 | Date | Spec | Status | What it covers |
 | --- | --- | --- | --- |
@@ -14,15 +16,7 @@ Design documents and brainstorming outputs for `project-standards`. Each spec ca
 | 2026-06-08 | [Check / Drift Detection](2026-06-08-check-drift-design.md) | approved | The `project-standards check` command — detect drift between adopted artifacts and the canonical bundle |
 | 2026-07-04 | [Project-Spec Tooling — Spec #1](2026-07-04-project-spec-tooling-design.md) | approved | The `project-standards spec validate \| lint \| extract \| next` read-only commands over a shared registry core; retires `check_specs.py` |
 | 2026-07-06 | [Markdown-Tooling Formatter Authority (F5, Spec B)](2026-07-06-markdown-tooling-formatter-authority-design.md) | codex-converged (r5) | Ship an opt-in reusable repo-wide Prettier gate (`format.yml` + caller), superseding DEC-9; document formatter authority + `proseWrap`; add a repo-local config-coherence tool. Additive ⇒ MINOR (`markdown_tooling 1.1`) |
-| 2026-07-07 | [MCP Meta-Repo Readiness — SPEC-MT01](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | draft (Full spec) | Prerequisite: make the meta-repo manifest-driven + graph-validated so a future MCP server stays thin. Establishes the independent-standard-package contract (groups = recommendations, never hidden hard dependencies). Blocks SPEC-RD01/MS01 |
-| 2026-07-07 | [MCP Enablement Roadmap — SPEC-RD01](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | draft (Full spec) | Ordered sequencing from meta-repo readiness → MCP phases. Depends on SPEC-MT01; MCP implementation must not start until the readiness gate passes |
-| 2026-07-07 | [MCP Server Implementation — SPEC-MS01](2026-07-07-project-standards-mcp-server-implementation-spec.md) | draft (Full spec) | Thin, local, read-only-first, manifest-driven MCP access layer over the standards graph — not a second standards implementation. Depends on SPEC-MT01 + SPEC-RD01; BLOCKED until the readiness gate passes |
-| 2026-07-09 | [Agent Handoff Standard Package — SPEC-DPEY](2026-07-09-agent-handoff-standard-package.md) | approved (Full spec rev 0.3; adversarial review converged; ADR 0022 accepted; implementation plan written) | Ingest `agent-handoff` as a v1 CLI-backed standard package with repository-only ownership, Claude Code/Codex SessionStart profiles, agent-guided legacy migration, and retirement gates for the old repository |
 | 2026-07-10 | [Pre-Step-07 Readiness Remediation](2026-07-10-pre-step-07-readiness-remediation-design.md) | approved for implementation planning | Reconcile SPEC-MT01 evidence and v5 docs, fix Agent Handoff bug-index shape targeting, and add a repository-only graph/catalog workflow without changing the reusable Python Tooling gate |
-| 2026-07-10 | [Consumer Standards Control Plane — SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md) | approved (rev 0.7; core and package-migration evidence passing through `a891973`; atomic source-root migration and owner deviation sign-off remain release-closeout actions) | Establish `.standards/` as the unified consumer catalog/config/lock plane, add explicit reconciliation and versioned package channels/payloads, migrate every current standard, and provide the foundation for a separate `project-toolbox` standard |
 | 2026-07-10 | [Root-Artifact Ownership and Semantic Composition](2026-07-10-root-artifact-ownership-semantic-composition-design.md) | approved (adversarial review converged in round 2) | Keep shared root containers consumer-owned while standards own typed keys, entries, blocks, or sections composed by syntax-preserving adapters without package precedence |
-| 2026-07-10 | [Standard Bundle Authoring V2 — SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved (rev 0.7; all nine packages, real compatibility, source/wheel parity, migration, and release-cut evidence passing; supersedes SPEC-BA01) | Replace BA01 with a family-index plus immutable-payload authoring contract covering option schemas, catalog roles, semantic contributions, providers, migrations, integrity, and compatibility evidence |
 
-> The six Full `SPEC-*` rows above and the Light `SPEC-BA01` row are real Project Specification documents (project-spec frontmatter, gated by `spec validate`/`lint`), unlike the frontmatter-less design/brainstorming docs elsewhere in this table. The MCP spec set's supporting reference pack lives at [`../research/2026-07-07-project-standards-mcp-specification-reference-pack.md`](../research/2026-07-07-project-standards-mcp-specification-reference-pack.md).
-
-Implementation plans for these specs live in [`../plans/`](../plans/).
+The MCP specification set's supporting reference pack remains at [`../research/2026-07-07-project-standards-mcp-specification-reference-pack.md`](../research/2026-07-07-project-standards-mcp-specification-reference-pack.md). Implementation plans remain in [`../plans/`](../plans/).

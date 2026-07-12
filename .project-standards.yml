@@ -59,30 +59,26 @@ markdown_tooling:
 cli_documentation:
   version: "1.0"
 
-# Project Specification Standard: which files `spec validate`/`spec lint` check.
-# This repo's own planning docs (docs/superpowers/specs/) predate this standard and use
-# a different convention — they are not project specs. The dogfood example under
-# standards/project-spec/examples/ is what's validated here, per standards/project-spec/adopt.md.
+# Project Specification Standard: durable specs live under docs/specs/. Historical
+# design documents under docs/superpowers/specs/ predate this standard and are not
+# project specs. The dogfood example remains gated per project-spec/adopt.md.
 spec:
   version: "1.0"
   include:
     - "standards/project-spec/examples/**/*.md"
-    # MCP enablement spec set (SPEC-MT01/RD01/MS01) — real Project Specification
-    # documents that use spec_id/profile frontmatter, so they ARE gated by `spec
-    # validate`/`lint`. Listed by explicit path (not a docs/superpowers/specs/**
-    # glob) on purpose: the other files in that directory are frontmatter-less
-    # brainstorming design docs on a different convention, not project specs.
-    - "docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md"
-    - "docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md"
-    - "docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md"
-    # v5 Step 02 design (SPEC-BA01) — the Standard Bundle Authoring meta-standard.
-    - "docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md"
+    - "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md"
+    - "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md"
+    - "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md"
+    # Superseded specs remain gated while retained as durable history.
+    - "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md"
     # V2 successor package-author contract (SPEC-BA02); BA01 remains historical.
-    - "docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
+    - "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
     # Agent Handoff v1 standards-package ingestion (SPEC-DPEY).
-    - "docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md"
+    - "docs/specs/2026-07-09-agent-handoff-standard-package.md"
     # V5 consumer-side catalog/config/lock/reconciliation control plane (SPEC-CP01).
-    - "docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md"
+    - "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md"
+    # Retained post-v5 specification set; still draft, but maintained and gated.
+    - "docs/specs/future/usage-documentation-site/**/*.md"
 
 # BEGIN agent-handoff managed config
 agent_handoff:

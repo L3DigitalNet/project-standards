@@ -16,12 +16,12 @@ tags:
   - 'decision'
 aliases: []
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'standards/adr/README.md'
   - 'standards/standard-bundle-authoring/README.md'
   - 'standards/markdown-frontmatter/field-values.md'
   - '.project-standards.yml'
-  - 'docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md'
+  - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
@@ -31,7 +31,7 @@ related:
 
 Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR standard](../../standards/adr/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
 
-ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. The MCP-server decisions (SPEC-MS01 §8.3) remain deferred to a later release.
+ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. The MCP-server decisions (SPEC-MS01 §8.3) remain deferred to a later release.
 
 | ADR | Title | Decision | Status |
 | --- | --- | --- | --- |

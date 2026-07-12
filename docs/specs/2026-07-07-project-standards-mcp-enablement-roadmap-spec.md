@@ -877,7 +877,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 ### Project References
 
 - `docs/adr/` — ADRs created by Step 01/Step 09/Step 15.
-- `docs/superpowers/specs/` — target location for specs if this repository uses that convention.
+- `docs/specs/` — durable location for maintained Project Specification documents.
 - `.project-standards.yml` — existing repository validation config.
 
 ---

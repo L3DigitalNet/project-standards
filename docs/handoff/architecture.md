@@ -1,26 +1,28 @@
 # Architecture
 
-**Last updated:** 2026-07-07
+**Last updated:** 2026-07-12
 
 ## Components
 
-```text
-project-standards
-├── standards/          -> governing standards, one bundle each (markdown-frontmatter, adr, python-tooling, markdown-tooling, project-spec, cli-documentation) + python-coding (draft, reference-only, unregistered) + standard-bundle-authoring (internal/reference meta-standard, adoption=none) + README index
-├── meta/               -> docs about this repo (versioning); not a governed standard
-├── src/project_standards/ + tests/ -> Python package: validator (validate_frontmatter.py) + bundled schema; V2 package repository and projected catalog/family/payload data (package_contract/, catalogs/, families/, payloads/); V2-backed standards graph validator/catalog generator with bounded V1 fixture/fallback loading (standards_graph/); the `project-standards` CLI (cli.py: validate|fix|spec|adopt|standards|list); the spec engine (specs/: commands/ validate|lint|extract|next|new|upgrade over project specs, plus config/document/model/registry/templates); the legacy adopt engine and fallback bundles (adopt/, bundles/); pytest suite
-├── .github/workflows/  -> reusable workflows consumers call (validate, validate-specs, lint-markdown, format)
-└── docs/handoff/       -> agent session state (this v3 layout)
-```
+- `standards/` holds the nine catalog 5 families, their manifests, package guidance, templates, examples, and index.
+- `meta/` holds repository policy such as the release contract; it is not a governed package.
+- `src/project_standards/` implements the CLI, validators, spec engine, catalog 5 control plane, projections, and bounded legacy compatibility.
+- `tests/` covers source and wheel behavior, package compatibility, migrations, scale, and documentation coherence.
+- `.github/workflows/` contains reusable consumer workflows and repository gates.
+- `docs/specs/` is the validated, indexed home for maintained Project Specification documents.
+- `docs/handoff/` is the repo-local Agent Handoff knowledge and session-state surface.
 
 ## Relationships
 
-- Consumers add `.project-standards.yml` + call the reusable workflow; they do not vendor copies. The schema is the contract — changing it is a versioned change.
-- The validator (`src/project_standards/`) reads `.project-standards.yml`, resolves the bundled schema shipped inside the package, and validates the configured include globs.
-- This repo dogfoods its own frontmatter standard only on repo-local managed docs configured in `.project-standards.yml` (`CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `meta/**/*.md`, and `docs/adr/**/*.md`). Standard-package docs under `standards/**` are excluded from this repo's local frontmatter scope so packages do not accidentally ship project-standards-specific metadata; intentional standard artifacts there may still contain frontmatter when frontmatter is the artifact itself (templates, examples, skill metadata).
-- The `adopt` CLI (`cli.py` + `adopt/`) materializes each standard's canonical artifacts from declarative `bundles/<id>/adopt.toml` manifests into a consumer repo. Bundle templates are the repo's _real working files_ (byte-identical dogfood test) or curated consumer scaffolds; they resolve via the same `Path(__file__)`-relative lookup as the bundled schema, so they ship in the wheel automatically. The future `check` (drift) command reads the same manifests.
+- Catalog 5 consumers select immutable packages in `.standards/config.toml`; one lock records exact payload and configuration state.
+- `reconcile` resolves, composes, applies, repairs, and checks drift transactionally while preserving consumer-owned content.
+- The legacy `.project-standards.yml` validator and `adopt` bundles remain bounded migration and compatibility inputs through v5.
+- This repo dogfoods frontmatter only on configured managed docs. ADR 0015 excludes `standards/**` so packages do not ship repo-specific metadata.
+- Schemas, manifests, payloads, generated projections, provider output, and installed-wheel behavior form versioned package contracts.
 
 ## Standing backlog
 
-- **Repo-root-relative link enforcement** — breaking; future major (deferred past `2.0.0`, which shipped without it).
-- **MCP enablement program (specs ingested 2026-07-07; partially started).** Ordered: **SPEC-MT01** (meta-repo readiness prep — `standard.toml` manifests, authority map, standards-graph validator, provider registry, generated index) → **SPEC-RD01** (sequencing roadmap) → **SPEC-MS01** (thin local read-only-first MCP server over the standards graph; not a second standards implementation). Hard gate: MCP server work must not begin until SPEC-MT01's readiness gate passes (SPEC-RD01 Step 07). Core architectural principle these lock in: **standards are independent packages by default**; standard groups/profiles are recommendations, never hidden hard dependencies — a future MCP layer surfaces relationships, never enforces them. SPEC-MT01 ADRs 0001-0013 are accepted; later MCP-server ADRs remain deferred. Specs/paths: see `specs-plans.md`.
+- **Repo-root-relative link enforcement:** breaking and deferred to a future major.
+- **MCP enablement:** complete SPEC-MT01 Step 07 before SPEC-RD01 or the thin, local, read-only-first SPEC-MS01 server.
+- Packages remain independent by default. Profiles recommend combinations; the future MCP layer surfaces relationships without enforcing hidden dependencies.
+- SPEC-MT01 ADRs 0001-0013 are accepted. Later MCP-server decisions remain deferred; see `specs-plans.md`.

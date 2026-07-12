@@ -50,11 +50,15 @@ def _git(checkout: Path, *arguments: str, input_bytes: bytes | None = None) -> b
     ).stdout
 
 
-def copy_tracked_checkout(target: Path) -> Path:
-    """Copy only Git-tracked paths, preserving tracked symlink identities."""
+def copy_tracked_checkout(target: Path, *, source_root: Path = _ROOT) -> Path:
+    """Copy Git-known working-tree paths, preserving symlink identities.
+
+    Include non-ignored additions and omit tracked deletions so pre-commit release
+    verification exercises the tree that would be committed, not the stale index.
+    """
     result = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=_ROOT,
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=source_root,
         check=True,
         capture_output=True,
     )
@@ -62,7 +66,9 @@ def copy_tracked_checkout(target: Path) -> Path:
         if not raw:
             continue
         relative = Path(raw.decode("utf-8"))
-        source = _ROOT / relative
+        source = source_root / relative
+        if not source.exists() and not source.is_symlink():
+            continue
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         if source.is_symlink():

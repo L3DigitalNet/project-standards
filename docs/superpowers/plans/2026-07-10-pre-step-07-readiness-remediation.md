@@ -445,7 +445,7 @@ git commit -m "docs(v5): reconcile standard bundle authoring"
 
 **Files:**
 
-- Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
+- Modify: `docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
 - [x] **Step 1: Update the Definition of Done from current evidence**
 
@@ -523,8 +523,8 @@ Run:
 ```bash
 uv run project-standards spec validate --config .project-standards.yml
 uv run project-standards spec lint --config .project-standards.yml --strict
-npx prettier --check docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
-npx markdownlint-cli2 --no-globs docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+npx prettier --check docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+npx markdownlint-cli2 --no-globs docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
 Expected: validation and strict lint pass; FR-013, FR-015, and FR-019 remain visible rather than being marked complete.
@@ -532,7 +532,7 @@ Expected: validation and strict lint pass; FR-013, FR-015, and FR-019 remain vis
 - [x] **Step 7: Commit traceability reconciliation**
 
 ```bash
-git add docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+git add docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 git diff --cached --check
 git commit -m "docs(v5): reconcile spec mt01 traceability"
 ```
@@ -543,7 +543,7 @@ git commit -m "docs(v5): reconcile spec mt01 traceability"
 
 - Modify: `CHANGELOG.md`
 - Modify: `UPGRADING.md`
-- Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
+- Modify: `docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
 - [x] **Step 1: Add classified `[Unreleased]` entries**
 
@@ -595,11 +595,11 @@ uv run project-standards spec lint --config .project-standards.yml --strict
 npx prettier --check \
   CHANGELOG.md \
   UPGRADING.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 npx markdownlint-cli2 --no-globs \
   CHANGELOG.md \
   UPGRADING.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
 - [x] **Step 5: Commit release guidance**
@@ -608,7 +608,7 @@ npx markdownlint-cli2 --no-globs \
 git add \
   CHANGELOG.md \
   UPGRADING.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 git diff --cached --check
 git commit -m "docs(v5): document standards graph migration"
 ```

@@ -1027,7 +1027,7 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 ### Project References
 
 - `docs/adr/` — ADRs created by this spec.
-- `docs/superpowers/specs/` — likely target location for this spec after migration.
+- `docs/specs/` — durable location for this specification.
 - `.project-standards.yml` — validation config and spec include/exclude behavior.
 - `scripts/check.py` — candidate local gate integration point if present.
 

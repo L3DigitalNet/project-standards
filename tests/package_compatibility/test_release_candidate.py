@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 import subprocess
 from hashlib import sha256
@@ -84,6 +85,26 @@ def test_legacy_dependency_scan_rejects_unapproved_runtime_writers(tmp_path: Pat
     assert classified["unclassified"] == ("project_standards/surprise.py",)
 
 
+def test_copy_tracked_checkout_uses_current_working_tree_paths(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=source, check=True)
+    tracked = source / "tracked.txt"
+    deleted = source / "deleted.txt"
+    tracked.write_text("tracked\n", encoding="utf-8")
+    deleted.write_text("deleted\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=source, check=True)
+    deleted.unlink()
+    added = source / "added.txt"
+    added.write_text("added\n", encoding="utf-8")
+
+    checkout = copy_tracked_checkout(tmp_path / "checkout", source_root=source)
+
+    assert (checkout / "tracked.txt").read_text(encoding="utf-8") == "tracked\n"
+    assert (checkout / "added.txt").read_text(encoding="utf-8") == "added\n"
+    assert not (checkout / "deleted.txt").exists()
+
+
 def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Path) -> None:
     source_versions = {path: (_ROOT / path).read_bytes() for path in ("pyproject.toml", "uv.lock")}
     checkout = copy_tracked_checkout(tmp_path / "checkout")
@@ -113,7 +134,8 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
 def test_disposable_release_checkout_migrates_and_reaches_fixed_point(
     tmp_path: Path,
 ) -> None:
-    checkout = copy_tracked_checkout(tmp_path / "checkout")
+    source_snapshot = copy_tracked_checkout(tmp_path / "source-snapshot")
+    checkout = Path(shutil.copytree(source_snapshot, tmp_path / "checkout", symlinks=True))
     set_release_version(checkout)
     declare_release_cut_intent(checkout)
     installed = build_installed_release(checkout, tmp_path / "build")
@@ -335,7 +357,9 @@ def test_disposable_release_checkout_migrates_and_reaches_fixed_point(
     assert upgrade_spec.returncode == 0, upgrade_spec.stderr
     assert _file_tree(checkout) == command_tree
 
-    patch_checkout = copy_tracked_checkout(tmp_path / "patch-checkout")
+    patch_checkout = Path(
+        shutil.copytree(source_snapshot, tmp_path / "patch-checkout", symlinks=True)
+    )
     initialize_release_baseline(patch_checkout)
     mirror_release_tree(checkout, patch_checkout)
     patch, changed_paths, patch_digest = release_patch(patch_checkout)
@@ -345,7 +369,7 @@ def test_disposable_release_checkout_migrates_and_reaches_fixed_point(
     assert ".standards/catalog.toml" in changed_paths
     assert ".standards/lock.toml" in changed_paths
     assert ".project-standards.yml" in changed_paths
-    replay = copy_tracked_checkout(tmp_path / "replay")
+    replay = Path(shutil.copytree(source_snapshot, tmp_path / "replay", symlinks=True))
     replay_release_patch(replay, patch)
     assert _file_tree(replay) == _file_tree(checkout)
     evidence = (

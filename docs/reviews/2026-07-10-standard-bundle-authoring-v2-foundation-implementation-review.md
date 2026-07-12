@@ -2,7 +2,7 @@
 
 **Plan:** `docs/superpowers/plans/2026-07-10-standard-bundle-authoring-v2-foundation.md`
 
-**Governing spec:** `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02 rev 0.6)
+**Governing spec:** `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02 rev 0.6)
 
 **Implementation range:** `4e507d6` through the foundation closeout on `testing`
 

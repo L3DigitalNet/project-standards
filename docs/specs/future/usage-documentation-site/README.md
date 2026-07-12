@@ -44,6 +44,20 @@ The bundle exists because the implementation is large enough to need a master co
 
 The `project-standards` repository must also dogfood the new standard. This means the repository that distributes `usage-documentation-site` shall adopt it under `docs/usage/` and validate that adoption before the standard is considered complete.
 
+Bundle map:
+
+| File | Role |
+| --- | --- |
+| [`00-master-spec.md`](00-master-spec.md) | Master coordination specification and authoritative cross-cutting requirements. |
+| [`01-standard-readme-spec.md`](01-standard-readme-spec.md) | Governing README requirements. |
+| [`02-adoption-bundle-spec.md`](02-adoption-bundle-spec.md) | Adopt bundle and consuming-repo scaffold requirements. |
+| [`03-validation-spec.md`](03-validation-spec.md) | Validation stack, schemas, and future validator requirements. |
+| [`04-compatibility-migration-spec.md`](04-compatibility-migration-spec.md) | Existing-standard compatibility and dogfood migration requirements. |
+| [`05-open-items-and-decision-log.md`](05-open-items-and-decision-log.md) | Open questions and decision tracking. |
+| [`06-distributor-standard-addendum.md`](06-distributor-standard-addendum.md) | Distributor-repository implementation and dogfood requirements. |
+
+Implementers shall start with `00-master-spec.md`, then use the child specifications as focused requirement slices. The `project-standards` repository must adopt `usage-documentation-site` itself before the standard is considered complete.
+
 ---
 
 ## 2. Scope
@@ -76,20 +90,6 @@ The `project-standards` repository must also dogfood the new standard. This mean
 | System owns | Navigation and reading-order guidance for this spec bundle. |
 | System depends on | The master specification and child specifications listed below. |
 | System does not own | The normative requirements inside the child specifications, except by linking to them. |
-
-### 2.5 Bundle Map
-
-| File | Role |
-| --- | --- |
-| [`00-master-spec.md`](00-master-spec.md) | Master coordination specification and authoritative cross-cutting requirements. |
-| [`01-standard-readme-spec.md`](01-standard-readme-spec.md) | Governing README requirements. |
-| [`02-adoption-bundle-spec.md`](02-adoption-bundle-spec.md) | Adopt bundle and consuming-repo scaffold requirements. |
-| [`03-validation-spec.md`](03-validation-spec.md) | Validation stack, schemas, and future validator requirements. |
-| [`04-compatibility-migration-spec.md`](04-compatibility-migration-spec.md) | Existing-standard compatibility and dogfood migration requirements. |
-| [`05-open-items-and-decision-log.md`](05-open-items-and-decision-log.md) | Open questions and decision tracking. |
-| [`06-distributor-standard-addendum.md`](06-distributor-standard-addendum.md) | Distributor-repository implementation and dogfood requirements. |
-
-Implementers shall start with `00-master-spec.md`, then use the child specifications as focused requirement slices. The `project-standards` repository must adopt `usage-documentation-site` itself before the standard is considered complete.
 
 ---
 

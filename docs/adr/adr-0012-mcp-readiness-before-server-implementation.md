@@ -18,7 +18,7 @@ tags:
 aliases:
   - 'mcp-readiness-before-server-implementation'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
@@ -38,7 +38,7 @@ project:
 
 # ADR 0012: MCP Readiness Before Server Implementation
 
-MADR status: **accepted**. Records decision D-012 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-012 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

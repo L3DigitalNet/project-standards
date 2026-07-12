@@ -13,7 +13,7 @@
 ## Source of Truth
 
 - `TODO.md` Step 04: graph validator plus CLI.
-- `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`:
+- `docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`:
   - FR-004 authority tuples.
   - FR-005 config namespace ownership.
   - FR-006 capabilities and relationships without hidden dependencies.
@@ -23,7 +23,7 @@
   - FR-017 safe arbitrary co-adoption.
   - FR-021 hidden-dependency rejection.
   - IR-003 CLI shape and exit codes.
-- `docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md` Step 04 row.
+- `docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md` Step 04 row.
 - `standards/standard-bundle-authoring/README.md` authority, relationship, config namespace, resource, provider, and conformance rules.
 - ADRs:
   - `docs/adr/adr-0002-manifest-first-standard-discovery.md`.

@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'agent-handoff ingestion inventory'
 related:
-  - 'docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md'
+  - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
   - 'docs/superpowers/plans/2026-07-09-agent-handoff-standard-package.md'
 source:
   - '/home/chris/projects/agent-handoff-v3@56b24df7279572c485c2512783b0cc7e5395429b'

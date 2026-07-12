@@ -11,7 +11,7 @@ Needs major specification correction before planning/implementation
 ### Audit loop status
 
 * Audit type: First audit
-* Spec path: /home/chris/projects/project-standards/docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md
+* Spec path: /home/chris/projects/project-standards/docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md
 * Significant findings remaining: Yes
 * Blocking issue count: 2
 * Non-blocking issue count: 3
@@ -173,7 +173,7 @@ Claude Code should revise the specification using the findings above
 
 ### Review ledger for next loop
 
-* Spec path: /home/chris/projects/project-standards/docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md
+* Spec path: /home/chris/projects/project-standards/docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md
 * Audit round: 1
 * Open issue IDs: SA-001, SA-002, SA-003, SA-004, SA-005
 * Resolved issue IDs:

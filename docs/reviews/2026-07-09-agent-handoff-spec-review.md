@@ -1,6 +1,6 @@
 # Adversarial Review — Agent Handoff Standard Package Specification
 
-**Reviewer:** Claude Code (Fable 5) **Date:** 2026-07-09 **Target:** `docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md` (SPEC-DPEY, draft, Full profile) **Method:** Spec assertions cross-checked against ground truth — ADRs 0017–0021, the Standard Bundle Authoring contract (`standards/standard-bundle-authoring/README.md`), the manifest schema (`src/project_standards/standard_manifest.py`), the adopt engine (`src/project_standards/adopt/`), the live CLI (`src/project_standards/cli.py`), the repo's own `.project-standards.yml`, the project-spec Full template, and the live Codex/Claude Code hook documentation fetched today. Every 🔴 finding is reproduced empirically, not inferred.
+**Reviewer:** Claude Code (Fable 5) **Date:** 2026-07-09 **Target:** `docs/specs/2026-07-09-agent-handoff-standard-package.md` (SPEC-DPEY, draft, Full profile) **Method:** Spec assertions cross-checked against ground truth — ADRs 0017–0021, the Standard Bundle Authoring contract (`standards/standard-bundle-authoring/README.md`), the manifest schema (`src/project_standards/standard_manifest.py`), the adopt engine (`src/project_standards/adopt/`), the live CLI (`src/project_standards/cli.py`), the repo's own `.project-standards.yml`, the project-spec Full template, and the live Codex/Claude Code hook documentation fetched today. Every 🔴 finding is reproduced empirically, not inferred.
 
 ## Verdict
 

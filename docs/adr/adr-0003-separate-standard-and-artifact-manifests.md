@@ -18,7 +18,7 @@ tags:
 aliases:
   - 'separate-standard-and-artifact-manifests'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
@@ -39,7 +39,7 @@ project:
 
 # ADR 0003: Separate Standard and Artifact Manifests
 
-MADR status: **superseded** by [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md). Records historical decision D-003 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **superseded** by [ADR 0023](adr-0023-unified-consumer-standards-control-plane.md). Records historical decision D-003 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

@@ -14,8 +14,8 @@
 
 ## Source of Truth
 
-- `docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01 rev 0.6), especially §§7–12, §17, §19 MS-4–MS-5, and Appendix B.
-- `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02 rev 0.6), especially FR-024–FR-034 and §§10, 17, and 18.7.
+- `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` (SPEC-CP01 rev 0.6), especially §§7–12, §17, §19 MS-4–MS-5, and Appendix B.
+- `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02 rev 0.6), especially FR-024–FR-034 and §§10, 17, and 18.7.
 - `docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md`.
 - `docs/adr/adr-0023-unified-consumer-standards-control-plane.md`.
 - `docs/adr/adr-0024-catalog-scoped-package-version-channels.md`.

@@ -1,25 +1,28 @@
 # CLAUDE.md
 
-**Session startup:** live state is injected by the shared repo-local SessionStart hook; do not read `docs/handoff/state.md` directly.
+**Session startup:** the repo hook injects live state; do not reread `docs/handoff/state.md`.
 
-**Purpose:** single source of truth for reusable standards — defines seven released or v5-staged standards: **Markdown Frontmatter**, **ADR**, **Markdown Tooling** (including `format.yml`), **Python Tooling SSOT**, **Project Specification**, **CLI Documentation**, and **Agent Handoff** — plus two unreleased/reference standards: **Python Coding** and **Standard Bundle Authoring** (`adoption = "none"`, the `standard.toml` bundle contract).
+**Purpose:** source of truth for reusable standards. Catalog 5 has seven consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring**.
 
-**Document layout (read on demand):**
+**Markdown Tooling:** Prettier and markdownlint remain the formatting and structure authorities; see `AGENTS.md` for the gate.
 
-- `docs/handoff/state.md` — live state + active incidents (auto-injected)
-- `docs/handoff/deployed.md` — published tags consumers pin to
-- `docs/handoff/architecture.md` — component graph + standing backlog
-- `docs/handoff/credentials.md` — credential references (none today)
-- `docs/handoff/conventions.md` — pattern library (check before adding patterns)
-- `docs/handoff/specs-plans.md` — spec/plan pointer table
-- `docs/handoff/sessions/` — monthly session logs
-- `docs/handoff/bugs/` — bug KB
+**`docs/handoff/` layout (read on demand):**
+
+- `state.md` — live state and incidents (auto-injected)
+- `deployed.md` — published consumer pins
+- `architecture.md` — component graph and backlog
+- `credentials.md` — credential references
+- `conventions.md` — pattern library; check before adding patterns
+- `specs-plans.md` — spec and plan pointers
+- `sessions/` and `bugs/` — history and lessons
+
+Maintained Project Specification documents live under `docs/specs/`.
 
 ## Non-Negotiables
 
-- Dogfood the standards: `uv run validate-frontmatter --config .project-standards.yml` must pass before finishing.
+- Dogfood the standards: `uv run project-standards validate --config .project-standards.yml` must pass.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
-- Keep the full toolchain gate listed in `AGENTS.md` green; coherence tests require `npm ci`.
+- Keep the `AGENTS.md` toolchain gate green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.
 
 <!-- BEGIN agent-handoff managed instructions -->

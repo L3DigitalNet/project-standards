@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- CP01 package migration is integrated on `testing`; retain source-root migration for the atomic v5 release commit.
-- Keep the release freeze and source-root migration atomic through v5.0.0; after publication, rerun wheel probes and dependency search.
+- CP01 is integrated; keep the release freeze and source-root migration atomic through v5, then rerun probes and dependency search.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
-- Run SPEC-MT01 Step 07 after the v5 standards-platform prerequisites complete.
+- Clear documented repo debt; review catalog 5 for MCP exposure; finish housekeeping; then run SPEC-MT01 Step 07.
+- Hold `project-toolbox` and `agent-managed-repo` for dedicated post-v5 development cycles.
 
 ## Active incidents
 

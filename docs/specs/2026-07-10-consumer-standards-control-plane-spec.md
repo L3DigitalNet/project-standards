@@ -39,7 +39,7 @@ related:
   repositories:
     - 'L3DigitalNet/project-standards'
   prior_specs:
-    - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+    - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
 ---
 
 # Consumer Standards Control Plane — Specification (Full)
@@ -1080,23 +1080,23 @@ No implementation-blocking design question remains after owner review.
 
 ### Standards
 
-- [Standard Bundle Authoring Standard](../../../standards/standard-bundle-authoring/README.md)
-- [Project Specification Standard](../../../standards/project-spec/README.md)
-- [Versioning Standard](../../../meta/versioning.md)
-- [ADR 0004 — Authority Map and Conflict-Free Composition](../../adr/adr-0004-authority-map-and-conflict-free-composition.md)
-- [ADR 0013 — Independent Standard Packages and Relationship Taxonomy](../../adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md)
-- [ADR 0017 — Unified Standard Adoption Methodology](../../adr/adr-0017-unified-standard-adoption-methodology.md)
-- [ADR 0019 — Packaged Artifact Parity and Provenance](../../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
-- [ADR 0020 — Standard Package Versioning Methodology](../../adr/adr-0020-standard-package-versioning-methodology.md)
-- [ADR 0021 — Standard-Packaged Skill Installation Methodology](../../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
-- [ADR 0022 — Standard-Packaged Hook Installation Methodology](../../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
+- [Standard Bundle Authoring Standard](../../standards/standard-bundle-authoring/README.md)
+- [Project Specification Standard](../../standards/project-spec/README.md)
+- [Versioning Standard](../../meta/versioning.md)
+- [ADR 0004 — Authority Map and Conflict-Free Composition](../adr/adr-0004-authority-map-and-conflict-free-composition.md)
+- [ADR 0013 — Independent Standard Packages and Relationship Taxonomy](../adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md)
+- [ADR 0017 — Unified Standard Adoption Methodology](../adr/adr-0017-unified-standard-adoption-methodology.md)
+- [ADR 0019 — Packaged Artifact Parity and Provenance](../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
+- [ADR 0020 — Standard Package Versioning Methodology](../adr/adr-0020-standard-package-versioning-methodology.md)
+- [ADR 0021 — Standard-Packaged Skill Installation Methodology](../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
+- [ADR 0022 — Standard-Packaged Hook Installation Methodology](../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
 
 ### Project References
 
 - [Meta-repository MCP readiness — SPEC-MT01](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md)
-- [Current generated standards catalog](../../../standards/catalog.md)
-- [Current consumer configuration example](../../../.project-standards.yml)
-- [Current adopt-engine documentation](../../../src/project_standards/README.md#adopt-engine)
+- [Current generated standards catalog](../../standards/catalog.md)
+- [Current consumer configuration example](../../.project-standards.yml)
+- [Current adopt-engine documentation](../../src/project_standards/README.md#adopt-engine)
 
 ---
 

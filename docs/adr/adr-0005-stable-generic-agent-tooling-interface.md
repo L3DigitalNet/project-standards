@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'stable-generic-agent-tooling-interface'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
   - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
@@ -36,7 +36,7 @@ project:
 
 # ADR 0005: Stable Generic Agent and Tooling Interface
 
-MADR status: **accepted**. Records decision D-005 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-005 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

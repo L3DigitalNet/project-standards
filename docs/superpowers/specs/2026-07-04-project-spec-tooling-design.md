@@ -30,7 +30,7 @@ The `project-spec` standard (5th standard, in-development draft) ships three tie
 
 The goal is to build that tooling so a consumer (human or coding agent) can mechanically validate, lint, slice, and assign IDs against real specifications — delivering guarantees G2–G5 and G7 from the standard's Features list. The tool must be agent/CI-safe (no prompts, deterministic exit codes, `--json`), profile-agnostic (one code path for Light/Standard/Full via the canonical registry), and read-only in this first spec.
 
-Today the only code over the templates is [`standards/project-spec/resources/check_specs.py`](../../../standards/project-spec/resources/check_specs.py) — a 307-line **maintainer** script that validates the three templates against **each other**. The consumer tooling needs the same registry logic pointed at the **opposite subject** (a consumer's own specs). Building it right means extracting that logic into a shared core rather than growing a second, drift-prone parser.
+At design time, the only code over the templates was the since-retired `standards/project-spec/resources/check_specs.py` maintainer script, which validated the three templates against **each other**. The consumer tooling needed the same registry logic pointed at the **opposite subject** (a consumer's own specs). Building it right meant extracting that logic into a shared core rather than growing a second, drift-prone parser.
 
 ## Scope decomposition (two specs)
 

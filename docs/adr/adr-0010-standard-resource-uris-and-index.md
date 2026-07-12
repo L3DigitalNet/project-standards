@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'standard-resource-uris-and-index'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0009-agent-summary-and-canonical-standard-split.md'
@@ -39,7 +39,7 @@ project:
 
 # ADR 0010: Standard Resource URIs and Index
 
-MADR status: **accepted**. Records decision D-010 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-010 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

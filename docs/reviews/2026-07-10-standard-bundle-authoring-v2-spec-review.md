@@ -1,6 +1,6 @@
 # Review: Standard Bundle Authoring V2 Specification (SPEC-BA02)
 
-**Spec:** `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (rev 0.1, draft, Full profile) **Review target state:** working tree after commit `e56db56` (spec is untracked; no other working-tree changes) **Workflow:** `docs/workflows/review-spec.md` **Reviewer:** session 2026-07-10
+**Spec:** `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (rev 0.1, draft, Full profile) **Review target state:** working tree after commit `e56db56` (spec is untracked; no other working-tree changes) **Workflow:** `docs/workflows/review-spec.md` **Reviewer:** session 2026-07-10
 
 ## Round 1
 

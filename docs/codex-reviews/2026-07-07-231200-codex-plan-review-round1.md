@@ -75,7 +75,7 @@ Performed claim inventory, falsification, blast-radius, failure-mode, validation
 * Adversarial angle: Missing-path false positive.
 * Plan reference: Task 8 lines 736-859.
 * Finding: The loader resolves resource paths and checks containment, but it does not check that declared files exist. A manifest with `readme = "missing.md"` appears able to pass if the path stays inside the bundle.
-* Repository evidence: SPEC-MT01 says validation fails when resource paths are missing (`docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md` lines 278 and 608). SPEC-BA01 describes resources as lazy-loadable bundle content and `README.md` as required (`standards/standard-bundle-authoring/README.md` lines 45-52, 190-205).
+* Repository evidence: SPEC-MT01 says validation fails when resource paths are missing (`docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md` lines 278 and 608). SPEC-BA01 describes resources as lazy-loadable bundle content and `README.md` as required (`standards/standard-bundle-authoring/README.md` lines 45-52, 190-205).
 * External research evidence: Not applicable.
 * Why it matters: Future resource consumers can get a manifest that validates but points to absent content.
 * Recommended action for Claude Code: Decide whether existence checks belong in Step 03 loader or Step 04 graph validation. If Step 03, add an existence test. If Step 04, state that explicitly in the plan.

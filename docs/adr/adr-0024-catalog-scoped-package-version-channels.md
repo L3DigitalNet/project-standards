@@ -19,7 +19,7 @@ aliases:
   - 'ADR 0024'
   - 'Catalog-scoped package version channels'
 related:
-  - 'docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md'
+  - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'meta/versioning.md'
   - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
   - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
@@ -29,7 +29,7 @@ supersedes:
   - 'adr-0020-project-standards-standard-package-versioning-methodology'
 superseded_by: null
 source:
-  - 'docs/superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md'
+  - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'meta/versioning.md'
 confidence: 'high'
 visibility: 'internal'
@@ -137,6 +137,6 @@ Resolver and release-policy tests cover ordinary defaults, exact pins, candidate
 
 ## More Information
 
-- Controlling specification: [`2026-07-10-consumer-standards-control-plane-spec.md`](../superpowers/specs/2026-07-10-consumer-standards-control-plane-spec.md)
+- Controlling specification: [`2026-07-10-consumer-standards-control-plane-spec.md`](../specs/2026-07-10-consumer-standards-control-plane-spec.md)
 - Unified control-plane decision: [`adr-0023-unified-consumer-standards-control-plane.md`](adr-0023-unified-consumer-standards-control-plane.md)
 - Repository versioning policy: [`meta/versioning.md`](../../meta/versioning.md)

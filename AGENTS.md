@@ -1,33 +1,35 @@
 # AGENTS.md
 
-**Session state:** injected at startup by the SessionStart hook (don't ritual-read `docs/handoff/state.md`), then this file, then `docs/handoff/conventions.md`.
+**Session state:** the startup hook injects `docs/handoff/state.md`; do not reread it. Check `docs/handoff/conventions.md` before adding persistent patterns.
 
-**Full conventions reference:** [`docs/handoff/conventions.md`](docs/handoff/conventions.md) — LLM-targeted pattern library. Check it before adding persistent patterns.
+**Conventions:** [`docs/handoff/conventions.md`](docs/handoff/conventions.md)
 
 ## Repo Purpose
 
-This repo is the **single source of truth** for reusable project standards. Catalog 5 contains seven consumer-selectable packages — **Markdown Frontmatter**, **ADR**, **Project Specification**, **Markdown Tooling**, **Python Tooling**, **CLI Documentation**, and **Agent Handoff** — plus reference-only **Python Coding** and internal **Standard Bundle Authoring 2.0**. Consumers select immutable packages through `.standards/config.toml`; reconciliation composes managed and consumer-owned surfaces under one central lock. See [README.md](README.md) for the full surface.
+This repo is the source of truth for reusable project standards. Catalog 5 has seven consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring 2.0**. `.standards/config.toml` selects immutable packages; reconciliation composes them under one lock. See [README.md](README.md).
 
 ## Structure
 
 | Path | Purpose |
 | --- | --- |
-| `standards/<name>/` | per-standard bundles (`README.md` = the standard, `standard.toml` manifest, `adopt.md` for adoptable standards, optional `templates/` + `examples/`); `standards/README.md` is the index |
-| `meta/` | repo-meta documents (e.g. `versioning.md`, the release contract) — not governed standards |
-| `src/project_standards/` + `tests/` | the Python validator (with bundled schema) and its tests |
-| `.github/workflows/` | the reusable workflows consumers call |
+| `standards/<name>/` | bundles: standard, manifest, adoption guide, templates, examples |
+| `meta/` | repo policy, including the release contract |
+| `src/project_standards/`, `tests/` | Python implementation and tests |
+| `.github/workflows/` | reusable consumer workflows |
+| `docs/specs/` | maintained Project Specification documents |
 | `docs/handoff/` | durable Agent Handoff project knowledge and session state |
-| `docs/superpowers/` | specs (`specs/`) and implementation plans (`plans/`) |
+| `docs/superpowers/` | historical designs, research, and implementation plans |
 
 ## Working Rules
 
-- **Sub-agent policy (standing).** Individual sub-agents and headless Codex are pre-authorized. Agent teams and multi-agent orchestration are not; ask first with a rough cost sketch. Never use Fable; use Haiku only for trivial/mechanical work, Sonnet or better for substantive work, and Opus for judgment-heavy/adversarial review. Set the model explicitly.
-- **Conventions-source self-containment.** This repo defines conventions, so it does **not** import external/global agent conventions. It dogfoods the repo-local **Agent Handoff** standard (`docs/handoff/` + project SessionStart hook). Do not layer global/workstation ownership onto it.
-- **Dogfood the standards.** Managed Markdown (`CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `docs/workflows/**`, `meta/**`, `docs/adr/**`) must validate: `uv run project-standards validate --config .project-standards.yml`. `standards/**` is excluded from this repo's local frontmatter scope by ADR 0015 so standard packages do not ship repo-local metadata.
+- **Sub-agents.** Individual agents and headless Codex are pre-authorized. Ask before agent teams or orchestration, with a cost sketch. Never use Fable; use Haiku only for mechanical work, Sonnet+ for substantive work, and Opus for adversarial review. Set the model.
+- **Self-containment.** This conventions source does not import global agent conventions. It dogfoods repo-local Agent Handoff; do not add workstation ownership.
+- **Dogfood.** Validate managed Markdown with `uv run project-standards validate --config .project-standards.yml`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
+- **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
-- **Keep the toolchain green** before committing validator/test changes: `uv run ruff format --check .`, `uv run ruff check .`, `uv run basedpyright`, `uv run coverage run -m pytest`, `uv run coverage report`, `uv run pip-audit`, `uv run pytest tests/coherence` (the markdownlint/Prettier co-satisfaction gate; needs `npm ci`).
+- **Keep the toolchain green** before committing validator/test changes: Ruff format/check, BasedPyright, pytest with coverage, `pip-audit`, and `tests/coherence` after `npm ci`.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`. Keep `.standards/` absent until atomic v5 release commit.
-- **The schema is a versioned contract** — see `docs/handoff/conventions.md` #4.
+- **The schema is versioned** — see `docs/handoff/conventions.md` #4.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.
 
 <!-- BEGIN agent-handoff managed instructions -->

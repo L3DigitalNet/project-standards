@@ -12,4 +12,4 @@ Start with the [2.0 author workflow](versions/2.0/README.md#author-workflow) and
 
 ## Authority history
 
-The singleton-manifest contract remains the bounded V1 runtime until the planned catalog cutover. The approved [SPEC-BA02](../../docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md) supersedes its authoring guidance; Task 14 replaces the root manifest only after all package reconstructions validate together. Released V2 payloads are immutable and remain addressable through the family index and catalog history.
+The singleton-manifest contract remains the bounded V1 runtime until the planned catalog cutover. The approved [SPEC-BA02](../../docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md) supersedes its authoring guidance; Task 14 replaces the root manifest only after all package reconstructions validate together. Released V2 payloads are immutable and remain addressable through the family index and catalog history.

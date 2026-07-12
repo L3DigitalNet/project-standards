@@ -15,12 +15,12 @@ related:
   repositories:
     - 'L3DigitalNet/project-standards'
   prior_specs:
-    - 'usage-documentation-site-standard-spec/01-standard-readme-spec.md'
-    - 'usage-documentation-site-standard-spec/02-adoption-bundle-spec.md'
-    - 'usage-documentation-site-standard-spec/03-validation-spec.md'
-    - 'usage-documentation-site-standard-spec/04-compatibility-migration-spec.md'
-    - 'usage-documentation-site-standard-spec/05-open-items-and-decision-log.md'
-    - 'usage-documentation-site-standard-spec/06-distributor-standard-addendum.md'
+    - 'docs/specs/future/usage-documentation-site/01-standard-readme-spec.md'
+    - 'docs/specs/future/usage-documentation-site/02-adoption-bundle-spec.md'
+    - 'docs/specs/future/usage-documentation-site/03-validation-spec.md'
+    - 'docs/specs/future/usage-documentation-site/04-compatibility-migration-spec.md'
+    - 'docs/specs/future/usage-documentation-site/05-open-items-and-decision-log.md'
+    - 'docs/specs/future/usage-documentation-site/06-distributor-standard-addendum.md'
 ---
 
 # Usage Documentation Site Standard Master — Specification (Standard)

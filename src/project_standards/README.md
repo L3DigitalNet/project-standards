@@ -242,7 +242,7 @@ Returns the worst exit code across all three phases. If the final validate fails
 
 ### project-standards spec (nested command group)
 
-`project-standards spec {validate|lint|extract|next|new|upgrade} …` is an early-dispatch group forwarded to `project_standards.specs.cli.run()`. It operates on project **specs** — the `docs/superpowers/specs/` documents this repo's own SDD workflow produces — independently of the frontmatter/id/references validators above.
+`project-standards spec {validate|lint|extract|next|new|upgrade} …` is an early-dispatch group forwarded to `project_standards.specs.cli.run()`. It operates on project **specs**—maintained in this repo under `docs/specs/`—independently of the frontmatter/id/references validators above.
 
 | Verb | Purpose |
 | --- | --- |

@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:1aec6e56e107bfaeb6b82e0ca0d8da42ba36ff092314a26c26c6bb465b7db081",
+        "sha256:c6c0a2b1b49460d261983658ad68e45f5f31992b86ded1b37b0b8dc7f7a87f4a",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -162,3 +162,13 @@ def test_repository_root_activates_exact_catalog_and_relative_projections() -> N
         assert link.destination.is_symlink()
         assert not link.destination.readlink().is_absolute()
         assert link.destination.resolve(strict=True).read_bytes() == link.source.read_bytes()
+
+
+def test_catalog_agent_summaries_link_to_their_canonical_standard() -> None:
+    for standard_id, (_name, _summary, _status, version, _role, _digest) in _PACKAGES.items():
+        summary = (
+            _ROOT / "standards" / standard_id / "versions" / version / "agent-summary.md"
+        ).read_text(encoding="utf-8")
+
+        assert "(README.md)" in summary, standard_id
+        assert "authoritative" in summary, standard_id

@@ -390,7 +390,7 @@ git commit -m "docs(v5): complete agent summary coverage"
 
 - Modify: `standards/catalog.md`
 - Modify: `CHANGELOG.md`
-- Modify: `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
+- Modify: `docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md`
 
 - [x] **Step 1: Regenerate the standards catalog**
 
@@ -431,16 +431,16 @@ uv run project-standards validate --config .project-standards.yml
 uv run project-standards spec validate --config .project-standards.yml
 uv run project-standards spec lint --config .project-standards.yml --strict
 npx prettier --check CHANGELOG.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 npx markdownlint-cli2 --no-globs CHANGELOG.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 ```
 
 - [x] **Step 5: Commit catalog and traceability evidence**
 
 ```bash
 git add standards/catalog.md CHANGELOG.md \
-  docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
 git diff --cached --check
 git commit -m "docs(v5): close fr-013 traceability"
 ```

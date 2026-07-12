@@ -20,7 +20,7 @@ aliases:
   - 'ADR 0022'
   - 'Standard-packaged hook installation methodology'
 related:
-  - 'docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md'
+  - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
   - 'standards/standard-bundle-authoring/README.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
@@ -34,7 +34,7 @@ related:
 supersedes: []
 superseded_by: null
 source:
-  - 'docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md'
+  - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
   - 'docs/reviews/2026-07-09-agent-handoff-spec-review.md'
   - 'standards/standard-bundle-authoring/README.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
@@ -109,7 +109,7 @@ Graph and adopt-manifest validation reject standard-packaged hook destinations o
 
 ## More Information
 
-- Agent Handoff v1 package specification: [`docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md`](../superpowers/specs/2026-07-09-agent-handoff-standard-package.md)
+- Agent Handoff v1 package specification: [`docs/specs/2026-07-09-agent-handoff-standard-package.md`](../specs/2026-07-09-agent-handoff-standard-package.md)
 - Standard bundle authoring contract: [`standards/standard-bundle-authoring/README.md`](../../standards/standard-bundle-authoring/README.md)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0005, stable generic agent and tooling interface: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)

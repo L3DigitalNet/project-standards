@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'manifest-first-standard-discovery'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
@@ -38,7 +38,7 @@ project:
 
 # ADR 0002: Manifest-First Standard Discovery
 
-MADR status: **accepted**. Records decision D-002 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-002 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

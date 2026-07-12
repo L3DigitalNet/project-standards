@@ -12,7 +12,7 @@
 
 ## Source of Truth
 
-- Approved specification: `docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md` (`SPEC-DPEY`, rev 0.5).
+- Approved specification: `docs/specs/2026-07-09-agent-handoff-standard-package.md` (`SPEC-DPEY`, rev 0.5).
 - Accepted hook methodology: `docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md`.
 - Package methodology: ADRs 0017–0021 and `standards/standard-bundle-authoring/README.md`.
 - Pinned legacy evidence source: `/home/chris/projects/agent-handoff-v3` commit `56b24df7279572c485c2512783b0cc7e5395429b`.
@@ -1260,8 +1260,8 @@ uv run coverage report
 uv run pip-audit
 uv run pytest tests/coherence
 uv run project-standards validate --config .project-standards.yml
-uv run project-standards spec validate docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md
-uv run project-standards spec lint docs/superpowers/specs/2026-07-09-agent-handoff-standard-package.md
+uv run project-standards spec validate docs/specs/2026-07-09-agent-handoff-standard-package.md
+uv run project-standards spec lint docs/specs/2026-07-09-agent-handoff-standard-package.md
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards render-catalog --root . --check
 npx prettier --check .

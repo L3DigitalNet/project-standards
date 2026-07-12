@@ -69,7 +69,7 @@ Could not execute write-producing validation, formatter writes, test runs, or im
 * External research evidence: Not applicable.
 * Why it matters: If implemented as written, the new meta-standard would codify an anatomy rule that contradicts an existing released standard. It confuses “no copy-adopt artifact bundle” with “not adoptable,” and would give Step 03/04 schema and graph work a bad contract for CLI-enforced standards.
 * Recommended action for Claude Code: Revise the plan, and SPEC-BA01 if needed, to separate adoption mode from `adopt.md` presence. CLI standards may have an `adopt.md` runbook even when they have no copy-adopt artifact bundle. Reserve explicit non-adoptable markers for standards with no downstream adoption path, such as `adoption = "none"` and possibly draft/reference-only documents not released for adoption.
-* Suggested validation: Re-run `rg -n "project-spec|adopt.md|required only|non-adoptable marker|cli" README.md standards/README.md standards/project-spec/adopt.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md docs/superpowers/plans/2026-07-07-standard-bundle-authoring-standard.md` and confirm the corrected wording does not imply Project Specification lacks or should not have `adopt.md`.
+* Suggested validation: Re-run `rg -n "project-spec|adopt.md|required only|non-adoptable marker|cli" README.md standards/README.md standards/project-spec/adopt.md docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md docs/superpowers/plans/2026-07-07-standard-bundle-authoring-standard.md` and confirm the corrected wording does not imply Project Specification lacks or should not have `adopt.md`.
 
 ### New non-blocking issues
 
@@ -97,7 +97,7 @@ None found.
 
 * `pwd`, `git status --short`, `git branch --show-current`, `git log --oneline -n 10`: confirmed repo root, branch `testing`, one untracked prior review artifact, and recent plan/spec revision commits.
 * `nl -ba docs/superpowers/plans/2026-07-07-standard-bundle-authoring-standard.md`: inspected the revised plan with line references.
-* `nl -ba docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md`: verified SPEC-BA01 rev 0.4 and OQ-002 resolution.
+* `nl -ba docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md`: verified SPEC-BA01 rev 0.4 and OQ-002 resolution.
 * `nl -ba` / `rg -n` on SPEC-MT01, `standards/README.md`, root `README.md`, `AGENTS.md`, `CLAUDE.md`, `meta/versioning.md`, `.project-standards.yml`, `registry.json`, and Project Specification docs: checked manifest, adoption, doc-scope, and no-machine-layer claims.
 * `find standards -maxdepth 2 -name adopt.md -print`: confirmed current standards with adoption runbooks, including `project-spec`.
 * `find src/project_standards/bundles -maxdepth 2 -type f`: confirmed machine bundle state and absence of a standard-bundle-authoring bundle.
@@ -115,7 +115,7 @@ Run only after correcting and implementing the remaining issue:
 * `uv run project-standards spec validate --config .project-standards.yml`
 * `uv run project-standards spec lint --config .project-standards.yml`
 * `uv run python -c "import tomllib,pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path('standards/standard-bundle-authoring').rglob('*.toml')]; print('toml ok')"`
-* Run only after implementation: `./node_modules/.bin/prettier --write standards/standard-bundle-authoring/README.md standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md`
+* Run only after implementation: `./node_modules/.bin/prettier --write standards/standard-bundle-authoring/README.md standards/README.md README.md AGENTS.md CLAUDE.md meta/versioning.md docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md`
 * `./node_modules/.bin/prettier --check "standards/**/*.md" "docs/superpowers/**/*.md"`
 * `./node_modules/.bin/markdownlint-cli2`
 * `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run pytest -q`

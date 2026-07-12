@@ -19,9 +19,9 @@ aliases:
   - 'MCP Reference Pack'
   - 'Project Standards MCP References'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
-  - 'docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
-  - 'docs/superpowers/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
 source:
   - 'https://modelcontextprotocol.io/specification/2025-06-18'
   - 'https://modelcontextprotocol.io/specification/2025-06-18/basic/transports'

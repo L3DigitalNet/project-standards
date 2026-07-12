@@ -16,7 +16,7 @@ The installed checkout also exercises Frontmatter fix, Project Specification ext
 
 ## Reviewed procedure
 
-The test copies only `git ls-files` entries, changes `pyproject.toml` and the root `uv.lock` package entry to `5.0.0`, and records repository-specific Python Tooling intent in the disposable legacy input. That intent retains `types-PyYAML`, the performance marker, the coverage `__main__` exclusion, and the three narrow vendored/handoff Ruff exclusions; the release patch also tightens the package-owned Ruff lower bound from `0.14` to `0.14.11`.
+The test copies the Git-known current working tree, including non-ignored additions and excluding tracked deletions. It changes `pyproject.toml` and the root `uv.lock` package entry to `5.0.0`, then records repository-specific Python Tooling intent in the disposable legacy input. That intent retains `types-PyYAML`, the performance marker, the coverage `__main__` exclusion, and the three narrow vendored/handoff Ruff exclusions; the release patch also tightens the package-owned Ruff lower bound from `0.14` to `0.14.11`.
 
 The reviewed commands are:
 
@@ -36,7 +36,7 @@ The automated proof uses a source-side read-only plan for detailed expected-stat
 The binary-safe patch is `git diff --binary --no-ext-diff HEAD -- .` from a local commit of the tracked baseline after mirroring the completed disposable release tree. Its SHA-256 is:
 
 ```text
-607c685b43f436ec2ba01a3425717c59e62fe0ff81741ccbff2af5a9f42f29e9
+c864accf5609cf2969e350451cbc85fc1bce95d7bb5996f27b95901cde515f3e
 ```
 
 Changed paths:
@@ -70,9 +70,9 @@ M uv.lock
 Control-plane file SHA-256 digests:
 
 ```text
-config.toml  2bce514453bb7d08fbd16136325d1d8c55c42cd9aa63d043f7fc9f89c7a2a098
-catalog.toml 840051ba2a5a4cf02a6105169e24d1adb953cca046d911c7eb04778899c75dd8
-lock.toml    dbe3da5f6aa07f80c76754b34dcaeaaedfc70c69e521246e6dc80afc587a88b6
+config.toml  c42e9161532c13dd96c9ff3a035d552993b190350183521e78f2db30c250968d
+catalog.toml ab99343880d867d34e41351d58a01ef2714793bec9b5c7048d802145499eef89
+lock.toml    fe22abef49fd48c4d90bb000f648c0b9d7cb1ede45cb6748e975254fca2fa1bb
 ```
 
 Replaying the recorded patch with `git apply --binary -` against a fresh tracked-tree copy produces an identical complete file tree and the same three control-plane digests.

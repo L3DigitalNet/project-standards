@@ -36,7 +36,7 @@ id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:d79c1ca3358c73026bb4d645c35d286c2d82bb605cb56af8ad8948248d6bfca1"
+digest = "sha256:4dc040b6be5f5f3ecc021ceadf83b49eb039723b541c13c65ac38b8128767f4e"
 
 [[resources]]
 id = "build-backend-guidance"
@@ -650,6 +650,7 @@ known_content_digests = [
   "sha256:c1da8ce6520f8aaa300f37f43810a45c8a39596d5e6c2fa965eb8b3ef4702caf",
   "sha256:f345f6167f040071b925a0c3b507cbe7e62a41b05ffc662055b25fb1f595405a",
   "sha256:68eba3cdc1101d739ae5aafb2407f5237e3d8fdce74ff6a3cc4ba1ff37491aa2",
+  "sha256:449b5809bb35cf339664ecf531b1154b3871cb3dcac4d6cf79aa22b75a515148",
 ]
 
 [[legacy_signatures]]
@@ -671,6 +672,7 @@ targets = ["CLAUDE.md"]
 known_content_digests = [
   "sha256:21cd73316ba5128b5a0bc66a34de4563dcf8af6b049f22ff4409f40c496850c0",
   "sha256:8da15c367a9863310000a48ad49f46bff7e67734d2e860face27016e3e6df806",
+  "sha256:8c9ba6563c70ea051ad36f2054d41f36aa048ce61d813d100d4e7b25d5e05de0",
 ]
 
 [[legacy_signatures]]

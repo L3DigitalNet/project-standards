@@ -1,6 +1,6 @@
 # Review: Standard Bundle Authoring V2 Foundation Implementation Plan
 
-**Plan:** `docs/superpowers/plans/2026-07-10-standard-bundle-authoring-v2-foundation.md` **Governing spec:** `docs/superpowers/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02, rev 0.3, approved) **Review target state:** clean working tree at commit `0b839bf` on `testing` **Reviewer:** Claude session 2026-07-10 **Status:** Round 1 findings resolved in `afa4465`; Round 2 convergence verdict **APPROVED FOR EXECUTION** (see Round 2 below)
+**Plan:** `docs/superpowers/plans/2026-07-10-standard-bundle-authoring-v2-foundation.md` **Governing spec:** `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md` (SPEC-BA02, rev 0.3, approved) **Review target state:** clean working tree at commit `0b839bf` on `testing` **Reviewer:** Claude session 2026-07-10 **Status:** Round 1 findings resolved in `afa4465`; Round 2 convergence verdict **APPROVED FOR EXECUTION** (see Round 2 below)
 
 ## Verdict
 

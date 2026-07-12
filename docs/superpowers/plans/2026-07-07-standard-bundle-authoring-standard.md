@@ -8,7 +8,7 @@
 
 **Tech Stack:** Markdown + YAML frontmatter (Markdown Frontmatter Standard); TOML (`standard.toml`); the repo's own validators (`validate-frontmatter`, `validate-id`, `project-standards spec`), markdownlint, and Prettier. No Python, no new dependencies.
 
-**Source of truth:** `docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md` (SPEC-BA01, rev 0.5 — check the spec's latest Revision History row). Each task's acceptance is the named FR's acceptance criteria in that spec. The `standard.toml` field shapes follow SPEC-MT01 §9.
+**Source of truth:** `docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md` (SPEC-BA01, rev 0.5 — check the spec's latest Revision History row). Each task's acceptance is the named FR's acceptance criteria in that spec. The `standard.toml` field shapes follow SPEC-MT01 §9.
 
 ## Global Constraints
 
@@ -39,7 +39,7 @@ No code, schema, `registry.json`, `spec.include`, or `src/project_standards/bund
 **Files:**
 
 - Create: `standards/standard-bundle-authoring/README.md`
-- Reference (read, do not edit): `standards/markdown-tooling/README.md` (frontmatter + house style), `docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md` (the FRs), SPEC-MT01 §9 (the `standard.toml` shape).
+- Reference (read, do not edit): `standards/markdown-tooling/README.md` (frontmatter + house style), `docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md` (the FRs), SPEC-MT01 §9 (the `standard.toml` shape).
 
 **Interfaces:**
 
@@ -71,7 +71,7 @@ aliases:
   - 'standard-bundle-authoring'
   - 'meta-standard'
 related:
-  - 'docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md'
+  - 'docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
 ---
 ```
@@ -295,7 +295,7 @@ Expected: frontmatter ✓ (one more file than before), id ✓, spec validate/lin
 - [ ] **Step 5: Commit.**
 
 ```bash
-git add TODO.md docs/handoff/specs-plans.md docs/handoff/sessions/2026-07.md STATUS.md docs/superpowers/specs/2026-07-07-standard-bundle-authoring-standard.md
+git add TODO.md docs/handoff/specs-plans.md docs/handoff/sessions/2026-07.md STATUS.md docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md
 git commit -m "docs(v5): Step 02 complete — Standard Bundle Authoring Standard authored + validated"
 ```
 

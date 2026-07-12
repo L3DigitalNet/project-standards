@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'standard-bundle-authoring-contract'
 related:
-  - 'docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/adr/adr-0002-manifest-first-standard-discovery.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
   - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
@@ -40,7 +40,7 @@ project:
 
 # ADR 0001: Standard Bundle Authoring Contract
 
-MADR status: **accepted**. Records decision D-001 of [SPEC-MT01](../superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
+MADR status: **accepted**. Records decision D-001 of [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md).
 
 ## Context and Problem Statement
 

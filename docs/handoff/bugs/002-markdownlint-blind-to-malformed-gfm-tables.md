@@ -24,5 +24,5 @@ Match the delimiter row's cell count to the header and escape pipes inside cells
 
 ## Lesson
 
-- **Green markdownlint says nothing about table well-formedness.** When authoring or reviewing GFM tables, count cells in header vs delimiter rows manually (or render-preview); the linter cannot do it.
+- Markdownlint cannot prove table well-formedness. Count header and delimiter cells or render-preview GFM tables.
 - Inline code containing `|` inside a table cell must use `\|` — backticks do not protect the pipe from the table parser.

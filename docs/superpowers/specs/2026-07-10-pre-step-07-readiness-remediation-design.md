@@ -123,7 +123,7 @@ Current pointers may be corrected in `docs/STATUS.md`, `docs/TODO.md`, `docs/han
 
 | Surface | Responsibility |
 | --- | --- |
-| `docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md` | DoD, traceability, open-question, and deviation truth |
+| `docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md` | DoD, traceability, open-question, and deviation truth |
 | `CHANGELOG.md`, `UPGRADING.md` | v5 consumer/release impact |
 | `standards/standard-bundle-authoring/**` | Current standard-package authoring contract |
 | `src/project_standards/standard_manifest.py` and generated schema | Remove stale implementation-state descriptions only |

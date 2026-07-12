@@ -20,8 +20,8 @@ aliases:
   - MT01 baseline inventory
   - Step 00 inventory
 related:
-  - docs/superpowers/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
-  - docs/superpowers/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md
+  - docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
+  - docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md
   - docs/superpowers/research/2026-07-07-project-standards-mcp-specification-reference-pack.md
 confidence: high
 visibility: internal

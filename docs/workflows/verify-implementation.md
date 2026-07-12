@@ -482,7 +482,7 @@ Do not include commands you did not run.
 
 For each command or inspection, summarize what it established.
 
-### Recommended follow-up validation
+### recommended validation
 
 List commands or checks the implementing agent should run after correcting the implementation.
 
@@ -518,17 +518,17 @@ Include this ledger exactly.
 
 Use this exact structure.
 
-### Executive summary
+### Follow-up executive summary
 
 Briefly state whether the implementing agent’s corrections closed the prior findings — with the gate now actually passing and the behavior now actually working — and whether significant findings remain.
 
 Mention whether new internet research was required.
 
-### Verdict
+### Follow-up verdict
 
 Choose exactly one verdict from the verdict list.
 
-### Verification loop status
+### Follow-up verification loop status
 
 - Verification type: Follow-up verification
 - Spec path:
@@ -542,13 +542,13 @@ Choose exactly one verdict from the verdict list.
 - Regression count:
 - Significant findings remaining: Yes / No
 
-### Verification performed
+### Follow-up verification performed
 
 Briefly list the passes performed in this follow-up, including prior findings retested, gates re-run, behavior re-exercised, and areas that could not be checked.
 
 Do not list full findings here; put findings in the issue sections.
 
-### Gate results
+### Follow-up gate results
 
 Summarize the outcome of every quality gate re-run this loop, one line each, with pass/fail and a pointer to the recorded output.
 
@@ -611,13 +611,13 @@ List any checks that previously passed but now fail, or any prior-resolved findi
 
 If none, state: None found.
 
-### Unproven or unverifiable claims
+### Follow-up unproven or unverifiable claims
 
 List completion claims still neither confirmed passing nor confirmed failing this loop.
 
 If every claim was settled, state: None.
 
-### Internet research performed
+### Follow-up internet research performed
 
 List any new external sources consulted during this follow-up verification.
 
@@ -625,7 +625,7 @@ If no new internet research was necessary, state why.
 
 If internet research was needed but unavailable, state what could not be verified.
 
-### Verification performed (commands and inspections)
+### Follow-up verification performed (commands and inspections)
 
 List the commands and inspections actually performed.
 
@@ -633,7 +633,7 @@ Do not include commands you did not run.
 
 For each command or inspection, summarize what it established.
 
-### Recommended follow-up validation
+### Follow-up recommended validation
 
 List commands or checks the implementing agent should run after correcting the remaining findings.
 
@@ -641,7 +641,7 @@ Only include commands that make sense for this repository/environment.
 
 Mark commands that mutate state or require an isolated environment as “run in an isolated environment.”
 
-### Final recommendation
+### Follow-up final recommendation
 
 State exactly what should happen next. Choose one:
 
@@ -651,7 +651,7 @@ State exactly what should happen next. Choose one:
 - The user should provide specific missing inputs (spec, plan, or an environment where a required check can run) before verification can complete
 - No significant findings remain; the verify/fix loop can stop
 
-### Review ledger for next loop
+### Follow-up review ledger for next loop
 
 Include this ledger exactly.
 
