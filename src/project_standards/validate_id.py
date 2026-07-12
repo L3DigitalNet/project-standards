@@ -62,6 +62,13 @@ from pathlib import Path
 from typing import Any, cast
 
 from project_standards._version import package_version
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    explicit_legacy_argument,
+    selected_command,
+)
+from project_standards.control_plane.locking import LockMode
 from project_standards.id_format import random_token, slugify
 from project_standards.registry import RegistryError, load_registry
 from project_standards.validate_frontmatter import (
@@ -488,9 +495,50 @@ def fix_file(
     return result
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
     """CLI entry point; returns an exit code."""
     reconfigure_output_streams()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.WRITE if "--fix" in arguments else LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None:
+        if "--fix" in arguments:
+            from project_standards.frontmatter_commands import run_locked_standalone_fix
+
+            return run_locked_standalone_fix(
+                arguments,
+                _selected_package,
+                surface="validate-id",
+            )
+        from project_standards.frontmatter_commands import run_locked_standalone_validate
+
+        return run_locked_standalone_validate(
+            arguments,
+            _selected_package,
+            surface="validate-id",
+        )
     parser = argparse.ArgumentParser(
         prog="validate-id",
         description=(
@@ -551,7 +599,7 @@ def main(argv: list[str] | None = None) -> int:
     # Has no effect here: id validation already silently skips files without frontmatter.
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     if args.config is not None and not args.config.exists():
         print(f"error: config file not found: {args.config}", file=sys.stderr)
@@ -561,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
             Path.cwd(),
             explicit_legacy=args.config,
             allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
         )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)

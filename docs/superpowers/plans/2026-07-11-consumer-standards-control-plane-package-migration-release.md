@@ -318,13 +318,13 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Create a focused shared config-resolution boundary under `src/project_standards/control_plane/`; modify top-level validation/fix, spec, Agent Handoff, and other provider-backed command dispatch; expand command/installed-wrapper tests.
 
-- [ ] Write a command matrix covering unified state, v5 legacy-only fallback warning, dual authority, explicit supported override, selected payload version, disabled package, package not present, and provider refusal.
-- [ ] Implement one repository-root resolver that returns selected payload plus validated effective package config. Package commands may not parse `.standards/config.toml` independently or read `.project-standards.yml` when unified authority exists.
-- [ ] Route every declared validate/verify/inspect provider through the version-selected provider boundary. Route `fix`, `scaffold`, and `upgrade` plans through the executor-only mutation path.
-- [ ] Preserve existing command names, flags, human/JSON output, stdout/stderr contracts, and exit codes unless SPEC-CP01 explicitly deprecates them.
-- [ ] Add a source scan proving current direct-write provider entrypoints are absent from advertised payload declarations and shared code contains no package-ID dispatch.
-- [ ] Run every provider-backed command from the extracted wheel with network denied; expect pass.
-- [ ] Commit: `feat(v5): route commands through selected packages`
+- [x] Write a command matrix covering unified state, v5 legacy-only fallback warning, dual authority, explicit supported override, selected payload version, disabled package, package not present, and provider refusal.
+- [x] Implement one repository-root resolver that returns selected payload plus validated effective package config. Package commands may not parse `.standards/config.toml` independently or read `.project-standards.yml` when unified authority exists.
+- [x] Route every declared validate/verify/inspect provider through the version-selected provider boundary. Route `fix`, `scaffold`, and `upgrade` plans through the executor-only mutation path.
+- [x] Preserve existing command names, flags, human/JSON output, stdout/stderr contracts, and exit codes unless SPEC-CP01 explicitly deprecates them.
+- [x] Add a source scan proving current direct-write provider entrypoints are absent from advertised payload declarations and shared code contains no package-ID dispatch.
+- [x] Run every provider-backed command from the extracted wheel with network denied; expect pass.
+- [x] Commit: `feat(v5): route commands through selected packages`
 
 ### Task 16: Real Package Compatibility Matrix
 

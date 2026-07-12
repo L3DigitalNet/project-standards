@@ -53,7 +53,7 @@ project-standards {--help | --version}
 
 `project-standards` is the unified command-line surface for this repository's tooling. It exposes 31 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
-`validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
+Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
 Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 31 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
@@ -72,16 +72,16 @@ Each leaf command is documented below with its own synopsis, options, and exit s
 
 ### `validate`
 
-Run `validate-frontmatter` (schema), `validate-id` (id format), and `validate-references` (cross-file, opt-in) over the configured file set. All three run; the worst exit code is returned, so a schema error, an id violation, or a reference error is never masked by another tool's success.
+Validate schema, ID format, and opt-in cross-file references over the configured file set. Unified repositories use the exact applied package provider and effective options; v5 legacy-only repositories run `validate-frontmatter`, `validate-id`, and `validate-references` and return their worst exit code.
 
 ```text
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 ```
 
-Options (all flags are forwarded unchanged to every validator):
+Options (the selected provider and legacy fallback accept the same surface):
 
 - **`<file>...`** — Zero or more Markdown files to validate. With no files, globs, or config includes, the underlying validators default to all `**/*.md` under the current directory.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A `--config` that names a non-existent file is an operator error (exit 2), never a silent default.
+- **`--config <path>`** — Explicit legacy/debug config path. Unified authority resolves from `.standards/config.toml` by repository root and rejects this override; a path that does not exist is an operator error (exit 2).
 - **`--schema <path>`** — Custom JSON Schema to validate against. Frontmatter-only, and it also causes `validate-id` to skip (a custom schema may use a different id convention). Environment/config interaction: overrides the config's `markdown.frontmatter.schema`.
 - **`--glob <pattern>`** — Glob (relative to the current directory) to validate instead of the config include list; combines with explicit `<file>` arguments. Note: this scopes `validate-frontmatter` and `validate-id`, but `validate-references` ignores it and always indexes the full configured set (see [NOTES](#notes)).
 - **`--no-require-frontmatter`** — Do not fail files that have no frontmatter block. Frontmatter-only; no effect on the id or reference passes.
@@ -93,7 +93,7 @@ Exit status: `0` all valid · `1` validation or control-plane findings · `2` op
 
 ### `fix`
 
-Format frontmatter (`format-frontmatter --write`), fix ids (`validate-id --fix`), then re-validate against the same contract as `validate` (references included), so a "successful" fix cannot hide a remaining error.
+Under unified authority, request one complete format-and-ID mutation plan from the selected package, apply it through the platform executor, then revalidate against the same provider contract (references included). The v5 legacy-only fallback retains the `format-frontmatter --write` plus `validate-id --fix` sequence.
 
 ```text
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
@@ -102,7 +102,7 @@ project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 Options:
 
 - **`<file>...`** — Markdown files to fix. Omit to use the config include list.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug config path. Unified authority resolves from `.standards/config.toml` and rejects this override; a non-existent path exits 2.
 - **`--glob <pattern>`** — Glob to select files instead of the include list; combines with explicit `<file>` arguments. Forwarded to each stage.
 - **`-q`, `--quiet`** — Suppress per-file output.
 

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
+import shutil
 from pathlib import Path
 from typing import cast
 
@@ -14,22 +16,46 @@ from project_standards import (
     validate_id,
     validate_references,
 )
+from project_standards.control_plane.bootstrap import initialize_control_plane
+from project_standards.control_plane.cli import run as reconcile
 from project_standards.control_plane.codec import (
-    bind_catalog_digest,
-    parse_config,
     parse_lock,
-    render_catalog,
     render_lock,
-    semantic_digest,
 )
-from project_standards.control_plane.models import CentralLock, ConsumerCatalog, LockedInput
-from project_standards.control_plane.providers import materialize_referenced_input_snapshots
+from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.locking import (
+    ControlPlaneBusyError,
+    LockMode,
+    control_plane_lock,
+)
+from project_standards.control_plane.models import LockedInput
+from project_standards.control_plane.providers import (
+    ProviderResult,
+    materialize_referenced_input_snapshots,
+)
+from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
-from project_standards.package_contract.payload import JsonObject, JsonValue
+from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderEffect
 from project_standards.validate_frontmatter import ConfigError, load_cli_config
 
 _PAYLOAD_DIGEST = f"sha256:{'a' * 64}"
 _EFFECTIVE_CONFIG_DIGEST = f"sha256:{'b' * 64}"
+
+
+@pytest.fixture(autouse=True)
+def installed_v5_distribution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> InstalledDistribution:
+    installed = tmp_path / "installed/project_standards"
+    shutil.copytree(Path("src/project_standards"), installed, symlinks=False)
+    distribution = InstalledDistribution(installed, tool_release="5.2.0")
+    monkeypatch.setattr(
+        InstalledDistribution,
+        "current",
+        staticmethod(lambda: distribution),
+    )
+    return distribution
 
 
 def _sha256(content: bytes) -> str:
@@ -69,45 +95,13 @@ def _write_unified_config(
     resolved: str = "1.2",
     custom_schema: bool = True,
 ) -> bytes | None:
+    distribution = InstalledDistribution.current()
+    initialize_control_plane(root, "5", distribution=distribution)
     control = root / ".standards"
-    control.mkdir()
     config_content = _config_content(selector=selector, custom_schema=custom_schema)
     (control / "config.toml").write_bytes(config_content)
-    desired = parse_config(config_content)
-
-    available = ["1.1", "1.2", "1.3"]
-    catalog = bind_catalog_digest(
-        ConsumerCatalog.model_validate(
-            {
-                "project_standards": {
-                    "schema_version": "1.0",
-                    "catalog": "5",
-                    "release": "5.1.0",
-                    "digest": _PAYLOAD_DIGEST,
-                },
-                "standards": {
-                    "markdown-frontmatter": {
-                        "status": "active",
-                        "available": available,
-                        "default": "1.3",
-                        "candidates": [],
-                        "versions": {
-                            version: {
-                                "channel": "stable" if version == "1.3" else "retained",
-                                "availability": "consumer",
-                                "payload_digest": _PAYLOAD_DIGEST,
-                            }
-                            for version in available
-                        },
-                    }
-                },
-            }
-        )
-    )
-    (control / "catalog.toml").write_bytes(render_catalog(catalog))
 
     schema_content: bytes | None = None
-    referenced_inputs: list[dict[str, str]] = []
     if custom_schema:
         schema_content = json.dumps(
             {"type": "object", "additionalProperties": True},
@@ -116,45 +110,15 @@ def _write_unified_config(
         schema_path = control / "extensions/markdown-frontmatter/schema.json"
         schema_path.parent.mkdir(parents=True)
         schema_path.write_bytes(schema_content)
-        referenced_inputs.append(
-            {
-                "standard_id": "markdown-frontmatter",
-                "extension_id": "custom-schema",
-                "path": ".standards/extensions/markdown-frontmatter/schema.json",
-                "digest": _sha256(schema_content),
-            }
-        )
-
-    lock = CentralLock.model_validate(
-        {
-            "project_standards": {
-                "schema_version": "1.0",
-                "catalog": "5",
-                "release": "5.1.0",
-                "catalog_digest": catalog.project_standards.digest.value,
-                "config_digest": semantic_digest(desired.model_dump(mode="json")).value,
-            },
-            "standards": {
-                "markdown-frontmatter": {
-                    "requested": selector,
-                    "resolved": resolved,
-                    "selection": "exact" if selector != "latest" else "stable",
-                    "payload_digest": _PAYLOAD_DIGEST,
-                    "effective_config_digest": _EFFECTIVE_CONFIG_DIGEST,
-                }
-            },
-            "accepted_tracks": {},
-            "artifacts": [],
-            "referenced_inputs": referenced_inputs,
-        }
-    )
-    (control / "lock.toml").write_bytes(render_lock(lock))
+    assert reconcile(["--repo", str(root), "--apply"], distribution=distribution) == 0
+    lock = parse_lock((control / "lock.toml").read_bytes())
+    assert lock.standards["markdown-frontmatter"].resolved.value == resolved
     return schema_content
 
 
 @pytest.mark.parametrize(
     ("selector", "resolved"),
-    [("latest", "1.3"), ("1.1", "1.1")],
+    [("latest", "1.2"), ("1.2", "1.2")],
     ids=["latest-default-refresh", "exact-pin"],
 )
 def test_cli_config_uses_the_committed_applied_package_version(
@@ -190,8 +154,7 @@ def test_cli_config_loads_frontmatter_options_and_locked_custom_schema(
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
-        ("config-digest", "config digest"),
-        ("catalog-digest", "catalog lineage"),
+        ("catalog-digest", "catalog digest"),
         ("requested", "selector"),
         ("resolved", "exact pin"),
         ("payload-digest", "payload digest"),
@@ -207,9 +170,7 @@ def test_cli_config_rejects_inconsistent_initialized_state(
     lock = parse_lock(lock_path.read_bytes())
     header = lock.project_standards
     package = lock.standards["markdown-frontmatter"]
-    if mutate == "config-digest":
-        header = header.model_copy(update={"config_digest": Sha256Digest(_PAYLOAD_DIGEST)})
-    elif mutate == "catalog-digest":
+    if mutate == "catalog-digest":
         header = header.model_copy(update={"catalog_digest": Sha256Digest(_PAYLOAD_DIGEST)})
     elif mutate == "requested":
         package = package.model_copy(update={"requested": "latest"})
@@ -399,6 +360,18 @@ def test_explicit_schema_bypasses_locked_custom_input_for_the_cli_suite(
     assert project_standards_main(["fix", "--schema", str(explicit), "--quiet", "plain.md"]) == 0
 
 
+def test_unified_standalone_command_rejects_empty_explicit_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_frontmatter.main(["--config="]) == 2
+    assert "--config requires a non-empty path" in capsys.readouterr().err
+
+
 def test_frontmatter_cli_suite_uses_unified_config_by_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -412,3 +385,569 @@ def test_frontmatter_cli_suite_uses_unified_config_by_default(
     assert validate_id.main(["--quiet"]) == 0
     assert validate_references.main(["--quiet"]) == 0
     assert format_frontmatter.main(["--quiet"]) == 0
+
+
+def test_unified_validate_id_fix_applies_selected_provider_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: wrong\n"
+        "title: Hello World\n"
+        "description: A note.\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-12'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "# Hello World\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_id.main(["--fix", "handbook/note.md"]) == 0
+    assert "id: 'note-" in document.read_text(encoding="utf-8")
+    output = capsys.readouterr().out
+    assert "fixed: handbook/note.md: id → 'note-" in output
+    assert "✓  1 id(s) fixed" in output
+
+
+def test_unified_format_write_applies_selected_provider_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-aaaaaa-hello-world'\n"
+        "title: Hello World\n"
+        "description: A note.\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-12'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "# Hello World\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert format_frontmatter.main(["--write", "handbook/note.md"]) == 0
+    assert "title: 'Hello World'" in document.read_text(encoding="utf-8")
+    assert "formatted: handbook/note.md" in capsys.readouterr().out
+
+
+def test_unified_validate_references_preserves_success_summary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("# Note\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_references.main([]) == 0
+    captured = capsys.readouterr()
+    assert "✓  references valid (0 docs, 0 warning(s))" in captured.out
+    assert "note: no managed docs matched" in captured.err
+
+
+def test_unified_validate_references_reports_skipped_malformed_documents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/bad.md"
+    document.parent.mkdir()
+    document.write_text("---\ntitle: First\ntitle: Second\n---\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_references.main([]) == 0
+    captured = capsys.readouterr()
+    assert "✓  references valid (0 docs, 1 warning(s))" in captured.out
+    assert "[warning] handbook/bad.md: skipped (invalid frontmatter" in captured.err
+
+
+@pytest.mark.parametrize(
+    "content",
+    [b"---\ntitle: First\ntitle: Second\n---\n", b"\xff\xfe\n"],
+    ids=["malformed-yaml", "invalid-utf8"],
+)
+def test_unified_validate_id_reports_unparseable_documents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    content: bytes,
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/bad.md"
+    document.parent.mkdir()
+    document.write_bytes(content)
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_id.main(["--quiet"]) == 1
+    assert "frontmatter is not valid UTF-8 YAML" in capsys.readouterr().err
+
+
+def test_unified_format_stdin_holds_a_read_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.stdin", io.StringIO("# Note\n"))
+    original = format_frontmatter.format_text
+
+    def assert_read_locked(*args: object, **kwargs: object) -> tuple[str, bool, list[str]]:
+        with (
+            pytest.raises(ControlPlaneBusyError, match="CP-BUSY"),
+            control_plane_lock(tmp_path, LockMode.WRITE),
+        ):
+            pytest.fail("stdin formatting allowed a concurrent writer")
+        return original(*args, **kwargs)  # pyright: ignore[reportArgumentType]
+
+    monkeypatch.setattr(format_frontmatter, "format_text", assert_read_locked)
+
+    assert format_frontmatter.main(["--stdin", "--quiet"]) == 0
+
+
+def test_top_level_validate_routes_only_through_selected_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("---\nid: wrong\ndoc_type: note\n---\n# Note\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    def fail_legacy(_argv: list[str] | None = None) -> int:
+        pytest.fail("legacy validator used under unified authority")
+
+    monkeypatch.setattr(validate_frontmatter, "main", fail_legacy)
+    monkeypatch.setattr(validate_id, "main", fail_legacy)
+    monkeypatch.setattr(validate_references, "main", fail_legacy)
+
+    assert project_standards_main(["validate", "--quiet"]) == 1
+    error = capsys.readouterr().err
+    assert "[id]" in error
+    assert "'wrong'" in error
+
+
+def test_top_level_fix_applies_selected_provider_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: wrong\n"
+        "title: Hello World\n"
+        "description: A note.\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-12'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "# Hello World\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["fix", "--quiet", "handbook/note.md"]) == 0
+    assert "id: 'note-" in document.read_text(encoding="utf-8")
+
+
+def test_top_level_validate_maps_selected_provider_refusal_to_operator_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+    from project_standards.control_plane.command_resolution import CommandResolutionError
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("# Note\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    def refuse(*_args: object, **_kwargs: object) -> object:
+        raise CommandResolutionError("selected provider refused its immutable input")
+
+    monkeypatch.setattr(
+        "project_standards.frontmatter_commands.invoke_selected_provider",
+        refuse,
+    )
+
+    assert project_standards_main(["validate", "--quiet"]) == 2
+    assert "selected provider refused" in capsys.readouterr().err
+
+
+def test_top_level_fix_preserves_custom_schema_skip_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    schema = tmp_path / "debug.schema.json"
+    schema.write_text('{"type":"object","required":["custom_required"]}', encoding="utf-8")
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("# Plain\n", encoding="utf-8")
+    before = document.read_bytes()
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["fix", "--schema", str(schema), str(document)]) == 0
+    assert "custom schema in use; skipping fix" in capsys.readouterr().err
+    assert document.read_bytes() == before
+
+
+def test_unified_schema_override_must_remain_inside_repository(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside.schema.json"
+    outside.write_text('{"type":"object"}', encoding="utf-8")
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("# Plain\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--schema", str(outside), str(document)]) == 2
+    assert "must remain inside the repository" in capsys.readouterr().err
+
+
+def test_unreconciled_valid_options_are_not_command_effective(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    config = tmp_path / ".standards/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8").replace("required = false", "required = true"),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet"]) == 1
+    assert "CP-DRIFT" in capsys.readouterr().err
+
+
+def test_top_level_validate_checks_control_drift_with_an_empty_document_set(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    managed = tmp_path / ".agents/skills/markdown-frontmatter/SKILL.md"
+    managed.write_text("local drift\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet"]) == 1
+    assert "CP-MODIFIED-MANAGED" in capsys.readouterr().err
+
+
+def test_selected_authoring_surfaces_refuse_a_symlink_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    target = tmp_path / "handbook/target.md"
+    target.parent.mkdir()
+    target.write_text("# Target\n", encoding="utf-8")
+    link = tmp_path / "handbook/link.md"
+    link.symlink_to(target)
+    monkeypatch.chdir(tmp_path)
+
+    commands = (
+        lambda: project_standards_main(["fix", "--quiet", str(link)]),
+        lambda: validate_id.main(["--fix", "--quiet", str(link)]),
+        lambda: format_frontmatter.main(["--write", "--quiet", str(link)]),
+    )
+    for command in commands:
+        assert command() == 2
+        assert "cannot auto-fix" in capsys.readouterr().err
+
+
+def test_selected_authoring_surfaces_report_unparseable_frontmatter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/bad.md"
+    document.parent.mkdir()
+    content = b"---\ntitle: First\ntitle: Second\n---\n# Bad\n"
+    document.write_bytes(content)
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["fix", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "frontmatter is not valid UTF-8 YAML" in capsys.readouterr().err
+    assert validate_id.main(["--fix", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "frontmatter is not valid UTF-8 YAML" in capsys.readouterr().err
+    assert format_frontmatter.main(["--write", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "duplicate top-level key 'title'" in capsys.readouterr().err
+
+
+def test_selected_authoring_surfaces_report_invalid_utf8(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/bad.md"
+    document.parent.mkdir()
+    content = b"\xff\xfe\n"
+    document.write_bytes(content)
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["fix", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "frontmatter is not valid UTF-8 YAML" in capsys.readouterr().err
+    assert validate_id.main(["--fix", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "frontmatter is not valid UTF-8 YAML" in capsys.readouterr().err
+    assert format_frontmatter.main(["--write", "--quiet", str(document)]) == 1
+    assert document.read_bytes() == content
+    assert "file is not valid UTF-8" in capsys.readouterr().err
+
+
+def test_unified_format_write_preserves_denylisted_path_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    instructions = tmp_path / "AGENTS.md"
+    content = b"# Instructions\n"
+    instructions.write_bytes(content)
+    monkeypatch.chdir(tmp_path)
+
+    assert format_frontmatter.main(["--write", "--quiet", "AGENTS.md"]) == 0
+    assert instructions.read_bytes() == content
+    assert "refused (denylisted)" in capsys.readouterr().err
+
+
+def test_unified_format_exit_class_uses_typed_diagnostic_severity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    document = tmp_path / "handbook/note.md"
+    document.parent.mkdir()
+    document.write_text("# Note\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    plan = MutationPlanSchema.model_validate(
+        {
+            "schema_version": "1.0",
+            "standard_id": "markdown-frontmatter",
+            "version": "1.2",
+            "actions": [],
+            "diagnostics": [
+                {
+                    "code": "FM-AUTHORING-UNPARSEABLE",
+                    "severity": "error",
+                    "path": "handbook/note.md",
+                    "message": "wording may change without changing the exit class",
+                }
+            ],
+        }
+    )
+
+    def provider_result(*_args: object, **_kwargs: object) -> ProviderResult:
+        return ProviderResult(
+            ProviderEffect.MUTATION_PLAN,
+            mutation_plan=plan,
+        )
+
+    monkeypatch.setattr(
+        "project_standards.frontmatter_commands.invoke_selected_provider",
+        provider_result,
+    )
+
+    assert format_frontmatter.main(["--write", "--quiet", str(document)]) == 1
+    assert "wording may change" in capsys.readouterr().err
+
+
+def test_scoped_validate_still_checks_repository_wide_reference_facts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    handbook = tmp_path / "handbook"
+    handbook.mkdir()
+    document = (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: note-aaaaaa-shared\n"
+        "title: Shared\n"
+        "description: A note.\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-12'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n# Shared\n"
+    )
+    selected = handbook / "selected.md"
+    selected.write_text(document, encoding="utf-8")
+    (handbook / "elsewhere.md").write_text(document, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet", str(selected)]) == 1
+    assert "document id is duplicated" in capsys.readouterr().err
+
+
+def test_scoped_validate_reports_date_order_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    selected = tmp_path / "handbook/selected.md"
+    selected.parent.mkdir()
+    selected.write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-aaaaaa-selected'\n"
+        "title: 'Selected'\n"
+        "description: 'A note.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-11'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "# Selected\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet", str(selected)]) == 1
+    assert capsys.readouterr().err.count("created date is after updated date") == 1
+
+
+def test_top_level_validate_invokes_enabled_adr_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    set_standard_enabled(tmp_path, "adr", True)
+    config = tmp_path / ".standards/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8") + "\n[standards.adr.config]\nrequire_sections = true\n",
+        encoding="utf-8",
+    )
+    assert reconcile(["--repo", str(tmp_path), "--apply"]) == 0
+    adr = tmp_path / "handbook/adr.md"
+    adr.parent.mkdir()
+    adr.write_text(
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: adr-0001-missing-sections\n"
+        "title: Missing sections\n"
+        "description: An ADR.\n"
+        "doc_type: adr\n"
+        "status: accepted\n"
+        "created: '2026-07-12'\n"
+        "updated: '2026-07-12'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n# Missing sections\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet", str(adr)]) == 1
+    assert "ADR is missing required section" in capsys.readouterr().err
+
+
+def test_top_level_validate_supports_adr_without_frontmatter_package(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    distribution = InstalledDistribution.current()
+    initialize_control_plane(tmp_path, "5", distribution=distribution)
+    set_standard_enabled(tmp_path, "adr", True)
+    config = tmp_path / ".standards/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8") + "\n[standards.adr.config]\nrequire_sections = true\n",
+        encoding="utf-8",
+    )
+    assert reconcile(["--repo", str(tmp_path), "--apply"], distribution=distribution) == 0
+    adr = tmp_path / "docs/adr/missing.md"
+    adr.parent.mkdir(parents=True, exist_ok=True)
+    adr.write_text("---\ndoc_type: adr\n---\n# Missing\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet", str(adr)]) == 1
+    assert "ADR is missing required section" in capsys.readouterr().err

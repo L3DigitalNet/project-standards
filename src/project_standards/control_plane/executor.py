@@ -342,6 +342,11 @@ def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApply
     root: Path | None = None
     root_descriptor: int | None = None
     try:
+        if any(item.refusal for item in plan.diagnostics):
+            raise _ApplyFailure(
+                "CP-AUTHORING-PLAN",
+                "authoring plan carries a package refusal",
+            )
         root, root_descriptor = _open_repository(repo)
         entries = _authoring_entries(root, plan)
         for action in plan.actions:

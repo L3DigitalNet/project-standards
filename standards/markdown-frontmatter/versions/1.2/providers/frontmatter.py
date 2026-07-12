@@ -13,7 +13,11 @@ from typing import Any, cast
 from jsonschema import Draft202012Validator
 
 from project_standards.control_plane.snapshot import EntryKind, SnapshotEntry
-from project_standards.frontmatter_authoring import plan_frontmatter_fix_entries
+from project_standards.frontmatter_authoring import (
+    plan_frontmatter_fix_entries,
+    plan_frontmatter_format_entries,
+    plan_frontmatter_id_fix_entries,
+)
 from project_standards.id_format import slugify
 from project_standards.package_contract.paths import (
     PackageVersion,
@@ -101,17 +105,62 @@ def run_fix(
             raise ValueError("snapshot token is missing or invalid")
         return token
 
-    today = snapshots.get("today")
-    if not isinstance(today, str):
-        raise ValueError("snapshots.today must be a string")
     version = PackageVersion(str(request.get("version")))
-    planned = plan_frontmatter_fix_entries(
-        _entries(request),
-        version=version,
-        token_factory=next_token,
-        today=today,
-    )
-    return planned.plan.model_dump(mode="json")
+    mode = snapshots.get("authoring_mode", "combined")
+    if mode == "id-only":
+        planned = plan_frontmatter_id_fix_entries(
+            _entries(request),
+            version=version,
+            valid_doc_types=_doc_types(_bundled_schema(_resources)),
+            token_factory=next_token,
+        )
+    else:
+        today = snapshots.get("today")
+        if not isinstance(today, str):
+            raise ValueError("snapshots.today must be a string")
+        if mode == "format-only":
+            bump_updated = snapshots.get("bump_updated", False)
+            if not isinstance(bump_updated, bool):
+                raise ValueError("snapshots.bump_updated must be a boolean")
+            planned = plan_frontmatter_format_entries(
+                _entries(request),
+                version=version,
+                token_factory=next_token,
+                today=today,
+                bump_updated=bump_updated,
+            )
+        elif mode == "combined":
+            planned = plan_frontmatter_fix_entries(
+                _entries(request),
+                version=version,
+                token_factory=next_token,
+                today=today,
+            )
+        else:
+            raise ValueError("snapshots.authoring_mode is invalid")
+    output = planned.plan.model_dump(mode="json")
+    refused = frozenset(planned.refused_paths)
+    diagnostics: list[dict[str, object]] = []
+    for path, message in planned.warnings:
+        refusal = path in refused
+        unparseable = "duplicate top-level key" in message or "not valid UTF-8" in message
+        if refusal:
+            code = "FM-AUTHORING-REFUSED"
+        elif unparseable:
+            code = "FM-AUTHORING-UNPARSEABLE"
+        else:
+            code = "FM-AUTHORING-WARNING"
+        diagnostics.append(
+            {
+                "code": code,
+                "severity": "error" if refusal or unparseable else "warning",
+                "path": path,
+                "message": message,
+                "refusal": refusal,
+            }
+        )
+    output["diagnostics"] = diagnostics
+    return output
 
 
 def run_id_next(
@@ -463,13 +512,13 @@ def run_validate(
             key=lambda error: [str(part) for part in error.path],
         )
         for schema_error in schema_errors:
-            identity = ".".join(str(part) for part in schema_error.path) or "$frontmatter"
+            identity = ".".join(str(part) for part in schema_error.path) or "(root)"
             findings.append(
                 _finding(
                     "FM-SCHEMA",
                     path,
                     identity,
-                    "frontmatter violates the selected schema",
+                    f"[{identity}] {schema_error.message}",
                     "compare the document with the selected package contract",
                 )
             )
@@ -482,13 +531,13 @@ def run_validate(
             and isinstance(doc_type, str)
             and doc_type in valid_doc_types
         ):
-            for _violation in validate_id(document_id, doc_type, valid_doc_types):
+            for violation in validate_id(document_id, doc_type, valid_doc_types):
                 findings.append(
                     _finding(
                         "FM-ID",
                         path,
                         "id",
-                        "document id violates the selected contract",
+                        f"[id] {violation}",
                         "run project-standards fix or repair the id manually",
                     )
                 )

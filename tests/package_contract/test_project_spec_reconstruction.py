@@ -143,7 +143,7 @@ def _invoke(
     payload = _payload()
     return invoke_provider(
         ProviderInvocation(
-            repo=_ROOT,
+            repo=_PAYLOAD,
             payload=payload,
             standard_id="project-spec",
             version=payload.manifest.payload.version,

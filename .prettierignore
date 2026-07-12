@@ -35,6 +35,7 @@ src/project_standards/schemas/mutation-plan.schema.json
 src/project_standards/schemas/provider-input.schema.json
 src/project_standards/schemas/reconciliation-plan.schema.json
 src/project_standards/schemas/migration-report.schema.json
+standards/*/versions/*/schemas/mutation-plan.schema.json
 
 # Package-contract fixtures are integrity inputs: their exact raw bytes and
 # declared digests are one test contract, not formatter-owned source documents.

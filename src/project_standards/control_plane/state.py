@@ -233,3 +233,16 @@ def detect_control_plane_state(repo: Path, *, tool_release: str) -> ControlPlane
             kind = StateKind.LEGACY_ONLY if legacy_exists else StateKind.UNINITIALIZED
             return _state(kind, normalized)
     return _state(StateKind.MALFORMED, normalized, "control-plane state changed during detection")
+
+
+def load_locked_control_plane_state(
+    repo: Path,
+    *,
+    tool_release: str,
+    control: LockedControlDirectory,
+) -> ControlPlaneState:
+    """Load one initialized state generation from a caller-held command lock."""
+    normalized = _safe_repo(repo)
+    if control.path != normalized / ".standards" or not control.is_current():
+        raise ValueError("control-plane command lock does not match the repository")
+    return _load_initialized_state(normalized, ParsedToolRelease(tool_release), control)

@@ -390,6 +390,11 @@ def main(argv: list[str] | None = None) -> int:
     # unchanged. We return the worst exit code (2 > 1 > 0) so a schema error, id violation, or
     # reference error is never masked by another tool's success.
     if args_list and args_list[0] == "validate":
+        from project_standards.control_plane.command_resolution import (
+            reset_legacy_authority_warning,
+        )
+
+        reset_legacy_authority_warning()
         validator_args = args_list[1:]
         # Intercept --help before forwarding — otherwise validate_frontmatter.main(["--help"])
         # calls sys.exit(0), which hides that validate-id also runs.
@@ -437,6 +442,11 @@ def main(argv: list[str] | None = None) -> int:
             _p.add_argument("--quiet", "-q", action="store_true", help="Suppress per-file output.")
             _p.print_help()
             return 0
+        from project_standards.frontmatter_commands import run_validate as _run_v2_validate
+
+        v2_result = _run_v2_validate(validator_args, validate_control=True)
+        if v2_result is not None:
+            return v2_result
         rc_frontmatter = validate_frontmatter.main(validator_args)
         rc_id = validate_id.main(validator_args)
         rc_refs = validate_references.main(validator_args)
@@ -454,6 +464,11 @@ def main(argv: list[str] | None = None) -> int:
                 "Skips entirely under a custom schema."
             )
             return 0
+        from project_standards.frontmatter_commands import run_fix as _run_v2_fix
+
+        v2_result = _run_v2_fix(fix_args)
+        if v2_result is not None:
+            return v2_result
         fix_parser = argparse.ArgumentParser(prog="project-standards fix", add_help=False)
         fix_parser.add_argument("files", nargs="*", type=Path)
         fix_parser.add_argument("--config", type=Path, default=None)

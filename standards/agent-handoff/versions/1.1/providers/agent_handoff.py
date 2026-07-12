@@ -6,10 +6,12 @@ import base64
 import fnmatch
 import hashlib
 import json
+import posixpath
 import re
 import tomllib
 from collections.abc import Mapping
 from typing import cast
+from urllib.parse import unquote
 
 
 def _table(value: object, *, name: str) -> Mapping[str, object]:
@@ -136,6 +138,7 @@ def _finding(
     hint: str,
     *,
     severity: str = "error",
+    locus: str | None = None,
 ) -> dict[str, object]:
     return {
         "code": code,
@@ -145,7 +148,7 @@ def _finding(
         "message": message,
         "hint": hint,
         "line": None,
-        "locus": None,
+        "locus": locus,
     }
 
 
@@ -178,6 +181,10 @@ _UPGRADE_TARGETS = {
     ".agents/skills/agent-handoff/SKILL.md": ("skill", "0644"),
     ".agents/skills/agent-handoff/agents/openai.yaml": ("skill-openai", "0644"),
 }
+
+_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+_FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
+_INLINE_CODE_RE = re.compile(r"(`+)(.*?)\1")
 
 
 def _managed_findings(
@@ -466,9 +473,10 @@ def _shape_findings(
                     "AH-SIZE-CAP",
                     path,
                     "size",
-                    "document exceeds its hard byte cap",
+                    f"document exceeds {cap} byte hard cap by {len(content) - cap} bytes",
                     "move durable detail to a lazy handoff document",
                     severity="error" if fatal else "warning",
+                    locus="byte budget",
                 )
             )
         elif target is not None and len(content) > target:
@@ -477,9 +485,10 @@ def _shape_findings(
                     "AH-SIZE-TARGET",
                     path,
                     "size",
-                    "document exceeds its target byte budget",
+                    f"document exceeds {target} byte target",
                     "condense eager content when practical",
                     severity="warning",
+                    locus="byte budget",
                 )
             )
 
@@ -590,6 +599,84 @@ def _credential_findings(
                     "replace the value with a credential reference",
                 )
             )
+    return findings
+
+
+def _reference_text(text: str) -> str:
+    visible: list[str] = []
+    fence_character: str | None = None
+    fence_length = 0
+    for line in text.splitlines(keepends=True):
+        marker = _FENCE_RE.match(line)
+        if fence_character is not None:
+            if marker is not None:
+                fence = marker.group("fence")
+                if fence[0] == fence_character and len(fence) >= fence_length:
+                    fence_character = None
+                    fence_length = 0
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        if marker is not None:
+            fence = marker.group("fence")
+            fence_character = fence[0]
+            fence_length = len(fence)
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        if line.startswith(("    ", "\t")):
+            visible.append("\n" if line.endswith("\n") else "")
+            continue
+        visible.append(_INLINE_CODE_RE.sub("", line))
+    return "".join(visible)
+
+
+def _reference_findings(
+    snapshots: Mapping[str, object], policy: Mapping[str, object]
+) -> list[dict[str, object]]:
+    paths = _table(policy.get("paths"), name="policy.paths")
+    required = _string_list(paths.get("required"), name="policy required paths")
+    sources = {path for path in required if path.endswith(".md")}
+    sources.update(
+        path
+        for path in snapshots
+        if re.fullmatch(r"docs/handoff/(?:sessions|bugs)/[^/]+\.md", path)
+    )
+    findings: list[dict[str, object]] = []
+    for source in sorted(sources):
+        content = _snapshot_content(snapshots, source)
+        if content is None:
+            continue
+        text = content.decode("utf-8", errors="replace")
+        for raw_target in _LINK_RE.findall(_reference_text(text)):
+            target = unquote(
+                raw_target.strip().strip("<>").split(maxsplit=1)[0].split("#", maxsplit=1)[0]
+            )
+            if not target or "://" in target or target.startswith(("mailto:", "#")):
+                continue
+            candidates = (
+                posixpath.normpath(target),
+                posixpath.normpath(posixpath.join(posixpath.dirname(source), target)),
+            )
+            exists = False
+            for candidate in candidates:
+                if candidate.startswith(("../", "/")) or candidate in {"..", "."}:
+                    continue
+                state = snapshots.get(candidate)
+                observed = (
+                    cast("Mapping[str, object]", state) if isinstance(state, Mapping) else None
+                )
+                if observed is not None and observed.get("kind") in {"regular", "directory"}:
+                    exists = True
+                    break
+            if not exists:
+                findings.append(
+                    _finding(
+                        "AH-REFERENCE-MISSING",
+                        source,
+                        "Markdown link",
+                        "local Markdown link target is missing or outside the repository",
+                        "repair the link or add the contained repository target",
+                    )
+                )
     return findings
 
 
@@ -753,6 +840,7 @@ def run_validate(
     findings = _managed_findings(request, resources)
     findings.extend(_layout_findings(snapshots, policy))
     findings.extend(_shape_findings(snapshots, policy))
+    findings.extend(_reference_findings(snapshots, policy))
     findings.extend(_credential_findings(snapshots, policy))
     findings.extend(_integration_findings(request, snapshots))
     return {"findings": findings}

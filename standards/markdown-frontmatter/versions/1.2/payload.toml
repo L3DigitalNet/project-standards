@@ -160,7 +160,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/frontmatter.py"
 media_type = "text/x-python"
-digest = "sha256:9d3ea9a3ce410b8bd69069bd74a650df1dbf08e0b7f924644e346c06c8088f4d"
+digest = "sha256:8e14e9ee820a776ebc9289773310be3fcaeab2159df7d6b37033f14154e649c9"
 
 [[resources]]
 id = "provider-input"
@@ -188,7 +188,7 @@ id = "provider-mutation-plan"
 role = "provider-resource"
 path = "schemas/mutation-plan.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:af01bbf7d718f11f46c0808770f0abf1d46259c6058a8cfcd6ece375e3a2ea29"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
 
 [[resources]]
 id = "provider-migration-report"
@@ -300,7 +300,7 @@ effect = "mutation-plan"
 entrypoint = "payload:provider-code#run_fix"
 input_schema = "provider-input"
 output_schema = "provider-mutation-plan"
-resources = []
+resources = ["frontmatter-schema"]
 
 [[providers]]
 id = "migrate-legacy"

@@ -19,19 +19,21 @@ from datetime import date
 from pathlib import Path
 from typing import NoReturn, cast
 
-from project_standards.control_plane.cli import build_planner_request
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    selected_command,
+)
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import apply_authoring_plan
+from project_standards.control_plane.locking import LockMode
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
     invoke_provider,
 )
-from project_standards.control_plane.resolution import resolve_packages
 from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot, SnapshotEntry
-from project_standards.control_plane.state import StateKind, detect_control_plane_state
-from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import SafeRelativePath
 from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderOperation
 from project_standards.specs.commands.extract import extract_slice
@@ -75,42 +77,10 @@ class _SpecRuntime:
     effective_config: JsonObject | None = None
 
 
-def _resolve_runtime(
-    repo: Path,
-    distribution: InstalledDistribution | None,
-) -> _SpecRuntime:
-    try:
-        root = repo.resolve(strict=True)
-        installed = distribution or InstalledDistribution.current()
-        state = detect_control_plane_state(root, tool_release=installed.tool_release.value)
-        if state.kind in {StateKind.UNINITIALIZED, StateKind.LEGACY_ONLY}:
-            return _SpecRuntime(root)
-        if state.kind is not StateKind.INITIALIZED:
-            raise ConfigError(state.detail or f"control-plane state is {state.kind.value}")
-        planner = build_planner_request(root, installed, frozenset())
-        resolution = resolve_packages(planner.resolution)
-        package = next(
-            (item for item in resolution.packages if item.standard_id == "project-spec"),
-            None,
-        )
-        if package is None:
-            raise ConfigError("project-spec package is disabled or not selected")
-        payload = next(
-            (
-                item
-                for item in planner.payloads
-                if item.manifest.payload.standard == "project-spec"
-                and item.manifest.payload.version == package.applied.resolved
-            ),
-            None,
-        )
-        if payload is None:
-            raise ConfigError("selected project-spec payload is unavailable")
-        return _SpecRuntime(root, payload, package.effective_config)
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
-        if isinstance(exc, ConfigError):
-            raise
-        raise ConfigError(str(exc)) from exc
+def _runtime(repo: Path, selected: SelectedCommandPackage | None) -> _SpecRuntime:
+    if selected is None:
+        return _SpecRuntime(repo.resolve(strict=True))
+    return _SpecRuntime(selected.repo, selected.payload, selected.effective_config)
 
 
 def _read(path: Path) -> str:
@@ -1227,6 +1197,34 @@ def _run_upgrade(argv: list[str], runtime: _SpecRuntime) -> int:
 _VERBS = frozenset({"validate", "lint", "extract", "next", "new", "upgrade"})
 
 
+def _explicit_config(argv: list[str]) -> Path | None:
+    """Return an operator-typed debug config without interpreting verb syntax."""
+    for index, argument in enumerate(argv):
+        if argument == "--config" and index + 1 < len(argv):
+            return Path(argv[index + 1])
+        if argument.startswith("--config="):
+            value = argument.removeprefix("--config=")
+            if not value:
+                raise CommandResolutionError("--config requires a non-empty path")
+            return Path(value)
+    return None
+
+
+def _operation_lock_mode(verb: str, argv: list[str]) -> LockMode:
+    """Select exclusivity from the command's actual write authorization."""
+    if verb == "new":
+        return LockMode.READ if "--stdout" in argv else LockMode.WRITE
+    if verb == "upgrade":
+        writes = any(
+            argument in {"--in-place", "-i", "--output", "-o"}
+            or argument.startswith("--output=")
+            or (argument.startswith("-o") and len(argument) > 2)
+            for argument in argv
+        )
+        return LockMode.WRITE if writes else LockMode.READ
+    return LockMode.READ
+
+
 def run(
     argv: list[str],
     *,
@@ -1245,23 +1243,45 @@ def run(
         print(f"error: unknown spec verb {verb!r}", file=sys.stderr)
         return 2
     try:
-        runtime = _resolve_runtime(repo or Path.cwd(), distribution)
-        if verb == "validate":
-            return _run_validate(rest, runtime)
-        if verb == "lint":
-            return _run_lint(rest, runtime)
-        if verb == "extract":
-            return _run_extract(rest, runtime)
-        if verb == "next":
-            return _run_next(rest, runtime)
-        if verb == "new":
-            return _run_new(rest, runtime)
-        if verb == "upgrade":
-            return _run_upgrade(rest, runtime)
-        raise AssertionError(f"unhandled spec verb: {verb}")
+        root = repo or Path.cwd()
+        mode = _operation_lock_mode(verb, rest)
+        with selected_command(
+            root,
+            "project-spec",
+            distribution,
+            mode=mode,
+            explicit_legacy=_explicit_config(rest),
+        ) as selected:
+            runtime = _runtime(root, selected)
+            if verb == "validate":
+                return _run_validate(rest, runtime)
+            if verb == "lint":
+                return _run_lint(rest, runtime)
+            if verb == "extract":
+                return _run_extract(rest, runtime)
+            if verb == "next":
+                return _run_next(rest, runtime)
+            if verb == "new":
+                return _run_new(rest, runtime)
+            if verb == "upgrade":
+                return _run_upgrade(rest, runtime)
+            raise AssertionError(f"unhandled spec verb: {verb}")
+    except CommandResolutionError as exc:
+        message = str(exc)
+        if "disabled" in message or "not present" in message:
+            message = "project-spec package is disabled or not selected"
+        elif "payload is unavailable" in message:
+            message = "selected project-spec payload is unavailable"
+        if verb in {"new", "upgrade"} and "--json" in rest:
+            return _emit_new_failure(True, NewError("config_error", message))
+        print(f"error: {message}", file=sys.stderr)
+        return 2
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except SpecParseError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2

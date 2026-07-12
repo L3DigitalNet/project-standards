@@ -90,6 +90,11 @@ def test_render_emits_selected_provider_content_without_planning_inputs_or_write
     distribution = installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
     set_standard_enabled(repo, "alpha", True)
+    extension = repo / ".standards/extensions/alpha/options.toml"
+    extension.parent.mkdir(parents=True)
+    extension.write_text("consumer = true\n", encoding="utf-8")
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+    capsys.readouterr()
     _use_distribution(monkeypatch, distribution)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
@@ -100,7 +105,6 @@ def test_render_emits_selected_provider_content_without_planning_inputs_or_write
     assert project_standards_main(["render", "alpha", "render-alpha", "--repo", str(repo)]) == 0
 
     assert capsys.readouterr().out == "[alpha]\nenabled = true\n"
-    assert not (repo / "config/alpha-options.toml").exists()
     assert {
         path.relative_to(repo).as_posix(): path.read_bytes()
         for path in repo.rglob("*")
@@ -126,6 +130,11 @@ def test_render_json_and_selection_boundary_failures(
     assert '"ok": false' in capsys.readouterr().out
 
     set_standard_enabled(repo, "alpha", True)
+    extension = repo / ".standards/extensions/alpha/options.toml"
+    extension.parent.mkdir(parents=True)
+    extension.write_text("consumer = true\n", encoding="utf-8")
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+    capsys.readouterr()
     assert (
         project_standards_main(["render", "alpha", "render-alpha", "--repo", str(repo), "--json"])
         == 0

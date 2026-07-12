@@ -28,7 +28,6 @@ from project_standards.control_plane.planner import (
     ReconciliationPlan,
     plan_reconciliation,
 )
-from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.control_plane.recovery import (
     RecoveryPlan,
     RecoveryRequest,
@@ -40,7 +39,6 @@ from project_standards.control_plane.resolution import (
     MajorAuthorization,
     ResolutionPayload,
     ResolutionRequest,
-    resolve_packages,
 )
 from project_standards.control_plane.state import (
     ControlPlaneState,
@@ -128,37 +126,48 @@ def build_planner_request(
     repo: Path,
     distribution: InstalledDistribution,
     allowed_majors: frozenset[MajorAuthorization],
+    *,
+    state: ControlPlaneState | None = None,
 ) -> PlannerRequest:
-    state = detect_control_plane_state(repo, tool_release=distribution.tool_release.value)
+    selected_state = state or detect_control_plane_state(
+        repo, tool_release=distribution.tool_release.value
+    )
     if (
-        state.kind is not StateKind.INITIALIZED
-        or state.config is None
-        or state.catalog is None
-        or state.lock is None
+        selected_state.kind is not StateKind.INITIALIZED
+        or selected_state.config is None
+        or selected_state.catalog is None
+        or selected_state.lock is None
     ):
-        raise ControlPlaneError(state.detail or f"control-plane state is {state.kind.value}")
+        raise ControlPlaneError(
+            selected_state.detail or f"control-plane state is {selected_state.kind.value}"
+        )
     installed = distribution.load_catalog(
-        state.config.project_standards.catalog,
-        recorded_release=state.catalog.project_standards.release,
+        selected_state.config.project_standards.catalog,
+        recorded_release=selected_state.catalog.project_standards.release,
     )
     refresh = plan_catalog_refresh(
-        state.catalog,
+        selected_state.catalog,
         distribution.consumer_catalog(
-            state.config.project_standards.catalog,
+            selected_state.config.project_standards.catalog,
             installed=installed,
         ),
-        state.config,
-        state.lock,
+        selected_state.config,
+        selected_state.lock,
     )
     resolution = ResolutionRequest(
-        desired=state.config,
+        desired=selected_state.config,
         catalog=refresh.installed,
-        previous_lock=state.lock,
+        previous_lock=selected_state.lock,
         allowed_majors=allowed_majors,
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
-    return PlannerRequest(repo, resolution, installed.payloads, catalog_refresh=refresh)
+    return PlannerRequest(
+        selected_state.repo,
+        resolution,
+        installed.payloads,
+        catalog_refresh=refresh,
+    )
 
 
 def run_render(
@@ -184,40 +193,30 @@ def run_render(
     json_mode = cast("bool", args.json)
     standard_id = cast("str", args.standard_id)
     provider_id = cast("str", args.provider_id)
+    from project_standards.control_plane.command_resolution import (
+        CommandResolutionError,
+        invoke_selected_provider,
+        selected_command,
+    )
+    from project_standards.control_plane.locking import LockMode
+
     try:
         repo = cast("Path", args.repo).resolve()
-        selected_distribution = distribution or InstalledDistribution.current()
-        planner = build_planner_request(repo, selected_distribution, frozenset())
-        resolution = resolve_packages(planner.resolution)
-        package = next(
-            (item for item in resolution.packages if item.standard_id == standard_id),
-            None,
-        )
-        if package is None:
-            raise ControlPlaneError("render standard must be selected and enabled")
-        payload = next(
-            (
-                item
-                for item in planner.payloads
-                if item.manifest.payload.standard == standard_id
-                and item.manifest.payload.version == package.applied.resolved
-            ),
-            None,
-        )
-        if payload is None:
-            raise ControlPlaneError("selected render payload is unavailable")
-        result = invoke_provider(
-            ProviderInvocation(
-                repo=repo,
-                payload=payload,
-                standard_id=standard_id,
-                version=package.applied.resolved,
+        with selected_command(
+            repo,
+            standard_id,
+            distribution,
+            mode=LockMode.READ,
+            require_reconciled=False,
+        ) as selected:
+            if selected is None:
+                raise ControlPlaneError("render requires unified package authority")
+            result = invoke_selected_provider(
+                selected,
+                ProviderOperation.RENDER,
+                {},
                 provider_id=provider_id,
-                operation=ProviderOperation.RENDER,
-                effective_config=package.effective_config,
-                snapshots={},
             )
-        )
         if result.effect is not ProviderEffect.CONTENT or result.content is None:
             raise ControlPlaneError("render provider did not return content")
         try:
@@ -239,7 +238,14 @@ def run_render(
         else:
             sys.stdout.write(content)
         return 0
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+    except (
+        CommandResolutionError,
+        ControlPlaneError,
+        PackageContractError,
+        OSError,
+        RuntimeError,
+        ValueError,
+    ) as exc:
         return _emit_error(json_mode, "CP-RENDER", str(exc), exit_code=2)
 
 
@@ -704,11 +710,11 @@ def validate_repository(
         if state.kind is StateKind.UNINITIALIZED:
             return 0
         if state.kind is StateKind.LEGACY_ONLY:
-            print(
-                "warning: legacy .project-standards.yml remains read-only; "
-                "migrate before using the V5 control plane",
-                file=sys.stderr,
+            from project_standards.control_plane.command_resolution import (
+                emit_legacy_authority_warning,
             )
+
+            emit_legacy_authority_warning()
             return 0
         if state.kind is not StateKind.INITIALIZED:
             print(

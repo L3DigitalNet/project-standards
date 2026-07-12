@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -9,9 +11,12 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.specs.cli as spec_cli
 from project_standards.control_plane.bootstrap import initialize_control_plane
+from project_standards.control_plane.cli import run as reconcile
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
+from project_standards.control_plane.locking import LockMode
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
 from project_standards.control_plane.snapshot import RepositorySnapshot
 from project_standards.package_contract.integrity import validate_payload_integrity
@@ -24,6 +29,24 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[1]
 _FAMILY = _ROOT / "standards/project-spec"
 _PAYLOAD = _FAMILY / "versions/1.1"
+
+
+@pytest.mark.parametrize(
+    ("verb", "argv", "expected"),
+    [
+        ("new", ["--stdout"], LockMode.READ),
+        ("new", ["spec.md"], LockMode.WRITE),
+        ("upgrade", ["spec.md", "--to", "standard"], LockMode.READ),
+        ("upgrade", ["spec.md", "--to", "standard", "-i"], LockMode.WRITE),
+        ("upgrade", ["spec.md", "--to", "standard", "-o", "out.md"], LockMode.WRITE),
+    ],
+)
+def test_authoring_lock_mode_tracks_actual_write_authorization(
+    verb: str,
+    argv: list[str],
+    expected: LockMode,
+) -> None:
+    assert spec_cli._operation_lock_mode(verb, argv) is expected  # pyright: ignore[reportPrivateUsage]
 
 
 def _payload() -> InstalledPayload:
@@ -75,6 +98,12 @@ role = "default"
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 
+def _enable_selected(repo: Path, distribution: InstalledDistribution) -> None:
+    set_standard_enabled(repo, "project-spec", True)
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        assert reconcile(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+
+
 def test_validate_routes_through_enabled_selected_payload(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -83,7 +112,7 @@ def test_validate_routes_through_enabled_selected_payload(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "docs/specs/example.md"
     spec.parent.mkdir(parents=True)
     spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
@@ -102,7 +131,7 @@ def test_selected_validate_and_lint_do_not_call_legacy_validators(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "spec.md"
     spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
 
@@ -114,6 +143,45 @@ def test_selected_validate_and_lint_do_not_call_legacy_validators(
 
     assert run(["validate", "spec.md"], repo=repo, distribution=distribution) == 0
     assert run(["lint", "spec.md"], repo=repo, distribution=distribution) == 0
+
+
+def test_selected_validate_rejects_explicit_legacy_config_override(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+    spec = repo / "spec.md"
+    spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
+    legacy = repo / "debug.yml"
+    legacy.write_text("spec: {version: '1.1'}\n", encoding="utf-8")
+
+    assert (
+        run(
+            ["validate", "spec.md", "--config", str(legacy)],
+            repo=repo,
+            distribution=distribution,
+        )
+        == 2
+    )
+    assert "explicit legacy override" in capsys.readouterr().err
+
+
+def test_selected_validate_rejects_empty_explicit_config(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    assert run(["validate", "--config="], repo=repo, distribution=distribution) == 2
+    assert "--config requires a non-empty path" in capsys.readouterr().err
 
 
 def test_selected_command_refuses_a_disabled_project_spec_package(
@@ -170,7 +238,7 @@ def test_extract_uses_the_selected_provider_and_preserves_json(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "spec.md"
     spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
 
@@ -198,7 +266,7 @@ def test_next_uses_the_selected_provider_and_preserves_json(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "spec.md"
     spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
 
@@ -224,7 +292,7 @@ def test_selected_next_preserves_invalid_prefix_refusal(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "spec.md"
     spec.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
 
@@ -244,7 +312,7 @@ def test_selected_validate_reports_provider_config_refusal_without_traceback(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     config = repo / ".standards/config.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
@@ -258,7 +326,7 @@ def test_selected_validate_reports_provider_config_refusal_without_traceback(
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "spec.reference_prefixes entry 'FR' is a canonical spec-local prefix" in captured.err
+    assert "unified config has not been reconciled" in captured.err
     assert "Traceback" not in captured.err
 
 
@@ -272,7 +340,7 @@ def test_selected_upgrade_reports_provider_config_refusal_without_traceback(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     config = repo / ".standards/config.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
@@ -290,7 +358,7 @@ def test_selected_upgrade_reports_provider_config_refusal_without_traceback(
         assert json.loads(captured.out)["code"] == "config_error"
     else:
         assert captured.out == ""
-        assert "canonical spec-local prefix" in captured.err
+        assert "unified config has not been reconciled" in captured.err
     assert "Traceback" not in captured.err
 
 
@@ -302,7 +370,7 @@ def test_selected_validate_json_preserves_line_and_locus(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     spec = repo / "bad.md"
     spec.write_bytes((_ROOT / "tests/fixtures/specs/bad_dup_id.md").read_bytes())
 
@@ -323,7 +391,7 @@ def test_new_stdout_uses_render_preview_and_writes_nothing(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
         for path in repo.rglob("*")
@@ -373,7 +441,7 @@ def test_new_write_applies_the_selected_scaffold_plan_through_the_executor(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     target = repo / "docs/specs/new.md"
 
     def fail_direct_write(*_args: object, **_kwargs: object) -> object:
@@ -401,7 +469,7 @@ def test_selected_new_write_does_not_invoke_the_preview_provider(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     calls: list[str] = []
     from project_standards.specs import cli as spec_cli
 
@@ -432,7 +500,7 @@ def test_selected_new_force_on_missing_target_remains_a_create(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
 
     assert (
         run(
@@ -455,7 +523,7 @@ def test_selected_new_refuses_explicit_absolute_target_outside_repo(
     outside = tmp_path / "outside/new.md"
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
 
     def fail_direct_write(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("legacy direct writer executed")
@@ -484,7 +552,7 @@ def test_selected_new_refuses_relative_escape_and_in_tree_symlink_parent(
     (repo / "link").symlink_to(outside, target_is_directory=True)
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
 
     assert (
         run(
@@ -515,7 +583,7 @@ def test_selected_new_file_mode_respects_umask(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     target = repo / "new.md"
 
     previous = os.umask(0o027)
@@ -542,7 +610,7 @@ def test_upgrade_preview_uses_render_provider_and_writes_nothing(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     original = (_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes()
     source.write_bytes(original)
@@ -573,7 +641,7 @@ def test_upgrade_in_place_applies_selected_plan_through_executor(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     source.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
     source.chmod(0o640)
@@ -605,7 +673,7 @@ def test_upgrade_in_place_refuses_to_replace_a_concurrent_edit(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     source.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
     concurrent = source.read_text(encoding="utf-8") + "\n<!-- concurrent edit -->\n"
@@ -641,7 +709,7 @@ def test_selected_upgrade_write_does_not_invoke_the_preview_provider(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     source.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
     calls: list[str] = []
@@ -674,7 +742,7 @@ def test_upgrade_output_applies_selected_plan_through_executor(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     source.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
     output = repo / "upgraded.md"
@@ -703,7 +771,7 @@ def test_selected_upgrade_force_on_missing_output_remains_a_create(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     source.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
 
@@ -738,7 +806,7 @@ def test_selected_read_commands_refuse_absolute_paths_outside_consumer_root(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     outside = tmp_path / "outside.md"
     outside.write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
 
@@ -763,7 +831,7 @@ def test_selected_validate_refuses_traversal(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     (tmp_path / "outside.md").write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
 
     assert run(["validate", path], repo=repo, distribution=distribution) == 2
@@ -780,7 +848,7 @@ def test_selected_validate_refuses_discovered_and_explicit_symlink_escape(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     outside = tmp_path / "outside.md"
     outside.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
     discovered = repo / "docs/specs/linked.md"
@@ -802,7 +870,7 @@ def test_selected_validate_uses_captured_bytes_if_path_changes_after_snapshot(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     victim = repo / "victim.md"
     victim.write_text("not a valid specification\n", encoding="utf-8")
     outside = tmp_path / "outside.md"
@@ -849,7 +917,7 @@ def test_selected_read_commands_refuse_symlinked_parent(
     (repo / "link").symlink_to(outside, target_is_directory=True)
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
 
     assert run(argv, repo=repo, distribution=distribution) == 2
     captured = capsys.readouterr()
@@ -865,7 +933,7 @@ def test_selected_upgrade_output_equal_to_source_is_flag_conflict_even_with_forc
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     original = (_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes()
     source.write_bytes(original)
@@ -899,7 +967,7 @@ def test_selected_upgrade_output_hard_linked_to_source_is_flag_conflict(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     source = repo / "spec.md"
     original = (_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes()
     source.write_bytes(original)
@@ -936,7 +1004,7 @@ def test_selected_upgrade_refuses_absolute_output_outside_consumer_root(
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     (repo / "spec.md").write_bytes((_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes())
     outside = tmp_path / "outside.md"
 
@@ -964,7 +1032,7 @@ def test_selected_extract_translates_malformed_document_refusal_without_tracebac
     repo.mkdir()
     distribution = _installed_distribution(tmp_path)
     initialize_control_plane(repo, "5", distribution=distribution)
-    set_standard_enabled(repo, "project-spec", True)
+    _enable_selected(repo, distribution)
     (repo / "bad.md").write_text("---\nspec_id: [broken\n---\n", encoding="utf-8")
     argv = ["extract", "bad.md", "§7"]
     if json_mode:

@@ -100,13 +100,24 @@ class MutationActionSchema(StrictModel):
         return base64.b64decode(self.content_base64, validate=True)
 
 
+class MutationDiagnosticSchema(StrictModel):
+    """Content-safe package diagnostic accompanying an authoring plan."""
+
+    code: str
+    severity: Literal["error", "warning"]
+    path: SafeRelativePath
+    message: str
+    refusal: bool = False
+
+
 class MutationPlanSchema(StrictModel):
-    """Typed mutation intent returned by a package provider."""
+    """Typed mutation intent and diagnostics returned by a package provider."""
 
     schema_version: Literal["1.0"]
     standard_id: KebabId
     version: PackageVersion
     actions: list[MutationActionSchema] = Field(default_factory=list)
+    diagnostics: list[MutationDiagnosticSchema] = Field(default_factory=list)
 
 
 class PublicFindingSchema(StrictModel):

@@ -38,6 +38,7 @@ import json
 import os
 import re
 import sys
+from collections.abc import Mapping
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, cast
@@ -47,21 +48,19 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 from project_standards._version import package_version
-from project_standards.control_plane.codec import (
-    parse_catalog,
-    parse_config,
-    parse_lock,
-    semantic_digest,
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    emit_legacy_authority_warning,
+    explicit_legacy_argument,
+    resolve_selected_package,
+    selected_command,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
-from project_standards.control_plane.locking import (
-    ControlPlaneBusyError,
-    LockMode,
-    control_plane_lock,
-)
-from project_standards.control_plane.models import CentralLock, ConsumerCatalog, DesiredConfig
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.locking import LockMode
+from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.providers import read_locked_input_bytes
-from project_standards.package_contract.payload import JsonValue, PayloadAvailability
 from project_standards.registry import Registry, RegistryError, load_registry
 
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
@@ -72,7 +71,6 @@ from project_standards.registry import Registry, RegistryError, load_registry
 _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", re.DOTALL)
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
-_legacy_warning_emitted = False
 
 
 class FrontmatterParseError(ValueError):
@@ -724,8 +722,8 @@ def _unified_string_list(value: object, *, option: str, default: list[str]) -> l
     return list(cast("list[str]", items))
 
 
-def _config_from_unified_options(
-    options: dict[str, object],
+def config_from_unified_options(
+    options: Mapping[str, object],
     *,
     selected_package_version: str,
     custom_schema_bytes: bytes | None = None,
@@ -794,71 +792,6 @@ def _config_from_unified_options(
     )
 
 
-def _validate_unified_state(
-    desired: DesiredConfig,
-    catalog: ConsumerCatalog,
-    lock: CentralLock,
-) -> None:
-    headers = (
-        desired.project_standards,
-        catalog.project_standards,
-        lock.project_standards,
-    )
-    if len({header.catalog for header in headers}) != 1:
-        raise ConfigError("unified config, catalog, and lock disagree on catalog major")
-    if (
-        lock.project_standards.release != catalog.project_standards.release
-        or lock.project_standards.catalog_digest != catalog.project_standards.digest
-    ):
-        raise ConfigError("central lock does not match committed catalog lineage")
-    desired_value = cast(JsonValue, desired.model_dump(mode="json"))
-    if lock.project_standards.config_digest != semantic_digest(desired_value):
-        raise ConfigError("central lock config digest does not match unified config")
-
-    for standard_id, applied in lock.standards.items():
-        selected = desired.standards.get(standard_id)
-        if selected is None or not selected.enabled:
-            raise ConfigError(f"central lock applies undesired package {standard_id}")
-        if applied.requested != selected.version:
-            raise ConfigError(f"central lock selector does not match unified config: {standard_id}")
-        if not isinstance(selected.version, str) and applied.resolved != selected.version:
-            raise ConfigError(f"central lock does not preserve exact pin: {standard_id}")
-        standard = catalog.standards.get(standard_id)
-        entry = standard.versions.get(applied.resolved.value) if standard is not None else None
-        if entry is None:
-            raise ConfigError(f"central lock selects an unavailable catalog version: {standard_id}")
-        if entry.availability is not PayloadAvailability.CONSUMER:
-            raise ConfigError(f"central lock selects a non-consumer package: {standard_id}")
-        if applied.payload_digest != entry.payload_digest:
-            raise ConfigError(f"central lock payload digest does not match catalog: {standard_id}")
-    for standard_id, selected in desired.standards.items():
-        if selected.enabled and standard_id not in lock.standards:
-            raise ConfigError(f"enabled package is absent from the applied lock: {standard_id}")
-
-
-def _load_unified_state(root: Path) -> tuple[DesiredConfig, ConsumerCatalog, CentralLock]:
-    try:
-        with control_plane_lock(root, LockMode.READ) as control:
-            required = ("config.toml", "catalog.toml", "lock.toml")
-            if any(control.file_kind(name) != "regular" for name in required):
-                raise ConfigError("unified control plane is not fully initialized")
-            if control.file_kind(".catalog-refresh.previous.toml") != "missing":
-                raise ConfigError("unified control plane has interrupted catalog refresh state")
-            desired = parse_config(control.read_bytes("config.toml"))
-            catalog = parse_catalog(control.read_bytes("catalog.toml"))
-            lock = parse_lock(control.read_bytes("lock.toml"))
-            if not control.is_current():
-                raise ConfigError("unified control plane changed during inspection")
-    except ConfigError:
-        raise
-    except ControlPlaneBusyError as exc:
-        raise ConfigError("unified control plane is busy") from exc
-    except (ControlPlaneError, OSError, ValueError) as exc:
-        raise ConfigError(f"cannot load initialized unified control plane: {exc}") from exc
-    _validate_unified_state(desired, catalog, lock)
-    return desired, catalog, lock
-
-
 def _custom_schema_bytes(
     root: Path,
     schema_path: str,
@@ -884,6 +817,8 @@ def load_cli_config(
     *,
     explicit_legacy: Path | None,
     allow_unlocked_custom_schema: bool = False,
+    distribution: InstalledDistribution | None = None,
+    selected_package: SelectedCommandPackage | None = None,
 ) -> tuple[ProjectConfig, bool]:
     """Resolve unified authority by repository root or an explicit legacy/debug file."""
     if repo.is_symlink():
@@ -895,29 +830,35 @@ def load_cli_config(
     if not root.is_dir() or root.is_symlink():
         raise ConfigError(f"repository root is not a regular directory: {repo}")
 
-    control = root / ".standards"
     default_legacy = root / ".project-standards.yml"
-    if control.exists() or control.is_symlink():
-        if explicit_legacy is not None or default_legacy.exists() or default_legacy.is_symlink():
-            raise ConfigError("dual authority: unified and legacy configuration both exist")
-        desired, _catalog, lock = _load_unified_state(root)
-        selected = desired.standards.get("markdown-frontmatter")
-        if selected is None or not selected.enabled:
-            raise ConfigError("markdown-frontmatter is not enabled in unified config")
-        applied = lock.standards.get("markdown-frontmatter")
-        if applied is None:
-            raise ConfigError("markdown-frontmatter is absent from the applied lock")
-        options = cast("dict[str, object]", selected.config)
+    try:
+        selected = selected_package or resolve_selected_package(
+            root,
+            "markdown-frontmatter",
+            distribution,
+            explicit_legacy=explicit_legacy,
+        )
+    except CommandResolutionError as exc:
+        message = str(exc)
+        if "legacy and unified" in message or "explicit legacy override" in message:
+            raise ConfigError(f"dual authority: {message}") from exc
+        if "disabled" in message or "not present" in message:
+            raise ConfigError("markdown-frontmatter is not enabled in unified config") from exc
+        if "payload is unavailable" in message:
+            raise ConfigError("markdown-frontmatter selected payload is unavailable") from exc
+        raise ConfigError(message) from exc
+    if selected is not None:
+        options = cast("dict[str, object]", selected.effective_config)
         schema_content: bytes | None = None
         if options.get("schema") == "custom" and not allow_unlocked_custom_schema:
             schema_path = options.get("schema_path")
             if not isinstance(schema_path, str):
                 raise ConfigError("custom frontmatter schema selection requires schema_path")
-            schema_content = _custom_schema_bytes(root, schema_path, lock)
+            schema_content = _custom_schema_bytes(root, schema_path, selected.lock)
         return (
-            _config_from_unified_options(
+            config_from_unified_options(
                 options,
-                selected_package_version=applied.resolved.value,
+                selected_package_version=selected.resolved.value,
                 custom_schema_bytes=schema_content,
             ),
             False,
@@ -929,15 +870,7 @@ def load_cli_config(
 
 def emit_legacy_config_warning() -> None:
     """Emit the process-wide V5 legacy-authority warning at most once."""
-    global _legacy_warning_emitted
-    if _legacy_warning_emitted:
-        return
-    print(
-        "warning: legacy .project-standards.yml remains read-only; "
-        "migrate before using the V5 control plane",
-        file=sys.stderr,
-    )
-    _legacy_warning_emitted = True
+    emit_legacy_authority_warning()
 
 
 # ---------------------------------------------------------------------------
@@ -959,9 +892,42 @@ def reconfigure_output_streams() -> None:
             stream.reconfigure(errors="replace")
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
     """CLI entry point; returns an exit code (0 valid / 1 violations / 2 operator error)."""
     reconfigure_output_streams()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None:
+        from project_standards.frontmatter_commands import run_locked_standalone_validate
+
+        return run_locked_standalone_validate(
+            arguments,
+            _selected_package,
+            surface="validate-frontmatter",
+        )
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1008,7 +974,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Suppress success output.",
     )
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     if args.config is not None and not args.config.exists():
         print(f"error: config file not found: {args.config}", file=sys.stderr)
@@ -1018,6 +984,7 @@ def main(argv: list[str] | None = None) -> int:
             Path.cwd(),
             explicit_legacy=args.config,
             allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
         )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)

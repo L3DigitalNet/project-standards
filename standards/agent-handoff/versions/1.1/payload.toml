@@ -190,7 +190,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/agent_handoff.py"
 media_type = "text/x-python"
-digest = "sha256:50cba0a959f0a679bcb3d80f9f1c8a0bba269ad35b8fe99fcc490d38fe5ef8e6"
+digest = "sha256:eab79ba8780c646c60b3ffe4bda1b797315afa4e53b3d11845cd5e462d33ceaf"
 
 [[resources]]
 id = "provider-input"
@@ -218,7 +218,7 @@ id = "provider-mutation-plan"
 role = "provider-resource"
 path = "schemas/mutation-plan.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:af01bbf7d718f11f46c0808770f0abf1d46259c6058a8cfcd6ece375e3a2ea29"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
 
 [[resources]]
 id = "provider-migration-report"

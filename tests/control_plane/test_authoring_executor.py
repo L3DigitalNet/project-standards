@@ -39,15 +39,45 @@ def _action(
     return action
 
 
-def _plan(actions: list[dict[str, object]]) -> MutationPlanSchema:
+def _plan(
+    actions: list[dict[str, object]],
+    *,
+    diagnostics: list[dict[str, object]] | None = None,
+) -> MutationPlanSchema:
     return MutationPlanSchema.model_validate(
         {
             "schema_version": "1.0",
             "standard_id": "markdown-frontmatter",
             "version": "1.2",
             "actions": actions,
+            "diagnostics": diagnostics or [],
         }
     )
+
+
+def test_authoring_executor_rejects_a_plan_with_package_refusal(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    target = repo / "existing.md"
+    target.write_bytes(b"old\n")
+    plan = _plan(
+        [_action(repo, "existing.md", b"new\n", kind="update")],
+        diagnostics=[
+            {
+                "code": "FM-AUTHORING-REFUSED",
+                "severity": "error",
+                "path": "existing.md",
+                "message": "package refused the target",
+                "refusal": True,
+            }
+        ],
+    )
+
+    result = apply_authoring_plan(repo, plan)
+
+    assert result.success is False
+    assert result.error_code == "CP-AUTHORING-PLAN"
+    assert target.read_bytes() == b"old\n"
 
 
 def test_authoring_executor_stages_and_applies_complete_whole_file_plan(

@@ -88,6 +88,15 @@ def test_mutation_plan_carries_complete_bytes_and_snapshot_preconditions() -> No
             "schema_version": "1.0",
             "standard_id": "markdown-frontmatter",
             "version": "1.2",
+            "diagnostics": [
+                {
+                    "code": "FM-AUTHORING-WARNING",
+                    "severity": "warning",
+                    "path": "docs/example.md",
+                    "message": "unknown key was preserved",
+                    "refusal": False,
+                }
+            ],
             "actions": [
                 {
                     "kind": "update",
@@ -105,6 +114,7 @@ def test_mutation_plan_carries_complete_bytes_and_snapshot_preconditions() -> No
     )
 
     assert plan.actions[0].content_bytes == content
+    assert plan.diagnostics[0].path.original == "docs/example.md"
 
     invalid = plan.model_dump(mode="json")
     del cast("list[dict[str, object]]", invalid["actions"])[0]["precondition_digest"]

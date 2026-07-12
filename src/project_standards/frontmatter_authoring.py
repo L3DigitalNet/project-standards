@@ -204,6 +204,45 @@ def plan_frontmatter_fix_entries(
     )
 
 
+def plan_frontmatter_format_entries(
+    entries: tuple[SnapshotEntry, ...],
+    *,
+    version: PackageVersion,
+    token_factory: Callable[[], str] | None,
+    today: str,
+    bump_updated: bool,
+) -> FrontmatterAuthoringPlan:
+    """Return a format-only plan from provider-supplied immutable entries."""
+    return _plan_entries(
+        entries,
+        version=version,
+        format_documents=True,
+        repair_ids=False,
+        valid_doc_types=VALID_DOC_TYPES,
+        token_factory=token_factory,
+        today=today,
+        bump_updated=bump_updated,
+    )
+
+
+def plan_frontmatter_id_fix_entries(
+    entries: tuple[SnapshotEntry, ...],
+    *,
+    version: PackageVersion,
+    valid_doc_types: frozenset[str],
+    token_factory: Callable[[], str] | None,
+) -> FrontmatterAuthoringPlan:
+    """Return an ID-only plan from provider-supplied immutable entries."""
+    return _plan_entries(
+        entries,
+        version=version,
+        format_documents=False,
+        repair_ids=True,
+        valid_doc_types=valid_doc_types,
+        token_factory=token_factory,
+    )
+
+
 def plan_frontmatter_format(
     repo: Path,
     paths: tuple[Path, ...],

@@ -141,7 +141,7 @@ id = "provider-mutation-plan"
 role = "provider-resource"
 path = "schemas/mutation-plan.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:af01bbf7d718f11f46c0808770f0abf1d46259c6058a8cfcd6ece375e3a2ea29"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
 
 [[resources]]
 id = "provider-migration-report"

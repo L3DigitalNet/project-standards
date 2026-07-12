@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- CP01 Tasks 1-14 are complete; execute Task 15 unified command configuration and provider routing next.
+- CP01 Tasks 1-15 are complete; execute Task 16 real package compatibility matrix next.
 - Complete remaining Agent Handoff default-branch integrations from the retirement inventory.
 - After v5 is published, rerun the disposable wheel probes and final operational-dependency search.
 - Keep the release freeze through v5.0.0; SPEC-MT01 Step 07 follows completion of the v5 standards-platform prerequisites.

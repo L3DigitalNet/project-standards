@@ -17,6 +17,13 @@ from pathlib import Path
 from typing import Any, cast
 
 from project_standards._version import package_version
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    explicit_legacy_argument,
+    selected_command,
+)
+from project_standards.control_plane.locking import LockMode
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
@@ -261,8 +268,41 @@ def check_adr_sequence(index: Index) -> list[str]:
     ]
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
     reconfigure_output_streams()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None:
+        from project_standards.frontmatter_commands import run_locked_standalone_validate
+
+        return run_locked_standalone_validate(
+            arguments,
+            _selected_package,
+            surface="validate-references",
+        )
     _base_desc = __doc__ or ""
     parser = argparse.ArgumentParser(
         prog="validate-references",
@@ -284,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--glob", metavar="PATTERN")
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--quiet", "-q", action="store_true")
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     if args.config is not None and not args.config.exists():
         print(f"error: config file not found: {args.config}", file=sys.stderr)
@@ -294,6 +334,7 @@ def main(argv: list[str] | None = None) -> int:
             Path.cwd(),
             explicit_legacy=args.config,
             allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
         )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)

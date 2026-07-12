@@ -28,7 +28,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:38f523980e18ce9fbfbae23a9a797a6aec863e368269e2fb59365ce82282c891",
+        "sha256:aae228bd78ce0c1b646770f4323737f45db09bd0a294a7265804fd5952b1e3f9",
     ),
     "cli-documentation": (
         "CLI Documentation Standard",
@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:ba2bce2d7344db187444c2eaff9f276e5c878afa81bdb97c63133a00d2cd353d",
+        "sha256:7587b4a6dd9d4dc5273ea9b7f8f5c07f31805f5bf3545b342e3de5422d7d744c",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:0999323cc5782b5d312348b70d6fbe4c809969f2510c888acafd22a5cd815c76",
+        "sha256:40779c1caeeaeaedee288b3bbc78aca37b4475393acee9a47e71e8f6f1e1653a",
     ),
     "python-coding": (
         "Python Coding Standard",

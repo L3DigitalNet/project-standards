@@ -135,6 +135,50 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return venv
 
 
+@pytest.fixture(scope="module")
+def selected_command_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Build the current catalog as a v5 wheel for offline public-command routing."""
+    tmp = tmp_path_factory.mktemp("selected-command-wheel")
+    source = tmp / "source"
+    shutil.copytree(
+        Path.cwd(),
+        source,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".venv",
+            ".pytest_cache",
+            "__pycache__",
+            "build",
+            "dist",
+        ),
+    )
+    pyproject = source / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace(
+            'version = "4.3.0"',
+            'version = "5.0.0"',
+            1,
+        ),
+        encoding="utf-8",
+    )
+    wheel_dir = tmp / "wheel"
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(wheel_dir)],
+        cwd=source,
+        check=True,
+        capture_output=True,
+    )
+    (wheel,) = wheel_dir.glob("*.whl")
+    venv = tmp / "venv"
+    subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
+    subprocess.run(
+        [str(venv / "bin/python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        check=True,
+        capture_output=True,
+    )
+    return venv
+
+
 def _run(venv: Path, cmd: str, *args: str) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "NO_COLOR": "1", "COLUMNS": "100"}
     return subprocess.run([str(venv / "bin" / cmd), *args], capture_output=True, text=True, env=env)
@@ -273,3 +317,120 @@ def test_package_release_subcommand_via_wrapper(installed_venv: Path) -> None:
 def test_agent_handoff_nested_subcommand_via_wrapper(installed_venv: Path) -> None:
     proc = _run(installed_venv, "project-standards", "agent-handoff", "--help")
     assert proc.returncode == 0, proc.stderr
+
+
+def test_selected_provider_commands_run_from_wheel_with_network_denied(
+    selected_command_venv: Path,
+    tmp_path: Path,
+) -> None:
+    script = r"""
+import os
+import socket
+import sys
+from pathlib import Path
+
+from project_standards.cli import main
+from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.format_frontmatter import main as format_frontmatter
+from project_standards.validate_frontmatter import main as validate_frontmatter
+from project_standards.validate_id import main as validate_id
+from project_standards.validate_references import main as validate_references
+
+
+def deny_network(*_args, **_kwargs):
+    raise AssertionError("provider command attempted network access")
+
+
+socket.socket = deny_network
+base = Path(sys.argv[1]).resolve()
+
+
+def initialize(name, standards):
+    repo = base / name
+    repo.mkdir()
+    assert main(["init", "--catalog", "5", "--repo", str(repo)]) == 0
+    for standard in standards:
+        set_standard_enabled(repo, standard, True)
+    assert main(["reconcile", "--apply", "--repo", str(repo)]) == 0
+    return repo
+
+
+agent = initialize("agent", ["agent-handoff"])
+for command in ("validate", "size-report", "shape-check", "drift-check", "legacy-report"):
+    assert main(["agent-handoff", command, "--repo", str(agent), "--json"]) == 0
+assert main(["agent-handoff", "upgrade", "--repo", str(agent), "--json"]) == 0
+
+frontmatter = initialize("frontmatter", ["markdown-frontmatter"])
+docs = frontmatter / "docs"
+docs.mkdir()
+note = docs / "note.md"
+note.write_text(
+    "---\n"
+    "schema_version: '1.1'\n"
+    "id: wrong\n"
+    "title: Hello World\n"
+    "description: A note.\n"
+    "doc_type: note\n"
+    "status: draft\n"
+    "created: '2026-07-12'\n"
+    "updated: '2026-07-12'\n"
+    "tags: []\n"
+    "aliases: []\n"
+    "related: []\n"
+    "---\n# Hello World\n",
+    encoding="utf-8",
+)
+os.chdir(frontmatter)
+assert main(["fix", "--quiet", "docs/note.md"]) == 0
+assert main(["validate", "--quiet", "docs/note.md"]) == 0
+assert validate_frontmatter(["--quiet", "docs/note.md"]) == 0
+assert validate_id(["--quiet", "docs/note.md"]) == 0
+assert validate_references(["--quiet", "docs/note.md"]) == 0
+assert format_frontmatter(["--check", "--quiet", "docs/note.md"]) == 0
+standalone = docs / "standalone.md"
+standalone.write_text(
+    note.read_text(encoding="utf-8").replace("id: 'note-", "id: 'wrong-", 1),
+    encoding="utf-8",
+)
+assert validate_id(["--fix", "--quiet", "docs/standalone.md"]) == 0
+standalone.write_text(
+    standalone.read_text(encoding="utf-8").replace("title: 'Hello World'", "title: Hello World"),
+    encoding="utf-8",
+)
+assert format_frontmatter(["--write", "--quiet", "docs/standalone.md"]) == 0
+
+set_standard_enabled(frontmatter, "adr", True)
+config = frontmatter / ".standards/config.toml"
+config.write_text(
+    config.read_text(encoding="utf-8")
+    + "\n[standards.adr.config]\nrequire_sections = true\n",
+    encoding="utf-8",
+)
+assert main(["reconcile", "--apply", "--repo", str(frontmatter)]) == 0
+adr = docs / "adr.md"
+adr.write_text(note.read_text(encoding="utf-8").replace("doc_type: 'note'", "doc_type: 'adr'").replace(
+    "id: 'note-", "id: 'adr-0001-"
+), encoding="utf-8")
+assert main(["validate", "--quiet", "docs/adr.md"]) == 1
+
+spec = initialize("spec", ["project-spec"])
+os.chdir(spec)
+source = Path("docs/specs/example.md")
+source.parent.mkdir(parents=True)
+assert main(["spec", "new", "--profile", "light", "--id", "SPEC-7F3Q", str(source)]) == 0
+assert main(["spec", "validate", str(source)]) == 0
+assert main(["spec", "extract", "--json", str(source), "§7"]) == 0
+assert main(["spec", "next", "--json", str(source), "FR"]) == 0
+assert main(["spec", "lint", "--json", str(source)]) in {0, 1}
+assert main([
+    "spec", "upgrade", str(source), "--to", "standard", "-o", "docs/specs/standard.md"
+]) == 0
+assert main(["render", "project-spec", "render-workflow", "--repo", str(spec)]) == 0
+"""
+    result = subprocess.run(
+        [str(selected_command_venv / "bin/python"), "-c", script, str(tmp_path)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
