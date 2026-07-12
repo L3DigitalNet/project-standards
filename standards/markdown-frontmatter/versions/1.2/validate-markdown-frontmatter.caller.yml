@@ -1,0 +1,11 @@
+name: Validate project standards
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import dataclasses
 import json
@@ -12,11 +13,29 @@ import re
 import stat
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, cast
 
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    selected_command,
+)
+from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
+from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
+from project_standards.control_plane.executor import apply_authoring_plan
+from project_standards.control_plane.locking import LockMode
+from project_standards.control_plane.providers import (
+    ProviderInvocation,
+    ProviderResult,
+    invoke_provider,
+)
+from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot, SnapshotEntry
+from project_standards.package_contract.paths import SafeRelativePath
+from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderOperation
 from project_standards.specs.commands.extract import extract_slice
 from project_standards.specs.commands.lint import lint_document
 from project_standards.specs.commands.new import (
@@ -32,6 +51,7 @@ from project_standards.specs.commands.upgrade import check_upgradeable, upgrade_
 from project_standards.specs.commands.validate import validate_document
 from project_standards.specs.config import (
     ConfigError,
+    DiscoveryError,
     collect_existing_spec_ids,
     collect_spec_paths,
     load_spec_config,
@@ -50,6 +70,19 @@ _USAGE = "usage: project-standards spec {validate|lint|extract|next|new|upgrade}
 _TIER_ORDER = {"light": 0, "standard": 1, "full": 2}
 
 
+@dataclass(frozen=True, slots=True)
+class _SpecRuntime:
+    repo: Path
+    payload: InstalledPayload | None = None
+    effective_config: JsonObject | None = None
+
+
+def _runtime(repo: Path, selected: SelectedCommandPackage | None) -> _SpecRuntime:
+    if selected is None:
+        return _SpecRuntime(repo.resolve(strict=True))
+    return _SpecRuntime(selected.repo, selected.payload, selected.effective_config)
+
+
 def _read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
@@ -59,44 +92,170 @@ def _read(path: Path) -> str:
         raise ConfigError(f"cannot read spec {path}: {exc}") from exc
 
 
-def _findings_payload(results: list[tuple[Path, list[Finding]]]) -> list[dict[str, object]]:
-    return [
-        {
-            "file": str(path),
-            "ok": not findings,
-            "findings": [dataclasses.asdict(f) for f in findings],
-        }
-        for path, findings in results
-    ]
+def _selected_paths(
+    explicit: list[Path], runtime: _SpecRuntime
+) -> list[tuple[Path, SnapshotEntry]]:
+    if explicit:
+        return [
+            (path, _selected_snapshot(path, runtime, must_exist=True)[2])
+            for path in sorted(explicit)
+        ]
+    assert runtime.effective_config is not None
+    raw_patterns = runtime.effective_config.get("include_patterns")
+    if not isinstance(raw_patterns, list) or not all(
+        isinstance(pattern, str) for pattern in raw_patterns
+    ):
+        raise ConfigError("selected project-spec include_patterns are invalid")
+    paths: set[Path] = set()
+    try:
+        for pattern in cast(list[str], raw_patterns):
+            if (
+                Path(pattern).is_absolute()
+                or "\\" in pattern
+                or any(part in {".", ".."} for part in Path(pattern).parts)
+            ):
+                raise ValueError("include pattern escapes the consumer root")
+            paths.update(
+                candidate.relative_to(runtime.repo) for candidate in runtime.repo.glob(pattern)
+            )
+    except (NotImplementedError, ValueError) as exc:
+        raise ConfigError(f"invalid selected project-spec include pattern: {exc}") from exc
+    if not paths:
+        raise DiscoveryError("spec discovery matched no files")
+    return [(path, _selected_snapshot(path, runtime, must_exist=True)[2]) for path in sorted(paths)]
 
 
-def _run_setwide(argv: list[str], *, lint: bool) -> int:
+def _selected_snapshot(
+    path: Path,
+    runtime: _SpecRuntime,
+    *,
+    must_exist: bool,
+) -> tuple[SafeRelativePath, Path, SnapshotEntry]:
+    """Capture one V2 CLI path without crossing the selected consumer root."""
+    if path.is_absolute():
+        raise ConfigError(f"selected path must stay within the consumer root: {path}")
+    try:
+        relative = SafeRelativePath.parse(path.as_posix())
+    except ValueError as exc:
+        raise ConfigError(f"selected path must stay within the consumer root: {path}") from exc
+    try:
+        entry = RepositorySnapshot.capture(runtime.repo, (relative,)).entry(relative)
+    except ControlPlaneError as exc:
+        raise ConfigError(f"cannot inspect selected path {path}: {exc}") from exc
+    if entry.kind is EntryKind.SYMLINK:
+        raise ConfigError(f"selected path cannot contain a symlink: {path}")
+    if must_exist and entry.kind is EntryKind.MISSING:
+        raise ConfigError(f"no such file: {path}")
+    allowed = {EntryKind.REGULAR} if must_exist else {EntryKind.MISSING, EntryKind.REGULAR}
+    if entry.kind not in allowed:
+        raise ConfigError(f"selected path is not a regular file: {path}")
+    return relative, runtime.repo / relative.normalized, entry
+
+
+def _selected_findings(
+    paths: list[tuple[Path, SnapshotEntry]],
+    runtime: _SpecRuntime,
+    *,
+    lint: bool,
+) -> list[tuple[Path, list[ControlFinding]]]:
+    assert runtime.payload is not None
+    assert runtime.effective_config is not None
+    documents: list[JsonValue] = []
+    for display, entry in paths:
+        content = entry.content
+        if content is None:
+            raise ConfigError(f"cannot read spec {display}: snapshot has no regular content")
+        documents.append(
+            {
+                "path": str(display),
+                "kind": "regular",
+                "content_base64": base64.b64encode(content).decode("ascii"),
+            }
+        )
+    operation = ProviderOperation.LINT if lint else ProviderOperation.VALIDATE
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=runtime.repo,
+            payload=runtime.payload,
+            standard_id="project-spec",
+            version=runtime.payload.manifest.payload.version,
+            provider_id=operation.value,
+            operation=operation,
+            effective_config=runtime.effective_config,
+            snapshots={"documents": documents},
+        )
+    )
+    grouped: dict[str, list[ControlFinding]] = {str(display): [] for display, _entry in paths}
+    for finding in result.findings:
+        grouped.setdefault(finding.path, []).append(finding)
+    return [(display, grouped[str(display)]) for display, _entry in paths]
+
+
+def _finding_payload(finding: Finding | ControlFinding) -> dict[str, object]:
+    return {
+        "code": finding.code,
+        "severity": finding.severity,
+        "message": finding.message,
+        "line": finding.line,
+        "locus": finding.locus,
+    }
+
+
+def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
     ap = argparse.ArgumentParser(prog=f"project-standards spec {'lint' if lint else 'validate'}")
     ap.add_argument("files", nargs="*", type=Path)
     ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
     args = ap.parse_args(argv)
-    reg = load_registry()
-    cfg = load_spec_config(args.config)
-    paths = collect_spec_paths(args.files, cfg)
-    fn = lint_document if lint else validate_document
-    results: list[tuple[Path, list[Finding]]] = []
-    for path in paths:
-        try:
-            results.append(
-                (
-                    path,
-                    fn(
-                        parse_document(str(path), _read(path), frozenset(cfg.reference_prefixes)),
-                        reg,
-                    ),
+    if runtime.payload is None:
+        reg = load_registry()
+        cfg = load_spec_config(args.config)
+        paths = collect_spec_paths(args.files, cfg)
+        fn = lint_document if lint else validate_document
+        legacy_results: list[tuple[Path, list[Finding]]] = []
+        for path in paths:
+            try:
+                legacy_results.append(
+                    (
+                        path,
+                        fn(
+                            parse_document(
+                                str(path), _read(path), frozenset(cfg.reference_prefixes)
+                            ),
+                            reg,
+                        ),
+                    )
                 )
+            except SpecParseError as exc:
+                legacy_results.append(
+                    (path, [Finding(code="SV-PARSE", severity="error", message=str(exc))])
+                )
+        results: Sequence[tuple[Path, Sequence[Finding | ControlFinding]]] = legacy_results
+    else:
+        try:
+            selected_results = _selected_findings(
+                _selected_paths(args.files, runtime),
+                runtime,
+                lint=lint,
             )
-        except SpecParseError as exc:
-            results.append((path, [Finding(code="SV-PARSE", severity="error", message=str(exc))]))
+        except ControlPlaneError as exc:
+            raise ConfigError(_provider_failure_message(exc)) from exc
+        results = selected_results
     if args.json:
-        print(json.dumps(_findings_payload(results), indent=2))
+        print(
+            json.dumps(
+                [
+                    {
+                        "file": str(path),
+                        "ok": not findings,
+                        "findings": [_finding_payload(finding) for finding in findings],
+                    }
+                    for path, findings in results
+                ],
+                indent=2,
+            )
+        )
     else:
         for path, findings in results:
             state = "WARN" if lint and findings else "FAIL" if findings else "OK  "
@@ -110,45 +269,133 @@ def _run_setwide(argv: list[str], *, lint: bool) -> int:
     return 1 if any_findings else 0
 
 
-def _run_extract(argv: list[str]) -> int:
+def _document_snapshot(path: Path, runtime: _SpecRuntime) -> JsonObject:
+    entry = _selected_snapshot(path, runtime, must_exist=True)[2]
+    content = entry.content
+    if content is None:
+        raise ConfigError(f"cannot read spec {path}: snapshot has no regular content")
+    return {
+        "path": str(path),
+        "kind": "regular",
+        "content_base64": base64.b64encode(content).decode("ascii"),
+    }
+
+
+def _invoke_selected(
+    runtime: _SpecRuntime,
+    provider_id: str,
+    operation: ProviderOperation,
+    snapshots: JsonObject,
+) -> ProviderResult:
+    assert runtime.payload is not None
+    assert runtime.effective_config is not None
+    return invoke_provider(
+        ProviderInvocation(
+            repo=runtime.repo,
+            payload=runtime.payload,
+            standard_id="project-spec",
+            version=runtime.payload.manifest.payload.version,
+            provider_id=provider_id,
+            operation=operation,
+            effective_config=runtime.effective_config,
+            snapshots=snapshots,
+        )
+    )
+
+
+def _run_extract(argv: list[str], runtime: _SpecRuntime) -> int:
     ap = argparse.ArgumentParser(prog="project-standards spec extract")
     ap.add_argument("file", type=Path)
     ap.add_argument("selector")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
-    doc = parse_document(str(args.file), _read(args.file))
-    result = extract_slice(doc, args.selector)
-    if args.json:
-        print(
-            json.dumps(
-                {
-                    "file": str(args.file),
-                    "selector": result.selector,
-                    "kind": result.kind,
-                    "found": result.found,
-                    "markdown": result.markdown,
-                }
-            )
-        )
-    elif result.found:
-        print(result.markdown)
+    if runtime.payload is None:
+        doc = parse_document(str(args.file), _read(args.file))
+        result = extract_slice(doc, args.selector)
+        payload = {
+            "file": str(args.file),
+            "selector": result.selector,
+            "kind": result.kind,
+            "found": result.found,
+            "markdown": result.markdown,
+        }
     else:
-        print(f"no match for {result.selector!r}", file=sys.stderr)
-    return 0 if result.found else 1
+        try:
+            provider_result = _invoke_selected(
+                runtime,
+                "extract",
+                ProviderOperation.EXTRACT,
+                {
+                    "document": _document_snapshot(args.file, runtime),
+                    "selector": args.selector,
+                },
+            )
+        except ControlPlaneError as exc:
+            raise SpecParseError(_provider_failure_message(exc)) from exc
+        structured = provider_result.structured_output
+        if structured is None:
+            raise ConfigError("selected extract provider returned no content")
+        file = structured.get("file")
+        selector = structured.get("selector")
+        kind = structured.get("kind")
+        found = structured.get("found")
+        markdown = structured.get("markdown")
+        if (
+            not isinstance(file, str)
+            or not isinstance(selector, str)
+            or not isinstance(kind, str)
+            or not isinstance(found, bool)
+            or not (isinstance(markdown, str) or markdown is None)
+        ):
+            raise ConfigError("selected extract provider returned invalid content")
+        payload = {
+            "file": file,
+            "selector": selector,
+            "kind": kind,
+            "found": found,
+            "markdown": markdown,
+        }
+    if args.json:
+        print(json.dumps(payload))
+    elif payload["found"]:
+        print(payload["markdown"])
+    else:
+        print(f"no match for {payload['selector']!r}", file=sys.stderr)
+    return 0 if payload["found"] else 1
 
 
-def _run_next(argv: list[str]) -> int:
+def _run_next(argv: list[str], runtime: _SpecRuntime) -> int:
     ap = argparse.ArgumentParser(prog="project-standards spec next")
     ap.add_argument("file", type=Path)
     ap.add_argument("prefix")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
-    doc = parse_document(str(args.file), _read(args.file))
-    try:
-        nid = next_free_id(doc, load_registry(), args.prefix)
-    except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+    if runtime.payload is None:
+        doc = parse_document(str(args.file), _read(args.file))
+        try:
+            nid = next_free_id(doc, load_registry(), args.prefix)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    else:
+        try:
+            result = _invoke_selected(
+                runtime,
+                "id-next",
+                ProviderOperation.ID_NEXT,
+                {
+                    "document": _document_snapshot(args.file, runtime),
+                    "prefix": args.prefix,
+                },
+            )
+        except ControlPlaneError as exc:
+            print(f"error: {_provider_failure_message(exc)}", file=sys.stderr)
+            return 2
+        structured = result.structured_output
+        next_id = structured.get("next_id") if structured is not None else None
+        if not isinstance(next_id, str):
+            raise ConfigError("selected id-next provider returned no content")
+        nid = next_id
     prefix = args.prefix.rstrip("-").upper()
     print(
         json.dumps({"file": str(args.file), "prefix": prefix, "next_id": nid}) if args.json else nid
@@ -156,12 +403,12 @@ def _run_next(argv: list[str]) -> int:
     return 0
 
 
-def _run_validate(argv: list[str]) -> int:
-    return _run_setwide(argv, lint=False)
+def _run_validate(argv: list[str], runtime: _SpecRuntime) -> int:
+    return _run_setwide(argv, lint=False, runtime=runtime)
 
 
-def _run_lint(argv: list[str]) -> int:
-    return _run_setwide(argv, lint=True)
+def _run_lint(argv: list[str], runtime: _SpecRuntime) -> int:
+    return _run_setwide(argv, lint=True, runtime=runtime)
 
 
 class _ArgparseError(Exception):
@@ -236,6 +483,57 @@ def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
     )
     template_text = (TEMPLATES_DIR / TIER_FILES[args.profile]).read_text(encoding="utf-8")
     return opts, template_text
+
+
+def _selected_existing_ids(runtime: _SpecRuntime) -> set[str]:
+    try:
+        selected = _selected_paths([], runtime)
+    except DiscoveryError:
+        return set()
+    ids: set[str] = set()
+    for display, entry in selected:
+        if entry.content is None:
+            continue
+        try:
+            document = parse_document(str(display), entry.content.decode("utf-8"))
+        except UnicodeDecodeError, SpecParseError:
+            continue
+        spec_id = document.frontmatter.get("spec_id")
+        if spec_id:
+            ids.add(spec_id)
+    return ids
+
+
+def _selected_new_options(args: argparse.Namespace, runtime: _SpecRuntime) -> NewOptions:
+    for flag, value, is_title in (
+        ("title", args.title, True),
+        ("owner", args.owner, False),
+        ("implementer", args.implementer, False),
+    ):
+        if value is not None:
+            try:
+                check_field(flag, value, is_title=is_title)
+            except FieldValueError as exc:
+                raise NewError("bad_field_value", str(exc)) from exc
+    existing_ids = _selected_existing_ids(runtime)
+    if args.spec_id is not None:
+        if not re.match(SPEC_ID_PATTERN, args.spec_id):
+            raise NewError("bad_id", f"--id {args.spec_id!r} does not match {SPEC_ID_PATTERN}")
+        if args.spec_id in existing_ids:
+            raise NewError("id_collision", f"--id {args.spec_id} is already used in this repo")
+        spec_id = args.spec_id
+    else:
+        try:
+            spec_id = mint_spec_id(random.Random(), existing_ids)
+        except SpecIdExhausted as exc:
+            raise NewError("id_exhausted", str(exc)) from exc
+    return NewOptions(
+        profile=args.profile,
+        spec_id=spec_id,
+        title=args.title,
+        owner=args.owner,
+        implementer=args.implementer,
+    )
 
 
 def _parent_chain_has_symlink(target: Path) -> bool:
@@ -342,7 +640,93 @@ def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> in
     return 0
 
 
-def _run_new(argv: list[str]) -> int:
+def _selected_authoring_target(
+    path: Path,
+    runtime: _SpecRuntime,
+    *,
+    force: bool,
+) -> tuple[Path, JsonObject, bool]:
+    try:
+        _relative, _raw_target, entry = _selected_snapshot(path, runtime, must_exist=False)
+    except ConfigError as exc:
+        code = "symlinked_parent" if "symlink" in str(exc) else "not_regular_file"
+        raise NewError(code, str(exc)) from exc
+    return (
+        runtime.repo,
+        _authoring_snapshot(path, entry, force=force),
+        entry.kind is EntryKind.REGULAR,
+    )
+
+
+def _authoring_snapshot(path: Path, entry: SnapshotEntry, *, force: bool) -> JsonObject:
+    """Bind one authoring request to the exact bytes and mode already captured."""
+    if entry.kind not in {EntryKind.MISSING, EntryKind.REGULAR}:
+        raise NewError("not_regular_file", f"refusing to write non-regular target: {path}")
+    overwritten = entry.kind is EntryKind.REGULAR
+    if overwritten and not force:
+        raise NewError("exists", f"refusing to overwrite existing file: {path} (use --force)")
+    return {
+        "target": entry.path.original,
+        "kind": entry.kind.value,
+        "precondition_digest": entry.precondition_digest.value,
+        "mode": entry.mode,
+        "overwrite": force,
+    }
+
+
+def _write_selected_new(
+    args: argparse.Namespace,
+    opts: NewOptions,
+    runtime: _SpecRuntime,
+) -> int:
+    executor_root, target, overwritten = _selected_authoring_target(
+        args.path,
+        runtime,
+        force=args.force,
+    )
+    target.update(
+        {
+            "profile": opts.profile,
+            "spec_id": opts.spec_id,
+            "today": date.today().isoformat(),
+            "title": opts.title,
+            "owner": opts.owner,
+            "implementer": opts.implementer,
+        }
+    )
+    try:
+        result = _invoke_selected(
+            runtime,
+            "scaffold",
+            ProviderOperation.SCAFFOLD,
+            {"authoring": target},
+        )
+    except ControlPlaneError as exc:
+        raise NewError("self_validation_failed", str(exc)) from exc
+    if result.mutation_plan is None:
+        raise NewError("self_validation_failed", "selected scaffold provider returned no plan")
+    applied = apply_authoring_plan(executor_root, result.mutation_plan)
+    if not applied.success:
+        raise NewError("write_failed", f"cannot write {args.path}: {applied.error_code}")
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "spec_id": opts.spec_id,
+                    "profile": opts.profile,
+                    "path": str(args.path),
+                    "written": True,
+                    "overwritten": overwritten,
+                }
+            )
+        )
+    else:
+        print(result.mutation_plan.actions[0].summary)
+    return 0
+
+
+def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
     json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
     ap = _NewArgParser(prog="project-standards spec new")
     ap.add_argument("path", nargs="?", type=Path)
@@ -369,26 +753,61 @@ def _run_new(argv: list[str]) -> int:
         if args.stdout and args.force:
             raise NewError("flag_conflict", "--force has no meaning with --stdout")
 
-        opts, template_text = _resolve_new_options(args)
-        text = scaffold(template_text, opts, today=date.today())
+        if runtime.payload is None:
+            opts, template_text = _resolve_new_options(args)
+            text = scaffold(template_text, opts, today=date.today())
+        else:
+            opts = _selected_new_options(args, runtime)
+            if not args.stdout:
+                return _write_selected_new(args, opts, runtime)
+            try:
+                preview = _invoke_selected(
+                    runtime,
+                    "render-preview",
+                    ProviderOperation.RENDER,
+                    {
+                        "preview": {
+                            "operation": "scaffold",
+                            "profile": opts.profile,
+                            "spec_id": opts.spec_id,
+                            "today": date.today().isoformat(),
+                            "title": opts.title,
+                            "owner": opts.owner,
+                            "implementer": opts.implementer,
+                        }
+                    },
+                )
+            except ControlPlaneError as exc:
+                raise NewError("self_validation_failed", str(exc)) from exc
+            if preview.content is None:
+                raise NewError(
+                    "self_validation_failed", "selected scaffold preview returned no content"
+                )
+            try:
+                text = preview.content.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise NewError(
+                    "self_validation_failed", "selected scaffold preview was not UTF-8"
+                ) from exc
 
-        # Fail-closed self-validation (I1): never emit a spec validate would reject, and
-        # map a parse failure of our OWN output to self_validation_failed (not exit 1).
-        try:
-            doc = parse_document(
-                "<new>", text, frozenset(load_spec_config(args.config).reference_prefixes)
-            )
-        except SpecParseError as exc:
-            raise NewError(
-                "self_validation_failed", f"generated scaffold did not parse: {exc}"
-            ) from exc
-        findings = validate_document(doc, load_registry())
-        if findings:
-            raise NewError(
-                "self_validation_failed",
-                "generated scaffold failed self-validation",
-                [dataclasses.asdict(f) for f in findings],
-            )
+        if runtime.payload is None:
+            # The selected provider performs the same fail-closed check against its
+            # payload templates before returning preview bytes.
+            try:
+                doc = parse_document(
+                    "<new>", text, frozenset(load_spec_config(args.config).reference_prefixes)
+                )
+            except SpecParseError as exc:
+                raise NewError(
+                    "self_validation_failed", f"generated scaffold did not parse: {exc}"
+                ) from exc
+            findings = validate_document(doc, load_registry())
+            if findings:
+                raise NewError(
+                    "self_validation_failed",
+                    "generated scaffold failed self-validation",
+                    [dataclasses.asdict(f) for f in findings],
+                )
 
         if args.stdout:
             if args.json:
@@ -408,6 +827,8 @@ def _run_new(argv: list[str]) -> int:
                 sys.stdout.write(text)
             return 0
 
+        if runtime.payload is not None:
+            return _write_selected_new(args, opts, runtime)
         return _write_new_file(args, opts, text)  # Task 6
     except NewError as err:
         return _emit_new_failure(json_mode, err)
@@ -423,6 +844,7 @@ def _upgrade_output(
     path: str | None,
     mode: str,
     written: bool,
+    summary: str | None = None,
 ) -> None:
     if json_mode:
         obj: dict[str, object] = {
@@ -440,7 +862,7 @@ def _upgrade_output(
     elif mode == "stdout":
         sys.stdout.write(text)
     else:
-        print(f"wrote {path}")
+        print(summary or f"wrote {path}")
 
 
 def _deliver_upgrade(
@@ -479,7 +901,131 @@ def _deliver_upgrade(
     return 0
 
 
-def _run_upgrade(argv: list[str]) -> int:
+def _provider_failure_message(exc: ControlPlaneError) -> str:
+    cause = exc.__cause__
+    return str(cause) if isinstance(cause, Exception) and str(cause) else str(exc)
+
+
+def _selected_upgrade_source(
+    args: argparse.Namespace,
+    runtime: _SpecRuntime,
+    source_text: str,
+    source_entry: SnapshotEntry,
+) -> tuple[str, str]:
+    try:
+        source_results = _selected_findings(
+            [(args.src, source_entry)],
+            runtime,
+            lint=False,
+        )
+    except ControlPlaneError as exc:
+        raise NewError("config_error", _provider_failure_message(exc)) from exc
+    source_findings = source_results[0][1]
+    if source_findings:
+        raise NewError(
+            "source_invalid",
+            f"source has {len(source_findings)} validation finding(s); fix them before upgrading",
+            [_finding_payload(finding) for finding in source_findings],
+        )
+    try:
+        source_document = parse_document(str(args.src), source_text)
+    except SpecParseError as exc:
+        raise NewError("source_read_error", str(exc)) from exc
+    source_profile = source_document.profile or ""
+    if _TIER_ORDER.get(source_profile, -1) >= _TIER_ORDER[args.to]:
+        raise NewError(
+            "not_upgradeable",
+            f"cannot upgrade profile {source_profile!r} to {args.to}: additive-only",
+        )
+    return source_profile, source_document.frontmatter.get("spec_id", "")
+
+
+def _selected_upgrade_preview(
+    args: argparse.Namespace,
+    runtime: _SpecRuntime,
+    source_text: str,
+    source_entry: SnapshotEntry,
+) -> tuple[str, str, str]:
+    source_profile, spec_id = _selected_upgrade_source(args, runtime, source_text, source_entry)
+    try:
+        result = _invoke_selected(
+            runtime,
+            "render-preview",
+            ProviderOperation.RENDER,
+            {
+                "preview": {
+                    "operation": "upgrade",
+                    "target": str(args.src),
+                    "content_base64": base64.b64encode(source_text.encode()).decode("ascii"),
+                    "target_profile": args.to,
+                }
+            },
+        )
+    except ControlPlaneError as exc:
+        raise NewError("source_not_upgradeable", _provider_failure_message(exc)) from exc
+    if result.content is None:
+        raise NewError("self_validation_failed", "selected upgrade preview returned no content")
+    try:
+        upgraded = result.content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise NewError("self_validation_failed", "selected upgrade preview was not UTF-8") from exc
+    return upgraded, source_profile, spec_id
+
+
+def _deliver_selected_upgrade(
+    args: argparse.Namespace,
+    runtime: _SpecRuntime,
+    source_text: str,
+    source_entry: SnapshotEntry,
+    output_entry: SnapshotEntry | None,
+    *,
+    source_profile: str,
+    spec_id: str,
+) -> int:
+    target = args.src if args.in_place else args.output
+    if target is None:
+        raise NewError("flag_conflict", "selected upgrade write requires a target")
+    target_entry = source_entry if args.in_place else output_entry
+    if target_entry is None:
+        raise NewError("flag_conflict", "selected upgrade output snapshot is missing")
+    authoring = _authoring_snapshot(target, target_entry, force=args.force or args.in_place)
+    authoring.update(
+        {
+            "content_base64": base64.b64encode(source_text.encode()).decode("ascii"),
+            "target_profile": args.to,
+        }
+    )
+    try:
+        result = _invoke_selected(
+            runtime,
+            "upgrade",
+            ProviderOperation.UPGRADE,
+            {"authoring": authoring},
+        )
+    except ControlPlaneError as exc:
+        raise NewError("source_not_upgradeable", _provider_failure_message(exc)) from exc
+    if result.mutation_plan is None:
+        raise NewError("self_validation_failed", "selected upgrade provider returned no plan")
+    applied = apply_authoring_plan(runtime.repo, result.mutation_plan)
+    if not applied.success:
+        raise NewError("write_failed", f"cannot write {target}: {applied.error_code}")
+    action = result.mutation_plan.actions[0]
+    content = (action.content_bytes or b"").decode("utf-8")
+    _upgrade_output(
+        content,
+        json_mode=args.json,
+        source_profile=source_profile,
+        target_tier=args.to,
+        spec_id=spec_id,
+        path=str(target),
+        mode="in_place" if args.in_place else "output",
+        written=True,
+        summary=action.summary,
+    )
+    return 0
+
+
+def _run_upgrade(argv: list[str], runtime: _SpecRuntime) -> int:
     json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
     ap = _NewArgParser(prog="project-standards spec upgrade")
     ap.add_argument("src", type=Path)
@@ -506,12 +1052,82 @@ def _run_upgrade(argv: list[str]) -> int:
         if args.force and not args.output:
             raise NewError("flag_conflict", "--force only applies to --output")
 
-        if not args.src.is_file():
+        selected_source_entry: SnapshotEntry | None = None
+        selected_output_entry: SnapshotEntry | None = None
+        if runtime.payload is not None:
+            try:
+                _source_relative, selected_source, selected_source_entry = _selected_snapshot(
+                    args.src,
+                    runtime,
+                    must_exist=True,
+                )
+            except ConfigError as exc:
+                raise NewError("source_not_found", str(exc)) from exc
+            if args.output is not None:
+                try:
+                    _output_relative, selected_output, selected_output_entry = _selected_snapshot(
+                        args.output,
+                        runtime,
+                        must_exist=False,
+                    )
+                except ConfigError as exc:
+                    code = "symlinked_parent" if "symlink" in str(exc) else "not_regular_file"
+                    raise NewError(code, str(exc)) from exc
+                if selected_output_entry.kind is EntryKind.REGULAR:
+                    try:
+                        same_file = selected_output.samefile(selected_source)
+                    except OSError as exc:
+                        raise NewError(
+                            "not_regular_file", f"cannot inspect output target: {args.output}"
+                        ) from exc
+                    if same_file:
+                        raise NewError("flag_conflict", "output equals source; use --in-place")
+        if runtime.payload is None and not args.src.is_file():
             raise NewError("source_not_found", f"source spec not found: {args.src}")
-        try:
-            source_text = _read(args.src)
-        except (SpecParseError, ConfigError) as exc:  # _read wraps OSError/decode errors
-            raise NewError("source_read_error", str(exc)) from exc
+        if selected_source_entry is not None:
+            assert selected_source_entry.content is not None
+            try:
+                source_text = selected_source_entry.content.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise NewError("source_read_error", f"{args.src}: not valid UTF-8: {exc}") from exc
+        else:
+            try:
+                source_text = _read(args.src)
+            except (SpecParseError, ConfigError) as exc:  # _read wraps OSError/decode errors
+                raise NewError("source_read_error", str(exc)) from exc
+
+        if runtime.payload is not None:
+            assert selected_source_entry is not None
+            if not args.in_place and args.output is None:
+                upgraded, source_profile, spec_id = _selected_upgrade_preview(
+                    args,
+                    runtime,
+                    source_text,
+                    selected_source_entry,
+                )
+                _upgrade_output(
+                    upgraded,
+                    json_mode=args.json,
+                    source_profile=source_profile,
+                    target_tier=args.to,
+                    spec_id=spec_id,
+                    path=None,
+                    mode="stdout",
+                    written=False,
+                )
+                return 0
+            source_profile, spec_id = _selected_upgrade_source(
+                args, runtime, source_text, selected_source_entry
+            )
+            return _deliver_selected_upgrade(
+                args,
+                runtime,
+                source_text,
+                selected_source_entry,
+                selected_output_entry,
+                source_profile=source_profile,
+                spec_id=spec_id,
+            )
 
         reg = load_registry()
         # --config is opt-in (default None): with no --config, .project-standards.yml is
@@ -578,17 +1194,43 @@ def _run_upgrade(argv: list[str]) -> int:
         return _emit_new_failure(json_mode, err)
 
 
-_VERBS: dict[str, Callable[[list[str]], int]] = {
-    "validate": _run_validate,
-    "lint": _run_lint,
-    "extract": _run_extract,
-    "next": _run_next,
-    "new": _run_new,
-    "upgrade": _run_upgrade,
-}
+_VERBS = frozenset({"validate", "lint", "extract", "next", "new", "upgrade"})
 
 
-def run(argv: list[str]) -> int:
+def _explicit_config(argv: list[str]) -> Path | None:
+    """Return an operator-typed debug config without interpreting verb syntax."""
+    for index, argument in enumerate(argv):
+        if argument == "--config" and index + 1 < len(argv):
+            return Path(argv[index + 1])
+        if argument.startswith("--config="):
+            value = argument.removeprefix("--config=")
+            if not value:
+                raise CommandResolutionError("--config requires a non-empty path")
+            return Path(value)
+    return None
+
+
+def _operation_lock_mode(verb: str, argv: list[str]) -> LockMode:
+    """Select exclusivity from the command's actual write authorization."""
+    if verb == "new":
+        return LockMode.READ if "--stdout" in argv else LockMode.WRITE
+    if verb == "upgrade":
+        writes = any(
+            argument in {"--in-place", "-i", "--output", "-o"}
+            or argument.startswith("--output=")
+            or (argument.startswith("-o") and len(argument) > 2)
+            for argument in argv
+        )
+        return LockMode.WRITE if writes else LockMode.READ
+    return LockMode.READ
+
+
+def run(
+    argv: list[str],
+    *,
+    repo: Path | None = None,
+    distribution: InstalledDistribution | None = None,
+) -> int:
     """Run the nested spec command group."""
     if argv[:1] in (["-h"], ["--help"]):
         print(_USAGE)
@@ -601,10 +1243,45 @@ def run(argv: list[str]) -> int:
         print(f"error: unknown spec verb {verb!r}", file=sys.stderr)
         return 2
     try:
-        return _VERBS[verb](rest)
+        root = repo or Path.cwd()
+        mode = _operation_lock_mode(verb, rest)
+        with selected_command(
+            root,
+            "project-spec",
+            distribution,
+            mode=mode,
+            explicit_legacy=_explicit_config(rest),
+        ) as selected:
+            runtime = _runtime(root, selected)
+            if verb == "validate":
+                return _run_validate(rest, runtime)
+            if verb == "lint":
+                return _run_lint(rest, runtime)
+            if verb == "extract":
+                return _run_extract(rest, runtime)
+            if verb == "next":
+                return _run_next(rest, runtime)
+            if verb == "new":
+                return _run_new(rest, runtime)
+            if verb == "upgrade":
+                return _run_upgrade(rest, runtime)
+            raise AssertionError(f"unhandled spec verb: {verb}")
+    except CommandResolutionError as exc:
+        message = str(exc)
+        if "disabled" in message or "not present" in message:
+            message = "project-spec package is disabled or not selected"
+        elif "payload is unavailable" in message:
+            message = "selected project-spec payload is unavailable"
+        if verb in {"new", "upgrade"} and "--json" in rest:
+            return _emit_new_failure(True, NewError("config_error", message))
+        print(f"error: {message}", file=sys.stderr)
+        return 2
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except SpecParseError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2

@@ -3,7 +3,7 @@
 ## Current snapshot
 
 - `main` remains the released v4.3.0 line; `testing` carries the unreleased v5.0.0 standards-platform work.
-- Seven standards are released or staged: the six v4 standards plus Agent Handoff v1 for the v5 release.
+- Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
 - ADRs 0023-0024 govern the unified `.standards/` control plane and catalog-scoped package channels; conflicting legacy decisions are superseded.
@@ -11,9 +11,9 @@
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29145160155` passed for the published v5 baseline at `5d21517`.
-- `SPEC-CP01` is approved rev 0.6; rev 0.5 reconciles BA02 examples and rev 0.6 records conservative core evidence without changing requirements or scope.
+- `SPEC-CP01` is approved rev 0.7 with current-package, installed-wheel, migration, refresh, and disposable release-cut traceability.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` is approved at rev 0.6; revs 0.4-0.5 pin digest bytes and complete relation/legacy-state declarations, while rev 0.6 records foundation evidence without changing scope. SPEC-BA01 is superseded history.
+- `SPEC-BA02` is approved at rev 0.7; all nine immutable payloads and the real compatibility/release evidence satisfy its authoring contract. SPEC-BA01 is superseded history.
 - The BA02 package-contract foundation is implemented (`4e507d6` through `477cbbf`): strict authoring models, integrity, graph validation, CLI, and installed projection.
 - Control-plane core Tasks 1-5 (`90debb5`…`2d8d831`) implement state/codecs, installed content, locking, and neutral initialization.
 - Tasks 6-8 (`2b6a359`…`6bd74b3`) add preserving config edits, catalog-scoped resolution, referenced inputs, and bounded providers.
@@ -22,8 +22,11 @@
 - Tasks 16-17 (`000ba43`, `6876ba4`) add transactional apply/recovery, public CLI contracts, and the catalog-aware V5 wrapper with V1 fallback.
 - Task 18 closes the core with offline wheel repair, an all-adapter fixed point, 100-order determinism, package-ID neutrality, and scale evidence.
 - The final gate passes 2,000 tests at 90% coverage; planning 100 packages and 1,000 artifacts remains below five seconds.
-- The approved 18-task core plan is complete. Real-package reconstruction, migration, conversion, refresh, activation, and release remain.
-- The CP01 follow-on plan's Rounds 1-2 are remediated; scratch-path convergence re-audit and owner approval are next.
+- The approved 18-task core plan is complete; its deferred real-package reconstruction, migration, conversion, refresh, and activation work is implemented by the follow-on below. Release remains.
+- CP01 follow-on Tasks 1-17 are committed through `a891973`: all nine payloads are reconstructed, catalog 5 is active, the real package compatibility matrix passes from source and wheel, and the disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
+- Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
+- Task 16 passes 56 compatibility rows plus three explicit performance rows across source and wheel.
+- Task 18 has reconciled v5 adoption, migration, CLI, upgrade, versioning, release, spec traceability, and generated catalog documentation. Independent review converged and the local gate passes 2,535 tests at 89% coverage; hosted post-push confirmation and the atomic source-root migration remain.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

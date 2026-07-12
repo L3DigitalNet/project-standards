@@ -82,7 +82,7 @@ def _provider(
         ("id-next", "inspect", "content"),
         ("extract", "inspect", "content"),
         ("render", "plan", "content"),
-        ("migrate", "plan", "mutation-plan"),
+        ("migrate", "plan", "migration-report"),
         ("fix", "authoring", "mutation-plan"),
         ("scaffold", "authoring", "mutation-plan"),
         ("upgrade", "authoring", "mutation-plan"),
@@ -327,7 +327,7 @@ def test_payload_accepts_a_complete_automatic_legacy_migration() -> None:
             provider_id="migrate-v4",
             operation="migrate",
             phase="plan",
-            effect="mutation-plan",
+            effect="migration-report",
             entrypoint="payload:migrate-code#migrate",
         )
         | {

@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"schema_version": { "const": "1.0" },
+		"standard_id": { "const": "markdown-tooling" },
+		"version": { "const": "1.2" },
+		"operation": { "enum": ["render", "verify", "migrate"] },
+		"config": { "type": "object" },
+		"resources": { "type": "object" },
+		"snapshots": { "type": "object" }
+	},
+	"required": [
+		"schema_version",
+		"standard_id",
+		"version",
+		"operation",
+		"config",
+		"resources",
+		"snapshots"
+	]
+}

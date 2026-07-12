@@ -121,6 +121,33 @@ def test_markdown_shared_block_preserves_until_last_reference_removal() -> None:
     assert b"## Consumer Section" in removed
 
 
+def test_markdown_removes_multiple_adjacent_managed_blocks_in_one_render() -> None:
+    adapter = MarkdownBlockAdapter()
+    scopes = ("block:alpha", "block:beta", "block:gamma")
+    created = adapter.render(
+        adapter.inspect(b"", scopes),
+        tuple(
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=f"{scope}\n".encode(),
+                value=f"{scope}\n".encode(),
+            )
+            for scope in scopes
+        ),
+    )
+
+    removed = adapter.render(
+        adapter.inspect(created, scopes),
+        tuple(UnitChange(ActionKind.REMOVE, scope) for scope in scopes[1:]),
+    )
+
+    assert b"BEGIN project-standards:alpha" in removed
+    assert b"BEGIN project-standards:beta" not in removed
+    assert b"BEGIN project-standards:gamma" not in removed
+    assert adapter.inspect(removed, scopes).units[0].scope == "block:alpha"
+
+
 @pytest.mark.parametrize(
     "content",
     [

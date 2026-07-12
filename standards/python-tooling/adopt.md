@@ -1,24 +1,34 @@
-# Adopt the Python Tooling SSOT Standard
+# Adopt the Python Tooling Standard
 
-Unlike the Markdown standards, this one is **not** enforced by the shared validator and ships **no reusable workflow**. Adoption is copy-the-scaffolds plus run-the-gate. The scaffolds live inline in [the standard](README.md).
+The current consumer package is [`python-tooling@1.1`](versions/1.1/adopt.md). Use it for the uv/uv_build `src/` baseline, Ruff, BasedPyright strict mode, pytest/coverage, pip-audit, CI, VS Code, and bounded agent instructions.
 
-## Quick adoption (CLI)
-
-As of `v3`, the packaged CLI materializes the scaffolds in one command:
+## Configure and reconcile
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
-  project-standards adopt python-tooling
+project-standards standards enable python-tooling --version 1.1
+project-standards reconcile
+project-standards reconcile --apply
+uv lock
+python scripts/check.py
 ```
 
-This writes `.python-version`, `.github/workflows/check.yml`, `scripts/check.py`, the agent entry points (`AGENTS.md`/`CLAUDE.md`), the `.vscode/` trio (`settings.json`, `tasks.json`, and the shared `extensions.json`), and the shared `.editorconfig`. The `pyproject.toml` sections are **reported, not written** (the CLI never edits an existing config in place) — copy the printed block into your `pyproject.toml`. Existing files are skipped unless you pass `--force`. Then run the verification gate (below). The manual steps remain the reference for what each scaffold is.
+Options under `[standards.python-tooling.config]` select the independent contract, Python/build/layout choices, additional development dependencies, Ruff exclusions, type checker, pytest markers and coverage exclusions, audit exceptions, CI, VS Code, and instruction behavior. Reconciliation composes only declared package-owned tables/properties/blocks and preserves unrelated project configuration.
 
-## Steps
+Commit `.standards/config.toml`, `.standards/lock.toml`, `uv.lock`, and reconciled outputs together. The package owns the development dependency group, so `uv lock` is an explicit post-apply step.
 
-1. **Copy the scaffolds** from [the standard](README.md): the `pyproject.toml` baseline (§6), `.python-version`, `.editorconfig` (§14), `.vscode/` config (§13), `.github/workflows/check.yml` (§15), the agent entry points (§16–17), and optionally `scripts/check.py` (§18).
-2. **Run the verification gate** (standard §2):
+## Migrate a V4 repository
 
 ```bash
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
+```
+
+Migration maps `python_tooling.version`, preserves explicit repository toolchain intent, and recognizes only exact released whole/shared artifacts. Conflicting or modified values block before writes; resolve the intended option rather than forcing replacement.
+
+## Verify and troubleshoot
+
+```bash
+project-standards reconcile --check
 uv run ruff format --check .
 uv run ruff check .
 uv run basedpyright
@@ -27,5 +37,4 @@ uv run coverage report
 uv run pip-audit
 ```
 
-3. **Migrating an existing repo?** Follow the staged migration guide (standard §21).
-4. **Need an exception?** Record it as an ADR (standard §20); see the [ADR Standard](../adr/README.md).
+Unsupported option combinations, conflicting TOML ownership, unsafe paths, or managed-unit drift fail closed. See the [version-specific guide](versions/1.1/adopt.md) for the complete option example, outputs, migration, disable semantics, and recovery guidance.

@@ -36,8 +36,9 @@ license: null
 project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
-project-standards init --catalog <major> [--repo <dir>] [--json]
+project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
+project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--dry-run] [--json]
 project-standards list [--json]
@@ -50,15 +51,15 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes thirty leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), four control/adoption operations (`init`, `reconcile`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 31 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
-`validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
+Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — thirty leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 31 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
-`--version` is recognized only as the **first** argument (`project-standards --version`). Because `validate`, `fix`, `spec`, `standards`, specialized Agent Handoff adoption, and `agent-handoff` are dispatched before the top-level argument parser runs, a `--version` placed after a subcommand is handled by that subcommand, not the top level — see [NOTES](#notes).
+`--version` is recognized only as the **first** argument (`project-standards --version`). The control-plane commands (`init`, `reconcile`, and `render`), `validate`, `fix`, `spec`, `standards`, `packages`, `agent-handoff`, and specialized Agent Handoff adoption are dispatched before the top-level argument parser runs. A `--version` placed after one of those commands belongs to the dispatched command rather than the top level — see [NOTES](#notes).
 
 ## OPTIONS
 
@@ -71,16 +72,16 @@ Each leaf command is documented below with its own synopsis, options, and exit s
 
 ### `validate`
 
-Run `validate-frontmatter` (schema), `validate-id` (id format), and `validate-references` (cross-file, opt-in) over the configured file set. All three run; the worst exit code is returned, so a schema error, an id violation, or a reference error is never masked by another tool's success.
+Validate schema, ID format, and opt-in cross-file references over the configured file set. Unified repositories use the exact applied package provider and effective options; v5 legacy-only repositories run `validate-frontmatter`, `validate-id`, and `validate-references` and return their worst exit code.
 
 ```text
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 ```
 
-Options (all flags are forwarded unchanged to every validator):
+Options (the selected provider and legacy fallback accept the same surface):
 
 - **`<file>...`** — Zero or more Markdown files to validate. With no files, globs, or config includes, the underlying validators default to all `**/*.md` under the current directory.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A `--config` that names a non-existent file is an operator error (exit 2), never a silent default.
+- **`--config <path>`** — Explicit legacy/debug config path. Unified authority resolves from `.standards/config.toml` by repository root and rejects this override; a path that does not exist is an operator error (exit 2).
 - **`--schema <path>`** — Custom JSON Schema to validate against. Frontmatter-only, and it also causes `validate-id` to skip (a custom schema may use a different id convention). Environment/config interaction: overrides the config's `markdown.frontmatter.schema`.
 - **`--glob <pattern>`** — Glob (relative to the current directory) to validate instead of the config include list; combines with explicit `<file>` arguments. Note: this scopes `validate-frontmatter` and `validate-id`, but `validate-references` ignores it and always indexes the full configured set (see [NOTES](#notes)).
 - **`--no-require-frontmatter`** — Do not fail files that have no frontmatter block. Frontmatter-only; no effect on the id or reference passes.
@@ -92,7 +93,7 @@ Exit status: `0` all valid · `1` validation or control-plane findings · `2` op
 
 ### `fix`
 
-Format frontmatter (`format-frontmatter --write`), fix ids (`validate-id --fix`), then re-validate against the same contract as `validate` (references included), so a "successful" fix cannot hide a remaining error.
+Under unified authority, request one complete format-and-ID mutation plan from the selected package, apply it through the platform executor, then revalidate against the same provider contract (references included). The v5 legacy-only fallback retains the `format-frontmatter --write` plus `validate-id --fix` sequence.
 
 ```text
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
@@ -101,7 +102,7 @@ project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 Options:
 
 - **`<file>...`** — Markdown files to fix. Omit to use the config include list.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug config path. Unified authority resolves from `.standards/config.toml` and rejects this override; a non-existent path exits 2.
 - **`--glob <pattern>`** — Glob to select files instead of the include list; combines with explicit `<file>` arguments. Forwarded to each stage.
 - **`-q`, `--quiet`** — Suppress per-file output.
 
@@ -111,25 +112,31 @@ Exit status: `0` success (or skipped under a custom schema) · `1` findings rema
 
 ### `init`
 
-Create the neutral `.standards/` scaffold for one catalog major. It creates only `config.toml`, `catalog.toml`, and `lock.toml`, with no enabled standards.
+Create the neutral `.standards/` scaffold for one catalog major, or preview/apply one complete migration from legacy authority. Plain initialization creates only `config.toml`, `catalog.toml`, and `lock.toml`, with no enabled standards.
 
 ```text
-project-standards init --catalog <major> [--repo <dir>] [--json]
+project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 ```
 
 Options:
 
 - **`--catalog <major>`** — Positive catalog major supplied by the installed distribution. Required.
+- **`--migrate`** — Inspect `.project-standards.yml`, registered legacy artifacts, and package-specific provenance; emit one deterministic migration report and reconciliation plan without writing.
+- **`--apply`** — Apply the exact migration planned from the current bytes. Requires `--migrate`; a blocked or ambiguous report is never partially applied.
 - **`--repo <dir>`** — Repository to initialize. Default: current directory.
-- **`--json`** — Emit the created/idempotent state and exact three-file inventory.
+- **`--json`** — In plain-init mode, emit the created/idempotent state and exact three-file inventory. In migration mode, emit the complete package reports, findings, reconciliation plan, and apply result without proposed file content.
 
-The command is idempotent only when all three existing files describe the same neutral state. Legacy YAML, partial state, symlinks, or different content fail closed.
+Always run migration preview first, resolve every unknown version, modified signature, overlapping claim, or unclassified artifact, and rerun the preview against unchanged bytes before apply. Apply stages the unified files and package outputs, verifies the complete state, publishes the central lock, and only then retires `.project-standards.yml` and recognized package locks. A stale preview or failed verification preserves recoverable legacy authority.
 
-Exit status: `0` created or already identical · `2` invalid arguments, unsafe paths, unavailable catalog, legacy authority, or inconsistent existing state.
+The command is idempotent only when all three existing files describe the same neutral state or the requested migration is already complete. Plain init refuses legacy YAML, partial state, symlinks, or different content. During v5, legacy-only validation remains a warned read-only compatibility path; v6 removes that fallback, so migration is the required upgrade boundary.
+
+Exit status: `0` plain init succeeded, migration already complete, or migration apply succeeded · `1` migration preview has an actionable plan/findings or apply failed · `2` invalid arguments, unsafe paths, unavailable catalog, unsupported authority state, or inconsistent existing state.
 
 ### `reconcile`
 
 Build one complete plan from `.standards/config.toml`, the committed catalog and lock, installed package payloads, and live repository content. Planning and checking are read-only. Only `--apply` publishes a conflict-free plan, runs read-only verification providers, and replaces the central lock last.
+
+When the installed tool carries a newer compatible snapshot of the same configured catalog major, the plan includes a catalog refresh. Compatible `latest` selections may advance; exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files remain unchanged. An older tool, unavailable pin/track, incompatible default change, or catalog-major mismatch refuses refresh.
 
 ```text
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
@@ -148,11 +155,46 @@ The default mode displays the plan. Exit 1 means drift, a conflict, an authoriza
 
 Exit status: `0` reconciled or apply succeeded · `1` drift/findings/apply failure · `2` invocation, authority, package, or filesystem boundary error.
 
+### `render`
+
+Render content from one enabled package's manifest-declared `render` provider. The command resolves the selected package and its effective configuration without building a reconciliation plan or resolving referenced-input files. This permits bootstrapping a consumer-owned file that the selected configuration names but that does not exist yet.
+
+```text
+project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
+```
+
+Arguments and options:
+
+- **`<standard-id>`** — Enabled standard whose selected payload declares the provider. Required.
+- **`<provider-id>`** — Provider declared by that exact selected payload with the `render` operation. Required.
+- **`--repo <dir>`** — Initialized repository whose selected package state supplies the provider configuration. Default: current directory.
+- **`--json`** — Emit `{ok, standard_id, provider_id, content}` instead of the raw rendered content.
+
+`render` writes rendered bytes only to standard output through its public interface and has no destination or output-path option. Installed provider resources are integrity-verified and providers are forbidden to write repository files. The runner refuses a provider when it detects a repository mutation, but detected provider mutation is an integrity incident, not an automatic rollback; inspect and restore any affected path before continuing.
+
+To create a consumer-owned file, render first to an external scratch file, review and validate those complete bytes, and then publish with a no-clobber redirection. Shell redirection is the explicit consumer-owned materialization step:
+
+```bash
+set -euo pipefail
+workflow_path=.github/workflows/cli-docs-check.yml
+scratch=$(mktemp "${TMPDIR:-/tmp}/cli-docs-check.XXXXXX")
+trap 'rm -f -- "$scratch"' EXIT
+project-standards render cli-documentation render-workflow --repo . >"$scratch"
+less "$scratch"
+actionlint "$scratch"
+mkdir -p "$(dirname "$workflow_path")"
+(set -o noclobber; cat -- "$scratch" >"$workflow_path")
+```
+
+If rendering or validation fails, `set -e` stops before publication and the trap removes the scratch file. If the destination already exists, Bash's `noclobber` open fails without truncating or overwriting the consumer file. The bounded provider runner also rejects an undeclared provider, a non-render operation, or a payload-selection mismatch.
+
+Exit status: `0` content rendered · `2` invalid arguments, uninitialized or disabled state, unavailable package/provider, provider refusal, or non-UTF-8 content.
+
 ### `adopt`
 
 Compatibility command for existing adoption scripts. It emits a V5 deprecation notice on every invocation.
 
-When every requested standard is consumer-selectable in the installed V2 catalog, the command wraps `init`, desired-state enablement, and `reconcile --apply`. Otherwise it retains the V1 packaged-bundle path until those real packages are activated by the follow-on migration. V5 routing never honors `--force`; reconciliation conflicts remain authoritative.
+For every current consumer package in catalog 5, the command wraps initialization, desired-state enablement, and `reconcile --apply`. The V1 bundle path remains only as a v5 compatibility implementation for non-catalog historical surfaces and is removed with the v6 legacy gate. V5 routing never honors `--force`; reconciliation conflicts remain authoritative.
 
 ```text
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
@@ -171,11 +213,11 @@ Options:
 
 Exit status: `0` success · `1` a file write failed · `2` invalid invocation, non-directory `--dest`, or registry/bundle drift · `3` a standard's bundle manifest is missing or malformed.
 
-Agent Handoff adoption performs a complete non-mutating preflight before writes, preserves consumer knowledge, rechecks content hashes before managed updates, and writes its provenance lock last. Another standard may share the same invocation and aggregate plan.
+For a catalog-5 Agent Handoff selection, the wrapper preserves consumer knowledge and publishes ownership in the central `.standards/lock.toml` last; successful legacy migration retires the package-specific manifest. Only the retained V1 fallback writes its package provenance lock last. Another standard may share the same invocation and aggregate plan.
 
 ### `list`
 
-List standards that have V1 packaged adopt artifacts. This compatibility command emits a deprecation notice. Use `project-standards standards list` for the complete installed V5 catalog inventory.
+List standards that have V1 packaged adopt artifacts. This v5 compatibility command emits a deprecation notice and is removed with the v6 fallback. Use `project-standards standards list` for the complete installed V5 catalog inventory.
 
 ```text
 project-standards list [--json]
@@ -306,7 +348,7 @@ Change one standard's desired selector while preserving its enablement and optio
 project-standards standards version <standard> <latest|major.minor> [--repo <dir>] [--json]
 ```
 
-Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes.
+Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes. The package selector (`version = "latest"` or an exact `major.minor`) chooses an immutable payload. Package-owned options such as `contract_version` independently choose a supported document/schema behavior inside that resolved payload; `standards version` never rewrites those options.
 
 Exit status: `0` inspection/edit succeeded · `2` invalid invocation, unknown or non-selectable standard, unavailable version, or unsafe control state.
 
@@ -580,7 +622,8 @@ No command reads an application-specific environment variable for configuration:
 
 ## FILES
 
-- `.project-standards.yml` — Default project config, read by `validate`, `fix`, the `spec` verbs, and the standalone validators. Overridable with `--config`.
+- `.standards/` — Desired, catalog, and lock state created by `init` and read by `reconcile`, `render`, and V5 catalog commands. `reconcile --apply` may replace managed state. `render` exposes no state-write path; if a provider violates its write prohibition, detection refuses the invocation but does not roll back the mutation.
+- `.project-standards.yml` — V5 legacy-only/debug configuration read only when unified authority is absent. `validate`, `fix`, provider-backed `spec` verbs, and standalone validators resolve `.standards/config.toml` under unified authority and reject a legacy override or dual authority.
 - `.vscode/settings.json` — Read and written by `sync-vscode-colors` / `sync-standards-include` (the `folder-color.pathColors` block).
 - Bundled schemas and spec templates ship inside the installed package (`project_standards/schemas/`, `project_standards/specs/templates/`) and are resolved automatically; they are not user-edited files.
 
@@ -589,7 +632,7 @@ No command reads an application-specific environment variable for configuration:
 ### Validate the whole configured file set
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 ### Validate specific files without a config
@@ -601,19 +644,21 @@ uv run project-standards validate README.md docs/adr.md --no-require-frontmatter
 ### Fix frontmatter formatting and ids, then re-check
 
 ```bash
-uv run project-standards fix --config .project-standards.yml
+uv run project-standards fix
 ```
 
-### Preview an adoption without writing anything
+### Preview a V4 migration without writing anything
 
 ```bash
-uv run project-standards adopt markdown-tooling --dry-run
+uv run project-standards init --catalog 5 --migrate
 ```
 
-### Adopt two standards into another repository
+### Enable two packages and preview reconciliation
 
 ```bash
-uv run project-standards adopt markdown-frontmatter python-tooling --dest ../my-repo
+project-standards standards enable markdown-frontmatter --version 1.2
+project-standards standards enable python-tooling --version 1.1
+project-standards reconcile
 ```
 
 ### List standards with packaged adopt artifacts as JSON
@@ -772,7 +817,7 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## NOTES
 
-- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `validate`, `fix`, `spec`, and `standards` are early-dispatched before the top-level parser is built, so a trailing `--version` is handled by the dispatched target: after `validate` it is forwarded to the validators (which print a version and exit 0), while after `adopt` it is an argparse usage error and after `spec` or `standards` it is an unknown verb — both exit 2. Put `--version` first.
+- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `init`, `reconcile`, `render`, `agent-handoff`, `validate`, `fix`, `spec`, `standards`, and `packages` are early-dispatched before the top-level parser is built; specialized Agent Handoff adoption is also dispatched early. A trailing `--version` is therefore handled or rejected by the selected command rather than treated as the top-level version flag. For example, `validate --version` forwards the flag to the validators and exits 0, while `render --version`, generic `adopt --version`, `spec --version`, and `standards --version` are usage errors and exit 2. Put `--version` first.
 - **`validate-references` scope.** The cross-file pass is repo-wide by design; scoping it to a subset would let a duplicate id or broken reference in an unselected document slip through. `<file>` / `--glob` are therefore forwarded but ignored by this stage even though `validate-frontmatter` and `validate-id` honor them.
 - **Custom schemas disable id and format work.** When a custom (non-bundled) schema is selected, `validate-id`, `format-frontmatter`, `fix`, and `validate-references` skip their bundled-convention checks and exit 0 with a note — a custom-schema repository owns those conventions itself.
 - **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--help`/`-h` and `--version` as flags (intercepted before any positional is read); every other leading token is read as the first positional (a file path).

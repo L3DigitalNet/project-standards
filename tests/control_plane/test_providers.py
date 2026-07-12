@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import socket
@@ -184,7 +185,23 @@ def test_disabled_reference_is_removed_from_state_but_consumer_file_is_preserved
     assert target.read_text(encoding="utf-8") == "consumer-owned"
 
 
+def test_optional_reference_is_absent_when_nullable_option_is_unset(tmp_path: Path) -> None:
+    inputs = resolve_referenced_inputs(
+        tmp_path,
+        standard_id="demo",
+        version=PackageVersion("1.2"),
+        config={"extra_rules_file": None},
+        extensions=(_extension(preferred=False),),
+        managed_targets=(),
+        enabled=True,
+    )
+
+    assert inputs == ()
+
+
 def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
+    if effect is ProviderEffect.MIGRATION_REPORT:
+        return control_plane_schema_documents()["migration-report.schema.json"]
     if effect is ProviderEffect.MUTATION_PLAN:
         return control_plane_schema_documents()["mutation-plan.schema.json"]
     if effect is ProviderEffect.CONTENT:
@@ -240,6 +257,25 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
     elif behavior == "wrong-output":
         body = "return {'unexpected': 'shape'}"
         imports = ""
+    elif behavior == "undeclared-signature":
+        digest = "sha256:" + ("a" * 64)
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': {{}}, "
+            "'recognized_settings': ['/demo']}, 'claims': [{'signature_id': "
+            "'undeclared-signature', 'target': 'legacy.yml', 'observed_digest': "
+            f"'{digest}', 'ownership': 'managed', 'disposition': "
+            "'adopt'}], 'findings': []}"
+        )
+        imports = ""
+    elif behavior == "secret-config":
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': "
+            "{'api_token': 'do-not-echo-this-value'}, 'recognized_settings': ['/demo']}, "
+            "'claims': [], 'findings': []}"
+        )
+        imports = ""
     elif effect is ProviderEffect.CONTENT:
         body = (
             "print('private stdout')\n"
@@ -254,10 +290,58 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
             "'hint': 'inspect'}]}"
         )
         imports = ""
-    else:
+    elif effect is ProviderEffect.MUTATION_PLAN and behavior != "success":
+        replacement = b"updated\n"
+        action = {
+            "kind": "update",
+            "target": "README.md",
+            "adapter": "whole-file",
+            "scope": "$file",
+            "summary": "update document",
+            "precondition_digest": _digest(b"repo\n"),
+            "content_digest": _digest(replacement),
+            "content_base64": base64.b64encode(replacement).decode("ascii"),
+            "mode": "0644",
+        }
+        if behavior == "undeclared-target":
+            action["target"] = "other.md"
+        elif behavior == "wrong-precondition":
+            action["precondition_digest"] = "sha256:" + ("c" * 64)
+        elif behavior == "create-over-regular":
+            action["kind"] = "create"
+        elif behavior == "remove":
+            action = {
+                "kind": "remove",
+                "target": "README.md",
+                "adapter": "whole-file",
+                "scope": "$file",
+                "summary": "remove document",
+                "precondition_digest": _digest(b"repo\n"),
+            }
+        elif behavior == "wrong-adapter":
+            action["adapter"] = "toml"
+            action["scope"] = "key:/document"
+        actions = [action, action] if behavior == "duplicate-target" else [action]
+        body = "return " + repr(
+            {
+                "schema_version": "1.0",
+                "standard_id": "demo",
+                "version": marker,
+                "actions": actions,
+            }
+        )
+        imports = ""
+    elif effect is ProviderEffect.MUTATION_PLAN:
         body = (
             "return {'schema_version': '1.0', 'standard_id': 'demo', "
             f"'version': '{marker}', 'actions': []}}"
+        )
+        imports = ""
+    else:
+        body = (
+            "return {'schema_version': '1.0', 'package': {'standard_id': 'demo', "
+            f"'version': '{marker}', 'selector': 'latest', 'config': {{'mode': 'strict'}}, "
+            "'recognized_settings': ['/demo']}, 'claims': [], 'findings': []}"
         )
         imports = ""
     return f"{imports}\ndef run(request, resources):\n    {body}\n"
@@ -270,6 +354,7 @@ def _write_provider_payload(
     operation: ProviderOperation = ProviderOperation.RENDER,
     effect: ProviderEffect = ProviderEffect.CONTENT,
     behavior: str = "success",
+    extensions: tuple[ExtensionDeclaration, ...] = (),
 ) -> InstalledPayload:
     root.mkdir(parents=True)
     input_schema = control_plane_schema_documents()["provider-input.schema.json"]
@@ -323,6 +408,9 @@ def _write_provider_payload(
     phase = {
         ProviderOperation.RENDER: "plan",
         ProviderOperation.VALIDATE: "validate",
+        ProviderOperation.FIX: "authoring",
+        ProviderOperation.SCAFFOLD: "authoring",
+        ProviderOperation.UPGRADE: "authoring",
         ProviderOperation.MIGRATE: "plan",
     }[operation]
     manifest = PayloadManifest.model_validate(
@@ -345,6 +433,7 @@ def _write_provider_payload(
                     "resources": ["provider-data"],
                 }
             ],
+            "extensions": [extension.model_dump(mode="json") for extension in extensions],
         }
     )
     return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
@@ -360,6 +449,59 @@ def _invocation(repo: Path, payload: InstalledPayload) -> ProviderInvocation:
         operation=payload.manifest.providers[0].operation,
         effective_config={"mode": "strict"},
         snapshots={"README.md": {"digest": _digest(b"repo\n")}},
+    )
+
+
+def _fix_invocation(
+    repo: Path, payload: InstalledPayload, *, kind: str = "regular"
+) -> ProviderInvocation:
+    invocation = _invocation(repo, payload)
+    return ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "documents": [
+                {
+                    "path": "README.md",
+                    "kind": kind,
+                    "precondition_digest": _digest(b"repo\n"),
+                }
+            ]
+        },
+    )
+
+
+def _authoring_invocation(
+    repo: Path,
+    payload: InstalledPayload,
+    *,
+    kind: str,
+    mode: str = "0644",
+    overwrite: bool,
+) -> ProviderInvocation:
+    invocation = _invocation(repo, payload)
+    return ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "authoring": {
+                "target": "README.md",
+                "kind": kind,
+                "precondition_digest": _digest(b"repo\n"),
+                "mode": mode,
+                "overwrite": overwrite,
+            }
+        },
     )
 
 
@@ -399,6 +541,54 @@ def test_provider_rejects_operation_mismatch_before_invocation(tmp_path: Path) -
 
 
 @pytest.mark.parametrize(
+    ("standard_id", "extension_id", "path", "message"),
+    [
+        ("other", "extra-rules", "rules.toml", "selected package"),
+        ("demo", "undeclared", "rules.toml", "undeclared extension"),
+        ("demo", "extra-rules", "other.toml", "configured path"),
+    ],
+)
+def test_provider_rejects_unscoped_referenced_input_before_reading(
+    tmp_path: Path,
+    standard_id: str,
+    extension_id: str,
+    path: str,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "rules.toml").write_text("safe", encoding="utf-8")
+    payload = _write_provider_payload(
+        tmp_path / "payload",
+        extensions=(_extension(preferred=False),),
+    )
+    invocation = _invocation(repo, payload)
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(
+            ProviderInvocation(
+                repo=invocation.repo,
+                payload=invocation.payload,
+                standard_id=invocation.standard_id,
+                version=invocation.version,
+                provider_id=invocation.provider_id,
+                operation=invocation.operation,
+                effective_config={"extra_rules_file": "rules.toml"},
+                snapshots={
+                    "referenced_inputs": [
+                        {
+                            "standard_id": standard_id,
+                            "extension_id": extension_id,
+                            "path": path,
+                            "digest": _digest(b"safe"),
+                        }
+                    ]
+                },
+            )
+        )
+
+
+@pytest.mark.parametrize(
     ("behavior", "message"),
     [
         ("wrong-output", "declared schema"),
@@ -431,7 +621,9 @@ def test_provider_receives_immutable_input_and_only_declared_resource_bytes(
         invoke_provider(_invocation(repo, payload))
 
 
-def test_provider_returns_typed_findings_and_mutation_plan(tmp_path: Path) -> None:
+def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
+    tmp_path: Path,
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     findings_payload = _write_provider_payload(
@@ -442,17 +634,168 @@ def test_provider_returns_typed_findings_and_mutation_plan(tmp_path: Path) -> No
     plan_payload = _write_provider_payload(
         tmp_path / "plan",
         version="2.0",
-        operation=ProviderOperation.MIGRATE,
+        operation=ProviderOperation.FIX,
         effect=ProviderEffect.MUTATION_PLAN,
+    )
+    migration_payload = _write_provider_payload(
+        tmp_path / "migration",
+        version="2.0",
+        operation=ProviderOperation.MIGRATE,
+        effect=ProviderEffect.MIGRATION_REPORT,
     )
 
     findings = invoke_provider(_invocation(repo, findings_payload))
     plan = invoke_provider(_invocation(repo, plan_payload))
+    migration = invoke_provider(_invocation(repo, migration_payload))
 
     assert findings.findings[0].code == "DEMO"
     assert findings.findings[0].standard_id == "demo"
     assert plan.mutation_plan is not None
     assert plan.mutation_plan.version.value == "2.0"
+    assert migration.migration_report is not None
+    assert migration.migration_report.package.version.value == "2.0"
+
+
+def test_fix_mutation_plan_is_bound_to_immutable_document_snapshot(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    result = invoke_provider(_fix_invocation(repo, payload))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].target.original == "README.md"
+
+
+@pytest.mark.parametrize(
+    ("behavior", "message"),
+    [
+        ("undeclared-target", "undeclared target"),
+        ("duplicate-target", "duplicate target"),
+        ("wrong-precondition", "precondition"),
+        ("create-over-regular", "action kind"),
+        ("remove", "removal"),
+        ("wrong-adapter", "whole-file"),
+    ],
+)
+def test_fix_mutation_plan_rejects_actions_not_bound_to_document_snapshot(
+    tmp_path: Path,
+    behavior: str,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / behavior,
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior=behavior,
+    )
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(_fix_invocation(repo, payload))
+
+
+def test_fix_mutation_plan_allows_create_only_for_missing_snapshot(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "create",
+        operation=ProviderOperation.FIX,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="create-over-regular",
+    )
+
+    result = invoke_provider(_fix_invocation(repo, payload, kind="missing"))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].kind.value == "create"
+
+
+def test_authoring_mutation_plan_is_bound_to_mode_and_overwrite_authorization(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.SCAFFOLD,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    result = invoke_provider(_authoring_invocation(repo, payload, kind="regular", overwrite=True))
+
+    assert result.mutation_plan is not None
+    assert result.mutation_plan.actions[0].mode == "0644"
+
+
+@pytest.mark.parametrize(
+    ("mode", "overwrite", "message"),
+    [
+        ("0600", True, "mode"),
+        ("0644", False, "overwrite authorization"),
+    ],
+)
+def test_authoring_mutation_plan_rejects_caller_authority_expansion(
+    tmp_path: Path,
+    mode: str,
+    overwrite: bool,
+    message: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "plan",
+        operation=ProviderOperation.SCAFFOLD,
+        effect=ProviderEffect.MUTATION_PLAN,
+        behavior="valid-update",
+    )
+
+    with pytest.raises(ControlPlaneError, match=message):
+        invoke_provider(
+            _authoring_invocation(
+                repo,
+                payload,
+                kind="regular",
+                mode=mode,
+                overwrite=overwrite,
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("behavior", "message", "hidden"),
+    [
+        ("undeclared-signature", "undeclared legacy signature", None),
+        ("secret-config", "invalid report", "do-not-echo-this-value"),
+    ],
+)
+def test_migration_provider_rejects_undeclared_signatures_and_secret_values(
+    tmp_path: Path,
+    behavior: str,
+    message: str,
+    hidden: str | None,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "migration",
+        operation=ProviderOperation.MIGRATE,
+        effect=ProviderEffect.MIGRATION_REPORT,
+        behavior=behavior,
+    )
+
+    with pytest.raises(ControlPlaneError, match=message) as caught:
+        invoke_provider(_invocation(repo, payload))
+
+    if hidden is not None:
+        assert hidden not in str(caught.value)
 
 
 @pytest.mark.parametrize("behavior", ["raise", "network"])

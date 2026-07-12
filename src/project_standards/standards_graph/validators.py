@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from project_standards.adopt.engine import resolve_source
 from project_standards.adopt.errors import ManifestError
 from project_standards.adopt.manifest import ArtifactProvenance
+from project_standards.package_contract.graph import validate_package_repository
 from project_standards.standard_manifest import AdoptionMode
 from project_standards.standards_graph.model import (
     GraphFinding,
@@ -485,6 +486,22 @@ def validate_graph(
     graph: StandardsGraph, *, require_all_manifests: bool = False
 ) -> list[GraphFinding]:
     """Return deterministic graph validation findings."""
+    if graph.package_repository is not None:
+        findings = _validate_missing_manifests(graph, require_all_manifests)
+        findings.extend(
+            [
+                GraphFinding(
+                    code=finding.code,
+                    severity=finding.severity,
+                    standard_id=finding.standard_id,
+                    path=finding.path,
+                    message=finding.message,
+                    hint=finding.hint,
+                )
+                for finding in validate_package_repository(graph.package_repository)
+            ]
+        )
+        return sort_findings(findings)
     findings: list[GraphFinding] = []
     findings.extend(_validate_missing_manifests(graph, require_all_manifests))
     findings.extend(_validate_artifact_manifests(graph))

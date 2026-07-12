@@ -7,6 +7,7 @@ import pytest
 
 from project_standards.cli import main
 from project_standards.standards_graph.cli import run
+from tests.package_contract.helpers import copy_minimal_repository
 from tests.standards_graph_helpers import write_standard
 
 
@@ -183,3 +184,18 @@ def test_current_repo_validate_graph_require_all_manifests_passes_after_retrofit
     assert rc == 0
     assert payload["ok"] is True
     assert payload["findings"] == []
+
+
+def test_v2_validate_graph_reports_manifestless_family_directory(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    orphan = root / "standards/orphan"
+    orphan.mkdir()
+    (orphan / "README.md").write_text("# Orphan\n", encoding="utf-8")
+
+    rc = run(["validate-graph", "--root", str(root), "--require-all-manifests", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 1
+    assert payload["findings"][0]["code"] == "SG-MANIFEST-MISSING"

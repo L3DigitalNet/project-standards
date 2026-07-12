@@ -1,106 +1,12 @@
-# Machine manifest for the Markdown Frontmatter Standard.
+schema_version = "2.0"
 
 [standard]
 id = "markdown-frontmatter"
 name = "Markdown Frontmatter Standard"
-status = "active"
 summary = "Canonical metadata, ID, and reference validation for managed Markdown documents."
-adoption = "validator"
+status = "active"
 
-[versions]
-supported = ["1.0", "1.1", "1.2"]
-latest = "1.2"
-
-[config]
-namespaces = ["markdown.frontmatter"]
-
-[capabilities]
-provides = [
-  "markdown.frontmatter.schema",
-  "markdown.frontmatter.format",
-  "markdown.id.validate",
-  "markdown.references.validate",
-]
-consumes_platform = []
-
-[relations]
-companions = ["adr", "markdown-tooling"]
-extends = []
-conflicts = []
-
-[resources]
-readme = "README.md"
-agent_summary = "agent-summary.md"
-adopt = "adopt.md"
-structure = "structure.md"
-field_values = "field-values.md"
-template_standard = "templates/frontmatter-standard.yml"
-template_minimal = "templates/frontmatter-minimal.yml"
-template_repository_frontmatter_adr = "templates/repository-frontmatter-adr.md"
-template_note = "templates/note.md"
-template_concept = "templates/concept.md"
-template_research = "templates/research.md"
-template_runbook = "templates/runbook.md"
-template_spec = "templates/spec.md"
-template_repo_pages = "templates/repo-pages/README.directory.template.md"
-example_note = "examples/note.example.md"
-example_concept = "examples/concept.example.md"
-example_runbook = "examples/runbook.example.md"
-skill = "skills/markdown-frontmatter/SKILL.md"
-skill_openai = "skills/markdown-frontmatter/agents/openai.yaml"
-skill_new_doc_id = "skills/markdown-frontmatter/scripts/new-doc-id"
-
-[artifacts]
-manifest = "src/project_standards/bundles/markdown-frontmatter/adopt.toml"
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "frontmatter-schema"
-owner = "project-standards"
-mutates = false
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "document-id-format"
-owner = "project-standards"
-mutates = false
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "cross-reference-integrity"
-owner = "project-standards"
-mutates = false
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "frontmatter-format"
-owner = "format-frontmatter"
-mutates = true
-
-[[providers]]
-operation = "validate"
-kind = "python"
-entrypoint = "project_standards.validate_frontmatter:main"
-optional = false
-
-[[providers]]
-operation = "validate"
-kind = "python"
-entrypoint = "project_standards.validate_id:main"
-optional = false
-
-[[providers]]
-operation = "validate"
-kind = "python"
-entrypoint = "project_standards.validate_references:main"
-optional = true
-
-[[providers]]
-operation = "fix"
-kind = "python"
-entrypoint = "project_standards.format_frontmatter:main"
-optional = true
+[[versions]]
+version = "1.2"
+payload = "versions/1.2/payload.toml"
+digest = "sha256:d93fa30ea330f0a5b6b094c120a89887f40e78605a8505ddeadc0288ff83afbd"

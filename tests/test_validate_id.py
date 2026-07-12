@@ -22,6 +22,7 @@ from project_standards.validate_id import (
     check_file,
     fix_file,
     main,
+    plan_fix_content,
     slugify,
     validate_id,
 )
@@ -488,6 +489,25 @@ def test_main_config_custom_schema_skips_validation(
 # ---------------------------------------------------------------------------
 
 
+def test_main_fix_refuses_a_leaf_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    outside = tmp_path / "outside.md"
+    original = _FULL_FM.replace("id: 'old-kebab-id'", "id: wrong")
+    outside.write_text(original)
+    link = tmp_path / "doc.md"
+    link.symlink_to(outside)
+
+    rc = main(["--fix", "--config", str(cfg), str(link)])
+
+    assert rc == 2
+    assert outside.read_text() == original
+    assert "not a regular file" in capsys.readouterr().err
+
+
 def test_replace_frontmatter_id_single_quoted(tmp_path: Path) -> None:
     text = "---\nid: 'old-id'\ndoc_type: 'note'\n---\n# Body\n"
     result = _replace_frontmatter_id(text, "note-a3f9zk-new-slug")
@@ -547,6 +567,28 @@ _FULL_FM = (
 )
 
 
+def test_plan_fix_content_returns_bytes_without_touching_the_repository() -> None:
+    raw = _doc(
+        "schema_version: '1.1'\n"
+        "id: wrong\n"
+        "title: Tailscale ACL Gotcha\n"
+        "description: d\n"
+        "doc_type: note\n"
+        "status: draft\n"
+        "created: '2026-01-01'\n"
+        "updated: '2026-01-01'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []"
+    ).encode()
+
+    updated, result = plan_fix_content(raw, token_factory=lambda: "aaaaaa")
+
+    assert result.new_id == "note-aaaaaa-tailscale-acl-gotcha"
+    assert b"id: 'note-aaaaaa-tailscale-acl-gotcha'" in updated
+    assert raw != updated
+
+
 def test_fix_file_rewrites_invalid_id(tmp_path: Path) -> None:
     f = tmp_path / "doc.md"
     f.write_text(_FULL_FM, encoding="utf-8")
@@ -560,6 +602,25 @@ def test_fix_file_rewrites_invalid_id(tmp_path: Path) -> None:
     assert parts[2] == "tailscale-acl-gotcha"
     # File was updated
     assert f"id: '{new_id}'" in f.read_text()
+
+
+def test_fix_cli_routes_writes_through_platform_executor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.validate_id as module
+
+    monkeypatch.chdir(tmp_path)
+    document = tmp_path / "doc.md"
+    document.write_text(_FULL_FM, encoding="utf-8")
+
+    def direct_write_forbidden(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("validate-id --fix must use the platform executor")
+
+    monkeypatch.setattr(module, "_atomic_write_bytes", direct_write_forbidden)
+
+    assert main(["--fix", str(document)]) == 0
+    assert "id: 'note-" in document.read_text(encoding="utf-8")
 
 
 def test_fix_file_already_valid_is_skipped(tmp_path: Path) -> None:
@@ -1161,26 +1222,3 @@ def test_main_quiet_success_suppresses_summary(
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.out == ""
-
-
-def test_main_fix_handles_reasonless_skip(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    # fix_file always supplies a skip_reason today; inject a bare FixResult to
-    # pin main's defensive handling — the file must still count as a failure
-    # (exit 1) without a crash or a blank skip note.
-    import project_standards.validate_id as vid
-
-    monkeypatch.chdir(tmp_path)
-    _write(tmp_path, "id: bad\ndoc_type: note\ntitle: 'T'", name="odd.md")
-
-    def bare_result(*_a: object, **_k: object) -> vid.FixResult:
-        return vid.FixResult()
-
-    monkeypatch.setattr(vid, "fix_file", bare_result)
-    rc = vid.main(["--fix", "odd.md"])
-    captured = capsys.readouterr()
-    assert rc == 1
-    assert "✗" in captured.err

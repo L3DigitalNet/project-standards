@@ -383,6 +383,20 @@ def _parse(content: bytes, kind: AdapterKind, *, fragment: bool = False) -> Json
     return JsonDocument(text, root)
 
 
+def container_value_without_comments(content: bytes, kind: AdapterKind) -> JsonValue | None:
+    """Return container semantics only when deleting it cannot discard JSONC comments."""
+    if kind not in {AdapterKind.JSON, AdapterKind.JSONC}:
+        raise ControlPlaneError("JSON container inspection requires a JSON-family adapter")
+    text = _decode(content, kind.value.upper())
+    try:
+        tokens = _lex(text, allow_comments=kind is AdapterKind.JSONC)
+    except ValueError as exc:
+        raise ControlPlaneError("content is not valid JSON-family syntax") from exc
+    if any(token.kind == "comment" for token in tokens):
+        return None
+    return _parse(content, kind).root.value
+
+
 def _pointer(value: str) -> tuple[str, ...]:
     return tuple(
         component.replace("~1", "/").replace("~0", "~") for component in value.split("/")[1:]
@@ -537,7 +551,12 @@ def _semantically_equal(left: JsonValue, right: JsonValue) -> bool:
     return semantic_digest(left) == semantic_digest(right)
 
 
-def _deletion_edits(located: LocatedUnit) -> list[tuple[int, int, str]]:
+def _deletion_edits(
+    located: LocatedUnit,
+    text: str | None = None,
+    *,
+    prune_whitespace: bool = False,
+) -> list[tuple[int, int, str]]:
     # Delete the semantic code and its separator as disjoint spans. Comments
     # and whitespace between them are consumer bytes and must survive removal.
     if located.member is not None:
@@ -552,6 +571,25 @@ def _deletion_edits(located: LocatedUnit) -> list[tuple[int, int, str]]:
         end = located.node.end
         comma = located.container.commas[located.index]
         previous_comma = located.container.commas[located.index - 1] if located.index > 0 else None
+    if prune_whitespace and text is not None:
+        count = (
+            len(located.container.members)
+            if located.container.kind == "object"
+            else len(located.container.elements)
+        )
+        if comma is not None and located.index + 1 < count:
+            next_start = (
+                located.container.members[located.index + 1].key_token.start
+                if located.container.kind == "object"
+                else located.container.elements[located.index + 1].start
+            )
+            separator = text[end:next_start]
+            if separator.replace(",", "", 1).strip() == "":
+                return [(start, next_start, "")]
+        if previous_comma is not None:
+            separator = text[previous_comma.start : start]
+            if separator.replace(",", "", 1).strip() == "":
+                return [(previous_comma.start, end, "")]
     edits = [(start, end, "")]
     selected_comma = comma if comma is not None else previous_comma
     if selected_comma is not None:
@@ -564,6 +602,32 @@ def _apply_edits(text: str, edits: list[tuple[int, int, str]]) -> str:
     for start, end, replacement in sorted(edits, reverse=True):
         updated = f"{updated[:start]}{replacement}{updated[end:]}"
     return updated
+
+
+def _prune_empty_object_ancestors(
+    content: bytes,
+    kind: AdapterKind,
+    path: tuple[str, ...],
+) -> bytes:
+    """Remove empty parent objects known to originate in a platform-created file."""
+    parent = path[:-1]
+    while parent:
+        document = _parse(content, kind)
+        node = _node_at(document.root, parent)
+        if node is None or node.kind != "object" or node.value != {}:
+            break
+        raw = document.text[node.start : node.end].encode()
+        if container_value_without_comments(raw, kind) != {}:
+            break
+        located = _key_location(document.root, parent)
+        if located is None:
+            break
+        content = _apply_edits(
+            document.text,
+            _deletion_edits(located, document.text, prune_whitespace=True),
+        ).encode()
+        parent = parent[:-1]
+    return content
 
 
 def _newline(text: str) -> str:
@@ -675,7 +739,16 @@ class _JsonFamilyAdapter:
                     raise ControlPlaneError("JSON removal cannot carry content")
                 if located is None:
                     raise ControlPlaneError("JSON removal scope is not present")
-                content = _apply_edits(document.text, _deletion_edits(located)).encode()
+                content = _apply_edits(
+                    document.text,
+                    _deletion_edits(
+                        located,
+                        document.text,
+                        prune_whitespace=change.prune_empty_ancestors,
+                    ),
+                ).encode()
+                if change.prune_empty_ancestors and spec.kind == "key":
+                    content = _prune_empty_object_ancestors(content, self.kind, spec.path)
                 _parse(content, self.kind)
                 continue
             if change.content is None:
@@ -713,14 +786,46 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("JSON key scope must identify an object member")
             parent = _node_at(document.root, spec.path[:-1])
             if parent is None:
-                raise ControlPlaneError("JSON creation parent scope is not present")
+                grandparent = _node_at(document.root, spec.path[:-2])
+                if grandparent is None:
+                    raise ControlPlaneError("JSON creation parent scope is not present")
+                if grandparent.kind != "object":
+                    raise ControlPlaneError("JSON creation parent is not an object")
+                parent_key = json.dumps(spec.path[-2], ensure_ascii=False)
+                member_key = json.dumps(spec.path[-1], ensure_ascii=False)
+                return _append(
+                    grandparent,
+                    document.text,
+                    f"{parent_key}: {{{member_key}: {fragment}}}",
+                )
             if parent.kind != "object":
                 raise ControlPlaneError("JSON creation parent is not an object")
             member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: {fragment}"
             return _append(parent, document.text, member)
         container = _node_at(document.root, spec.path)
         if container is None:
-            raise ControlPlaneError("JSON set container is not present")
+            if not spec.path:
+                raise ControlPlaneError("JSON set container is not present")
+            parent = _node_at(document.root, spec.path[:-1])
+            if parent is None:
+                if spec.kind != "keyed-set":
+                    raise ControlPlaneError("JSON set container parent is not present")
+                grandparent = _node_at(document.root, spec.path[:-2])
+                if grandparent is None:
+                    raise ControlPlaneError("JSON set container parent is not present")
+                if grandparent.kind != "object":
+                    raise ControlPlaneError("JSON set container grandparent is not an object")
+                parent_key = json.dumps(spec.path[-2], ensure_ascii=False)
+                member_key = json.dumps(spec.path[-1], ensure_ascii=False)
+                return _append(
+                    grandparent,
+                    document.text,
+                    f"{parent_key}: {{{member_key}: [{fragment}]}}",
+                )
+            if parent.kind != "object":
+                raise ControlPlaneError("JSON set container parent is not an object")
+            member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: [{fragment}]"
+            return _append(parent, document.text, member)
         if container.kind != "array":
             raise ControlPlaneError("JSON set scope does not identify an array")
         return _append(container, document.text, fragment)

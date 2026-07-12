@@ -181,7 +181,11 @@ def test_extracted_wheel_runs_offline_lifecycle_and_repairs_partial_apply(
     project = tmp_path / "build"
     shutil.copytree(_FULL / "standards", project / "standards")
     shutil.copytree(_FULL / "catalogs", project / "catalogs")
-    shutil.copytree(Path("src/project_standards"), project / "src/project_standards")
+    shutil.copytree(
+        Path("src/project_standards"),
+        project / "src/project_standards",
+        ignore=shutil.ignore_patterns("catalogs", "families", "payloads"),
+    )
     (project / "pyproject.toml").write_text(
         """[project]
 name = "project-standards"
@@ -224,7 +228,7 @@ socket.socket = deny
 socket.create_connection = deny
 
 from project_standards.cli import main
-from project_standards.control_plane.cli import _planner_request, validate_repository
+from project_standards.control_plane.cli import build_planner_request, validate_repository
 from project_standards.control_plane.codec import parse_lock
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
@@ -245,7 +249,7 @@ extension = repo / ".standards/extensions/alpha/options.toml"
 extension.parent.mkdir(parents=True)
 extension.write_text("enabled = true\n", encoding="utf-8")
 codes.append(main(["standards", "enable", "alpha", "--repo", str(repo)]))
-request = _planner_request(repo, distribution, frozenset())
+request = build_planner_request(repo, distribution, frozenset())
 plan = plan_reconciliation(request)
 
 def interrupt(phase, identity):

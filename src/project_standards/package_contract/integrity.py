@@ -121,7 +121,14 @@ def _live_files(payload_dir: Path) -> dict[str, Path]:
     live: dict[str, Path] = {}
     normalized_paths: list[SafeRelativePath] = []
     for entry in entries:
-        relative_text = entry.relative_to(payload_dir).as_posix()
+        relative_path = entry.relative_to(payload_dir)
+        relative_text = relative_path.as_posix()
+        if "__pycache__" in relative_path.parts:
+            if entry.is_dir() or entry.suffix == ".pyc":
+                continue
+            raise PackageContractError(
+                f"payload inventory contains undeclared cache content: {relative_text}"
+            )
         try:
             relative = SafeRelativePath.parse(relative_text)
         except ValueError as exc:

@@ -480,12 +480,42 @@ def _replacement(
     return _indent_fragment(fragment, column, newline)
 
 
-def _deletion_span(document: YamlDocument, located: LocatedUnit) -> tuple[int, int, str]:
+def _deletion_span(
+    document: YamlDocument,
+    located: LocatedUnit,
+    spec: ScopeSpec,
+) -> tuple[int, int, str]:
     if located.key_node is not None:
         start = _line_start(document.text, _node_start(located.key_node))
     else:
         start = _line_start(document.text, _node_start(located.node))
-    return (start, _content_end(located.node), "")
+    content_end = _content_end(located.node)
+    line_end = _after_line(document.text, content_end)
+    end = content_end if "#" in document.text[content_end:line_end] else line_end
+    if isinstance(located.container, MappingNode) and len(located.container.value) == 1:
+        newline = _newline(document.text)
+        if located.container is document.root:
+            prefix = document.text[:start]
+            suffix = document.text[end:]
+            separator = "" if suffix.startswith((" ", "\t")) else newline
+            return (0, len(document.text), f"{prefix}{{}}{separator}{suffix}")
+        parent = _key_location(document.root, spec.path[:-1])
+        if parent is not None and parent.node is located.container and parent.key_node is not None:
+            parent_start = _line_start(document.text, _node_start(parent.key_node))
+            parent_end = _after_line(document.text, _content_end(located.container))
+            header_end = _after_line(document.text, _node_end(parent.key_node))
+            header = document.text[parent_start:header_end]
+            prefix = document.text[parent_start:start]
+            suffix = document.text[end:parent_end]
+            if "#" in header or f"{prefix}{suffix}" != header:
+                empty_node = located.key_node if located.key_node is not None else located.node
+                separator = "" if suffix.startswith((" ", "\t")) else newline
+                empty = f"{' ' * _node_column(empty_node)}{{}}{separator}"
+                return (parent_start, parent_end, f"{prefix}{empty}{suffix}")
+            key = document.text[_node_start(parent.key_node) : _node_end(parent.key_node)]
+            indent = " " * _node_column(parent.key_node)
+            return (parent_start, parent_end, f"{indent}{key}: {{}}{newline}")
+    return (start, end, "")
 
 
 def _apply_edit(text: str, edit: tuple[int, int, str]) -> str:
@@ -513,6 +543,43 @@ def _append_mapping_entry(
     fragment: str,
 ) -> str:
     if parent.flow_style:
+        if parent is document.root and not parent.value and document.text.strip() == "{}":
+            newline = _newline(document.text)
+            key_text = _canonical_key(key)
+            if _fragment_is_block_collection(fragment_document):
+                value = _indent_fragment(fragment, 2, newline)
+                return f"{key_text}:{newline}  {value}{newline}"
+            return f"{key_text}: {_normalize_newlines(fragment, newline)}{newline}"
+        if not parent.value and document.text[_node_start(parent) : _node_end(parent)] == "{}":
+            newline = _newline(document.text)
+            line_start = _line_start(document.text, _node_start(parent))
+            prefix = document.text[line_start : _node_start(parent)]
+            parent_indent = len(prefix) - len(prefix.lstrip(" "))
+            inline_parent = bool(prefix.strip())
+            indent = parent_indent + 2 if inline_parent else len(prefix)
+            lead = newline if inline_parent else ""
+            key_text = _canonical_key(key)
+            if _fragment_is_block_collection(fragment_document):
+                child_indent = indent + 2
+                value = _indent_fragment(fragment, child_indent, newline)
+                replacement = f"{lead}{' ' * indent}{key_text}:{newline}{' ' * child_indent}{value}"
+            else:
+                value = _normalize_newlines(fragment, newline)
+                replacement = f"{lead}{' ' * indent}{key_text}: {value}"
+            replacement_start = _node_start(parent)
+            while replacement_start > line_start and document.text[replacement_start - 1] in " \t":
+                replacement_start -= 1
+            line_end = _after_line(document.text, _node_end(parent))
+            tail = document.text[_node_end(parent) : line_end]
+            replacement_end = _node_end(parent)
+            if "#" in tail:
+                comment = tail.rstrip("\r\n")
+                replacement = f"{comment}{replacement}{newline}"
+                replacement_end = line_end
+            return _apply_edit(
+                document.text,
+                (replacement_start, replacement_end, replacement),
+            )
         raise ControlPlaneError("YAML flow mappings are not independently editable")
     newline = _newline(document.text)
     indent = _mapping_indent(parent)
@@ -583,7 +650,10 @@ class YamlAdapter:
                 if located is None:
                     raise ControlPlaneError("YAML removal scope is not present")
                 _assert_bounded(document, located)
-                content = _apply_edit(document.text, _deletion_span(document, located)).encode()
+                content = _apply_edit(
+                    document.text,
+                    _deletion_span(document, located, spec),
+                ).encode()
                 _parse(content)
                 continue
             if change.content is None:
@@ -633,6 +703,30 @@ class YamlAdapter:
                 raise ControlPlaneError("YAML key scope must identify a mapping entry")
             parent = _node_at(document.root, spec.path[:-1])
             if parent is None:
+                parent_depth = len(spec.path) - 1
+                while parent_depth >= 0:
+                    candidate = _node_at(document.root, spec.path[:parent_depth])
+                    if candidate is not None:
+                        if not isinstance(candidate, MappingNode):
+                            raise ControlPlaneError("YAML creation parent is not a mapping")
+                        nested = fragment
+                        nested_document = fragment_document
+                        for key in reversed(spec.path[parent_depth + 1 :]):
+                            newline = _newline(nested_document.text)
+                            if _fragment_is_block_collection(nested_document):
+                                value = _indent_fragment(nested, 2, newline)
+                                nested = f"{_canonical_key(key)}:{newline}  {value}"
+                            else:
+                                nested = f"{_canonical_key(key)}: {nested}"
+                            nested_document = _parse(nested.encode(), fragment=True)
+                        return _append_mapping_entry(
+                            document,
+                            candidate,
+                            spec.path[parent_depth],
+                            nested_document,
+                            nested,
+                        )
+                    parent_depth -= 1
                 raise ControlPlaneError("YAML creation parent scope is not present")
             if not isinstance(parent, MappingNode):
                 raise ControlPlaneError("YAML creation parent is not a mapping")

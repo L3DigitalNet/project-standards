@@ -40,6 +40,8 @@ class ControlFinding:
     identity: str
     message: str
     hint: str
+    line: int | None = None
+    locus: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +84,8 @@ def finding_sort_key(finding: ControlFinding) -> tuple[object, ...]:
         finding.severity,
         finding.message,
         finding.hint,
+        finding.line if finding.line is not None else -1,
+        finding.locus or "",
     )
 
 
@@ -111,7 +115,10 @@ def sort_actions(actions: Iterable[ControlAction]) -> list[ControlAction]:
 
 def findings_to_jsonable(findings: Iterable[ControlFinding]) -> list[dict[str, object]]:
     """Return deterministically ordered JSON-compatible finding objects."""
-    return [asdict(finding) for finding in sort_findings(findings)]
+    return [
+        {key: value for key, value in asdict(finding).items() if value is not None}
+        for finding in sort_findings(findings)
+    ]
 
 
 def actions_to_jsonable(actions: Iterable[ControlAction]) -> list[dict[str, object]]:

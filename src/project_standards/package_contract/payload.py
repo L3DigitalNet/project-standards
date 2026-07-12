@@ -159,6 +159,39 @@ class ArtifactPolicy(StrEnum):
     CREATE_ONLY = "create-only"
 
 
+class MaterializationPredicate(StrictModel):
+    """Match one resolved package option without embedding executable policy."""
+
+    option: OptionName
+    equals: bool | int | float | str | None = None
+    contains: bool | int | float | str | None = None
+
+    @model_validator(mode="after")
+    def _one_operator(self) -> MaterializationPredicate:
+        if (self.equals is None) == (self.contains is None):
+            raise ValueError("materialization predicate requires exactly one operator")
+        return self
+
+    def matches(self, config: Mapping[str, JsonValue]) -> bool:
+        """Return whether the resolved option satisfies this closed predicate."""
+        observed = config.get(self.option)
+        if self.equals is not None:
+            return type(observed) is type(self.equals) and observed == self.equals
+        return isinstance(observed, list) and any(
+            type(item) is type(self.contains) and item == self.contains for item in observed
+        )
+
+
+class ConditionalMaterialization(StrictModel):
+    """Allow a declaration to exist only for selected resolved profiles."""
+
+    when_any: list[MaterializationPredicate] = Field(default_factory=list)
+
+    def materializes(self, config: Mapping[str, JsonValue]) -> bool:
+        """Return whether the declaration belongs in the desired virtual tree."""
+        return not self.when_any or any(predicate.matches(config) for predicate in self.when_any)
+
+
 class AdapterKind(StrEnum):
     """Semantic container adapters supported by the V1 contribution contract."""
 
@@ -171,7 +204,7 @@ class AdapterKind(StrEnum):
     MARKDOWN_BLOCK = "markdown-block"
 
 
-class WholeArtifactDeclaration(StrictModel):
+class WholeArtifactDeclaration(ConditionalMaterialization):
     """Declare exclusive ownership of one complete repository file."""
 
     id: ResourceId
@@ -254,7 +287,9 @@ def normalize_scope(adapter: AdapterKind, scope: str) -> str:
         for prefix in ("key:", "table:"):
             if scope.startswith(prefix):
                 return f"{prefix}{_json_pointer(scope.removeprefix(prefix))}"
-        raise ValueError("TOML selector must own one key or table")
+        if scope.startswith("keyed-set:"):
+            return _keyed_set_scope(scope.removeprefix("keyed-set:"))
+        raise ValueError("TOML selector must own one key, table, or keyed-set entry")
 
     if adapter in {AdapterKind.JSON, AdapterKind.JSONC, AdapterKind.YAML}:
         if scope.startswith("key:"):
@@ -284,7 +319,7 @@ def normalize_scope(adapter: AdapterKind, scope: str) -> str:
     raise ValueError("unknown semantic adapter")
 
 
-class ContributionDeclaration(StrictModel):
+class ContributionDeclaration(ConditionalMaterialization):
     """Declare ownership of one normalized semantic unit in a shared file."""
 
     id: ResourceId
@@ -348,6 +383,7 @@ class ProviderEffect(StrEnum):
     FINDINGS = "findings"
     CONTENT = "content"
     MUTATION_PLAN = "mutation-plan"
+    MIGRATION_REPORT = "migration-report"
 
 
 _OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect]] = {
@@ -361,7 +397,7 @@ _OPERATION_CONTRACT: dict[ProviderOperation, tuple[ProviderPhase, ProviderEffect
     ProviderOperation.RENDER: (ProviderPhase.PLAN, ProviderEffect.CONTENT),
     ProviderOperation.SCAFFOLD: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
     ProviderOperation.UPGRADE: (ProviderPhase.AUTHORING, ProviderEffect.MUTATION_PLAN),
-    ProviderOperation.MIGRATE: (ProviderPhase.PLAN, ProviderEffect.MUTATION_PLAN),
+    ProviderOperation.MIGRATE: (ProviderPhase.PLAN, ProviderEffect.MIGRATION_REPORT),
     ProviderOperation.SEMANTIC_REVIEW: (ProviderPhase.VALIDATE, ProviderEffect.FINDINGS),
 }
 
@@ -826,7 +862,11 @@ class PayloadManifest(StrictModel):
                 used_legacy_states.add(endpoint.legacy_state)
             if migration.provider is not None:
                 provider = provider_by_id.get(migration.provider)
-                if provider is None or provider.operation is not ProviderOperation.MIGRATE:
+                if (
+                    provider is None
+                    or provider.operation is not ProviderOperation.MIGRATE
+                    or provider.effect is not ProviderEffect.MIGRATION_REPORT
+                ):
                     raise ValueError("automatic migration must identify a migrate provider")
             if (
                 migration.instructions is not None
@@ -975,7 +1015,16 @@ def _validate_extension_options(
     properties = _object_properties(schema)
     for extension in extensions:
         option_schema = properties.get(extension.option)
-        if not isinstance(option_schema, dict) or option_schema.get("type") != "string":
+        if not isinstance(option_schema, dict):
+            raise PackageContractError(
+                "extension option must identify a declared string package option"
+            )
+        option_type = option_schema.get("type")
+        nullable_string = isinstance(option_type, list) and set(option_type) == {
+            "null",
+            "string",
+        }
+        if option_type != "string" and not nullable_string:
             raise PackageContractError(
                 "extension option must identify a declared string package option"
             )

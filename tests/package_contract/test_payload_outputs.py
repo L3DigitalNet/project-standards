@@ -11,8 +11,10 @@ from project_standards.package_contract.payload import (
     AdapterKind,
     ArtifactPolicy,
     ContributionDeclaration,
+    MaterializationPredicate,
     PayloadManifest,
     SemanticAddress,
+    WholeArtifactDeclaration,
 )
 
 _PAYLOAD_PATH = (
@@ -79,6 +81,53 @@ def test_whole_artifact_declares_exclusive_source_target_policy_and_mode() -> No
     assert artifact.source.original == "artifacts/python-version"
     assert artifact.policy is ArtifactPolicy.CREATE_ONLY
     assert artifact.mode == "0644"
+
+
+def test_outputs_accept_closed_option_predicates_for_conditional_materialization() -> None:
+    artifact = WholeArtifactDeclaration.model_validate(
+        {
+            "id": "hook",
+            "target": ".agents/hooks/session_start.py",
+            "source": "artifacts/session_start.py",
+            "digest": f"sha256:{'a' * 64}",
+            "policy": "managed",
+            "when_any": [{"option": "startup", "equals": "automatic"}],
+        }
+    )
+    contribution = ContributionDeclaration.model_validate(
+        {
+            **_contribution(),
+            "when_any": [
+                {"option": "startup", "equals": "manual"},
+                {"option": "harnesses", "contains": "codex"},
+            ],
+        }
+    )
+
+    assert artifact.materializes({"startup": "automatic"})
+    assert not artifact.materializes({"startup": "manual"})
+    assert contribution.materializes({"startup": "manual", "harnesses": []})
+    assert contribution.materializes({"startup": "automatic", "harnesses": ["codex"]})
+    assert not contribution.materializes({"startup": "automatic", "harnesses": ["claude-code"]})
+    assert not MaterializationPredicate(option="level", equals=1).matches({"level": True})
+
+
+@pytest.mark.parametrize(
+    "predicate",
+    [
+        {},
+        {"option": "startup"},
+        {"option": "startup", "equals": "automatic", "contains": "automatic"},
+        {"option": "", "equals": "automatic"},
+        {"option": "startup", "equals": {"nested": True}},
+        {"option": "harnesses", "contains": ["codex"]},
+    ],
+)
+def test_materialization_predicate_rejects_ambiguous_or_non_scalar_contracts(
+    predicate: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        MaterializationPredicate.model_validate(predicate)
 
 
 @pytest.mark.parametrize("mode", ["644", "0999", "06444", "-0644", 0o644])

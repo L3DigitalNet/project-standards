@@ -263,9 +263,11 @@ def _remove_span(document: MarkdownDocument, block: MarkdownBlock) -> tuple[int,
     newline = _newline(document.text)
     start = block.envelope_start
     end = block.envelope_end
+    consumed_preceding_separator = False
     if start >= len(newline) and document.text[:start].endswith(newline * 2):
         start -= len(newline)
-    if document.text[end:].startswith(newline):
+        consumed_preceding_separator = True
+    if not consumed_preceding_separator and document.text[end:].startswith(newline):
         end += len(newline)
     return start, end
 

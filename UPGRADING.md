@@ -1,12 +1,12 @@
 ---
 schema_version: '1.1'
-id: 'runbook-p5m7nf-upgrading-from-v3-to-v4'
-title: 'Upgrading from v3 to v4'
-description: 'Step-by-step runbook for upgrading a consuming repository from project-standards v3 to v4.'
+id: 'runbook-p5m7nf-upgrading-from-v4-to-v5'
+title: 'Upgrading from v4 to v5'
+description: 'Step-by-step runbook for migrating a consuming repository from project-standards v4 authority to the v5 control plane.'
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-10'
+updated: '2026-07-12'
 tags:
   - 'migration'
   - 'upgrade'
@@ -14,134 +14,120 @@ tags:
 aliases: []
 related:
   - 'CHANGELOG.md'
-  - 'standards/markdown-frontmatter/adopt.md'
-  - 'standards/project-spec/adopt.md'
+  - 'docs/usage.md'
+  - 'meta/versioning.md'
+  - 'standards/README.md'
   - 'standards/agent-handoff/adopt.md'
-  - 'standards/agent-handoff/resources/legacy-migration.md'
-  - 'standards/standard-bundle-authoring/README.md'
 ---
 
-# Upgrading from v3 to v4
+# Upgrading from v4 to v5
 
-`project-standards` `4.0.0` is a **major** release: re-pinning a repo from `@v3` to `@v4` can turn a previously-passing CI run red. This runbook is the step-by-step upgrade path. For the full list of changes see [`CHANGELOG.md`](CHANGELOG.md); for first-time adoption (not upgrade) see each standard's `adopt.md` (e.g. [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md)).
+`project-standards` 5.0.0 replaces the legacy `.project-standards.yml` and package-specific provenance model with one committed `.standards/` catalog, desired config, and central lock. This is an explicit repository migration, not a pin-only upgrade.
 
-> **v5 release-candidate note.** This document remains the released v3-to-v4 runbook until the v5 release commit rewrites it for v4-to-v5. The section below records the Agent Handoff migration that v5 consumers must perform deliberately.
-
-## Preparing Agent Handoff for v5.0.0
-
-Agent Handoff `1.0` is new and opt-in, but it replaces the deprecated separately-cloned handoff engine for repositories that used it. Do not copy files mechanically across legacy versions and do not delete the legacy checkout yet.
-
-For each consuming repository:
-
-1. Run `project-standards agent-handoff legacy-report --repo . --json` and review every finding locally.
-2. Reconcile root `STATUS.md` and `TODO.md` into `docs/STATUS.md` and `docs/TODO.md`; preserve existing `docs/handoff/` knowledge in place.
-3. Adopt one explicit startup profile with `project-standards adopt agent-handoff --dest . --manual` or one or more `--harness` flags.
-4. Remove old per-harness hooks, registrations, and retired skill copies only after the shared repo-local hook and skill are installed.
-5. Run `project-standards agent-handoff validate --repo .` and `drift-check --repo .`; commit the migration as that repository's own reviewed change.
-
-The new package owns no global environment and stores no state outside the adopting repository. See [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) and the [legacy migration guide](standards/agent-handoff/resources/legacy-migration.md) for the complete procedure.
-
-## Standard manifests and graph validation in v5.0.0
-
-No action is required for ordinary consuming repositories. `standard.toml`, the standards graph, provider declarations, artifact-manifest links, composition fixtures, and `standards/catalog.md` describe and verify this repository's published standard packages; they do not add consumer configuration keys or silently adopt files.
-
-Repositories that author or redistribute their own standard bundles must follow the [Standard Bundle Authoring Standard](standards/standard-bundle-authoring/README.md), provide a validated `standard.toml`, declare any packaged `adopt.toml` link and artifact provenance, and run:
-
-```bash
-project-standards standards validate-graph --root . --require-all-manifests
-project-standards standards render-catalog --root . --check
-```
-
-Existing consumers continue to use their selected standard's `adopt.md`, config fragment, and reusable workflow. Re-pinning to v5 does not enable graph validation against the consumer repository unless that repository deliberately adopts the authoring contract.
-
-## What breaks
-
-The v4 validator rejects several inputs that v3 silently accepted or truncated. On re-pin, a repo that passed under `@v3` can newly fail on any of:
-
-1. **`date` fields no longer accept datetime values.** A `created`/`updated`/`reviewed` value whose YAML parses as a full timestamp (e.g. an unquoted `2026-06-03T00:00:00`) previously had its time part silently dropped; it now fails. Fix: quote the value as a plain `'YYYY-MM-DD'` date.
-2. **The `tags` pattern is tighter** — `^[a-z0-9]+(-[a-z0-9]+)*$`. A tag with a leading/trailing hyphen or consecutive hyphens now fails.
-3. **Non-string frontmatter keys are rejected.** A bare YAML key that parses as a number or boolean now errors with a clear message.
-4. **Config errors now exit 2 instead of passing silently:**
-   - a duplicate top-level key in `.project-standards.yml` (previously the last occurrence silently won);
-   - an unquoted numeric `version` value (e.g. `version: 1.10`, which parsed as the float `1.1`) — quote it: `version: '1.10'`;
-   - an explicitly-named file argument that does not exist, or a typo'd `--config` path (previously a vacuous green run). This also applies to `format-frontmatter --config`.
-5. **`validate-references` semantic corrections — only if you set `references.enabled: true`.** Supersede sets are merged per-id (not last-wins), ADR numbers sort numerically (`adr-0010` after `adr-0009`), and dates are compared as dates — violations these bugs masked are newly caught. An empty index no longer exits vacuously green, and skipped files surface as warnings. Repos without the opt-in are unaffected.
-
-**Copy-adopters (Python Tooling SSOT), on re-sync only:** the ruff dev-group floor is now `>=0.14` (earlier versions reject the standard's `target-version = "py314"`), and `pytest-cov` is dropped from the scaffolds (the documented gate never used it). Nothing changes until you deliberately re-sync the scaffolds.
-
-## What's new (opt-in)
-
-The **Project Specification Standard** — tiered spec templates, stable IDs, and the `project-standards spec` CLI (`validate`/`lint`/`extract`/`next`/`new`/`upgrade`) with its own reusable `validate-specs.yml` workflow — first ships at `v4.0.0`. It is fully opt-in (a `spec:` config block; nothing is inherited automatically). To adopt it, follow [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md).
-
-## Markdown Tooling — optional: enforce Prettier (contract 1.1)
-
-Prettier is now a shipped, opt-in gate (contract `markdown_tooling 1.1`, from `v4.2.0`). To enforce it in your repo:
-
-1. Adopt the workflow: re-run `project-standards adopt markdown-tooling` (writes `.github/workflows/format.yml`) or add `uses: …/format.yml@v4`.
-2. Format once: `npx prettier@3.8.3 --write .`, commit the result.
-3. File-set parity: if you exclude generated Markdown from markdownlint via `.markdownlint-cli2.jsonc`, mirror those globs into `.prettierignore` so Prettier does not gate files markdownlint skips.
-4. Not ready yet? Set `prettier: false` in the caller to defer (the whole job skips — a clean pass).
-
-Nothing is required: unchanged consumers keep passing.
-
-## v4.3.0 — CLI Documentation Standard (no action required)
-
-v4.3.0: no action required. Caveat: the validator now recognizes `cli_documentation.version`; a config that already carried that key with an unrecognized value (previously ignored) now exits 2. No known such configs.
+The v5 tool keeps a warned read-only fallback for a repository that still has only `.project-standards.yml`. It never merges YAML and TOML authority. V6 removes that fallback, so every V4 consumer must complete this migration before moving beyond v5.
 
 ## Before you start
 
-- Python **3.14+** must be available — the validator requires it.
-- Upgrade on a branch and let CI run before merging.
+- Upgrade on a branch with a clean, reviewed working tree.
+- Install or invoke the exact v5 release you intend to pin.
+- Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
+- Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
 
-## Steps
+Do not run plain `init` in a legacy repository; it correctly refuses split authority.
 
-### 1. Re-pin both refs to `@v4`
+## 1. Preview the complete migration
 
-In your caller workflow, bump the `uses:` pin **and** set `standards-ref` explicitly:
-
-```yaml
-jobs:
-  validate:
-    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
-    with:
-      config-path: '.project-standards.yml'
-      standards-ref: 'v4'
-```
-
-Set `standards-ref` to the same ref as your `uses:` pin so the workflow definition and the installed validator never drift. If you also call `lint-markdown.yml`, bump its `uses:` pin to `@v4` the same way.
-
-### 2. Audit the config
-
-Check `.project-standards.yml` for the newly-fatal config shapes: duplicate top-level keys, and unquoted numeric `version` values (`version: 1.1` → `version: '1.1'`). A bad config now exits 2 instead of validating under defaults.
-
-### 3. Audit managed documents
-
-Run the new validator against your repo before merging the pin bump:
+Run both human and JSON previews against the same repository bytes:
 
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
-  project-standards validate --config .project-standards.yml
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --json >migration-plan.json
 ```
 
-Fix what it reports — typically datetime-shaped `created`/`updated`/`reviewed` values (quote them as `'YYYY-MM-DD'`), malformed tags, and non-string keys. `project-standards fix` (same flags) auto-formats frontmatter where it can.
+Preview is read-only. Review every selected package, migrated option, recognized artifact, ownership transfer, planned output, finding, and legacy retirement action. Resolve before apply:
 
-### 4. (Opted-in repos) review `validate-references` results
+- unknown or unsupported legacy versions;
+- modified managed files or marker blocks;
+- duplicate or overlapping ownership claims;
+- unsafe paths, symlinks, or unclassified legacy artifacts;
+- missing repository intent that a closed package option must preserve.
 
-If `references.enabled: true`, the corrected semantics may newly flag real supersede/ordering violations that v3's bugs masked. Each finding reflects a genuine inconsistency — fix the documents, not the config.
+Rerun preview after each correction. Do not edit the repository between the accepted preview and apply.
 
-### 5. (Optional) adopt the Project Specification Standard
+## 2. Apply the reviewed migration
 
-Add a `spec:` block and the `validate-specs.yml@v4` workflow per [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md). Skipping this step changes nothing.
+```bash
+project-standards init --catalog 5 --migrate --apply
+```
+
+Apply rechecks the inspected bytes, materializes package outputs, runs unified verification, publishes `.standards/lock.toml`, and only then removes `.project-standards.yml` and recognized package-specific locks. A stale plan, ambiguity, provider refusal, or verification failure preserves recoverable legacy authority and exits non-zero.
+
+Review the result:
+
+```bash
+git status --short
+git diff --check
+project-standards standards list
+project-standards reconcile --check
+```
+
+Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and every reconciled output together.
+
+## 3. Review selectors and package options
+
+Each enabled package has two separate version planes:
+
+- `standards.<id>.version` selects an immutable package payload (`latest` or exact `major.minor`);
+- package options such as `contract_version` select supported document/schema behavior inside that payload.
+
+Changing one does not silently change the other. Use `project-standards standards version` for the payload selector, edit only declared package options in `.standards/config.toml`, and preview with `reconcile` before apply.
+
+An exact selector remains pinned. `latest` follows only the compatible default or an explicitly accepted package-major track. Entering or leaving a non-default major requires the matching `--allow-major STANDARD_ID@MAJOR` and a declared migration path.
+
+## 4. Verify provider-backed commands
+
+Under unified authority, validators and authoring commands resolve the selected payload. Read-only providers receive immutable snapshots; authoring providers return typed plans whose writes are performed by the platform executor.
+
+Run the commands for the selected packages, including as applicable:
+
+```bash
+project-standards validate
+project-standards fix
+project-standards spec validate
+project-standards spec lint --strict
+project-standards agent-handoff validate --repo .
+project-standards agent-handoff drift-check --repo .
+```
+
+An explicit `--config .project-standards.yml` is now a legacy/debug-only path and is rejected under unified authority.
+
+## 5. Re-pin workflows and the tool
+
+After v5.0.0 is published, pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.0.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
+
+Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
+
+## 6. Understand same-major refresh
+
+A newer v5 tool may carry a compatible updated catalog-5 snapshot. `reconcile` previews that catalog refresh together with affected `latest` package updates; `--apply` publishes the catalog and central lock transactionally.
+
+Refresh preserves exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files. It refuses an unavailable pin/track, incompatible default change, older-tool downgrade, or catalog-major mismatch.
 
 ## Verify
 
+Run the repository's own checks plus the generic control-plane gates:
+
 ```bash
-uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
-  project-standards validate --config .project-standards.yml
+project-standards reconcile --check
+project-standards validate
+project-standards standards list
+git diff --check
 ```
 
-Exit `0` means the schema, id, and (when enabled) reference checks all pass.
+A second reconciliation must be a no-op. Package-specific adoption guides list their additional verification and troubleshooting commands.
 
 ## Rollback
 
-The upgrade is pins plus document/config fixes. To roll back, re-pin `@v4` → `@v3` and `standards-ref: "v3"`. Content fixed for v4 stays valid under v3 — v4 is strictly stricter on the enforced surface — so no content rollback is needed. A repo that adopted the Project Specification Standard must also remove (or stop calling) `validate-specs.yml`, which does not exist at the `v3` tag.
+Before successful apply, rollback is simply no action: preview writes nothing, and a failed apply preserves a recoverable authority state.
+
+After successful apply, do not recreate `.project-standards.yml` beside `.standards/`; that is rejected dual authority. Revert the complete migration commit or replay a reviewed reverse patch that restores the legacy config, package locks, and artifacts together, then re-pin the v4 tool/workflows. Validate the restored V4 state before deleting the migration branch.

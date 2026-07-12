@@ -21,12 +21,21 @@ def _source_files() -> tuple[Path, ...]:
     return tuple(sorted(path for path in _SOURCE.rglob("*") if path.is_file()))
 
 
+def _v1_source_files() -> tuple[Path, ...]:
+    return tuple(
+        path
+        for path in _source_files()
+        if path.relative_to(_SOURCE).parts[0] != "versions"
+        and path.name not in {"adopt.md", "standard.toml"}
+    )
+
+
 def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
-    source_relatives = {path.relative_to(_SOURCE) for path in _source_files()}
+    source_relatives = {path.relative_to(_SOURCE) for path in _v1_source_files()}
     bundled_relatives = {
         path.relative_to(_BUNDLE)
         for path in _BUNDLE.rglob("*")
-        if path.is_file() and path.name != "adopt.toml"
+        if path.is_file() and path.name not in {"adopt.md", "adopt.toml", "standard.toml"}
     }
 
     assert source_relatives == bundled_relatives
@@ -35,7 +44,7 @@ def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
 
 
 def test_every_declared_resource_resolves() -> None:
-    manifest = tomllib.loads((_SOURCE / "standard.toml").read_text(encoding="utf-8"))
+    manifest = tomllib.loads((_BUNDLE / "standard.toml").read_text(encoding="utf-8"))
 
     for relative in manifest["resources"].values():
         assert (_SOURCE / relative).is_file(), relative
@@ -60,14 +69,24 @@ def test_skill_identity_version_and_openai_metadata_are_canonical() -> None:
 
 
 def test_public_package_material_has_no_retired_runtime_dependency() -> None:
-    excluded = {_SOURCE / "resources/legacy-migration.md"}
     forbidden = ("handoff-system-v3", "agent-handoff-v3", "~/projects/", "git clone")
 
     for path in _source_files():
-        if path in excluded or path.suffix not in {".md", ".yaml", ".json", ".toml"}:
+        if path.name == "legacy-migration.md" or path.suffix not in {
+            ".md",
+            ".yaml",
+            ".json",
+            ".toml",
+        }:
             continue
         text = path.read_text(encoding="utf-8")
         assert not any(term in text for term in forbidden), path
+
+        relative = path.relative_to(_SOURCE)
+        if relative.parts[0] == "versions" and (
+            "skills" in relative.parts or relative.as_posix().endswith("managed/skill.md")
+        ):
+            assert ".agents/agent-handoff/manifest.json" not in text, path
 
 
 def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
@@ -147,7 +166,7 @@ def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
     (wheel,) = tmp_path.glob("*.whl")
     names = set(zipfile.ZipFile(wheel).namelist())
 
-    for source in _source_files():
+    for source in _v1_source_files():
         relative = source.relative_to(_SOURCE).as_posix()
         expected = f"project_standards/bundles/agent-handoff/{relative}"
         assert any(name.endswith(expected) for name in names), expected

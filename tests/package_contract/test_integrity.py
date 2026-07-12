@@ -139,6 +139,27 @@ def test_integrity_rejects_an_undeclared_regular_file(tmp_path: Path) -> None:
         validate_payload_integrity(payload_dir, manifest)
 
 
+def test_integrity_ignores_installer_generated_payload_bytecode(tmp_path: Path) -> None:
+    _, payload_dir = _copy_payload(tmp_path)
+    manifest = load_payload_manifest(payload_dir / "payload.toml")
+    cache = payload_dir / "__pycache__"
+    cache.mkdir()
+    (cache / "provider.cpython-314.pyc").write_bytes(b"installed bytecode")
+
+    assert validate_payload_integrity(payload_dir, manifest)
+
+
+def test_integrity_rejects_other_undeclared_cache_content(tmp_path: Path) -> None:
+    _, payload_dir = _copy_payload(tmp_path)
+    manifest = load_payload_manifest(payload_dir / "payload.toml")
+    cache = payload_dir / "__pycache__"
+    cache.mkdir()
+    (cache / "surprise.txt").write_text("undeclared\n", encoding="utf-8")
+
+    with pytest.raises(PackageContractError, match="undeclared cache content"):
+        validate_payload_integrity(payload_dir, manifest)
+
+
 def test_integrity_rejects_duplicate_digest_bearing_declarations(tmp_path: Path) -> None:
     _, payload_dir = _copy_payload(tmp_path)
     source = payload_dir / "payload.toml"

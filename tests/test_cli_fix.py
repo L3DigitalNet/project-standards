@@ -218,6 +218,25 @@ def test_fix_config_schema_path_skips_in_process(
     assert doc.read_text() == before  # no writes
 
 
+def test_fix_refuses_a_leaf_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    outside = tmp_path / "outside.md"
+    original = "---\ntitle: X\n---\n# B\n"
+    outside.write_text(original)
+    link = tmp_path / "doc.md"
+    link.symlink_to(outside)
+
+    rc = cli_main(["fix", "--config", str(cfg), str(link)])
+
+    assert rc == 2
+    assert outside.read_text() == original
+    assert "not a regular file" in capsys.readouterr().err
+
+
 def test_fix_type_and_bad_id_in_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """fix on a doc with type: + bad id → formats + fixes id, returns 0.
 
@@ -249,6 +268,32 @@ def test_fix_type_and_bad_id_in_process(tmp_path: Path, monkeypatch: pytest.Monk
     # postcondition: in-process validate is also clean
     rc_val = cli_main(["validate", "--config", str(cfg)])
     assert rc_val == 0
+
+
+def test_fix_uses_one_platform_plan_instead_of_legacy_direct_writers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.validate_id as id_validator
+
+    monkeypatch.chdir(tmp_path)
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")
+    document = tmp_path / "a.md"
+    document.write_text(
+        _full("Hello World", "wrong").replace("doc_type: 'note'", "type: 'note'"),
+        encoding="utf-8",
+    )
+
+    def direct_write_forbidden(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("frontmatter commands must write only through the platform executor")
+
+    monkeypatch.setattr(id_validator, "_atomic_write_bytes", direct_write_forbidden)
+
+    assert cli_main(["fix", "--config", str(cfg)]) == 0
+    content = document.read_text(encoding="utf-8")
+    assert "doc_type: 'note'" in content
+    assert "id: 'note-" in content
 
 
 def test_fix_fails_on_reference_error_in_process(

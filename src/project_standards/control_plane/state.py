@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import parse_catalog, parse_config, parse_lock
 from project_standards.control_plane.distribution import ParsedToolRelease
 from project_standards.control_plane.locking import (
@@ -27,6 +28,7 @@ class StateKind(StrEnum):
     INCONSISTENT = "inconsistent"
     TOOL_MISMATCH = "tool-mismatch"
     NEWER_RELEASE = "newer-release"
+    INTERRUPTED_REFRESH = "interrupted-refresh"
     INITIALIZED = "initialized"
 
 
@@ -98,6 +100,21 @@ def _load_initialized_state(
             repo,
             "one or more control-plane files are invalid",
         )
+    try:
+        backup_kind = control.file_kind(CATALOG_REFRESH_BACKUP)
+        if backup_kind == "unsafe":
+            raise ValueError("catalog refresh backup is unsafe")
+        backup = (
+            parse_catalog(control.read_bytes(CATALOG_REFRESH_BACKUP))
+            if backup_kind == "regular"
+            else None
+        )
+    except ValueError:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "catalog refresh backup is invalid",
+        )
     if not control.is_current():
         return _state(
             StateKind.MALFORMED,
@@ -109,6 +126,7 @@ def _load_initialized_state(
         config.project_standards.catalog.major,
         catalog.project_standards.catalog.major,
         lock.project_standards.catalog.major,
+        *(backup.project_standards.catalog.major for backup in (backup,) if backup is not None),
     }
     if len(majors) != 1:
         return ControlPlaneState(
@@ -120,15 +138,6 @@ def _load_initialized_state(
             detail="control-plane files disagree on the catalog major",
         )
     selected_major = next(iter(majors))
-    if lock.project_standards.catalog_digest != catalog.project_standards.digest:
-        return ControlPlaneState(
-            kind=StateKind.INCONSISTENT,
-            repo=repo,
-            config=config,
-            catalog=catalog,
-            lock=lock,
-            detail="central lock does not identify the current catalog digest",
-        )
     if tool.major != selected_major:
         return ControlPlaneState(
             kind=StateKind.TOOL_MISMATCH,
@@ -141,7 +150,13 @@ def _load_initialized_state(
 
     catalog_release = ParsedToolRelease(catalog.project_standards.release)
     lock_release = ParsedToolRelease(lock.project_standards.release)
-    if max(catalog_release.sort_key, lock_release.sort_key) > tool.sort_key:
+    backup_release = (
+        ParsedToolRelease(backup.project_standards.release) if backup is not None else None
+    )
+    releases = [catalog_release.sort_key, lock_release.sort_key]
+    if backup_release is not None:
+        releases.append(backup_release.sort_key)
+    if max(releases) > tool.sort_key:
         return ControlPlaneState(
             kind=StateKind.NEWER_RELEASE,
             repo=repo,
@@ -149,6 +164,40 @@ def _load_initialized_state(
             catalog=catalog,
             lock=lock,
             detail="control-plane state was written by a newer tool release",
+        )
+    if backup is not None:
+        matching = (
+            catalog
+            if catalog.project_standards.digest == lock.project_standards.catalog_digest
+            else backup
+            if backup.project_standards.digest == lock.project_standards.catalog_digest
+            else None
+        )
+        if matching is None or matching.project_standards.release != lock.project_standards.release:
+            return ControlPlaneState(
+                kind=StateKind.INCONSISTENT,
+                repo=repo,
+                config=config,
+                catalog=catalog,
+                lock=lock,
+                detail="catalog refresh backup does not identify retained lock lineage",
+            )
+        return ControlPlaneState(
+            kind=StateKind.INTERRUPTED_REFRESH,
+            repo=repo,
+            config=config,
+            catalog=catalog,
+            lock=lock,
+            detail="catalog refresh was interrupted before transaction cleanup",
+        )
+    if lock.project_standards.catalog_digest != catalog.project_standards.digest:
+        return ControlPlaneState(
+            kind=StateKind.INCONSISTENT,
+            repo=repo,
+            config=config,
+            catalog=catalog,
+            lock=lock,
+            detail="central lock does not identify the current catalog digest",
         )
     return ControlPlaneState(
         kind=StateKind.INITIALIZED,
@@ -184,3 +233,16 @@ def detect_control_plane_state(repo: Path, *, tool_release: str) -> ControlPlane
             kind = StateKind.LEGACY_ONLY if legacy_exists else StateKind.UNINITIALIZED
             return _state(kind, normalized)
     return _state(StateKind.MALFORMED, normalized, "control-plane state changed during detection")
+
+
+def load_locked_control_plane_state(
+    repo: Path,
+    *,
+    tool_release: str,
+    control: LockedControlDirectory,
+) -> ControlPlaneState:
+    """Load one initialized state generation from a caller-held command lock."""
+    normalized = _safe_repo(repo)
+    if control.path != normalized / ".standards" or not control.is_current():
+        raise ValueError("control-plane command lock does not match the repository")
+    return _load_initialized_state(normalized, ParsedToolRelease(tool_release), control)

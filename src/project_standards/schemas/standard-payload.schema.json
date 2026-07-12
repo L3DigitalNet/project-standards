@@ -140,6 +140,13 @@
         "target": {
           "title": "Target",
           "type": "string"
+        },
+        "when_any": {
+          "items": {
+            "$ref": "#/$defs/MaterializationPredicate"
+          },
+          "title": "When Any",
+          "type": "array"
         }
       },
       "required": [
@@ -308,6 +315,64 @@
         "id"
       ],
       "title": "LegacyStateDeclaration",
+      "type": "object"
+    },
+    "MaterializationPredicate": {
+      "additionalProperties": false,
+      "description": "Match one resolved package option without embedding executable policy.",
+      "properties": {
+        "contains": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contains"
+        },
+        "equals": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equals"
+        },
+        "option": {
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+          "title": "Option",
+          "type": "string"
+        }
+      },
+      "required": [
+        "option"
+      ],
+      "title": "MaterializationPredicate",
       "type": "object"
     },
     "MigrationDeclaration": {
@@ -517,7 +582,8 @@
       "enum": [
         "findings",
         "content",
-        "mutation-plan"
+        "mutation-plan",
+        "migration-report"
       ],
       "title": "ProviderEffect",
       "type": "string"
@@ -704,6 +770,13 @@
         "target": {
           "title": "Target",
           "type": "string"
+        },
+        "when_any": {
+          "items": {
+            "$ref": "#/$defs/MaterializationPredicate"
+          },
+          "title": "When Any",
+          "type": "array"
         }
       },
       "required": [

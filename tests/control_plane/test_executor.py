@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import os
+import stat
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -27,6 +29,7 @@ from project_standards.control_plane.planner import (
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
+    materialize_referenced_input_snapshots,
 )
 from project_standards.package_contract.payload import ProviderEffect
 from tests.control_plane.planner_helpers import resolution_request, write_payload
@@ -126,6 +129,141 @@ def test_success_stages_replaces_verifies_and_writes_lock_last(
     assert replacements[-1][1] == "lock.toml"
     assert all(source.startswith(".project-standards-") for source, _target in replacements)
     assert not list(repo.rglob(".project-standards-*.tmp"))
+
+
+@pytest.mark.parametrize("mask", [0o022, 0o027])
+def test_reconciliation_default_mode_is_independent_of_process_umask(
+    tmp_path: Path,
+    mask: int,
+) -> None:
+    repo, planner, plan = _fixture(tmp_path)
+
+    previous = os.umask(mask)
+    try:
+        result = _apply(planner, plan)
+    finally:
+        os.umask(previous)
+
+    assert result.success
+    assert stat.S_IMODE((repo / "alpha.txt").stat().st_mode) == 0o644
+    assert stat.S_IMODE((repo / "nested/beta.txt").stat().st_mode) == 0o644
+
+
+def test_verification_receives_lock_declared_referenced_inputs(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    referenced = repo / "consumer/workflow.yml"
+    referenced.parent.mkdir()
+    referenced.write_text("name: consumer\n", encoding="utf-8")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        extensions=[
+            {
+                "id": "workflow",
+                "option": "workflow_path",
+                "media_type": "text/yaml",
+                "path_policy": "repository-relative",
+            }
+        ],
+        verify_providers=["verify-demo"],
+    )
+    resolution = resolution_request(
+        (payload,),
+        configs={"demo": {"workflow_path": "consumer/workflow.yml"}},
+    )
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    plan = plan_reconciliation(planner)
+
+    def verify(invocation: ProviderInvocation) -> ProviderResult:
+        assert invocation.snapshots["referenced_inputs"] == [
+            {
+                "standard_id": "demo",
+                "extension_id": "workflow",
+                "path": "consumer/workflow.yml",
+                "digest": plan.next_lock.referenced_inputs[0].digest.value,
+            }
+        ]
+        return ProviderResult(ProviderEffect.FINDINGS, findings=())
+
+    result = _apply(planner, plan, verification_runner=verify)
+
+    assert result.success
+
+
+def test_verification_receives_only_its_package_referenced_inputs(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    for standard_id in ("alpha", "beta"):
+        referenced = repo / f"consumer/{standard_id}.yml"
+        referenced.parent.mkdir(exist_ok=True)
+        referenced.write_text(f"name: {standard_id}\n", encoding="utf-8")
+    payloads = tuple(
+        write_payload(
+            tmp_path / f"payload-{standard_id}",
+            standard_id,
+            extensions=[
+                {
+                    "id": "workflow",
+                    "option": "workflow_path",
+                    "media_type": "text/yaml",
+                    "path_policy": "repository-relative",
+                }
+            ],
+            verify_providers=[f"verify-{standard_id}"],
+        )
+        for standard_id in ("alpha", "beta")
+    )
+    resolution = resolution_request(
+        payloads,
+        configs={
+            standard_id: {"workflow_path": f"consumer/{standard_id}.yml"}
+            for standard_id in ("alpha", "beta")
+        },
+    )
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, payloads)
+    plan = plan_reconciliation(planner)
+    observed: dict[str, object] = {}
+
+    def verify(invocation: ProviderInvocation) -> ProviderResult:
+        referenced_inputs = invocation.snapshots["referenced_inputs"]
+        observed[invocation.standard_id] = referenced_inputs
+        assert isinstance(referenced_inputs, list)
+        standard_ids: list[object] = []
+        for item in referenced_inputs:
+            assert isinstance(item, dict)
+            standard_ids.append(item["standard_id"])
+        assert standard_ids == [invocation.standard_id]
+        beta = repo / "consumer/beta.yml"
+        if invocation.standard_id == "alpha":
+            beta.write_text("name: changed-beta\n", encoding="utf-8")
+        materialized = materialize_referenced_input_snapshots(
+            repo,
+            invocation.snapshots,
+            standard_id=invocation.standard_id,
+            config=invocation.effective_config,
+            extensions=invocation.payload.manifest.extensions,
+        )
+        if invocation.standard_id == "alpha":
+            beta.write_text("name: beta\n", encoding="utf-8")
+        content = materialized["referenced_input_content"]
+        assert isinstance(content, list)
+        assert len(content) == 1
+        entry = content[0]
+        assert isinstance(entry, dict)
+        encoded = entry["content_base64"]
+        assert isinstance(encoded, str)
+        assert base64.b64decode(encoded) == f"name: {invocation.standard_id}\n".encode()
+        return ProviderResult(ProviderEffect.FINDINGS, findings=())
+
+    result = _apply(planner, plan, verification_runner=verify)
+
+    assert result.success
+    assert set(observed) == {"alpha", "beta"}
 
 
 @pytest.mark.parametrize(

@@ -14,5 +14,5 @@ def test_root_readme_names_format_workflow() -> None:
 def test_agent_files_do_not_call_prettier_workflowless() -> None:
     for name in ("CLAUDE.md", "AGENTS.md"):
         text = (_REPO / name).read_text(encoding="utf-8")
-        # The Markdown Tooling description must not imply only lint-markdown.yml.
-        assert "format.yml" in text
+        assert "Prettier is copy-adopt (no workflow)" not in text
+        assert "Markdown Tooling" in text

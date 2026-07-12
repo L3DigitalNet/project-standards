@@ -20,6 +20,13 @@ def test_top_level_help_advertises_agent_handoff(
     assert "agent-handoff" in capsys.readouterr().out
 
 
+def test_agent_handoff_adopt_help_uses_nonmutating_argparse_help() -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["adopt", "agent-handoff", "--help"])
+
+    assert exc_info.value.code == 0
+
+
 @pytest.mark.parametrize(
     "args",
     [
@@ -69,6 +76,55 @@ def test_agent_handoff_adopt_json_dry_run_is_aggregate_and_non_mutating(
     assert "docs/STATUS.md" in paths
     assert ".markdownlint.json" in paths
     assert not any(tmp_path.iterdir())
+
+
+def test_agent_handoff_adopt_attempts_v5_before_legacy_dispatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[tuple[list[str], Path, bool, bool, bool]] = []
+
+    def capture(
+        standards: list[str],
+        destination: Path,
+        *,
+        force: bool,
+        dry_run: bool,
+        unsupported_options: bool = False,
+    ) -> int:
+        seen.append((standards, destination, force, dry_run, unsupported_options))
+        return 7
+
+    monkeypatch.setattr("project_standards.cli._try_v5_adopt", capture)
+
+    def fail_legacy(_args: list[str]) -> int:
+        pytest.fail("legacy dispatch ran after V5 activation")
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.run_adopt",
+        fail_legacy,
+    )
+
+    assert main(["adopt", "agent-handoff", "--dest", str(tmp_path)]) == 7
+    assert seen == [(["agent-handoff"], tmp_path, False, False, False)]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["adopt", "agent-handoff", "--dest", "--force"],
+        ["adopt", "agent-handoff", "--bogus"],
+        ["adopt", "agent-handoff", "--force=false"],
+    ],
+)
+def test_agent_handoff_adopt_rejects_malformed_route_before_v5_dispatch(
+    args: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("V5 dispatch ran after malformed adopt syntax")
+
+    monkeypatch.setattr("project_standards.cli._try_v5_adopt", fail)
+
+    assert main(args) == 2
 
 
 @pytest.mark.parametrize(

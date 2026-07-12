@@ -9,6 +9,7 @@
 docs/codex-reviews/
 docs/handoff/
 tests/fixtures/specs/
+tests/fixtures/package_compatibility/legacy/
 
 # Agent Handoff owns exact managed blocks in the instruction files; its shape
 # policy owns the status/task documents and preserves user-authored task wrapping.
@@ -33,6 +34,8 @@ src/project_standards/schemas/consumer-lock.schema.json
 src/project_standards/schemas/mutation-plan.schema.json
 src/project_standards/schemas/provider-input.schema.json
 src/project_standards/schemas/reconciliation-plan.schema.json
+src/project_standards/schemas/migration-report.schema.json
+standards/*/versions/*/schemas/mutation-plan.schema.json
 
 # Package-contract fixtures are integrity inputs: their exact raw bytes and
 # declared digests are one test contract, not formatter-owned source documents.

@@ -50,7 +50,6 @@ _DOGFOOD = {
         "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id"
     ),
     "agent-handoff/README.md": "standards/agent-handoff/README.md",
-    "agent-handoff/adopt.md": "standards/agent-handoff/adopt.md",
     "agent-handoff/agent-summary.md": "standards/agent-handoff/agent-summary.md",
     "agent-handoff/hooks/session-start/session_start.py": (
         "standards/agent-handoff/hooks/session-start/session_start.py"
@@ -141,49 +140,18 @@ def test_standard_doc_pyproject_block_matches_bundle_fragment() -> None:
         assert doc_toml[table] == value, table
 
 
-def test_frontmatter_adopt_doc_fences_match_bundle_artifacts() -> None:
-    # adopt.md §2/§3 instruct manual adopters to create the same config/workflow
-    # artifacts the CLI delivers (.project-standards.yml, validate-standards.yml) —
-    # one artifact, two representations, byte-locked like the python-tooling §15 block.
-    # The caller is compared at the CURRENT major so a v4 bump forces the doc to follow.
-    doc = (_REPO / "standards" / "markdown-frontmatter" / "adopt.md").read_text()
-    fences = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
-    starter = (_BUNDLES / "markdown-frontmatter" / "project-standards.starter.yml").read_text()
-    caller = (
-        (_BUNDLES / "markdown-frontmatter" / "validate-markdown-frontmatter.caller.yml")
-        .read_text()
-        .replace("{{ref}}", major_ref())
-    )
-    assert starter in fences
-    assert caller in fences
-    # Guard the guards: both byte-locked fences need a bare prettier-ignore, or
-    # Prettier's embedded formatting rewrites their quote style on the next --write.
-    assert doc.count("<!-- prettier-ignore -->\n```yaml\n") >= 2
-
-
-def test_adr_adopt_doc_config_fence_matches_fragment_semantically() -> None:
-    # adr/adopt.md §3 teaches the same markdown.adr block the CLI reports as a
-    # fragment. The doc fence carries a teaching comment and Prettier-normalized
-    # quotes, so compare parsed values rather than bytes.
-    doc = (_REPO / "standards" / "adr" / "adopt.md").read_text()
-    fences = re.findall(r"```yaml\n(markdown:.*?)```", doc, re.DOTALL)
-    assert len(fences) == 1
-    fragment = yaml.safe_load((_BUNDLES / "adr" / "project-standards.adr-fragment.yml").read_text())
-    assert yaml.safe_load(fences[0]) == fragment
-
-
-def test_project_spec_adopt_doc_fences_match_bundle_artifacts() -> None:
-    doc = (_REPO / "standards" / "project-spec" / "adopt.md").read_text()
-    fences = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
-    fragment = (_BUNDLES / "project-spec" / "project-standards.spec-fragment.yml").read_text()
-    caller = (
-        (_BUNDLES / "project-spec" / "validate-specs.caller.yml")
-        .read_text()
-        .replace("{{ref}}", major_ref())
-    )
-    assert fragment in fences
-    assert caller in fences
-    assert doc.count("<!-- prettier-ignore -->\n```yaml\n") >= 2
+@pytest.mark.parametrize(
+    "standard_id,version",
+    [("markdown-frontmatter", "1.2"), ("adr", "1.1"), ("project-spec", "1.1")],
+)
+def test_current_adoption_guides_use_v5_packages_not_v1_fragments(
+    standard_id: str,
+    version: str,
+) -> None:
+    doc = (_REPO / "standards" / standard_id / "adopt.md").read_text()
+    assert f"versions/{version}/adopt.md" in doc
+    assert "project-standards init --catalog 5 --migrate" in doc
+    assert "```yaml" not in doc
 
 
 def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
@@ -218,7 +186,7 @@ def test_doc_workflow_snippets_reference_current_major() -> None:
             assert workflow in workflows, f"{md}: {workflow}"
             assert used_ref == ref, f"{md}: {workflow}@{used_ref}"
             seen += 1
-    assert seen >= 4  # both callers + the lint-markdown snippets
+    assert seen >= 1  # retained normative/versioned workflow references remain pinned
 
 
 def test_adopt_python_tooling_delivers_vscode_settings_and_tasks(tmp_path: Path) -> None:

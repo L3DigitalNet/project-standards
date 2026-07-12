@@ -1,0 +1,11 @@
+# Marker presence is insufficient: known digests identify exact shipped content.
+[[legacy_signatures]]
+id = "legacy-config-v1"
+kind = "bounded-block"
+format = "yaml"
+targets = [".project-standards.yml"]
+begin = "# BEGIN example-standard managed config"
+end = "# END example-standard managed config"
+known_content_digests = [
+  "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+]

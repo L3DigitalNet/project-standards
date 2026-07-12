@@ -8,13 +8,11 @@ and never edits the document body."""
 from __future__ import annotations
 
 import argparse
-import contextlib
 import datetime
 import json
-import os
 import re
 import sys
-import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -491,12 +489,12 @@ def _today_iso() -> str:
     return datetime.date.today().isoformat()
 
 
-def _build_scaffold(body_text: str, path: Path, today: str) -> str:
+def _build_scaffold(body_text: str, path: Path, today: str, token: str) -> str:
     h1 = _H1_RE.search(body_text)
     title = h1.group(1) if h1 else path.stem.replace("-", " ").replace("_", " ").title()
     doc_type = _infer_doc_type(path) or "note"
     slug = slugify(title) or slugify(path.stem) or "untitled"
-    new_id = f"{doc_type}-{random_token()}-{slug}"
+    new_id = f"{doc_type}-{token}-{slug}"
     return (
         "---\n"
         f"schema_version: {_emit_single_quoted(BUNDLED_SCHEMA_VERSION)}\n"
@@ -521,6 +519,7 @@ def format_text(
     scaffold: bool = False,
     today: str | None = None,
     bump_updated: bool = False,
+    token_factory: Callable[[], str] | None = None,
 ) -> tuple[str, bool, list[str]]:
     """Format the frontmatter block of `text`. Returns (new_text, changed, warnings).
 
@@ -534,8 +533,9 @@ def format_text(
     if match is None:
         if scaffold and path is not None and not is_denylisted(path):
             stamp = today or _today_iso()
+            token = (token_factory or random_token)()
             return (
-                _build_scaffold(text, path, stamp) + text,
+                _build_scaffold(text, path, stamp, token) + text,
                 True,
                 [f"scaffolded: {path} — fill in title/description"],
             )
@@ -574,33 +574,58 @@ def format_text(
 # everything above this line operates on text alone, with no config or filesystem
 # discovery. There is no circular-import constraint — validate_frontmatter does
 # not import this module.
+from project_standards.control_plane.command_resolution import (  # noqa: E402
+    CommandResolutionError,
+    SelectedCommandPackage,
+    explicit_legacy_argument,
+    selected_command,
+)
+from project_standards.control_plane.locking import LockMode  # noqa: E402
 from project_standards.validate_frontmatter import (  # noqa: E402
     ConfigError,
     collect_paths,
-    load_config,
+    emit_legacy_config_warning,
+    load_cli_config,
     schema_value_is_path,
 )
 
-_DEFAULT_CONFIG = Path(".project-standards.yml")
 
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.WRITE if "--write" in arguments else LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None and "--write" in arguments:
+        from project_standards.frontmatter_commands import (
+            run_locked_standalone_fix,
+        )
 
-def _atomic_write(path: Path, data: str) -> None:
-    """Write atomically AND preserve the original file's permission bits (codex
-    missing-consideration): mkstemp creates 0600, so copy the source mode first."""
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
-    tmp_path = Path(tmp)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
-            fh.write(data)
-        with contextlib.suppress(OSError):
-            tmp_path.chmod(path.stat().st_mode & 0o777)
-        tmp_path.replace(path)
-    except BaseException:
-        tmp_path.unlink()
-        raise
-
-
-def main(argv: list[str] | None = None) -> int:
+        return run_locked_standalone_fix(
+            arguments,
+            _selected_package,
+            surface="format-frontmatter",
+        )
     parser = argparse.ArgumentParser(
         prog="format-frontmatter",
         description=__doc__,
@@ -608,10 +633,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
     parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
-    # Default None, not _DEFAULT_CONFIG: a missing implicit default falls back to
-    # defaults, but an operator-typed --config that does not exist must exit 2 —
-    # silently formatting (and writing) under defaults disables the checks being
-    # requested. Mirrors validate_frontmatter's --config handling.
+    # None selects unified repository authority. An operator-typed legacy/debug
+    # path that does not exist must still exit 2.
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--schema", type=Path, default=None)
     parser.add_argument("--glob", metavar="PATTERN")
@@ -622,7 +645,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--stdin", action="store_true")
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--quiet", "-q", action="store_true")
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     # SA-spec: --stdin reads one document and writes stdout; it is incompatible with a
     # file set or in-place write. Enforce it (parser.error exits 2) — CR-005.
@@ -633,10 +656,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(
+            Path.cwd(),
+            explicit_legacy=args.config,
+            allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     if args.schema is not None or schema_value_is_path(config.schema):
         if not args.quiet:
@@ -662,6 +692,37 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     write = args.write  # default is check-mode
+    if write:
+        from project_standards.control_plane.executor import apply_authoring_plan
+        from project_standards.frontmatter_authoring import plan_frontmatter_format
+        from project_standards.package_contract.paths import PackageVersion
+
+        try:
+            planned = plan_frontmatter_format(
+                Path.cwd(),
+                tuple(paths),
+                version=PackageVersion(config.selected_package_version),
+                bump_updated=args.bump_updated,
+            )
+        except (ConfigError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        unparseable = False
+        for path, warning in planned.warnings:
+            print(f"{path}: {warning}", file=sys.stderr)
+            if "duplicate top-level key" in warning or "not valid UTF-8" in warning:
+                unparseable = True
+        if planned.refused_paths:
+            return 2
+        result = apply_authoring_plan(Path.cwd(), planned.plan)
+        if not result.success:
+            print(f"error: frontmatter apply failed: {result.error_code}", file=sys.stderr)
+            return 2
+        if not args.quiet:
+            for path in planned.formatted_paths:
+                print(f"formatted: {path}")
+        return 1 if unparseable else 0
+
     any_change = False
     unparseable = False
     for path in paths:
@@ -683,14 +744,8 @@ def main(argv: list[str] | None = None) -> int:
                 unparseable = True
         if changed:
             any_change = True
-            if write:
-                _atomic_write(path, new)
-                if not args.quiet:
-                    print(f"formatted: {path}")
-            elif not args.quiet:
+            if not args.quiet:
                 print(f"would reformat: {path}")
-    if write:
-        return 1 if unparseable else 0
     return 1 if (any_change or unparseable) else 0
 
 

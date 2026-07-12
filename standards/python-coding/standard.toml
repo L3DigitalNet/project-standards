@@ -1,54 +1,12 @@
-# Machine manifest for the draft Python Coding Standard.
+schema_version = "2.0"
 
 [standard]
 id = "python-coding"
 name = "Python Coding Standard"
-status = "draft"
 summary = "Reference guidance for Python code shape, boundaries, typing, tests, and agent behavior."
-adoption = "reference-only"
+status = "draft"
 
-[versions]
-supported = ["0.4", "0.5"]
-latest = "0.5"
-
-[config]
-namespaces = []
-
-[capabilities]
-provides = ["python.coding.guidance", "python.testing.guidance", "python.agent-guidance"]
-consumes_platform = []
-
-[relations]
-companions = ["python-tooling"]
-extends = []
-conflicts = []
-
-[resources]
-readme = "README.md"
-agent_summary = "agent-summary.md"
-
-[[authority]]
-domain = "python"
-target = "**/*.py"
-concern = "code-design-guidance"
-owner = "python-coding"
-mutates = false
-
-[[authority]]
-domain = "python"
-target = "tests/**/*.py"
-concern = "testing-guidance"
-owner = "python-coding"
-mutates = false
-
-[[authority]]
-domain = "agent"
-target = "AGENTS.md"
-concern = "python-behavior-guidance"
-owner = "python-coding"
-mutates = false
-
-[[providers]]
-operation = "semantic-review"
-kind = "documentation-only"
-optional = true
+[[versions]]
+version = "0.5"
+payload = "versions/0.5/payload.toml"
+digest = "sha256:d427ddb6ad6f04f010c2ef897d7668c577bda7f1c0d2b50c943dd56fa98634bc"

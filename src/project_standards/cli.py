@@ -11,11 +11,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import NoReturn
 
 from project_standards import (
-    format_frontmatter,
     validate_frontmatter,
     validate_id,
     validate_references,
@@ -29,6 +28,7 @@ from project_standards.adopt.manifest import (
     available_standards,
     load_manifest,
 )
+from project_standards.control_plane.models import ConsumerCatalog
 from project_standards.registry import Registry, RegistryError, load_registry
 
 
@@ -78,46 +78,73 @@ _V5_ADOPT_DEPRECATION = (
 )
 
 
-class _CliArgumentError(ValueError):
-    """Return parser errors through the CLI's structured boundary."""
+def v5_catalog_has_all_adoptable_defaults(catalog: ConsumerCatalog) -> bool:
+    """Return whether V2 can replace the complete legacy consumer surface."""
+    defaults = {
+        standard_id
+        for standard_id, standard in catalog.standards.items()
+        if standard.default is not None
+    }
+    return defaults == set(_ADOPTABLE_STANDARD_IDS)
 
 
-class _CliParser(argparse.ArgumentParser):
-    def error(self, message: str) -> NoReturn:
-        raise _CliArgumentError(message)
+@dataclass(frozen=True, slots=True)
+class _EarlyAdoptRoute:
+    standards: tuple[str, ...]
+    destination: Path
+    force: bool
+    dry_run: bool
+    legacy_only_options: bool
 
 
-def _extract_config_path(args: list[str]) -> Path:
-    """Pull the --config value out of a forwarded argv (default .project-standards.yml)."""
-    for i, a in enumerate(args):
-        if a == "--config" and i + 1 < len(args):
-            return Path(args[i + 1])
-        if a.startswith("--config="):
-            return Path(a.split("=", 1)[1])
-    return Path(".project-standards.yml")
-
-
-def _has_schema_flag(args: list[str]) -> bool:
-    """True if a forwarded argv passes --schema (custom-schema mode) — CR-001."""
-    return any(a == "--schema" or a.startswith("--schema=") for a in args)
-
-
-def _adopt_positional_standards(args: list[str]) -> tuple[str, ...]:
-    """Extract adopt standard ids while skipping values owned by specialized flags."""
+def _parse_early_adopt(args: list[str]) -> _EarlyAdoptRoute | None:
+    """Parse only the closed option surface needed before Agent Handoff dispatch."""
     standards: list[str] = []
+    destination = Path.cwd()
+    force = False
+    dry_run = False
+    legacy_only = False
     index = 0
     while index < len(args):
         argument = args[index]
         if argument in {"--dest", "--repo", "--harness"}:
+            if index + 1 >= len(args) or args[index + 1].startswith("-"):
+                return None
+            value = args[index + 1]
+            if argument == "--dest":
+                destination = Path(value)
+            else:
+                legacy_only = True
             index += 2
             continue
         if argument.startswith(("--dest=", "--repo=", "--harness=")):
+            option, _separator, value = argument.partition("=")
+            if not value:
+                return None
+            if option == "--dest":
+                destination = Path(value)
+            else:
+                legacy_only = True
             index += 1
             continue
-        if not argument.startswith("-"):
+        if argument == "--force":
+            force = True
+        elif argument == "--dry-run":
+            dry_run = True
+        elif argument in {"--manual", "--automatic", "--json"}:
+            legacy_only = True
+        elif argument.startswith("-"):
+            return None
+        else:
             standards.append(argument)
         index += 1
-    return tuple(standards)
+    return _EarlyAdoptRoute(
+        tuple(standards),
+        destination,
+        force,
+        dry_run,
+        legacy_only,
+    )
 
 
 def _assert_registry_bundle_parity(registry: Registry) -> None:
@@ -198,6 +225,7 @@ def _try_v5_adopt(
     *,
     force: bool,
     dry_run: bool,
+    unsupported_options: bool = False,
 ) -> int | None:
     """Route only fully advertised V2 selections through the control plane."""
     from project_standards.control_plane.distribution import InstalledDistribution
@@ -217,6 +245,18 @@ def _try_v5_adopt(
         catalog = distribution.consumer_catalog(major)
     except (PackageContractError, OSError, ValueError) as exc:
         print(f"error: installed V2 catalog is invalid: {exc}", file=sys.stderr)
+        return 2
+    if not v5_catalog_has_all_adoptable_defaults(catalog):
+        print(
+            "error: installed V2 catalog does not expose the complete consumer default set",
+            file=sys.stderr,
+        )
+        return 2
+    if unsupported_options:
+        print(
+            "error: legacy agent-handoff adopt options are unavailable under V5",
+            file=sys.stderr,
+        )
         return 2
     selected = [catalog.standards.get(standard_id) for standard_id in standards]
     if not any(item is not None for item in selected):
@@ -304,76 +344,44 @@ def main(argv: list[str] | None = None) -> int:
 
         return _reconcile_run(args_list[1:])
 
+    if args_list and args_list[0] == "render":
+        from project_standards.control_plane.cli import run_render as _render_run
+
+        return _render_run(args_list[1:])
+
     if args_list and args_list[0] == "init":
-        from project_standards.control_plane.bootstrap import initialize_control_plane
-        from project_standards.control_plane.distribution import InstalledDistribution
-        from project_standards.control_plane.paths import CatalogMajor
+        from project_standards.control_plane.cli import run_init as _init_run
 
-        init_parser = _CliParser(prog="project-standards init")
-
-        def catalog_major(value: str) -> CatalogMajor:
-            try:
-                return CatalogMajor(value)
-            except ValueError as exc:
-                raise argparse.ArgumentTypeError(
-                    "catalog must be a canonical positive integer"
-                ) from exc
-
-        init_parser.add_argument("--catalog", required=True, type=catalog_major)
-        init_parser.add_argument("--repo", type=Path, default=Path.cwd())
-        init_parser.add_argument("--json", action="store_true")
-        try:
-            init_args = init_parser.parse_args(args_list[1:])
-        except _CliArgumentError as exc:
-            if "--json" in args_list:
-                print(json.dumps({"ok": False, "code": "CP-ARGUMENT", "error": str(exc)}))
-            else:
-                print(f"error: {exc}", file=sys.stderr)
-            return 2
-        except SystemExit as exc:
-            return exc.code if isinstance(exc.code, int) else 1
-        try:
-            result = initialize_control_plane(
-                init_args.repo,
-                init_args.catalog,
-                distribution=InstalledDistribution.current(),
-            )
-        except ValueError as exc:
-            if init_args.json:
-                print(json.dumps({"ok": False, "code": "CP-INIT", "error": str(exc)}))
-            else:
-                print(f"error: {exc}", file=sys.stderr)
-            return 2
-        if init_args.json:
-            print(
-                json.dumps(
-                    {
-                        "ok": True,
-                        "created": result.created,
-                        "repo": str(result.repo),
-                        "files": [f".standards/{name}" for name in result.files],
-                    },
-                    indent=2,
-                )
-            )
-            return 0
-        action = "Initialized" if result.created else "OK"
-        print(f"{action} standards control plane: {result.repo / '.standards'}")
-        return 0
+        return _init_run(args_list[1:])
 
     if args_list and args_list[0] == "agent-handoff":
         from project_standards.agent_handoff.cli import run as _agent_handoff_run
 
         return _agent_handoff_run(args_list[1:])
 
-    if (
-        args_list
-        and args_list[0] == "adopt"
-        and "agent-handoff" in _adopt_positional_standards(args_list[1:])
-    ):
+    adopt_help = args_list[:1] == ["adopt"] and any(
+        argument in {"--help", "-h"} for argument in args_list[1:]
+    )
+    early_adopt = (
+        _parse_early_adopt(args_list[1:]) if args_list[:1] == ["adopt"] and not adopt_help else None
+    )
+    if args_list[:1] == ["adopt"] and not adopt_help and early_adopt is None:
+        print("error: invalid adopt arguments", file=sys.stderr)
+        return 2
+    if early_adopt is not None and "agent-handoff" in early_adopt.standards:
+        adopt_args = args_list[1:]
+        v5_result = _try_v5_adopt(
+            list(early_adopt.standards),
+            early_adopt.destination,
+            force=early_adopt.force,
+            dry_run=early_adopt.dry_run,
+            unsupported_options=early_adopt.legacy_only_options,
+        )
+        if v5_result is not None:
+            return v5_result
         from project_standards.agent_handoff.cli import run_adopt as _agent_handoff_adopt
 
-        return _agent_handoff_adopt(args_list[1:])
+        return _agent_handoff_adopt(adopt_args)
 
     # EARLY DISPATCH for `validate`: delegate every trailing arg to all three validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects
@@ -382,6 +390,11 @@ def main(argv: list[str] | None = None) -> int:
     # unchanged. We return the worst exit code (2 > 1 > 0) so a schema error, id violation, or
     # reference error is never masked by another tool's success.
     if args_list and args_list[0] == "validate":
+        from project_standards.control_plane.command_resolution import (
+            reset_legacy_authority_warning,
+        )
+
+        reset_legacy_authority_warning()
         validator_args = args_list[1:]
         # Intercept --help before forwarding — otherwise validate_frontmatter.main(["--help"])
         # calls sys.exit(0), which hides that validate-id also runs.
@@ -406,7 +419,7 @@ def main(argv: list[str] | None = None) -> int:
             _p.add_argument(
                 "--config",
                 metavar="PATH",
-                help="Project config file (default: .project-standards.yml).",
+                help="Explicit legacy/debug config; unified config resolves from .standards/.",
             )
             _p.add_argument(
                 "--schema",
@@ -429,6 +442,11 @@ def main(argv: list[str] | None = None) -> int:
             _p.add_argument("--quiet", "-q", action="store_true", help="Suppress per-file output.")
             _p.print_help()
             return 0
+        from project_standards.frontmatter_commands import run_validate as _run_v2_validate
+
+        v2_result = _run_v2_validate(validator_args, validate_control=True)
+        if v2_result is not None:
+            return v2_result
         rc_frontmatter = validate_frontmatter.main(validator_args)
         rc_id = validate_id.main(validator_args)
         rc_refs = validate_references.main(validator_args)
@@ -446,25 +464,77 @@ def main(argv: list[str] | None = None) -> int:
                 "Skips entirely under a custom schema."
             )
             return 0
-        # Custom-schema preflight (CR-001): fix is bundled-only, like format/validate-id.
+        from project_standards.frontmatter_commands import run_fix as _run_v2_fix
+
+        v2_result = _run_v2_fix(fix_args)
+        if v2_result is not None:
+            return v2_result
+        fix_parser = argparse.ArgumentParser(prog="project-standards fix", add_help=False)
+        fix_parser.add_argument("files", nargs="*", type=Path)
+        fix_parser.add_argument("--config", type=Path, default=None)
+        fix_parser.add_argument("--schema", type=Path, default=None)
+        fix_parser.add_argument("--glob")
+        fix_parser.add_argument("--quiet", "-q", action="store_true")
+        fix_parser.add_argument("--no-require-frontmatter", action="store_true")
+        parsed_fix = fix_parser.parse_args(fix_args)
+        if parsed_fix.config is not None and not parsed_fix.config.exists():
+            print(f"error: config file not found: {parsed_fix.config}", file=sys.stderr)
+            return 2
         try:
-            fix_cfg = validate_frontmatter.load_config(_extract_config_path(fix_args))
+            fix_cfg, legacy = validate_frontmatter.load_cli_config(
+                Path.cwd(),
+                explicit_legacy=parsed_fix.config,
+                allow_unlocked_custom_schema=parsed_fix.schema is not None,
+            )
         except validate_frontmatter.ConfigError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        if _has_schema_flag(fix_args) or validate_frontmatter.schema_value_is_path(fix_cfg.schema):
+        if legacy:
+            validate_frontmatter.emit_legacy_config_warning()
+        if parsed_fix.schema is not None or validate_frontmatter.schema_value_is_path(
+            fix_cfg.schema
+        ):
             print("note: custom schema in use; skipping fix", file=sys.stderr)
             return 0
-        rc_format = format_frontmatter.main(["--write", *fix_args])
-        rc_idfix = validate_id.main(["--fix", *fix_args])
+        try:
+            paths = validate_frontmatter.collect_paths(
+                list(parsed_fix.files),
+                parsed_fix.glob,
+                fix_cfg.include,
+                fix_cfg.exclude,
+            )
+            from project_standards.control_plane.executor import apply_authoring_plan
+            from project_standards.frontmatter_authoring import plan_frontmatter_fix
+            from project_standards.package_contract.paths import PackageVersion
+
+            planned = plan_frontmatter_fix(
+                Path.cwd(),
+                tuple(paths),
+                version=PackageVersion(fix_cfg.selected_package_version),
+            )
+        except (validate_frontmatter.ConfigError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        for path, warning in planned.warnings:
+            print(f"{path}: {warning}", file=sys.stderr)
+        if planned.refused_paths:
+            return 2
+        applied = apply_authoring_plan(Path.cwd(), planned.plan)
+        if not applied.success:
+            print(f"error: frontmatter apply failed: {applied.error_code}", file=sys.stderr)
+            return 2
+        if not parsed_fix.quiet:
+            for path in planned.formatted_paths:
+                print(f"formatted: {path}")
+            for path, document_id in planned.fixed_ids:
+                print(f"fixed: {path} -> {document_id}")
         # Final postcondition = the SAME contract as `project-standards validate`,
         # references included, so a "successful" fix cannot hide a reference error (CR-001).
-        rc_check = max(
+        return max(
             validate_frontmatter.main(fix_args),
             validate_id.main(fix_args),
             validate_references.main(fix_args),
         )
-        return max(rc_format, rc_idfix, rc_check)
 
     if args_list and args_list[0] == "spec":
         from project_standards.specs.cli import run as _spec_run
@@ -499,6 +569,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.add_parser("init", help="create the neutral .standards control plane")
     sub.add_parser("reconcile", help="plan, check, apply, or recover unified standards state")
+    sub.add_parser("render", help="render one enabled package provider to stdout")
 
     p_adopt = sub.add_parser(
         "adopt",

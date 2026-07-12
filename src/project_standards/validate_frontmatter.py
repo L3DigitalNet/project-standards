@@ -9,8 +9,8 @@ Usage:
     # Validate explicit files
     validate-frontmatter README.md docs/adr.md
 
-    # Validate using the project config (default: .project-standards.yml)
-    validate-frontmatter --config .project-standards.yml
+    # Validate using unified repository config
+    validate-frontmatter
 
     # Override the schema explicitly
     validate-frontmatter --schema src/project_standards/schemas/markdown-frontmatter.schema.json standards/markdown-frontmatter/examples/*.md
@@ -38,6 +38,7 @@ import json
 import os
 import re
 import sys
+from collections.abc import Mapping
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, cast
@@ -47,6 +48,19 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 from project_standards._version import package_version
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    emit_legacy_authority_warning,
+    explicit_legacy_argument,
+    resolve_selected_package,
+    selected_command,
+)
+from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.locking import LockMode
+from project_standards.control_plane.models import CentralLock
+from project_standards.control_plane.providers import read_locked_input_bytes
 from project_standards.registry import Registry, RegistryError, load_registry
 
 # Frontmatter is only recognised at the very top of the file (\A anchor). A block
@@ -57,7 +71,6 @@ from project_standards.registry import Registry, RegistryError, load_registry
 _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", re.DOTALL)
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
-_DEFAULT_CONFIG = Path(".project-standards.yml")
 
 
 class FrontmatterParseError(ValueError):
@@ -461,7 +474,7 @@ def collect_paths(
 
 
 class ProjectConfig:
-    """Resolved view of `.project-standards.yml`.
+    """Resolved frontmatter options from unified or explicit legacy authority.
 
     Holds the `markdown.frontmatter` settings (schema/include/exclude/required)
     plus the separate, opt-in `markdown.adr` flags. The two namespaces stay
@@ -484,6 +497,9 @@ class ProjectConfig:
         cli_documentation_version: str | None = None,
         project_spec_version: str | None = None,
         references_enabled: bool = False,
+        unified_authority: bool = False,
+        selected_package_version: str = "1.2",
+        custom_schema_bytes: bytes | None = None,
     ) -> None:
         self.schema = schema
         self.include = include
@@ -497,6 +513,9 @@ class ProjectConfig:
         self.cli_documentation_version = cli_documentation_version
         self.project_spec_version = project_spec_version
         self.references_enabled = references_enabled
+        self.unified_authority = unified_authority
+        self.selected_package_version = selected_package_version
+        self.custom_schema_bytes = custom_schema_bytes
 
 
 def resolve_effective_schema(
@@ -516,7 +535,7 @@ def resolve_effective_schema(
         return args_schema
     schema_value = config.schema
     custom_path = schema_value_is_path(schema_value)
-    if custom_path and config.frontmatter_version is not None:
+    if custom_path and config.frontmatter_version is not None and not config.unified_authority:
         raise ConfigError(
             "set markdown.frontmatter.schema (a custom path) or "
             "markdown.frontmatter.version, not both"
@@ -684,6 +703,176 @@ def load_config(path: Path) -> ProjectConfig:
     )
 
 
+def _unified_string(value: object, *, option: str, default: str) -> str:
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string")
+    return value
+
+
+def _unified_string_list(value: object, *, option: str, default: list[str]) -> list[str]:
+    if value is None:
+        return list(default)
+    if not isinstance(value, list):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string array")
+    items = cast("list[object]", value)
+    if not all(isinstance(item, str) for item in items):
+        raise ConfigError(f"markdown-frontmatter option {option} must be a string array")
+    return list(cast("list[str]", items))
+
+
+def config_from_unified_options(
+    options: Mapping[str, object],
+    *,
+    selected_package_version: str,
+    custom_schema_bytes: bytes | None = None,
+) -> ProjectConfig:
+    contract_version = _unified_string(
+        options.get("contract_version"),
+        option="contract_version",
+        default="1.1",
+    )
+    schema_selection = _unified_string(
+        options.get("schema"),
+        option="schema",
+        default="markdown-frontmatter",
+    )
+    schema_path = options.get("schema_path")
+    if schema_selection == "custom":
+        if not isinstance(schema_path, str):
+            raise ConfigError("custom frontmatter schema selection requires schema_path")
+        schema = schema_path
+    elif schema_selection == "markdown-frontmatter":
+        if schema_path is not None:
+            raise ConfigError("bundled frontmatter schema selection forbids schema_path")
+        schema = schema_selection
+    else:
+        raise ConfigError(f"unknown frontmatter schema selection {schema_selection!r}")
+
+    required = options.get("required", True)
+    if not isinstance(required, bool):
+        raise ConfigError("markdown-frontmatter option required must be a boolean")
+    references = options.get("references", {"enabled": False})
+    if not isinstance(references, dict):
+        raise ConfigError("markdown-frontmatter option references must be a table")
+    references_table = cast("dict[str, object]", references)
+    references_enabled = references_table.get("enabled", False)
+    if not isinstance(references_enabled, bool):
+        raise ConfigError("markdown-frontmatter option references.enabled must be a boolean")
+
+    return ProjectConfig(
+        schema=schema,
+        include=_unified_string_list(
+            options.get("include"),
+            option="include",
+            default=["README.md", "docs/**/*.md"],
+        ),
+        exclude=_unified_string_list(
+            options.get("exclude"),
+            option="exclude",
+            default=[
+                "**/*.template.md",
+                "AGENTS.md",
+                "CLAUDE.md",
+                ".agents/**",
+                ".claude/**",
+                ".codex/**",
+                ".github/**",
+                "node_modules/**",
+            ],
+        ),
+        required=required,
+        require_adr_sections=False,
+        frontmatter_version=contract_version,
+        references_enabled=references_enabled,
+        unified_authority=True,
+        selected_package_version=selected_package_version,
+        custom_schema_bytes=custom_schema_bytes,
+    )
+
+
+def _custom_schema_bytes(
+    root: Path,
+    schema_path: str,
+    lock: CentralLock,
+) -> bytes:
+    matching = [
+        item
+        for item in lock.referenced_inputs
+        if item.standard_id == "markdown-frontmatter"
+        and item.extension_id == "custom-schema"
+        and item.path.original == schema_path
+    ]
+    if len(matching) != 1:
+        raise ConfigError("custom schema requires exactly one matching locked input")
+    try:
+        return read_locked_input_bytes(root, matching[0])
+    except ControlPlaneError as exc:
+        raise ConfigError(f"custom schema locked input is invalid: {exc}") from exc
+
+
+def load_cli_config(
+    repo: Path,
+    *,
+    explicit_legacy: Path | None,
+    allow_unlocked_custom_schema: bool = False,
+    distribution: InstalledDistribution | None = None,
+    selected_package: SelectedCommandPackage | None = None,
+) -> tuple[ProjectConfig, bool]:
+    """Resolve unified authority by repository root or an explicit legacy/debug file."""
+    if repo.is_symlink():
+        raise ConfigError(f"repository root is not a regular directory: {repo}")
+    try:
+        root = repo.resolve(strict=True)
+    except OSError as exc:
+        raise ConfigError(f"cannot resolve repository root {repo}") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise ConfigError(f"repository root is not a regular directory: {repo}")
+
+    default_legacy = root / ".project-standards.yml"
+    try:
+        selected = selected_package or resolve_selected_package(
+            root,
+            "markdown-frontmatter",
+            distribution,
+            explicit_legacy=explicit_legacy,
+        )
+    except CommandResolutionError as exc:
+        message = str(exc)
+        if "legacy and unified" in message or "explicit legacy override" in message:
+            raise ConfigError(f"dual authority: {message}") from exc
+        if "disabled" in message or "not present" in message:
+            raise ConfigError("markdown-frontmatter is not enabled in unified config") from exc
+        if "payload is unavailable" in message:
+            raise ConfigError("markdown-frontmatter selected payload is unavailable") from exc
+        raise ConfigError(message) from exc
+    if selected is not None:
+        options = cast("dict[str, object]", selected.effective_config)
+        schema_content: bytes | None = None
+        if options.get("schema") == "custom" and not allow_unlocked_custom_schema:
+            schema_path = options.get("schema_path")
+            if not isinstance(schema_path, str):
+                raise ConfigError("custom frontmatter schema selection requires schema_path")
+            schema_content = _custom_schema_bytes(root, schema_path, selected.lock)
+        return (
+            config_from_unified_options(
+                options,
+                selected_package_version=selected.resolved.value,
+                custom_schema_bytes=schema_content,
+            ),
+            False,
+        )
+
+    legacy_path = explicit_legacy if explicit_legacy is not None else default_legacy
+    return load_config(legacy_path), legacy_path.exists()
+
+
+def emit_legacy_config_warning() -> None:
+    """Emit the process-wide V5 legacy-authority warning at most once."""
+    emit_legacy_authority_warning()
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -703,9 +892,42 @@ def reconfigure_output_streams() -> None:
             stream.reconfigure(errors="replace")
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
     """CLI entry point; returns an exit code (0 valid / 1 violations / 2 operator error)."""
     reconfigure_output_streams()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None:
+        from project_standards.frontmatter_commands import run_locked_standalone_validate
+
+        return run_locked_standalone_validate(
+            arguments,
+            _selected_package,
+            surface="validate-frontmatter",
+        )
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -732,15 +954,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Validate files matching PATTERN (relative to cwd) instead of the "
         "config include list; combines with explicit FILE arguments.",
     )
-    # Default None, not _DEFAULT_CONFIG: a missing implicit default falls back to
-    # defaults, but an operator-typed --config that does not exist must exit 2 —
-    # silently proceeding with defaults disables the very checks being requested.
+    # None selects unified repository authority. An operator-typed legacy/debug
+    # path that does not exist must still exit 2.
     parser.add_argument(
         "--config",
         type=Path,
         default=None,
         metavar="PATH",
-        help=f"Project config file (default: {_DEFAULT_CONFIG}).",
+        help="Explicit legacy/debug config; unified config resolves from .standards/.",
     )
     parser.add_argument(
         "--no-require-frontmatter",
@@ -753,16 +974,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Suppress success output.",
     )
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     if args.config is not None and not args.config.exists():
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(
+            Path.cwd(),
+            explicit_legacy=args.config,
+            allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     # The registry is loaded only when a gate actually consults it (version keys,
     # ADR flags). A wheel with a corrupted registry.json must not break the
@@ -857,8 +1085,14 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     try:
-        schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        if args.schema is None and config.custom_schema_bytes is not None:
+            schema = cast(
+                "dict[str, Any]",
+                json.loads(config.custom_schema_bytes.decode("utf-8")),
+            )
+        else:
+            schema = cast("dict[str, Any]", json.loads(schema_path.read_text(encoding="utf-8")))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         print(f"error: cannot load schema {schema_path}: {exc}", file=sys.stderr)
         return 2
 

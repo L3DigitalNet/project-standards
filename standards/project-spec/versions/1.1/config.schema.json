@@ -1,0 +1,28 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"contract_version": { "const": "1.1", "default": "1.1" },
+		"workflow_mode": { "enum": ["caller", "self-hosted"], "default": "caller" },
+		"include_patterns": {
+			"type": "array",
+			"items": {
+				"type": "string",
+				"minLength": 1,
+				"pattern": "^(?!.*\\s$)[^!\\s\\u0000-\\u001F\\u007F`][^\\u0000-\\u001F\\u007F`]*$"
+			},
+			"minItems": 1,
+			"uniqueItems": true,
+			"default": ["docs/specs/**/*.md"]
+		},
+		"reference_prefixes": {
+			"type": "array",
+			"items": { "type": "string", "pattern": "^[A-Z]{1,4}$" },
+			"uniqueItems": true,
+			"default": []
+		},
+		"default_profile": { "enum": ["light", "standard", "full"], "default": "standard" },
+		"ci": { "type": "boolean", "default": true }
+	}
+}

@@ -26,10 +26,10 @@ Example: ``adr-0001-homelab-use-postgresql-for-persistent-storage``.
 
 Usage:
     validate-id FILE [FILE ...]
-    validate-id --config .project-standards.yml
-    validate-id --quiet --config .project-standards.yml
+    validate-id
+    validate-id --quiet
     validate-id --glob 'docs/**/*.md'
-    validate-id --fix --config .project-standards.yml
+    validate-id --fix
 
 When ``--schema PATH`` is provided, id-format validation is **skipped** (exit 0).
 A custom schema signals non-standard id conventions; running the bundled base36 rules
@@ -56,25 +56,32 @@ import os
 import re
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
 from project_standards._version import package_version
+from project_standards.control_plane.command_resolution import (
+    CommandResolutionError,
+    SelectedCommandPackage,
+    explicit_legacy_argument,
+    selected_command,
+)
+from project_standards.control_plane.locking import LockMode
 from project_standards.id_format import random_token, slugify
 from project_standards.registry import RegistryError, load_registry
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
     collect_paths,
-    load_config,
+    emit_legacy_config_warning,
+    load_cli_config,
     parse_frontmatter,
     reconfigure_output_streams,
     resolve_effective_schema,
     schema_value_is_path,
 )
-
-_DEFAULT_CONFIG = Path(".project-standards.yml")
 
 # Default bundled schema: the doc_type enum source when no effective schema is
 # resolved (direct library calls, tests). main() resolves the enum from the
@@ -344,12 +351,14 @@ class FixResult:
     is_adr: bool = False
 
 
-def fix_file(
-    path: Path,
+def plan_fix_content(
+    raw: bytes,
     valid_doc_types: frozenset[str] | None = None,
     existing_ids: set[str] | None = None,
-) -> FixResult:
-    """Rewrite the ``id`` field in *path* to a valid standard-format id.
+    *,
+    token_factory: Callable[[], str] | None = None,
+) -> tuple[bytes, FixResult]:
+    """Return an id-repaired byte snapshot without writing the repository.
 
     Derives the new id from the document's ``doc_type`` and ``title`` fields:
     ``{doc_type}-{6-char base36 token}-{slugify(title)}``.
@@ -359,19 +368,14 @@ def fix_file(
     detection lives in opt-in validate-references — a collision minted here
     could otherwise pass CI forever in a repo that never opted in.)
 
-    Returns a FixResult: ``new_id`` set when the file was modified, otherwise a
-    human-readable ``skip_reason`` (already-valid id, ADR doc_type, missing or
-    unslugifiable title, unreadable file, or an id layout the single-line
-    replacement cannot rewrite safely).
+    The token factory is an explicit input so a provider can return deterministic
+    output from immutable snapshots. The returned bytes equal *raw* whenever the
+    result carries no ``new_id``.
     """
-    try:
-        raw = path.read_bytes()
-    except OSError as exc:
-        return FixResult(skip_reason=f"cannot read file: {exc}")
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
-        return FixResult(skip_reason="file is not valid UTF-8")
+        return raw, FixResult(skip_reason="file is not valid UTF-8")
     # check_file reads with utf-8-sig (BOM stripped); a plain utf-8 decode keeps
     # U+FEFF, the \A--- anchor never matches, and a BOM'd file is flagged by
     # validation but silently unfixable. Strip it here and re-prepend on write so
@@ -386,46 +390,48 @@ def fix_file(
     try:
         meta: dict[str, Any] | None = parse_frontmatter(text_lf)
     except FrontmatterParseError as exc:
-        return FixResult(skip_reason=f"invalid YAML frontmatter: {exc}")
+        return raw, FixResult(skip_reason=f"invalid YAML frontmatter: {exc}")
     if meta is None:
-        return FixResult(skip_reason="no frontmatter block found")
+        return raw, FixResult(skip_reason="no frontmatter block found")
     doc_types = valid_doc_types if valid_doc_types is not None else _load_doc_types(_SCHEMA_PATH)
     doc_id = meta.get("id")
     doc_type = meta.get("doc_type")
     title = meta.get("title")
     if not isinstance(doc_id, str) or not doc_id:
-        return FixResult(skip_reason="id field is missing or not a string")
+        return raw, FixResult(skip_reason="id field is missing or not a string")
     if not isinstance(doc_type, str) or doc_type not in doc_types:
-        return FixResult(skip_reason="doc_type field is missing or not a valid doc_type")
+        return raw, FixResult(skip_reason="doc_type field is missing or not a valid doc_type")
     # ADR ids include a repo-name segment that cannot be derived from document fields.
     if doc_type == "adr":
-        return FixResult(
-            is_adr=True, skip_reason="ADR ids require a repo-name segment — fix manually"
+        return raw, FixResult(
+            is_adr=True,
+            skip_reason="ADR ids require a repo-name segment — fix manually",
         )
     # Already valid — nothing to fix.
     if not validate_id(doc_id, doc_type, doc_types):
-        return FixResult(skip_reason="id is already valid")
+        return raw, FixResult(skip_reason="id is already valid")
     if not isinstance(title, str) or not title.strip():
-        return FixResult(skip_reason="title is missing or empty — cannot derive a slug")
+        return raw, FixResult(skip_reason="title is missing or empty — cannot derive a slug")
     slug = slugify(title)
     if not slug:
-        return FixResult(
+        return raw, FixResult(
             skip_reason="title produces an empty slug (no ASCII-translatable "
             "characters) — set an ASCII-translatable title or write the id manually"
         )
-    new_id = f"{doc_type}-{random_token()}-{slug}"
+    next_token = token_factory or random_token
+    new_id = f"{doc_type}-{next_token()}-{slug}"
     if existing_ids is not None:
         # 36^6 tokens make a real collision astronomically rare; the bound only
         # guards against a pathological existing_ids set.
         for _ in range(100):
             if new_id not in existing_ids:
                 break
-            new_id = f"{doc_type}-{random_token()}-{slug}"
+            new_id = f"{doc_type}-{next_token()}-{slug}"
         else:
-            return FixResult(skip_reason="could not generate an unused id (token collisions)")
+            return raw, FixResult(skip_reason="could not generate an unused id (token collisions)")
     new_text_lf = _replace_frontmatter_id(text_lf, new_id)
     if new_text_lf == text_lf:
-        return FixResult(skip_reason="no rewritable id: line found in the frontmatter block")
+        return raw, FixResult(skip_reason="no rewritable id: line found in the frontmatter block")
     # Post-rewrite sanity check: _replace_frontmatter_id only understands
     # single-line id: values. A block-scalar id (id: >- with an indented
     # continuation) would leave the continuation orphaned — invalid YAML written
@@ -438,9 +444,9 @@ def fix_file(
     try:
         new_meta = parse_frontmatter(new_text_lf)
     except FrontmatterParseError:
-        return unsafe_layout
+        return raw, unsafe_layout
     if not isinstance(new_meta, dict) or new_meta.get("id") != new_id:
-        return unsafe_layout
+        return raw, unsafe_layout
     # Reconstruct output preserving per-line endings.  Only the id: line differs between
     # text_lf and new_text_lf; all other lines — whether \r\n, \n, or \r — are kept
     # byte-exact.  This avoids converting bare-LF lines to CRLF in mixed-ending files.
@@ -453,8 +459,8 @@ def fix_file(
         # would mass-rewrite a CRLF file's endings behind the user's back —
         # refusing keeps the preserve-endings contract (the violation stays
         # reported).
-        return FixResult(
-            skip_reason="rewrite would alter the file beyond the id line — edit the id manually"
+        return raw, FixResult(
+            skip_reason=("rewrite would alter the file beyond the id line — edit the id manually")
         )
     output: list[str] = []
     for orig_line, new_line_lf in zip(orig_lines, new_lines_lf, strict=True):
@@ -466,18 +472,73 @@ def fix_file(
             # Content changed: apply new content with the original line ending.
             orig_ending = orig_line[len(orig_stripped) :]
             output.append(new_stripped + orig_ending)
+    return (bom_prefix + "".join(output)).encode("utf-8"), FixResult(new_id=new_id)
+
+
+def fix_file(
+    path: Path,
+    valid_doc_types: frozenset[str] | None = None,
+    existing_ids: set[str] | None = None,
+) -> FixResult:
+    """Plan and atomically publish one safe id repair for *path*."""
     try:
-        _atomic_write_bytes(path, (bom_prefix + "".join(output)).encode("utf-8"))
+        raw = path.read_bytes()
     except OSError as exc:
-        # Read-only file, or permissions changed between read and write: report
-        # it like the read errors instead of letting the traceback escape main.
+        return FixResult(skip_reason=f"cannot read file: {exc}")
+    updated, result = plan_fix_content(raw, valid_doc_types, existing_ids)
+    if result.new_id is None:
+        return result
+    try:
+        _atomic_write_bytes(path, updated)
+    except OSError as exc:
         return FixResult(skip_reason=f"cannot write file: {exc}")
-    return FixResult(new_id=new_id)
+    return result
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+) -> int:
     """CLI entry point; returns an exit code."""
     reconfigure_output_streams()
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if not _command_locked and not any(
+        option in arguments for option in {"--help", "-h", "--version"}
+    ):
+        try:
+            with selected_command(
+                Path.cwd(),
+                "markdown-frontmatter",
+                mode=LockMode.WRITE if "--fix" in arguments else LockMode.READ,
+                explicit_legacy=explicit_legacy_argument(arguments),
+            ) as selected:
+                if selected is not None:
+                    return main(
+                        arguments,
+                        _command_locked=True,
+                        _selected_package=selected,
+                    )
+        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if _selected_package is not None:
+        if "--fix" in arguments:
+            from project_standards.frontmatter_commands import run_locked_standalone_fix
+
+            return run_locked_standalone_fix(
+                arguments,
+                _selected_package,
+                surface="validate-id",
+            )
+        from project_standards.frontmatter_commands import run_locked_standalone_validate
+
+        return run_locked_standalone_validate(
+            arguments,
+            _selected_package,
+            surface="validate-id",
+        )
     parser = argparse.ArgumentParser(
         prog="validate-id",
         description=(
@@ -500,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         type=Path,
         default=None,
-        help=f"Project config file (default: {_DEFAULT_CONFIG}).",
+        help="Explicit legacy/debug config; unified config resolves from .standards/.",
     )
     parser.add_argument(
         "--quiet",
@@ -538,16 +599,23 @@ def main(argv: list[str] | None = None) -> int:
     # Has no effect here: id validation already silently skips files without frontmatter.
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     if args.config is not None and not args.config.exists():
         print(f"error: config file not found: {args.config}", file=sys.stderr)
         return 2
     try:
-        config = load_config(args.config if args.config is not None else _DEFAULT_CONFIG)
+        config, legacy = load_cli_config(
+            Path.cwd(),
+            explicit_legacy=args.config,
+            allow_unlocked_custom_schema=args.schema is not None,
+            selected_package=_selected_package,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if legacy:
+        emit_legacy_config_warning()
 
     # Skip id-format validation when a custom (non-bundled) schema is in use — either
     # via the --schema CLI flag or via a config-level path. Custom schemas are
@@ -576,40 +644,49 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.fix:
-        fixed: list[tuple[Path, str]] = []
-        adr_skipped: list[Path] = []
-        skip_notes: list[tuple[Path, str]] = []
+        from project_standards.control_plane.executor import apply_authoring_plan
+        from project_standards.frontmatter_authoring import plan_frontmatter_id_fix
+        from project_standards.package_contract.paths import PackageVersion
+
+        try:
+            planned = plan_frontmatter_id_fix(
+                Path.cwd(),
+                tuple(paths),
+                version=PackageVersion(config.selected_package_version),
+                valid_doc_types=valid_doc_types,
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if planned.refused_paths:
+            for path, reason in planned.warnings:
+                if path in planned.refused_paths:
+                    print(f"cannot auto-fix: {path}: {reason}", file=sys.stderr)
+            return 2
+        applied = apply_authoring_plan(Path.cwd(), planned.plan)
+        if not applied.success:
+            print(f"error: id repair apply failed: {applied.error_code}", file=sys.stderr)
+            return 2
+
+        fixed = [(Path(path), document_id) for path, document_id in planned.fixed_ids]
+        adr_skipped = [
+            Path(path) for path, reason in planned.warnings if reason.startswith("ADR ids require")
+        ]
+        skip_notes = [
+            (Path(path), reason)
+            for path, reason in planned.warnings
+            if not reason.startswith("ADR ids require")
+        ]
         remaining_errors: list[str] = []
-
-        # Pre-collect every id in the corpus so minted ids cannot collide with an
-        # existing one (or with each other — fixed ids are added as they're minted).
-        existing_ids: set[str] = set()
-        for path in paths:
-            try:
-                meta = parse_frontmatter(path.read_text(encoding="utf-8-sig"))
-            # Unparenthesized form: PEP 758 (>=3.14 only), enforced by ruff format
-            # — see the matching note in validate_frontmatter._match_key.
-            except OSError, UnicodeDecodeError, FrontmatterParseError:
-                continue
-            if isinstance(meta, dict):
-                existing = meta.get("id")
-                if isinstance(existing, str) and existing:
-                    existing_ids.add(existing)
-
         remaining_files: set[Path] = set()
+        adr_names = {path.as_posix() for path in adr_skipped}
+        root = Path.cwd()
         for path in paths:
-            violations = check_file(path, valid_doc_types)
-            if not violations:
+            relative = path.relative_to(root) if path.is_absolute() else path
+            if relative.as_posix() in adr_names:
                 continue
-            result = fix_file(path, valid_doc_types, existing_ids)
-            if result.new_id is not None:
-                existing_ids.add(result.new_id)
-                fixed.append((path, result.new_id))
-            elif result.is_adr:
-                adr_skipped.append(path)
-            else:
-                if result.skip_reason is not None:
-                    skip_notes.append((path, result.skip_reason))
+            violations = check_file(path, valid_doc_types)
+            if violations:
                 remaining_files.add(path)
                 remaining_errors.extend(violations)
 

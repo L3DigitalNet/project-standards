@@ -188,10 +188,11 @@ def _has_transition_path(
     return False
 
 
-def _consumer_versions(
+def consumer_versions(
     standard: CatalogStandard,
     major: int,
 ) -> list[PackageVersion]:
+    """Return consumer-advertised versions on one package-major track."""
     return [
         version
         for version in standard.available
@@ -206,7 +207,7 @@ def _latest_in_major(
     *,
     unavailable_message: str,
 ) -> PackageVersion:
-    versions = _consumer_versions(standard, major)
+    versions = consumer_versions(standard, major)
     if not versions:
         raise ControlPlaneError(unavailable_message)
     return max(versions, key=lambda version: version.sort_key)
@@ -219,13 +220,14 @@ def _authorization_targets(
     return {item.target_major for item in request.allowed_majors if item.standard_id == standard_id}
 
 
-def _selected_version(
+def select_catalog_version(
     standard_id: str,
     desired: DesiredPackage,
     standard: CatalogStandard,
     prior_track: AcceptedTrack | None,
     authorization_targets: set[int],
 ) -> tuple[PackageVersion, int]:
+    """Resolve one selector against explicit catalog and authorization facts."""
     default = standard.default
     if default is None:
         raise ControlPlaneError(f"standard is not consumer-selectable: {standard_id}")
@@ -424,7 +426,7 @@ def _resolve_enabled(
     previous = request.previous_lock.standards.get(standard_id)
     prior_track = request.previous_lock.accepted_tracks.get(standard_id)
     authorization_targets = _authorization_targets(request, standard_id)
-    selected, target_major = _selected_version(
+    selected, target_major = select_catalog_version(
         standard_id,
         desired,
         standard,

@@ -1,0 +1,7 @@
+standards_version: v4
+markdown:
+  frontmatter:
+    version: "1.1"
+    unsupported_option: true
+unknown_standard:
+  version: "9.9"

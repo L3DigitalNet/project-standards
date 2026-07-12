@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import json
+import os
 import stat
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Literal, Protocol, cast
@@ -17,8 +19,13 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as JsonSchemaError
 from pydantic import ValidationError
 
-from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlFinding,
+    ControlPlaneError,
+)
 from project_standards.control_plane.distribution import InstalledPayload
+from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import LockedInput
 from project_standards.control_plane.schemas import MutationPlanSchema, ProviderInputSchema
 from project_standards.package_contract.paths import (
@@ -27,6 +34,7 @@ from project_standards.package_contract.paths import (
     Sha256Digest,
 )
 from project_standards.package_contract.payload import (
+    AdapterKind,
     ExtensionDeclaration,
     JsonObject,
     JsonValue,
@@ -77,6 +85,119 @@ def _safe_reference(root: Path, value: str) -> tuple[SafeRelativePath, Path]:
     return relative, resolved
 
 
+def read_locked_input_bytes(repo: Path, locked: LockedInput) -> bytes:
+    """Read one lock-authorized input without following any path component."""
+    root = _safe_repo(repo)
+    root_descriptor = os.open(
+        root,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+    )
+    descriptor = root_descriptor
+    try:
+        for part in locked.path.normalized.parts[:-1]:
+            try:
+                child = os.open(
+                    part,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    dir_fd=descriptor,
+                )
+            except OSError as exc:
+                raise ControlPlaneError(
+                    "locked referenced input path contains a symlink or missing ancestor"
+                ) from exc
+            if descriptor != root_descriptor:
+                os.close(descriptor)
+            descriptor = child
+        try:
+            leaf = os.open(
+                locked.path.normalized.name,
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=descriptor,
+            )
+        except OSError as exc:
+            raise ControlPlaneError("locked referenced input is missing or is a symlink") from exc
+        try:
+            if not stat.S_ISREG(os.fstat(leaf).st_mode):
+                raise ControlPlaneError("locked referenced input is not a regular file")
+            chunks: list[bytes] = []
+            while chunk := os.read(leaf, 1024 * 1024):
+                chunks.append(chunk)
+            content = b"".join(chunks)
+        finally:
+            os.close(leaf)
+    finally:
+        if descriptor != root_descriptor:
+            os.close(descriptor)
+        os.close(root_descriptor)
+    if _sha256(content) != locked.digest:
+        raise ControlPlaneError("locked referenced input digest changed")
+    return content
+
+
+def materialize_referenced_input_snapshots(
+    repo: Path,
+    snapshots: JsonObject,
+    *,
+    standard_id: str | None = None,
+    config: Mapping[str, JsonValue] | None = None,
+    extensions: Sequence[ExtensionDeclaration] | None = None,
+) -> JsonObject:
+    """Attach immutable bytes for every lock-declared referenced input."""
+    raw_inputs = snapshots.get("referenced_inputs")
+    if raw_inputs is None:
+        return dict(snapshots)
+    if not isinstance(raw_inputs, list):
+        raise ControlPlaneError("provider referenced-input snapshot must be an array")
+    locked_inputs: list[LockedInput] = []
+    try:
+        for raw in raw_inputs:
+            locked_inputs.append(LockedInput.model_validate(raw))
+    except ValidationError as exc:
+        raise ControlPlaneError("provider referenced-input snapshot is invalid") from exc
+    keys = [item.natural_key for item in locked_inputs]
+    if len(keys) != len(set(keys)):
+        raise ControlPlaneError("provider referenced-input snapshot contains a duplicate")
+    if standard_id is not None and config is not None and extensions is not None:
+        declared = {extension.id: extension for extension in extensions}
+        for locked in locked_inputs:
+            if locked.standard_id != standard_id:
+                raise ControlPlaneError(
+                    "provider referenced input does not match the selected package"
+                )
+            extension = declared.get(locked.extension_id)
+            if extension is None:
+                raise ControlPlaneError("provider referenced input uses an undeclared extension")
+            configured = config.get(extension.option)
+            if not isinstance(configured, str):
+                raise ControlPlaneError("provider referenced input has no configured path")
+            try:
+                configured_path = SafeRelativePath.parse(configured)
+            except ValueError as exc:
+                raise ControlPlaneError(
+                    "provider referenced input configured path is not canonical"
+                ) from exc
+            if configured_path != locked.path:
+                raise ControlPlaneError(
+                    "provider referenced input does not match its configured path"
+                )
+    materialized: list[JsonValue] = []
+    for locked in sorted(locked_inputs, key=lambda item: item.natural_key):
+        content = read_locked_input_bytes(repo, locked)
+        materialized.append(
+            {
+                "standard_id": locked.standard_id,
+                "extension_id": locked.extension_id,
+                "path": locked.path.original,
+                "digest": locked.digest.value,
+                "content_base64": base64.b64encode(content).decode("ascii"),
+            }
+        )
+    return {
+        **snapshots,
+        "referenced_input_content": materialized,
+    }
+
+
 def _canonical_target(root: Path, target: SafeRelativePath) -> Path:
     try:
         resolved = (root / target.normalized).resolve(strict=False)
@@ -104,7 +225,13 @@ def resolve_referenced_inputs(
     managed = {_canonical_target(root, target) for target in managed_targets}
     inputs: list[LockedInput] = []
     for extension in sorted(extensions, key=lambda item: item.id):
-        configured = config.get(extension.option)
+        if extension.option not in config:
+            raise ControlPlaneError(
+                f"referenced input option is missing or not a path: {extension.option}"
+            )
+        configured = config[extension.option]
+        if configured is None:
+            continue
         if not isinstance(configured, str):
             raise ControlPlaneError(
                 f"referenced input option is missing or not a path: {extension.option}"
@@ -149,7 +276,9 @@ class ProviderResult:
     findings: tuple[ControlFinding, ...] = ()
     content: bytes | None = None
     mutation_plan: MutationPlanSchema | None = None
+    migration_report: MigrationReport | None = None
     output_notice: str | None = None
+    structured_output: JsonObject | None = None
 
 
 class _OutputSink(io.TextIOBase):
@@ -309,7 +438,12 @@ def _typed_result(
         content = output.get("content")
         if not isinstance(content, str):
             raise ControlPlaneError("content provider returned an invalid result")
-        return ProviderResult(effect, content=content.encode(), output_notice=notice)
+        return ProviderResult(
+            effect,
+            content=content.encode(),
+            output_notice=notice,
+            structured_output=output,
+        )
     if effect is ProviderEffect.FINDINGS:
         raw_findings = output.get("findings")
         if not isinstance(raw_findings, list):
@@ -330,11 +464,18 @@ def _typed_result(
                         identity=cast(str, table["identity"]),
                         message=cast(str, table["message"]),
                         hint=cast(str, table["hint"]),
+                        line=cast(int | None, table.get("line")),
+                        locus=cast(str | None, table.get("locus")),
                     )
                 )
             except KeyError as exc:
                 raise ControlPlaneError("findings provider omitted a required field") from exc
-        return ProviderResult(effect, findings=tuple(findings), output_notice=notice)
+        return ProviderResult(
+            effect,
+            findings=tuple(findings),
+            output_notice=notice,
+            structured_output=output,
+        )
     if effect is ProviderEffect.MUTATION_PLAN:
         try:
             plan = MutationPlanSchema.model_validate(output)
@@ -342,8 +483,145 @@ def _typed_result(
             raise ControlPlaneError("mutation provider returned an invalid plan") from exc
         if plan.standard_id != invocation.standard_id or plan.version != invocation.version:
             raise ControlPlaneError("mutation plan identity does not match selected payload")
-        return ProviderResult(effect, mutation_plan=plan, output_notice=notice)
+        if invocation.operation is ProviderOperation.FIX:
+            _bind_fix_actions_to_snapshots(invocation, plan)
+        elif invocation.operation in {ProviderOperation.SCAFFOLD, ProviderOperation.UPGRADE}:
+            _bind_authoring_actions_to_snapshot(invocation, plan)
+        return ProviderResult(
+            effect,
+            mutation_plan=plan,
+            output_notice=notice,
+            structured_output=output,
+        )
+    if effect is ProviderEffect.MIGRATION_REPORT:
+        try:
+            report = MigrationReport.model_validate(output)
+        except ValidationError as exc:
+            raise ControlPlaneError("migration provider returned an invalid report") from exc
+        if (
+            report.package.standard_id != invocation.standard_id
+            or report.package.version != invocation.version
+        ):
+            raise ControlPlaneError("migration report identity does not match selected payload")
+        declared_signatures = {
+            signature
+            for migration in invocation.payload.manifest.migrations
+            if migration.provider == invocation.provider_id
+            for signature in migration.signatures
+        }
+        if any(claim.signature_id not in declared_signatures for claim in report.claims):
+            raise ControlPlaneError("migration provider claimed an undeclared legacy signature")
+        return ProviderResult(
+            effect,
+            migration_report=report,
+            output_notice=notice,
+            structured_output=output,
+        )
     raise ControlPlaneError("provider declared an unsupported effect")
+
+
+def _bind_fix_actions_to_snapshots(
+    invocation: ProviderInvocation,
+    plan: MutationPlanSchema,
+) -> None:
+    """Reject FIX actions that are not exact whole-file transitions over snapshots."""
+    raw_documents = invocation.snapshots.get("documents")
+    if not isinstance(raw_documents, list):
+        if plan.actions:
+            raise ControlPlaneError("FIX mutation plan requires immutable document snapshots")
+        return
+    documents: dict[str, tuple[str, Sha256Digest]] = {}
+    for raw in raw_documents:
+        if not isinstance(raw, dict):
+            raise ControlPlaneError("FIX document snapshot is invalid")
+        document = cast(dict[str, JsonValue], raw)
+        path = document.get("path")
+        kind = document.get("kind")
+        digest = document.get("precondition_digest")
+        if not isinstance(path, str) or not isinstance(kind, str) or not isinstance(digest, str):
+            raise ControlPlaneError("FIX document snapshot is invalid")
+        try:
+            normalized = SafeRelativePath.parse(path).original
+            precondition = Sha256Digest(digest)
+        except ValueError as exc:
+            raise ControlPlaneError("FIX document snapshot is invalid") from exc
+        if normalized in documents:
+            raise ControlPlaneError("FIX document snapshots contain a duplicate target")
+        documents[normalized] = (kind, precondition)
+
+    targets: set[str] = set()
+    for action in plan.actions:
+        target = action.target.original
+        if target in targets:
+            raise ControlPlaneError("FIX mutation plan contains a duplicate target")
+        targets.add(target)
+        snapshot = documents.get(target)
+        if snapshot is None:
+            raise ControlPlaneError("FIX mutation plan contains an undeclared target")
+        if action.adapter is not AdapterKind.WHOLE_FILE or action.scope != "$file":
+            raise ControlPlaneError("FIX mutation actions must use whole-file scope and adapter")
+        if action.kind is ActionKind.REMOVE:
+            raise ControlPlaneError("FIX mutation plan cannot request document removal")
+        kind, precondition = snapshot
+        if action.precondition_digest != precondition:
+            raise ControlPlaneError("FIX mutation action precondition does not match its snapshot")
+        expected = (
+            ActionKind.UPDATE
+            if kind == "regular"
+            else ActionKind.CREATE
+            if kind == "missing"
+            else None
+        )
+        if expected is None or action.kind is not expected:
+            raise ControlPlaneError("FIX mutation action kind does not match its document snapshot")
+
+
+def _bind_authoring_actions_to_snapshot(
+    invocation: ProviderInvocation,
+    plan: MutationPlanSchema,
+) -> None:
+    """Bind scaffold/upgrade output to one caller-authorized target snapshot."""
+    raw_authoring = invocation.snapshots.get("authoring")
+    if not isinstance(raw_authoring, dict):
+        raise ControlPlaneError("authoring provider requires one immutable target snapshot")
+    authoring = cast(dict[str, JsonValue], raw_authoring)
+    target = authoring.get("target")
+    kind = authoring.get("kind")
+    digest = authoring.get("precondition_digest")
+    mode = authoring.get("mode")
+    overwrite = authoring.get("overwrite")
+    if (
+        not isinstance(target, str)
+        or not isinstance(kind, str)
+        or not isinstance(digest, str)
+        or not (isinstance(mode, str) or mode is None)
+        or not isinstance(overwrite, bool)
+    ):
+        raise ControlPlaneError("authoring target snapshot is invalid")
+    try:
+        normalized_target = SafeRelativePath.parse(target)
+        precondition = Sha256Digest(digest)
+    except ValueError as exc:
+        raise ControlPlaneError("authoring target snapshot is invalid") from exc
+    if len(plan.actions) != 1:
+        raise ControlPlaneError("authoring provider must return exactly one target action")
+    action = plan.actions[0]
+    if (
+        action.target != normalized_target
+        or action.adapter is not AdapterKind.WHOLE_FILE
+        or action.scope != "$file"
+        or action.precondition_digest != precondition
+    ):
+        raise ControlPlaneError("authoring mutation does not match its target snapshot")
+    if action.mode != mode:
+        raise ControlPlaneError("authoring mutation mode exceeds its target authorization")
+    expected = (
+        ActionKind.CREATE if kind == "missing" else ActionKind.UPDATE if kind == "regular" else None
+    )
+    if expected is None or action.kind is not expected:
+        raise ControlPlaneError("authoring mutation kind does not match its target snapshot")
+    if expected is ActionKind.UPDATE and not overwrite:
+        raise ControlPlaneError("authoring mutation exceeds its overwrite authorization")
 
 
 def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
@@ -391,7 +669,17 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
     provider_resource_bytes = {
         resource_id: loaded[resource_id] for resource_id in provider.resources
     }
-    provider_input = _provider_input(invocation, provider_resource_bytes)
+    effective_invocation = replace(
+        invocation,
+        snapshots=materialize_referenced_input_snapshots(
+            root,
+            invocation.snapshots,
+            standard_id=invocation.standard_id,
+            config=invocation.effective_config,
+            extensions=payload.manifest.extensions,
+        ),
+    )
+    provider_input = _provider_input(effective_invocation, provider_resource_bytes)
     input_value = cast(JsonValue, provider_input.model_dump(mode="json"))
     _validate_json_schema(input_schema, input_value, kind="input")
     frozen_input = _deep_freeze(input_value)

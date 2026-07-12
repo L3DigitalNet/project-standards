@@ -9,6 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn, cast
 
+from project_standards.control_plane.catalog_refresh import plan_catalog_refresh
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
@@ -21,6 +22,7 @@ from project_standards.control_plane.distribution import (
 )
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.models import CentralLock
+from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
     PlannerRequest,
     ReconciliationPlan,
@@ -38,9 +40,17 @@ from project_standards.control_plane.resolution import (
     ResolutionPayload,
     ResolutionRequest,
 )
-from project_standards.control_plane.state import StateKind, detect_control_plane_state
+from project_standards.control_plane.state import (
+    ControlPlaneState,
+    StateKind,
+    detect_control_plane_state,
+)
 from project_standards.package_contract.diagnostics import PackageContractError
-from project_standards.package_contract.payload import load_option_schema
+from project_standards.package_contract.payload import (
+    ProviderEffect,
+    ProviderOperation,
+    load_option_schema,
+)
 
 
 class _ArgumentError(ValueError):
@@ -112,34 +122,131 @@ def _transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
     return frozenset(transitions)
 
 
-def _planner_request(
+def build_planner_request(
     repo: Path,
     distribution: InstalledDistribution,
     allowed_majors: frozenset[MajorAuthorization],
+    *,
+    state: ControlPlaneState | None = None,
 ) -> PlannerRequest:
-    state = detect_control_plane_state(repo, tool_release=distribution.tool_release.value)
-    if (
-        state.kind is not StateKind.INITIALIZED
-        or state.config is None
-        or state.catalog is None
-        or state.lock is None
-    ):
-        raise ControlPlaneError(state.detail or f"control-plane state is {state.kind.value}")
-    installed = distribution.load_catalog(
-        state.config.project_standards.catalog,
-        recorded_release=state.catalog.project_standards.release,
+    selected_state = state or detect_control_plane_state(
+        repo, tool_release=distribution.tool_release.value
     )
-    if distribution.consumer_catalog(state.config.project_standards.catalog) != state.catalog:
-        raise ControlPlaneError("committed catalog does not match the installed distribution")
+    if (
+        selected_state.kind is not StateKind.INITIALIZED
+        or selected_state.config is None
+        or selected_state.catalog is None
+        or selected_state.lock is None
+    ):
+        raise ControlPlaneError(
+            selected_state.detail or f"control-plane state is {selected_state.kind.value}"
+        )
+    installed = distribution.load_catalog(
+        selected_state.config.project_standards.catalog,
+        recorded_release=selected_state.catalog.project_standards.release,
+    )
+    refresh = plan_catalog_refresh(
+        selected_state.catalog,
+        distribution.consumer_catalog(
+            selected_state.config.project_standards.catalog,
+            installed=installed,
+        ),
+        selected_state.config,
+        selected_state.lock,
+    )
     resolution = ResolutionRequest(
-        desired=state.config,
-        catalog=state.catalog,
-        previous_lock=state.lock,
+        desired=selected_state.config,
+        catalog=refresh.installed,
+        previous_lock=selected_state.lock,
         allowed_majors=allowed_majors,
         payloads=_resolution_payloads(installed),
         transition_paths=_transitions(installed),
     )
-    return PlannerRequest(repo, resolution, installed.payloads)
+    return PlannerRequest(
+        selected_state.repo,
+        resolution,
+        installed.payloads,
+        catalog_refresh=refresh,
+    )
+
+
+def run_render(
+    argv: list[str] | None = None,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> int:
+    """Render one selected package provider to stdout without planning changes."""
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    parser = _Parser(prog="project-standards render")
+    parser.add_argument("standard_id", metavar="STANDARD_ID")
+    parser.add_argument("provider_id", metavar="PROVIDER_ID")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    try:
+        args = parser.parse_args(arguments)
+    except (_ArgumentError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code == 0:
+            return 0
+        message = str(exc) if isinstance(exc, _ArgumentError) else "invalid arguments"
+        return _emit_error("--json" in arguments, "CP-ARGUMENT", message, exit_code=2)
+
+    json_mode = cast("bool", args.json)
+    standard_id = cast("str", args.standard_id)
+    provider_id = cast("str", args.provider_id)
+    from project_standards.control_plane.command_resolution import (
+        CommandResolutionError,
+        invoke_selected_provider,
+        selected_command,
+    )
+    from project_standards.control_plane.locking import LockMode
+
+    try:
+        repo = cast("Path", args.repo).resolve()
+        with selected_command(
+            repo,
+            standard_id,
+            distribution,
+            mode=LockMode.READ,
+            require_reconciled=False,
+        ) as selected:
+            if selected is None:
+                raise ControlPlaneError("render requires unified package authority")
+            result = invoke_selected_provider(
+                selected,
+                ProviderOperation.RENDER,
+                {},
+                provider_id=provider_id,
+            )
+        if result.effect is not ProviderEffect.CONTENT or result.content is None:
+            raise ControlPlaneError("render provider did not return content")
+        try:
+            content = result.content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ControlPlaneError("render provider content is not UTF-8 text") from exc
+        if json_mode:
+            print(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "standard_id": standard_id,
+                        "provider_id": provider_id,
+                        "content": content,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            sys.stdout.write(content)
+        return 0
+    except (
+        CommandResolutionError,
+        ControlPlaneError,
+        PackageContractError,
+        OSError,
+        RuntimeError,
+        ValueError,
+    ) as exc:
+        return _emit_error(json_mode, "CP-RENDER", str(exc), exit_code=2)
 
 
 def _drift(plan: ReconciliationPlan, previous_lock: CentralLock) -> bool:
@@ -155,6 +262,216 @@ def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> 
     else:
         print(f"error: {message}", file=sys.stderr)
     return exit_code
+
+
+def _inspect_tool_mismatch(
+    state: ControlPlaneState,
+    *,
+    apply: bool,
+    json_mode: bool,
+) -> int:
+    detail = state.detail or "installed tool major does not match configured catalog major"
+    if apply:
+        return _emit_error(
+            json_mode,
+            "CP-CATALOG-MAJOR-MISMATCH",
+            detail,
+            exit_code=2,
+        )
+    if state.catalog is None:
+        return _emit_error(json_mode, "CP-CONTROL-STATE", detail, exit_code=2)
+    header = state.catalog.project_standards
+    if json_mode:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "mode": "inspection",
+                    "state": state.kind.value,
+                    "mutable": False,
+                    "catalog": {
+                        "major": header.catalog.value,
+                        "release": header.release,
+                    },
+                    "error": detail,
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(
+            f"Inspection only: catalog {header.catalog.value} at {header.release}; {detail}.",
+            file=sys.stderr,
+        )
+    return 1
+
+
+def _migration_plan_payload(plan: object, *, mode: str) -> dict[str, object]:
+    from project_standards.control_plane.migration import LegacyMigrationPlan
+
+    if not isinstance(plan, LegacyMigrationPlan):
+        raise TypeError("migration report requires a legacy migration plan")
+    return {
+        "ok": plan.applicable,
+        "mode": mode,
+        "applicable": plan.applicable,
+        "plan": plan.to_jsonable(),
+    }
+
+
+def _emit_migration_plan(
+    plan: object,
+    *,
+    mode: str,
+    json_mode: bool,
+) -> int:
+    from project_standards.control_plane.migration import LegacyMigrationPlan
+
+    if not isinstance(plan, LegacyMigrationPlan):
+        raise TypeError("migration report requires a legacy migration plan")
+    if json_mode:
+        print(json.dumps(_migration_plan_payload(plan, mode=mode), indent=2))
+    else:
+        for action in plan.actions:
+            print(f"{action.kind.value:<8} {action.target}  {action.summary}")
+        for finding in plan.findings:
+            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+    return 1
+
+
+def run_init(
+    argv: list[str] | None = None,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> int:
+    """Initialize neutral state or explicitly preview/apply legacy migration."""
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+    from project_standards.control_plane.migration import (
+        apply_legacy_migration,
+        plan_legacy_migration,
+        plan_legacy_migration_recovery,
+    )
+
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    parser = _Parser(prog="project-standards init")
+
+    def catalog_major(value: str) -> CatalogMajor:
+        try:
+            return CatalogMajor(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                "catalog must be a canonical positive integer"
+            ) from exc
+
+    parser.add_argument("--catalog", required=True, type=catalog_major)
+    parser.add_argument("--migrate", action="store_true", help="preview legacy migration")
+    parser.add_argument("--apply", action="store_true", help="apply an explicit migration")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--json", action="store_true")
+    try:
+        args = parser.parse_args(arguments)
+    except (_ArgumentError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code == 0:
+            return 0
+        message = str(exc) if isinstance(exc, _ArgumentError) else "invalid arguments"
+        return _emit_error("--json" in arguments, "CP-ARGUMENT", message, exit_code=2)
+
+    json_mode = cast("bool", args.json)
+    if cast("bool", args.apply) and not cast("bool", args.migrate):
+        return _emit_error(
+            json_mode,
+            "CP-ARGUMENT",
+            "--apply requires --migrate",
+            exit_code=2,
+        )
+    repo = cast("Path", args.repo).resolve()
+    major = cast("CatalogMajor", args.catalog)
+    selected_distribution = distribution or InstalledDistribution.current()
+    try:
+        if not cast("bool", args.migrate):
+            result = initialize_control_plane(
+                repo,
+                major,
+                distribution=selected_distribution,
+            )
+            if json_mode:
+                print(
+                    json.dumps(
+                        {
+                            "ok": True,
+                            "created": result.created,
+                            "repo": str(result.repo),
+                            "files": [f".standards/{name}" for name in result.files],
+                        },
+                        indent=2,
+                    )
+                )
+            else:
+                action = "Initialized" if result.created else "OK"
+                print(f"{action} standards control plane: {result.repo / '.standards'}")
+            return 0
+
+        state = detect_control_plane_state(
+            repo,
+            tool_release=selected_distribution.tool_release.value,
+        )
+        if state.kind is StateKind.INITIALIZED:
+            if (
+                state.config is None
+                or state.catalog is None
+                or state.config.project_standards.catalog != major
+                or selected_distribution.consumer_catalog(major) != state.catalog
+            ):
+                return _emit_error(
+                    json_mode,
+                    "CP-MIGRATION-STATE",
+                    "initialized control plane does not match the requested catalog",
+                    exit_code=2,
+                )
+            if json_mode:
+                print(json.dumps({"ok": True, "mode": "migration-noop"}, indent=2))
+            else:
+                print("OK legacy migration is already complete")
+            return 0
+        if state.kind is StateKind.LEGACY_ONLY:
+            plan = plan_legacy_migration(repo, selected_distribution, major)
+            mode = "migration-plan"
+        elif state.kind is StateKind.DUAL_AUTHORITY:
+            plan = plan_legacy_migration_recovery(repo, selected_distribution, major)
+            mode = "migration-recovery-plan"
+        else:
+            return _emit_error(
+                json_mode,
+                "CP-MIGRATION-STATE",
+                state.detail or f"control-plane state is {state.kind.value}",
+                exit_code=2,
+            )
+        if not cast("bool", args.apply) or not plan.applicable:
+            return _emit_migration_plan(plan, mode=mode, json_mode=json_mode)
+
+        result = apply_legacy_migration(plan)
+        if json_mode:
+            print(
+                json.dumps(
+                    {
+                        **_migration_plan_payload(plan, mode="migration-apply"),
+                        "ok": result.success,
+                        "success": result.success,
+                        "applied_action_ids": list(result.applied_action_ids),
+                        "lock_written": result.lock_written,
+                        "error_code": result.error_code,
+                        "findings": findings_to_jsonable(result.verification_findings),
+                    },
+                    indent=2,
+                )
+            )
+        elif result.success:
+            print("Applied legacy migration; unified lock published before legacy retirement.")
+        else:
+            print(f"error: migration failed ({result.error_code})", file=sys.stderr)
+        return 0 if result.success else 1
+    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+        return _emit_error(json_mode, "CP-MIGRATION-STATE", str(exc), exit_code=2)
 
 
 def _emit_plan(
@@ -295,7 +612,7 @@ def run(
             repo,
             tool_release=selected_distribution.tool_release.value,
         )
-        if state.kind is StateKind.INCOMPLETE:
+        if state.kind in {StateKind.INCOMPLETE, StateKind.INTERRUPTED_REFRESH}:
             if not cast("bool", args.repair_state):
                 return _emit_error(
                     json_mode,
@@ -317,7 +634,13 @@ def run(
                 "control plane is not in a sanctioned incomplete state",
                 exit_code=2,
             )
-        planner = _planner_request(repo, selected_distribution, allowed_majors)
+        if state.kind is StateKind.TOOL_MISMATCH:
+            return _inspect_tool_mismatch(
+                state,
+                apply=cast("bool", args.apply),
+                json_mode=json_mode,
+            )
+        planner = build_planner_request(repo, selected_distribution, allowed_majors)
         plan = plan_reconciliation(planner)
         if cast("bool", args.apply):
             if not plan.applicable:
@@ -387,11 +710,11 @@ def validate_repository(
         if state.kind is StateKind.UNINITIALIZED:
             return 0
         if state.kind is StateKind.LEGACY_ONLY:
-            print(
-                "warning: legacy .project-standards.yml remains read-only; "
-                "migrate before using the V5 control plane",
-                file=sys.stderr,
+            from project_standards.control_plane.command_resolution import (
+                emit_legacy_authority_warning,
             )
+
+            emit_legacy_authority_warning()
             return 0
         if state.kind is not StateKind.INITIALIZED:
             print(
@@ -399,7 +722,7 @@ def validate_repository(
                 file=sys.stderr,
             )
             return 1
-        planner = _planner_request(repo.resolve(), selected_distribution, frozenset())
+        planner = build_planner_request(repo.resolve(), selected_distribution, frozenset())
         plan = plan_reconciliation(planner)
         drift = _drift(plan, planner.resolution.previous_lock)
         for finding in plan.findings:

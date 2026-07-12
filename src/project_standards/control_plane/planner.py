@@ -29,7 +29,9 @@ from project_standards.control_plane.adapters import (
     YamlAdapter,
 )
 from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
-from project_standards.control_plane.codec import semantic_digest
+from project_standards.control_plane.adapters.jsonc import container_value_without_comments
+from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
+from project_standards.control_plane.codec import render_catalog, semantic_digest
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -103,6 +105,9 @@ class PlannerRequest:
     resolution: ResolutionRequest
     payloads: tuple[InstalledPayload, ...]
     provider_runner: ProviderRunner | None = None
+    catalog_refresh: CatalogRefreshPlan | None = None
+    retired_targets: frozenset[SafeRelativePath] = frozenset()
+    retired_content: tuple[tuple[SafeRelativePath, bytes], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +176,7 @@ class ReconciliationPlan:
     verification_requests: tuple[VerificationRequest, ...]
     provider_notices: tuple[ProviderNotice, ...]
     namespace_prunes: tuple[str, ...]
+    catalog_refresh: CatalogRefreshPlan | None
     next_lock: CentralLock
 
     def proposed_content(self, target: str) -> bytes:
@@ -226,6 +232,7 @@ class ReconciliationPlan:
                 [asdict(item) for item in self.provider_notices],
             ),
             "namespace_prunes": list(self.namespace_prunes),
+            "catalog_refresh": _catalog_refresh_json(self.catalog_refresh),
             "next_lock": cast(JsonValue, self.next_lock.model_dump(mode="json")),
         }
 
@@ -277,6 +284,33 @@ def _transition_json(transition: AcceptedTrackTransition) -> dict[str, JsonValue
             JsonValue,
             transition.current.model_dump(mode="json") if transition.current else None,
         ),
+    }
+
+
+def _catalog_refresh_json(refresh: CatalogRefreshPlan | None) -> JsonValue:
+    if refresh is None:
+        return None
+    return {
+        "changed": refresh.changed,
+        "classification": refresh.classification.value,
+        "before": {
+            "catalog": refresh.before.catalog,
+            "release": refresh.before.release,
+            "digest": refresh.before.digest.value,
+        },
+        "after": {
+            "catalog": refresh.after.catalog,
+            "release": refresh.after.release,
+            "digest": refresh.after.digest.value,
+        },
+        "affected_selections": [
+            {
+                "standard_id": item.standard_id,
+                "previous": item.previous.value if item.previous is not None else None,
+                "current": item.current.value,
+            }
+            for item in refresh.affected_selections
+        ],
     }
 
 
@@ -443,21 +477,30 @@ def _desired_intents(
     notices: list[ProviderNotice],
 ) -> tuple[_Intent, ...]:
     snapshots = _snapshot_json(snapshot)
-    snapshots["referenced_inputs"] = [
-        cast(JsonValue, item.model_dump(mode="json")) for item in referenced_inputs
-    ]
     intents: list[_Intent] = []
     for package, payload in selected:
+        package_snapshots: JsonObject = {
+            **snapshots,
+            "referenced_inputs": [
+                cast(JsonValue, item.model_dump(mode="json"))
+                for item in referenced_inputs
+                if item.standard_id == package.standard_id
+            ],
+        }
         intents.extend(
-            _artifact_intent(package, payload, artifact) for artifact in payload.manifest.artifacts
+            _artifact_intent(package, payload, artifact)
+            for artifact in payload.manifest.artifacts
+            if artifact.materializes(package.effective_config)
         )
         for contribution in payload.manifest.contributions:
+            if not contribution.materializes(package.effective_config):
+                continue
             content, provenance = _contribution_content(
                 request=request,
                 package=package,
                 payload=payload,
                 contribution=contribution,
-                snapshots=snapshots,
+                snapshots=package_snapshots,
                 notices=notices,
             )
             intents.append(
@@ -825,6 +868,8 @@ def _classify_desired(
             return _unit_plan(ActionKind.CREATE, group, current), None
         if current.semantic_digest == group.unit.semantic_digest:
             return _unit_plan(ActionKind.ADOPT, group, current), None
+        if group.policy is ArtifactPolicy.CREATE_ONLY and entry.kind is EntryKind.REGULAR:
+            return _unit_plan(ActionKind.PRESERVE, group, current), None
         return None, _finding(
             "CP-CONSUMER-CONFLICT",
             target=group.target.original,
@@ -842,6 +887,8 @@ def _classify_desired(
             version=group.versions[0][1],
             message="locked unit identity does not match the selected declaration",
         )
+    if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        return _unit_plan(ActionKind.PRESERVE, group, current), None
     if current is None:
         if entry.kind is EntryKind.MISSING and previous.created_container:
             return _unit_plan(ActionKind.CREATE, group, current), None
@@ -871,8 +918,6 @@ def _classify_desired(
             version=group.versions[0][1],
             message="managed semantic value differs from the central lock",
         )
-    if previous.policy is ArtifactPolicy.CREATE_ONLY:
-        return _unit_plan(ActionKind.PRESERVE, group, current), None
     if current.semantic_digest == group.unit.semantic_digest:
         if group.mode is not None and entry.mode != group.mode:
             return _unit_plan(ActionKind.UPDATE, group, current), None
@@ -899,6 +944,8 @@ def _classify_removed(
         before_digest=current.semantic_digest.value if current else None,
         after_digest=None,
     )
+    if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        return replace(unit, kind=ActionKind.PRESERVE), None
     if current is None:
         if entry.kind is EntryKind.MISSING:
             return unit, None
@@ -919,12 +966,17 @@ def _classify_removed(
             version=versions[0][1],
             message="managed semantic value differs from the central lock",
         )
-    if previous.policy is ArtifactPolicy.CREATE_ONLY or not previous.created_container:
+    if previous.adapter is AdapterKind.WHOLE_FILE and not previous.created_container:
         return replace(unit, kind=ActionKind.PRESERVE), None
     return unit, None
 
 
-def _change(unit: PlannedUnit, desired: _DesiredGroup | None) -> UnitChange:
+def _change(
+    unit: PlannedUnit,
+    desired: _DesiredGroup | None,
+    *,
+    prune_empty_ancestors: bool,
+) -> UnitChange:
     if unit.kind in {ActionKind.CREATE, ActionKind.ADOPT, ActionKind.UPDATE}:
         if desired is None:
             raise ControlPlaneError("mutating unit action is missing desired content")
@@ -934,7 +986,11 @@ def _change(unit: PlannedUnit, desired: _DesiredGroup | None) -> UnitChange:
             content=desired.unit.raw,
             value=desired.unit.value,
         )
-    return UnitChange(unit.kind, unit.scope)
+    return UnitChange(
+        unit.kind,
+        unit.scope,
+        prune_empty_ancestors=prune_empty_ancestors,
+    )
 
 
 def _target_action(
@@ -943,10 +999,13 @@ def _target_action(
     adapter: AdapterKind,
     rendered: bytes,
     units: tuple[PlannedUnit, ...],
+    remove_container: bool = False,
 ) -> ControlAction:
     if entry.kind is EntryKind.MISSING:
         kind = ActionKind.CREATE if rendered else ActionKind.NOOP
-    elif adapter is AdapterKind.WHOLE_FILE and rendered == b"" and entry.kind is EntryKind.REGULAR:
+    elif remove_container or (
+        adapter is AdapterKind.WHOLE_FILE and rendered == b"" and entry.kind is EntryKind.REGULAR
+    ):
         kind = ActionKind.REMOVE
     elif entry.content == rendered:
         kinds = {unit.kind for unit in units}
@@ -972,6 +1031,56 @@ def _target_action(
         after_digest=after,
         content=rendered,
     )
+
+
+def _nested_empty(path: tuple[str, ...], leaf: JsonValue) -> JsonObject:
+    nested: JsonValue = leaf
+    for component in reversed(path):
+        nested = {component: nested}
+    return cast(JsonObject, nested)
+
+
+def _merge_empty_scaffold(target: JsonObject, addition: JsonObject) -> None:
+    for key, value in addition.items():
+        current = target.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            _merge_empty_scaffold(current, value)
+        elif current is None:
+            target[key] = value
+        elif current != value:
+            raise ControlPlaneError("removed JSON scopes imply incompatible empty scaffolds")
+
+
+def _json_empty_scaffold(scopes: tuple[str, ...]) -> JsonObject:
+    result: JsonObject = {}
+    for scope in scopes:
+        prefix, body = scope.split(":", 1)
+        pointer = body.split("#", 1)[0]
+        path = tuple(
+            component.replace("~1", "/").replace("~0", "~") for component in pointer.split("/")[1:]
+        )
+        if prefix == "key":
+            scaffold = _nested_empty(path[:-1], {})
+        elif prefix in {"set", "keyed-set"}:
+            scaffold = _nested_empty(path, [])
+        else:
+            raise ControlPlaneError("JSON removal scope cannot define an empty scaffold")
+        _merge_empty_scaffold(result, scaffold)
+    return result
+
+
+def _container_is_package_empty(
+    adapter: AdapterKind,
+    rendered: bytes,
+    scopes: tuple[str, ...],
+) -> bool:
+    """Return whether removing the file cannot discard a consumer-owned unit."""
+    if not rendered.strip():
+        return True
+    if adapter in {AdapterKind.JSON, AdapterKind.JSONC}:
+        value = container_value_without_comments(rendered, adapter)
+        return value == {} or value == _json_empty_scaffold(scopes)
+    return False
 
 
 def _render_targets(
@@ -1070,16 +1179,38 @@ def _render_targets(
         if target_findings:
             findings.extend(target_findings)
             continue
+        platform_created_container = bool(previous) and all(
+            item.created_container for item in previous
+        )
         changes = tuple(
-            _change(unit, desired_map.get((adapter_kind, unit.scope)))
+            _change(
+                unit,
+                desired_map.get((adapter_kind, unit.scope)),
+                prune_empty_ancestors=platform_created_container,
+            )
             for unit in sorted(target_units, key=lambda item: item.scope.encode("utf-8"))
         )
         rendered = adapter.render(adapter.inspect(current_content, scopes), changes)
+        # `created_container` alone is insufficient: consumers may have added
+        # unrelated units after adoption. Prune only the exact empty scaffold
+        # left by removing every managed unit, and preserve any comment or value.
+        remove_container = (
+            not desired
+            and bool(previous)
+            and all(
+                item.created_container and item.policy is ArtifactPolicy.MANAGED
+                for item in previous
+            )
+            and _container_is_package_empty(adapter_kind, rendered, scopes)
+        )
+        if remove_container:
+            rendered = b""
         action = _target_action(
             entry=entry,
             adapter=adapter_kind,
             rendered=rendered,
             units=tuple(target_units),
+            remove_container=remove_container,
         )
         actions.append(action)
         unit_plans.extend(target_units)
@@ -1380,13 +1511,98 @@ def _next_lock(
     )
 
 
+def _catalog_refresh_target(
+    refresh: CatalogRefreshPlan,
+    snapshot: RepositorySnapshot,
+) -> tuple[ControlAction | None, PlannedTarget | None, ControlFinding | None]:
+    path = SafeRelativePath.parse(".standards/catalog.toml")
+    entry = snapshot.entry(path)
+    committed = render_catalog(refresh.committed)
+    installed = render_catalog(refresh.installed)
+    if entry.kind is not EntryKind.REGULAR or entry.content != committed:
+        return (
+            None,
+            None,
+            _finding(
+                "CP-CATALOG-PRECONDITION",
+                target=path.original,
+                identity="$catalog",
+                standard_id="project-standards",
+                version="",
+                message="committed catalog changed before refresh planning",
+            ),
+        )
+    return (
+        ControlAction(
+            kind=ActionKind.UPDATE,
+            target=path.original,
+            adapter=AdapterKind.WHOLE_FILE.value,
+            scope="$catalog",
+            standard_id="project-standards",
+            summary=(
+                f"refresh catalog {refresh.before.catalog} from "
+                f"{refresh.before.release} to {refresh.after.release}"
+            ),
+            before_digest=entry.precondition_digest.value,
+            after_digest=_digest(installed).value,
+            content=installed,
+        ),
+        PlannedTarget(path.original, installed, "0644"),
+        None,
+    )
+
+
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
     resolution = resolve_packages(request.resolution)
     payloads = _payload_map(request.payloads)
     selected = _selected_payloads(resolution, payloads)
     paths = _target_paths(selected, request.resolution.previous_lock)
+    if request.catalog_refresh is not None and request.catalog_refresh.changed:
+        paths = tuple(
+            sorted(
+                (*paths, SafeRelativePath.parse(".standards/catalog.toml")),
+                key=lambda item: item.original.encode("utf-8"),
+            )
+        )
     snapshot = RepositorySnapshot.capture(request.repo, paths)
+    if request.retired_targets or request.retired_content:
+        # Migration replacement plans must not parse retired whole-file bytes as
+        # consumer content. Bounded legacy blocks instead expose their preserved
+        # outside bytes. Apply still binds either view to the exact live file.
+        retired = {path.original for path in request.retired_targets}
+        replacement_content = {path.original: content for path, content in request.retired_content}
+        snapshot = RepositorySnapshot(
+            snapshot.root,
+            snapshot.targets,
+            tuple(
+                (
+                    SnapshotEntry(
+                        path=entry.path,
+                        kind=EntryKind.MISSING,
+                        content=None,
+                        mode=entry.mode,
+                        link_target=None,
+                        content_digest=None,
+                        precondition_digest=entry.precondition_digest,
+                    )
+                    if entry.path.original in retired and entry.kind is EntryKind.REGULAR
+                    else SnapshotEntry(
+                        path=entry.path,
+                        kind=EntryKind.REGULAR,
+                        content=replacement_content[entry.path.original],
+                        mode=entry.mode,
+                        link_target=None,
+                        content_digest=_digest(replacement_content[entry.path.original]),
+                        precondition_digest=entry.precondition_digest,
+                    )
+                    if entry.path.original in replacement_content
+                    and entry.kind is EntryKind.REGULAR
+                    else entry
+                )
+                for entry in snapshot.entries
+            ),
+        )
     referenced_inputs = _referenced_inputs(request, selected)
     notices: list[ProviderNotice] = []
     intents = _desired_intents(
@@ -1424,6 +1640,18 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
     )
     findings.extend(target_findings)
+    if request.catalog_refresh is not None and request.catalog_refresh.changed:
+        catalog_action, catalog_target, catalog_finding = _catalog_refresh_target(
+            request.catalog_refresh,
+            snapshot,
+        )
+        if catalog_finding is not None:
+            findings.append(catalog_finding)
+        if catalog_action is not None and catalog_target is not None:
+            actions = tuple(sort_actions((*actions, catalog_action)))
+            targets = tuple(
+                sorted((*targets, catalog_target), key=lambda item: item.target.encode("utf-8"))
+            )
     ordered_findings = tuple(sort_findings(findings))
     applicable = not any(finding.severity == "error" for finding in ordered_findings)
     namespace_prunes = _namespace_prunes(
@@ -1467,5 +1695,6 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             )
         ),
         namespace_prunes=namespace_prunes,
+        catalog_refresh=request.catalog_refresh,
         next_lock=next_lock,
     )

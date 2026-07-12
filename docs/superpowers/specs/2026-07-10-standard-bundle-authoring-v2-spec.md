@@ -47,6 +47,7 @@ related:
 | 0.4 | 2026-07-10 | Coding agent with foundation-plan review | Clarified the existing aggregate-digest algorithm: every inventory entry uses the full lowercase `sha256:` digest form, all entries sort together, and one exact golden vector fixes the byte contract. No scope or requirement changed. |
 | 0.5 | 2026-07-10 | Chris Purcell / L3DigitalNet with coding agent | Added the missing declaration mechanisms already required by FR-006 and FR-018: payload-owned relation evidence and explicit legacy-state registration. Also corrected the semantic-contribution example to use the normative TOML selector grammar. |
 | 0.6 | 2026-07-10 | Coding agent with owner-authorized foundation implementation | Recorded the BA02 foundation evidence in requirement traceability. This evidence-only revision changes no requirement or scope; provider execution, live semantic mutation, current-package reconstruction, and release activation remain follow-on work. |
+| 0.7 | 2026-07-12 | Codex package-migration closeout | Reconcile traceability with all nine reconstructed packages, real composition, installed-wheel providers, legacy migration, release-baseline, projection, and disposable release-cut evidence through `a891973`. No requirement or scope changes. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
@@ -873,16 +874,16 @@ No regulated or personal data is introduced. Every payload resource and provider
 
 ### 17.1 Definition of Done
 
-- [ ] SPEC-BA02 is adversarially reviewed, owner-approved, and indexed; SPEC-BA01 is marked superseded without rewriting its history.
-- [ ] The V2 Standard Bundle Authoring README and package `2.0` payload define and dogfood every Must requirement.
-- [ ] Strict typed family, payload, and catalog models plus generated schemas and drift tests pass.
-- [ ] Every current package has a complete V2 reconstruction and compatibility-matrix row.
-- [ ] Every advertised payload passes repository and offline installed-wheel validation.
-- [ ] Static and provider-rendered artifacts/contributions pass preservation, conflict, update, disable, removal, and idempotency fixtures.
-- [ ] Provider mutation/network spies and migration forward/rollback/manual-path suites pass.
-- [ ] Pairwise, full-set, randomized-order, integrity, and release-baseline gates pass.
-- [ ] Traceability (§17.3), documentation (§18.7), security review, and Deviations Log are complete.
-- [ ] No known blocking defect or unexplained deviation remains.
+- [x] SPEC-BA02 is adversarially reviewed, owner-approved, and indexed; SPEC-BA01 is marked superseded without rewriting its history.
+- [x] The V2 Standard Bundle Authoring README and package `2.0` payload define and dogfood every Must requirement.
+- [x] Strict typed family, payload, and catalog models plus generated schemas and drift tests pass.
+- [x] Every current package has a complete V2 reconstruction and compatibility-matrix row.
+- [x] Every advertised payload passes repository and offline installed-wheel validation.
+- [x] Static and provider-rendered artifacts/contributions pass preservation, conflict, update, disable, removal, and idempotency fixtures.
+- [x] Provider mutation/network spies and migration forward/rollback/manual-path suites pass.
+- [x] Pairwise, full-set, randomized-order, integrity, and release-baseline gates pass.
+- [ ] Traceability (§17.3), documentation (§18.7), security review, and Deviations Log are complete. Traceability/docs/security evidence is current; owner acceptance of the empty Deviations Log remains a release-closeout action.
+- [x] No known blocking defect or unexplained deviation remains.
 
 ### 17.2 Test Strategy
 
@@ -914,34 +915,34 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-010 | Whole-artifact lifecycle and collision tests | Passing |
 | FR-011 | Semantic-contribution source/scope validation tests | Passing |
 | FR-012 | Shared-identity equality and disagreement tests | Passing |
-| FR-013 | Adapter-selector schema and current-surface coverage tests | Partial |
-| FR-014 | Provider-output bound and pre-executor rejection tests | Partial |
-| FR-015 | Provider declaration, entrypoint, phase/effect, and wheel-resolution tests | Partial |
-| FR-016 | Provider filesystem/network spy and typed-output tests | Not Started |
-| FR-017 | Referenced-extension path/digest/disable preservation tests | Partial |
+| FR-013 | Adapter-selector schema, current-surface coverage, real pair/full-set composition, and preservation suites | Passing — `1b257c7`, `06a33c1` |
+| FR-014 | Provider-output bounds, migration-report effect, authoring-plan refusal, and pre-executor rejection tests | Passing — `11ef081`, package reconstruction commits, `94f3183` |
+| FR-015 | Provider declaration, entrypoint, phase/effect, source/wheel resolution, and installed command matrix | Passing — package reconstruction commits, `06a33c1`, `a891973` |
+| FR-016 | Provider filesystem/network mutation spies, immutable snapshots, and typed-output tests | Passing — `1b257c7`, `94f3183`, `06a33c1` |
+| FR-017 | Referenced-extension path/digest/output collision/disable preservation and real option-migration tests | Passing — `27d3e99`, `06a33c1`, `a891973` |
 | FR-018 | Migration endpoint, legacy-state registration, signature, and effect-inventory schema tests | Passing |
-| FR-019 | Candidate entry, exact-target exit, and rollback-path tests | Partial |
+| FR-019 | Candidate entry, exact-target exit, automatic/manual rollback, legacy migration, and accepted-track tests | Passing — core control-plane suite, `a903b54`, `af33689` |
 | FR-020 | Complete payload inventory and symlink rejection tests | Passing |
 | FR-021 | Canonical aggregate-digest golden tests | Passing |
 | FR-022 | Catalog-source schema, role, and digest-parity tests | Passing |
 | FR-023 | Catalog default uniqueness, candidate-major, and promotion tests | Passing |
-| FR-024 | Released-payload tagged-baseline immutability tests | Partial |
-| FR-025 | Catalog-diff release-classification tests | Partial |
-| FR-026 | Reduced package adoption-guide conformance tests | Not Started |
-| FR-027 | Family/payload README authority, link, and summary-size tests | Not Started |
-| FR-028 | Author-workflow documentation and CI gate checks | Not Started |
-| FR-029 | Current-package fresh/migrated/pairwise/full compatibility matrix | Not Started |
-| FR-030 | Legacy-authority dependency search and marker-migration fixtures | Not Started |
-| FR-031 | Standard Bundle Authoring `2.0` self-hosting and template tests | Not Started |
+| FR-024 | Tagged-baseline immutability and release-candidate replay tests | Passing — foundation release suite, `a891973` |
+| FR-025 | Catalog-diff release classification and same-major compatibility tests | Passing — foundation release suite, `af33689`, `a891973` |
+| FR-026 | Seven current package adoption guides cover package-specific suitability, closed options, outputs, migration, verification, and troubleshooting | Passing — Task 18 documentation/spec/generated-drift gates and independent review |
+| FR-027 | Family/payload authority, link, resource role, projection, and agent-summary size/integrity tests | Passing — package contract and projection suites |
+| FR-028 | Author workflow, package validation/schema/projection commands, release evidence, and CI gate documentation | Passing — Task 18 documentation/spec/generated-drift gates and release-cut proof |
+| FR-029 | Seven individual, 21 pairwise, full-set, fresh/migrated, source/wheel compatibility rows | Passing — `06a33c1` |
+| FR-030 | Classified tracked/installed legacy dependency inventory, all-namespace migration, exact marker/artifact fixtures | Passing — `06a33c1`, `a891973` |
+| FR-031 | Standard Bundle Authoring `2.0` self-hosting, schema, graph, catalog, and template tests | Passing — `1b257c7` |
 | FR-032 | Typed-model generated-schema drift tests | Passing |
-| FR-033 | No-package-ID-branch architecture tests and review | Partial |
-| FR-034 | Source-to-installed-payload tree and digest parity | Partial |
+| FR-033 | No-package-ID-branch architecture tests plus current-package compatibility review | Passing — `06a33c1` |
+| FR-034 | Source/direct-wheel/sdist-wheel payload tree, symlink dereference, and digest parity | Passing — foundation projection suite, `06a33c1` |
 | NFR-001 | Repeated-generation and randomized-discovery determinism tests | Passing |
-| NFR-002 | Network-deny installed-wheel suite | Partial |
+| NFR-002 | Offline build/install and network-deny provider/compatibility suites | Passing — `06a33c1`, `a891973` |
 | NFR-003 | Payload tamper and undeclared-file fixtures | Passing |
-| NFR-004 | Pairwise/full-set request-order permutation tests | Partial |
-| NFR-005 | Path/symlink/provider read-write boundary spies | Partial |
-| NFR-006 | Adapter byte-preservation round-trip corpus | Not Started |
+| NFR-004 | Pairwise/full-set request-order permutation and 100-order full-set sweep | Passing — `06a33c1` |
+| NFR-005 | Path/symlink/provider read-write boundary spies and installed mutation refusal | Passing — package contract/provider suites, `06a33c1` |
+| NFR-006 | TOML, JSON/JSONC, YAML, EditorConfig, Markdown, whole-file, source/wheel byte-preservation corpus | Passing — core adapter suites, `06a33c1` |
 | NFR-007 | Synthetic package extensibility architecture test | Passing |
 | NFR-008 | 100-family/1,000-payload/10,000-unit benchmark | Passing |
 | NFR-009 | Structured diagnostic snapshot tests | Passing |
@@ -949,9 +950,9 @@ No regulated or personal data is introduced. Every payload resource and provider
 | IR-002 | Payload-manifest parser/schema fixture suite | Passing |
 | IR-003 | Package option-schema/default suite | Passing |
 | IR-004 | Catalog-source parser/schema/generator suite | Passing |
-| IR-005 | Generic provider protocol and installed dispatch suite | Partial |
+| IR-005 | Generic provider protocol, typed effect/result bounds, source/wheel entrypoint resolution, and installed dispatch suite | Passing — package contract suites, `94f3183`, `a891973` |
 | IR-006 | Generated consumer-catalog round-trip/drift suite | Passing |
-| IR-007 | Installed payload root inventory/parity suite | Partial |
+| IR-007 | Installed payload root inventory, source/direct-wheel/sdist-wheel byte and digest parity | Passing — projection suites, `06a33c1` |
 | DR-001 | Package-family identity/lifecycle model invariants | Passing |
 | DR-002 | Payload version/inventory/digest model invariants | Passing |
 | DR-003 | Package config contract serialization/default invariants | Passing |
@@ -959,7 +960,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | DR-005 | Provider contract serialization and resource-reference invariants | Passing |
 | DR-006 | Migration graph endpoint/effect/reversibility invariants | Passing |
 | DR-007 | Catalog-role uniqueness and parity invariants | Passing |
-| DR-008 | Installed payload-tree byte/inventory invariants | Partial |
+| DR-008 | Installed payload-tree byte/inventory/digest invariants and symlink-only source projection | Passing — projection/integrity suites, `06a33c1` |
 
 ---
 
@@ -1005,12 +1006,12 @@ No independent durable datastore exists. Git history, signed release tags, and p
 
 ### 18.7 Documentation Deliverables
 
-- [ ] Replace the implemented Standard Bundle Authoring README with the approved V2 contract.
-- [ ] Ship family-index, payload, option-schema, catalog, provider, contribution, and migration templates/examples.
-- [ ] Update `standards/README.md`, repository README, CLI usage, versioning, changelog, upgrade guide, and ADR/spec indexes.
-- [ ] Reduce every package adoption guide to package-specific suitability/options/outputs/migration/verification guidance.
-- [ ] Document the complete current-package reconstruction and compatibility matrix.
-- [ ] Update handoff status, tasks, architecture, specifications/plans, and session history.
+- [x] Replace the implemented Standard Bundle Authoring README with the approved V2 contract.
+- [x] Ship family-index, payload, option-schema, catalog, provider, contribution, and migration templates/examples.
+- [x] Update `standards/README.md`, repository README, CLI usage, versioning, changelog, upgrade guide, and ADR/spec indexes.
+- [x] Reduce every package adoption guide to package-specific suitability/options/outputs/migration/verification guidance.
+- [x] Document the complete current-package reconstruction and compatibility matrix.
+- [x] Update handoff status, tasks, architecture, specifications/plans, and session history.
 
 ---
 

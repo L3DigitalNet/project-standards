@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from functools import cache
 from pathlib import Path
 
@@ -133,13 +134,16 @@ def declared_prefixes(body: str) -> dict[str, str]:
     return declared
 
 
-@cache
-def load_registry() -> Registry:
-    """Load the immutable registry derived from the three bundled templates."""
+def registry_from_templates(templates: Mapping[str, str]) -> Registry:
+    """Build canonical rules from one version-selected template set."""
     tier_body: dict[str, str] = {}
     tier_fm: dict[str, str] = {}
     for tier, fname in TIER_FILES.items():
-        fm, body = split_front_matter((TEMPLATES_DIR / fname).read_text(encoding="utf-8"))
+        try:
+            text = templates[fname]
+        except KeyError as exc:
+            raise ValueError(f"template set is missing {fname}") from exc
+        fm, body = split_front_matter(text)
         tier_body[tier] = body
         tier_fm[tier] = fm
 
@@ -168,4 +172,15 @@ def load_registry() -> Registry:
         tier_prefixes=tier_prefixes,
         sentinel=SENTINEL,
         spec_id_pattern=SPEC_ID_PATTERN,
+    )
+
+
+@cache
+def load_registry() -> Registry:
+    """Load the immutable registry derived from the installed templates."""
+    return registry_from_templates(
+        {
+            fname: (TEMPLATES_DIR / fname).read_text(encoding="utf-8")
+            for fname in TIER_FILES.values()
+        }
     )

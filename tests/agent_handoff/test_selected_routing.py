@@ -1,0 +1,257 @@
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+
+import pytest
+
+import project_standards.agent_handoff.cli as agent_handoff_cli
+from project_standards.agent_handoff.cli import run
+from project_standards.control_plane.bootstrap import initialize_control_plane
+from project_standards.control_plane.cli import build_planner_request
+from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+from project_standards.control_plane.locking import (
+    ControlPlaneBusyError,
+    LockMode,
+    control_plane_lock,
+)
+from project_standards.control_plane.planner import plan_reconciliation
+
+
+@pytest.fixture(scope="module")
+def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
+    installed = tmp_path_factory.mktemp("agent-handoff-v2") / "project_standards"
+    shutil.copytree(Path("src/project_standards"), installed, symlinks=False)
+    return InstalledDistribution(installed, tool_release="5.0.0")
+
+
+def _consumer(tmp_path: Path, distribution: InstalledDistribution) -> Path:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_enabled(repo, "agent-handoff", True)
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+    return repo
+
+
+def test_unified_validate_uses_selected_provider(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+
+    def fail_legacy(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("legacy provider runner used under unified authority")
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.run_packaged_providers",
+        fail_legacy,
+    )
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["standard_version"] == "1.1"
+    assert report["findings"] == []
+
+
+def test_unified_validate_reports_selected_payload_drift_without_writing(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    skill = repo / ".agents/skills/agent-handoff/SKILL.md"
+    skill.write_text("consumer drift\n", encoding="utf-8")
+    before = skill.read_bytes()
+
+    assert run(["drift-check", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert any(item["code"] == "AH-DRIFT" for item in report["findings"])
+    assert skill.read_bytes() == before
+
+
+def test_unified_upgrade_refuses_local_managed_drift(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    skill = repo / ".agents/skills/agent-handoff/SKILL.md"
+    skill.write_text("consumer drift\n", encoding="utf-8")
+
+    assert run(["upgrade", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["changes"] == []
+    assert any(item["code"] == "AH-ARTIFACT-DRIFT" for item in report["findings"])
+    assert skill.read_text(encoding="utf-8") == "consumer drift\n"
+
+
+def test_unified_upgrade_is_a_noop_when_managed_bytes_are_current(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+
+    assert run(["upgrade", "--repo", str(repo), "--json"], distribution=distribution) == 0
+    assert json.loads(capsys.readouterr().out)["changes"] == []
+
+
+def test_unified_upgrade_dry_run_holds_a_read_lock(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    original = agent_handoff_cli._upgrade_plan  # pyright: ignore[reportPrivateUsage]
+
+    def assert_read_locked(selected: object) -> object:
+        with (
+            pytest.raises(ControlPlaneBusyError, match="CP-BUSY"),
+            control_plane_lock(repo, LockMode.WRITE),
+        ):
+            pytest.fail("dry-run allowed a concurrent writer")
+        return original(selected)  # pyright: ignore[reportArgumentType]
+
+    monkeypatch.setattr(agent_handoff_cli, "_upgrade_plan", assert_read_locked)
+
+    assert run(["upgrade", "--repo", str(repo), "--dry-run"], distribution=distribution) == 0
+
+
+def test_unified_size_report_preserves_numeric_budget_message(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / "docs/handoff/state.md").write_bytes(b"x" * 3000)
+
+    assert run(["size-report", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    finding = next(item for item in report["findings"] if item["code"] == "AH-SIZE-CAP")
+    assert finding["message"] == "document exceeds 2048 byte hard cap by 952 bytes"
+    assert finding["locus"] == "byte budget"
+
+
+def test_unified_validate_uses_the_last_repeated_repo_option(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+    first = _consumer(first_root, distribution)
+    second = _consumer(second_root, distribution)
+    (first / ".agents/skills/agent-handoff/SKILL.md").write_text(
+        "consumer drift\n", encoding="utf-8"
+    )
+
+    assert (
+        run(
+            ["validate", "--repo", str(first), "--repo", str(second), "--json"],
+            distribution=distribution,
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["repository"] == str(second)
+
+
+def test_unified_command_rejects_empty_repo_without_legacy_fallback(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    monkeypatch.chdir(repo)
+
+    def fail_legacy(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("legacy provider runner used for malformed unified invocation")
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.run_packaged_providers",
+        fail_legacy,
+    )
+
+    assert run(["validate", "--repo="], distribution=distribution) == 2
+    assert "--repo requires a non-empty path" in capsys.readouterr().err
+
+
+def test_unified_command_reports_invalid_pending_options_without_traceback(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    config = repo / ".standards/config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + "\n[standards.agent-handoff.config]\nstartup = 'invalid'\n",
+        encoding="utf-8",
+    )
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 2
+    captured = capsys.readouterr()
+    assert "configured package options are invalid" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_unified_validate_restores_missing_link_findings(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    state = repo / "docs/handoff/state.md"
+    state.write_text(
+        state.read_text(encoding="utf-8") + "\n[Missing](missing.md)\n",
+        encoding="utf-8",
+    )
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert any(item["code"] == "AH-REFERENCE-MISSING" for item in report["findings"])
+
+
+def test_unified_validate_does_not_follow_a_symlinked_link_target(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    target = repo / "docs/handoff/target.md"
+    target.write_text("# Target\n", encoding="utf-8")
+    (repo / "docs/handoff/linked.md").symlink_to(target)
+    state = repo / "docs/handoff/state.md"
+    state.write_text(
+        state.read_text(encoding="utf-8") + "\n[Linked](linked.md)\n",
+        encoding="utf-8",
+    )
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    assert any(item["code"] == "AH-REFERENCE-MISSING" for item in report["findings"])
+
+
+def test_unified_legacy_report_serializes_platform_evidence_through_provider(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / "STATUS.md").write_text("legacy\n", encoding="utf-8")
+
+    assert run(["legacy-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
+    assert report["standard_version"] == "1.1"

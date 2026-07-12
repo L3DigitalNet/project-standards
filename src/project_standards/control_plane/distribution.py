@@ -235,13 +235,21 @@ class InstalledDistribution:
             payloads.append(InstalledPayload(payload_root, manifest, integrity))
         return InstalledCatalog(source, tuple(families), tuple(payloads))
 
-    def consumer_catalog(self, catalog: CatalogMajor | str) -> ConsumerCatalog:
-        """Build the complete deterministic consumer snapshot from installed facts."""
-        installed = self.load_catalog(catalog)
+    def consumer_catalog(
+        self,
+        catalog: CatalogMajor | str,
+        *,
+        installed: InstalledCatalog | None = None,
+    ) -> ConsumerCatalog:
+        """Build the deterministic consumer snapshot from one validated load."""
+        major = catalog if isinstance(catalog, CatalogMajor) else CatalogMajor(catalog)
+        selected = installed or self.load_catalog(major)
+        if selected.source.catalog_major != major.major:
+            raise PackageContractError("installed catalog identity does not match the request")
         grouped: dict[str, list[CatalogPackageEntry]] = defaultdict(list)
-        for entry in installed.source.packages:
+        for entry in selected.source.packages:
             grouped[entry.id].append(entry)
-        payloads = installed.payload_map
+        payloads = selected.payload_map
         standards: dict[str, object] = {}
         channels = {
             CatalogRole.DEFAULT: "stable",
@@ -255,7 +263,7 @@ class InstalledDistribution:
                 entry.version.value for entry in entries if entry.role is CatalogRole.DEFAULT
             ]
             standards[standard_id] = {
-                "status": installed.family_map[standard_id].standard.status.value,
+                "status": selected.family_map[standard_id].standard.status.value,
                 "available": [entry.version.value for entry in entries],
                 **({"default": defaults[0]} if defaults else {}),
                 "candidates": [
@@ -272,7 +280,6 @@ class InstalledDistribution:
                     for entry in entries
                 },
             }
-        major = catalog if isinstance(catalog, CatalogMajor) else CatalogMajor(catalog)
         snapshot = ConsumerCatalog.model_validate(
             {
                 "project_standards": {

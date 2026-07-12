@@ -1,91 +1,12 @@
-# Machine manifest for the Markdown Tooling Standard.
+schema_version = "2.0"
 
 [standard]
 id = "markdown-tooling"
 name = "Markdown Tooling Standard"
-status = "active"
 summary = "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and adjacent structured text."
-adoption = "copy-adopt"
+status = "active"
 
-[versions]
-supported = ["1.0", "1.1", "1.2"]
-latest = "1.2"
-
-[config]
-namespaces = ["markdown_tooling"]
-
-[capabilities]
-provides = ["markdown.format", "markdown.lint.structure", "yaml.format", "json.format"]
-consumes_platform = []
-
-[relations]
-companions = ["markdown-frontmatter"]
-extends = []
-conflicts = []
-
-[resources]
-readme = "README.md"
-agent_summary = "agent-summary.md"
-adopt = "adopt.md"
-
-[artifacts]
-manifest = "src/project_standards/bundles/markdown-tooling/adopt.toml"
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "physical-formatting"
-owner = "prettier"
-mutates = true
-
-[[authority]]
-domain = "markdown"
-target = "**/*.md"
-concern = "structure-lint"
-owner = "markdownlint"
-mutates = false
-
-[[authority]]
-domain = "yaml"
-target = "**/*.yml"
-concern = "physical-formatting"
-owner = "prettier"
-mutates = true
-
-[[authority]]
-domain = "yaml"
-target = "**/*.yaml"
-concern = "physical-formatting"
-owner = "prettier"
-mutates = true
-
-[[authority]]
-domain = "json"
-target = "**/*.json"
-concern = "physical-formatting"
-owner = "prettier"
-mutates = true
-
-[[authority]]
-domain = "editorconfig"
-target = ".editorconfig"
-concern = "physical-formatting"
-owner = "editorconfig"
-mutates = true
-
-[[providers]]
-operation = "lint"
-kind = "workflow"
-entrypoint = "lint-markdown"
-optional = false
-
-[[providers]]
-operation = "fix"
-kind = "workflow"
-entrypoint = "format"
-optional = true
-
-[[providers]]
-operation = "drift-check"
-kind = "documentation-only"
-optional = true
+[[versions]]
+version = "1.2"
+payload = "versions/1.2/payload.toml"
+digest = "sha256:3b64ef577a2ab580c48411b67064fb15b9d520dc25fd228fec58e571ac85b490"

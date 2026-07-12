@@ -6,12 +6,16 @@ on:
     paths:
       - "**/*.md"
       - "src/**"
+      - ".standards/config.toml"
+      # Transitional dogfood authority; Task 14 replaces the root V1 family.
       - ".project-standards.yml"
       - "pyproject.toml"
   pull_request:
     paths:
       - "**/*.md"
       - "src/**"
+      - ".standards/config.toml"
+      # Transitional dogfood authority; Task 14 replaces the root V1 family.
       - ".project-standards.yml"
       - "pyproject.toml"
   workflow_call:
@@ -20,17 +24,17 @@ on:
         description: "Path to the project standards config file in the calling repo."
         required: false
         type: string
-        default: ".project-standards.yml"
+        default: ".standards/config.toml"
       standards-ref:
         description: "project-standards git ref to install from (match your uses: @vN pin)."
         required: false
         type: string
-        default: "v4"
+        default: "v5"
       strict-lint:
         description: "Also run `spec lint --strict` (fail on advisory warnings)."
         required: false
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -39,6 +43,10 @@ jobs:
   validate-specs:
     name: Specs
     runs-on: ubuntu-latest
+    # workflow_call receives the V5 default above. Direct events have no inputs,
+    # so an empty value intentionally lets the CLI use this checkout's authority.
+    env:
+      PROJECT_STANDARDS_SPEC_CONFIG: ${{ inputs.config-path }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -52,59 +60,52 @@ jobs:
         if: github.repository == 'L3DigitalNet/project-standards'
         run: uv sync --dev
 
-      # project-spec is registered and this repo's `.project-standards.yml` has a `spec:`
-      # block, but this job is also reused by `workflow_call` for consuming repos (and
-      # can run against a config-path override), so the block's presence isn't guaranteed
-      # at every call site. `spec validate` deliberately exits 2 on a vacuous "no spec:
-      # block" run rather than passing green with nothing checked, so detect the block
-      # first and gate the this-repo spec steps on it: this keeps CI green and defensive
-      # for any repo/config that hasn't adopted a `spec:` block yet, while validating for
-      # real wherever one is present (as it is here).
-      - name: Detect spec config (this repo)
-        id: cfg
-        if: github.repository == 'L3DigitalNet/project-standards'
-        env:
-          CONFIG_PATH: ${{ inputs.config-path || '.project-standards.yml' }}
-        run: |
-          if grep -Eq '^spec:' "$CONFIG_PATH"; then
-            echo "has_spec=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_spec=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No top-level 'spec:' block in $CONFIG_PATH; skipping this-repo spec validation for this config."
-          fi
-
       - name: Validate specs (this repo)
-        if: github.repository == 'L3DigitalNet/project-standards' && steps.cfg.outputs.has_spec == 'true'
-        run: uv run project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        if: github.repository == 'L3DigitalNet/project-standards'
+        shell: bash
+        run: |
+          set -euo pipefail
+          config_args=()
+          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
+            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
+          fi
+          uv run project-standards spec validate "${config_args[@]}"
 
       - name: Lint specs (this repo, strict)
-        if: github.repository == 'L3DigitalNet/project-standards' && inputs.strict-lint && steps.cfg.outputs.has_spec == 'true'
-        run: uv run project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        if: github.repository == 'L3DigitalNet/project-standards' && inputs.strict-lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          config_args=()
+          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
+            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
+          fi
+          uv run project-standards spec lint --strict "${config_args[@]}"
 
       - name: Install (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'
-        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref }}"
-
-      # Same defensive gate as the this-repo path above: a consuming repo that wires this
-      # workflow but has not added a `spec:` block yet skips gracefully rather than hard-failing
-      # on `spec validate`'s deliberate exit-2 vacuous-run guard.
-      - name: Detect spec config (consuming repo)
-        id: cfg_consumer
-        if: github.repository != 'L3DigitalNet/project-standards'
         env:
-          CONFIG_PATH: ${{ inputs.config-path || '.project-standards.yml' }}
-        run: |
-          if grep -Eq '^spec:' "$CONFIG_PATH"; then
-            echo "has_spec=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_spec=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No top-level 'spec:' block in $CONFIG_PATH; skipping spec validation for this config."
-          fi
+          PROJECT_STANDARDS_REF: ${{ inputs.standards-ref }}
+        run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${PROJECT_STANDARDS_REF}"
 
       - name: Validate specs (consuming repo)
-        if: github.repository != 'L3DigitalNet/project-standards' && steps.cfg_consumer.outputs.has_spec == 'true'
-        run: project-standards spec validate --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        if: github.repository != 'L3DigitalNet/project-standards'
+        shell: bash
+        run: |
+          set -euo pipefail
+          config_args=()
+          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
+            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
+          fi
+          project-standards spec validate "${config_args[@]}"
 
       - name: Lint specs (consuming repo, strict)
-        if: github.repository != 'L3DigitalNet/project-standards' && inputs.strict-lint && steps.cfg_consumer.outputs.has_spec == 'true'
-        run: project-standards spec lint --strict --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        if: github.repository != 'L3DigitalNet/project-standards' && inputs.strict-lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          config_args=()
+          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
+            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
+          fi
+          project-standards spec lint --strict "${config_args[@]}"

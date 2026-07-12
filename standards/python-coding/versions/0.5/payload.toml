@@ -1,0 +1,51 @@
+schema_version = "1.0"
+
+[payload]
+standard = "python-coding"
+version = "0.5"
+availability = "reference-only"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = [
+  "python.agent-guidance",
+  "python.coding.guidance",
+  "python.testing.guidance",
+]
+consumes_platform = []
+
+[relations]
+companions = ["python-tooling"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:1c749cb7a66f44f56531298fc5ce7e341fdf9a45045ffddc72766ed9d2e2f270"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:5a0841066fc9dfdf3d38285891f3a04f99dc2ee9e27034fc5004208be6ba5163"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:3a0887e2c695c2d78320555b838de99deb6bb98215e61a150bf9417f58c05313"
+
+[[providers]]
+id = "semantic-review"
+operation = "semantic-review"
+kind = "documentation-only"
+phase = "validate"
+effect = "findings"
+resources = []
