@@ -22,14 +22,14 @@ Pre-release owner work is tracked in the durable v5.0.0 project tracker below.
 
 ### P2 — Parallel, non-release-blocking work
 
-- [ ] Complete Agent Handoff consumer retirement from the tracked inventory.
+- [ ] Finish Agent Handoff consumer retirement.
 
-  Finish the remaining protected default-branch integrations. After v5 ships, verify the published artifact, run the final dependency search, and obtain owner approval before deleting the old engine.
+  Complete protected defaults. After v5, verify the artifact, search dependencies, and obtain deletion approval.
 
 - [ ] Continue the MCP enablement program after the readiness gate.
 
   Recheck MCP protocol, Python SDK, licensing, and client capabilities before SPEC-MS01 MS-0. Keep server code blocked until Step 07 passes.
-  - [ ] Within the `markdown-frontmatter` standards package: Add the following as strongly recommended language to include in the ADR as suggested by `markdown-frontmatter` to consumers:
+  - [ ] In the `markdown-frontmatter` package, add strongly recommended ADR language for consumers:
 
   ````markdown
   ## Decision Outcome

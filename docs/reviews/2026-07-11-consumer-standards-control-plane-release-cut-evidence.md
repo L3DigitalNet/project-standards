@@ -2,7 +2,7 @@
 
 **Evidence date:** 2026-07-12
 
-**Source branch:** `feature/v5-package-migration`
+**Source branch:** `testing`
 
 **Release candidate:** `project-standards 5.0.0` built from a disposable tracked-tree checkout
 
@@ -36,7 +36,7 @@ The automated proof uses a source-side read-only plan for detailed expected-stat
 The binary-safe patch is `git diff --binary --no-ext-diff HEAD -- .` from a local commit of the tracked baseline after mirroring the completed disposable release tree. Its SHA-256 is:
 
 ```text
-3c5b06b099e94d9c7fbd742c17d690e6945b5983a45c0fece5614e98f4d5e706
+c0cb28608c9450ea22f10bb3e54df50b97734ba76261c306a8930b88a536f656
 ```
 
 Changed paths:
@@ -72,7 +72,7 @@ Control-plane file SHA-256 digests:
 ```text
 config.toml  2bce514453bb7d08fbd16136325d1d8c55c42cd9aa63d043f7fc9f89c7a2a098
 catalog.toml 840051ba2a5a4cf02a6105169e24d1adb953cca046d911c7eb04778899c75dd8
-lock.toml    b122322dad56d485a10a5d26f6380e32961bd0b2a871aadb2f88452069a2594d
+lock.toml    9955e73104c415b1b6fffc130db87b72c5dd3c1578f96d84d3935228b222f556
 ```
 
 Replaying the recorded patch with `git apply --binary -` against a fresh tracked-tree copy produces an identical complete file tree and the same three control-plane digests.
