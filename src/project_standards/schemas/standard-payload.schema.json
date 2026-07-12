@@ -212,7 +212,7 @@
     },
     "LegacySignatureDeclaration": {
       "additionalProperties": false,
-      "description": "Recognize only exact previously shipped whole files or bounded blocks.",
+      "description": "Declare exact package history and optional target-bound owner resolution.",
       "properties": {
         "begin": {
           "anyOf": [
@@ -225,6 +225,18 @@
           ],
           "default": null,
           "title": "Begin"
+        },
+        "consumer_owned_intent_pointer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Consumer Owned Intent Pointer"
         },
         "end": {
           "anyOf": [

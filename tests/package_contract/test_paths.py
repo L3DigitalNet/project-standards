@@ -3,7 +3,9 @@ from __future__ import annotations
 import dataclasses
 import json
 import unicodedata
+from collections.abc import Callable
 from pathlib import PurePosixPath
+from typing import cast
 
 import pytest
 from pydantic import BaseModel, ConfigDict
@@ -14,9 +16,37 @@ from project_standards.package_contract import (
     Sha256Digest,
     validate_path_collection,
 )
+from project_standards.package_contract import paths as package_paths
 
 _PACKAGE_VERSION_JSON_PATTERN = r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 _SHA256_JSON_PATTERN = r"^sha256:[0-9a-f]{64}$"
+
+
+def _json_pointer_validator() -> Callable[[str], str]:
+    validator = getattr(package_paths, "validate_json_pointer", None)
+    assert callable(validator), "canonical JSON pointer validator is not implemented"
+    return cast("Callable[[str], str]", validator)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "/python_tooling/workflow_ownership",
+        "/escaped~1segment/value",
+        "/tilde~0segment",
+    ],
+)
+def test_json_pointer_accepts_canonical_absolute_values(value: str) -> None:
+    assert _json_pointer_validator()(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "python_tooling/workflow_ownership", "/bad~2escape", "/trailing~"],
+)
+def test_json_pointer_rejects_relative_or_noncanonical_values(value: str) -> None:
+    with pytest.raises(ValueError):
+        _json_pointer_validator()(value)
 
 
 class _StrictScalarModel(BaseModel):

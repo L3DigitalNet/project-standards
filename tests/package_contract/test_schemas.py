@@ -88,6 +88,16 @@ def test_generated_schema_documents_are_closed_draft_2020_12_contracts() -> None
         Draft202012Validator.check_schema(schema)
 
 
+def test_payload_schema_exposes_optional_owner_resolution_pointer() -> None:
+    schema = package_schema_documents()["standard-payload.schema.json"]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    signature = cast("dict[str, object]", definitions["LegacySignatureDeclaration"])
+    properties = cast("dict[str, object]", signature["properties"])
+
+    assert "consumer_owned_intent_pointer" in properties
+    assert "consumer_owned_intent_pointer" not in cast("list[str]", signature["required"])
+
+
 def test_generated_schema_bytes_are_canonical_and_checked_in() -> None:
     first = package_schema_bytes()
     second = package_schema_bytes()

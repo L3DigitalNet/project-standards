@@ -19,6 +19,21 @@ _PACKAGE_VERSION_PATTERN = re.compile(_PACKAGE_VERSION_PATTERN_TEXT, re.ASCII)
 _SHA256_PATTERN = re.compile(_SHA256_PATTERN_TEXT, re.ASCII)
 
 
+def validate_json_pointer(value: str) -> str:
+    """Return one canonical absolute JSON pointer."""
+    if not value.startswith("/"):
+        raise ValueError("setting must be an absolute JSON pointer")
+    index = 0
+    while index < len(value):
+        if value[index] != "~":
+            index += 1
+            continue
+        if index + 1 >= len(value) or value[index + 1] not in {"0", "1"}:
+            raise ValueError("setting contains a noncanonical JSON pointer escape")
+        index += 2
+    return value
+
+
 def _pydantic_string_schema[T](
     scalar_type: type[T],
     validator: Callable[[str], T],

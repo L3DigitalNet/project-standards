@@ -67,6 +67,7 @@ from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
     Sha256Digest,
+    validate_json_pointer,
 )
 from project_standards.package_contract.payload import (
     AdapterKind,
@@ -109,20 +110,6 @@ class LegacyDisposition(StrEnum):
     IMPORT_LOCK = "import-lock"
 
 
-def _validate_json_pointer(value: str) -> str:
-    if not value.startswith("/"):
-        raise ValueError("recognized setting must be an absolute JSON pointer")
-    index = 0
-    while index < len(value):
-        if value[index] != "~":
-            index += 1
-            continue
-        if index + 1 >= len(value) or value[index + 1] not in {"0", "1"}:
-            raise ValueError("recognized setting contains a noncanonical JSON pointer escape")
-        index += 2
-    return value
-
-
 class MigratedPackage(StrictModel):
     """Validated desired-state contribution produced for one selected payload."""
 
@@ -148,7 +135,7 @@ class MigratedPackage(StrictModel):
     @field_validator("recognized_settings")
     @classmethod
     def _canonical_settings(cls, value: tuple[str, ...]) -> tuple[str, ...]:
-        validated = [_validate_json_pointer(item) for item in value]
+        validated = [validate_json_pointer(item) for item in value]
         if len(validated) != len(set(validated)):
             raise ValueError("recognized setting paths must be unique")
         return tuple(sorted(validated))

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.payload import (
+    LegacySignatureDeclaration,
     PackageOptionSchema,
     PayloadAvailability,
     PayloadManifest,
@@ -76,6 +77,70 @@ def _payload_data() -> dict[str, object]:
             },
         ],
     }
+
+
+def _whole_file_signature(**overrides: object) -> dict[str, object]:
+    signature: dict[str, object] = {
+        "id": "legacy-workflow",
+        "kind": "whole-file",
+        "targets": [".github/workflows/check.yml"],
+        "known_content_digests": [_digest("a")],
+    }
+    signature.update(overrides)
+    return signature
+
+
+def test_owner_resolution_pointer_is_canonical_and_target_specific() -> None:
+    signature = LegacySignatureDeclaration.model_validate(
+        _whole_file_signature(consumer_owned_intent_pointer="/python_tooling/workflow_ownership")
+    )
+
+    assert signature.consumer_owned_intent_pointer == ("/python_tooling/workflow_ownership")
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {
+            "kind": "bounded-block",
+            "format": "yaml",
+            "begin": "# begin",
+            "end": "# end",
+        },
+        {"targets": ["one.yml", "two.yml"]},
+        {"consumer_owned_intent_pointer": "python_tooling/workflow_ownership"},
+        {"consumer_owned_intent_pointer": "/python_tooling/~2workflow"},
+    ],
+)
+def test_owner_resolution_declaration_rejects_ambiguous_shapes(
+    update: dict[str, object],
+) -> None:
+    values = _whole_file_signature(
+        consumer_owned_intent_pointer="/python_tooling/workflow_ownership"
+    )
+    values.update(update)
+
+    with pytest.raises(ValidationError):
+        LegacySignatureDeclaration.model_validate(values)
+
+
+def test_payload_rejects_reused_owner_resolution_pointer() -> None:
+    data = _payload_data()
+    data["legacy_signatures"] = [
+        _whole_file_signature(
+            id="first-workflow",
+            targets=["first.yml"],
+            consumer_owned_intent_pointer="/demo/workflow_ownership",
+        ),
+        _whole_file_signature(
+            id="second-workflow",
+            targets=["second.yml"],
+            consumer_owned_intent_pointer="/demo/workflow_ownership",
+        ),
+    ]
+
+    with pytest.raises(ValidationError, match="reuses a consumer-owned intent pointer"):
+        PayloadManifest.model_validate(data)
 
 
 def test_payload_manifest_accepts_identity_options_capabilities_and_relations() -> None:

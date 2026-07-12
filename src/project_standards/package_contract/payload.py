@@ -34,6 +34,7 @@ from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
     Sha256Digest,
+    validate_json_pointer,
     validate_path_collection,
 )
 
@@ -576,7 +577,7 @@ class LegacySignatureFormat(StrEnum):
 
 
 class LegacySignatureDeclaration(StrictModel):
-    """Recognize only exact previously shipped whole files or bounded blocks."""
+    """Declare exact package history and optional target-bound owner resolution."""
 
     id: ResourceId
     kind: LegacySignatureKind
@@ -585,6 +586,12 @@ class LegacySignatureDeclaration(StrictModel):
     begin: str | None = None
     end: str | None = None
     known_content_digests: list[Sha256Digest] = Field(min_length=1)
+    consumer_owned_intent_pointer: str | None = None
+
+    @field_validator("consumer_owned_intent_pointer")
+    @classmethod
+    def _canonical_owner_intent_pointer(cls, value: str | None) -> str | None:
+        return None if value is None else validate_json_pointer(value)
 
     @model_validator(mode="after")
     def _signature_shape(self) -> LegacySignatureDeclaration:
@@ -605,7 +612,11 @@ class LegacySignatureDeclaration(StrictModel):
         if self.kind is LegacySignatureKind.WHOLE_FILE:
             if any(value is not None for value in (self.format, self.begin, self.end)):
                 raise ValueError("whole-file legacy signature cannot declare block fields")
+            if self.consumer_owned_intent_pointer is not None and len(self.targets) != 1:
+                raise ValueError("consumer-owned intent requires one whole-file legacy target")
             return self
+        if self.consumer_owned_intent_pointer is not None:
+            raise ValueError("consumer-owned intent requires one whole-file legacy target")
         if self.format is None or self.begin is None or self.end is None:
             raise ValueError("bounded-block legacy signature requires format and delimiters")
         if (
@@ -834,10 +845,17 @@ class PayloadManifest(StrictModel):
             raise ValueError("managed output overlaps a consumer-owned extension root")
 
         signature_ids: set[str] = set()
+        intent_pointers: set[str] = set()
         for signature in self.legacy_signatures:
             if signature.id in signature_ids:
                 raise ValueError("payload contains a duplicate legacy signature ID")
             signature_ids.add(signature.id)
+            pointer = signature.consumer_owned_intent_pointer
+            if pointer is None:
+                continue
+            if pointer in intent_pointers:
+                raise ValueError("payload reuses a consumer-owned intent pointer")
+            intent_pointers.add(pointer)
 
         legacy_state_ids: set[str] = set()
         for state in self.legacy_states:
