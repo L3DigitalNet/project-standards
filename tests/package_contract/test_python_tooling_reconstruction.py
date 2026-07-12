@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import shlex
 import shutil
 import subprocess
+import sys
 import tomllib
 import zipfile
 from pathlib import Path
@@ -342,6 +344,108 @@ def test_python_tooling_parallel_local_commands_match_ci_coverage_lifecycle() ->
 
     assert workflow_phases == ["erase", "run", "combine", "report"]
     assert script_phases == workflow_phases
+
+
+@pytest.mark.parametrize(
+    ("patch", "expect_child_capture"),
+    [(["subprocess"], True), ([], False)],
+)
+def test_python_tooling_generated_gate_subprocess_only_capture_oracle(
+    tmp_path: Path,
+    patch: list[str],
+    expect_child_capture: bool,
+) -> None:
+    repo = tmp_path / "scratch-consumer"
+    repo.mkdir()
+    (repo / "tests").mkdir()
+    config = _options(
+        source_layout="flat",
+        pytest={"fail_under": 0},
+        coverage={"parallel": True, "patch": patch},
+        ci={"enabled": True, "performance": False},
+    )
+    pyproject = "\n".join(
+        _render(scope, AdapterKind.TOML, config).rstrip()
+        for scope in (
+            "table:/build-system",
+            "key:/dependency-groups/dev",
+            "table:/tool/ruff",
+            "table:/tool/basedpyright",
+            "table:/tool/pytest/ini_options",
+            "table:/tool/coverage/run",
+            "table:/tool/coverage/report",
+        )
+    )
+    (repo / "pyproject.toml").write_text(pyproject + "\n", encoding="utf-8")
+    (repo / "child_only.py").write_text(
+        """def main() -> None:
+    print("child-only execution")
+
+
+if __name__ == "__main__":
+    main()
+""",
+        encoding="utf-8",
+    )
+    (repo / "tests/test_child_process.py").write_text(
+        """import subprocess
+import sys
+
+
+def test_child_process() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "child_only"],
+        check=False,
+    )
+    assert completed.returncode == 0
+""",
+        encoding="utf-8",
+    )
+    script = _render(
+        "$file",
+        AdapterKind.WHOLE_FILE,
+        config,
+        target="scripts/check.py",
+    )
+    script_path = repo / "scripts/check.py"
+    script_path.parent.mkdir()
+    script_path.write_text(script, encoding="utf-8")
+    environment = {
+        **os.environ,
+        "COVERAGE_FILE": str(repo / ".coverage"),
+        "UV_OFFLINE": "1",
+        "UV_PROJECT": str(_ROOT),
+    }
+
+    result = subprocess.run(
+        [sys.executable, "scripts/check.py"],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    output = result.stdout + result.stderr
+    if result.returncode != 0 and "cache" in output.lower():
+        pytest.fail(f"offline subprocess oracle is missing a locked cache entry:\n{output}")
+    assert result.returncode == 0, output
+    subprocess.run(
+        [sys.executable, "-m", "coverage", "json", "-o", "coverage.json"],
+        cwd=repo,
+        env=environment,
+        check=True,
+    )
+    report = json.loads((repo / "coverage.json").read_text(encoding="utf-8"))
+    files = cast("dict[str, object]", report["files"])
+    child = cast(
+        "dict[str, object]",
+        next(info for path, info in files.items() if path.endswith("child_only.py")),
+    )
+    summary = cast("dict[str, object]", child["summary"])
+    captured = summary["covered_lines"] != 0
+
+    assert captured is expect_child_capture
+    assert not list(repo.glob(".coverage.*"))
 
 
 def test_python_tooling_manifest_uses_only_bounded_shared_container_units() -> None:
