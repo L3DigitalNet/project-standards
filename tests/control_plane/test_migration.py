@@ -18,6 +18,7 @@ from project_standards.control_plane.codec import (
     parse_config,
     parse_lock,
 )
+from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import (
     InstalledCatalog,
@@ -25,7 +26,11 @@ from project_standards.control_plane.distribution import (
     InstalledPayload,
     ParsedToolRelease,
 )
-from project_standards.control_plane.executor import reconciliation_fingerprint
+from project_standards.control_plane.executor import (
+    ApplyRequest,
+    apply_reconciliation,
+    reconciliation_fingerprint,
+)
 from project_standards.control_plane.migration import (
     LegacyClaim,
     LegacyDisposition,
@@ -48,6 +53,8 @@ from project_standards.package_contract.paths import SafeRelativePath, Sha256Dig
 from project_standards.package_contract.payload import (
     ContributionDeclaration,
     LegacySignatureDeclaration,
+    LegacySignatureFormat,
+    LegacySignatureKind,
     ProviderEffect,
     ProviderOperation,
 )
@@ -431,9 +438,23 @@ def _owner_resolution_distribution(
     *,
     known: bool = False,
     materializes_target: bool = False,
+    managed_target: bool = False,
 ) -> InstalledDistribution:
     installed = base.load_catalog("5")
+    catalog = base.consumer_catalog("5", installed=installed)
     alpha = installed.payload_map[("alpha", "2.0")]
+    schema_path = alpha.root / "config.schema.json"
+    schema = cast("dict[str, object]", json.loads(schema_path.read_text(encoding="utf-8")))
+    properties = cast("dict[str, object]", schema["properties"])
+    properties["workflow_ownership"] = {
+        "type": "string",
+        "enum": ["managed", "consumer-owned"],
+        "default": "managed",
+    }
+    schema_path.write_text(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+    )
     signature = LegacySignatureDeclaration.model_validate(
         {
             "id": "legacy-alpha",
@@ -444,19 +465,20 @@ def _owner_resolution_distribution(
         }
     )
     contributions = list(alpha.manifest.contributions)
-    if materializes_target:
-        contributions.append(
-            ContributionDeclaration.model_validate(
-                {
-                    "id": "consumer-workflow",
-                    "target": _OWNER_TARGET,
-                    "adapter": "whole-file",
-                    "scope": "$file",
-                    "policy": "managed",
-                    "provider": "render-alpha",
-                }
-            )
-        )
+    if materializes_target or managed_target:
+        contribution_values: dict[str, object] = {
+            "id": "consumer-workflow",
+            "target": _OWNER_TARGET,
+            "adapter": "whole-file",
+            "scope": "$file",
+            "policy": "managed",
+            "provider": "render-alpha",
+        }
+        if managed_target:
+            contribution_values["when_any"] = [
+                {"option": "workflow_ownership", "equals": "managed"}
+            ]
+        contributions.append(ContributionDeclaration.model_validate(contribution_values))
     manifest = alpha.manifest.model_copy(
         update={
             "contributions": contributions,
@@ -471,7 +493,7 @@ def _owner_resolution_distribution(
     )
     return cast(
         InstalledDistribution,
-        _FixtureDistribution(changed, base.consumer_catalog("5")),
+        _FixtureDistribution(changed, catalog),
     )
 
 
@@ -529,7 +551,10 @@ def _install_owner_resolution_provider(
                     "standard_id": "alpha",
                     "version": "2.0",
                     "selector": "latest",
-                    "config": {"extension_path": "config/alpha-options.toml"},
+                    "config": {
+                        "extension_path": "config/alpha-options.toml",
+                        "workflow_ownership": "consumer-owned",
+                    },
                     "recognized_settings": recognized,
                 }
             ),
@@ -545,6 +570,15 @@ def _install_owner_resolution_provider(
 
 def _finding_codes(plan: LegacyMigrationPlan) -> set[str]:
     return {finding.code for finding in plan.findings}
+
+
+def _set_owner_mode(repo: Path, mode: str) -> None:
+    config_path = repo / ".standards/config.toml"
+    content = config_path.read_bytes()
+    before = b'workflow_ownership = "consumer-owned"'
+    after = f'workflow_ownership = "{mode}"'.encode()
+    assert content.count(before) == 1
+    config_path.write_bytes(content.replace(before, after))
 
 
 def test_unknown_whole_file_relinquishment_requires_target_bound_raw_intent(
@@ -566,12 +600,14 @@ def test_unknown_whole_file_relinquishment_requires_target_bound_raw_intent(
     assert all(
         unit.path.original != _OWNER_TARGET for unit in plan.reconciliation.next_lock.artifacts
     )
-    public_claim = cast(
+    public_report = cast(
         "dict[str, object]",
         cast("list[object]", plan.to_jsonable()["reports"])[0],
     )
-    assert _OWNER_TARGET in json.dumps(public_claim)
-    assert _OWNER_DIGEST.value in json.dumps(public_claim)
+    public_claim = cast("list[dict[str, object]]", public_report["claims"])[0]
+    assert public_claim["target"] == _OWNER_TARGET
+    assert public_claim["observed_digest"] == _OWNER_DIGEST.value
+    assert public_claim["intent_pointer"] == _OWNER_POINTER
     assert "not semantically validated" in render_migration_report(plan.reports[0])
 
 
@@ -665,6 +701,55 @@ def test_unknown_signature_without_claim_retains_digest_finding(
     assert "CP-MIGRATION-LEGACY-DIGEST" in _finding_codes(plan)
 
 
+def test_ordinary_claim_without_matching_observation_retains_digest_finding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.providers as provider_module
+
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    (repo / "legacy-alpha.md").unlink()
+    original = provider_module.invoke_provider
+
+    def missing_observation(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.operation is not ProviderOperation.MIGRATE:
+            return original(invocation)
+        return ProviderResult(
+            effect=ProviderEffect.MIGRATION_REPORT,
+            migration_report=MigrationReport(
+                schema_version="1.0",
+                package=MigratedPackage.model_validate(
+                    {
+                        "standard_id": "alpha",
+                        "version": "2.0",
+                        "selector": "latest",
+                        "config": {"extension_path": "config/alpha-options.toml"},
+                        "recognized_settings": ["/alpha/enabled"],
+                    }
+                ),
+                claims=(
+                    LegacyClaim.model_validate(
+                        {
+                            "signature_id": "legacy-alpha",
+                            "target": "legacy-alpha.md",
+                            "observed_digest": _digest("d"),
+                            "ownership": "managed",
+                            "disposition": "preserve",
+                        }
+                    ),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(provider_module, "invoke_provider", missing_observation)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert _finding_codes(plan) == {"CP-MIGRATION-LEGACY-DIGEST"}
+
+
 def test_known_consumer_owned_claim_forbids_extraneous_intent_pointer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -695,6 +780,158 @@ def test_owner_resolution_rejects_selected_payload_materialization(
     assert not plan.applicable
     assert "CP-MIGRATION-LEGACY-DIGEST" in _finding_codes(plan)
     assert "CP-MIGRATION-OWNER-RESOLUTION" in _finding_codes(plan)
+
+
+def test_owner_resolution_rejects_adversarial_bounded_block_claim(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = installed_distribution(tmp_path)
+    distribution = _owner_resolution_distribution(base)
+    installed = distribution.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    signature = alpha.manifest.legacy_signatures[0].model_copy(
+        update={
+            "kind": LegacySignatureKind.BOUNDED_BLOCK,
+            "format": LegacySignatureFormat.MARKDOWN,
+            "begin": "<!-- owner begin -->",
+            "end": "<!-- owner end -->",
+        }
+    )
+    manifest = alpha.manifest.model_copy(update={"legacy_signatures": [signature]})
+    changed_alpha = InstalledPayload(alpha.root, manifest, alpha.integrity)
+    changed = InstalledCatalog(
+        installed.source,
+        installed.families,
+        tuple(changed_alpha if payload is alpha else payload for payload in installed.payloads),
+    )
+    adversarial = cast(
+        InstalledDistribution,
+        _FixtureDistribution(changed, distribution.consumer_catalog("5")),
+    )
+    repo = _owner_resolution_repo(tmp_path)
+    (repo / _OWNER_TARGET).write_bytes(
+        b"before\n<!-- owner begin -->\nconsumer body\n<!-- owner end -->\nafter\n"
+    )
+    body = b"consumer body\n"
+    body_digest = f"sha256:{hashlib.sha256(body).hexdigest()}"
+    _install_owner_resolution_provider(
+        monkeypatch,
+        claim_overrides={"observed_digest": body_digest},
+    )
+
+    plan = plan_legacy_migration(repo, adversarial, "5")
+
+    assert not plan.applicable
+    assert {
+        "CP-MIGRATION-LEGACY-DIGEST",
+        "CP-MIGRATION-OWNER-RESOLUTION",
+    }.issubset(_finding_codes(plan))
+
+
+def test_owner_resolution_preserves_file_through_lifecycle_and_explicit_replacement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = installed_distribution(tmp_path)
+    consumer_distribution = _owner_resolution_distribution(base)
+    managed_distribution = _owner_resolution_distribution(
+        consumer_distribution,
+        managed_target=True,
+    )
+    repo = _owner_resolution_repo(tmp_path)
+    workflow = repo / _OWNER_TARGET
+    original = workflow.read_bytes()
+    _install_owner_resolution_provider(monkeypatch)
+
+    migration = plan_legacy_migration(repo, consumer_distribution, "5")
+    assert migration.applicable, migration.findings
+    assert apply_legacy_migration(migration).success
+    assert workflow.read_bytes() == original
+    assert all(
+        unit.path.original != _OWNER_TARGET
+        for unit in parse_lock((repo / ".standards/lock.toml").read_bytes()).artifacts
+    )
+
+    fixed_request = build_planner_request(repo, consumer_distribution, frozenset())
+    fixed = plan_reconciliation(fixed_request)
+    assert fixed.applicable, fixed.findings
+    assert all(action.target != _OWNER_TARGET for action in fixed.actions)
+    assert apply_reconciliation(ApplyRequest(fixed_request, fixed)).success
+
+    for enabled in (False, True):
+        set_standard_enabled(repo, "alpha", enabled)
+        request = build_planner_request(repo, consumer_distribution, frozenset())
+        plan = plan_reconciliation(request)
+        assert plan.applicable, plan.findings
+        assert all(action.target != _OWNER_TARGET for action in plan.actions)
+        assert apply_reconciliation(ApplyRequest(request, plan)).success
+        assert workflow.read_bytes() == original
+        assert all(
+            unit.path.original != _OWNER_TARGET
+            for unit in parse_lock((repo / ".standards/lock.toml").read_bytes()).artifacts
+        )
+
+    _set_owner_mode(repo, "managed")
+    lock_before = (repo / ".standards/lock.toml").read_bytes()
+    blocked_request = build_planner_request(repo, managed_distribution, frozenset())
+    blocked = plan_reconciliation(blocked_request)
+    assert not blocked.applicable
+    assert "CP-CONSUMER-CONFLICT" in {finding.code for finding in blocked.findings}
+    assert all(action.target != _OWNER_TARGET for action in blocked.actions)
+    assert all(unit.target != _OWNER_TARGET for unit in blocked.units)
+    assert workflow.read_bytes() == original
+    assert (repo / ".standards/lock.toml").read_bytes() == lock_before
+
+    backup = workflow.with_name("consumer-check.consumer-owned.yml")
+    workflow.rename(backup)
+    replacement_request = build_planner_request(repo, managed_distribution, frozenset())
+    replacement = plan_reconciliation(replacement_request)
+    assert replacement.applicable, replacement.findings
+    assert any(
+        action.kind is ActionKind.CREATE and action.target == _OWNER_TARGET
+        for action in replacement.actions
+    )
+    assert any(unit.path.original == _OWNER_TARGET for unit in replacement.next_lock.artifacts)
+    assert apply_reconciliation(ApplyRequest(replacement_request, replacement)).success
+    assert backup.read_bytes() == original
+    assert workflow.read_bytes() == b"[alpha]\nenabled = true\n"
+
+    converged_request = build_planner_request(repo, managed_distribution, frozenset())
+    converged = plan_reconciliation(converged_request)
+    assert converged.applicable, converged.findings
+    assert all(
+        action.kind in {ActionKind.NOOP, ActionKind.PRESERVE} for action in converged.actions
+    )
+
+
+@pytest.mark.parametrize("mutation", ["bytes", "directory", "symlink"])
+def test_owner_resolution_stale_plan_rejects_target_mutation_without_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+) -> None:
+    distribution = _owner_resolution_distribution(installed_distribution(tmp_path))
+    repo = _owner_resolution_repo(tmp_path)
+    workflow = repo / _OWNER_TARGET
+    _install_owner_resolution_provider(monkeypatch)
+    plan = plan_legacy_migration(repo, distribution, "5")
+    assert plan.applicable, plan.findings
+
+    workflow.unlink()
+    if mutation == "bytes":
+        workflow.write_bytes(b"changed after preview\n")
+    elif mutation == "directory":
+        workflow.mkdir()
+    else:
+        workflow.symlink_to(repo / "legacy-alpha.md")
+
+    result = apply_legacy_migration(plan)
+
+    assert not result.success
+    assert result.error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards").exists()
+    assert (repo / ".project-standards.yml").is_file()
 
 
 def test_legacy_migration_preview_is_complete_and_performs_no_writes(

@@ -292,7 +292,9 @@ def render_migration_report(report: MigrationReport) -> str:
             and claim.disposition is LegacyDisposition.PRESERVE
             and claim.intent_pointer is not None
         ):
-            line += "; consumer-owned preserved; not semantically validated by the package"
+            line += (
+                "; consumer-owned preservation requested; not semantically validated by the package"
+            )
         lines.append(line)
     lines.extend(
         f"finding {finding.severity} {finding.code} {finding.path.original} {finding.identity}"
@@ -954,6 +956,18 @@ def _claim_findings(
                     )
                 )
             claimed[key] = report.package.standard_id
+            if item is None:
+                findings.append(
+                    _finding(
+                        "CP-MIGRATION-LEGACY-DIGEST",
+                        path=claim.target.original,
+                        identity=claim.signature_id,
+                        standard_id=report.package.standard_id,
+                        version=report.package.version.value,
+                        message="legacy claim does not match the observed declared signature",
+                        hint="rerun preview after restoring recognized legacy content",
+                    )
+                )
             if item is not None and item.known:
                 if item.digest != claim.observed_digest:
                     findings.append(
