@@ -8,10 +8,14 @@ import subprocess
 from hashlib import sha256
 from pathlib import Path
 
+import pytest
+
 from project_standards.control_plane.codec import parse_config, parse_lock
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.migration import plan_legacy_migration
+from tests.package_compatibility import release_candidate as release_candidate_helpers
 from tests.package_compatibility.release_candidate import (
+    assert_release_evidence_current,
     build_installed_release,
     classify_legacy_dependencies,
     copy_tracked_checkout,
@@ -22,6 +26,8 @@ from tests.package_compatibility.release_candidate import (
     replay_release_patch,
     set_release_version,
 )
+
+pytestmark = pytest.mark.release_replay
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -105,6 +111,53 @@ def test_copy_tracked_checkout_uses_current_working_tree_paths(tmp_path: Path) -
     assert not (checkout / "deleted.txt").exists()
 
 
+def test_release_input_digest_excludes_only_its_evidence_file(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=source, check=True)
+    tracked = source / "tracked.txt"
+    tracked.write_text("tracked\n", encoding="utf-8")
+    evidence = (
+        source / "docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md"
+    )
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("evidence one\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=source, check=True)
+
+    release_input_digest = release_candidate_helpers.release_input_digest
+    baseline = release_input_digest(source)
+    evidence.write_text("evidence two\n", encoding="utf-8")
+
+    assert release_input_digest(source) == baseline
+
+    tracked.write_text("changed\n", encoding="utf-8")
+
+    assert release_input_digest(source) != baseline
+
+
+def test_release_evidence_preflight_rejects_stale_inputs(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=source, check=True)
+    tracked = source / "tracked.txt"
+    tracked.write_text("tracked\n", encoding="utf-8")
+    evidence = (
+        source / "docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md"
+    )
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("placeholder\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=source, check=True)
+    digest = release_candidate_helpers.release_input_digest(source)
+    evidence.write_text(f"Release-input SHA-256: `{digest}`\n", encoding="utf-8")
+    preflight = release_candidate_helpers.assert_release_evidence_current
+
+    preflight(source)
+    tracked.write_text("stale\n", encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="release evidence is stale"):
+        preflight(source)
+
+
 def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Path) -> None:
     source_versions = {path: (_ROOT / path).read_bytes() for path in ("pyproject.toml", "uv.lock")}
     checkout = copy_tracked_checkout(tmp_path / "checkout")
@@ -134,6 +187,7 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
 def test_disposable_release_checkout_migrates_and_reaches_fixed_point(
     tmp_path: Path,
 ) -> None:
+    assert_release_evidence_current()
     source_snapshot = copy_tracked_checkout(tmp_path / "source-snapshot")
     checkout = Path(shutil.copytree(source_snapshot, tmp_path / "checkout", symlinks=True))
     set_release_version(checkout)
@@ -375,7 +429,10 @@ def test_disposable_release_checkout_migrates_and_reaches_fixed_point(
     evidence = (
         _ROOT / "docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md"
     ).read_text(encoding="utf-8")
-    assert patch_digest in evidence
+    expected_evidence = {"release patch": patch_digest}
     for name in ("config.toml", "catalog.toml", "lock.toml"):
-        digest = sha256((checkout / ".standards" / name).read_bytes()).hexdigest()
-        assert digest in evidence
+        expected_evidence[name] = sha256((checkout / ".standards" / name).read_bytes()).hexdigest()
+    missing = {name: digest for name, digest in expected_evidence.items() if digest not in evidence}
+    assert not missing, "release evidence is missing current digests:\n" + "\n".join(
+        f"{name}: {digest}" for name, digest in missing.items()
+    )

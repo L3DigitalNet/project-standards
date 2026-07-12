@@ -946,7 +946,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -954,7 +954,7 @@ jobs:
 
       # SHA-pinned: setup-uv has no moving @v8 tag (dropped as of v8.0.0);
       # Dependabot bumps the SHA via the trailing version comment.
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: "0.11.6"
           enable-cache: true
@@ -974,11 +974,11 @@ jobs:
       - name: Test with coverage
         run: uv run coverage run -m pytest -m "not performance"
 
-      - name: Package contract performance gate
-        run: uv run pytest -m performance
-
       - name: Coverage report
         run: uv run coverage report
+
+      - name: Package contract performance gate
+        run: uv run pytest -m performance
 
       - name: Dependency audit
         run: uv run pip-audit
@@ -986,7 +986,7 @@ jobs:
 
 Notes:
 
-- This block is exactly what `project-standards adopt python-tooling` writes to `.github/workflows/check.yml` (a dogfood test keeps the two byte-identical).
+- This readable scaffold has the same ordered actions and commands as the default generated V2 workflow; generated step labels and spacing may differ.
 - The `version:` and SHA pins are template defaults — re-resolve the setup-uv SHA and the pinned uv version when adopting, and recheck them when this standard is reviewed. `setup-uv` publishes **no** moving major/minor tag as of v8.0.0 (`@v8`/`@v8.0` 404), so it must stay SHA-pinned with the version in a trailing comment for Dependabot.
 - The template triggers on `pull_request` and pushes to `main`. A repository that develops by direct commits to a working branch (no PRs) must add that branch to `push.branches`, or CI never runs before merge; the local verification gate is then the only pre-merge check.
 
@@ -1525,7 +1525,7 @@ Source basis: these tools are active projects whose documented behavior can chan
 | S17 | VS Code user/workspace settings | [https://code.visualstudio.com/docs/configure/settings](https://code.visualstudio.com/docs/configure/settings) | Workspace settings in `.vscode/settings.json` and project-specific behavior | 2026-06-06 |
 | S18 | VS Code tasks | [https://code.visualstudio.com/docs/debugtest/tasks](https://code.visualstudio.com/docs/debugtest/tasks) | `.vscode/tasks.json` and running external tools from VS Code | 2026-06-06 |
 | S19 | EditorConfig | [https://editorconfig.org/](https://editorconfig.org/) | Cross-editor coding style file and supported properties | 2026-06-06 |
-| S20 | uv: GitHub Actions integration | [https://docs.astral.sh/uv/guides/integration/github/](https://docs.astral.sh/uv/guides/integration/github/) | `astral-sh/setup-uv` (SHA-pinned; no moving major/minor tag since v8.0.0), `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-06-07 |
+| S20 | uv: GitHub Actions integration | [https://docs.astral.sh/uv/guides/integration/github/](https://docs.astral.sh/uv/guides/integration/github/) | `astral-sh/setup-uv` (SHA-pinned; no moving major/minor tag since v8.0.0), `actions/setup-python`, `python-version-file`, `uv sync`, `uv run`, cache support | 2026-07-12 |
 | S21 | Python docs: `typing` | [https://docs.python.org/3/library/typing.html](https://docs.python.org/3/library/typing.html) | Type annotations, advanced type-hinting vocabulary, type checkers/IDEs/linters | 2026-06-06 |
 | S22 | Python docs: `dataclasses` | [https://docs.python.org/3/library/dataclasses.html](https://docs.python.org/3/library/dataclasses.html) | `@dataclass`, `frozen=True`, frozen instance behavior | 2026-06-06 |
 | S23 | Pydantic docs: models | [https://pydantic.dev/docs/validation/latest/concepts/models/](https://pydantic.dev/docs/validation/latest/concepts/models/) | Pydantic model validation and output type/constraint guarantee | 2026-06-06 |
@@ -1606,6 +1606,10 @@ Action-pin fix on 2026-06-07:
 
 - §15 `check.yml` template: replaced the unresolvable `astral-sh/setup-uv@v8` with a full-version commit SHA + trailing version comment (`@fac544c…39 # v8.2.0`). As of setup-uv v8.0.0 (March 2026) Astral publishes **no** moving major/minor tag, so `@v8`/`@v8.0` 404 — confirmed against the GitHub refs API on 2026-06-07. A copied template previously red-failed at the install step before any gate ran.
 - Review reminder: when this standard is re-checked, verify every embedded action ref still resolves (a moving tag can be withdrawn, as setup-uv's was). The [S20] uv GitHub Actions guide already shows the SHA-pinned form, so re-reading the cited source catches this class of drift.
+
+Action runtime refresh on 2026-07-12:
+
+- The current §15 workflow and V2 provider output use `actions/checkout@v7` and the exact `astral-sh/setup-uv` v8.3.2 commit (`11f9893…f990`). Checkout v7 runs on Node 24, so self-hosted consumers need GitHub Actions Runner v2.327.1 or newer. Registered legacy workflow resources retain their earlier bytes for exact migration recognition.
 
 Consistency fixes on 2026-06-12 (backfilled 2026-07-01 — this entry was originally omitted):
 

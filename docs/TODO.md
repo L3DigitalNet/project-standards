@@ -26,35 +26,13 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
-Work in priority order. P0 and P1 gate the v5 release; P3 may proceed independently without widening release scope. Do not start P4 until v5.0.0 is published.
+Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independently without widening release scope. Do not start P4 until v5.0.0 is published.
 
 ### P0 — Resolve release debt
 
-- [ ] Apply the reviewed GitHub Action upgrades across the v5 authority surface.
+- [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
 
-  Owner-approved on 2026-07-12. Upgrade only live root and V2 workflows, provider output, payload digests, and current documentation; preserve registered legacy bytes. Keep npm caching disabled where v4 omitted it, document the Node 24 runner floor, regenerate projections, and prove source/wheel parity.
-
-- [ ] Review and accept the empty v5 implementation-deviation logs.
-
-  Confirm the no-deviation records in SPEC-MT01, SPEC-BA02, and SPEC-CP01 before release closeout.
-
-- [ ] Finalize link and anchor integrity after artifact disposition.
-
-  The retained source corpus currently has 1,924 valid local links and no failures. After pruning, audit every retained review while excluding sessions, projections, fixtures, transcripts, and scratch files.
-
-### P1 — Complete v5 readiness
-
-- [ ] Optimize release verification without reducing coverage or isolation.
-
-  Preserve the complete source/wheel compatibility matrix and disposable release proof while reducing wall-clock time. Add a cheap stale-evidence preflight, parallelize independent correctness rows while keeping performance and release-replay tests serial, cache immutable catalog/package discovery, avoid repeated repository scans within one lifecycle, and reuse immutable release fixtures where isolation permits. Record before/after timings and retain equivalent failure evidence.
-
-- [ ] Complete the final pre-release housekeeping sweep.
-
-  After P0 closes, rerun the repository-hygiene checklist, refresh indexes and status, and confirm that only accepted append-only history warnings remain.
-
-- [ ] Pass SPEC-MT01 Step 07, the MCP-readiness gate.
-
-  Produce the readiness report and checklist, confirming no blocking graph, package, documentation, migration, compatibility, or repository-hygiene gaps remain.
+  Release replay proved that Python Tooling 1.1 cannot represent the required parallel/subprocess coverage settings and that the optimized consumer-owned workflow needs a generic, target-bound ownership-relinquishment path. ADR 0023, SPEC-CP01 rev 0.10, SPEC-BA02 rev 0.11, and the owner-approved design now converge on that fail-closed contract. The contract convergence audit and implementation-plan audit both pass; the reviewed 11-task TDD plan covers engine/package changes, complete legacy replay, refreshed evidence, and the atomic root transition. Next, capture the converged artifacts in a prerequisite commit, execute the plan in an isolated worktree, refresh release evidence, and complete the atomic migration.
 
 ### P2 — Cut and publish v5.0.0
 

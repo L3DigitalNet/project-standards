@@ -45,7 +45,7 @@ def _workflow(config: Mapping[str, object]) -> str:
         "  cli-docs-check:",
         f"    runs-on: {json.dumps(runner)}",
         "    steps:",
-        "      - uses: actions/checkout@v6",
+        "      - uses: actions/checkout@v7",
         "      - name: Validate command selection",
         "        shell: bash",
         "        run: |",
@@ -57,7 +57,7 @@ def _workflow(config: Mapping[str, object]) -> str:
     if language == "python" and setup == "uv":
         lines.extend(
             [
-                "      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39",
+                "      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990",
                 "      - name: Build and install wheel",
                 "        run: |",
                 "          uv build --wheel --out-dir dist/",

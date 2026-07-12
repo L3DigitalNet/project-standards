@@ -27,7 +27,7 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 - **Dogfood.** Validate managed Markdown with `uv run project-standards validate --config .project-standards.yml`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
-- **Keep the toolchain green** before committing validator/test changes: Ruff format/check, BasedPyright, pytest with coverage, `pip-audit`, and `tests/coherence` after `npm ci`.
+- **Keep the toolchain green** before committing validator/test changes: Ruff format/check, BasedPyright, `uv run python scripts/run_repository_tests.py`, `pip-audit`, and `tests/coherence` after `npm ci`. The repository test runner keeps ordinary/release/performance phases serial and parallelizes only the source/wheel compatibility matrix.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`. Keep `.standards/` absent until atomic v5 release commit.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.

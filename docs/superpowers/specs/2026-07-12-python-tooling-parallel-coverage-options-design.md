@@ -1,6 +1,6 @@
 # Python Tooling Parallel Coverage Options Design
 
-**Date:** 2026-07-12 **Status:** owner-approved; audit rounds 1-3 reconciled; implementation pending **Author:** Codex with Chris Purcell / L3DigitalNet
+**Date:** 2026-07-12 **Status:** owner-approved; contract and implementation-plan audits converged; TDD ready **Author:** Codex with Chris Purcell / L3DigitalNet
 
 ## Problem and goal
 
@@ -33,6 +33,8 @@ Add a top-level `coverage` option object to Python Tooling 1.1:
 3. **Special-case this repository in the release fixture.** A fixture-only patch could make the proof pass while the actual V5 provider still deletes the settings; it would conceal rather than fix the contract gap.
 4. **Teach the generic package to reproduce this repository's specialized release phases.** The compatibility-wheel prebuild, release replay, and performance marker topology are repository-specific and would overfit Python Tooling.
 5. **Let migration replace the optimized root workflow.** This would restore the structural contract while regressing the release-verification optimization that triggered this work.
+6. **Register the optimized root workflow digest as Python Tooling package history.** Those bytes were authored for this repository and were never shipped by Python Tooling; declaring them known would misstate provenance and solve only one checkout.
+7. **Remove the workflow before migration and restore it afterward.** This weakens preview/apply evidence, creates a failure window in which the file is absent, and does not implement the advertised preserve-through-migration behavior.
 
 ## Audit round 1 disposition
 
@@ -57,6 +59,26 @@ Add a top-level `coverage` option object to Python Tooling 1.1:
 - **SA-NEW-005:** Accepted. The option is renamed to `workflow_ownership` so the ownership axis cannot be confused with the existing cross-package `workflow_mode` delivery axis.
 - **SA-NEW-006:** Accepted. `ci.enabled` and `ci.performance` are documented and validated as managed-workflow-only settings; they do not govern a consumer-owned workflow.
 - **Verification wiring:** `run_verify` conditionally excludes `.github/workflows/check.yml` only when `workflow_ownership = "consumer-owned"`; the other managed whole-file targets remain verified.
+
+## Round 4 convergence and planning discovery
+
+The round-4 audit reported no significant findings, but implementation-plan mapping found a contract defect that the prose-only review missed. The optimized root workflow has digest `sha256:9f4f90364b85af187ce7430a18d5e189389e5884157d74e8defc4d468cb13bdc`; Python Tooling's `legacy-check-workflow` signature knows only its frozen V1 workflow digest. The current migration engine emits `CP-MIGRATION-LEGACY-DIGEST` during signature inspection before provider claim classification and later requires a claim's observed signature to be known. The round-3 `consumer-owned`/`preserve` wording therefore cannot make this migration applicable.
+
+The owner approved the generic correction recommended by [the consumer-owned workflow migration research](../../research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md). ADR 0023, SPEC-CP01, and SPEC-BA02 now distinguish package-history recognition from an explicit whole-file owner-resolution claim. The engine may clear an unknown whole-file finding only when the payload statically binds a canonical `consumer_owned_intent_pointer` to that signature's sole target, the provider echoes the declaration and exact observed target/digest as `consumer-owned`/`preserve`, the raw pointer value is explicitly `consumer-owned`, and the resolved payload materializes nothing for the target. This records package ownership relinquishment; it does not recognize or validate the workflow bytes.
+
+## Combined contract audit round 1 disposition
+
+- **SAFETY-01:** Accepted. Provider-reported `recognized_settings` is a flat list and cannot prove which target a pointer governs. The payload now declares `consumer_owned_intent_pointer` directly on an eligible single-target whole-file legacy signature. The claim echoes it, and the engine verifies claim signature, target, and pointer against that trusted static declaration.
+- **BC-01:** Accepted. `intent_pointer` is required only on the unrecognized-whole-file relinquishment path. Existing known-history `consumer-owned`/`preserve` claims, including CLI Documentation's workflow claim, remain valid without it.
+- **REF-01:** Accepted. Live state and the current session pointer now place convergence review and implementation before refreshed release evidence and atomic migration.
+- **TRACE-01:** Accepted. SPEC-CP01's blanket Must-completion checkbox is reopened while FR-037 and FR-038 remain Not Started.
+- **SAFETY-02:** Accepted. Signature inspection holds unknown-digest findings for claim-aware validation, but every unknown observation not cleared by a fully valid claim—including an observation with no claim—still emits `CP-MIGRATION-LEGACY-DIGEST`.
+- **TRACE-02:** Accepted. SPEC-BA02 traces the amended portion of DR-006 with FR-037 as Not Started while retaining the implemented base migration-graph row.
+- **COH-01:** Accepted. ADR 0023 now requires the exact observed target and digest.
+
+## Convergence audit advisory
+
+- **ADV-001:** Accepted. The generic contract changes the old absolute statement that unknown legacy bytes always block automatic migration. Implementation must synchronize the canonical Standard Bundle Authoring 2.0 README and legacy-signature template with the narrow FR-037 exception, and update the `LegacySignatureDeclaration`, `LegacyDisposition`, and `LegacyClaim` descriptions plus both generated schema descriptions so “exactly recognized package history” is not confused with the separate owner-resolution binding.
 
 ## Contract changes
 
@@ -99,18 +121,22 @@ The current root `scripts/check.py` and V1 adopt-bundle twin remain frozen legac
 The `check-workflow` payload contribution materializes only when `workflow_ownership = "managed"`, using the existing flat `when_any` predicate. In `consumer-owned` mode:
 
 - the payload does not declare or lock `.github/workflows/check.yml`;
-- migration recognizes `/python_tooling/workflow_ownership`, resolves it before signature classification, and emits the recognized workflow claim with `ownership = "consumer-owned"` and `disposition = "preserve"` instead of the default managed/adopt pair;
+- migration requires `/python_tooling/workflow_ownership = "consumer-owned"` to be explicitly present in raw legacy input; the schema default is not owner authorization;
+- the `legacy-check-workflow` signature declares `consumer_owned_intent_pointer = "/python_tooling/workflow_ownership"` and remains a single-target whole-file signature; the payload validator rejects the field on bounded-block or multi-target signatures and rejects duplicate pointer bindings;
+- the claim carries the same value as `intent_pointer`; the engine verifies declaration/claim/signature/target equality, that the provider recognized the pointer, and that its raw legacy value is the literal string `consumer-owned` before defaults are applied;
+- the engine retains the observed workflow as a whole-file signature, holds its unknown-digest finding until claim-aware validation, and clears that finding only for the fully valid exact-target, exact-digest `ownership = "consumer-owned"` / `disposition = "preserve"` owner-resolution claim when the resolved payload omits that target; rejected and absent claims retain the finding;
+- the accepted claim appears in preview and is bound to the observed path, file type, and bytes by the migration stale-plan fingerprint, but produces no create, update, remove, adopt, package-unit, or lock action;
 - `run_verify` excludes the workflow from its managed whole-file loop while continuing to verify `.python-version` and `scripts/check.py`;
 - disable/re-enable leaves the workflow untouched;
 - `.python-version` and `scripts/check.py` remain managed normally.
 
 `ci.enabled` and `ci.performance` configure only a package-managed workflow. They are intentionally inert when the workflow is consumer-owned because Python Tooling neither parses nor governs consumer workflow triggers or commands.
 
-The root release intent selects `consumer-owned`, so its optimized workflow continues calling `scripts/run_repository_tests.py`. This option is general: any consumer with a project-specific Python workflow may retain it while adopting the remaining Python Tooling contract.
+The root release intent explicitly selects `consumer-owned`, so its optimized workflow continues calling `scripts/run_repository_tests.py`. Preview labels the file as preserved, consumer-owned, and not semantically validated by Python Tooling. This option is general: any consumer with a project-specific Python workflow may retain it while adopting the remaining Python Tooling contract. A later switch to managed ownership requires a separate reviewed adoption or replacement path; ordinary reconciliation must not silently take over the preserved bytes.
 
 ### Legacy migration
 
-The provider recognizes `/python_tooling/coverage` and `/python_tooling/workflow_ownership` as V4-to-V5 migration inputs and copies them through normal JSON-safe option handling. The resolved ownership value governs workflow signature classification in the same provider call. Schema validation then rejects invalid option values before reconciliation planning; legacy file-tamper signatures remain a separate fail-closed check. The disposable release fixture declares:
+The provider recognizes `/python_tooling/coverage` and `/python_tooling/workflow_ownership` as V4-to-V5 migration inputs and copies them through normal JSON-safe option handling. The `legacy-check-workflow` signature statically binds the latter pointer to its sole `.github/workflows/check.yml` target. For an unrecognized workflow digest, consumer-owned preservation is applicable only when the raw input explicitly contains the consumer-owned value; a defaulted or inferred value cannot authorize ownership relinquishment. The provider returns the same pointer as `intent_pointer` and the exact observed workflow target/digest as `consumer-owned`/`preserve`, while the resolved payload contributes no workflow. Schema validation rejects invalid option values before reconciliation planning. An unknown workflow observation with no claim or an invalid claim retains `CP-MIGRATION-LEGACY-DIGEST`. Unknown bounded blocks and every managed, destructive, shared, or lock-import transition remain exact-digest, fail-closed checks. The disposable release fixture declares:
 
 - `additional_dev_dependencies = ["types-PyYAML", "pytest-xdist>=3.8"]`;
 - the `compatibility`, `performance`, and `release_replay` pytest markers;
@@ -118,7 +144,7 @@ The provider recognizes `/python_tooling/coverage` and `/python_tooling/workflow
 - `coverage.patch = ["subprocess"]`.
 - `workflow_ownership = "consumer-owned"`.
 
-The migrated `.standards/config.toml` and composed `pyproject.toml` must retain those values. Modified legacy managed files still fail signature checks, while invalid legacy option values fail package schema validation.
+The migrated `.standards/config.toml` and composed `pyproject.toml` must retain those values. Modified legacy managed files still fail signature checks, while invalid legacy option values fail package schema validation. The preserved workflow remains byte-identical and absent from the central package lock; its observed digest is migration preview/apply evidence only, not a known Python Tooling signature.
 
 ## Files and ownership
 
@@ -126,8 +152,14 @@ The migrated `.standards/config.toml` and composed `pyproject.toml` must retain 
 | --- | --- |
 | `standards/python-tooling/versions/1.1/config.schema.json` | Closed option contract and defaults |
 | `standards/python-tooling/versions/1.1/providers/python_tooling.py` | Defaults, dependency floor, coverage rendering, gate orchestration, and legacy migration |
+| `standards/python-tooling/versions/1.1/schemas/migration-report.schema.json` | Optional claim `intent_pointer` accepted by the installed provider output contract |
 | `standards/python-tooling/versions/1.1/README.md` | Consumer-facing package option semantics |
-| `standards/python-tooling/versions/1.1/payload.toml` and family/catalog metadata | Conditional workflow materialization plus resource and aggregate integrity |
+| `standards/python-tooling/versions/1.1/payload.toml` and family/catalog metadata | Static workflow pointer-to-target binding, conditional workflow materialization, and resource/aggregate integrity |
+| `src/project_standards/package_contract/payload.py` and generated `schemas/standard-payload.schema.json` | Optional `consumer_owned_intent_pointer` declaration; canonical-pointer, whole-file, single-target, and uniqueness validation; history-versus-owner-resolution description |
+| `src/project_standards/control_plane/migration.py` and generated `schemas/migration-report.schema.json` | Optional claim `intent_pointer`, required only for the unknown whole-file exception and forbidden on ordinary claims; declaration/claim/target validation, hold-and-emit-unless-cleared findings, stale-plan evidence, no-lock/no-action enforcement, and accurate claim/disposition descriptions |
+| `standards/standard-bundle-authoring/versions/2.0/README.md` and `templates/legacy-signature.toml` | Author-facing distinction between exact package-history recognition and the constrained unknown-whole-file relinquishment declaration |
+| `tests/control_plane/test_migration.py` | Generic positive and negative ownership-relinquishment coverage independent of Python Tooling |
+| `tests/package_contract/test_payload.py` and Standard Bundle Authoring self-hosting/reconstruction tests | Declaration shape, generated-schema description, template guidance, and source/wheel contract coverage |
 | `tests/package_contract/test_python_tooling_reconstruction.py` | Option, rendering, rejection, migration, and source/wheel reconstruction coverage |
 | `tests/package_compatibility/release_candidate.py` | Repository-specific disposable release intent |
 | `tests/package_compatibility/test_release_candidate.py` | Atomic migration preservation and release evidence |
@@ -140,7 +172,10 @@ The migrated `.standards/config.toml` and composed `pyproject.toml` must retain 
 - Missing coverage values receive schema defaults and preserve current consumer output.
 - A selected subprocess patch without coverage.py 7.10.0 or newer is prevented by the rendered dependency floor.
 - A parallel-aware generated gate erases stale data, writes suffixed data, combines once, and reports; any command failure stops the gate with its original exit code.
-- A consumer-owned workflow is never rendered, claimed, locked, drift-checked, updated, or removed by Python Tooling.
+- Every unknown signature observation retains `CP-MIGRATION-LEGACY-DIGEST` unless a fully valid owner-resolution claim clears that exact observation; a provider that omits the claim cannot bypass the gate.
+- A consumer-owned relinquishment with a missing/invalid/duplicate static binding, a missing or mismatched claim pointer, an unrecognized/non-`consumer-owned` raw value, a provider-selected different target, a bounded-block target, a mismatched observed digest, or a materialized workflow fails before writes. Known-history consumer-owned preserve claims remain valid without either intent field.
+- A consumer-owned workflow is never rendered, locked, drift-checked, updated, or removed by Python Tooling; the migration claim records relinquishment evidence only.
+- Switching a preserved workflow back to managed ownership without a separately reviewed adoption or replacement path fails rather than overwriting consumer bytes.
 - A release migration that drops `parallel`, `subprocess`, `pytest-xdist`, any phase marker, the optimized consumer-owned workflow, or the parallel-aware generated script fails the disposable release test before evidence can be refreshed.
 - Payload or provider byte changes without regenerated digests fail package, graph, projection, and source/wheel reconstruction gates.
 
@@ -151,14 +186,17 @@ Follow test-driven development:
 1. Add failing option/default/rendering, dependency-floor, workflow-ownership, and cross-field rejection tests, including omitted `parallel`.
 2. Add failing command-rendering tests for the conditional erase/run/combine/report sequence.
 3. Add a failing end-to-end scratch-consumer test whose generated gate measures subprocess-only code and produces a non-empty report.
-4. Add failing migration tests that require `/python_tooling/coverage` and `/python_tooling/workflow_ownership` recognition, plus a consumer-owned workflow claim with `ownership = "consumer-owned"` and `disposition = "preserve"`.
-5. Add failing release assertions for the dependency, markers, coverage settings, generated script, and preserved consumer-owned workflow.
-6. Implement the schema and provider changes.
-7. Regenerate package digests, catalog metadata, and payload projections.
-8. Run focused Python Tooling reconstruction and release-fixture tests.
-9. During atomic migration, retire only the obsolete root-script `_DOGFOOD` mapping; retain a frozen V1 bundle digest check and add current V2 root-rendering evidence.
-10. Compare subprocess-aware coverage evidence with the patch disabled to demonstrate the preserved behavior.
-11. Run package/graph/schema/projection gates and the optimized repository gate.
+4. Add failing payload/engine tests proving an unknown whole file succeeds only when a canonical `consumer_owned_intent_pointer` is statically declared on a single-target whole-file signature and the claim echoes that binding with literal raw `consumer-owned`, exact observed target/digest, `consumer-owned`/`preserve`, and resolved-target exclusion. Prove invalid/duplicate declarations, a provider-selected different target, missing/wrong claim intent, unknown observations with no claim, managed/destructive claims, unknown bounded blocks, simultaneous materialization, and stale plans fail before writes; prove existing known consumer-owned claims remain field-free.
+5. Add failing engine assertions that an accepted relinquishment creates no action, artifact/contribution/package-unit state, or lock entry and that returning to managed ownership requires a separate adoption/replacement path.
+6. Add failing Python Tooling migration tests for `/python_tooling/coverage` and `/python_tooling/workflow_ownership`, including the optimized unknown workflow digest and source/wheel parity.
+7. Add failing release assertions for the dependency, markers, coverage settings, generated script, and preserved consumer-owned workflow.
+8. Implement the generic engine contract, then the schema and provider changes.
+9. Regenerate package digests, catalog metadata, and payload projections.
+10. Run focused control-plane migration, Python Tooling reconstruction, and release-fixture tests.
+11. During atomic migration, retire only the obsolete root-script `_DOGFOOD` mapping; retain a frozen V1 bundle digest check and add current V2 root-rendering evidence.
+12. Compare subprocess-aware coverage evidence with the patch disabled to demonstrate the preserved behavior.
+13. Synchronize the Standard Bundle Authoring README/template and model-generated schema descriptions with the constrained exception.
+14. Run package/graph/schema/projection gates and the optimized repository gate.
 
 ## Acceptance criteria
 
@@ -170,7 +208,11 @@ Follow test-driven development:
 - Default generated gates remain byte-identical; parallel-aware generated gates render erase/run/combine/report in that order.
 - The parallel-aware generated gate runs end to end, measures subprocess-only code, reports non-empty data, and removes input shards.
 - V4 migration recognizes and preserves the coverage object and `/python_tooling/workflow_ownership` setting.
-- Managed workflow ownership retains current default bytes and lifecycle behavior; consumer-owned ownership emits a preserve claim, omits the contribution, and preserves the existing workflow across migrate/reconcile/disable/re-enable.
+- Managed workflow ownership retains current default bytes and lifecycle behavior; explicitly selected consumer-owned ownership uses the payload's static single-target pointer binding, emits the matching claim pointer and exact observed-target/digest preserve claim, omits the contribution and all lock/action state, and preserves the existing workflow across migrate/reconcile/disable/re-enable.
+- Unknown whole-file preservation is accepted only under the generic owner-resolution contract. Unknown observations with rejected or absent claims, unknown bounded blocks, and managed, destructive, shared, or lock-import claims remain exact-digest and fail closed; known consumer-owned preserve claims remain backward compatible without intent fields.
+- Standard Bundle Authoring's canonical README and legacy-signature template plus the payload-signature, claim, disposition, and generated-schema descriptions distinguish exact known-history recognition from the narrow owner-resolution exception without implying that arbitrary unknown bytes are accepted.
+- Preview identifies the preserved target/digest and lack of Python Tooling validation; apply rejects path/type/byte changes through stale-plan binding.
+- A later consumer-owned-to-managed transition requires a separately reviewed adoption or replacement path and cannot silently claim preserved bytes.
 - Consumer-owned verification skips only `.github/workflows/check.yml`; `.python-version` and `scripts/check.py` remain managed and drift-checked.
 - `ci.enabled` and `ci.performance` are documented as managed-workflow-only settings and do not affect consumer-owned workflow bytes or lifecycle.
 - The disposable v5 root migration retains `pytest-xdist`, all three pytest markers, both coverage settings, the optimized consumer-owned workflow, and a working parallel-aware check script.

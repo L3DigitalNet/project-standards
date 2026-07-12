@@ -357,6 +357,18 @@ def test_workflow_quotes_the_multiword_pytest_marker_as_one_shell_argument() -> 
     assert "performance" not in argv[marker_index + 2 :]
 
 
+def test_workflow_renderer_uses_reviewed_action_runtime_versions() -> None:
+    workflow = _render(
+        "$file",
+        AdapterKind.WHOLE_FILE,
+        _options(),
+        target=".github/workflows/check.yml",
+    )
+
+    assert "actions/checkout@v7" in workflow
+    assert "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" in workflow
+
+
 @pytest.mark.parametrize(
     ("scope", "original"),
     [

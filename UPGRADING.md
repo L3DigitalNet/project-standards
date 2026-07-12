@@ -107,6 +107,8 @@ After v5.0.0 is published, pin reusable workflows and the installed CLI to the s
 
 Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
 
+V5's live and self-hosted workflows use Node 24-generation actions. GitHub-hosted runners already satisfy the runtime requirement; self-hosted runners must run GitHub Actions Runner v2.327.1 or newer before adopting the v5 workflow bytes. The lockfile-free Markdown formatter keeps setup-node package-manager caching disabled, while workflows that run `npm ci` retain explicit npm caching.
+
 ## 6. Understand same-major refresh
 
 A newer v5 tool may carry a compatible updated catalog-5 snapshot. `reconcile` previews that catalog refresh together with affected `latest` package updates; `--apply` publishes the catalog and central lock transactionally.

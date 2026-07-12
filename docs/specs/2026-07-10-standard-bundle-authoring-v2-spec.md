@@ -49,6 +49,9 @@ related:
 | 0.6 | 2026-07-10 | Coding agent with owner-authorized foundation implementation | Recorded the BA02 foundation evidence in requirement traceability. This evidence-only revision changes no requirement or scope; provider execution, live semantic mutation, current-package reconstruction, and release activation remain follow-on work. |
 | 0.7 | 2026-07-12 | Codex package-migration closeout | Reconcile traceability with all nine reconstructed packages, real composition, installed-wheel providers, legacy migration, release-baseline, projection, and disposable release-cut evidence through `a891973`. No requirement or scope changes. |
 | 0.8 | 2026-07-12 | Chris Purcell / L3DigitalNet with coding agent | Revised the V5 launch estimate from 11 to the nine catalog 5 families. `project-toolbox` and `agent-managed-repo` are dedicated post-v5 programs and do not gate SPEC-MT01 Step 07 or the v5.0.0 release. Capacity requirements and the generic authoring contract are unchanged. |
+| 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Reviewed and accepted the empty implementation Deviations Log. No requirement or scope changed. |
+| 0.10 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Added the owner-approved, fail-closed contract for explicitly relinquishing an unrecognized whole file to consumer ownership during legacy migration. Known package-history signatures remain mandatory for ownership-acquiring, destructive, shared, lock-import, and bounded-block transitions. |
+| 0.11 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Make ownership relinquishment target-verifiable through a static single-target signature pointer binding, preserve unknown-and-unclaimed fail-closed behavior and known-claim compatibility, and reconcile the amended migration traceability. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
@@ -152,7 +155,7 @@ Package authors describe desired semantics rather than imperative installation s
 | G-001 | Make every advertised package version a real immutable offline payload. | Installed-wheel tests load and reconcile every catalog entry without network access. | FR-004-FR-009, FR-020-FR-021, FR-024, FR-034; NFR-001-NFR-003 |
 | G-002 | Separate package identity, payload behavior, and catalog channel policy. | No family or payload manifest contains a global `latest` or candidate/default role. | FR-001-FR-003, FR-022-FR-025 |
 | G-003 | Make package composition declarative and conflict-free. | All declared scopes validate before providers run; pairwise/full-set plans are order-independent. | FR-010-FR-014, FR-017; NFR-004, NFR-006 |
-| G-004 | Bound package behavior behind typed trusted provider and migration contracts. | Mutation spies observe no direct writes and all effects match declarations. | FR-015-FR-019; NFR-005 |
+| G-004 | Bound package behavior behind typed trusted provider and migration contracts. | Mutation spies observe no direct writes and all effects match declarations; explicit ownership relinquishment neither materializes nor locks the preserved target. | FR-015-FR-019, FR-037; NFR-005 |
 | G-005 | Give authors one repeatable release and compatibility gate. | A new version requires data/schema/test additions, not shared package-ID dispatch. | FR-026-FR-033; NFR-007-NFR-009 |
 
 ---
@@ -210,7 +213,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-015 | Each provider shall declare stable ID, generic operation, kind, phase, allowed effect, payload-resource entrypoint, input/output schema, and referenced resources. | Provider behavior must be version-correct, typed, and schedulable. | Schema and installed-wheel tests resolve entrypoints only inside the selected payload and reject undeclared phases/effects or global/unqualified implementations. | Must |
 | FR-016 | Read-only providers shall return findings or content from declared immutable snapshots; mutation-intent providers shall return typed mutation plans and shall never write the live repository. | The platform executor is the sole reconciliation writer. | Filesystem/network spies cover every provider; direct writes, undeclared reads, and undeclared effects fail conformance. | Must |
 | FR-017 | Each referenced extension shall bind one config option to an allowed content type, repository-relative path policy, and optional preferred `.standards/extensions/{id}/` location while retaining consumer ownership. | Specialized inputs need reproducibility without managed ownership. | Path/digest/disable fixtures reject package-namespace and output overlap and preserve extension content. | Must |
-| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, affected config/artifact/contribution identities, and any exact legacy signatures it recognizes. Every legacy endpoint shall resolve to an explicit payload-owned legacy-state declaration. | Version and legacy transitions need explicit bounded plans, and state tokens must not become typo-tolerant implicit registrations. | Migration graph validation rejects unknown package versions, unregistered legacy states, unknown signatures, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
+| FR-018 | Each migration shall declare stable ID, typed `package:VERSION` or `legacy:STATE` endpoints, automatic or manual mode, provider or instruction resource, reversibility, affected config/artifact/contribution identities, and any exact legacy signatures it recognizes. Every legacy endpoint shall resolve to an explicit payload-owned legacy-state declaration. | Version and legacy transitions need explicit bounded plans, and state tokens must not become typo-tolerant implicit registrations. | Migration graph validation rejects unknown package versions, unregistered legacy states, unknown signatures outside FR-037's owner-resolution path, unrelated edges, incomplete effect inventories, and automatic migrations without providers. | Must |
 | FR-019 | Every advertised package-major entry and exit shall have a declared path; a non-automatic rollback shall identify its exact manual instructions and limitations. | Candidate authorization is useful only when transition consequences are known. | Candidate fixtures cover forward entry, exact-target exit, automatic rollback, manual rollback, and missing-path rejection. | Must |
 | FR-020 | Every regular file inside an indexed payload directory shall be declared and digested, except `payload.toml`, which is included directly in the aggregate inventory. | Undeclared content would escape catalog integrity and lifecycle rules. | Inventory fixtures reject undeclared, missing, duplicate, and symlink-escaped files. | Must |
 | FR-021 | The family index aggregate digest shall be SHA-256 over a canonical sorted inventory containing the raw `payload.toml` digest and every declared path/digest pair. | Catalogs and locks need a deterministic non-self-referential payload identity. | Independent implementations produce the same lowercase `sha256:HEX` value and detect any byte change. | Must |
@@ -227,6 +230,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-032 | Family, payload, option, and catalog schemas shall be generated from strict typed models and checked into the distribution with drift tests. | Prose alone cannot enforce the exact V2 contract. | Schema snapshots use Draft 2020-12, reject unknown fields, and match generated output byte-for-byte. | Must |
 | FR-033 | Shared control-plane and graph code shall dispatch by declared adapter/provider/schema data and contain no ordinary package-ID branches. | New standards must remain data additions rather than platform rewrites. | Architecture tests and review reject package-ID conditionals outside explicit legacy migrations and package-owned provider code. | Must |
 | FR-034 | The build shall package each indexed payload under `project_standards/payloads/{standard-id}/{version}/` with a byte-identical relative tree; repository payload directories remain the sole authoring authority. | Runtime discovery needs one exact installed path without creating a second editable payload source. | Source-to-wheel parity tests cover every file/digest and reject missing, extra, transformed, or separately maintained runtime copies. | Must |
+| FR-037 | A migration provider may resolve an unrecognized `whole-file` legacy signature only by explicitly relinquishing that exact target to consumer ownership. The payload's matching legacy-signature declaration shall include a canonical `consumer_owned_intent_pointer`; that field is valid only on a `whole-file` signature with exactly one target, and one pointer may bind at most one signature target in a payload. Raw package migration input shall explicitly select the target's consumer-owned mode through that pointer. The provider shall return `ownership = "consumer-owned"`, `disposition = "preserve"`, the exact observed target and digest, and an `intent_pointer` that exactly echoes the declaration; that pointer shall be one of the provider's recognized settings and its raw pre-default value shall be the literal string `consumer-owned`; the engine shall prove the claim signature, target, and pointer match the static declaration; and the resolved payload shall materialize no artifact or contribution at that target. `intent_pointer` is an optional claim field required only for this unknown-signature exception and forbidden when the claim matches declared package history or uses another ownership/disposition pair. Every observed unknown signature shall retain `CP-MIGRATION-LEGACY-DIGEST` unless one fully valid FR-037 claim clears that exact observation, including when the provider returns no claim. The result records owner resolution rather than adding package history. | A package must be able to decline ownership without allowing defaults, a provider-selected target, or a broad package switch to substitute for target-specific owner authorization; changing existing known-signature preserve behavior; or claiming that consumer-authored bytes were previously shipped or semantically validated by the package. | Source/wheel fixtures prove the static pointer-to-signature-target binding; reject invalid, duplicate, mismatched, reused, or extraneous declarations/claims and a provider-selected different target; retain the digest finding for unknown observations with rejected or absent claims; preserve existing known consumer-owned claims without the field; show the relinquishment in preview with the observed digest; bind stale-plan apply; perform no write; and create no artifact, contribution, package-unit, or lock entry. Unknown bounded blocks and all managed, destructive, shared, or lock-import claims continue to require declared known digests and fail closed. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -263,7 +267,7 @@ Package authors describe desired semantics rather than imperative installation s
 | DR-003 | Package config contract | Preserve option types, constraints, defaults, references, and internal contract selectors per payload. | Closed Draft 2020-12 schema; deterministic defaults. | Selected payload. |
 | DR-004 | Managed output declaration | Preserve whole-artifact and semantic-unit identity, target, ownership, source/provider provenance, policy, and digest bounds. | Unique stable IDs; non-overlapping normalized scopes. | Selected payload; applied facts copied to central lock. |
 | DR-005 | Provider contract | Preserve provider identity, phase/effect, implementation resource, schemas, and declared resources. | Selected-payload resource entrypoint; closed enums and schemas. | Selected payload. |
-| DR-006 | Migration graph | Preserve typed endpoints, direction, effects, reversibility, and provider/manual evidence. | Endpoints exist or use registered legacy states; major transitions have paths. | Payload declaring the transition. |
+| DR-006 | Migration graph | Preserve typed endpoints, direction, effects, reversibility, provider/manual evidence, and any explicit whole-file owner-resolution evidence. | Endpoints exist or use registered legacy states; major transitions have paths. For an unrecognized whole-file relinquishment only, the signature statically binds one `consumer_owned_intent_pointer` to its sole target; the claim echoes that pointer and the exact observed target/digest; the raw value is `consumer-owned`; and the resolved payload excludes that target. A known-history consumer-owned preserve claim carries no `intent_pointer`. | Payload declaring the transition; observed digest and claim intent pointer are preview/apply evidence only and never package-history authority. |
 | DR-007 | Catalog role | Preserve catalog-major-specific package/version/digest and channel role. | Exact family/payload match; one ordinary default per consumer package. | Repository catalog declaration. |
 | DR-008 | Installed payload tree | Preserve the canonical payload's complete relative structure and bytes in the distribution. | Exact file/digest parity; no extra runtime mirror authority. | Generated wheel package data. |
 
@@ -627,9 +631,18 @@ targets = [".project-standards.yml"]
 begin = "# BEGIN agent-handoff managed config"
 end = "# END agent-handoff managed config"
 known_content_digests = ["sha256:..."]
+
+[[legacy_signatures]]
+id = "consumer-workflow-v4"
+kind = "whole-file"
+targets = [".github/workflows/check.yml"]
+known_content_digests = ["sha256:..."]
+consumer_owned_intent_pointer = "/python_tooling/workflow_ownership"
 ```
 
-`kind` is `whole-file` or `bounded-block`; a bounded block requires exact begin/end bytes and a declared format. `targets` are contained repository-relative paths. `known_content_digests` identify normalized block bodies or whole-file bytes previously shipped by the package. Marker presence alone never proves managed ownership. The Agent Handoff legacy migration lists all three signature IDs in its `signatures` field and maps each recognized block to its V2 contribution or config state.
+`kind` is `whole-file` or `bounded-block`; a bounded block requires exact begin/end bytes and a declared format. `targets` are contained repository-relative paths. `known_content_digests` identify normalized block bodies or whole-file bytes previously shipped by the package. Marker presence alone never proves managed ownership. Optional `consumer_owned_intent_pointer` is a canonical JSON pointer valid only on a single-target whole-file signature; each pointer may appear on at most one signature in a payload. It statically binds raw consumer intent to that exact target and does not add any observed digest to package history. The Agent Handoff legacy migration lists all three of its signature IDs in its `signatures` field and maps each recognized block to its V2 contribution or config state.
+
+FR-037's whole-file owner-resolution path is deliberately separate from `known_content_digests`: it does not recognize, adopt, import, validate, or extend package history. It records that the repository owner explicitly selected consumer ownership through the pointer statically bound to the signature's sole target and that the package declines all lifecycle authority over the exact observed bytes. Every unknown observation retains the ordinary digest finding unless a fully valid claim clears it. Unknown bounded blocks and any transition that would manage, alter, remove, share, or lock content remain inapplicable until the observed digest matches declared package history.
 
 ### Integrity
 
@@ -720,6 +733,7 @@ Expected result:
 | AW-004 | Package is reference-only or internal. | Publish complete docs/resources/config schema as applicable and assign the corresponding catalog role without consumer adoption guide/actions. | Package remains discoverable but cannot be enabled as an ordinary consumer package. |
 | AW-005 | Existing package migrates to V2. | Reconstruct one or more payloads, declare exact legacy file/block signatures and migrations, and pass the full compatibility matrix before advertisement. | Legacy artifacts and deployed markers become migration evidence, not active authority. |
 | AW-006 | Released payload needs correction. | Leave it byte-identical, author a new package version, and update catalog roles according to compatibility. | Pins and historical migration inputs remain reproducible. |
+| AW-007 | A repository explicitly retains an unrecognized whole file under consumer ownership while adopting the rest of a package. | Declare a unique `consumer_owned_intent_pointer` on the single-target whole-file signature; require raw target-specific consumer-owned intent; return the same recognized `intent_pointer` and the exact observed target/digest as `consumer-owned`/`preserve`; prove declaration/claim/target equality, the raw `consumer-owned` value, and resolved-payload exclusion; expose the relinquishment in preview; and bind apply to the same bytes. | Migration preserves the file byte for byte without package validation, writes, drift checks, lifecycle actions, or lock ownership. A later switch to managed ownership requires a separate reviewed adoption or replacement path. |
 
 ### 10.3 Edge Cases
 
@@ -737,6 +751,7 @@ Expected result:
 | EC-010 | Referenced extension aliases a managed or semantic output after canonical resolution. | Reject before provider execution and preserve the consumer file. |
 | EC-011 | Released catalog baseline cannot be located during release checking. | Block publication until immutable-baseline evidence is restored; never assume the payload is unchanged. |
 | EC-012 | A target contains a recognized pre-V2 delimiter but its body digest is unknown or modified. | Preserve the entire block, report migration ambiguity, and require explicit owner resolution; never claim it from markers alone. |
+| EC-013 | An observed unknown signature has no claim, or an unrecognized-whole-file relinquishment claim lacks a valid static single-target `consumer_owned_intent_pointer` binding; omits or mismatches `intent_pointer`; names an unrecognized or non-`consumer-owned` raw value; targets a bounded block; reports a different target/digest; or accompanies a resolved artifact/contribution for the target. | Retain `CP-MIGRATION-LEGACY-DIGEST`, reject invalid provider output when present, preserve the live file, and produce no lock entry. A known-history consumer-owned preserve claim remains valid without `intent_pointer`. |
 
 ### 10.4 State Transitions
 
@@ -773,6 +788,7 @@ No browser UI or network API is in scope. The supported interfaces are the versi
 | ERR-008 | Catalog role/default invalid | Refuse generated catalog publication. | Report catalog major, package, versions, and roles. | Correct repository catalog declaration. |
 | ERR-009 | Released payload differs from tagged baseline | Block release and preserve both evidence digests. | Report package/version, baseline tag, and changed paths. | Revert historical mutation and publish changes as a new package version. |
 | ERR-010 | Legacy reconstruction is ambiguous | Do not advertise the package as V5-compatible. | Compatibility report inventories unmatched settings/artifacts/signatures. | Add explicit migration data or obtain package-specific owner resolution. |
+| ERR-011 | Unknown whole-file owner resolution is absent or invalid | Stop before any migration action is applied and retain the ordinary unknown-digest finding for every observation not cleared by a fully valid FR-037 claim. | Report the target plus the missing or mismatched static binding, claim intent pointer/value, ownership, disposition, digest, or payload-exclusion condition without exposing file content. | Correct the package declaration, option, provider, or payload contract, or use a separate reviewed managed adoption path. |
 
 ### 12.2 Retry and Idempotency
 
@@ -862,6 +878,7 @@ V5 launches with the nine families in catalog 5. The separately tracked `project
 | R-005 | Legacy package behavior has ambiguous ownership or no reversible migration. | High | High | Use explicit signatures/manual migration declarations and fail closed; never infer ownership. | Package owner |
 | R-006 | Family landing docs drift from versioned normative docs. | Medium | Medium | Clear authority notices, link tests, and payload-specific agent summaries/adoption guides. | Standard author |
 | R-007 | Catalog roles accidentally weaken `latest`. | Low | High | Strict default uniqueness, release-diff classification, and ADR 0024 channel tests. | Release maintainer |
+| R-008 | Explicit ownership relinquishment preserves stale, unsafe, or semantically incompatible consumer content. | Medium | High | Make the path non-default and target-specific through a static single-target pointer binding; require raw owner intent; show the exact digest in preview; perform no package validation, write, or lock claim; document consumer responsibility; and require separate review before managed takeover. | Consumer repository owner |
 
 ---
 
@@ -883,8 +900,9 @@ No regulated or personal data is introduced. Every payload resource and provider
 - [x] Static and provider-rendered artifacts/contributions pass preservation, conflict, update, disable, removal, and idempotency fixtures.
 - [x] Provider mutation/network spies and migration forward/rollback/manual-path suites pass.
 - [x] Pairwise, full-set, randomized-order, integrity, and release-baseline gates pass.
-- [ ] Traceability (§17.3), documentation (§18.7), security review, and Deviations Log are complete. Traceability/docs/security evidence is current; owner acceptance of the empty Deviations Log remains a release-closeout action.
-- [x] No known blocking defect or unexplained deviation remains.
+- [x] Traceability (§17.3), documentation (§18.7), security review, and the owner-accepted empty Deviations Log are complete.
+- [ ] No known blocking defect or unexplained deviation remains after the rev 0.11 amendment converges in audit and is implemented.
+- [ ] FR-037 whole-file ownership relinquishment and its separate managed-takeover boundary pass source/wheel contract, migration, stale-plan, no-write, and no-lock tests.
 
 ### 17.2 Test Strategy
 
@@ -895,7 +913,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | Graph/composition | Relations, overlaps, shared identities, migrations, channel constraints | Individual, pairs, full catalog, randomized order | Yes |
 | Adapter/preservation | Whole/TOML/JSONC/YAML/EditorConfig/Markdown adapters | Create/equal/update/remove/conflict plus byte preservation | Yes |
 | Provider security | Phase/effect/input/output bounds and installed entrypoints | Mutation/network/undeclared-read spies and malformed output | Yes |
-| Migration | Legacy and package-version transitions | Registered legacy states, fresh, forward, exact-target exit, automatic/manual rollback, exact legacy block signatures, and modified-block refusal | Yes |
+| Migration | Legacy and package-version transitions | Registered legacy states, fresh, forward, exact-target exit, automatic/manual rollback, exact legacy block signatures, modified-block refusal, explicit whole-file ownership relinquishment, managed-transition refusal, and stale-plan rejection | Yes |
 | Installed wheel | Packaged payload completeness and offline execution | Every advertised version and provider | Yes |
 | Release regression | Historical immutability and catalog-diff classification | Every published payload/catalog baseline | Yes |
 | Documentation | Family/payload authority, summary limit, adoption-guide scope, links | Every payload | Yes |
@@ -938,6 +956,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-032 | Typed-model generated-schema drift tests | Passing |
 | FR-033 | No-package-ID-branch architecture tests plus current-package compatibility review | Passing — `06a33c1` |
 | FR-034 | Source/direct-wheel/sdist-wheel payload tree, symlink dereference, and digest parity | Passing — foundation projection suite, `06a33c1` |
+| FR-037, DR-006 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw `consumer-owned`, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, resolved-target exclusion, preview, stale-plan, no-write/no-lock, source/wheel, and managed-transition refusal tests | Not Started — combined audit round 1 reconciled; convergence audit and implementation pending |
 | NFR-001 | Repeated-generation and randomized-discovery determinism tests | Passing |
 | NFR-002 | Offline build/install and network-deny provider/compatibility suites | Passing — `06a33c1`, `a891973` |
 | NFR-003 | Payload tamper and undeclared-file fixtures | Passing |
@@ -1042,6 +1061,7 @@ Exit criterion: valid/invalid fixture corpora and current repository draft fixtu
 2. Implement typed provider phase/effect interfaces and mutation/network spies.
 3. Implement declarative whole-artifact and semantic-contribution models consumed by SPEC-CP01.
 4. Implement migration graph and registered legacy-state inputs.
+5. Implement the generic, whole-file-only owner-resolution primitive with a static single-target `consumer_owned_intent_pointer` declaration, provider-echoed claim pointer, literal raw `consumer-owned` validation, unknown-and-unclaimed fail-closed retention, exact observed-target/digest preview/apply binding, resolved-target exclusion, and no lock ownership.
 
 Exit criterion: synthetic packages prove the full contract without package-ID shared-core branches.
 
@@ -1101,7 +1121,7 @@ Exit criterion: all DoD and traceability rows pass; no package compatibility blo
 
 ## Deviations Log
 
-No implementation deviations are recorded. The initial design is represented directly in revision 0.1 and the answered decisions above.
+No implementation deviations are recorded. The initial design is represented directly in revision 0.1 and the answered decisions above. The owner reviewed and accepted this empty log on 2026-07-12.
 
 ---
 

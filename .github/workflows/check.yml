@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -21,7 +21,7 @@ jobs:
 
       # SHA-pinned: setup-uv has no moving @v8 tag (dropped as of v8.0.0);
       # Dependabot bumps the SHA via the trailing version comment.
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: "0.11.6"
           enable-cache: true
@@ -38,14 +38,10 @@ jobs:
       - name: Type check
         run: uv run basedpyright
 
-      - name: Test with coverage
-        run: uv run coverage run -m pytest -m "not performance"
-
-      - name: Package contract performance gate
-        run: uv run pytest -m performance
-
-      - name: Coverage report
-        run: uv run coverage report
+      - name: Test, coverage, and performance
+        env:
+          PROJECT_STANDARDS_TEST_WORKERS: "4"
+        run: uv run python scripts/run_repository_tests.py
 
       - name: Dependency audit
         run: uv run pip-audit

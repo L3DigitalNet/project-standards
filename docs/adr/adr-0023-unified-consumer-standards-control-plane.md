@@ -6,8 +6,8 @@ description: 'Establishes one neutral .standards control plane with explicit rec
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-12'
+reviewed: '2026-07-12'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -31,6 +31,7 @@ related:
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
   - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
+  - 'docs/research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md'
 supersedes:
   - 'adr-0003-project-standards-separate-standard-and-artifact-manifests'
   - 'adr-0008-project-standards-consumer-config-namespace-registry'
@@ -39,6 +40,7 @@ superseded_by: null
 source:
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
   - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
+  - 'docs/research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md'
 confidence: 'high'
 visibility: 'internal'
 license: null
@@ -70,6 +72,7 @@ How should a consumer repository declare, reconcile, and audit its installed sta
 - Safe update and removal based on exact ownership and provenance.
 - Preservation of conventional paths required by external tools.
 - Semantic composition that does not overwrite unrelated consumer content.
+- Explicit ownership relinquishment without treating consumer bytes as package history.
 
 ## Considered Options
 
@@ -127,6 +130,10 @@ The exact versioned payload and manifest contract is defined by the successor St
 
 V5 provides explicit preview/apply migration from `.project-standards.yml` and recognized installed artifacts. Successful migration retires the legacy YAML authority only after complete conversion and validation. Known whole-file package payloads are recognized through offline versioned signatures; exact matches receive reviewed replacement actions, while modified or ambiguous matches block instead of duplicating stale and current content.
 
+One constrained owner-resolution path may preserve an unrecognized whole file without claiming it. The selected payload must statically bind one canonical `consumer_owned_intent_pointer` to a single-target `whole-file` legacy signature. Raw legacy input must explicitly select consumer ownership through that exact pointer; the migration provider must return `ownership = "consumer-owned"`, `disposition = "preserve"`, the exact observed target and digest, and an `intent_pointer` that echoes the declaration and names a recognized raw setting whose literal value is `consumer-owned`; and the resolved payload must materialize no artifact or contribution for the target. The engine verifies the claim target against the declared signature target instead of trusting the provider to choose the file. The plan exposes the preserved path and digest, apply remains bound to the observed bytes and file identity, and the central lock records no package ownership or managed unit for the file.
+
+This exception relinquishes ownership; it does not infer package provenance, validate file semantics, or authorize a future takeover. Every observed unknown signature retains the ordinary unknown-digest finding unless one fully valid, statically target-bound claim clears it; an unknown signature with no claim still fails closed. Unknown bounded blocks and every adopt, replace, remove, shared-ownership, or package-lock transition still require declared exact content evidence and fail closed otherwise. Returning a consumer-owned whole file to managed ownership requires a separate previewed adoption or replacement after the consumer explicitly resolves the existing file.
+
 V5 may retain read-only legacy validation compatibility. It never merges active YAML and TOML authorities. V6 removes the legacy fallback after migration evidence is complete.
 
 ### Consequences
@@ -135,14 +142,16 @@ V5 may retain read-only legacy validation compatibility. It never merges active 
 - Good, because package composition and removal become deterministic, reviewable, and safe.
 - Good, because standard packages remain independent while sharing platform services.
 - Good, because required external discovery paths remain intact without granting whole-file ownership.
+- Good, because a package can explicitly relinquish a whole file without misclassifying consumer bytes as package-shipped history.
 - Good, because package-specific provenance locks and untracked fragment instructions are retired.
 - Neutral, because package standards still document their own options and behavior while adoption mechanics move to the platform.
 - Bad, because the platform must implement syntax-preserving semantic adapters, migrations, and a larger compatibility suite.
+- Bad, because preserved consumer-owned files receive no package drift detection, updates, validation, or automatic path back to managed ownership.
 - Bad, because every current package must be reconstructed as immutable versioned payloads before it can be advertised as V5-compatible.
 
 ### Confirmation
 
-Conformance requires schema round trips, offline installed-wheel tests, real apply for every package/pair/full set, deterministic input-order tests, migration fixtures, path-safety tests, interruption recovery, reference-counted removal, and format-then-reconcile stability. A package that fails the compatibility matrix is not advertised as control-plane compatible.
+Conformance requires schema round trips, offline installed-wheel tests, real apply for every package/pair/full set, deterministic input-order tests, migration fixtures, path-safety tests, interruption recovery, reference-counted removal, and format-then-reconcile stability. Migration fixtures must prove that explicit consumer-owned whole-file preservation requires a static single-target pointer binding, emits no write or lock ownership, remains stale-plan-safe, rejects a provider-selected different target and simultaneous materialization, keeps unknown unclaimed, bounded, or managed content blocked, preserves known consumer-owned claims without an intent pointer, and requires a separate reviewed transition back to managed ownership. A package that fails the compatibility matrix is not advertised as control-plane compatible.
 
 ## More Information
 

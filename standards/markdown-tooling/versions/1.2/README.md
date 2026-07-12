@@ -93,6 +93,8 @@ The managed format caller sends three typed inputs to `.github/workflows/format.
 
 The reusable workflow keeps `.` as its backward-compatible default. It transfers inputs through environment variables, splits them into quoted Bash arrays, and invokes pinned Prettier over `"${globs[@]}"`. Existing `.gitignore`, existing `.prettierignore`, and the repository-root temporary file for package exclusions remain separate `--ignore-path` arguments, so each pattern keeps its correct anchor and a missing terminal newline cannot merge entries. Config values never become shell source.
 
+The self-hosted formatter uses `actions/setup-node@v6` with Node 24 and explicitly disables setup-node's automatic package-manager cache because the reusable workflow has no consumer lockfile. Current self-hosted workflows use Node 24-generation actions and therefore require GitHub Actions Runner v2.327.1 or newer on self-hosted runners.
+
 The lint and format callers are separate so repositories can select either authority independently. Neither workflow is coupled to frontmatter validation.
 
 ## Formatter policy

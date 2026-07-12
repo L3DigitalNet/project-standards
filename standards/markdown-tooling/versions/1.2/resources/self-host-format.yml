@@ -43,13 +43,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "22"
-          # No `cache: npm`: a consumer checkout has no lockfile to key the cache on.
+          node-version: "24"
+          # setup-node v6 may auto-cache npm; this reusable workflow has no lockfile
+          # from which to derive a safe consumer-specific cache key.
+          package-manager-cache: false
 
       - name: Check formatting (Prettier)
         env:

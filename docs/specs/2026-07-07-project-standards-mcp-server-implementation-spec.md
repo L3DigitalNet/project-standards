@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-09'
+last_reviewed: '2026-07-12'
 supersedes: null
 superseded_by: null
 related:
@@ -42,12 +42,13 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.5 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Record the SPEC-MT01 readiness prerequisite as passed. Server work remains deferred until v5 priorities permit, the roadmap advances, and protocol/SDK research is refreshed. |
 | 0.4 | 2026-07-09 | Coding agent | Added package-methodology ADR references and split standard descriptor version fields into package and consumer-contract planes. |
 | 0.3 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. This spec is blocked by the meta-repository readiness work in `SPEC-MT01` and follows the sequencing constraints in `SPEC-RD01`.
+**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12; implementation remains deferred by `SPEC-RD01` sequencing, v5 release priority, and the required fresh protocol/SDK review.
 
 ---
 
@@ -724,7 +725,7 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 
 ### 17.1 Definition of Done
 
-- [ ] `SPEC-MT01` readiness gate passed or the server work is stopped at MS-0 with blockers reported.
+- [x] `SPEC-MT01` readiness gate passed; see `docs/mcp-readiness.md`.
 - [ ] Required MCP ADRs in §8.3 are created or explicitly tracked as open blockers.
 - [ ] Local stdio server starts from source checkout.
 - [ ] Resource listing/reading works for current standards and fixture standard.

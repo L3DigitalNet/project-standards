@@ -64,7 +64,7 @@ id = "check-workflow-source"
 role = "provider-resource"
 path = "resources/check.yml"
 media_type = "application/yaml"
-digest = "sha256:e35d56f81208d597e95d4a780684e495c220316766c931346480f987e2285875"
+digest = "sha256:574193ff5e3ff8cc3c9334883f6af7820eb5219419d89766836da87b2c827a5b"
 
 [[resources]]
 id = "check-script-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:e27306e87c9c5920211bee739635e8019aca4fb608628da1d9489fb253a267e3"
+digest = "sha256:73172515d02a477a0bc5932442840c4c8f0568db5b64666297f9cf748619b68d"
 
 [[resources]]
 id = "provider-input"

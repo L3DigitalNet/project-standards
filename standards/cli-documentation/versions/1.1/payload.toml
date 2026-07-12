@@ -71,7 +71,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/cli_documentation.py"
 media_type = "text/x-python"
-digest = "sha256:9d0c2332a8effaa3a1a86cdd2d32516450928d4087d1f2f2d652297c619eb95c"
+digest = "sha256:cfce79c9d1f81345d10d645b677a6c967ecc62511c7cd92d4897928d02a298ed"
 
 [[resources]]
 id = "legacy-workflow"

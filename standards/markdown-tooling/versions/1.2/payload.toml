@@ -22,7 +22,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:88ac340d25aa7f7246586a1ed4ff711c74ada4d035b72d5141b418447bfa52c9"
+digest = "sha256:139d427e4398c5ba90ea38798915243208cac3b7942a18f7588d47349a6ac8c9"
 
 [[resources]]
 id = "adopt"
@@ -92,14 +92,14 @@ id = "self-host-lint-workflow"
 role = "provider-resource"
 path = "resources/self-host-lint-markdown.yml"
 media_type = "application/yaml"
-digest = "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772"
+digest = "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656"
 
 [[resources]]
 id = "self-host-format-workflow"
 role = "provider-resource"
 path = "resources/self-host-format.yml"
 media_type = "application/yaml"
-digest = "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
+digest = "sha256:901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a"
 
 [[resources]]
 id = "provider-code"

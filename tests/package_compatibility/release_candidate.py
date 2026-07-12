@@ -10,6 +10,9 @@ from pathlib import Path
 from tests.wheel_helpers import extract_pure_python_wheel
 
 _ROOT = Path(__file__).resolve().parents[2]
+_RELEASE_EVIDENCE = Path(
+    "docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md"
+)
 
 _DIRECT_WRITER_RUNTIME_PATHS = frozenset(
     {
@@ -50,22 +53,62 @@ def _git(checkout: Path, *arguments: str, input_bytes: bytes | None = None) -> b
     ).stdout
 
 
-def copy_tracked_checkout(target: Path, *, source_root: Path = _ROOT) -> Path:
-    """Copy Git-known working-tree paths, preserving symlink identities.
-
-    Include non-ignored additions and omit tracked deletions so pre-commit release
-    verification exercises the tree that would be committed, not the stale index.
-    """
+def _git_known_worktree_paths(source_root: Path) -> tuple[Path, ...]:
     result = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=source_root,
         check=True,
         capture_output=True,
     )
-    for raw in result.stdout.split(b"\0"):
-        if not raw:
+    return tuple(
+        sorted(
+            (Path(raw.decode("utf-8")) for raw in result.stdout.split(b"\0") if raw),
+            key=lambda path: path.as_posix().encode("utf-8"),
+        )
+    )
+
+
+def release_input_digest(source_root: Path = _ROOT) -> str:
+    """Hash every copied release input except the self-referential evidence file."""
+    digest = sha256()
+    for relative in _git_known_worktree_paths(source_root):
+        if relative == _RELEASE_EVIDENCE:
             continue
-        relative = Path(raw.decode("utf-8"))
+        source = source_root / relative
+        if not source.exists() and not source.is_symlink():
+            continue
+        metadata = source.lstat()
+        digest.update(relative.as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(f"{metadata.st_mode:o}".encode("ascii"))
+        digest.update(b"\0")
+        if source.is_symlink():
+            digest.update(b"symlink\0")
+            digest.update(source.readlink().as_posix().encode("utf-8"))
+        else:
+            digest.update(b"regular\0")
+            digest.update(source.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def assert_release_evidence_current(source_root: Path = _ROOT) -> None:
+    """Fail before release replay when the retained evidence predates any input."""
+    digest = release_input_digest(source_root)
+    expected = f"Release-input SHA-256: `{digest}`"
+    evidence = (source_root / _RELEASE_EVIDENCE).read_text(encoding="utf-8")
+    assert expected in evidence, (
+        f"release evidence is stale; refresh the disposable proof for release-input digest {digest}"
+    )
+
+
+def copy_tracked_checkout(target: Path, *, source_root: Path = _ROOT) -> Path:
+    """Copy Git-known working-tree paths, preserving symlink identities.
+
+    Include non-ignored additions and omit tracked deletions so pre-commit release
+    verification exercises the tree that would be committed, not the stale index.
+    """
+    for relative in _git_known_worktree_paths(source_root):
         source = source_root / relative
         if not source.exists() and not source.is_symlink():
             continue

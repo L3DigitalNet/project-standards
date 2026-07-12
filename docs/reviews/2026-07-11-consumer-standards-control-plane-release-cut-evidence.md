@@ -6,6 +6,8 @@
 
 **Release candidate:** `project-standards 5.0.0` built from a disposable tracked-tree checkout
 
+Release-input SHA-256: `fde6a239141a3702f174a3d287d020bfd4947bb979bd892aac0bf0ddfcd36c87`
+
 ## Result
 
 The disposable release cut migrates the repository from the bounded V4 YAML authority to the catalog-5 control plane without changing the source checkout. Human and JSON previews report the same applicable migration, apply retires the legacy authority and Agent Handoff package lock only after verification, and a second reconciliation changes no bytes.

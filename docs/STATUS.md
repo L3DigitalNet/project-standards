@@ -7,21 +7,27 @@
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
 - ADRs 0023-0024 govern the unified `.standards/` control plane and catalog-scoped package channels; conflicting legacy decisions are superseded.
-- SPEC-MT01 Steps 00-06 are complete; Step 07 remains the MCP-readiness gate before SPEC-MS01 server work.
+- SPEC-MT01 is approved at rev 0.9. Step 07 passes with no blocking gaps; `docs/mcp-readiness.md` is the durable completion report.
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29201533025` passed for cleanup commit `a6bb970`.
-- `SPEC-CP01` is approved rev 0.7 with current-package, installed-wheel, migration, refresh, and disposable release-cut traceability.
+- `SPEC-CP01` is approved rev 0.10; its ownership-relinquishment contract and implementation-plan audits have converged, with TDD implementation pending.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` rev 0.8 sets the v5 launch scope to the nine catalog 5 families; their immutable payloads and compatibility evidence satisfy the authoring contract.
+- `SPEC-BA02` rev 0.11 keeps the nine-family v5 scope and target-bound consumer intent; its implementation plan has converged.
 - The CP01 core and package-migration follow-on are integrated on `testing` through `b6a60fc`; all nine payloads are reconstructed and catalog 5 is active.
 - The V2 control plane covers resolution, composition, lifecycle planning, transactional apply/recovery, public commands, legacy migration, and same-major refresh.
 - Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Remaining release gates are the approved Action upgrades, verification optimization, final housekeeping, SPEC-MT01 Step 07, and the atomic source-root migration.
+- The remaining v5 gates are the reviewed coverage/ownership TDD implementation, refreshed release evidence, atomic source-root migration, and release.
+- The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
+- Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
+- Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
+- All five serial performance gates pass, and failed runs remove parallel coverage shards.
+- The owner reviewed and accepted the empty SPEC-MT01, SPEC-BA02, and SPEC-CP01 implementation-deviation logs on 2026-07-12. All three specs pass strict validate/lint.
+- The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Pruning removed 55 completed or superseded review/plan artifacts and both scratch files. The release-cut evidence and active Agent Handoff plan remain.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
@@ -32,7 +38,7 @@
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`.
 - `project-toolbox` and `agent-managed-repo` are dedicated post-v5 programs, not v5 release prerequisites.
-- The reconciled v5 scope and catalog 5 MCP review are complete; final housekeeping remains before Step 07.
+- Final pre-release housekeeping and SPEC-MT01 Step 07 are complete. MCP server work remains deferred behind v5 and fresh protocol/SDK research.
 - Nineteen known consumers validate on v1 branches; six concrete-evidence default branches, a published v5 wheel check, the final dependency search, and owner approval remain.
 - `progressive-apparel` is the first migrated consumer (`2b062b6`); its Codex-only profile validates cleanly on `main`.
 - `doc-proc-scripts` is migrated (`e1db276`); its full 532-test, 100%-coverage gate and Codex profile pass on `main`.

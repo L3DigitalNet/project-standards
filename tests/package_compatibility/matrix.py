@@ -7,6 +7,7 @@ import shutil
 import stat
 import tomllib
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import cast
 
@@ -253,6 +254,7 @@ def _assert_unmanaged_state(
             raise AssertionError(f"unknown sentinel kind: {sentinel.kind}")
 
 
+@cache
 def catalog_default_ids() -> tuple[str, ...]:
     """Return catalog 5 consumer defaults in stable package-id order."""
     repository = build_package_repository(_ROOT, catalog_major=5)

@@ -26,6 +26,8 @@ from tests.package_compatibility.matrix import (
     exercise_migrated_lifecycle,
 )
 
+pytestmark = pytest.mark.compatibility
+
 _DEFAULTS = catalog_default_ids()
 _PAIRS = tuple(combinations(_DEFAULTS, 2))
 _MANDATORY_GROUPS = (

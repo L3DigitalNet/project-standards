@@ -60,6 +60,9 @@ from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import clone_demo_family, copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
+_LEGACY_WORKFLOW = (
+    _ROOT / "tests/fixtures/package_compatibility/legacy/validate-markdown-frontmatter.yml"
+)
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
 _PAYLOAD = _FAMILY / "versions/1.2"
 _MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
@@ -500,7 +503,7 @@ markdown:
     )
     workflow = repo / ".github/workflows/validate-markdown-frontmatter.yml"
     workflow.parent.mkdir(parents=True)
-    shutil.copy2(_ROOT / ".github/workflows/validate-markdown-frontmatter.yml", workflow)
+    shutil.copy2(_LEGACY_WORKFLOW, workflow)
     legacy_skill = _FAMILY / "skills/markdown-frontmatter"
     installed_skill = repo / ".agents/skills/markdown-frontmatter"
     shutil.copytree(legacy_skill, installed_skill)
@@ -576,7 +579,7 @@ markdown:
     )
     workflow = repo / ".github/workflows/validate-markdown-frontmatter.yml"
     workflow.parent.mkdir(parents=True)
-    shutil.copy2(_ROOT / ".github/workflows/validate-markdown-frontmatter.yml", workflow)
+    shutil.copy2(_LEGACY_WORKFLOW, workflow)
     installed_skill = repo / ".agents/skills/markdown-frontmatter"
     shutil.copytree(_FAMILY / "skills/markdown-frontmatter", installed_skill)
     changed = installed_skill / modified_path

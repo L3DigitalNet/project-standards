@@ -6,12 +6,12 @@ This directory is the durable home for Project Specification Standard documents 
 
 | Specification | Status | Role |
 | --- | --- | --- |
-| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | draft rev 0.7; Step 07 open | Readiness gate for the catalog-backed MCP program |
-| [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | draft; blocked by SPEC-MT01 | Sequencing from readiness through MCP delivery |
-| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | draft; blocked by SPEC-MT01 | Thin, local, read-only-first MCP server |
+| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved rev 0.9; Step 07 passed | Completed readiness gate; evidence is in [`docs/mcp-readiness.md`](../mcp-readiness.md) |
+| [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | draft rev 0.6; Step 08 deferred | Sequencing from readiness through MCP delivery |
+| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | draft rev 0.5; implementation deferred | Thin, local, read-only-first MCP server |
 | [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.5; implemented | Catalog 5 Agent Handoff package and retirement gates |
-| [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.7; implemented except release-cut migration | Catalog/config/lock/reconciliation control plane |
-| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.8; implemented | Immutable family/payload authoring contract |
+| [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.10; ownership contract and implementation plan converged, TDD pending | Catalog/config/lock/reconciliation control plane |
+| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.11; ownership contract and implementation plan converged, TDD pending | Immutable family/payload authoring contract |
 
 ## Future maintained specifications
 

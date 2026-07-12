@@ -102,7 +102,7 @@ Policy decision: work over these file types is not complete until the check cont
 | --- | --- | --- |
 | **Prettier** | Opinionated formatter; reads `.prettierrc.json` discovered up the file tree, supports per-file `overrides`, and recursively formats all supported files via `prettier .`. [S01], [S02] | Prettier owns physical formatting of all the structured-text it supports (`md`/`json`/`jsonc`/`yaml` here). Copy-adopt config **plus** a reusable opt-in workflow (`format.yml` + `format.caller.yml`; DEC-10) that enforces `prettier --check .` repo-wide. |
 | **`markdownlint-cli2`** | Markdown linter that auto-discovers `.markdownlint-cli2.jsonc` / `.markdownlint.json` up the tree, accepts globs on the CLI, honors `gitignore`, and applies `--fix` in place. [S03], [S04] | markdownlint owns Markdown-only structural linting. The rule set (`.markdownlint.json`) is the seedable artifact. |
-| **`markdownlint-cli2-action`** | GitHub Action running on its own bundled **Node 24** (`using: node24`) [S06]; globs newline-delimited, default glob the non-recursive `*.{md,markdown}`, pinned by major tag (`@v23`) [S05]. | The reusable CI surface for the linter half. Pin the action by major tag; pass `globs` explicitly. |
+| **`markdownlint-cli2-action`** | GitHub Action running on its own bundled **Node 24** (`using: node24`) [S06]; globs newline-delimited, default glob the non-recursive `*.{md,markdown}`, pinned by major tag (`@v24`) [S05]. | The reusable CI surface for the linter half. Pin the action by major tag; pass `globs` explicitly. |
 | **EditorConfig** | Cross-editor style file; `root = true` stops the upward search; supports `charset`, `end_of_line`, `indent_style`/`indent_size`, `insert_final_newline`, `trim_trailing_whitespace`; `[glob]` sections match by filepath. [S07] | The floor under both tools. Recommended copy. |
 
 Node-runtime note: **no committed Node project is required for the linter.** GitHub runners ship Node, and the action ships its own Node 24 runtime [S06]. Prettier, if pinned reproducibly, uses a minimal `package.json` (this repo does exactly that). Frontmatter-only consumers — those that adopt only the Markdown Frontmatter Standard's validator — never inherit this linter/formatter toolchain, because it is wired as a separate opt-in workflow (DEC-8: a separate opt-in lint workflow so frontmatter-only consumers don't inherit a Node/markdownlint toolchain).
@@ -288,7 +288,7 @@ Both authorities are CI-enforceable, neither advisory-only: markdownlint is auth
 
 ## 11. CI reusable workflow
 
-The linter half ships as a reusable workflow, `.github/workflows/lint-markdown.yml`. It runs `DavidAnson/markdownlint-cli2-action@v23` [S05], which executes on its own bundled Node 24 [S06] — so a consumer needs no committed Node project. Its `workflow_call` inputs:
+The linter half ships as a reusable workflow, `.github/workflows/lint-markdown.yml`. It runs `DavidAnson/markdownlint-cli2-action@v24` [S05], which executes on its own bundled Node 24 [S06] — so a consumer needs no committed Node project. Its `workflow_call` inputs:
 
 - `globs` — newline-delimited glob(s) of Markdown to lint (default `**/*.md`). Passed explicitly because the action's own default glob is the non-recursive `*.{md,markdown}` [S06].
 - `config` — path to a base config file; empty means no `--config` flag is passed, so the underlying `markdownlint-cli2` auto-discovers config from the caller's repo (its own `.markdownlint.json` / `.markdownlint-cli2.jsonc`) [S03].

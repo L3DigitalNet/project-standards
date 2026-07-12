@@ -19,6 +19,7 @@ venv/
 .ruff_cache/
 .pytest_cache/
 .coverage
+.coverage.*
 
 # Node (Prettier toolchain)
 node_modules/

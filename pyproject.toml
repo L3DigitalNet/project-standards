@@ -29,6 +29,7 @@ dev = [
     "types-PyYAML",
     "coverage[toml]",
     "pip-audit",
+    "pytest-xdist>=3.8",
 ]
 
 [build-system]
@@ -69,11 +70,15 @@ minversion = "9.0"
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 markers = [
+    "compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase",
     "performance: deterministic scale gates run explicitly in CI",
+    "release_replay: disposable release-cut checks run in their own serial phase",
 ]
 
 [tool.coverage.run]
 branch = true
+parallel = true
+patch = ["subprocess"]
 source = ["src"]
 
 [tool.coverage.report]

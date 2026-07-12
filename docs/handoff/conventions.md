@@ -58,10 +58,10 @@ uv run validate-frontmatter --config .project-standards.yml
 **Code:**
 
 ```bash
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run python scripts/run_repository_tests.py && uv run pip-audit
 ```
 
-**Why:** `main` must stay releasable; consumers pin to tags.
+**Why:** `main` must stay releasable; consumers pin to tags. The repository runner preserves serial ordinary, release-replay, and performance phases while parallelizing only the isolated source/wheel compatibility matrix, then combines coverage before enforcing the threshold.
 
 **Sources:** pre-v3 `AGENTS.md`.
 

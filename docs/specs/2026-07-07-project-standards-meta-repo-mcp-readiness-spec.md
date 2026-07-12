@@ -1,12 +1,12 @@
 ---
 spec_id: SPEC-MT01
 title: 'Project Standards Meta-Repository MCP Readiness Preparation'
-status: draft
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-09'
+last_reviewed: '2026-07-12'
 supersedes: null
 superseded_by: null
 related:
@@ -42,8 +42,10 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Complete Step 07: publish the no-blocker MCP-readiness report, close FR-019 and the remaining documentation deliverable, and approve the completed meta-repository preparation contract. |
 | 0.6 | 2026-07-09 | Coding agent | Aligned the manifest example, adoption-mode references, and authority tuple with the implemented ADR 0017-0021 package methodology. |
 | 0.7 | 2026-07-12 | Codex V5 documentation closeout | Resolve OQ-005 from implemented V2 package evidence: agent summaries are hand-authored immutable payload resources with machine-enforced presence, size, digest, projection, and catalog checks. Mark completed readiness/documentation DoD evidence; MCP implementation remains separately deferred. |
+| 0.8 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Reviewed and accepted the empty implementation Deviations Log through Step 06. No requirement or scope changed; Step 07 remains the readiness-report gate. |
 | 0.5 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references after the adoption, lifecycle, provenance, versioning, and packaged-skill decisions were recorded. |
 | 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references from placeholders to recorded ADR paths. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: tightened independent-standard-package rules, relationship taxonomy, MCP-evidence alignment, and graph gates for package independence. |
@@ -791,9 +793,9 @@ No secrets are required. The repository must not add secrets for manifest valida
 - [x] Generated standards index exists and is checked for freshness.
 - [x] Dogfood consumer fixtures pass.
 - [x] Existing CLI/adopt/frontmatter/spec tests still pass.
-- [ ] MCP-readiness report shows no blocking gaps. Step 07 remains the explicit readiness-report gate.
+- [x] MCP-readiness report shows no blocking gaps. Step 07 passed on 2026-07-12.
 - [x] Graph validation proves active standards have no undeclared hard dependencies and that all companion/extension relationships are indexed.
-- [ ] Documentation deliverables (§18.7) complete. The Step 07 readiness report template/checklist remains pending.
+- [x] Documentation deliverables (§18.7) complete, including `docs/mcp-readiness.md`.
 
 ### 17.2 Test Strategy
 
@@ -829,7 +831,7 @@ No secrets are required. The repository must not add secrets for manifest valida
 | FR-016 | ADRs 0001-0013 are active and pass managed frontmatter/ADR validation. | Passing |
 | FR-017 | Individual, pairwise, and all-standard coverage in `tests/test_standards_composition.py`. | Passing |
 | FR-018 | `tests/test_adopt_dogfood.py` and `tests/test_standards_composition.py`. | Passing |
-| FR-019 | Step 07 must produce the MCP-readiness report and no-blocker checklist. | Blocked — Step 07 deliverable |
+| FR-019 | `docs/mcp-readiness.md`; zero-finding package/graph gates; 162 focused readiness tests; 2,506 ordinary tests; 56 source/wheel compatibility rows. | Passing |
 | FR-020 | Standard Bundle Authoring exception rules; ADR-backed extension tests in `tests/test_standards_graph_validators.py`. | Passing |
 | FR-021 | Companion, extension, hidden dependency, unknown target, and cycle tests in graph validation. | Passing |
 | FR-022 | Relationship enums/schema; `tests/test_standard_manifest.py::test_relations_rejects_requires_key`. | Passing |
@@ -914,7 +916,7 @@ No durable runtime data is owned. Repository history and normal GitHub backups c
 - [x] ADRs listed in §8.3.
 - [x] Updated adopt guides or bundle docs for every existing standard.
 - [x] `UPGRADING.md` / migration notes for manifest introduction.
-- [ ] MCP-readiness report template/checklist.
+- [x] MCP-readiness report and checklist (`docs/mcp-readiness.md`).
 
 ---
 
@@ -1025,7 +1027,9 @@ No external automation is required. CI integration is the only automation in sco
 
 | ID | Spec Reference | Deviation | Reason | Approved? |
 | --- | --- | --- | --- | --- |
-| — | N/A | No implementation deviations recorded through Step 06. | Implemented behavior follows the accepted ADRs and requirements. | N/A |
+| — | N/A | No implementation deviations recorded through Step 07. | Implemented behavior follows the accepted ADRs and requirements. | N/A |
+
+The owner reviewed and accepted this empty log on 2026-07-12. Step 07 readiness evidence is recorded separately in `docs/mcp-readiness.md`.
 
 ---
 

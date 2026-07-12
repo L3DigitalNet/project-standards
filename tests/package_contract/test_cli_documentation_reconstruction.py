@@ -326,7 +326,8 @@ def test_cli_documentation_renders_python_and_non_python_workflows() -> None:
     assert b"docs-name-a" not in python.content
     assert b"docs-name-b" not in python.content
     assert b"CLI_DOCS_COMMAND: ${{ vars.CLI_DOCS_COMMAND }}" in python.content
-    assert b"setup-uv@" in python.content
+    assert b"actions/checkout@v7" in python.content
+    assert b"astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" in python.content
     assert b"uv build --wheel --out-dir dist/" in python.content
     assert b"uv venv .cli-docs-venv" in python.content
     assert b"uv pip install --python .cli-docs-venv dist/*.whl" in python.content

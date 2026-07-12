@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-09'
+last_reviewed: '2026-07-12'
 supersedes: null
 superseded_by: null
 related:
@@ -37,6 +37,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.6 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Record SPEC-MT01 Step 07 as passed with no blocking gaps. The roadmap may proceed to Step 08 when v5 release priorities permit; protocol and SDK research remains required before server MS-0. |
 | 0.5 | 2026-07-09 | Coding agent | Added package-methodology ADR references so future MCP phases inherit adoption, lifecycle, provenance, versioning, and skill-installation policy. |
 | 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: aligned sequencing with independent-standard-package validation, SDK caution, and tool/resource safety constraints. |
@@ -601,7 +602,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 ### 17.1 Definition of Done
 
-- [ ] `SPEC-MT01` readiness gate passes.
+- [x] `SPEC-MT01` readiness gate passes; see `docs/mcp-readiness.md`.
 - [ ] Required ADRs for MCP sequencing are approved.
 - [ ] Detailed MCP implementation spec is created and approved before MCP coding.
 - [ ] Read-only local MCP can list/read manifest-generated standards resources.
@@ -628,7 +629,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 | --- | --- | --- |
 | FR-001 | Baseline inventory artifact. | Not Started |
 | FR-002 | ADR files and review checklist. | Not Started |
-| FR-003 | `SPEC-MT01` completion report. | Not Started |
+| FR-003 | `docs/mcp-readiness.md`. | Passing |
 | FR-004 | Existing CLI/docs/CI tests remain passing. | Not Started |
 | FR-005 | Standards graph API tests. | Not Started |
 | FR-006 | Existing standards manifest coverage report. | Not Started |
@@ -643,7 +644,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 | FR-015 | Apply tool plan identity tests, when write phase starts. | Not Started |
 | FR-016 | `SPEC-MS01` approved before server coding. | Not Started |
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
-| FR-018 | Readiness report and graph tests show no hidden hard dependencies before Step 08. | Not Started |
+| FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
 | FR-019 | MCP protocol/SDK source recheck entry recorded before server MS-0. | Not Started |
 
 ---
@@ -726,7 +727,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 ### 18.7 Documentation Deliverables
 
 - [ ] This roadmap approved.
-- [ ] `SPEC-MT01` completed.
+- [x] `SPEC-MT01` completed; Step 07 passed on 2026-07-12.
 - [ ] MCP implementation spec created after readiness.
 - [ ] MCP ADRs for local stdio, read-only-first, generic tools, controlled writes, and remote deferral.
 - [ ] User setup instructions for local MCP.

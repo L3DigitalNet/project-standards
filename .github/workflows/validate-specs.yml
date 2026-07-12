@@ -49,10 +49,10 @@ jobs:
       PROJECT_STANDARDS_SPEC_CONFIG: ${{ inputs.config-path }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
 

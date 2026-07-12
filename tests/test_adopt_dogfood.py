@@ -1,8 +1,8 @@
-"""Dogfood tests: bundle source files must stay byte-identical to their repo-root counterparts.
+"""Dogfood tests: current bundle files must match their adopted counterparts.
 
 The _DOGFOOD dict maps each bundle artifact that this repo self-adopts to the working-copy
-file it must match exactly. Any drift means the bundle would ship different content from
-what the repo itself runs — caught here rather than on a consumer's adoption run.
+file it must match exactly. Frozen legacy bundle bytes are validated separately because
+the repo root and current V2 packages legitimately advance beyond those old artifacts.
 
 Also covers: every manifest artifact resolves to an actual file; workflow-caller stubs
 render to valid YAML with the correct @vN ref; the starter config and AGENTS.md stub
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import stat
 import subprocess
 import tomllib
@@ -33,7 +34,6 @@ _DOGFOOD = {
     "_shared/vscode-extensions.json": ".vscode/extensions.json",
     "markdown-tooling/markdownlint.json": ".markdownlint.json",
     "markdown-tooling/prettierrc.json": ".prettierrc.json",
-    "python-tooling/check.yml": ".github/workflows/check.yml",
     "python-tooling/check.py": "scripts/check.py",
     # ADR bundle template ↔ its canonical copy under standards/ (guards silent drift —
     # the project-spec templates have the analogous guard in test_spec_packaging.py).
@@ -107,21 +107,25 @@ def test_generated_workflow_yaml_has_no_tabs() -> None:
 _PY_TOOLING_DOC = _REPO / "standards" / "python-tooling" / "README.md"
 
 
-def test_standard_doc_check_yml_block_matches_bundle() -> None:
-    # The standard's §15 scaffold and the bundle's check.yml are two representations
-    # of one artifact; manual copy-adopters use the doc block, the CLI ships the
-    # bundle. They must stay byte-identical or the two adoption paths diverge
-    # (2026-07-01: the doc block had drifted into tab-indented, unparseable YAML).
+def test_standard_doc_check_yml_block_matches_current_package_semantics() -> None:
+    # The readable standard scaffold and generated V2 resource may use different
+    # labels and spacing, but their ordered action and command contracts must agree.
     doc = _PY_TOOLING_DOC.read_text()
     blocks = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
     assert len(blocks) == 1  # §15 is the document's only YAML fence
     block = blocks[0]
-    assert block == (_BUNDLES / "python-tooling" / "check.yml").read_text()
+    current = _REPO / "standards/python-tooling/versions/1.1/resources/check.yml"
+    doc_steps = yaml.safe_load(block)["jobs"]["check"]["steps"]
+    current_steps = yaml.safe_load(current.read_text())["jobs"]["check"]["steps"]
+
+    def contract(step: dict[str, object]) -> tuple[str, object]:
+        if uses := step.get("uses"):
+            return ("uses", uses)
+        return ("run", tuple(shlex.split(str(step["run"]))))
+
+    assert [contract(step) for step in doc_steps] == [contract(step) for step in current_steps]
     assert "\t" not in block  # YAML forbids tab indentation
     yaml.safe_load(block)
-    # Guard the guard: without a bare prettier-ignore directly above the fence,
-    # Prettier's embedded formatting rewrites the block's quote style on the next
-    # --write and byte-equality with the bundle breaks.
     assert "<!-- prettier-ignore -->\n```yaml\n" in doc
 
 
