@@ -1,6 +1,6 @@
 # Python Tooling Parallel Coverage Options Design
 
-**Date:** 2026-07-12 **Status:** owner-approved; audit rounds 1-2 reconciled; implementation pending **Author:** Codex with Chris Purcell / L3DigitalNet
+**Date:** 2026-07-12 **Status:** owner-approved; audit rounds 1-3 reconciled; implementation pending **Author:** Codex with Chris Purcell / L3DigitalNet
 
 ## Problem and goal
 
@@ -23,8 +23,8 @@ Add a top-level `coverage` option object to Python Tooling 1.1:
 - The repository's disposable v5 migration selects `parallel = true` and `patch = ["subprocess"]`.
 - `pytest-xdist>=3.8` remains explicit in `additional_dev_dependencies`; selecting parallel coverage does not implicitly select a test-distribution dependency or policy.
 - Selecting the subprocess patch renders `coverage[toml]>=7.10.0`, the release that introduced `[run] patch`; configurations without a patch retain the current floorless dependency.
-- Python Tooling gains a top-level `workflow_mode = "managed" | "consumer-owned"` option, defaulting to `managed`. This follows the existing flat payload-predicate contract and the top-level workflow-mode precedent in Markdown Tooling and Project Specification.
-- This repository's disposable v5 migration selects `workflow_mode = "consumer-owned"`, preserving its optimized multi-phase `.github/workflows/check.yml` without package ownership or lock state.
+- Python Tooling gains a top-level `workflow_ownership = "managed" | "consumer-owned"` option, defaulting to `managed`. The distinct name avoids colliding with Markdown Tooling and Project Specification's `workflow_mode = "caller" | "self-hosted"` delivery axis.
+- This repository's disposable v5 migration selects `workflow_ownership = "consumer-owned"`, preserving its optimized multi-phase `.github/workflows/check.yml` without package ownership or lock state.
 
 ## Alternatives rejected
 
@@ -49,7 +49,14 @@ Add a top-level `coverage` option object to Python Tooling 1.1:
 - **SA-NEW-001:** Accepted. Coverage-option implementation keeps the V1 bundle/root script twin frozen. Atomic migration replaces only the root script, retires its obsolete `_DOGFOOD` mapping, and replaces that assertion with separate frozen-V1 and current-V2 checks.
 - **SA-NEW-002:** Accepted. The schema conditional's `then` branch requires `parallel` to be present as well as `true`.
 - **SA-NEW-003:** Accepted with a precision correction. Current coverage.py post-processing may force parallel for the subprocess patch, but the package follows the public requirement for explicit parallel configuration and does not rely on that internal behavior.
-- **Root workflow preservation:** Owner-approved as a general `workflow_mode` option. The root selects `consumer-owned`; default consumers remain `managed`.
+- **Root workflow preservation:** Owner-approved as a general workflow-ownership option. The root selects `consumer-owned`; default consumers remain `managed`.
+
+## Audit round 3 disposition
+
+- **SA-NEW-004:** Accepted. `/python_tooling/workflow_ownership` is a recognized legacy migration input, and the signature classifier consults its resolved value before emitting the workflow claim.
+- **SA-NEW-005:** Accepted. The option is renamed to `workflow_ownership` so the ownership axis cannot be confused with the existing cross-package `workflow_mode` delivery axis.
+- **SA-NEW-006:** Accepted. `ci.enabled` and `ci.performance` are documented and validated as managed-workflow-only settings; they do not govern a consumer-owned workflow.
+- **Verification wiring:** `run_verify` conditionally excludes `.github/workflows/check.yml` only when `workflow_ownership = "consumer-owned"`; the other managed whole-file targets remain verified.
 
 ## Contract changes
 
@@ -57,7 +64,7 @@ Add a top-level `coverage` option object to Python Tooling 1.1:
 
 `standards/python-tooling/versions/1.1/config.schema.json` gains the closed, fully defaulted `coverage` object. Unknown coverage keys and patch values fail package option validation before planning or writes. When raw input contains a non-empty patch, the schema conditional's `then` branch requires `parallel` to be present and equal to `true`; omission cannot fall through to the default.
 
-The same schema adds top-level `workflow_mode` with the closed values `managed` and `consumer-owned` and default `managed`.
+The same schema adds top-level `workflow_ownership` with the closed values `managed` and `consumer-owned` and default `managed`. The `ci` options remain valid in both modes for config round-trip stability, but their documentation states that they affect only a managed workflow.
 
 ### Provider rendering
 
@@ -67,7 +74,7 @@ The Python Tooling provider renders the selected values into its bounded `[tool.
 - `patch = ["subprocess"]` is emitted only when selected.
 - Canonical key order is `branch`, optional `parallel`, optional `patch`, then `source`.
 - Default rendering of `table:/tool/coverage/run` remains unchanged as `branch` then `source`; the three static whole-file resources remain unaffected.
-- `_DEFAULT_CONFIG` receives the exact schema-default `coverage` object and `workflow_mode` value so default whole-file static-source verification remains active.
+- `_DEFAULT_CONFIG` receives the exact schema-default `coverage` object and `workflow_ownership` value so default whole-file static-source verification remains active.
 - Dependency rendering selects `coverage[toml]>=7.10.0` only when `patch` is non-empty.
 
 The option does not change coverage thresholds, exclusions, test markers, worker counts, or xdist distribution policy. Those remain separate declared options or consumer-specific behavior.
@@ -89,25 +96,27 @@ The current root `scripts/check.py` and V1 adopt-bundle twin remain frozen legac
 
 ### Workflow ownership
 
-The `check-workflow` payload contribution materializes only when `workflow_mode = "managed"`, using the existing flat `when_any` predicate. In `consumer-owned` mode:
+The `check-workflow` payload contribution materializes only when `workflow_ownership = "managed"`, using the existing flat `when_any` predicate. In `consumer-owned` mode:
 
 - the payload does not declare or lock `.github/workflows/check.yml`;
-- migration classifies a recognized legacy workflow as `consumer-owned` with `preserve` disposition instead of adopting it;
-- verification excludes the workflow from managed whole-file drift checks;
+- migration recognizes `/python_tooling/workflow_ownership`, resolves it before signature classification, and emits the recognized workflow claim with `ownership = "consumer-owned"` and `disposition = "preserve"` instead of the default managed/adopt pair;
+- `run_verify` excludes the workflow from its managed whole-file loop while continuing to verify `.python-version` and `scripts/check.py`;
 - disable/re-enable leaves the workflow untouched;
 - `.python-version` and `scripts/check.py` remain managed normally.
+
+`ci.enabled` and `ci.performance` configure only a package-managed workflow. They are intentionally inert when the workflow is consumer-owned because Python Tooling neither parses nor governs consumer workflow triggers or commands.
 
 The root release intent selects `consumer-owned`, so its optimized workflow continues calling `scripts/run_repository_tests.py`. This option is general: any consumer with a project-specific Python workflow may retain it while adopting the remaining Python Tooling contract.
 
 ### Legacy migration
 
-The provider recognizes `/python_tooling/coverage` as a V4-to-V5 migration input and copies it through normal JSON-safe option handling. Schema validation then rejects invalid coverage values before reconciliation planning; legacy file-tamper signatures remain a separate fail-closed check. The disposable release fixture declares:
+The provider recognizes `/python_tooling/coverage` and `/python_tooling/workflow_ownership` as V4-to-V5 migration inputs and copies them through normal JSON-safe option handling. The resolved ownership value governs workflow signature classification in the same provider call. Schema validation then rejects invalid option values before reconciliation planning; legacy file-tamper signatures remain a separate fail-closed check. The disposable release fixture declares:
 
 - `additional_dev_dependencies = ["types-PyYAML", "pytest-xdist>=3.8"]`;
 - the `compatibility`, `performance`, and `release_replay` pytest markers;
 - `coverage.parallel = true`;
 - `coverage.patch = ["subprocess"]`.
-- `workflow_mode = "consumer-owned"`.
+- `workflow_ownership = "consumer-owned"`.
 
 The migrated `.standards/config.toml` and composed `pyproject.toml` must retain those values. Modified legacy managed files still fail signature checks, while invalid legacy option values fail package schema validation.
 
@@ -139,10 +148,10 @@ The migrated `.standards/config.toml` and composed `pyproject.toml` must retain 
 
 Follow test-driven development:
 
-1. Add failing option/default/rendering, dependency-floor, workflow-mode, and cross-field rejection tests, including omitted `parallel`.
+1. Add failing option/default/rendering, dependency-floor, workflow-ownership, and cross-field rejection tests, including omitted `parallel`.
 2. Add failing command-rendering tests for the conditional erase/run/combine/report sequence.
 3. Add a failing end-to-end scratch-consumer test whose generated gate measures subprocess-only code and produces a non-empty report.
-4. Add a failing migration test that requires `/python_tooling/coverage` recognition.
+4. Add failing migration tests that require `/python_tooling/coverage` and `/python_tooling/workflow_ownership` recognition, plus a consumer-owned workflow claim with `ownership = "consumer-owned"` and `disposition = "preserve"`.
 5. Add failing release assertions for the dependency, markers, coverage settings, generated script, and preserved consumer-owned workflow.
 6. Implement the schema and provider changes.
 7. Regenerate package digests, catalog metadata, and payload projections.
@@ -160,8 +169,10 @@ Follow test-driven development:
 - Unsupported coverage options and patch-with-false-or-omitted-parallel configurations fail before writes.
 - Default generated gates remain byte-identical; parallel-aware generated gates render erase/run/combine/report in that order.
 - The parallel-aware generated gate runs end to end, measures subprocess-only code, reports non-empty data, and removes input shards.
-- V4 migration recognizes and preserves the coverage object.
-- Managed workflow mode retains current default bytes and lifecycle behavior; consumer-owned mode omits the contribution and preserves the existing workflow across migrate/reconcile/disable/re-enable.
+- V4 migration recognizes and preserves the coverage object and `/python_tooling/workflow_ownership` setting.
+- Managed workflow ownership retains current default bytes and lifecycle behavior; consumer-owned ownership emits a preserve claim, omits the contribution, and preserves the existing workflow across migrate/reconcile/disable/re-enable.
+- Consumer-owned verification skips only `.github/workflows/check.yml`; `.python-version` and `scripts/check.py` remain managed and drift-checked.
+- `ci.enabled` and `ci.performance` are documented as managed-workflow-only settings and do not affect consumer-owned workflow bytes or lifecycle.
 - The disposable v5 root migration retains `pytest-xdist`, all three pytest markers, both coverage settings, the optimized consumer-owned workflow, and a working parallel-aware check script.
 - Atomic source-root migration retires the root-script/V1-bundle twin assertion without changing frozen V1 bytes, and proves the new root script matches current V2 rendering.
 - Source and extracted-wheel behavior remain identical.
