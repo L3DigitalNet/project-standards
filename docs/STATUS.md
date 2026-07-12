@@ -26,6 +26,7 @@
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
+- Python Tooling coverage Tasks 5–6 pass: the default remains byte-compatible, opt-in parallel/subprocess rendering is complete, and the offline paired oracle distinguishes executed subprocess code from its no-patch control. The same executable probe found a release-blocking pre-existing dual checker-table configuration; its conditional-materialization fix requires a reviewed design amendment before Tasks 7–11 continue.
 - The owner reviewed and accepted the empty SPEC-MT01, SPEC-BA02, and SPEC-CP01 implementation-deviation logs on 2026-07-12. All three specs pass strict validate/lint.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Pruning removed 55 completed or superseded review/plan artifacts and both scratch files. The release-cut evidence and active Agent Handoff plan remain.
