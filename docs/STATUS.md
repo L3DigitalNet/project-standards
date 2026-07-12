@@ -26,7 +26,7 @@
 - CP01 follow-on Tasks 1-17 are committed through `a891973`: all nine payloads are reconstructed, catalog 5 is active, the real package compatibility matrix passes from source and wheel, and the disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
 - Task 16 passes 56 compatibility rows plus three explicit performance rows across source and wheel.
-- Task 18 has reconciled v5 adoption, migration, CLI, upgrade, versioning, release, spec traceability, and generated catalog documentation. Independent review converged and the local gate passes 2,535 tests at 89% coverage; hosted post-push confirmation and the atomic source-root migration remain.
+- Task 18 has reconciled v5 adoption, migration, CLI, upgrade, versioning, release, spec traceability, and generated catalog documentation. Independent review and the 2,535-test local gate pass; hosted run `29195839078` passes for `b6a60fc`. The atomic source-root migration remains.
 - All 13 `docs/future-standards/` drafts pass broad Prettier and markdownlint checks; they remain provisional and unregistered.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`; active work is in `docs/TODO.md`.

@@ -175,7 +175,7 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 
   The approved 18-task mechanism-level core is complete through `e069c34`: neutral initialization, unified config and lock state, catalog-scoped resolution, bounded providers, semantic composition, lifecycle planning, transactional apply/recovery, and public reconciliation commands. Reconstruct and convert the current packages, implement legacy migration and same-major catalog refresh, prove compatibility for every current standard, then complete activation and release.
 
-  The owner-approved 18-task follow-on plan is locally complete through Task 18: MS-4 real-package compatibility covers every default, unordered pair, full set, validator, shared surface, and legacy namespace from source and wheel; the disposable 5.0.0 checkout records installed migration, same-major refresh preservation, replay digests, and fixed-point convergence. The final local gate passes 2,535 tests at 89% coverage. Keep this item open for the retained P3 atomic release-commit migration of this source checkout, v5 publication, and hosted post-push confirmation.
+  The owner-approved 18-task follow-on plan is complete through Task 18: MS-4 real-package compatibility covers every default, unordered pair, full set, validator, shared surface, and legacy namespace from source and wheel; the disposable 5.0.0 checkout records installed migration, same-major refresh preservation, replay digests, and fixed-point convergence. The 2,535-test local gate and hosted run `29195839078` pass. Keep this item open for the retained P3 atomic release-commit migration of this source checkout and v5 publication.
 
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 

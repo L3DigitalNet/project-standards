@@ -367,7 +367,7 @@ Existing package resources remain canonical only when copied into a version dire
 - [x] Normalize all v5 specs/ADRs affected by implementation. Resolve or explicitly defer SPEC-MT01 OQ-005 and leave no stale status row or unexplained unchecked implemented DoD item.
 - [x] Add the package compatibility matrix and migration/refresh/release evidence to the durable docs without turning `docs/STATUS.md` into a changelog.
 - [x] Run an inline adversarial implementation review. Fix every Important-or-higher finding and rerun focused evidence before the full gate.
-- [ ] Run the complete verification gate below and confirm hosted graph/catalog CI for the pushed `testing` commit. The complete local gate passes; hosted confirmation awaits an authorized push.
+- [x] Run the complete verification gate below and confirm hosted graph/catalog CI for the pushed `testing` commit. The local gate passes 2,535 tests at 89% coverage; hosted run `29195839078` passes for `b6a60fc`.
 - [x] Update `docs/TODO.md` without deleting the retained v5 tracker: record MS-4 and disposable dogfood evidence under the CP01 follow-on, but leave that item open for the atomic release-commit migration. Leave release publication, Step 07, MCP, toolbox, repository-governance, and Agent Handoff retirement tasks open.
 - [x] Commit: `docs(v5): close package migration readiness`
 
