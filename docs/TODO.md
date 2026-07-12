@@ -32,7 +32,7 @@ Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independen
 
 - [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
 
-  Release replay proved that Python Tooling 1.1 cannot represent the required parallel/subprocess coverage settings and that the optimized consumer-owned workflow needs a generic, target-bound ownership-relinquishment path. ADR 0023, SPEC-CP01 rev 0.10, SPEC-BA02 rev 0.11, and the owner-approved design now converge on that fail-closed contract. The contract convergence audit and implementation-plan audit both pass; the reviewed 11-task TDD plan covers engine/package changes, complete legacy replay, refreshed evidence, and the atomic root transition. Next, capture the converged artifacts in a prerequisite commit, execute the plan in an isolated worktree, refresh release evidence, and complete the atomic migration.
+  Release replay proved that Python Tooling 1.1 cannot represent the required parallel/subprocess coverage settings and that the optimized consumer-owned workflow needs a generic, target-bound ownership-relinquishment path. The reviewed 11-task TDD plan is in progress on an isolated feature branch. Tasks 1–4 are complete: the generic declaration/report contracts, fail-closed engine resolution, known-claim compatibility, lifecycle preservation, explicit return-to-managed boundary, and stale-plan refusal pass independent adversarial review and verification. Next, implement the Python Tooling options, rendering, migration provider, and authoring documentation in Tasks 5–8; then refresh release replay/evidence and perform the atomic root migration.
 
 ### P2 — Cut and publish v5.0.0
 

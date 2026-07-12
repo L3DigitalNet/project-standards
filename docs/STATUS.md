@@ -12,7 +12,7 @@
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29201533025` passed for cleanup commit `a6bb970`.
-- `SPEC-CP01` is approved rev 0.10; its ownership-relinquishment contract and implementation-plan audits have converged, with TDD implementation pending.
+- `SPEC-CP01` is approved rev 0.10; its ownership-relinquishment contract and implementation-plan audits have converged. Generic engine Tasks 1–4 are implemented and independently verified on the isolated feature branch.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` rev 0.11 keeps the nine-family v5 scope and target-bound consumer intent; its implementation plan has converged.
 - The CP01 core and package-migration follow-on are integrated on `testing` through `b6a60fc`; all nine payloads are reconstructed and catalog 5 is active.
@@ -21,7 +21,7 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- The remaining v5 gates are the reviewed coverage/ownership TDD implementation, refreshed release evidence, atomic source-root migration, and release.
+- The remaining v5 gates are Python Tooling package Tasks 5–8, refreshed release replay/evidence, atomic source-root migration, and release.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
