@@ -30,17 +30,9 @@ Work in priority order. P0 and P1 gate the v5 release; P3 may proceed independen
 
 ### P0 — Resolve release debt
 
-- [ ] Approve and execute the disposition of completed plans and review artifacts.
-
-  The inventory contains 29 Codex review rounds, 13 review/evidence documents, 13 completed plans, one active Agent Handoff plan, and one superseded `check` plan. Retain the release-cut evidence and active plan; delete only approved candidates, then update references and indexes.
-
-- [ ] Decide whether to delete the two ignored scratch files.
-
-  `docs/scratch/scratch.md` is an interrupted-session transcript; `docs/scratch/tree_output.md` is a generated tree snapshot.
-
 - [ ] Apply the reviewed GitHub Action upgrades across the v5 authority surface.
 
-  This high-risk CI change requires owner approval. Upgrade only live root and V2 workflows, provider output, payload digests, and current documentation; preserve registered legacy bytes. Keep npm caching disabled where v4 omitted it, document the Node 24 runner floor, regenerate projections, and prove source/wheel parity.
+  Owner-approved on 2026-07-12. Upgrade only live root and V2 workflows, provider output, payload digests, and current documentation; preserve registered legacy bytes. Keep npm caching disabled where v4 omitted it, document the Node 24 runner floor, regenerate projections, and prove source/wheel parity.
 
 - [ ] Review and accept the empty v5 implementation-deviation logs.
 

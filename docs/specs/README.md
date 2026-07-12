@@ -1,6 +1,6 @@
 # Project Specifications
 
-This directory is the durable home for Project Specification Standard documents that the repository keeps and maintains. Historical design and brainstorming artifacts remain under `docs/superpowers/specs/`; implementation plans remain under `docs/superpowers/plans/`.
+This directory is the durable home for Project Specification Standard documents that the repository keeps and maintains. Historical design and brainstorming artifacts remain under `docs/superpowers/specs/`; only active implementation plans remain under `docs/superpowers/plans/`.
 
 ## Current specifications
 

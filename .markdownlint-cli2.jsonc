@@ -21,7 +21,6 @@
 	// Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
 	// ignored — they stay gated.
 	"ignores": [
-		"docs/codex-reviews/**",
 		"docs/handoff/**",
 		"tests/fixtures/specs/**",
 		"tests/fixtures/package_compatibility/legacy/**"

@@ -35,7 +35,6 @@ supersedes: []
 superseded_by: null
 source:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'docs/reviews/2026-07-09-agent-handoff-spec-review.md'
   - 'standards/standard-bundle-authoring/README.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'

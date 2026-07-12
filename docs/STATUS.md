@@ -21,8 +21,8 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Remaining release gates are owner-directed debt disposition, final housekeeping, SPEC-MT01 Step 07, and the atomic source-root migration.
-- The first release-debt inventory found 42 review/evidence artifacts, 15 plans, 12 future-standard drafts, two indexes, and two ignored scratch files.
+- Remaining release gates are the approved Action upgrades, verification optimization, final housekeeping, SPEC-MT01 Step 07, and the atomic source-root migration.
+- Pruning removed 55 completed or superseded review/plan artifacts and both scratch files. The release-cut evidence and active Agent Handoff plan remain.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
 - GitHub issue #3 and PRs #1, #2, #4, #5, and #6 are closed with no open PRs; incomplete action bumps are consolidated into one v5-wide parity task.

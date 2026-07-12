@@ -1,6 +1,6 @@
 # Design: `check` — drift detection for adopted standards artifacts
 
-**Date:** 2026-06-08 **Status:** approved (brainstorming complete; refined by codex-review round 3; plan ready at `2026-06-08-check-drift.md`) **Author:** session 2026-06-08
+**Date:** 2026-06-08 **Status:** approved historical design; superseded by the CP01/V2 control plane **Author:** session 2026-06-08
 
 ## Table of Contents
 

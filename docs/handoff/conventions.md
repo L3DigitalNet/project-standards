@@ -110,7 +110,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 **Rule:** machine-generated or template Markdown is **excluded** from style gates, not reformatted. Draw one boundary and mirror it across gates:
 
 - `.project-standards.yml` excludes `docs/handoff/**` from frontmatter validation.
-- `.markdownlint-cli2.jsonc` ignores `docs/codex-reviews/**` and `docs/handoff/**`; verify local and CI behavior.
+- `.markdownlint-cli2.jsonc` ignores append-only `docs/handoff/**`; verify local and CI behavior.
 - `.prettierignore` mirrors the markdownlint ignore boundary.
 
 **Why:** codex review transcripts, v3 handoff state, and shipped templates change mechanically. Style-linting them creates churn and false red CI.

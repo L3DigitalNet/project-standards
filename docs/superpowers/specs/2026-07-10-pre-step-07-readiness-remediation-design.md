@@ -8,7 +8,7 @@ SPEC-MT01 Steps 00-06 are implemented and the full local Python gate is green, b
 
 The goal is to reconcile the implemented contract with its evidence, fix verified housekeeping defects, and add an explicit repository-only graph/catalog CI gate. The work must not change the generic Python Tooling verification contract or begin MCP server implementation.
 
-The source inventory is the [2026-07-10 readiness and housekeeping review](../../codex-reviews/2026-07-10-1004-codex-review-plan.md). The design also incorporates the [2026-07-10 adversarial design review](../../reviews/2026-07-10-pre-step-07-remediation-design-adversarial-review.md).
+The 2026-07-10 readiness inventory and adversarial review are incorporated into this design; their completed review artifacts were pruned before v5 after the accepted outcomes were preserved here and in session history.
 
 ## Approved approach
 
