@@ -80,6 +80,23 @@ def test_editorconfig_shared_property_preserves_until_last_reference_removal() -
     assert b"max_line_length = 100" in removed
 
 
+def test_editorconfig_global_property_round_trip_restores_created_bytes() -> None:
+    content = b"root = true\n\n[*]\ncharset = utf-8\n"
+    adapter = EditorConfigAdapter()
+    scope = "property:$global#root"
+
+    removed = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+    restored = adapter.render(
+        adapter.inspect(removed, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, content=b"true", value="true"),),
+    )
+
+    assert restored == content
+
+
 def test_editorconfig_appends_properties_and_missing_sections_canonically() -> None:
     before = _fixture("consumer.editorconfig")
     adapter = EditorConfigAdapter()

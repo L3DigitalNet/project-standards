@@ -216,6 +216,128 @@ def test_yaml_creates_nested_key_in_empty_block_mapping_with_crlf() -> None:
     assert after == b"settings:\r\n  existing: true\r\n  new: false\r\n"
 
 
+def test_yaml_removing_last_mapping_entry_preserves_an_empty_mapping() -> None:
+    content = b"name: Validate\njobs:\n  frontmatter:\n    uses: workflow.yml\n"
+    adapter = YamlAdapter()
+    scope = "key:/jobs/frontmatter"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b"name: Validate\njobs: {}\n"
+    recreated = adapter.render(
+        adapter.inspect(after, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b"uses: workflow.yml\n",
+                value={"uses": "workflow.yml"},
+            ),
+        ),
+    )
+    assert b"jobs:\n  frontmatter:\n" in recreated
+
+
+def test_yaml_removing_last_mapping_entry_preserves_nested_consumer_comments() -> None:
+    content = (
+        b"name: Validate\n"
+        b"jobs: # consumer jobs\n"
+        b"  # consumer note\n"
+        b"  frontmatter:\n"
+        b"    uses: workflow.yml\n"
+    )
+    adapter = YamlAdapter()
+    scope = "key:/jobs/frontmatter"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b"name: Validate\njobs: # consumer jobs\n  # consumer note\n  {}\n"
+
+
+def test_yaml_removing_only_root_entry_preserves_consumer_header() -> None:
+    content = b"# consumer header\nfrontmatter:\n  uses: workflow.yml\n"
+    adapter = YamlAdapter()
+    scope = "key:/frontmatter"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b"# consumer header\n{}\n"
+
+
+def test_yaml_root_collapse_keeps_consumer_footer_after_empty_mapping() -> None:
+    content = b"# consumer header\nfrontmatter:\n  uses: workflow.yml\n# consumer footer\n"
+    adapter = YamlAdapter()
+    scope = "key:/frontmatter"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b"# consumer header\n{}\n# consumer footer\n"
+
+
+def test_yaml_empty_parent_expansion_keeps_inline_comment_on_parent() -> None:
+    content = b"name: Validate\njobs: {} # consumer jobs\n"
+    adapter = YamlAdapter()
+    scope = "key:/jobs/frontmatter"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b"uses: workflow.yml\n",
+                value={"uses": "workflow.yml"},
+            ),
+        ),
+    )
+
+    assert after == (
+        b"name: Validate\njobs: # consumer jobs\n  frontmatter:\n    uses: workflow.yml\n"
+    )
+
+
+def test_yaml_commented_parent_remove_recreate_round_trip_is_exact() -> None:
+    content = (
+        b"name: Validate\n"
+        b"jobs: # consumer jobs\n"
+        b"  # consumer note\n"
+        b"  frontmatter:\n"
+        b"    uses: workflow.yml\n"
+    )
+    adapter = YamlAdapter()
+    scope = "key:/jobs/frontmatter"
+
+    removed = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+    recreated = adapter.render(
+        adapter.inspect(removed, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b"uses: workflow.yml\n",
+                value={"uses": "workflow.yml"},
+            ),
+        ),
+    )
+
+    assert recreated == content
+
+
 @pytest.mark.parametrize(
     ("content", "scope", "message"),
     [

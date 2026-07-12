@@ -36,6 +36,7 @@ class UnitChange:
     scope: str
     content: bytes | None = None
     value: JsonValue | bytes | None = None
+    prune_empty_ancestors: bool = False
 
 
 class DocumentAdapter(Protocol):

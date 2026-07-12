@@ -274,6 +274,25 @@ def test_toml_table_removal_removes_owned_code_but_preserves_comments() -> None:
     assert parsed["tool"] == {"coverage.py": {"branch": True}}
 
 
+def test_toml_created_table_round_trip_restores_preexisting_bytes() -> None:
+    content = b'[dependency-groups]\ndev = ["pytest"]\n'
+    fragment = b"[tool.ruff]\nline-length = 100\n"
+    adapter = TomlAdapter()
+    scope = "table:/tool/ruff"
+    desired = _unit(adapter, fragment, scope)
+
+    created = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, desired.raw, desired.value),),
+    )
+    removed = adapter.render(
+        adapter.inspect(created, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert removed == content
+
+
 @pytest.mark.parametrize(
     ("content", "message"),
     [

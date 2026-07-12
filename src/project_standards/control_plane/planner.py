@@ -971,7 +971,12 @@ def _classify_removed(
     return unit, None
 
 
-def _change(unit: PlannedUnit, desired: _DesiredGroup | None) -> UnitChange:
+def _change(
+    unit: PlannedUnit,
+    desired: _DesiredGroup | None,
+    *,
+    prune_empty_ancestors: bool,
+) -> UnitChange:
     if unit.kind in {ActionKind.CREATE, ActionKind.ADOPT, ActionKind.UPDATE}:
         if desired is None:
             raise ControlPlaneError("mutating unit action is missing desired content")
@@ -981,7 +986,11 @@ def _change(unit: PlannedUnit, desired: _DesiredGroup | None) -> UnitChange:
             content=desired.unit.raw,
             value=desired.unit.value,
         )
-    return UnitChange(unit.kind, unit.scope)
+    return UnitChange(
+        unit.kind,
+        unit.scope,
+        prune_empty_ancestors=prune_empty_ancestors,
+    )
 
 
 def _target_action(
@@ -1070,7 +1079,7 @@ def _container_is_package_empty(
         return True
     if adapter in {AdapterKind.JSON, AdapterKind.JSONC}:
         value = container_value_without_comments(rendered, adapter)
-        return value == _json_empty_scaffold(scopes)
+        return value == {} or value == _json_empty_scaffold(scopes)
     return False
 
 
@@ -1170,8 +1179,15 @@ def _render_targets(
         if target_findings:
             findings.extend(target_findings)
             continue
+        platform_created_container = bool(previous) and all(
+            item.created_container for item in previous
+        )
         changes = tuple(
-            _change(unit, desired_map.get((adapter_kind, unit.scope)))
+            _change(
+                unit,
+                desired_map.get((adapter_kind, unit.scope)),
+                prune_empty_ancestors=platform_created_container,
+            )
             for unit in sorted(target_units, key=lambda item: item.scope.encode("utf-8"))
         )
         rendered = adapter.render(adapter.inspect(current_content, scopes), changes)

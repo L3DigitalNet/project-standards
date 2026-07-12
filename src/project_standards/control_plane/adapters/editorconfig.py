@@ -190,7 +190,10 @@ def _insertion_position(document: EditorConfigDocument, section: str) -> int | N
     if properties:
         return properties[-1].source_end
     if section == "$global":
-        return document.sections[0].start if document.sections else len(document.text)
+        if not document.sections:
+            return len(document.text)
+        first_section = document.sections[0].start
+        return 0 if not document.text[:first_section].strip() else first_section
     found = _section(document, section)
     return found.header_end if found is not None else None
 

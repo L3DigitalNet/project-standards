@@ -548,11 +548,13 @@ def _preserve_comments_and_whitespace(source: str) -> str:
     delimiter: str | None = None
     comment = False
     index = 0
+    line_start = 0
     while index < len(source):
         if comment:
             preserved.append(source[index])
             if source[index] == "\n":
                 comment = False
+                line_start = index + 1
             index += 1
             continue
         if delimiter is not None:
@@ -563,8 +565,8 @@ def _preserve_comments_and_whitespace(source: str) -> str:
             if delimiter in {'"', '"""'} and source[index] == "\\":
                 index += 2
                 continue
-            if source[index].isspace():
-                preserved.append(source[index])
+            if source[index] == "\n":
+                line_start = index + 1
             index += 1
             continue
         if source.startswith('"""', index) or source.startswith("'''", index):
@@ -575,10 +577,13 @@ def _preserve_comments_and_whitespace(source: str) -> str:
         if character in {'"', "'"}:
             delimiter = character
         elif character == "#":
+            prefix = source[line_start:index]
+            if not prefix.strip():
+                preserved.append(prefix)
             comment = True
             preserved.append(character)
-        elif character.isspace():
-            preserved.append(character)
+        elif character == "\n":
+            line_start = index + 1
         index += 1
     return "".join(preserved)
 
@@ -588,6 +593,33 @@ def _apply_edits(text: str, edits: list[tuple[int, int, str]]) -> str:
     for start, end, replacement in sorted(edits, reverse=True):
         updated = f"{updated[:start]}{replacement}{updated[end:]}"
     return updated
+
+
+def _removal_bounds(
+    text: str,
+    statement: TomlStatement,
+    *,
+    consume_separator: bool,
+) -> tuple[int, int]:
+    start = statement.start
+    end = statement.end
+    if text.startswith("\r\n", end):
+        end += 2
+    elif end < len(text) and text[end] in "\r\n":
+        end += 1
+    if not consume_separator:
+        return start, end
+
+    whitespace_start = start
+    while whitespace_start > 0 and text[whitespace_start - 1].isspace():
+        whitespace_start -= 1
+    if whitespace_start == 0:
+        return 0, end
+    if text.startswith("\r\n", whitespace_start):
+        return whitespace_start + 2, end
+    if text[whitespace_start] in "\r\n":
+        return whitespace_start + 1, end
+    return start, end
 
 
 def _insertion_position(
@@ -739,12 +771,17 @@ class TomlAdapter:
                     selected = _table_statements(statements, spec.path)
                 if not selected or selected[0] is None:
                     raise ControlPlaneError("TOML removal scope is not independently addressable")
-                for statement in cast("tuple[TomlStatement, ...]", selected):
-                    source = text[statement.start : statement.end]
+                for index, statement in enumerate(cast("tuple[TomlStatement, ...]", selected)):
+                    start, end = _removal_bounds(
+                        text,
+                        statement,
+                        consume_separator=spec.kind != "key" and index == 0,
+                    )
+                    source = text[start:end]
                     edits.append(
                         (
-                            statement.start,
-                            statement.end,
+                            start,
+                            end,
                             _preserve_comments_and_whitespace(source),
                         )
                     )

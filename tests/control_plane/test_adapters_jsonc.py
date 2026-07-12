@@ -310,6 +310,36 @@ def test_json_family_composes_nested_members_and_removes_to_empty_object(
 
 
 @pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_prunes_platform_created_empty_ancestors(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    content = b'{"consumer":true,"[markdown]":{"editor.formatOnSave":true}}\n'
+    scope = "key:/[markdown]/editor.formatOnSave"
+
+    removed = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope, prune_empty_ancestors=True),),
+    )
+
+    assert json.loads(removed) == {"consumer": True}
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_prunes_platform_separator_whitespace(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    content = b'{"alpha":true,    "removed":false,    "zeta":true}\n'
+    scope = "key:/removed"
+
+    removed = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope, prune_empty_ancestors=True),),
+    )
+
+    assert removed == b'{"alpha":true,    "zeta":true}\n'
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
 def test_json_family_nested_key_creation_preserves_existing_siblings(
     adapter: JsonAdapter | JsoncAdapter,
 ) -> None:

@@ -330,17 +330,17 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Create `tests/package_compatibility/**`, including `test_performance.py`, and fixtures; update package-specific tests where matrix failures expose contract defects.
 
-- [ ] Build a table-driven list from catalog 5 rather than hardcoding a count. Assert every consumer default passes fresh enable/apply/validate/disable/re-enable alone.
-- [ ] Generate every unordered pair from the consumer-default list. Exercise fresh and migrated apply, all declared validators, shared ownership, removal, and second-apply byte identity.
-- [ ] Exercise the full supported set once per fresh and all-namespace legacy correctness fixture under the ordinary non-performance gate.
-- [ ] Mark only the 100-order requested/discovery permutation sweep as `performance`. Compare reports, config/catalog/lock, planned actions, and final files, and require completion within 30 seconds on the normal Linux CI runner.
-- [ ] Add targeted mandatory matrices: Python Tooling + Agent Handoff + Markdown Tooling; ADR + Frontmatter; Project Spec + Frontmatter; every package contributing to VS Code, EditorConfig, workflows, or agent instructions.
-- [ ] Assert a failure in any package row excludes that package from catalog 5 rather than weakening or skipping the row.
-- [ ] Build/extract one session-scoped wheel, deny network, rerun the individual/pair/full correctness matrix against that shared installed payload tree, and compare source/wheel results. Do not rebuild the wheel per matrix row.
-- [ ] Put repeated wheel build/extract cycles in `test_performance.py` under the `performance` marker; keep one installed-wheel individual/pair/full correctness pass in the default gate.
-- [ ] Add performance assertions that the real catalog remains within the existing 100-package/1,000-artifact planning threshold.
-- [ ] Run `uv run pytest tests/package_compatibility -m 'not performance' -q`; expect every correctness row pass. Run `uv run pytest tests/package_compatibility/test_performance.py -m performance -q` separately; expect the 100-order and repeated-wheel budgets to pass.
-- [ ] Commit: `test(v5): prove current package compatibility`
+- [x] Build a table-driven list from catalog 5 rather than hardcoding a count. Assert every consumer default passes fresh enable/apply/validate/disable/re-enable alone.
+- [x] Generate every unordered pair from the consumer-default list. Exercise fresh and migrated apply, all declared validators, shared ownership, removal, and second-apply byte identity.
+- [x] Exercise the full supported set once per fresh and all-namespace legacy correctness fixture under the ordinary non-performance gate.
+- [x] Mark only the 100-order requested/discovery permutation sweep as `performance`. Compare reports, config/catalog/lock, planned actions, and final files, and require completion within 30 seconds on the normal Linux CI runner.
+- [x] Add targeted mandatory matrices: Python Tooling + Agent Handoff + Markdown Tooling; ADR + Frontmatter; Project Spec + Frontmatter; every package contributing to VS Code, EditorConfig, workflows, or agent instructions.
+- [x] Assert a failure in any package row excludes that package from catalog 5 rather than weakening or skipping the row.
+- [x] Build/extract one session-scoped wheel, deny network, rerun the individual/pair/full correctness matrix against that shared installed payload tree, and compare source/wheel results. Do not rebuild the wheel per matrix row.
+- [x] Put repeated wheel build/extract cycles in `test_performance.py` under the `performance` marker; keep one installed-wheel individual/pair/full correctness pass in the default gate.
+- [x] Add performance assertions that the real catalog remains within the existing 100-package/1,000-artifact planning threshold.
+- [x] Run `uv run pytest tests/package_compatibility -m 'not performance' -q`; expect every correctness row pass. Run `uv run pytest tests/package_compatibility/test_performance.py -m performance -q` separately; expect the 100-order and repeated-wheel budgets to pass.
+- [x] Commit: `test(v5): prove current package compatibility`
 
 ### Task 17: Disposable Release-Cut Dogfood and Refresh Proof
 
