@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from project_standards import (
@@ -27,6 +28,7 @@ from project_standards.adopt.manifest import (
     available_standards,
     load_manifest,
 )
+from project_standards.control_plane.models import ConsumerCatalog
 from project_standards.registry import Registry, RegistryError, load_registry
 
 
@@ -76,22 +78,73 @@ _V5_ADOPT_DEPRECATION = (
 )
 
 
-def _adopt_positional_standards(args: list[str]) -> tuple[str, ...]:
-    """Extract adopt standard ids while skipping values owned by specialized flags."""
+def v5_catalog_has_all_adoptable_defaults(catalog: ConsumerCatalog) -> bool:
+    """Return whether V2 can replace the complete legacy consumer surface."""
+    defaults = {
+        standard_id
+        for standard_id, standard in catalog.standards.items()
+        if standard.default is not None
+    }
+    return defaults == set(_ADOPTABLE_STANDARD_IDS)
+
+
+@dataclass(frozen=True, slots=True)
+class _EarlyAdoptRoute:
+    standards: tuple[str, ...]
+    destination: Path
+    force: bool
+    dry_run: bool
+    legacy_only_options: bool
+
+
+def _parse_early_adopt(args: list[str]) -> _EarlyAdoptRoute | None:
+    """Parse only the closed option surface needed before Agent Handoff dispatch."""
     standards: list[str] = []
+    destination = Path.cwd()
+    force = False
+    dry_run = False
+    legacy_only = False
     index = 0
     while index < len(args):
         argument = args[index]
         if argument in {"--dest", "--repo", "--harness"}:
+            if index + 1 >= len(args) or args[index + 1].startswith("-"):
+                return None
+            value = args[index + 1]
+            if argument == "--dest":
+                destination = Path(value)
+            else:
+                legacy_only = True
             index += 2
             continue
         if argument.startswith(("--dest=", "--repo=", "--harness=")):
+            option, _separator, value = argument.partition("=")
+            if not value:
+                return None
+            if option == "--dest":
+                destination = Path(value)
+            else:
+                legacy_only = True
             index += 1
             continue
-        if not argument.startswith("-"):
+        if argument == "--force":
+            force = True
+        elif argument == "--dry-run":
+            dry_run = True
+        elif argument in {"--manual", "--automatic", "--json"}:
+            legacy_only = True
+        elif argument.startswith("-"):
+            return None
+        else:
             standards.append(argument)
         index += 1
-    return tuple(standards)
+    return _EarlyAdoptRoute(
+        tuple(standards),
+        destination,
+        force,
+        dry_run,
+        legacy_only,
+    )
 
 
 def _assert_registry_bundle_parity(registry: Registry) -> None:
@@ -172,6 +225,7 @@ def _try_v5_adopt(
     *,
     force: bool,
     dry_run: bool,
+    unsupported_options: bool = False,
 ) -> int | None:
     """Route only fully advertised V2 selections through the control plane."""
     from project_standards.control_plane.distribution import InstalledDistribution
@@ -191,6 +245,18 @@ def _try_v5_adopt(
         catalog = distribution.consumer_catalog(major)
     except (PackageContractError, OSError, ValueError) as exc:
         print(f"error: installed V2 catalog is invalid: {exc}", file=sys.stderr)
+        return 2
+    if not v5_catalog_has_all_adoptable_defaults(catalog):
+        print(
+            "error: installed V2 catalog does not expose the complete consumer default set",
+            file=sys.stderr,
+        )
+        return 2
+    if unsupported_options:
+        print(
+            "error: legacy agent-handoff adopt options are unavailable under V5",
+            file=sys.stderr,
+        )
         return 2
     selected = [catalog.standards.get(standard_id) for standard_id in standards]
     if not any(item is not None for item in selected):
@@ -293,14 +359,29 @@ def main(argv: list[str] | None = None) -> int:
 
         return _agent_handoff_run(args_list[1:])
 
-    if (
-        args_list
-        and args_list[0] == "adopt"
-        and "agent-handoff" in _adopt_positional_standards(args_list[1:])
-    ):
+    adopt_help = args_list[:1] == ["adopt"] and any(
+        argument in {"--help", "-h"} for argument in args_list[1:]
+    )
+    early_adopt = (
+        _parse_early_adopt(args_list[1:]) if args_list[:1] == ["adopt"] and not adopt_help else None
+    )
+    if args_list[:1] == ["adopt"] and not adopt_help and early_adopt is None:
+        print("error: invalid adopt arguments", file=sys.stderr)
+        return 2
+    if early_adopt is not None and "agent-handoff" in early_adopt.standards:
+        adopt_args = args_list[1:]
+        v5_result = _try_v5_adopt(
+            list(early_adopt.standards),
+            early_adopt.destination,
+            force=early_adopt.force,
+            dry_run=early_adopt.dry_run,
+            unsupported_options=early_adopt.legacy_only_options,
+        )
+        if v5_result is not None:
+            return v5_result
         from project_standards.agent_handoff.cli import run_adopt as _agent_handoff_adopt
 
-        return _agent_handoff_adopt(args_list[1:])
+        return _agent_handoff_adopt(adopt_args)
 
     # EARLY DISPATCH for `validate`: delegate every trailing arg to all three validators BEFORE the
     # adopt/list parser runs. `parse_args()` + `REMAINDER` does NOT work here — argparse rejects

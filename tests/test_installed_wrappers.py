@@ -18,7 +18,10 @@ import pytest
 
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import load_payload_manifest
-from project_standards.package_contract.projection import sync_payload_projection
+from project_standards.package_contract.projection import (
+    plan_payload_projection,
+    sync_payload_projection,
+)
 
 _SCRIPTS = tuple(
     tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["scripts"]
@@ -62,7 +65,10 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     fixture = source / "tests/fixtures/package_contract/valid/full"
     shutil.rmtree(source / "standards")
     shutil.copytree(fixture / "standards", source / "standards")
+    shutil.rmtree(source / "catalogs")
     shutil.copytree(fixture / "catalogs", source / "catalogs")
+    for projection in ("catalogs", "families", "payloads"):
+        shutil.rmtree(source / "src/project_standards" / projection)
 
     provider = source / "standards/alpha/versions/2.0/provider.py"
     original_provider = provider.read_bytes()
@@ -132,6 +138,30 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def _run(venv: Path, cmd: str, *args: str) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "NO_COLOR": "1", "COLUMNS": "100"}
     return subprocess.run([str(venv / "bin" / cmd), *args], capture_output=True, text=True, env=env)
+
+
+def test_installed_wheel_matches_every_catalog_advertised_source_byte(
+    installed_venv: Path,
+) -> None:
+    located = subprocess.run(
+        [
+            str(installed_venv / "bin/python"),
+            "-c",
+            "import pathlib, project_standards; print(pathlib.Path(project_standards.__file__).parent)",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    installed_root = Path(located.stdout.strip())
+    source_root = Path("src/project_standards").resolve()
+
+    for link in plan_payload_projection(Path.cwd()).links:
+        relative = link.destination.relative_to(source_root)
+        installed = installed_root / relative
+        assert installed.is_file(), relative
+        assert not installed.is_symlink(), relative
+        assert installed.read_bytes() == link.source.read_bytes(), relative
 
 
 @pytest.mark.parametrize("script", _SCRIPTS)

@@ -1,64 +1,12 @@
-# Machine manifest for the CLI Documentation Standard.
+schema_version = "2.0"
 
 [standard]
 id = "cli-documentation"
 name = "CLI Documentation Standard"
-status = "active"
 summary = "Profile-based user-facing CLI help, usage-reference, man-page, and drift-check documentation."
-adoption = "copy-adopt"
+status = "active"
 
-[versions]
-supported = ["1.0", "1.1"]
-latest = "1.1"
-
-[config]
-namespaces = ["cli_documentation"]
-
-[capabilities]
-provides = ["cli.docs.usage", "cli.docs.drift-check", "cli.docs.templates"]
-consumes_platform = []
-
-[relations]
-companions = []
-extends = []
-conflicts = []
-
-[resources]
-readme = "README.md"
-agent_summary = "agent-summary.md"
-adopt = "adopt.md"
-research_notes = "resources/research-notes.md"
-usage_example = "examples/usage.example.md"
-usage_template = "templates/usage-doc.md"
-readme_single_file_template = "templates/readme-single-file.md"
-workflow_template = "templates/cli-docs-check.yml"
-
-[artifacts]
-manifest = "src/project_standards/bundles/cli-documentation/adopt.toml"
-
-[[authority]]
-domain = "cli"
-target = "docs/usage.md"
-concern = "usage-documentation"
-owner = "cli-documentation"
-mutates = true
-
-[[authority]]
-domain = "cli"
-target = "README.md"
-concern = "command-reference"
-owner = "cli-documentation"
-mutates = false
-
-[[authority]]
-domain = "github-actions"
-target = ".github/workflows/cli-docs-check.yml"
-concern = "cli-docs-drift-check"
-owner = "github-actions"
-mutates = true
-
-[[providers]]
-operation = "drift-check"
-kind = "workflow"
-entrypoint = "cli-docs-check"
-optional = false
+[[versions]]
+version = "1.1"
+payload = "versions/1.1/payload.toml"
+digest = "sha256:eab56ef2c1135a31f5525d951c137937b0a748f8a55b3d17222828189848c457"

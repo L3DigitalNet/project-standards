@@ -92,7 +92,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:72c26b0aad782798535a0834753bb89b37c62124c78a57e9ffd344c53b3f842a"
+digest = "sha256:84819f521212d6febd397c36ef1ae842e32b9768f22acd7e56dfe1c12964bf72"
 
 [[resources]]
 id = "provider-input"

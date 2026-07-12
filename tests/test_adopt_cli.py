@@ -17,7 +17,10 @@ from pathlib import Path
 import pytest
 
 from project_standards import validate_frontmatter
-from project_standards.cli import main
+from project_standards.cli import main, v5_catalog_has_all_adoptable_defaults
+from project_standards.control_plane.codec import parse_catalog
+from project_standards.package_contract.catalog import render_consumer_catalog
+from project_standards.package_contract.repository import build_package_repository
 
 
 def test_list_plain_lists_packaged_adopt_standards(
@@ -47,6 +50,33 @@ def test_adopt_force_help_explains_create_only_exception(
     normalized = " ".join(capsys.readouterr().out.split())
     assert "overwrite existing managed artifacts" in normalized
     assert "create-only artifacts remain skipped" in normalized
+
+
+def test_v5_adopt_activates_only_for_the_complete_default_set() -> None:
+    root = Path(__file__).resolve().parent.parent
+    repository = build_package_repository(root, catalog_major=5)
+    assert repository.catalog is not None
+    catalog = parse_catalog(
+        render_consumer_catalog(
+            repository.catalog,
+            repository.family_map,
+            repository.payload_map,
+            tool_release="5.0.0",
+        )
+    )
+
+    assert v5_catalog_has_all_adoptable_defaults(catalog)
+    incomplete = catalog.model_copy(
+        update={
+            "standards": {
+                **catalog.standards,
+                "agent-handoff": catalog.standards["agent-handoff"].model_copy(
+                    update={"default": None}
+                ),
+            }
+        }
+    )
+    assert not v5_catalog_has_all_adoptable_defaults(incomplete)
 
 
 def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:

@@ -6,18 +6,17 @@ from itertools import combinations
 from pathlib import Path
 
 from project_standards.adopt.engine import build_plan, execute_plan
-from project_standards.standard_manifest import AdoptionMode
-from project_standards.standards_graph.discovery import build_graph
+from project_standards.package_contract.catalog import CatalogRole
+from project_standards.package_contract.repository import build_package_repository
 
 _REPO = Path(__file__).resolve().parent.parent
 
 
 def _adoptable_standard_ids() -> list[str]:
-    graph = build_graph(_REPO)
-    adoptable_modes = {AdoptionMode.VALIDATOR, AdoptionMode.COPY_ADOPT, AdoptionMode.CLI}
-    nodes = [node for node in graph.standards if node.manifest.standard.adoption in adoptable_modes]
-    assert all(node.artifact_manifest is not None for node in nodes)
-    return [node.standard_id for node in nodes]
+    repository = build_package_repository(_REPO, catalog_major=5)
+    assert repository.findings == ()
+    assert repository.catalog is not None
+    return [entry.id for entry in repository.catalog.packages if entry.role is CatalogRole.DEFAULT]
 
 
 def test_each_artifact_standard_builds_an_independent_plan() -> None:
@@ -66,13 +65,13 @@ def test_all_standard_plan_deduplicates_shared_artifacts() -> None:
 
 
 def test_successful_dogfood_profile_has_no_declared_conflicts() -> None:
-    graph = build_graph(_REPO)
+    repository = build_package_repository(_REPO, catalog_major=5)
     artifact_ids = set(_adoptable_standard_ids())
 
     assert not {
-        (node.standard_id, target)
-        for node in graph.standards
-        if node.standard_id in artifact_ids
-        for target in node.manifest.relations.conflicts
+        (payload.manifest.payload.standard, target)
+        for payload in repository.payloads
+        if payload.manifest.payload.standard in artifact_ids
+        for target in payload.manifest.relations.conflicts
         if target in artifact_ids
     }

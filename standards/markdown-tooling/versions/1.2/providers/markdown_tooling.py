@@ -14,6 +14,14 @@ def _table(value: object, *, name: str) -> Mapping[str, object]:
     return cast("Mapping[str, object]", value)
 
 
+def _optional_table(value: object) -> Mapping[str, object]:
+    return (
+        cast("Mapping[str, object]", value)
+        if isinstance(value, Mapping)
+        else cast("Mapping[str, object]", {})
+    )
+
+
 def _sequence(value: object, *, name: str) -> Sequence[object]:
     if not isinstance(value, Sequence) or isinstance(value, str | bytes):
         raise ValueError(f"{name} must be an array")
@@ -275,7 +283,7 @@ def _verify(
     findings: list[dict[str, str]] = []
     for path, digest in expected.items():
         observed = snapshots.get(path)
-        table = cast("Mapping[str, object]", observed) if isinstance(observed, Mapping) else {}
+        table = _optional_table(observed)
         if table.get("kind") != "regular" or table.get("content_digest") != digest:
             findings.append(
                 _finding(

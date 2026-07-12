@@ -2,19 +2,19 @@
 
 This directory holds the **governing standards** this repository defines. Each standard is a self-contained **bundle** — open its folder and the standard renders.
 
-The generated [standards catalog](catalog.md) exposes manifest-derived lifecycle, version, capability, relationship, resource, provider, artifact-provenance, and repo-local skill facts. Regenerate it with `uv run project-standards standards render-catalog --root .`; use `--check` in verification to detect drift.
+The generated [standards catalog](catalog.md) exposes validated V2 family, payload, channel, capability, relationship, resource, provider, and managed-output facts. Regenerate it with `uv run project-standards standards render-catalog --root .`; use `--check` in verification to detect drift.
 
-| Standard | What it governs | Bundle | Adopt |
-| --- | --- | --- | --- |
-| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
-| ADR | Architecture Decision Records (MADR on the frontmatter profile) | [adr/](adr/) | [adopt](adr/adopt.md) |
-| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
-| Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
-| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
-| CLI Documentation | User-facing CLI usage docs: help text, usage references, man pages, CI drift checks | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
-| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
-| Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT; package version 0.4) | [python-coding/](python-coding/) | — (**in-development draft**, reference-only; not yet released for adoption) |
-| Standard Bundle Authoring | The contract every standard bundle must declare (`standard.toml`, authorities, relationships, namespaces; package version 1.0) | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs how this repo authors standards, not consumer-adopted) |
+| Standard | What it governs | Package | Catalog role | Bundle | Adopt |
+| --- | --- | --- | --- | --- | --- |
+| Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.2 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
+| ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.1 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
+| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.1 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
+| Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.2 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
+| Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.1 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
+| CLI Documentation | User-facing CLI usage docs: help text, usage references, man pages, CI drift checks | 1.1 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
+| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.1 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
+| Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | 0.5 | reference-only | [python-coding/](python-coding/) | — (**in-development draft**; not released for adoption) |
+| Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.0 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
 
 ## Table of Contents
 
@@ -29,16 +29,17 @@ Every standard follows the same shape, so adding a new one is mechanical:
 
 ```text
 standards/<standard-id>/
-├── README.md      # REQUIRED — the governing standard itself
-├── standard.toml  # REQUIRED — the machine manifest (see standard-bundle-authoring/)
-├── adopt.md       # REQUIRED for adoptable standards — how to adopt (internal/draft: a non-adoptable marker instead)
-├── templates/     # OPTIONAL — copy-paste scaffolds, including placeholder frontmatter when teaching it
-├── examples/      # OPTIONAL — worked examples that may carry standard-specific frontmatter
-├── skills/        # OPTIONAL — standard-owned agent skills installed by adoption
-└── resources/     # OPTIONAL — rationale/research notes — see project-spec/, cli-documentation/
+├── README.md                 # REQUIRED — family landing page
+├── standard.toml             # REQUIRED — V2 family index and payload digests
+└── versions/<version>/
+    ├── payload.toml          # REQUIRED — immutable version contract
+    ├── README.md             # REQUIRED — canonical versioned standard
+    ├── config.schema.json    # REQUIRED — package options
+    ├── adopt.md              # REQUIRED for consumer packages
+    └── ...                   # Declared resources, providers, templates, and outputs
 ```
 
-Every standard ships a `README.md` and — per the [Standard Bundle Authoring Standard](standard-bundle-authoring/) — a `standard.toml` machine manifest with a non-empty package version. `adopt.md` is present for every standard **released for adoption** — including CLI-enforced ones like [project-spec/](project-spec/) and [agent-handoff/](agent-handoff/) — while only internal (`adoption = "none"`) standards like [standard-bundle-authoring/](standard-bundle-authoring/) and unreleased-draft documents like [python-coding/](python-coding/) carry an explicit non-adoptable marker instead. Beyond those, a standard may be doc-only (no `templates/` or `examples`) — see [markdown-tooling/](markdown-tooling/), may ship standard-owned skills — see [markdown-frontmatter/](markdown-frontmatter/), may seed support scaffolding while leaving authored content to a CLI — see [project-spec/](project-spec/), may combine create-only knowledge with managed runtime resources — see [agent-handoff/](agent-handoff/), or may add appendices such as [python-tooling/](python-tooling/)'s [`build-backend.md`](python-tooling/build-backend.md). Standard-package docs under `standards/**` are excluded from this repository's local markdown-frontmatter corpus by ADR 0015; [python-coding/](python-coding/) additionally ships as an **in-development draft** (reference-only and unregistered as a consumer-selectable contract).
+Every family ships a landing-page `README.md` and a V2 `standard.toml` index. Each indexed version points to one immutable `versions/<version>/payload.toml`; its aggregate digest covers the complete declared payload inventory. Consumer payloads include an adoption guide, while reference-only and internal payloads do not. Catalog 5 selects the seven default consumer packages shown above and advertises Python Coding and Standard Bundle Authoring only in their non-consumer roles. Standard-package docs under `standards/**` remain excluded from this repository's local markdown-frontmatter corpus by ADR 0015.
 
 ## Not a governed standard
 

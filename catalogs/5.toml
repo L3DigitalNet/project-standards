@@ -1,0 +1,56 @@
+schema_version = "1.0"
+catalog_major = 5
+
+[[packages]]
+id = "adr"
+version = "1.1"
+digest = "sha256:e764da40443b48508c593798a9b5b04ae418cb24f8ac31afa1c5706c3eac6bb7"
+role = "default"
+
+[[packages]]
+id = "agent-handoff"
+version = "1.1"
+digest = "sha256:38f523980e18ce9fbfbae23a9a797a6aec863e368269e2fb59365ce82282c891"
+role = "default"
+
+[[packages]]
+id = "cli-documentation"
+version = "1.1"
+digest = "sha256:eab56ef2c1135a31f5525d951c137937b0a748f8a55b3d17222828189848c457"
+role = "default"
+
+[[packages]]
+id = "markdown-frontmatter"
+version = "1.2"
+digest = "sha256:ba2bce2d7344db187444c2eaff9f276e5c878afa81bdb97c63133a00d2cd353d"
+role = "default"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.2"
+digest = "sha256:07649cbf7140c9a430b66f315dba2855fba33696eb8edba274a15a7b1cfdf558"
+role = "default"
+
+[[packages]]
+id = "project-spec"
+version = "1.1"
+digest = "sha256:0999323cc5782b5d312348b70d6fbe4c809969f2510c888acafd22a5cd815c76"
+role = "default"
+
+[[packages]]
+id = "python-coding"
+version = "0.5"
+digest = "sha256:d427ddb6ad6f04f010c2ef897d7668c577bda7f1c0d2b50c943dd56fa98634bc"
+role = "reference-only"
+
+[[packages]]
+id = "python-tooling"
+version = "1.1"
+digest = "sha256:7e473510b8acbacc434be3edf73b8b9c14a3a47042020375286689311d767dfa"
+role = "default"
+
+[[packages]]
+id = "standard-bundle-authoring"
+version = "2.0"
+digest = "sha256:5f60155d4678d46d85793e18907d5d423965ef1dffed923e9ebef1a84f12519e"
+role = "internal"

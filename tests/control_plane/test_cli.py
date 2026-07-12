@@ -30,6 +30,7 @@ def _use_distribution(
         return distribution
 
     monkeypatch.setattr(InstalledDistribution, "current", staticmethod(current))
+    monkeypatch.setattr("project_standards.cli._ADOPTABLE_STANDARD_IDS", ("alpha",))
 
 
 def _legacy_repo(root: Path, *, extra_yaml: str = "") -> Path:

@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.2/artifacts/agent-summary.md

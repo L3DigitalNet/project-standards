@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import shutil
@@ -867,11 +866,6 @@ def test_markdown_tooling_instruction_block_is_prettier_stable(tmp_path: Path) -
 
     after = adapter.inspect(path.read_bytes(), ("block:markdown-tooling",)).units[0]
     assert after.semantic_digest == before.semantic_digest
-
-
-def test_markdown_tooling_root_v1_manifest_is_unchanged() -> None:
-    digest = hashlib.sha256((_PAYLOAD.parent.parent / "standard.toml").read_bytes()).hexdigest()
-    assert digest == "5801d1fd7b2f1998f0eb0b587dc8262e1635193d7c33f1adbb6d0fb6523297ee"
 
 
 def test_markdown_tooling_payload_docs_have_only_relocatable_local_links() -> None:

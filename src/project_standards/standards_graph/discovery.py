@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from project_standards.adopt.manifest import load_manifest as load_artifact_manifest
+from project_standards.package_contract.discovery import discover_v2_families
+from project_standards.package_contract.repository import build_package_repository
 from project_standards.standard_manifest import load_standard_manifest
 from project_standards.standards_graph.model import StandardNode, StandardsGraph
 
@@ -39,7 +41,7 @@ def discover_artifact_manifest_paths(root: Path) -> list[Path]:
 
 
 def build_graph(root: Path) -> StandardsGraph:
-    """Load manifest-backed standards from root."""
+    """Load one V2 package graph or a bounded historical V1 standards graph."""
     resolved_root = root.resolve()
     if not resolved_root.is_dir():
         msg = f"root is not a directory: {root}"
@@ -48,6 +50,32 @@ def build_graph(root: Path) -> StandardsGraph:
     if not standards_dir.is_dir():
         msg = f"root has no standards directory: {resolved_root}"
         raise ValueError(msg)
+
+    standard_dirs = discover_standard_dirs(resolved_root)
+    manifest_paths = discover_manifest_paths(resolved_root)
+    v2_missing_manifest_dirs = tuple(
+        directory for directory in standard_dirs if not (directory / "standard.toml").is_file()
+    )
+    v2_discovery = discover_v2_families(resolved_root)
+    if v2_discovery.paths:
+        if len(v2_discovery.paths) != len(manifest_paths):
+            msg = "standards graph cannot mix V1 manifests and V2 family indexes"
+            raise ValueError(msg)
+        catalog_majors = sorted(
+            int(path.stem)
+            for path in (resolved_root / "catalogs").glob("*.toml")
+            if path.stem.isdigit() and int(path.stem) >= 1
+        )
+        repository = build_package_repository(
+            resolved_root,
+            catalog_major=catalog_majors[-1] if catalog_majors else None,
+        )
+        return StandardsGraph(
+            root=resolved_root,
+            standards=(),
+            missing_manifest_dirs=v2_missing_manifest_dirs,
+            package_repository=repository,
+        )
 
     nodes: list[StandardNode] = []
     missing_manifest_dirs: list[Path] = []

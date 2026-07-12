@@ -277,12 +277,6 @@ def test_project_spec_declares_the_exact_rendered_v4_workflow_only() -> None:
     )
 
 
-def test_project_spec_root_v1_manifest_is_unchanged() -> None:
-    digest = hashlib.sha256((_FAMILY / "standard.toml").read_bytes()).hexdigest()
-
-    assert digest == "c39f455234f3201df671b0f158630e55af21a175d6ece19a30136896c03b2993"
-
-
 def test_project_spec_v2_docs_describe_only_the_v5_control_plane() -> None:
     documents = {
         path.name: path.read_text(encoding="utf-8")

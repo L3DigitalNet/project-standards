@@ -23,7 +23,9 @@ def _source_files() -> tuple[Path, ...]:
 
 def _v1_source_files() -> tuple[Path, ...]:
     return tuple(
-        path for path in _source_files() if path.relative_to(_SOURCE).parts[0] != "versions"
+        path
+        for path in _source_files()
+        if path.relative_to(_SOURCE).parts[0] != "versions" and path.name != "standard.toml"
     )
 
 
@@ -32,7 +34,7 @@ def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
     bundled_relatives = {
         path.relative_to(_BUNDLE)
         for path in _BUNDLE.rglob("*")
-        if path.is_file() and path.name != "adopt.toml"
+        if path.is_file() and path.name not in {"adopt.toml", "standard.toml"}
     }
 
     assert source_relatives == bundled_relatives
@@ -41,7 +43,7 @@ def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
 
 
 def test_every_declared_resource_resolves() -> None:
-    manifest = tomllib.loads((_SOURCE / "standard.toml").read_text(encoding="utf-8"))
+    manifest = tomllib.loads((_BUNDLE / "standard.toml").read_text(encoding="utf-8"))
 
     for relative in manifest["resources"].values():
         assert (_SOURCE / relative).is_file(), relative

@@ -1042,8 +1042,3 @@ source-include = ["standards/**"]
         payload=installed_payload,
     )
     assert "AH-SHAPE" in {finding.code for finding in installed_shape.findings}
-
-
-def test_agent_handoff_root_v1_manifest_is_unchanged() -> None:
-    digest = hashlib.sha256((_FAMILY / "standard.toml").read_bytes()).hexdigest()
-    assert digest == "14ee5d6ff52d33281859b7bf4d98fd5c31ff2f01a378dd0641bb6774068a9861"

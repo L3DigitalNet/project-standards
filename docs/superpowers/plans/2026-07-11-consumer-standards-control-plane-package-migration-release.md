@@ -303,16 +303,16 @@ Existing package resources remain canonical only when copied into a version dire
 
 **Files:** Create `catalogs/5.toml`; finish all root V2 family indexes; synchronize `src/project_standards/{catalogs,families,payloads}/`; modify package data, graph/catalog generation, CLI activation, and related tests/docs.
 
-- [ ] Build an isolated nine-family repository and require all payloads, digests, migration graphs, provider resources, option schemas, relationships, roles, and catalog entries to validate before touching repository root activation files.
-- [ ] Add `catalogs/5.toml` with exactly the roles and versions pinned in this plan. Compute every family/catalog digest from the validated payload inventory.
-- [ ] Replace V1 graph/catalog consumers with V2 package-repository facts. Keep historical V1 loaders only where the documented v5 legacy fallback still invokes them; do not make V2 `standard.toml` parse through the V1 model.
-- [ ] Regenerate the human standards index/catalog from V2 families, payloads, roles, capabilities, resources, providers, outputs, and relations.
-- [ ] Run `standards sync-payload-projection --root .`, review every generated relative-file symlink, and update package-data inclusion only if the built wheel otherwise omits a projected catalog/family/payload member.
-- [ ] Activate the V5 adopt wrapper only after the installed catalog exposes all seven consumer defaults. V1 fallback remains available only for legacy-only installations or package versions not advertised by catalog 5.
-- [ ] Keep `.standards/` absent from the source checkout and absent from `.gitignore` on `testing`. Assert the atomic v5 release patch later adds the complete tracked control plane together; a catalog-only directory is never a valid intermediate state.
-- [ ] Prove source checkout and extracted wheel discover identical catalog/family/payload bytes and that no catalog-advertised resource is missing.
-- [ ] Run package, graph/catalog, projection, registry, adoption, and installed-wrapper tests; expect pass.
-- [ ] Commit: `feat(v5): activate current package catalog`
+- [x] Build an isolated nine-family repository and require all payloads, digests, migration graphs, provider resources, option schemas, relationships, roles, and catalog entries to validate before touching repository root activation files.
+- [x] Add `catalogs/5.toml` with exactly the roles and versions pinned in this plan. Compute every family/catalog digest from the validated payload inventory.
+- [x] Replace V1 graph/catalog consumers with V2 package-repository facts. Keep historical V1 loaders only where the documented v5 legacy fallback still invokes them; do not make V2 `standard.toml` parse through the V1 model.
+- [x] Regenerate the human standards index/catalog from V2 families, payloads, roles, capabilities, resources, providers, outputs, and relations.
+- [x] Run `standards sync-payload-projection --root .`, review every generated relative-file symlink, and update package-data inclusion only if the built wheel otherwise omits a projected catalog/family/payload member.
+- [x] Activate the V5 adopt wrapper only after the installed catalog exposes all seven consumer defaults. V1 fallback remains available only for legacy-only installations or package versions not advertised by catalog 5.
+- [x] Keep `.standards/` absent from the source checkout and absent from `.gitignore` on `testing`. Assert the atomic v5 release patch later adds the complete tracked control plane together; a catalog-only directory is never a valid intermediate state.
+- [x] Prove source checkout and extracted wheel discover identical catalog/family/payload bytes and that no catalog-advertised resource is missing.
+- [x] Run package, graph/catalog, projection, registry, adoption, and installed-wrapper tests; expect pass.
+- [x] Commit: `feat(v5): activate current package catalog`
 
 ### Task 15: Unified Config Resolution and Public Provider Commands
 

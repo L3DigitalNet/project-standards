@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.2/examples/note.example.md

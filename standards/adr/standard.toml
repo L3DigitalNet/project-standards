@@ -1,70 +1,12 @@
-# Machine manifest for the Architecture Decision Record (ADR) Standard.
+schema_version = "2.0"
 
 [standard]
 id = "adr"
 name = "Architecture Decision Record (ADR) Standard"
-status = "active"
 summary = "MADR-based architecture decision records with project-standard frontmatter and optional section validation."
-adoption = "validator"
+status = "active"
 
-[versions]
-supported = ["1.0", "1.1"]
-latest = "1.1"
-
-[config]
-namespaces = ["markdown.adr"]
-
-[capabilities]
-provides = ["adr.frontmatter", "adr.section-validation", "adr.template"]
-consumes_platform = []
-
-[relations]
-companions = ["markdown-frontmatter"]
-extends = []
-conflicts = []
-
-[resources]
-readme = "README.md"
-agent_summary = "agent-summary.md"
-adopt = "adopt.md"
-template = "templates/adr.md"
-template_bare = "templates/adr-bare.md"
-template_bare_minimal = "templates/adr-bare-minimal.md"
-template_minimal = "templates/adr-minimal.md"
-example = "examples/adr.example.md"
-
-[artifacts]
-manifest = "src/project_standards/bundles/adr/adopt.toml"
-
-[[authority]]
-domain = "adr"
-target = "docs/adr/**/*.md"
-concern = "record-structure"
-owner = "madr"
-mutates = false
-
-[[authority]]
-domain = "adr"
-target = "docs/adr/**/*.md"
-concern = "section-validation"
-owner = "project-standards"
-mutates = false
-
-[[authority]]
-domain = "adr"
-target = "docs/adr/adr.template.md"
-concern = "template-scaffold"
-owner = "project-standards-adopt"
-mutates = true
-
-[[providers]]
-operation = "validate"
-kind = "python"
-entrypoint = "project_standards.validate_frontmatter:main"
-optional = false
-
-[[providers]]
-operation = "validate"
-kind = "python"
-entrypoint = "project_standards.validate_id:main"
-optional = false
+[[versions]]
+version = "1.1"
+payload = "versions/1.1/payload.toml"
+digest = "sha256:e764da40443b48508c593798a9b5b04ae418cb24f8ac31afa1c5706c3eac6bb7"

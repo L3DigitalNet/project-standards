@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from project_standards.adopt.manifest import Manifest as ArtifactManifest
+from project_standards.package_contract.repository import PackageRepository
 from project_standards.standard_manifest import StandardManifest
 
 Severity = Literal["error", "warning"]
@@ -45,9 +46,12 @@ class StandardsGraph:
     standards: tuple[StandardNode, ...]
     missing_manifest_dirs: tuple[Path, ...]
     orphan_artifact_manifests: tuple[Path, ...] = ()
+    package_repository: PackageRepository | None = None
 
     @property
     def ids(self) -> frozenset[str]:
+        if self.package_repository is not None:
+            return frozenset(self.package_repository.family_map)
         return frozenset(node.standard_id for node in self.standards)
 
     @property

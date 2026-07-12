@@ -7,6 +7,7 @@ import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
+from project_standards.package_contract.family import load_family_manifest
 from project_standards.standard_manifest import (
     AdoptionMode,
     ArtifactsTable,
@@ -474,9 +475,10 @@ def _load_toml(path: Path) -> dict[str, object]:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
-_REAL_MANIFESTS = sorted(
-    (Path(__file__).resolve().parent.parent / "standards").glob("*/standard.toml")
-)
+_REAL_MANIFESTS = [
+    Path(__file__).resolve().parent.parent
+    / "src/project_standards/bundles/agent-handoff/standard.toml"
+]
 _AGENT_SUMMARY_MAX_BYTES = 3_000
 _AGENT_SUMMARY_AUTHORITY_NOTICE = (
     "The canonical [README](README.md) is authoritative and wins if this summary conflicts with it."
@@ -501,14 +503,18 @@ def test_real_manifests_validate(real: Path) -> None:
     load_standard_manifest(real)
 
 
-def test_agent_handoff_manifest_is_discovered_and_packaged_identically() -> None:
+def test_agent_handoff_v2_family_and_packaged_v1_fallback_are_separate() -> None:
     repository = Path(__file__).resolve().parent.parent
     canonical = repository / "standards/agent-handoff/standard.toml"
     packaged = repository / "src/project_standards/bundles/agent-handoff/standard.toml"
 
-    assert canonical in _REAL_MANIFESTS
-    load_standard_manifest(canonical)
-    assert packaged.read_bytes() == canonical.read_bytes()
+    family = load_family_manifest(canonical)
+    fallback = load_standard_manifest(packaged)
+
+    assert family.standard.id == "agent-handoff"
+    assert fallback.standard.id == "agent-handoff"
+    assert packaged in _REAL_MANIFESTS
+    assert packaged.read_bytes() != canonical.read_bytes()
 
 
 # --- schema-vs-fixture semantic tests (the generated schema is a permissive view) ---

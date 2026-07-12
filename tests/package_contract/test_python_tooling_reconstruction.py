@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import shlex
 import shutil
@@ -726,11 +725,6 @@ source-include = ["standards/**"]
         if path.is_file()
     }
     assert wheel_files == source_files
-
-
-def test_python_tooling_root_v1_manifest_is_unchanged() -> None:
-    digest = hashlib.sha256((_FAMILY / "standard.toml").read_bytes()).hexdigest()
-    assert digest == "db5877b25551c391431c62f5c1035b93a843c9baea8739b2efd04e45e239e115"
 
 
 def test_python_tooling_adoption_requires_lock_refresh_and_commit() -> None:

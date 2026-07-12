@@ -16,16 +16,16 @@ def test_catalog_renders_all_manifest_and_relationship_facts() -> None:
 
     for standard_id in graph.ids:
         assert f"`{standard_id}`" in rendered
-    assert "Package version" in rendered
-    assert "Contract default" in rendered
-    assert "Artifact provenance" in rendered
-    assert "Repo-local skills" in rendered
-    assert "standards://markdown-frontmatter/readme" in rendered
+    assert "Package" in rendered
+    assert "Role" in rendered
+    assert "Managed outputs" in rendered
+    assert "standards://markdown-frontmatter/1.2/readme" in rendered
     assert "markdown-frontmatter" in rendered
     assert "markdown-tooling" in rendered
     assert "companion" in rendered
     assert "[`agent-handoff`](agent-handoff/README.md)" in rendered
-    assert "standards://agent-handoff/skill" in rendered
+    assert "standards://agent-handoff/1.1/skill" in rendered
+    assert "startup\\|resume\\|clear\\|compact" in rendered
 
 
 def test_catalog_is_deterministic() -> None:

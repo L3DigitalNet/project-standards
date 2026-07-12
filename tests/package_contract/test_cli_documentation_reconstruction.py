@@ -44,7 +44,6 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/cli-documentation"
 _PAYLOAD = _ROOT / "standards/cli-documentation/versions/1.1"
-_ROOT_V1_DIGEST = "722d4dae32d6a163e31bd69cfd37e23cf61b9bbc316a50b33305f7704002ba98"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 
 
@@ -845,8 +844,3 @@ source-include = ["standards/**"]
         if path.is_file()
     }
     assert wheel_files == source_files
-
-
-def test_cli_documentation_root_v1_manifest_is_unchanged() -> None:
-    digest = hashlib.sha256((_FAMILY / "standard.toml").read_bytes()).hexdigest()
-    assert digest == _ROOT_V1_DIGEST

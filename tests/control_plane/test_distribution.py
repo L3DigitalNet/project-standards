@@ -128,7 +128,11 @@ def test_extracted_wheel_loads_catalog_offline_through_importlib_resources(
     project = tmp_path / "build"
     shutil.copytree(_FULL / "standards", project / "standards")
     shutil.copytree(_FULL / "catalogs", project / "catalogs")
-    shutil.copytree(Path("src/project_standards"), project / "src/project_standards")
+    shutil.copytree(
+        Path("src/project_standards"),
+        project / "src/project_standards",
+        ignore=shutil.ignore_patterns("catalogs", "families", "payloads"),
+    )
     (project / "pyproject.toml").write_text(
         """[project]
 name = "project-standards"
