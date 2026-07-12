@@ -29,6 +29,53 @@ Pre-release owner work is tracked in the durable v5.0.0 project tracker below.
 - [ ] Continue the MCP enablement program after the readiness gate.
 
   Recheck MCP protocol, Python SDK, licensing, and client capabilities before SPEC-MS01 MS-0. Keep server code blocked until Step 07 passes.
+  - [ ] Within the `markdown-frontmatter` standards package: Add the following as strongly recommended language to include in the ADR as suggested by `markdown-frontmatter` to consumers:
+
+  ````markdown
+  ## Decision Outcome
+
+  Chosen option: **govern the durable documentation corpus with explicit value policy**, because this gives the repository useful metadata without forcing frontmatter onto operational files, temporary work products, fixtures, generated output, or harness configuration.
+
+  This ADR establishes the repo-local conventions for frontmatter values. It does not need to change the upstream schema.
+
+  ### Governed Scope
+
+  Files and/or directories may be explicitly included or excluded from `markdown-frontmatter` standards governance by editing `.project-standards.yml`.
+
+  The minimum set of files/locations that are governed under this ADR (additional entries may be included, but those noted below are mandatory):
+
+  ```yaml
+  include:
+    - `docs/adr/**/*.md`
+    - 'docs/research/**/*.md'
+    - `docs/specs/**/*.md`
+  ```
+
+  `include` is an explicit allowlist, so any path not listed above is outside managed scope until it is added deliberately.
+
+  ### Excluded Scope
+
+  The governed scope excludes files that should not carry project-standard frontmatter:
+
+  ```yaml
+  exclude:
+    - '.agents/**'
+    - '.claude/**'
+    - '.codex/**'
+    - `.standards/**`
+    - `.vscode/**`
+    - `docs/TODO.md`
+    - `docs/STATUS.md`
+    - `docs/handoff/**` # for back-compatability
+    - 'AGENTS.md'
+    - 'CLAUDE.md'
+    - 'README.md`
+  ```
+
+  `exclude` is an explicit denylist. Any path not under `include` and not under `exclude` is excluded by default. The excluded paths above are operational, temporary, harness-owned, generated, vendored, or fixture files that should not carry project-standard frontmatter and are included for observability and clarity.
+
+  The repository root `README.md` file is excluded for human readability and accessibility. `README.md` files in subdirectories are not excluded by default; however the `markdown-frontmatter` standards recommends that they be treated as "human-first" and excluded. Governed indexes should be named `index.md` and written for agent consumption.
+  ````
 
 ### P3 — Deferred maintenance
 
@@ -133,7 +180,6 @@ Meta-repo readiness (`SPEC-MT01`), ordered — see SPEC-RD01 §19, Steps 00–07
 - [ ] Create and release the provider-neutral `project-toolbox` standard for v5.
 
   Specify this only after `SPEC-CP01` is approved. V1 packages the four proven workflows plus one routing skill, installs managed core workflows under `.agents/workflows/project-toolbox/`, keeps `docs/workflows/` for local extensions, and documents the later operational-suite and extension-framework waves.
-
   - [ ] Convert the installed Codex `review-orchestrator` skill into a managed workflow under `.agents/workflows/project-toolbox/`.
 
 - [ ] Create and release the `agent-managed-repo` standard for v5.0.0.
