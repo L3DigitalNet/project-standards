@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:e41b64008ee8ff012a61434e9bd791f0050f1b80d0c1e40d749c216522462aa2"
+digest = "sha256:571590e603082031f8d46794683ef8387d7eaf0ddf12697934868ea6a8cd56e7"
 
 [[resources]]
 id = "provider-input"
@@ -163,6 +163,7 @@ adapter = "toml"
 scope = "table:/tool/basedpyright"
 policy = "managed"
 provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
 
 [[contributions]]
 id = "pyright-config"
@@ -171,6 +172,7 @@ adapter = "toml"
 scope = "table:/tool/pyright"
 policy = "managed"
 provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
 
 [[contributions]]
 id = "pytest-config"

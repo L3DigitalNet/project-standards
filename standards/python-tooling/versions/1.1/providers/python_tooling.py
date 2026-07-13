@@ -124,15 +124,16 @@ def _ruff_table(config: Mapping[str, object]) -> str:
 
 def _checker_table(config: Mapping[str, object], table: str) -> str:
     checker, mode = _checker(config)
+    if checker != table:
+        raise ValueError("non-selected checker table must not be rendered")
     include, _coverage = _source_roots(config)
-    effective_mode = mode if checker == table else "off"
     return (
         f"[tool.{table}]\n"
         f"include = {json.dumps(include)}\n"
-        f"typeCheckingMode = {json.dumps(effective_mode)}\n"
+        f"typeCheckingMode = {json.dumps(mode)}\n"
         f"pythonVersion = {json.dumps(_python_version(config))}\n"
         'pythonPlatform = "All"\n'
-        f"failOnWarnings = {'true' if checker == table else 'false'}\n"
+        "failOnWarnings = true\n"
     )
 
 

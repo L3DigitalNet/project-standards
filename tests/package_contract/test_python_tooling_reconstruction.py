@@ -147,6 +147,55 @@ role = "default"
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 
+def test_python_tooling_declares_conditional_checker_tables() -> None:
+    declarations = {item.id: item for item in _payload().manifest.contributions}
+
+    for contribution_id, selected in (
+        ("basedpyright-config", "basedpyright"),
+        ("pyright-config", "pyright"),
+    ):
+        predicates = declarations[contribution_id].when_any
+        assert [item.option for item in predicates] == ["/type_checker/name"]
+        assert [item.equals for item in predicates] == [selected]
+
+    for name in ("basedpyright", "pyright"):
+        config = _options(type_checker={"name": name, "mode": "strict"})
+        materialized = [
+            contribution_id
+            for contribution_id in ("basedpyright-config", "pyright-config")
+            if declarations[contribution_id].materializes(config)
+        ]
+        assert materialized == [f"{name}-config"]
+
+
+@pytest.mark.parametrize(
+    ("selected", "requested"),
+    [("basedpyright", "pyright"), ("pyright", "basedpyright")],
+)
+def test_python_tooling_provider_refuses_non_selected_checker_table(
+    selected: str,
+    requested: str,
+) -> None:
+    config = _options(type_checker={"name": selected, "mode": "strict"})
+
+    with pytest.raises(ControlPlaneError) as exc_info:
+        _render(f"table:/tool/{requested}", AdapterKind.TOML, config)
+
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert str(exc_info.value.__cause__) == "non-selected checker table must not be rendered"
+
+
+def test_python_tooling_selected_checker_table_rendering_is_unchanged() -> None:
+    assert _render("table:/tool/basedpyright", AdapterKind.TOML, _options()) == (
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests"]\n'
+        'typeCheckingMode = "strict"\n'
+        'pythonVersion = "3.14"\n'
+        'pythonPlatform = "All"\n'
+        "failOnWarnings = true\n"
+    )
+
+
 def _legacy_python_tooling_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "consumer"
     repo.mkdir()
@@ -502,10 +551,10 @@ def test_python_tooling_manifest_uses_only_bounded_shared_container_units() -> N
 
 
 @pytest.mark.parametrize(
-    ("checker", "mode", "command", "active_table", "inactive_table"),
+    ("checker", "mode", "command", "active_table"),
     [
-        ("basedpyright", "strict", "uv run basedpyright", "basedpyright", "pyright"),
-        ("pyright", "standard", "uv run pyright", "pyright", "basedpyright"),
+        ("basedpyright", "strict", "uv run basedpyright", "basedpyright"),
+        ("pyright", "standard", "uv run pyright", "pyright"),
     ],
 )
 def test_type_checker_selection_fans_out_to_all_declared_surfaces(
@@ -513,13 +562,11 @@ def test_type_checker_selection_fans_out_to_all_declared_surfaces(
     mode: str,
     command: str,
     active_table: str,
-    inactive_table: str,
 ) -> None:
     config = _options(type_checker={"name": checker, "mode": mode})
 
     dependencies = _render("key:/dependency-groups/dev", AdapterKind.TOML, config)
     active = _render(f"table:/tool/{active_table}", AdapterKind.TOML, config)
-    inactive = _render(f"table:/tool/{inactive_table}", AdapterKind.TOML, config)
     task = json.loads(_render("keyed-set:/tasks#label=typecheck", AdapterKind.JSONC, config))
     instructions = _render("block:python-tooling", AdapterKind.MARKDOWN_BLOCK, config)
     workflow = _render(
@@ -531,7 +578,6 @@ def test_type_checker_selection_fans_out_to_all_declared_surfaces(
 
     assert f'"{checker}"' in dependencies
     assert f'typeCheckingMode = "{mode}"' in active
-    assert 'typeCheckingMode = "off"' in inactive
     assert task["tasks"][0]["command"] == command
     assert command in instructions
     assert command in workflow
@@ -598,7 +644,14 @@ def test_python_tooling_preflights_every_conflicting_consumer_toml_scope_before_
     repo = tmp_path / "consumer"
     repo.mkdir()
     (repo / "pyproject.toml").write_bytes(original)
-    request = PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    configs: dict[str, JsonObject] | None = None
+    if scope == "table:/tool/pyright":
+        configs = {"python-tooling": {"type_checker": {"name": "pyright", "mode": "strict"}}}
+    request = PlannerRequest(
+        repo,
+        resolution_request((payload,), configs=configs),
+        (payload,),
+    )
 
     plan = plan_reconciliation(request)
 
@@ -717,7 +770,7 @@ def test_python_tooling_fresh_apply_second_apply_drift_and_disable(
     pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["build-system"]["build-backend"] == "uv_build"
     assert pyproject["tool"]["basedpyright"]["typeCheckingMode"] == "strict"
-    assert pyproject["tool"]["pyright"]["typeCheckingMode"] == "off"
+    assert "pyright" not in pyproject["tool"]
     assert "basedpyright" in pyproject["dependency-groups"]["dev"]
     assert (repo / ".python-version").read_text(encoding="utf-8") == "3.14\n"
 
@@ -780,7 +833,7 @@ mode = "standard"
     assert "pyright" in pyproject["dependency-groups"]["dev"]
     assert "basedpyright" not in pyproject["dependency-groups"]["dev"]
     assert pyproject["tool"]["pyright"]["typeCheckingMode"] == "standard"
-    assert pyproject["tool"]["basedpyright"]["typeCheckingMode"] == "off"
+    assert "basedpyright" not in pyproject["tool"]
     workflow = (repo / ".github/workflows/check.yml").read_text(encoding="utf-8")
     assert "run: uv run pyright" in workflow
     assert "run: uv run basedpyright" not in workflow
