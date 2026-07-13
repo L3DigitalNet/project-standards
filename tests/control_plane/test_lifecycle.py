@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
-from project_standards.control_plane.models import AcceptedTrack, LockedUnit
+from project_standards.control_plane.models import AcceptedTrack, CentralLock, LockedUnit
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
     PlannerRequest,
@@ -59,6 +59,13 @@ def _enable_only(request: ResolutionRequest, *enabled: str) -> ResolutionRequest
         }
     )
     return replace(request, desired=desired)
+
+
+def _assert_no_mutating_actions(plan: ReconciliationPlan) -> None:
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in plan.actions
+    )
 
 
 def test_shared_lock_requires_and_round_trips_stable_identity() -> None:
@@ -252,6 +259,149 @@ def test_enable_update_disable_and_reenable_package_local_artifact(
     reenabled = plan_reconciliation(PlannerRequest(repo, reenabled_request, (v2,)))
     assert reenabled.actions[0].kind is ActionKind.CREATE
     assert set(reenabled.next_lock.standards) == {"demo"}
+
+
+def test_conditional_units_transition_across_pointer_predicate_flips(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "alpha-table",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/alpha",
+                "content": b'[tool.alpha]\nmode = "on"\n',
+                "when_any": [{"option": "/engine/name", "equals": "alpha"}],
+            },
+            {
+                "id": "beta-table",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/beta",
+                "content": b'[tool.beta]\nmode = "on"\n',
+                "when_any": [{"option": "/engine/name", "equals": "beta"}],
+            },
+        ],
+        option_properties={
+            "engine": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"name": {"enum": ["alpha", "beta"]}},
+                "required": ["name"],
+            }
+        },
+    )
+
+    def _request(name: str, previous: CentralLock | None = None) -> ResolutionRequest:
+        return resolution_request(
+            (payload,),
+            configs={"demo": {"engine": {"name": name}}},
+            previous_lock=previous,
+        )
+
+    def _scopes(plan: ReconciliationPlan) -> set[str]:
+        return {unit.scope for unit in plan.next_lock.artifacts}
+
+    first = plan_reconciliation(PlannerRequest(repo, _request("alpha"), (payload,)))
+    assert _scopes(first) == {"table:/tool/alpha"}
+    _materialize(repo, first)
+
+    converged = plan_reconciliation(
+        PlannerRequest(repo, _request("alpha", first.next_lock), (payload,))
+    )
+    _assert_no_mutating_actions(converged)
+
+    to_beta = plan_reconciliation(
+        PlannerRequest(repo, _request("beta", first.next_lock), (payload,))
+    )
+    assert _scopes(to_beta) == {"table:/tool/beta"}
+    assert {unit.kind for unit in to_beta.units} >= {ActionKind.REMOVE, ActionKind.CREATE}
+    _materialize(repo, to_beta)
+    assert "[tool.alpha]" not in (repo / "config.toml").read_text(encoding="utf-8")
+
+    back = plan_reconciliation(
+        PlannerRequest(repo, _request("alpha", to_beta.next_lock), (payload,))
+    )
+    assert _scopes(back) == {"table:/tool/alpha"}
+    _materialize(repo, back)
+
+    settled = plan_reconciliation(
+        PlannerRequest(repo, _request("alpha", back.next_lock), (payload,))
+    )
+    _assert_no_mutating_actions(settled)
+
+
+def test_conditional_units_disable_and_reenable_retained_selection(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "beta-table",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/beta",
+                "content": b'[tool.beta]\nmode = "on"\n',
+                "when_any": [{"option": "/engine/name", "equals": "beta"}],
+            }
+        ],
+        option_properties={
+            "engine": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"name": {"const": "beta"}},
+                "required": ["name"],
+            }
+        },
+    )
+    selected = resolution_request(
+        (payload,),
+        configs={"demo": {"engine": {"name": "beta"}}},
+    )
+    first = plan_reconciliation(PlannerRequest(repo, selected, (payload,)))
+    _materialize(repo, first)
+
+    disabled_request = _enable_only(
+        resolution_request(
+            (payload,),
+            configs={"demo": {"engine": {"name": "beta"}}},
+            previous_lock=first.next_lock,
+        )
+    )
+    disabled = plan_reconciliation(PlannerRequest(repo, disabled_request, (payload,)))
+    assert {unit.kind for unit in disabled.units} == {ActionKind.REMOVE}
+    assert disabled.next_lock.artifacts == []
+    _materialize(repo, disabled)
+    assert not (repo / "config.toml").exists()
+
+    reenabled_request = resolution_request(
+        (payload,),
+        configs={"demo": {"engine": {"name": "beta"}}},
+        previous_lock=disabled.next_lock,
+    )
+    reenabled = plan_reconciliation(PlannerRequest(repo, reenabled_request, (payload,)))
+    assert {unit.scope for unit in reenabled.next_lock.artifacts} == {"table:/tool/beta"}
+    _materialize(repo, reenabled)
+
+    converged = plan_reconciliation(
+        PlannerRequest(
+            repo,
+            resolution_request(
+                (payload,),
+                configs={"demo": {"engine": {"name": "beta"}}},
+                previous_lock=reenabled.next_lock,
+            ),
+            (payload,),
+        )
+    )
+    _assert_no_mutating_actions(converged)
 
 
 def test_shared_owner_removal_then_last_reference_removal(tmp_path: Path) -> None:

@@ -22,7 +22,11 @@ from project_standards.control_plane.diagnostics import ActionKind, ControlPlane
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.migration import apply_legacy_migration, plan_legacy_migration
-from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
+from project_standards.control_plane.planner import (
+    PlannerRequest,
+    ReconciliationPlan,
+    plan_reconciliation,
+)
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
@@ -147,6 +151,46 @@ role = "default"
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 
+def _write_checker_config(repo: Path, checker: str) -> None:
+    (repo / ".standards/config.toml").write_text(
+        f'''[project_standards]
+schema_version = "1.0"
+catalog = "5"
+
+[standards.python-tooling]
+enabled = true
+version = "latest"
+
+[standards.python-tooling.config.type_checker]
+name = "{checker}"
+mode = "strict"
+''',
+        encoding="utf-8",
+    )
+
+
+def _assert_no_mutating_actions(plan: ReconciliationPlan) -> None:
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in plan.actions
+    )
+
+
+def _assert_checker_state(repo: Path, plan: ReconciliationPlan, selected: str) -> None:
+    other = "pyright" if selected == "basedpyright" else "basedpyright"
+    data = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    tool = cast("dict[str, object]", data["tool"])
+    assert selected in tool
+    assert other not in tool
+    scopes = {
+        unit.scope
+        for unit in plan.next_lock.artifacts
+        if unit.path.original == "pyproject.toml" and unit.scope.startswith("table:/tool/")
+    }
+    assert f"table:/tool/{selected}" in scopes
+    assert f"table:/tool/{other}" not in scopes
+
+
 def test_python_tooling_declares_conditional_checker_tables() -> None:
     declarations = {item.id: item for item in _payload().manifest.contributions}
 
@@ -194,6 +238,28 @@ def test_python_tooling_selected_checker_table_rendering_is_unchanged() -> None:
         'pythonPlatform = "All"\n'
         "failOnWarnings = true\n"
     )
+
+
+@pytest.mark.parametrize("checker", ["basedpyright", "pyright"])
+def test_python_tooling_plan_materializes_exactly_one_checker_scope(
+    tmp_path: Path,
+    checker: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _payload()
+    request = resolution_request(
+        (payload,),
+        configs={"python-tooling": {"type_checker": {"name": checker, "mode": "strict"}}},
+    )
+    plan = plan_reconciliation(PlannerRequest(repo, request, (payload,)))
+
+    scopes = {
+        unit.scope for unit in plan.next_lock.artifacts if unit.path.original == "pyproject.toml"
+    }
+    other = "pyright" if checker == "basedpyright" else "basedpyright"
+    assert f"table:/tool/{checker}" in scopes
+    assert f"table:/tool/{other}" not in scopes
 
 
 def _legacy_python_tooling_repo(tmp_path: Path) -> Path:
@@ -846,6 +912,86 @@ mode = "standard"
     assert "Use pyright in standard mode" in (repo / "AGENTS.md").read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize("first", ["basedpyright", "pyright"])
+def test_python_tooling_real_checker_transitions_preserve_locks(
+    tmp_path: Path,
+    first: str,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    second = "pyright" if first == "basedpyright" else "basedpyright"
+    previous: str | None = None
+
+    for selected in (first, second, first):
+        _write_checker_config(repo, selected)
+        request = build_planner_request(repo, distribution, frozenset())
+        plan = plan_reconciliation(request)
+        assert plan.applicable, plan.findings
+        if previous is not None:
+            checker_units = {
+                unit.kind
+                for unit in plan.units
+                if unit.target == "pyproject.toml"
+                and unit.scope
+                in {
+                    "table:/tool/basedpyright",
+                    "table:/tool/pyright",
+                }
+            }
+            assert checker_units == {ActionKind.REMOVE, ActionKind.CREATE}
+        assert apply_reconciliation(ApplyRequest(request, plan)).success
+        _assert_checker_state(repo, plan, selected)
+
+        converged = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+        _assert_no_mutating_actions(converged)
+        previous = selected
+
+
+def test_python_tooling_real_disable_and_reenable_retains_pyright_selection(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _write_checker_config(repo, "pyright")
+
+    first_request = build_planner_request(repo, distribution, frozenset())
+    first = plan_reconciliation(first_request)
+    assert first.applicable, first.findings
+    assert apply_reconciliation(ApplyRequest(first_request, first)).success
+    _assert_checker_state(repo, first, "pyright")
+
+    set_standard_enabled(repo, "python-tooling", False)
+    disable_request = build_planner_request(repo, distribution, frozenset())
+    disabled = plan_reconciliation(disable_request)
+    assert disabled.applicable, disabled.findings
+    assert any(
+        unit.kind is ActionKind.REMOVE
+        and unit.target == "pyproject.toml"
+        and unit.scope == "table:/tool/pyright"
+        for unit in disabled.units
+    )
+    assert not {
+        unit.scope
+        for unit in disabled.next_lock.artifacts
+        if unit.scope in {"table:/tool/basedpyright", "table:/tool/pyright"}
+    }
+    assert apply_reconciliation(ApplyRequest(disable_request, disabled)).success
+
+    set_standard_enabled(repo, "python-tooling", True)
+    reenable_request = build_planner_request(repo, distribution, frozenset())
+    reenabled = plan_reconciliation(reenable_request)
+    assert reenabled.applicable, reenabled.findings
+    assert apply_reconciliation(ApplyRequest(reenable_request, reenabled)).success
+    _assert_checker_state(repo, reenabled, "pyright")
+
+    converged = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    _assert_no_mutating_actions(converged)
+
+
 def test_python_tooling_disable_preserves_markdown_shared_units(tmp_path: Path) -> None:
     distribution = _installed_distribution(tmp_path, include_markdown=True)
     repo = tmp_path / "consumer"
@@ -901,6 +1047,9 @@ def test_python_tooling_real_v4_migration_applies_and_converges(tmp_path: Path) 
         "typecheck",
     ]
     assert "[tool.ruff]" in (repo / "pyproject.toml").read_text(encoding="utf-8")
+    pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    tables = [name for name in ("basedpyright", "pyright") if name in pyproject.get("tool", {})]
+    assert tables == ["basedpyright"]
     extensions = json.loads((repo / ".vscode/extensions.json").read_text(encoding="utf-8"))
     assert "detachhead.basedpyright" in extensions["recommendations"]
 
