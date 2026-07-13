@@ -40,7 +40,7 @@
     },
     "LegacyClaim": {
       "additionalProperties": false,
-      "description": "Identify one legacy signature match without retaining its source bytes.",
+      "description": "Identify recognized package history or one target-bound consumer-owned preservation claim without retaining source bytes.",
       "properties": {
         "disposition": {
           "$ref": "#/$defs/LegacyDisposition"
@@ -86,7 +86,7 @@
       "type": "object"
     },
     "LegacyDisposition": {
-      "description": "Proposed treatment of one exactly recognized legacy object.",
+      "description": "Propose treatment for recognized package history or an authorized consumer-owned preservation.",
       "enum": [
         "adopt",
         "preserve",

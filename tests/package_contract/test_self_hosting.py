@@ -195,6 +195,22 @@ def test_authoring_templates_are_strict_v2_copy_starts() -> None:
     assert schema_template["properties"][extension["extensions"][0]["option"]]["type"] == "string"
 
 
+def test_authoring_surfaces_bound_consumer_owned_preservation() -> None:
+    guide = (_PAYLOAD / "README.md").read_text(encoding="utf-8")
+    template = (_PAYLOAD / "templates/legacy-signature.toml").read_text(encoding="utf-8")
+
+    assert "exact package-history bytes through `known_content_digests`" in guide
+    assert "ownership-acquiring, locking, or destructive transition" in guide
+    assert "single-target whole-file signature" in guide
+    assert "`consumer_owned_intent_pointer`" in guide
+    assert "literal `consumer-owned` value through that pointer" in guide
+    assert "never adds observed bytes to package history" in guide
+    assert '# kind = "whole-file"' in template
+    assert '# targets = [".github/workflows/check.yml"]' in template
+    assert '# consumer_owned_intent_pointer = "/example_standard/workflow_ownership"' in template
+    assert 'supply literal "consumer-owned" through that pointer' in template
+
+
 def test_authoring_workflow_validates_indexes_catalogs_and_projects(tmp_path: Path) -> None:
     assert _PAYLOAD.is_dir()
     root = _isolated_repository(tmp_path)

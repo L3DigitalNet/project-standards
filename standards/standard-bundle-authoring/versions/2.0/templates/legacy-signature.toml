@@ -9,3 +9,15 @@ end = "# END example-standard managed config"
 known_content_digests = [
   "sha256:0000000000000000000000000000000000000000000000000000000000000000",
 ]
+
+# A single-target whole-file signature may authorize only consumer-owned
+# preservation. Observed bytes never become known package history.
+# Raw migration input must supply literal "consumer-owned" through that pointer.
+# [[legacy_signatures]]
+# id = "legacy-check-workflow"
+# kind = "whole-file"
+# targets = [".github/workflows/check.yml"]
+# known_content_digests = [
+#   "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+# ]
+# consumer_owned_intent_pointer = "/example_standard/workflow_ownership"

@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:bf3645cb29d51c6e2f14cd4836b17a28d70cb1974315afd53fd9b55b34ad6849",
+        "sha256:95a58ccb8af99618ac2528229e3a27981495c265f77fe312f7ec059233727692",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -84,7 +84,7 @@ _PACKAGES = {
         "active",
         "2.0",
         "internal",
-        "sha256:5f60155d4678d46d85793e18907d5d423965ef1dffed923e9ebef1a84f12519e",
+        "sha256:5fec499e321fc4d20ea9ddb50f6dceae1da800dd66d909ebea2dbd23e84597ca",
     ),
 }
 

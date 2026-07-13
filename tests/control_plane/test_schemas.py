@@ -60,6 +60,15 @@ def test_migration_claim_schema_exposes_optional_intent_pointer() -> None:
 
     assert "intent_pointer" in properties
     assert "intent_pointer" not in cast("list[str]", claim["required"])
+    assert claim["description"] == (
+        "Identify recognized package history or one target-bound consumer-owned "
+        "preservation claim without retaining source bytes."
+    )
+    disposition = cast("dict[str, object]", definitions["LegacyDisposition"])
+    assert disposition["description"] == (
+        "Propose treatment for recognized package history or an authorized "
+        "consumer-owned preservation."
+    )
 
 
 def test_control_plane_schema_generator_writes_checks_and_detects_drift(

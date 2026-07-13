@@ -166,6 +166,15 @@ def test_owner_resolution_pointer_is_canonical_and_target_specific() -> None:
     assert signature.consumer_owned_intent_pointer == ("/python_tooling/workflow_ownership")
 
 
+def test_owner_resolution_schema_description_distinguishes_package_history() -> None:
+    schema = LegacySignatureDeclaration.model_json_schema()
+
+    assert schema["description"] == (
+        "Declare exact package-history bytes and an optional target-bound "
+        "consumer-owned preservation exception."
+    )
+
+
 @pytest.mark.parametrize(
     "update",
     [

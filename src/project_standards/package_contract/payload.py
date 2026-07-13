@@ -596,7 +596,7 @@ class LegacySignatureFormat(StrEnum):
 
 
 class LegacySignatureDeclaration(StrictModel):
-    """Declare exact package history and optional target-bound owner resolution."""
+    """Declare exact package-history bytes and an optional target-bound consumer-owned preservation exception."""
 
     id: ResourceId
     kind: LegacySignatureKind

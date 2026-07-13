@@ -103,7 +103,7 @@ _MISSING = object()
 
 
 class LegacyDisposition(StrEnum):
-    """Proposed treatment of one exactly recognized legacy object."""
+    """Propose treatment for recognized package history or an authorized consumer-owned preservation."""
 
     ADOPT = "adopt"
     PRESERVE = "preserve"
@@ -149,7 +149,7 @@ class MigratedPackage(StrictModel):
 
 
 class LegacyClaim(StrictModel):
-    """Identify one legacy signature match without retaining its source bytes."""
+    """Identify recognized package history or one target-bound consumer-owned preservation claim without retaining source bytes."""
 
     signature_id: KebabId
     target: SafeRelativePath

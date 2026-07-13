@@ -76,7 +76,7 @@ A referenced extension binds one path-valued option to a media type and the `rep
 
 Migration endpoints are exact `package:MAJOR.MINOR` values or registered `legacy:STATE` tokens. An automatic migration names one migration provider. A manual migration names one instruction resource. Each declaration inventories all affected `config:*`, `artifact:ID`, and `contribution:ID` identities and at least one endpoint equals the containing payload version.
 
-Legacy signatures recognize only exact whole-file bytes or exact bounded blocks with known content digests. Marker presence alone never proves ownership. Unknown or modified legacy bytes remain consumer-owned and block automatic migration. See the [`migration.toml`](templates/migration.toml) and [`legacy-signature.toml`](templates/legacy-signature.toml) templates.
+Legacy signatures recognize exact package-history bytes through `known_content_digests`. Unknown bounded blocks and every ownership-acquiring, locking, or destructive transition block automatic migration. A single-target whole-file signature may additionally declare `consumer_owned_intent_pointer`; this authorizes only the FR-037 consumer-owned preserve path and never adds observed bytes to package history. Raw migration input must explicitly supply the literal `consumer-owned` value through that pointer. Marker presence alone never proves ownership, and all other unknown or modified legacy bytes remain consumer-owned and block automatic migration. See the [`migration.toml`](templates/migration.toml) and [`legacy-signature.toml`](templates/legacy-signature.toml) templates.
 
 ## Integrity and catalog roles
 
