@@ -44,7 +44,7 @@
 - Modify: `tests/package_contract/test_schemas.py`
 - Regenerate: `src/project_standards/schemas/standard-payload.schema.json`
 
-- [ ] **Step 1: Add failing canonical-pointer and declaration-shape tests**
+- [x] **Step 1: Add failing canonical-pointer and declaration-shape tests**
 
 Add tests covering a canonical pointer, missing leading slash, noncanonical `~` escape, bounded-block declaration, multi-target whole-file declaration, duplicate pointers across signatures, and one valid single-target declaration.
 
@@ -80,7 +80,7 @@ def test_owner_resolution_declaration_rejects_ambiguous_shapes(update: dict[str,
         LegacySignatureDeclaration.model_validate(values)
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run:
 
@@ -90,7 +90,7 @@ uv run pytest tests/package_contract/test_paths.py tests/package_contract/test_p
 
 Expected: failures because canonical pointer validation is migration-local and `consumer_owned_intent_pointer` is forbidden as an extra field.
 
-- [ ] **Step 3: Extract canonical pointer validation and add the payload field**
+- [x] **Step 3: Extract canonical pointer validation and add the payload field**
 
 Move the existing validation logic from `control_plane/migration.py` into the package-contract boundary without changing its accepted language.
 
@@ -149,7 +149,7 @@ if len(intent_pointers) != len(set(intent_pointers)):
     raise ValueError("payload reuses a consumer-owned intent pointer")
 ```
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run:
 
@@ -159,7 +159,7 @@ uv run pytest tests/package_contract/test_paths.py tests/package_contract/test_p
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Regenerate and verify the strict payload schema**
+- [x] **Step 5: Regenerate and verify the strict payload schema**
 
 Run:
 
@@ -170,7 +170,7 @@ uv run pytest tests/package_contract/test_schemas.py -q
 
 Expected: `standard-payload.schema.json` contains optional `consumer_owned_intent_pointer`, remains closed, and all schema tests pass.
 
-- [ ] **Step 6: Commit the payload declaration unit**
+- [x] **Step 6: Commit the payload declaration unit**
 
 ```bash
 git add src/project_standards/package_contract/paths.py src/project_standards/package_contract/payload.py src/project_standards/schemas/standard-payload.schema.json tests/package_contract/test_paths.py tests/package_contract/test_payload.py tests/package_contract/test_schemas.py
@@ -186,7 +186,7 @@ git commit -m "feat(control-plane): declare target-bound owner intent"
 - Modify: `tests/control_plane/test_schemas.py`
 - Regenerate: `src/project_standards/schemas/migration-report.schema.json`
 
-- [ ] **Step 1: Add failing claim normalization and public-output tests**
+- [x] **Step 1: Add failing claim normalization and public-output tests**
 
 ```python
 def test_legacy_claim_accepts_optional_canonical_intent_pointer() -> None:
@@ -208,7 +208,7 @@ def test_known_claim_json_shape_omits_absent_intent_pointer() -> None:
 
 Also parametrize invalid noncanonical pointers and assert schema `additionalProperties: false` remains intact.
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run:
 
@@ -218,7 +218,7 @@ uv run pytest tests/control_plane/test_migration.py::test_legacy_claim_accepts_o
 
 Expected: the first test fails because the field is forbidden.
 
-- [ ] **Step 3: Add the field and preserve field-free serialization**
+- [x] **Step 3: Add the field and preserve field-free serialization**
 
 ```python
 class LegacyClaim(StrictModel):
@@ -251,7 +251,7 @@ if claim.intent_pointer is not None:
     claim_json["intent_pointer"] = claim.intent_pointer
 ```
 
-- [ ] **Step 4: Regenerate the control-plane schema and run focused tests**
+- [x] **Step 4: Regenerate the control-plane schema and run focused tests**
 
 Run:
 
@@ -262,7 +262,7 @@ uv run pytest tests/control_plane/test_migration.py tests/control_plane/test_sch
 
 Expected: claim/schema tests pass; ordinary claim JSON remains unchanged.
 
-- [ ] **Step 5: Commit the claim contract**
+- [x] **Step 5: Commit the claim contract**
 
 ```bash
 git add src/project_standards/control_plane/migration.py src/project_standards/schemas/migration-report.schema.json tests/control_plane/test_migration.py tests/control_plane/test_schemas.py
@@ -277,7 +277,7 @@ git commit -m "feat(control-plane): carry owner intent in legacy claims"
 - Modify: `tests/control_plane/test_migration.py`
 - Modify: `tests/package_contract/test_cli_documentation_reconstruction.py`
 
-- [ ] **Step 1: Add failing adversarial engine tests**
+- [x] **Step 1: Add failing adversarial engine tests**
 
 Create one helper that mutates the synthetic alpha payload to use an unknown single-target whole-file signature with a static pointer. Add separate tests for:
 
@@ -317,7 +317,7 @@ assert any(
 )
 ```
 
-- [ ] **Step 2: Run the adversarial tests and verify RED**
+- [x] **Step 2: Run the adversarial tests and verify RED**
 
 Run:
 
@@ -327,7 +327,7 @@ uv run pytest tests/control_plane/test_migration.py -k 'owner_resolution or unkn
 
 Expected: the valid exception still fails at both current unknown-digest gates.
 
-- [ ] **Step 3: Add raw-pointer lookup without applying defaults**
+- [x] **Step 3: Add raw-pointer lookup without applying defaults**
 
 ```python
 _MISSING = object()
@@ -350,7 +350,7 @@ def _pointer_value(document: JsonObject, pointer: str) -> object:
 
 ```
 
-- [ ] **Step 4: Convert unknown findings to hold-and-emit-unless-cleared after reconciliation**
+- [x] **Step 4: Convert unknown findings to hold-and-emit-unless-cleared after reconciliation**
 
 Keep malformed bounded-block findings in `_inspect_signatures`, but stop emitting the whole-file unknown-digest finding there. Move final claim validation until after `plan_reconciliation(planner)` so it can inspect resolved materialization and lock/action state, while still running before applicability and all writes. Pass `legacy`, `payloads`, and the `ReconciliationPlan` into `_claim_findings`. For each unknown observation, clear it only after this complete predicate succeeds:
 
@@ -395,7 +395,7 @@ Track cleared observation keys. After all claims, emit `CP-MIGRATION-LEGACY-DIGE
 
 Extend `render_migration_report` so an accepted exception is labeled as consumer-owned, preserved, and not semantically validated by the package. Add a human-output assertion beside the JSON preview test; do not expose file content.
 
-- [ ] **Step 5: Run the full migration test module and verify GREEN**
+- [x] **Step 5: Run the full migration test module and verify GREEN**
 
 Run:
 
@@ -405,7 +405,7 @@ uv run pytest tests/control_plane/test_migration.py -q
 
 Expected: all migration tests pass, including unknown-and-unclaimed and known-claim compatibility.
 
-- [ ] **Step 6: Commit the engine proof**
+- [x] **Step 6: Commit the engine proof**
 
 ```bash
 git add src/project_standards/control_plane/migration.py tests/control_plane/test_migration.py tests/package_contract/test_cli_documentation_reconstruction.py
@@ -418,7 +418,7 @@ git commit -m "feat(control-plane): validate ownership relinquishment"
 
 - Modify: `tests/control_plane/test_migration.py`
 
-- [ ] **Step 1: Complete the applicable-plan assertions introduced before Task 3 implementation**
+- [x] **Step 1: Complete the applicable-plan assertions introduced before Task 3 implementation**
 
 For the valid consumer-owned unknown whole file, assert:
 
@@ -437,7 +437,7 @@ assert public_claim["observed_digest"] == expected_digest.value
 assert public_claim["intent_pointer"] == "/alpha/workflow_ownership"
 ```
 
-- [ ] **Step 2: Complete apply, fixed-point, return-to-managed, and stale-plan coverage**
+- [x] **Step 2: Complete apply, fixed-point, return-to-managed, and stale-plan coverage**
 
 Apply the relinquishment plan and prove the file remains byte-identical and outside the lock. Reconcile, disable, and re-enable the package and prove the file remains untouched. Then change only the ownership option back to managed while the unowned file still exists and require `CP-CONSUMER-CONFLICT` with no write, removal, adoption, or lock change.
 
@@ -476,7 +476,7 @@ assert all(
 
 Finally, modify each of path type, symlink state, and bytes between relinquishment preview/apply and require `CP-STALE-PLAN` with no `.standards/` publication.
 
-- [ ] **Step 3: Run the lifecycle tests**
+- [x] **Step 3: Run the lifecycle tests**
 
 Run:
 
@@ -486,7 +486,7 @@ uv run pytest tests/control_plane/test_migration.py -k 'owner_resolution or reli
 
 Expected: all selected lifecycle tests pass.
 
-- [ ] **Step 4: Commit lifecycle evidence**
+- [x] **Step 4: Commit lifecycle evidence**
 
 ```bash
 git add tests/control_plane/test_migration.py
@@ -504,7 +504,7 @@ git commit -m "test(control-plane): prove relinquishment lifecycle safety"
 - Modify: `catalogs/5.toml`
 - Modify: `tests/package_contract/test_python_tooling_reconstruction.py`
 
-- [ ] **Step 1: Add failing option/default/cross-field tests**
+- [x] **Step 1: Add failing option/default/cross-field tests**
 
 Extend `test_python_tooling_options_are_closed_and_fully_defaulted` with:
 
@@ -523,7 +523,7 @@ Before provider implementation, add named failing tests for each rendering seam:
 - `test_python_tooling_parallel_local_commands_match_ci_coverage_lifecycle`;
 - parameterized `test_python_tooling_generated_gate_subprocess_capture_oracle`, covering patch-enabled capture and the no-patch negative control in the offline scratch checkout described in Task 6.
 
-- [ ] **Step 2: Run the option test and verify RED**
+- [x] **Step 2: Run the option test and verify RED**
 
 Run:
 
@@ -533,7 +533,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k 'o
 
 Expected: option tests fail because both options are unknown; rendering and scratch-oracle tests fail because the dependency floor, TOML keys, and parallel command lifecycle are absent.
 
-- [ ] **Step 3: Add the closed schema with the raw-input conditional**
+- [x] **Step 3: Add the closed schema with the raw-input conditional**
 
 Add top-level properties:
 
@@ -560,7 +560,7 @@ Add top-level properties:
 
 Add an `allOf` condition whose `then` branch includes both `required: ["parallel"]` and `parallel: {"const": true}` when a non-empty patch is present. This must reject raw `{patch:["subprocess"]}` before default application.
 
-- [ ] **Step 4: Update `_DEFAULT_CONFIG`, dependency rendering, and coverage TOML rendering**
+- [x] **Step 4: Update `_DEFAULT_CONFIG`, dependency rendering, and coverage TOML rendering**
 
 ```python
 _DEFAULT_CONFIG.update(
@@ -585,7 +585,7 @@ def _coverage_run(config: Mapping[str, object]) -> str:
 
 In `_dependencies`, render `coverage[toml]>=7.10.0` only when `patch` is non-empty; keep `coverage[toml]` for defaults.
 
-- [ ] **Step 5: Add conditional coverage command construction**
+- [x] **Step 5: Add conditional coverage command construction**
 
 ```python
 def _coverage_commands(*pytest_args: str, config: Mapping[str, object]) -> list[tuple[str, ...]]:
@@ -602,7 +602,7 @@ def _coverage_commands(*pytest_args: str, config: Mapping[str, object]) -> list[
 
 Use the helper from both `_commands` and `_local_commands`; preserve the default command sequence byte for byte.
 
-- [ ] **Step 6: Refresh Python Tooling integrity before loader-backed tests**
+- [x] **Step 6: Refresh Python Tooling integrity before loader-backed tests**
 
 Run `sha256sum` for `config.schema.json` and `providers/python_tooling.py`, then replace only their matching resource digests in `payload.toml`. After those resource digests validate, print the new aggregate:
 
@@ -621,7 +621,7 @@ PY
 
 Write that aggregate to `standards/python-tooling/standard.toml` and the `python-tooling@1.1` entry in `catalogs/5.toml`. Run `uv run project-standards standards sync-payload-projection --root . --check`; because this task adds no payload path, any projection drift is unexpected and must be investigated.
 
-- [ ] **Step 7: Run rendering tests and verify GREEN**
+- [x] **Step 7: Run rendering tests and verify GREEN**
 
 Run:
 
@@ -631,7 +631,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k 'o
 
 Expected: default bytes remain unchanged; opted-in TOML uses `branch`, `parallel`, `patch`, `source`; dependency and command assertions pass.
 
-- [ ] **Step 8: Commit the option/rendering unit**
+- [x] **Step 8: Commit the option/rendering unit**
 
 ```bash
 git add standards/python-tooling/versions/1.1/config.schema.json standards/python-tooling/versions/1.1/providers/python_tooling.py standards/python-tooling/versions/1.1/payload.toml standards/python-tooling/standard.toml catalogs/5.toml tests/package_contract/test_python_tooling_reconstruction.py
@@ -644,7 +644,7 @@ git commit -m "feat(python-tooling): configure parallel coverage"
 
 - Modify: `tests/package_contract/test_python_tooling_reconstruction.py`
 
-- [ ] **Step 1: Complete the pre-implementation scratch-consumer oracle**
+- [x] **Step 1: Complete the pre-implementation scratch-consumer oracle**
 
 Complete the parameterized test introduced before Task 5 implementation: it launches `python -m child_only`, while no parent imports `child_only`. Use the existing minimal-repository/installed-wheel helpers and the locked local environment so the test remains offline; do not add a network-dependent dependency installation path. Render the complete local script in both supported configurations, execute its gate in the scratch repository, then inspect coverage JSON. The `patch=["subprocess"]` case must capture `child_only.py`; the `patch=[]` negative control must prove it is absent.
 
@@ -675,7 +675,7 @@ assert not list(repo.glob(".coverage.*"))
 
 Give the scratch project the minimal Ruff, pytest, type-checker, coverage, and pip-audit configuration needed for the complete generated gate; do not skip non-coverage commands. Run subprocesses with `UV_OFFLINE=1` and fail with an explicit missing-cache diagnostic rather than accessing the network.
 
-- [ ] **Step 2: Run both oracle cases and verify GREEN**
+- [x] **Step 2: Run both oracle cases and verify GREEN**
 
 Run:
 
@@ -685,11 +685,11 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k su
 
 Expected: the child-only module appears in the report and input shards are removed.
 
-- [ ] **Step 3: Run the durable paired oracle**
+- [x] **Step 3: Run the durable paired oracle**
 
 Run the parameterized test without source edits and require both the positive subprocess-patch case and negative no-patch case to pass. This committed comparison is the evidence that the oracle detects the behavior being preserved.
 
-- [ ] **Step 4: Commit the executable coverage proof**
+- [x] **Step 4: Commit the executable coverage proof**
 
 ```bash
 git add tests/package_contract/test_python_tooling_reconstruction.py
@@ -708,7 +708,7 @@ git commit -m "test(python-tooling): prove subprocess coverage capture"
 - Modify: `catalogs/5.toml`
 - Modify: `tests/package_contract/test_python_tooling_reconstruction.py`
 
-- [ ] **Step 1: Add failing materialization, verification, and migration tests**
+- [x] **Step 1: Add failing materialization, verification, and migration tests**
 
 Cover:
 
@@ -721,7 +721,7 @@ Cover:
 - migrate/reconcile/disable/re-enable preserves consumer bytes and creates no lock/action state;
 - source and extracted-wheel providers return identical results.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
@@ -731,7 +731,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k 'w
 
 Expected: the option and predicate/claim behavior are absent.
 
-- [ ] **Step 3: Add conditional workflow materialization and signature binding**
+- [x] **Step 3: Add conditional workflow materialization and signature binding**
 
 In `payload.toml`:
 
@@ -750,7 +750,7 @@ consumer_owned_intent_pointer = "/python_tooling/workflow_ownership"
 
 Place the `when_any` table under the `check-workflow` contribution only.
 
-- [ ] **Step 4: Make verification ownership-aware**
+- [x] **Step 4: Make verification ownership-aware**
 
 ```python
 targets = [".python-version", "scripts/check.py"]
@@ -760,7 +760,7 @@ for target in targets:
     # retain the existing regular-file and digest checks
 ```
 
-- [ ] **Step 5: Emit the correct known or unknown migration claim**
+- [x] **Step 5: Emit the correct known or unknown migration claim**
 
 Copy raw `coverage` and `workflow_ownership` through normal JSON-safe option handling and add both recognized pointers. For `legacy-check-workflow`:
 
@@ -784,11 +784,11 @@ else:
 
 The provider must not add its package-specific modified finding for the valid unknown consumer-owned case.
 
-- [ ] **Step 6: Extend the installed provider-output schema and package docs**
+- [x] **Step 6: Extend the installed provider-output schema and package docs**
 
 Add optional `intent_pointer` to `$defs.claim.properties` without adding it to `required`. Document `workflow_ownership`, managed-only `ci.*`, unmanaged/unvalidated consumer responsibility, and the separate return-to-managed boundary.
 
-- [ ] **Step 7: Refresh Python Tooling resource and aggregate digests**
+- [x] **Step 7: Refresh Python Tooling resource and aggregate digests**
 
 Run `sha256sum` for the three changed resources and replace their exact entries in `payload.toml`. Then print the new aggregate:
 
@@ -814,7 +814,7 @@ uv run project-standards standards validate-packages --root . --json
 
 Expected: projection and package validation pass before any source/wheel test runs.
 
-- [ ] **Step 8: Run Python Tooling reconstruction and installed-wheel tests**
+- [x] **Step 8: Run Python Tooling reconstruction and installed-wheel tests**
 
 Run:
 
@@ -824,7 +824,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -q
 
 Expected: all source and wheel reconstruction tests pass.
 
-- [ ] **Step 9: Commit the Python workflow unit**
+- [x] **Step 9: Commit the Python workflow unit**
 
 ```bash
 git add standards/python-tooling/versions/1.1 standards/python-tooling/standard.toml catalogs/5.toml tests/package_contract/test_python_tooling_reconstruction.py
@@ -848,11 +848,11 @@ git commit -m "feat(python-tooling): preserve consumer-owned workflow"
 - Modify: `tests/package_contract/test_payload.py`
 - Modify: `tests/control_plane/test_schemas.py`
 
-- [ ] **Step 1: Add failing canonical-guide and schema-description assertions**
+- [x] **Step 1: Add failing canonical-guide and schema-description assertions**
 
 Assert the README and template mention `consumer_owned_intent_pointer`, whole-file/single-target restriction, literal raw intent, and the fact that the field is not package-history evidence. Assert generated descriptions no longer say every claim/disposition is exactly recognized history.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -862,7 +862,7 @@ uv run pytest tests/package_contract/test_self_hosting.py tests/package_contract
 
 Expected: documentation/template assertions fail against the old absolute wording.
 
-- [ ] **Step 3: Revise the canonical authoring surfaces**
+- [x] **Step 3: Revise the canonical authoring surfaces**
 
 Replace the absolute rule with this bounded distinction:
 
@@ -872,7 +872,7 @@ Legacy signatures recognize exact package-history bytes through `known_content_d
 
 Add a commented whole-file example to `legacy-signature.toml`. Update `LegacySignatureDeclaration`, `LegacyDisposition`, and `LegacyClaim` docstrings so both generated schemas express the same distinction.
 
-- [ ] **Step 4: Refresh Standard Bundle Authoring integrity**
+- [x] **Step 4: Refresh Standard Bundle Authoring integrity**
 
 Run `sha256sum` for `README.md` and `templates/legacy-signature.toml`, replace their exact resource entries in `payload.toml`, then print the new aggregate:
 
@@ -897,7 +897,7 @@ uv run project-standards standards validate-packages --root . --json
 
 Expected: package validation passes before self-hosting or source/wheel tests run.
 
-- [ ] **Step 5: Regenerate schemas and run focused tests**
+- [x] **Step 5: Regenerate schemas and run focused tests**
 
 Run:
 
@@ -908,7 +908,7 @@ uv run pytest tests/package_contract/test_self_hosting.py tests/package_contract
 
 Expected: authoring, model-description, and schema tests pass.
 
-- [ ] **Step 6: Commit the authoring synchronization**
+- [x] **Step 6: Commit the authoring synchronization**
 
 ```bash
 git add standards/standard-bundle-authoring/versions/2.0 standards/standard-bundle-authoring/standard.toml catalogs/5.toml src/project_standards/package_contract/payload.py src/project_standards/control_plane/migration.py src/project_standards/schemas tests/package_contract/test_self_hosting.py tests/package_contract/test_payload.py tests/control_plane/test_schemas.py
@@ -941,7 +941,7 @@ git commit -m "docs(authoring): explain ownership relinquishment"
 - Modify: `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`
 - Refresh: `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`
 
-- [ ] **Step 1: Add failing exact-union predecessor-reconstruction tests**
+- [x] **Step 1: Add failing exact-union predecessor-reconstruction tests**
 
 Create a complete pre-intent root-authority overlay. Derive its required path set as the exact union of:
 
@@ -982,7 +982,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py -k 'overlay 
 
 Expected: RED because the exact-union overlay manifest, frozen predecessor files, loader, and reconstruction path do not exist.
 
-- [ ] **Step 2: Implement predecessor reconstruction independent of live authority**
+- [x] **Step 2: Implement predecessor reconstruction independent of live authority**
 
 Add `prepare_legacy_release_checkout(source_root, target)` so it copies the Git-known source tree, removes copied `.standards/` only inside the disposable checkout, removes every manifest-listed path, and restores only entries declared `file`:
 
@@ -1024,7 +1024,7 @@ Use the reconstructed predecessor as the Git patch authority as well as the migr
 
 Define the authority tree from `_git_known_worktree_paths`: tracked current paths plus non-ignored additions, with tracked deletions omitted. Add a mode- and symlink-aware `git_known_file_tree` snapshot helper, and change `mirror_release_tree` to enumerate only that source path set. It must never recurse into or copy `.git/**`, and it must exclude ignored runtime artifacts such as `.venv/`, `.coverage*`, `.pytest_cache/`, `.ruff_cache/`, and `__pycache__/`. Use the authority snapshot—not raw `rglob` output—for post-atomic capture, patch mirroring, replay comparison, and pre/post source equivalence. The release patch must therefore always describe predecessor-to-v5 migration, including removal of `.project-standards.yml`, without repository metadata or execution residue, regardless of the live root's current authority.
 
-- [ ] **Step 3: Add failing intent, schema-currency, installed-provider, and guard tests**
+- [x] **Step 3: Add failing intent, schema-currency, installed-provider, and guard tests**
 
 Define one sparse V2 config object as the source for both legacy-intent rendering and installed-provider pre-alignment:
 
@@ -1102,7 +1102,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py -k 'signatur
 
 Expected on first execution: RED because the task guard, release-signature currency, preserved-container coherence, classifier synchronization, and comparator grammar do not yet satisfy the frozen predecessor.
 
-- [ ] **Step 4: Implement the two fail-closed alignment and migration-recognition contracts**
+- [x] **Step 4: Implement the two fail-closed alignment and migration-recognition contracts**
 
 Add a frozen result type and one helper used by both the disposable and live release paths:
 
@@ -1238,11 +1238,11 @@ Load the same installed Python Tooling 1.1 payload and schema-resolved effective
 
 Then append the exact CTM-NEW-010 signature digests; add the frozen `AGENTS.md`, frozen `CLAUDE.md`, and deterministic post-task-alignment digests to Python Tooling's preserved set as specified by CTM-NEW-009/012; implement Markdown Tooling's two explicit complete self-host cohorts and Project Spec's historical/current classifier set; and apply only the comparator item-pattern correction from CTM-NEW-013. Keep every older signature. Do not implement Markdown classifier membership as independent flat sets: only exact historical or current pairs select self-hosted, so mixed-generation pairs cannot pass. Update tests that select signatures positionally: `test_markdown_tooling_partial_self_host_pair_blocks_migration`, `test_markdown_tooling_migration_maps_yaml_and_exact_v1_artifacts`, `test_project_spec_declares_the_exact_rendered_v4_workflow_only`, and `test_project_spec_migration_claims_only_its_semantic_config_block_and_workflow`. Bind caller, historical self-host, and current self-host cases to explicit resource/root digests rather than `[0]`/`[-1]`, then add mixed/partial refusal. Refresh edited resource digests, each of the four family aggregate digests, catalog-5 entries, and activation expectations. Verify source projections and run the focused comparator, signature/classifier/coherence, reconstruction, package, and graph tests before executing the disposable preview.
 
-- [ ] **Step 5: Separate executable proof from retained-evidence currency**
+- [x] **Step 5: Separate executable proof from retained-evidence currency**
 
 Remove `assert_release_evidence_current()` from the migration/replay test's preamble. Have the proof helper return the release patch plus config/catalog/lock digests; keep evidence-currency assertions in a separate test so TDD can execute migration before retained prose is refreshed.
 
-- [ ] **Step 6: Run the post-implementation disposable proof**
+- [x] **Step 6: Run the post-implementation disposable proof**
 
 Run:
 
@@ -1252,7 +1252,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py::test_dispos
 
 Expected: frozen reconstruction, both installed-provider pre-alignments, migration, apply, locked sync, and fixed-point reconciliation pass independently of retained-evidence currency.
 
-- [ ] **Step 7: Complete config, preview, dependency, workflow, script, and lock assertions**
+- [x] **Step 7: Complete config, preview, dependency, workflow, script, and lock assertions**
 
 Assert:
 
@@ -1303,7 +1303,7 @@ Expected: the disposable lock is current, its locked offline sync passes, and bo
 
 Task 9 must not execute the migrated repository-root `scripts/check.py` against the otherwise pre-atomic checkout. Its pytest phase necessarily consumes root dogfood, version, workflow, and legacy-CLI tests that remain bound to `.project-standards.yml` until Task 11 performs their atomic transition. The first literal attempt proved this boundary by reaching 2,586 passing tests but failing the expected pre/post-authority assertions. Task 9 instead requires the migrated script bytes to equal the installed provider output, explicitly asserts the parallel `coverage erase` / `run --parallel-mode` / `combine` sequence, executes both complete reconciled gates in isolated scratch consumers, and completes locked offline sync in both reconstructed migration paths. Task 11 executes the migrated root gate only after every release-only root test, document, workflow, and version edit is final.
 
-- [ ] **Step 8: Prove pre-atomic and post-atomic replay equivalence**
+- [x] **Step 8: Prove pre-atomic and post-atomic replay equivalence**
 
 Run the proof first from the pre-atomic source tree. Use its completed migrated checkout—not a hand-built approximation—as the post-atomic source shape, Git-initialize and commit that authority tree, reconstruct it through the same overlay, and run the proof again. Git-initialize and commit each reconstructed predecessor before deriving its `source_snapshot`, `patch_checkout`, and replay baseline. Before any digest comparison, require `git_known_file_tree(predecessor_a) == git_known_file_tree(predecessor_b)`, including every frozen managed output and every live-copied all-`create-only` target. Both paths must restore the same frozen `pyproject.toml`, `uv.lock`, and `.vscode/tasks.json`; bind the same dev-group source digest, task source/post-alignment digests, and reviewed pre-write values; perform both guarded mutations; refresh/check/sync the lock offline; produce the same changed-path set and release patch/config/catalog/lock digests; replay that patch cleanly against a fresh copy of the same reconstructed predecessor; and reach the same fixed point. Compare both guards' complete result records, including next-lock semantic/provenance equality. Compare replay with the completed checkout through `git_known_file_tree`; ignored environments, caches, bytecode, and coverage files are disposable execution residue and must be absent from mirroring and evidence. Independently derive each expected instruction residual by slicing the sole frozen legacy begin line through the end-line terminator and require exact frozen prefix-plus-suffix equality; planner output is not its own preservation oracle. Reject a post-atomic path that attempts to use its already-aligned live root bytes, leaked non-signature materialized outputs, repository metadata, ignored runtime artifacts, or a raw unified-root patch baseline without restoration.
 
@@ -1325,11 +1325,11 @@ source_root = Path(os.environ.get("RELEASE_REPLAY_SOURCE_ROOT", _ROOT))
 
 Every fixture, overlay, catalog, and predecessor read in the proof must resolve from `source_root`; imported test/helper code may remain the live implementation under test. Ordinary Task 9 TDD runs leave the variable unset and may exercise the current worktree. When the override is set, require it to be an independent clean repository whose committed Git-known tree equals the recorded pre-atomic object tree; run sanitized `fsck`, reject both on-disk and ambient object borrowing, and add focused negative tests for non-Git, dirty, mismatched, or externally backed overrides. Task 11 sets the override to `$RELEASE_PREDECESSOR_ROOT`.
 
-- [ ] **Step 9: Reconcile implementation traceability before evidence hashing**
+- [x] **Step 9: Reconcile implementation traceability before evidence hashing**
 
 Mark CP01/BA02 FR-037 and CP01 FR-038 Passing only after their focused, source/wheel, and lifecycle tests pass. Revise CP01 from 0.10 to 0.11 and BA02 from 0.11 to 0.12 as evidence-only updates, set `last_reviewed` to 2026-07-13, append revision-history rows, and synchronize the revision labels in `docs/handoff/specs-plans.md`; keep CP01's live-root dogfood item pending until Task 11. Update STATUS, TODO, handoff, and the July session ledger to leave the complete gate and atomic migration as the remaining P0 work. Finalize every non-evidence documentation and specification edit before calculating `release_input_digest()`. Do not edit these release-input files again before the retained-evidence test is green.
 
-- [ ] **Step 10: Refresh retained evidence from the stable pre-atomic tree**
+- [x] **Step 10: Refresh retained evidence from the stable pre-atomic tree**
 
 Regenerate the retained evidence's preliminary migration procedure, migration changed-path ledger, workflow facts, container-preservation facts, and release-input/migration-patch/config/catalog/lock digests from the completed executable proof. The procedure must name the frozen complete-root overlay, both installed-provider pre-alignments, signature/classifier currency, no Python Tooling whole-file retirement of the four shared containers, independently derived exact legacy-block-to-three-current-block instruction normalization, real-migrated-tree post-atomic reconstruction, locked offline sync, byte identity for consumer-owned `check.yml` and both Markdown Tooling workflows, Markdown Frontmatter's legacy-workflow removal plus `validate-standards.yml` composition, Project Spec's in-place self-host workflow replacement, and no `check.yml` action/unit/lock entry. Remove the obsolete universal changed-workflow or universal workflow-identity claim. Label this digest and ledger **migration patch**, not complete atomic release content; Task 11 replaces the canonical release-content digest and ledger after all release-only edits.
 
@@ -1342,7 +1342,7 @@ uv run pytest tests/package_compatibility/test_catalog_matrix.py -q
 
 Expected: both predecessor reconstructions, both guarded mutations, signature/classifier/container coherence, disposable migration, locked sync, both checker oracles, fixed point, retained-evidence currency, source/wheel matrix, and performance rows pass. The evidence file is excluded from its own input digest, so the final evidence-only correction does not invalidate the proof.
 
-- [ ] **Step 11: Commit the release proof**
+- [x] **Step 11: Commit the release proof**
 
 ```bash
 git add catalogs/5.toml standards/markdown-frontmatter standards/markdown-tooling standards/project-spec standards/python-tooling src/project_standards/payloads tests/fixtures/package_compatibility/legacy/release-root tests/package_contract tests/package_compatibility/release_candidate.py tests/package_compatibility/test_release_candidate.py docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md docs/specs/2026-07-10-consumer-standards-control-plane-spec.md docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md docs/STATUS.md docs/TODO.md docs/handoff

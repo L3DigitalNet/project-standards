@@ -27,7 +27,7 @@
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Coverage Task 9 is committed at `7d4d5fa`; refresh its preliminary evidence after the audited input fixes. CTM-NEW-015 defers the migrated-root gate to Task 11.
+- Task 9 is committed at `7d4d5fa`; its plan and release indexes are synchronized. Refresh evidence after P0 fixes; Task 11 owns migrated-root proof.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.

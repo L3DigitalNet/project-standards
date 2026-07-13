@@ -30,7 +30,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
 ### P0 — Correct audited release inputs
 
-- [ ] Synchronize the v5 execution plan and current-state indexes.
+- [x] Synchronize the v5 execution plan and current-state indexes.
 
   Mark coverage Task 9 committed at `7d4d5fa`; add the audited prerequisites before Task 10; correct stale CP01/BA02 revisions, Step 07 status, Standard Bundle Authoring 2.0 status, and V5 configuration guidance in maintained indexes.
 

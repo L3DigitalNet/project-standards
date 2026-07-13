@@ -23,6 +23,6 @@
 ## Standing backlog
 
 - **Repo-root-relative link enforcement:** breaking and deferred to a future major.
-- **MCP enablement:** complete SPEC-MT01 Step 07 before SPEC-RD01 or the thin, local, read-only-first SPEC-MS01 server.
+- **MCP enablement:** SPEC-MT01 Step 07 is complete; the v5 release and refreshed protocol/SDK research now gate the thin, local, read-only-first SPEC-MS01 server.
 - Packages remain independent by default. Profiles recommend combinations; the future MCP layer surfaces relationships without enforcing hidden dependencies.
 - SPEC-MT01 ADRs 0001-0013 are accepted. Later MCP-server decisions remain deferred; see `specs-plans.md`.
