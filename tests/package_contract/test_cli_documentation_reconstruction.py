@@ -268,6 +268,16 @@ def test_cli_documentation_declares_only_create_only_usage_ownership() -> None:
     ).read_bytes()
 
 
+def test_cli_documentation_current_examples_use_unified_validation() -> None:
+    for example in (
+        _ROOT / "standards/cli-documentation/examples/usage.example.md",
+        _PAYLOAD / "examples/usage.example.md",
+    ):
+        content = example.read_text(encoding="utf-8")
+        assert "project-standards validate --config .project-standards.yml" not in content
+        assert "uv run project-standards validate\n" in content
+
+
 def test_cli_documentation_renders_python_and_non_python_workflows() -> None:
     python_config: JsonObject = {
         "contract_version": "1.0",

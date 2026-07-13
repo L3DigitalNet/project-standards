@@ -229,7 +229,7 @@ policy = "managed"
 id = "skill"
 target = ".agents/skills/markdown-frontmatter/SKILL.md"
 source = "skills/markdown-frontmatter/SKILL.md"
-digest = "sha256:b60815276714957c4b090328c1735fd78794c31045f9f6c7f624179d496de777"
+digest = "sha256:2e20513ae5c6ce3811f99726594db1e436bb7e4bf6023b47107874f0a32d08d5"
 policy = "managed"
 
 [[artifacts]]

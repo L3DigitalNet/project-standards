@@ -42,11 +42,11 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   Stop the current V2 caller from passing `.standards/config.toml` as an explicit legacy override. Reconcile the resource, provider, adoption guide, root workflow, CLI semantics, and tests with an end-to-end generated-command check.
 
-- [ ] Correct stale shipped package and release guidance.
+- [x] Correct stale shipped package and release guidance.
 
   Update the Frontmatter skill and wheel twin, active CLI Documentation example, Project Specification tooling notes, Python Coding 0.5 banner, current family docs, and ADR package-versus-contract changelog wording. Preserve frozen legacy resources and historical migration records.
 
-- [ ] Regenerate all integrity outputs affected by the release-input fixes.
+- [x] Regenerate all integrity outputs affected by the release-input fixes.
 
   Refresh payload, family, and catalog digests; schemas; installed projections; bundled resources; and source/wheel regression expectations. Prove package validation, graph validation, and fixed-point projection remain clean.
 

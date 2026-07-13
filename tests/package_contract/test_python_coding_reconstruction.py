@@ -163,6 +163,12 @@ def test_python_coding_reconstructs_one_reference_only_payload(tmp_path: Path) -
     }
 
 
+def test_python_coding_current_banners_identify_package_0_5() -> None:
+    for readme in (_FAMILY / "README.md", _PAYLOAD / "README.md"):
+        banner = readme.read_text(encoding="utf-8").splitlines()[2]
+        assert "Draft (version 0.5)" in banner
+
+
 def test_python_coding_is_visible_but_cannot_be_enabled_or_write(tmp_path: Path) -> None:
     _root, repository = _repository(tmp_path)
     family = _python_coding(repository)

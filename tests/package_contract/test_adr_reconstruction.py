@@ -375,6 +375,18 @@ def test_adr_payload_docs_have_only_relocatable_local_links() -> None:
             assert target.exists(), raw
 
 
+def test_adr_changelog_distinguishes_package_and_document_contract_versions() -> None:
+    entry = next(
+        line
+        for line in (_ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+        if line.startswith("- **ADR Standard — canonical ADR directory moved")
+    )
+
+    assert "Package impact: `adr` package `1.0` → `1.1`" in entry
+    assert "document contract remains `1.0`" in entry
+    assert "Contract impact:" not in entry
+
+
 def test_adr_payload_is_byte_identical_in_built_wheel(tmp_path: Path) -> None:
     project = _isolated_repository(tmp_path, with_frontmatter=True)
     package = project / "src/project_standards"

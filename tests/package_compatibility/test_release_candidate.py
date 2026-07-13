@@ -811,12 +811,18 @@ def test_legacy_dependency_scan_rejects_unapproved_runtime_writers(tmp_path: Pat
         "from project_standards.agent_handoff.planning import apply_adoption\napply_adoption()\n",
         encoding="utf-8",
     )
+    endpoint = tmp_path / ".github/workflows/validate-markdown-frontmatter.yml"
+    endpoint.parent.mkdir(parents=True)
+    endpoint.write_text("run: validate --config .project-standards.yml\n", encoding="utf-8")
 
     classified = classify_legacy_dependencies(tmp_path)
 
     assert classified["direct-writer-runtime"] == (
         "project_standards/agent_handoff/providers.py",
         "project_standards/cli.py",
+    )
+    assert classified["release-bootstrap"] == (
+        ".github/workflows/validate-markdown-frontmatter.yml",
     )
     assert classified["unclassified"] == ("project_standards/surprise.py",)
 
@@ -1397,8 +1403,7 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
 
 def test_selected_project_spec_workflow_commands_use_unified_authority() -> None:
     workflow = (
-        _ROOT
-        / "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml"
+        _ROOT / "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml"
     ).read_bytes()
 
     assert _generated_spec_arguments(workflow) == (
@@ -1508,6 +1513,7 @@ def _execute_migration_proof(
             ".github/workflows/check.yml",
             ".github/workflows/format.yml",
             ".github/workflows/lint-markdown.yml",
+            ".github/workflows/validate-markdown-frontmatter.yml",
             ".github/workflows/validate-specs.yml",
         )
     }
@@ -1767,7 +1773,9 @@ def _execute_migration_proof(
             managed_suffix = managed_suffix.replace(envelope, b"", 1)
         assert managed_suffix.replace(b"\n", b"") == b""
     active_workflow_bytes = b"\n".join(
-        path.read_bytes() for path in sorted((checkout / ".github/workflows").glob("*.yml"))
+        path.read_bytes()
+        for path in sorted((checkout / ".github/workflows").glob("*.yml"))
+        if path != frontmatter_endpoint
     )
     assert b".project-standards.yml" not in active_workflow_bytes
     assert b".agents/agent-handoff/manifest.json" not in active_workflow_bytes
@@ -1775,6 +1783,10 @@ def _execute_migration_proof(
     installed_dependencies = classify_legacy_dependencies(installed)
     assert tracked_dependencies["unclassified"] == ()
     assert installed_dependencies["unclassified"] == ()
+    assert tracked_dependencies["release-bootstrap"] == (
+        ".github/workflows/validate-markdown-frontmatter.yml",
+    )
+    assert installed_dependencies["release-bootstrap"] == ()
     assert tracked_dependencies["migration-runtime"]
     assert installed_dependencies["migration-runtime"]
     assert tracked_dependencies["direct-writer-runtime"] == tuple(

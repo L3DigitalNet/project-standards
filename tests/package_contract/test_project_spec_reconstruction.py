@@ -325,6 +325,30 @@ def test_project_spec_v2_docs_describe_only_the_v5_control_plane() -> None:
         assert expected in combined
 
 
+def test_project_spec_current_tooling_notes_use_unified_discovery() -> None:
+    for notes in (
+        _ROOT / "standards/project-spec/resources/tooling-notes.md",
+        _PAYLOAD / "resources/tooling-notes.md",
+    ):
+        content = notes.read_text(encoding="utf-8")
+        assert "--config .project-standards.yml" not in content
+        assert "project-standards spec validate [FILE ...]" in content
+
+
+def test_project_spec_current_docs_cover_all_six_unified_options() -> None:
+    adopt = (_PAYLOAD / "adopt.md").read_text(encoding="utf-8")
+    summary = (_PAYLOAD / "agent-summary.md").read_text(encoding="utf-8")
+
+    assert "six closed options" in adopt
+    assert "five closed" not in adopt
+    assert (
+        "`contract_version`, `workflow_mode`, `include_patterns`, `reference_prefixes`, "
+        "`default_profile`, and `ci`"
+    ) in summary
+    for readme in (_ROOT / "standards/project-spec/README.md", _PAYLOAD / "README.md"):
+        assert "upgrade --config" not in readme.read_text(encoding="utf-8")
+
+
 def test_project_spec_validate_and_lint_use_payload_templates() -> None:
     content = (_PAYLOAD / "examples/spec.example.md").read_bytes()
     snapshots: JsonObject = {

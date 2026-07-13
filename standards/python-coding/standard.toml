@@ -9,4 +9,4 @@ status = "draft"
 [[versions]]
 version = "0.5"
 payload = "versions/0.5/payload.toml"
-digest = "sha256:d427ddb6ad6f04f010c2ef897d7668c577bda7f1c0d2b50c943dd56fa98634bc"
+digest = "sha256:d8af72fbb1f6c1d90925168345c10a7d16a38f8980fa694a47076a47f29410f1"

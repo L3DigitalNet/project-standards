@@ -155,7 +155,7 @@ spec:
   reference_prefixes: ['RQ', 'GAP', 'MIT'] # cited, not minted here
 ```
 
-Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade --config` read this key; `extract` and `next` never load config.
+Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade` read this option; `extract` and `next` do not use it.
 
 ---
 

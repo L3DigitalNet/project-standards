@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:b85c5176ba032230232ed1c540a88d40411171f0a5d45732bc32bf5aa2b8e6fe"
+digest = "sha256:58a82a6b3df990b426cae8557f8d5a5f8b985a55d4778d5f338dad26ca2d8e98"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:23d27278a3f82b6d080df0c3c13cc7752ba2329950c6301f324af73725170c4e"
+digest = "sha256:b5953a43a0dc55602cac2fc89e54a80ac4d3e9fb256f534d5beb37fe1d4a2980"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:2a8789dcab647c14781fd71151e1a0924394379cc6125a0c4369a72088a21beb"
+digest = "sha256:2791626ac89c3d9aed4c511dfdd14aedf957161aa0f56389262b18519c619916"
 
 [[resources]]
 id = "config-schema"
@@ -57,7 +57,7 @@ id = "tooling-notes"
 role = "tooling-note"
 path = "resources/tooling-notes.md"
 media_type = "text/markdown"
-digest = "sha256:77d0c1ddcf0cd781e9b822182ce724b16d5cc0c1adea895c147a08679989de57"
+digest = "sha256:0417ba7e0a918deb909468923b063f147336f134e7a74b6fe120d9c8c9f10554"
 
 [[resources]]
 id = "template-light"

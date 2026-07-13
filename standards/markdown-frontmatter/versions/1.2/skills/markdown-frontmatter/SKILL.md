@@ -12,7 +12,7 @@ metadata:
 
 ## Overview
 
-Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/README.md).
+Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/README.md).
 
 This skill ships with the standard package and is installed repo-local at `.agents/skills/markdown-frontmatter` when a repository adopts the standard. That path is deliberate: both Claude Code and Codex CLI can discover it without a global skill owner.
 
@@ -169,8 +169,8 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 
 ## Authoritative references
 
-- [Standard README](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/README.md) — overview and adoption surface.
-- [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
-- [Field Values](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
+- [Standard README](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/README.md) — overview and adoption surface.
+- [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
+- [Field Values](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
 - [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
-- `src/project_standards/schemas/markdown-frontmatter.schema.json` (in project-standards) — the authoritative contract; wins on any conflict.
+- [Bundled JSON Schema](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/schemas/markdown-frontmatter.schema.json) — the authoritative contract; wins on any conflict.

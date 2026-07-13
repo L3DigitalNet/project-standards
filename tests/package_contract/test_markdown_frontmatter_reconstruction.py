@@ -1176,6 +1176,22 @@ def test_frontmatter_source_markdown_links_are_relocatable() -> None:
     _assert_local_markdown_links_stay_within_payload(_PAYLOAD)
 
 
+def test_frontmatter_active_skill_links_to_versioned_v5_package_docs() -> None:
+    skill = (_PAYLOAD / "skills/markdown-frontmatter/SKILL.md").read_text(encoding="utf-8")
+
+    assert "project-standards/blob/main" not in skill
+    for relative in (
+        "README.md",
+        "structure.md",
+        "field-values.md",
+        "schemas/markdown-frontmatter.schema.json",
+    ):
+        assert (
+            f"project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/{relative}"
+            in skill
+        )
+
+
 def test_frontmatter_versioning_distinguishes_package_contract_and_tool_release() -> None:
     readme = (_PAYLOAD / "README.md").read_text(encoding="utf-8")
 

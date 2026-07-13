@@ -147,7 +147,7 @@ The table gives the repository-wide convention; per-command deviations are noted
 ### Validate the whole configured file set
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 ### Preview an adoption without writing anything

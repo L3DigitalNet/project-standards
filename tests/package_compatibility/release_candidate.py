@@ -1251,6 +1251,7 @@ def classify_legacy_dependencies(root: Path) -> dict[str, tuple[str, ...]]:
         "migration-runtime": [],
         "direct-writer-runtime": [],
         "v5-fallback-runtime": [],
+        "release-bootstrap": [],
         "historical-or-test": [],
         "unclassified": [],
     }
@@ -1285,6 +1286,8 @@ def classify_legacy_dependencies(root: Path) -> dict[str, tuple[str, ...]]:
             or relative.startswith("scripts/")
         ):
             category = "v5-fallback-runtime"
+        elif relative == ".github/workflows/validate-markdown-frontmatter.yml":
+            category = "release-bootstrap"
         elif (
             relative.startswith(("tests/", "docs/", "standards/", "meta/"))
             or normalized.startswith(("project_standards/families/", "project_standards/payloads/"))
