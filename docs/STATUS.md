@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; `testing` carries the unreleased v5.0.0 standards-platform work with coverage Tasks 1–8 integrated through `d5c8031` and Task 9's release proof in the current reviewed worktree.
+- `main` remains the released v4.3.0 line; `testing` carries unreleased v5.0.0 work through coverage Task 9 at `7d4d5fa`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
@@ -11,7 +11,7 @@
 - Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
-- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29201533025` passed for cleanup commit `a6bb970`.
+- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29249551448` passed for `7d4d5fa`.
 - `SPEC-CP01` rev 0.11 is approved; FR-037/FR-038 focused, lifecycle, stale-plan, no-write/no-lock, managed-return, and source/wheel evidence passes.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` rev 0.12 keeps the nine-family v5 scope and records passing FR-037 migration/source-wheel evidence without changing the authoring contract.
@@ -21,23 +21,23 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Remaining v5 gates: Task 10's complete implementation gate, Task 11's atomic source-root migration and final complete-release evidence, then release landing/tagging/publication.
+- V5 requires Frontmatter pre-tag and Project Spec unified-config fixes; then guidance/integrity/Task 9 refresh, Task 10, atomic Task 11, hosted gates, and signed publication.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Coverage Task 9 now reconstructs the exact 31-path predecessor twice, performs both installed-provider guards and locked offline sync, proves signature/classifier/container currency and exact workflow/instruction transitions, and binds deterministic migration evidence through self-contained canonical Git helpers. CTM-NEW-015 defers the real migrated root gate until Task 11 has atomically changed its pre-atomic test/document/version expectations.
+- Coverage Task 9 is committed at `7d4d5fa`; refresh its preliminary evidence after the audited input fixes. CTM-NEW-015 defers the migrated-root gate to Task 11.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
-- GitHub issue #3 and PRs #1, #2, #4, #5, and #6 are closed with no open PRs; incomplete action bumps are consolidated into one v5-wide parity task.
+- No GitHub issues or PRs remain open. Two Dependabot alerts on `main` are fixed on `testing`; confirm closure after release landing.
 - Deferred decisions are closed: existing symlink checks and OpenAPI policy stand; catalog 5 drift tooling supersedes the old v2.2 `check` plan.
 - Current handoff instructions, architecture, and bug lessons meet size and shape targets; only accepted append-only session warnings remain.
 - All 15 retained Project Specification documents now live under `docs/specs/`, are indexed, and pass validate/lint; future package specs remain post-v5.
 - The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`.
-- `project-toolbox` and `agent-managed-repo` are dedicated post-v5 programs, not v5 release prerequisites.
+- Future-artifact disposition, Python Coding status, Usage Documentation Site review, `project-toolbox`, and `agent-managed-repo` are post-v5 programs, not release prerequisites.
 - Final pre-release housekeeping and SPEC-MT01 Step 07 are complete. MCP server work remains deferred behind v5 and fresh protocol/SDK research.
 - Nineteen known consumers validate on v1 branches; six concrete-evidence default branches, a published v5 wheel check, the final dependency search, and owner approval remain.
 - `progressive-apparel` is the first migrated consumer (`2b062b6`); its Codex-only profile validates cleanly on `main`.

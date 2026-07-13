@@ -26,39 +26,83 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
-Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independently without widening release scope. Do not start P4 until v5.0.0 is published.
+Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are explicitly post-release and must not delay that path.
 
-### P0 — Resolve release debt
+### P0 — Correct audited release inputs
 
-- [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
+- [ ] Synchronize the v5 execution plan and current-state indexes.
 
-  Coverage Tasks 1–8 and all six checker-table materialization tasks are integrated on `testing` through `d5c8031`. Task 9 closes the 31-path predecessor, both guarded installed-provider alignments, signature/classifier/container currency, locked sync, two-path migration replay, and exact retained-record binding; CP01 rev 0.11 and BA02 rev 0.12 record the passing requirement evidence. Next run Task 10's complete gate, then perform Task 11's atomic root migration, real migrated-root gate, and final complete-release evidence refresh.
+  Mark coverage Task 9 committed at `7d4d5fa`; add the audited prerequisites before Task 10; correct stale CP01/BA02 revisions, Step 07 status, Standard Bundle Authoring 2.0 status, and V5 configuration guidance in maintained indexes.
+
+- [ ] Repair the Markdown Frontmatter release-workflow bootstrap.
+
+  The V2-composed job cannot call this repository at `@v5` before that tag exists. Make the first `main` release run bootstrap-safe, retain a canonical public `workflow_call` endpoint for consumers, and test both pre-tag and published-ref paths.
+
+- [ ] Repair the Project Specification generated workflow under unified authority.
+
+  Stop the current V2 caller from passing `.standards/config.toml` as an explicit legacy override. Reconcile the resource, provider, adoption guide, root workflow, CLI semantics, and tests with an end-to-end generated-command check.
+
+- [ ] Correct stale shipped package and release guidance.
+
+  Update the Frontmatter skill and wheel twin, active CLI Documentation example, Project Specification tooling notes, Python Coding 0.5 banner, current family docs, and ADR package-versus-contract changelog wording. Preserve frozen legacy resources and historical migration records.
+
+- [ ] Regenerate all integrity outputs affected by the release-input fixes.
+
+  Refresh payload, family, and catalog digests; schemas; installed projections; bundled resources; and source/wheel regression expectations. Prove package validation, graph validation, and fixed-point projection remain clean.
+
+- [ ] Re-run coverage Task 9 and replace the retained preliminary evidence.
+
+  Repeat the exact predecessor and two-path migration replay only after P0 inputs stabilize. Bind the new release-input hash and patch, obtain an independent release-critical review, and leave a committed clean pre-atomic checkpoint.
+
+### P1 — Complete the pre-atomic gate
+
+- [ ] Run coverage Task 10's complete verification-only gate.
+
+  Run the integrity/catalog, focused, full repository, package, document, spec, handoff, dependency, and performance checks from the stable checkpoint. Require a clean tree and no generated diff.
 
 ### P2 — Cut and publish v5.0.0
 
-- [ ] Prepare the v5 release commit for `main`.
+- [ ] Create Task 11 as one atomic v5 release commit on `main`.
 
-  Atomically migrate this source checkout to the V2 control plane; do not stage `.standards/` earlier. Update release references and metadata, bump `pyproject.toml` and `uv.lock`, promote CHANGELOG `[Unreleased]`, and rewrite `UPGRADING.md` for v4 to v5.
+  Start from the verified predecessor. Migrate the source root to V2, create `.standards/`, remove `.project-standards.yml`, transition root workflows and commands, bump project and lock versions, promote the changelog, and finish the active v4-to-v5 reference sweep. Do not stage `.standards/` earlier.
 
-- [ ] Run the complete release checklist and land the release commit on `main`.
+- [ ] Bind final release evidence and verify the atomic parent-to-release diff.
 
-  Follow `meta/versioning.md`, run local and hosted gates, and confirm the exact release commit exists on `main` before tagging.
+  Run the migrated-root gate, repeat the Task 9 proof against the actual release tree, derive the complete-release record, rerun all local release gates, and prove the single commit contains exactly the intended transition.
+
+- [ ] Land the exact release commit on remote `main` and pass hosted gates.
+
+  Confirm local and remote SHA equality before tagging. Require every protected `main` workflow to pass, including the repaired standards workflow, and confirm the two default-branch Dependabot alerts close against the already-updated lock.
 
 - [ ] Sign and publish `v5.0.0`, advance the `v5` tag, and publish the GitHub release.
 
-- [ ] Lift the release freeze and record deployed v5 truth.
+  GPG-sign both refs at the exact release commit, verify their remote dereferenced SHAs, publish from the promoted release notes, and probe the published wheel and GitHub release.
 
-  Update `meta/versioning.md`, `docs/handoff/state.md`, deployment/status records, and release history only after the release refs are live.
+- [ ] Close the v5 release and record deployed truth.
 
-### P3 — Parallel and post-release programs
+  Lift the freeze and update `meta/versioning.md`, deployment, status, task, handoff, and release-history records only after the refs and artifact are live. Reconcile `testing` with the released `main` tip.
+
+### P3 — Post-release cleanup and deferred standards
 
 - [ ] Finish Agent Handoff consumer retirement.
 
   Refresh the 26-repository ledger, resolve its six remaining concrete-evidence default-branch rows through authorized workflows, verify the published v5 artifact, run the final dependency search, and obtain owner approval before deleting the deprecated engine.
 
-- [ ] Continue MCP server enablement after Step 07.
+- [ ] Resolve the owner-reviewed future-artifact dispositions.
 
-  Before SPEC-MS01 MS-0, recheck the MCP protocol, Python SDK, licensing, and client capabilities. Keep server implementation blocked until Step 07 passes.
+  Delete the two approved superseded transcripts, consolidate the retained Project Specification guidance into its durable owner, then update `docs/future-standards/README.md`, inbound links, and the local-link audit.
+
+- [ ] Decide and complete the Python Coding package's post-v5 status path.
+
+  Keep 0.5 reference-only until its draft requirements, adoption posture, and release criteria are explicitly accepted or the package is deliberately retained as reference material.
+
+- [ ] Review the Usage Documentation Site specification set.
+
+  Treat the moved eight-document set as a separate post-v5 program: reconcile requirements and decisions, obtain formal specification approval, then design and plan implementation.
+
+- [ ] Continue MCP server enablement after v5.
+
+  Step 07 is complete. Before SPEC-MS01 MS-0, recheck the MCP protocol, Python SDK, licensing, and client capabilities; resolve remaining owner decisions before server implementation.
 
 ### P4 — Dedicated post-v5 package programs
 
@@ -66,6 +110,10 @@ Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independen
 
   Develop this first as its own design, review, implementation, and release cycle. Package the four proven workflows plus one routing skill under `.agents/workflows/project-toolbox/`; retain `docs/workflows/` for local extensions.
   - [ ] Convert the installed Codex `review-orchestrator` skill into a managed `project-toolbox` workflow.
+
+- [ ] Add template-repository autopopulation after `project-toolbox` is released.
+
+  Design the bootstrap and update flow against the released provider-neutral workflow package rather than embedding a second unmanaged copy.
 
 - [ ] Create and release the `agent-managed-repo` standard.
 
