@@ -50,7 +50,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   Refresh payload, family, and catalog digests; schemas; installed projections; bundled resources; and source/wheel regression expectations. Prove package validation, graph validation, and fixed-point projection remain clean.
 
-- [ ] Re-run coverage Task 9 and replace the retained preliminary evidence.
+- [x] Re-run coverage Task 9 and replace the retained preliminary evidence.
 
   Repeat the exact predecessor and two-path migration replay only after P0 inputs stabilize. Bind the new release-input hash and patch, obtain an independent release-critical review, and leave a committed clean pre-atomic checkpoint.
 

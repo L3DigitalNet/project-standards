@@ -21,7 +21,7 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Frontmatter and Project Spec workflows plus shipped guidance/integrity are fixed; the 649-test package/catalog matrix passes. Task 9 refresh is next.
+- V5 release inputs and Task 9 evidence are refreshed; the 649-test package/catalog matrix and two-path replay pass. Independent review is Ready; Task 10 is next.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.

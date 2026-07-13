@@ -3,7 +3,7 @@
 ## Current focus
 
 - Fix the audited Frontmatter bootstrap and Project Spec workflow blockers, then reconcile stale shipped v4 and package guidance.
-- Regenerate affected integrity outputs and Task 9 evidence before running Task 10's complete pre-atomic gate.
+- Task 9 evidence and independent review are current. Run Task 10's complete pre-atomic verification-only gate next.
 - Keep the freeze and root migration atomic through Task 11, hosted `main` gates, signed refs, and artifact verification.
 - After v5, finish Agent Handoff retirement; hold `project-toolbox` and `agent-managed-repo` for dedicated cycles.
 

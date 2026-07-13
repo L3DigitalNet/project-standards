@@ -6,8 +6,8 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-13'
+reviewed: '2026-07-13'
 owner: ''
 consumer: 'mix'
 tags:
@@ -158,6 +158,7 @@ Every release MUST:
 4. **Bump the package version** in `pyproject.toml` and regenerate `uv.lock` in the release commit, so `uv tool install` resolves a version that matches the tag.
 5. **Update the changelog** in the same commit: move entries from `## [Unreleased]` into a new `## [vMAJOR.MINOR.PATCH] — YYYY-MM-DD` section, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). A MAJOR release MUST include migration notes describing what a consumer must change.
 6. **Rewrite `UPGRADING.md` for the new major (MAJOR only).** [`UPGRADING.md`](../UPGRADING.md) is the step-by-step major-upgrade runbook README.md points consumers to, and both prior majors shipped it rewritten in the release commit. Its frontmatter `title` (and `id`, if it encodes the version) still reads "Upgrading from v(N-1) to vN" — rewrite the document as **"Upgrading from v(N-1) to vN"** for the new pair, with the new major's breaking-change steps, and update the frontmatter `title` (and `id` if applicable) to match. Confirm `README.md`'s pin example (e.g. `@v2` → `@v3`) names the current major pair.
+7. **Run the executable release replay.** Before tag or publication, run `uv run pytest tests/package_compatibility/test_release_candidate.py -q` without skipping the `release_replay` tier. The two-path disposable migration, executed guard records, migration patch and ledger, and control-plane digests must exactly match the retained machine-readable release evidence.
 
 ## Consuming repositories
 
