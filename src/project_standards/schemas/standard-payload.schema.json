@@ -331,7 +331,7 @@
     },
     "MaterializationPredicate": {
       "additionalProperties": false,
-      "description": "Match one resolved package option without embedding executable policy.",
+      "description": "Match a bare top-level option or an absolute nested option pointer.",
       "properties": {
         "contains": {
           "anyOf": [
@@ -376,9 +376,18 @@
           "title": "Equals"
         },
         "option": {
-          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
-          "title": "Option",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "pattern": "^(?:/[a-z][a-z0-9]*(?:_[a-z0-9]+)*){2,}$",
+              "type": "string"
+            }
+          ],
+          "description": "Bare top-level option name or absolute multi-segment option pointer; single-segment pointers are noncanonical.",
+          "title": "Option"
         }
       },
       "required": [

@@ -67,6 +67,10 @@ SharedIdentity = Annotated[
     StringConstraints(pattern=r"^[a-z0-9]+(?:[./_-][a-z0-9]+)*$"),
 ]
 OptionName = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")]
+OptionPointer = Annotated[
+    str,
+    StringConstraints(pattern=r"^(?:/[a-z][a-z0-9]*(?:_[a-z0-9]+)*){2,}$"),
+]
 AffectedIdentity = Annotated[
     str,
     StringConstraints(
@@ -161,9 +165,14 @@ class ArtifactPolicy(StrEnum):
 
 
 class MaterializationPredicate(StrictModel):
-    """Match one resolved package option without embedding executable policy."""
+    """Match a bare top-level option or an absolute nested option pointer."""
 
-    option: OptionName
+    option: OptionName | OptionPointer = Field(
+        description=(
+            "Bare top-level option name or absolute multi-segment option pointer; "
+            "single-segment pointers are noncanonical."
+        )
+    )
     equals: bool | int | float | str | None = None
     contains: bool | int | float | str | None = None
 
@@ -173,9 +182,19 @@ class MaterializationPredicate(StrictModel):
             raise ValueError("materialization predicate requires exactly one operator")
         return self
 
+    def _observed(self, config: Mapping[str, JsonValue]) -> JsonValue | None:
+        if not self.option.startswith("/"):
+            return config.get(self.option)
+        node: object = config
+        for segment in self.option.split("/")[1:]:
+            if not isinstance(node, Mapping):
+                return None
+            node = node.get(segment)
+        return cast("JsonValue | None", node)
+
     def matches(self, config: Mapping[str, JsonValue]) -> bool:
         """Return whether the resolved option satisfies this closed predicate."""
-        observed = config.get(self.option)
+        observed = self._observed(config)
         if self.equals is not None:
             return type(observed) is type(self.equals) and observed == self.equals
         return isinstance(observed, list) and any(

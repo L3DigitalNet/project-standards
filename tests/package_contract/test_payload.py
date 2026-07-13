@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.payload import (
     LegacySignatureDeclaration,
+    MaterializationPredicate,
     PackageOptionSchema,
     PayloadAvailability,
     PayloadManifest,
@@ -26,6 +27,71 @@ _INVALID_PAYLOADS = _FIXTURES / "invalid/payload"
 
 def _digest(character: str = "0") -> str:
     return f"sha256:{character * 64}"
+
+
+def test_materialization_predicate_accepts_canonical_option_pointer() -> None:
+    predicate = MaterializationPredicate.model_validate(
+        {"option": "/type_checker/name", "equals": "basedpyright"}
+    )
+
+    assert predicate.matches({"type_checker": {"name": "basedpyright", "mode": "strict"}})
+    assert not predicate.matches({"type_checker": {"name": "pyright", "mode": "strict"}})
+
+
+def test_materialization_predicate_pointer_misses_fail_closed() -> None:
+    predicate = MaterializationPredicate.model_validate(
+        {"option": "/type_checker/name", "equals": "basedpyright"}
+    )
+
+    assert not predicate.matches({})
+    assert not predicate.matches({"type_checker": "basedpyright"})
+    assert not predicate.matches({"type_checker": {"mode": "strict"}})
+
+
+def test_materialization_predicate_contains_matches_nested_arrays() -> None:
+    predicate = MaterializationPredicate.model_validate(
+        {"option": "/coverage/patch", "contains": "subprocess"}
+    )
+
+    assert predicate.matches({"coverage": {"patch": ["subprocess"]}})
+    assert not predicate.matches({"coverage": {"patch": []}})
+    assert not predicate.matches({"coverage": {}})
+
+
+def test_materialization_predicate_equals_stays_type_exact_at_nested_leaves() -> None:
+    predicate = MaterializationPredicate.model_validate(
+        {"option": "/coverage/parallel", "equals": True}
+    )
+
+    assert predicate.matches({"coverage": {"parallel": True}})
+    assert not predicate.matches({"coverage": {"parallel": 1}})
+
+
+@pytest.mark.parametrize(
+    "option",
+    [
+        "/type_checker",
+        "/type_checker/",
+        "//name",
+        "/type_checker/~1name",
+        "/type_checker/0",
+        "/Type_Checker/name",
+        "/type_checker/naïve",
+        "type_checker/name",
+    ],
+)
+def test_materialization_predicate_rejects_noncanonical_pointers(option: str) -> None:
+    with pytest.raises(ValidationError):
+        MaterializationPredicate.model_validate({"option": option, "equals": "x"})
+
+
+def test_materialization_predicate_top_level_spelling_is_unchanged() -> None:
+    predicate = MaterializationPredicate.model_validate(
+        {"option": "workflow_ownership", "equals": "managed"}
+    )
+
+    assert predicate.matches({"workflow_ownership": "managed"})
+    assert not predicate.matches({"workflow_ownership": "consumer-owned"})
 
 
 def _payload_data() -> dict[str, object]:

@@ -98,6 +98,20 @@ def test_payload_schema_exposes_optional_owner_resolution_pointer() -> None:
     assert "consumer_owned_intent_pointer" not in cast("list[str]", signature["required"])
 
 
+def test_payload_schema_documents_materialization_option_spellings() -> None:
+    schema = package_schema_documents()["standard-payload.schema.json"]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    predicate = cast("dict[str, object]", definitions["MaterializationPredicate"])
+    properties = cast("dict[str, object]", predicate["properties"])
+    option = cast("dict[str, object]", properties["option"])
+
+    assert option["description"] == (
+        "Bare top-level option name or absolute multi-segment option pointer; "
+        "single-segment pointers are noncanonical."
+    )
+    assert len(cast("list[object]", option["anyOf"])) == 2
+
+
 def test_generated_schema_bytes_are_canonical_and_checked_in() -> None:
     first = package_schema_bytes()
     second = package_schema_bytes()
