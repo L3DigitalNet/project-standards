@@ -563,6 +563,128 @@ def test_child_process() -> None:
     assert not list(repo.glob(".coverage.*"))
 
 
+@pytest.mark.parametrize("checker", ["basedpyright", "pyright"])
+def test_python_tooling_reconciled_complete_gate_oracle(
+    tmp_path: Path,
+    checker: str,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    (repo / "src/consumer_pkg").mkdir(parents=True)
+    (repo / "src/consumer_pkg/__init__.py").write_text(
+        'GREETING: str = "materialized"\n', encoding="utf-8"
+    )
+    (repo / "tests").mkdir()
+    (repo / "tests/test_consumer_pkg.py").write_text(
+        """from consumer_pkg import GREETING
+
+
+def test_greeting() -> None:
+    assert GREETING == "materialized"
+""",
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        """[project]
+name = "consumer-pkg"
+version = "0.1.0"
+requires-python = ">=3.14"
+""",
+        encoding="utf-8",
+    )
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / ".standards/config.toml").write_text(
+        f'''[project_standards]
+schema_version = "1.0"
+catalog = "5"
+
+[standards.python-tooling]
+enabled = true
+version = "latest"
+
+[standards.python-tooling.config.type_checker]
+name = "{checker}"
+mode = "strict"
+
+[standards.python-tooling.config.pytest]
+fail_under = 0
+
+[standards.python-tooling.config.ci]
+enabled = true
+performance = false
+''',
+        encoding="utf-8",
+    )
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+
+    data = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    tool = cast("dict[str, object]", data["tool"])
+    other = "pyright" if checker == "basedpyright" else "basedpyright"
+    assert checker in tool
+    assert other not in tool
+
+    # This oracle proves generated command/config execution with the root's
+    # locked tools. PYTHONPATH supplies scratch source without claiming to
+    # prove consumer dependency installation.
+    pyright_cache = repo / ".pyright-cache"
+    environment = {
+        **os.environ,
+        "COVERAGE_FILE": str(repo / ".coverage"),
+        "UV_OFFLINE": "1",
+        "npm_config_offline": "true",
+        "PYRIGHT_PYTHON_CACHE_DIR": str(pyright_cache),
+        "PYRIGHT_PYTHON_IGNORE_WARNINGS": "true",
+        "PYRIGHT_PYTHON_USE_BUNDLED_PYRIGHT": "true",
+        "UV_PROJECT": str(_ROOT),
+        "PYTHONPATH": str(repo / "src"),
+    }
+    runtime = subprocess.run(
+        ["uv", "run", checker, "--version"],
+        cwd=_ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert runtime.returncode == 0, runtime.stdout + runtime.stderr
+    assert not pyright_cache.exists()
+    probe = subprocess.run(
+        [sys.executable, "-c", "import consumer_pkg"],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert probe.returncode == 0, probe.stdout + probe.stderr
+
+    # uv and the Pyright wrapper are offline here. The generated pip-audit
+    # phase still queries its configured vulnerability service by contract.
+    result = subprocess.run(
+        [sys.executable, "scripts/check.py"],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    subprocess.run(
+        [sys.executable, "-m", "coverage", "json", "-o", "coverage.json"],
+        cwd=repo,
+        env=environment,
+        check=True,
+    )
+    report = json.loads((repo / "coverage.json").read_text(encoding="utf-8"))
+    files = cast("dict[str, object]", report["files"])
+    assert any(path.endswith("src/consumer_pkg/__init__.py") for path in files)
+
+
 def test_python_tooling_manifest_uses_only_bounded_shared_container_units() -> None:
     manifest = _payload().manifest
     assert manifest.payload.standard == "python-tooling"

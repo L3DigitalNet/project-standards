@@ -30,6 +30,7 @@ dev = [
     "coverage[toml]",
     "pip-audit",
     "pytest-xdist>=3.8",
+    "pyright==1.1.411",
 ]
 
 [build-system]
