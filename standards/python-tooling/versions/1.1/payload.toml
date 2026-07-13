@@ -22,7 +22,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:46eda4e72e62ab2a185004266e7266c0808057d466ceeb44aedc312b7cbdf634"
+digest = "sha256:86f40777d17b165a1772b42bf9932738cf9a95bee318bbcb9b09df995c0a0755"
 
 [[resources]]
 id = "adopt"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:571590e603082031f8d46794683ef8387d7eaf0ddf12697934868ea6a8cd56e7"
+digest = "sha256:1db4607a35bf8ddf571ab91d547070705a0d9b42a856f09cdfcbcbd7be3e9800"
 
 [[resources]]
 id = "provider-input"
@@ -106,7 +106,7 @@ id = "provider-migration-report"
 role = "provider-resource"
 path = "schemas/migration-report.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:17fadcd1eb609bd63eaf3e4cdffbc2583497756f85c6e3e2d026de9204e4e483"
+digest = "sha256:aaaf02ae6693099ed5294e27fbdd2f49fa45ebf920a93a9de26603d8a2e0e812"
 
 [[contributions]]
 id = "python-version"
@@ -123,6 +123,10 @@ adapter = "whole-file"
 scope = "$file"
 policy = "managed"
 provider = "render-semantic"
+
+[[contributions.when_any]]
+option = "workflow_ownership"
+equals = "managed"
 
 [[contributions]]
 id = "check-script"
@@ -666,6 +670,7 @@ id = "legacy-check-workflow"
 kind = "whole-file"
 targets = [".github/workflows/check.yml"]
 known_content_digests = ["sha256:16a65f2bdc06adfc814786201ec32937bad4b5930cbf2bf722489007150c933e"]
+consumer_owned_intent_pointer = "/python_tooling/workflow_ownership"
 
 [[legacy_signatures]]
 id = "legacy-claude"

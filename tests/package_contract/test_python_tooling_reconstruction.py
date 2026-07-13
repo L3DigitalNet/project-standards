@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tomllib
 import zipfile
+from hashlib import sha256
 from pathlib import Path
 from typing import cast
 
@@ -21,7 +22,11 @@ from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
-from project_standards.control_plane.migration import apply_legacy_migration, plan_legacy_migration
+from project_standards.control_plane.migration import (
+    MigrationReport,
+    apply_legacy_migration,
+    plan_legacy_migration,
+)
 from project_standards.control_plane.planner import (
     PlannerRequest,
     ReconciliationPlan,
@@ -88,6 +93,45 @@ def _render(
     assert result.effect is ProviderEffect.CONTENT
     assert result.content is not None
     return result.content.decode()
+
+
+def _migration_report(
+    payload: InstalledPayload,
+    *,
+    workflow_ownership: str,
+    known: bool,
+    digest: str,
+) -> MigrationReport:
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=payload.root,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="migrate-legacy",
+            operation=ProviderOperation.MIGRATE,
+            effective_config={},
+            snapshots={
+                "legacy_config": {
+                    "standards_version": "v4",
+                    "python_tooling": {
+                        "version": "1.0",
+                        "workflow_ownership": workflow_ownership,
+                    },
+                },
+                "legacy_signatures": {
+                    "legacy-check-workflow": {
+                        ".github/workflows/check.yml": {
+                            "known": known,
+                            "digest": digest,
+                        }
+                    }
+                },
+            },
+        )
+    )
+    assert result.migration_report is not None
+    return result.migration_report
 
 
 def _installed_distribution(
@@ -375,6 +419,119 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
     for options in invalid:
         with pytest.raises(PackageContractError, match="package options violate schema"):
             schema.resolve_options(options)
+
+
+@pytest.mark.parametrize(
+    ("workflow_ownership", "ci", "expect_workflow"),
+    [
+        ("managed", {"enabled": True, "performance": True}, True),
+        ("consumer-owned", {"enabled": True, "performance": True}, False),
+        ("consumer-owned", {"enabled": False, "performance": False}, False),
+    ],
+)
+def test_python_tooling_workflow_ownership_controls_only_the_workflow(
+    tmp_path: Path,
+    workflow_ownership: str,
+    ci: JsonObject,
+    expect_workflow: bool,
+) -> None:
+    payload = _payload()
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    request = resolution_request(
+        (payload,),
+        configs={
+            "python-tooling": {
+                "workflow_ownership": workflow_ownership,
+                "ci": ci,
+            }
+        },
+    )
+
+    plan = plan_reconciliation(PlannerRequest(repo, request, (payload,)))
+
+    paths = {unit.path.original for unit in plan.next_lock.artifacts}
+    assert ".python-version" in paths
+    assert "scripts/check.py" in paths
+    assert (".github/workflows/check.yml" in paths) is expect_workflow
+
+
+def test_python_tooling_consumer_owned_verification_omits_the_workflow() -> None:
+    payload = _payload()
+    config = _options(workflow_ownership="consumer-owned")
+    snapshots: JsonObject = {}
+    for target in (".python-version", "scripts/check.py"):
+        content = _render("$file", AdapterKind.WHOLE_FILE, config, target=target).encode()
+        snapshots[target] = {
+            "kind": "regular",
+            "content_digest": f"sha256:{sha256(content).hexdigest()}",
+        }
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=_PAYLOAD,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="verify-toolchain",
+            operation=ProviderOperation.VERIFY,
+            effective_config=config,
+            snapshots=snapshots,
+        )
+    )
+
+    assert result.findings == ()
+
+
+def test_python_tooling_known_consumer_owned_workflow_claim_is_field_free() -> None:
+    payload = _payload()
+    signature = next(
+        item for item in payload.manifest.legacy_signatures if item.id == "legacy-check-workflow"
+    )
+    report = _migration_report(
+        payload,
+        workflow_ownership="consumer-owned",
+        known=True,
+        digest=signature.known_content_digests[0].value,
+    )
+
+    assert report.package.config["workflow_ownership"] == "consumer-owned"
+    assert "/python_tooling/workflow_ownership" in report.package.recognized_settings
+    assert len(report.claims) == 1
+    claim = report.claims[0]
+    assert claim.ownership == "consumer-owned"
+    assert claim.disposition.value == "preserve"
+    assert claim.intent_pointer is None
+    assert report.findings == ()
+
+
+def test_python_tooling_unknown_consumer_owned_workflow_claim_binds_intent() -> None:
+    report = _migration_report(
+        _payload(),
+        workflow_ownership="consumer-owned",
+        known=False,
+        digest=f"sha256:{'f' * 64}",
+    )
+
+    assert len(report.claims) == 1
+    claim = report.claims[0]
+    assert claim.ownership == "consumer-owned"
+    assert claim.disposition.value == "preserve"
+    assert claim.intent_pointer == "/python_tooling/workflow_ownership"
+    assert report.findings == ()
+
+
+def test_python_tooling_unknown_managed_workflow_remains_blocked() -> None:
+    report = _migration_report(
+        _payload(),
+        workflow_ownership="managed",
+        known=False,
+        digest=f"sha256:{'f' * 64}",
+    )
+
+    assert report.claims == ()
+    assert [(finding.code, finding.path.original) for finding in report.findings] == [
+        ("PT-LEGACY-MODIFIED", ".github/workflows/check.yml")
+    ]
 
 
 def test_python_tooling_subprocess_patch_selects_coverage_7_10_floor() -> None:
@@ -1181,6 +1338,84 @@ def test_python_tooling_real_v4_migration_applies_and_converges(tmp_path: Path) 
         action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
         for action in second.actions
     )
+
+
+def test_python_tooling_consumer_owned_workflow_survives_migration_lifecycle(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    repo = _legacy_python_tooling_repo(tmp_path)
+    legacy_config = repo / ".project-standards.yml"
+    legacy_config.write_text(
+        legacy_config.read_text(encoding="utf-8").replace(
+            '  version: "1.0"\n',
+            '  version: "1.0"\n  workflow_ownership: "consumer-owned"\n',
+        ),
+        encoding="utf-8",
+    )
+    workflow = repo / ".github/workflows/check.yml"
+    workflow.write_bytes(workflow.read_bytes() + b"# consumer optimization\n")
+    consumer_bytes = workflow.read_bytes()
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    assert apply_legacy_migration(migration).success
+    assert workflow.read_bytes() == consumer_bytes
+    config = tomllib.loads((repo / ".standards/config.toml").read_text(encoding="utf-8"))
+    assert config["standards"]["python-tooling"]["config"]["workflow_ownership"] == "consumer-owned"
+    lock_paths = {unit.path.original for unit in migration.reconciliation.next_lock.artifacts}
+    assert ".github/workflows/check.yml" not in lock_paths
+
+    set_standard_enabled(repo, "python-tooling", False)
+    disable_request = build_planner_request(repo, distribution, frozenset())
+    disable = plan_reconciliation(disable_request)
+    assert disable.applicable, disable.findings
+    assert apply_reconciliation(ApplyRequest(disable_request, disable)).success
+    assert workflow.read_bytes() == consumer_bytes
+
+    set_standard_enabled(repo, "python-tooling", True)
+    reenable_request = build_planner_request(repo, distribution, frozenset())
+    reenable = plan_reconciliation(reenable_request)
+    assert reenable.applicable, reenable.findings
+    assert apply_reconciliation(ApplyRequest(reenable_request, reenable)).success
+    assert workflow.read_bytes() == consumer_bytes
+    assert not any(
+        unit.path.original == ".github/workflows/check.yml" for unit in reenable.next_lock.artifacts
+    )
+    _assert_no_mutating_actions(
+        plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    )
+
+
+@pytest.mark.parametrize("known", [True, False])
+def test_python_tooling_consumer_owned_migration_matches_extracted_wheel(
+    tmp_path: Path,
+    *,
+    known: bool,
+) -> None:
+    source = _payload()
+    distribution = _installed_distribution(tmp_path)
+    installed = distribution.load_catalog("5").payload_map[("python-tooling", "1.1")]
+    signature = next(
+        item for item in source.manifest.legacy_signatures if item.id == "legacy-check-workflow"
+    )
+
+    digest = signature.known_content_digests[0].value if known else f"sha256:{'f' * 64}"
+    source_report = _migration_report(
+        source,
+        workflow_ownership="consumer-owned",
+        known=known,
+        digest=digest,
+    )
+    installed_report = _migration_report(
+        installed,
+        workflow_ownership="consumer-owned",
+        known=known,
+        digest=digest,
+    )
+
+    assert installed_report == source_report
 
 
 def test_python_tooling_modified_legacy_file_blocks_migration_without_writes(

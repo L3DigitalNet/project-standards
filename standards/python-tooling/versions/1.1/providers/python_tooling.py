@@ -576,11 +576,14 @@ def run_verify(
     request: Mapping[str, object],
     resources: Mapping[str, bytes],
 ) -> dict[str, object]:
-    """Verify the three exclusive rendered files from captured snapshot facts."""
+    """Verify the selected exclusive rendered files from captured snapshot facts."""
     config = _config(request)
     snapshots = _table(request.get("snapshots"), name="snapshots")
     findings: list[dict[str, object]] = []
-    for target in (".python-version", ".github/workflows/check.yml", "scripts/check.py"):
+    targets = [".python-version", "scripts/check.py"]
+    if config.get("workflow_ownership") == "managed":
+        targets.insert(1, ".github/workflows/check.yml")
+    for target in targets:
         observed = snapshots.get(target)
         state: Mapping[str, object] = (
             cast("Mapping[str, object]", observed) if isinstance(observed, Mapping) else {}
@@ -638,7 +641,13 @@ def run_migrate(
     if "version" in namespace:
         config["contract_version"] = namespace["version"]
         recognized.append("/python_tooling/version")
-    for key in ("additional_dev_dependencies", "ruff", "pytest"):
+    for key in (
+        "additional_dev_dependencies",
+        "ruff",
+        "pytest",
+        "coverage",
+        "workflow_ownership",
+    ):
         if key in namespace:
             config[key] = _json_value(namespace[key])
             recognized.append(f"/python_tooling/{key}")
@@ -646,6 +655,7 @@ def run_migrate(
     signatures = _table(snapshots.get("legacy_signatures"), name="legacy signatures")
     claims: list[dict[str, object]] = []
     findings: list[dict[str, str]] = []
+    consumer_owned_workflow = namespace.get("workflow_ownership") == "consumer-owned"
     for signature_id, (target, ownership, disposition) in _SIGNATURES.items():
         raw = signatures.get(signature_id)
         if not isinstance(raw, Mapping):
@@ -659,6 +669,9 @@ def run_migrate(
             resolved_disposition = (
                 "preserve" if digest in _PRESERVED_CONTAINER_DIGESTS else disposition
             )
+            if signature_id == "legacy-check-workflow" and consumer_owned_workflow:
+                ownership = "consumer-owned"
+                resolved_disposition = "preserve"
             claims.append(
                 {
                     "signature_id": signature_id,
@@ -666,6 +679,21 @@ def run_migrate(
                     "observed_digest": digest,
                     "ownership": ownership,
                     "disposition": resolved_disposition,
+                }
+            )
+        elif (
+            signature_id == "legacy-check-workflow"
+            and consumer_owned_workflow
+            and isinstance(digest, str)
+        ):
+            claims.append(
+                {
+                    "signature_id": signature_id,
+                    "target": target,
+                    "observed_digest": digest,
+                    "ownership": "consumer-owned",
+                    "disposition": "preserve",
+                    "intent_pointer": "/python_tooling/workflow_ownership",
                 }
             )
         elif isinstance(digest, str):

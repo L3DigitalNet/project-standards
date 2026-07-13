@@ -46,7 +46,7 @@ role = "reference-only"
 [[packages]]
 id = "python-tooling"
 version = "1.1"
-digest = "sha256:bf3645cb29d51c6e2f14cd4836b17a28d70cb1974315afd53fd9b55b34ad6849"
+digest = "sha256:95a58ccb8af99618ac2528229e3a27981495c265f77fe312f7ec059233727692"
 role = "default"
 
 [[packages]]

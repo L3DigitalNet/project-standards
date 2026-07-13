@@ -12,7 +12,7 @@ Python Tooling defines one reproducible Python project toolchain built around uv
 
 The package delegates lifecycle and locking to the central control plane:
 
-- `.python-version`, `.github/workflows/check.yml`, and `scripts/check.py` are exclusive whole-file units rendered from package options.
+- `.python-version` and `scripts/check.py` are exclusive whole-file units rendered from package options. The package also manages `.github/workflows/check.yml` unless `workflow_ownership` is `consumer-owned`.
 - `pyproject.toml` is composed through bounded TOML table and key contributions. Existing conflicting values block before any write.
 - `.editorconfig` properties are shared by stable identity with Markdown Tooling where their values are identical.
 - VS Code extensions, settings, and task labels are independent JSONC units. Unrelated recommendations, settings, and tasks remain consumer-owned.
@@ -31,9 +31,11 @@ The closed option schema controls:
 - BasedPyright or Pyright, including checking mode;
 - the mandatory pytest coverage floor;
 - pip-audit vulnerability exceptions;
-- CI triggers, performance tests, VS Code format-on-save behavior, and bounded agent instruction detail.
+- workflow ownership, CI triggers, performance tests, VS Code format-on-save behavior, and bounded agent instruction detail.
 
-The type-checker choice fans out to dependency declarations, both Pyright-family configuration tables, the CI workflow, local check script, VS Code settings/tasks, and agent instructions. The inactive checker table and editor setting are explicitly set to `off`; the selected checker is the only dependency and command in the gate. The BasedPyright extension recommendation remains a reversible, package-owned editor aid even when the Pyright CLI is selected; the editor authority follows the selected settings, not the dormant recommendation.
+`workflow_ownership = "managed"` materializes, verifies, locks, and removes `.github/workflows/check.yml` with the package lifecycle. `workflow_ownership = "consumer-owned"` leaves that path outside package actions, verification, and lock state; the consumer is responsible for its validity and maintenance. The `ci.*` options remain schema-valid in consumer-owned mode but affect only a managed workflow, so they are inert while ownership remains with the consumer. Returning to managed ownership is a separate acquisition boundary and conflicts with unequal consumer bytes rather than overwriting them.
+
+The type-checker choice fans out to dependency declarations, both Pyright-family configuration tables, the managed CI workflow, local check script, VS Code settings/tasks, and agent instructions. The inactive checker table and editor setting are explicitly set to `off`; the selected checker is the only dependency and command in the gate. The BasedPyright extension recommendation remains a reversible, package-owned editor aid even when the Pyright CLI is selected; the editor authority follows the selected settings, not the dormant recommendation.
 
 ## Build backends
 
@@ -50,13 +52,15 @@ The rendered gate runs the mandatory commands in this order:
 5. Optional performance tests.
 6. pip-audit.
 
-CI-disabled configurations retain an explicit manual-only workflow so the selected gate remains inspectable without running automatically.
+Managed CI-disabled configurations retain an explicit manual-only workflow so the selected gate remains inspectable without running automatically.
 
 ## Migration
 
-The automatic V4 migration recognizes only the legacy `python_tooling.version` setting and byte-identical files shipped by the V1 copy-adopt bundle. It preserves that consumer contract selector independently from the selected 1.1 package payload; both supported contract values render the same toolchain because the selector remains metadata-only. Known whole-file agent and VS Code content is retired into bounded contributions; shared EditorConfig and extension files are preserved while their package-owned units enter the central lock. Modified legacy content blocks migration instead of being overwritten.
+The automatic V4 migration recognizes the legacy `python_tooling.version`, Python Tooling option values, and byte-identical files shipped by the V1 copy-adopt bundle. It preserves the consumer contract selector independently from the selected 1.1 package payload; both supported contract values render the same toolchain because the selector remains metadata-only. Known whole-file agent and VS Code content is retired into bounded contributions; shared EditorConfig and extension files are preserved while their package-owned units enter the central lock.
 
-The V1 root family manifest remains authoritative in this source checkout until the atomic Task 14 activation commit.
+An exact known workflow migrates according to the selected ownership. An unknown workflow remains blocking in managed mode. In consumer-owned mode, the explicit raw legacy intent authorizes only preservation of that single whole-file path; the migration preview labels it consumer-owned, preserved, and not semantically validated, and the control plane creates no workflow action, unit, or lock entry. Other modified legacy content remains blocking.
+
+The V1 root family manifest remains authoritative in this source checkout until the atomic v5 release commit.
 
 ## Update process
 

@@ -20,7 +20,8 @@
 				"ownership": {
 					"enum": ["managed", "create-only", "shared", "consumer-owned", "package-lock"]
 				},
-				"disposition": { "enum": ["adopt", "preserve", "remove", "import-lock"] }
+				"disposition": { "enum": ["adopt", "preserve", "remove", "import-lock"] },
+				"intent_pointer": { "type": "string" }
 			},
 			"required": [
 				"signature_id",
