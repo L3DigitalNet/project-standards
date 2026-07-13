@@ -32,7 +32,7 @@ Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independen
 
 - [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
 
-  Coverage Tasks 1–6 and all six checker-table materialization tasks are integrated on `testing` through `26fb984`. The Tasks 9/11 amendment now carries exact `pyright==1.1.411`, guarded provider-derived dev-group pre-alignment, frozen predecessor reconstruction, and executable release commands; its fresh Fable-max audit and delta re-check converged with no spec backtrack. Next complete coverage Tasks 7–8, execute Tasks 9–11, refresh the deliberately stale release evidence, and perform the atomic root migration.
+  Coverage Tasks 1–8 and all six checker-table materialization tasks are integrated on `testing` through `d5c8031`. Initial Task 9 implementation exposed an incomplete predecessor overlay; CTM-NEW-008 and the superseding audit now require complete 31-path root-authority reconstruction, Git-known replay, exact `pyright==1.1.411`, and guarded installed-provider dev-group pre-alignment without a CP01 or BA02 backtrack. Next execute Tasks 9–11, refresh the deliberately stale release evidence, and perform the atomic root migration.
 
 ### P2 — Cut and publish v5.0.0
 
