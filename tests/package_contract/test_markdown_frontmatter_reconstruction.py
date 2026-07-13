@@ -218,6 +218,7 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
     assert payload.manifest.payload.version.value == "1.2"
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
+        "workflow_mode": "caller",
         "schema": "markdown-frontmatter",
         "schema_path": None,
         "required": True,
@@ -237,6 +238,7 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
     assert schema.resolve_options(
         {
             "contract_version": "1.1",
+            "workflow_mode": "local",
             "schema": "custom",
             "schema_path": ".standards/extensions/markdown-frontmatter/schema.json",
             "required": False,
@@ -287,10 +289,50 @@ def test_frontmatter_fresh_plan_composes_workflow_and_managed_skill(tmp_path: Pa
     assert workflow is not None
     assert b"frontmatter:" in workflow
     assert b"validate-markdown-frontmatter.yml@v5" in workflow
+    assert b'config-path: ".standards/config.toml"' in workflow
+    assert b'standards-ref: "v5"' in workflow
     assert (
         plan.proposed_content(".agents/skills/markdown-frontmatter/SKILL.md")
         == (_PAYLOAD / "skills/markdown-frontmatter/SKILL.md").read_bytes()
     )
+
+
+def test_frontmatter_local_workflow_mode_uses_same_commit_endpoint(tmp_path: Path) -> None:
+    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
+    payload = InstalledPayload(
+        _PAYLOAD,
+        manifest,
+        validate_payload_integrity(_PAYLOAD, manifest),
+    )
+    repo = tmp_path / "standards-repository"
+    repo.mkdir()
+
+    plan = plan_reconciliation(
+        PlannerRequest(
+            repo,
+            resolution_request(
+                (payload,),
+                configs={"markdown-frontmatter": {"workflow_mode": "local"}},
+            ),
+            (payload,),
+        )
+    )
+
+    assert plan.applicable, plan.findings
+    workflow = plan.proposed_content(".github/workflows/validate-standards.yml")
+    assert workflow is not None
+    assert b"uses: ./.github/workflows/validate-markdown-frontmatter.yml" in workflow
+    assert b"validate-markdown-frontmatter.yml@v5" not in workflow
+    assert b'config-path: ".standards/config.toml"' in workflow
+    assert b'standards-ref: "v5"' in workflow
+
+
+def test_frontmatter_public_endpoint_remains_reusable() -> None:
+    endpoint = (_ROOT / ".github/workflows/validate-markdown-frontmatter.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "workflow_call:" in endpoint
 
 
 def test_frontmatter_declares_version_selected_validate_inspect_and_fix_providers() -> None:
@@ -313,6 +355,11 @@ def test_frontmatter_declares_version_selected_validate_inspect_and_fix_provider
             "plan",
             ProviderEffect.MIGRATION_REPORT,
         ),
+        "render-workflow-job": (
+            ProviderOperation.RENDER,
+            "plan",
+            ProviderEffect.CONTENT,
+        ),
         "validate-frontmatter": (
             ProviderOperation.VALIDATE,
             "validate",
@@ -321,6 +368,10 @@ def test_frontmatter_declares_version_selected_validate_inspect_and_fix_provider
     }
     assert providers["validate-frontmatter"].resources == ["frontmatter-schema"]
     assert providers["id-next"].resources == ["frontmatter-schema"]
+    assert providers["render-workflow-job"].resources == [
+        "workflow-job-caller",
+        "workflow-job-local",
+    ]
     assert manifest.migrations[0].affected == [
         "artifact:skill",
         "artifact:skill-new-doc-id",
@@ -487,6 +538,60 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         ("legacy-skill-script", "adopt"),
         ("legacy-workflow", "remove"),
     }
+
+
+def test_frontmatter_local_migration_preserves_owned_public_endpoint(tmp_path: Path) -> None:
+    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
+    payload = InstalledPayload(
+        _PAYLOAD,
+        manifest,
+        validate_payload_integrity(_PAYLOAD, manifest),
+    )
+    repo = tmp_path / "standards-repository"
+    repo.mkdir()
+    signature = next(item for item in manifest.legacy_signatures if item.id == "legacy-workflow")
+
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=repo,
+            payload=payload,
+            standard_id="markdown-frontmatter",
+            version=manifest.payload.version,
+            provider_id="migrate-legacy",
+            operation=ProviderOperation.MIGRATE,
+            effective_config={},
+            snapshots={
+                "legacy_config": {
+                    "standards_version": "v4",
+                    "markdown": {
+                        "frontmatter": {
+                            "version": "1.1",
+                            "schema": "markdown-frontmatter",
+                            "workflow_mode": "local",
+                        }
+                    },
+                },
+                "legacy_signatures": {
+                    "legacy-workflow": {
+                        ".github/workflows/validate-markdown-frontmatter.yml": {
+                            "digest": signature.known_content_digests[-1].value,
+                            "known": True,
+                            "content_base64": "",
+                        }
+                    }
+                },
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    assert result.migration_report.package.config["workflow_mode"] == "local"
+    assert result.migration_report.package.recognized_settings == (
+        "/markdown/frontmatter/schema",
+        "/markdown/frontmatter/version",
+        "/markdown/frontmatter/workflow_mode",
+    )
+    assert [claim.disposition.value for claim in result.migration_report.claims] == ["preserve"]
 
 
 def test_frontmatter_workflow_signature_history_includes_current_root() -> None:

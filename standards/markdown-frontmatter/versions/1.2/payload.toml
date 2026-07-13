@@ -41,14 +41,14 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:88d8f023c6bedb04337ca4e4951b0b2cd5bd546c9b6dcf8905133c3e795e8391"
+digest = "sha256:30560dba6188beba25292f90ae90ab7f5c503ab43eb4bf9769c1e15ee1069ce8"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:bf1dc54fcb652f58536d438c913fcf6e94c519386f4c474417a052578d0ddb84"
+digest = "sha256:83afa0d16e3a1a8309db383dca53748125b64f7013fd807bc2590bdd609c2d70"
 
 [[resources]]
 id = "structure"
@@ -156,18 +156,32 @@ media_type = "application/yaml"
 digest = "sha256:c45e0a4a5673841add51cfecb988f80360bbb43f8d91da07a76589d54f1774b0"
 
 [[resources]]
+id = "workflow-job-caller"
+role = "provider-resource"
+path = "workflow-job.yml"
+media_type = "application/yaml"
+digest = "sha256:859aac3eb98767661dcd6bb7b31eca2bd95a7f295b6fdb4549619c292f611a2c"
+
+[[resources]]
+id = "workflow-job-local"
+role = "provider-resource"
+path = "workflow-job.local.yml"
+media_type = "application/yaml"
+digest = "sha256:ad20568d0c2fdb8a435ee055493990b90018b96ab045bb7faeb53bdcdbe2daa9"
+
+[[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/frontmatter.py"
 media_type = "text/x-python"
-digest = "sha256:fb042d7e53fb43e205bb1b7866b274f49324d5f07f8caa6b20daef46546f38c7"
+digest = "sha256:136bc003f5d5177680b8e38c5cc054094f283068a6591deefa3cc24976d03fc7"
 
 [[resources]]
 id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:f899768b4c99449705d8f8452d194baa02bb40b07adeb6859f3322fdcb4aea50"
+digest = "sha256:a889ccc0634aeeee94efc2dec3a84eacb260c79fcc9b1f62c4a21f01e85e4812"
 
 [[resources]]
 id = "provider-findings"
@@ -259,8 +273,7 @@ target = ".github/workflows/validate-standards.yml"
 adapter = "yaml"
 scope = "key:/jobs/frontmatter"
 policy = "managed"
-source = "workflow-job.yml"
-source_digest = "sha256:c3e9fce5de356b728481c565f1262f0421b1eb9652018f0022a741ba48fdd1c0"
+provider = "render-workflow-job"
 
 [[extensions]]
 id = "custom-schema"
@@ -312,6 +325,17 @@ entrypoint = "payload:provider-code#run_migrate"
 input_schema = "provider-input"
 output_schema = "provider-migration-report"
 resources = []
+
+[[providers]]
+id = "render-workflow-job"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_workflow_job"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["workflow-job-caller", "workflow-job-local"]
 
 [[legacy_states]]
 id = "v4-markdown-frontmatter"

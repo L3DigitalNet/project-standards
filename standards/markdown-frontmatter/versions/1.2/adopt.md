@@ -27,6 +27,7 @@ version = "1.2"
 
 [standards.markdown-frontmatter.config]
 contract_version = "1.1"
+workflow_mode = "caller"
 schema = "markdown-frontmatter"
 required = true
 include = ["README.md", "docs/**/*.md"]
@@ -52,6 +53,7 @@ Follow the V5 CLI guide for preview and apply mechanics. Applying this package i
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `contract_version` | `"1.1"` | Select the frontmatter document contract independently of package version `1.2`. |
+| `workflow_mode` | `"caller"` | Use the published `@v5` endpoint. `"local"` is reserved for a repository that owns that endpoint and must call its same-commit bytes before publication. |
 | `schema` | `"markdown-frontmatter"` | Use the bundled schema; set to `"custom"` only with `schema_path`. |
 | `schema_path` | omitted | Repository-relative path to a consumer-owned custom JSON Schema. |
 | `required` | `true` | Require a frontmatter block on every selected document. |
@@ -120,7 +122,7 @@ When `.project-standards.yml` contains `markdown.frontmatter`, preview migration
 project-standards init --catalog 5 --migrate
 ```
 
-The migration maps the recognized namespace to package options and recognizes only the exact previously shipped Frontmatter workflow, skill, and skill-script bytes. Modified or unknown content blocks automatic ownership transfer and remains untouched. Review the complete report, then follow the V5 CLI guide's explicit migration-apply procedure without changing the inspected repository state.
+The migration maps the recognized namespace to package options and recognizes only the exact previously shipped Frontmatter workflow, skill, and skill-script bytes. It normally removes the legacy workflow in favor of the published V5 caller. A repository that owns the canonical public endpoint may explicitly migrate with `workflow_mode: "local"`; that preserves the endpoint and composes a same-commit call, which is safe before the V5 tag exists. Modified or unknown content blocks automatic ownership transfer and remains untouched. Review the complete report, then follow the V5 CLI guide's explicit migration-apply procedure without changing the inspected repository state.
 
 The legacy YAML file is removed only after unified configuration, reconciliation, provider verification, and central-lock publication succeed.
 

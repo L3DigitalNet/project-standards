@@ -185,6 +185,17 @@ def run_id_next(
     return {"content": f"{doc_type}-{token}-{slug}"}
 
 
+def run_render_workflow_job(
+    request: Mapping[str, object], resources: Mapping[str, bytes]
+) -> dict[str, str]:
+    """Render the published or same-commit reusable-workflow job."""
+    config = _table(request.get("config"), name="config")
+    resource_id = (
+        "workflow-job-local" if config.get("workflow_mode") == "local" else "workflow-job-caller"
+    )
+    return {"content": resources[resource_id].decode("utf-8")}
+
+
 def _finding(
     code: str,
     path: str,
@@ -578,6 +589,7 @@ def run_migrate(
         "include",
         "exclude",
         "references",
+        "workflow_mode",
     }
     config: dict[str, object] = {}
     recognized: list[str] = []
@@ -620,10 +632,11 @@ def run_migrate(
         name="snapshots.legacy_signatures",
     )
     claims: list[dict[str, object]] = []
+    workflow_disposition = "preserve" if config.get("workflow_mode") == "local" else "remove"
     dispositions = {
         "legacy-workflow": (
             ".github/workflows/validate-markdown-frontmatter.yml",
-            "remove",
+            workflow_disposition,
         ),
         "legacy-skill": (".agents/skills/markdown-frontmatter/SKILL.md", "adopt"),
         "legacy-skill-script": (

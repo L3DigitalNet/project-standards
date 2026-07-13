@@ -10,7 +10,7 @@ project-standards reconcile
 project-standards reconcile --apply
 ```
 
-Options under `[standards.markdown-frontmatter.config]` select the independent document `contract_version`, bundled or custom schema, required/optional frontmatter, include/exclude globs, and reference validation. Exclude harness instructions, agent assets, workflow files, and `**/*.template.md`. A custom schema remains a consumer-owned referenced input.
+Options under `[standards.markdown-frontmatter.config]` select the independent document `contract_version`, published-caller or same-commit-local workflow mode, bundled or custom schema, required/optional frontmatter, include/exclude globs, and reference validation. Normal consumers use the default `workflow_mode = "caller"`; `"local"` is reserved for a repository that owns the canonical reusable endpoint. Exclude harness instructions, agent assets, workflow files, and `**/*.template.md`. A custom schema remains a consumer-owned referenced input.
 
 Managed outputs include the repo-local Markdown Frontmatter skill, package summary, and the package-owned job in `.github/workflows/validate-standards.yml`. Consumer Markdown bodies remain consumer-owned.
 
@@ -21,7 +21,7 @@ project-standards init --catalog 5 --migrate
 project-standards init --catalog 5 --migrate --apply
 ```
 
-Migration maps `markdown.frontmatter`, recognizes exact released workflow and skill bytes, and removes `.project-standards.yml` only after the complete unified state validates. Modified or unknown artifacts block apply and remain untouched.
+Migration maps `markdown.frontmatter`, recognizes exact released workflow and skill bytes, and removes `.project-standards.yml` only after the complete unified state validates. The legacy endpoint is removed for the default published caller, or preserved when its owning repository explicitly selects local mode. Modified or unknown artifacts block apply and remain untouched.
 
 ## Verify and troubleshoot
 

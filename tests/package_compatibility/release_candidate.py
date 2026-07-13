@@ -782,6 +782,11 @@ def declare_release_cut_intent(checkout: Path) -> None:
     """Inject sparse V5 owner intent without changing the guarded TOML input."""
     legacy = checkout / ".project-standards.yml"
     content = legacy.read_text(encoding="utf-8")
+    frontmatter_anchor = '  frontmatter:\n    version: "1.1"\n'
+    frontmatter_replacement = frontmatter_anchor + '    workflow_mode: "local"\n'
+    assert content.count(frontmatter_anchor) == 1, "legacy Frontmatter intent anchor changed"
+    assert 'workflow_mode: "local"' not in content
+    content = content.replace(frontmatter_anchor, frontmatter_replacement)
     anchor = 'python_tooling:\n  version: "1.0"\n'
     assert content.count(anchor) == 1, "legacy Python Tooling intent anchor changed"
     legacy_options = {

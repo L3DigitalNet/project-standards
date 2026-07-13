@@ -485,6 +485,7 @@ def test_prealign_release_intent_changes_only_legacy_config(tmp_path: Path) -> N
     expected_legacy = {**expected, "version": expected["contract_version"]}
     expected_legacy.pop("contract_version")
     assert legacy_config["python_tooling"] == expected_legacy
+    assert legacy_config["markdown"]["frontmatter"]["workflow_mode"] == "local"
 
 
 def test_prealign_release_dev_group_uses_installed_provider_and_single_write(
@@ -1581,10 +1582,10 @@ def _execute_migration_proof(
         if action.kind not in {ActionKind.NOOP, ActionKind.PRESERVE, ActionKind.ADOPT}
     }
     assert not any(target == ".github/workflows/check.yml" for target, _kind in mutating_actions)
-    assert (
-        ".github/workflows/validate-markdown-frontmatter.yml",
-        "remove",
-    ) in mutating_actions
+    assert not any(
+        target == ".github/workflows/validate-markdown-frontmatter.yml"
+        for target, _kind in mutating_actions
+    )
     assert (".github/workflows/validate-standards.yml", "create") in mutating_actions
     assert (".github/workflows/validate-specs.yml", "update") in mutating_actions
     assert not any(
@@ -1624,6 +1625,7 @@ def _execute_migration_proof(
     lock = parse_lock((checkout / ".standards/lock.toml").read_bytes())
     assert lock == preview.reconciliation.next_lock
     config = parse_config((checkout / ".standards/config.toml").read_bytes())
+    assert config.standards["markdown-frontmatter"].config["workflow_mode"] == "local"
     assert config.standards["markdown-tooling"].config["workflow_mode"] == "self-hosted"
     assert config.standards["project-spec"].config["workflow_mode"] == "self-hosted"
     python_config = config.standards["python-tooling"].config
@@ -1658,8 +1660,17 @@ def _execute_migration_proof(
     assert '"coverage", "combine"' in check_script
     # The root gate becomes meaningful only after Task 11 atomically rewrites the
     # repository's pre-control-plane tests; Task 9 executes both scratch gates instead.
-    assert not (checkout / ".github/workflows/validate-markdown-frontmatter.yml").exists()
-    assert (checkout / ".github/workflows/validate-standards.yml").is_file()
+    frontmatter_endpoint = checkout / ".github/workflows/validate-markdown-frontmatter.yml"
+    assert frontmatter_endpoint.read_bytes() == workflows_before[
+        ".github/workflows/validate-markdown-frontmatter.yml"
+    ]
+    assert b"workflow_call:" in frontmatter_endpoint.read_bytes()
+    standards_workflow = checkout / ".github/workflows/validate-standards.yml"
+    assert standards_workflow.is_file()
+    assert b"uses: ./.github/workflows/validate-markdown-frontmatter.yml" in (
+        standards_workflow.read_bytes()
+    )
+    assert b"validate-markdown-frontmatter.yml@v5" not in standards_workflow.read_bytes()
     for path in (
         ".github/workflows/format.yml",
         ".github/workflows/lint-markdown.yml",

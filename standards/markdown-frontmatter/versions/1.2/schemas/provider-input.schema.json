@@ -6,7 +6,7 @@
 		"schema_version": { "const": "1.0" },
 		"standard_id": { "const": "markdown-frontmatter" },
 		"version": { "const": "1.2" },
-		"operation": { "enum": ["validate", "id-next", "fix", "migrate"] },
+		"operation": { "enum": ["validate", "id-next", "fix", "migrate", "render"] },
 		"config": { "type": "object" },
 		"resources": { "type": "object" },
 		"snapshots": { "type": "object" }

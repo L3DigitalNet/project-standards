@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:e124181648dbd918b29e7c6d5578953dcd367d93fb84d37fd756d1f2a965a551",
+        "sha256:3fbdb2a8d85c3d3f027773581255291a8c0c90d391ade7e8b9c2e7f4ae373812",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",

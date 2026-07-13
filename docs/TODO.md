@@ -34,7 +34,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   Mark coverage Task 9 committed at `7d4d5fa`; add the audited prerequisites before Task 10; correct stale CP01/BA02 revisions, Step 07 status, Standard Bundle Authoring 2.0 status, and V5 configuration guidance in maintained indexes.
 
-- [ ] Repair the Markdown Frontmatter release-workflow bootstrap.
+- [x] Repair the Markdown Frontmatter release-workflow bootstrap.
 
   The V2-composed job cannot call this repository at `@v5` before that tag exists. Make the first `main` release run bootstrap-safe, retain a canonical public `workflow_call` endpoint for consumers, and test both pre-tag and published-ref paths.
 

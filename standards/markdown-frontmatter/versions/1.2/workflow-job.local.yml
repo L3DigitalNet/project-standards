@@ -1,7 +1,7 @@
 jobs:
   frontmatter:
     name: Frontmatter
-    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5
+    uses: ./.github/workflows/validate-markdown-frontmatter.yml
     with:
       config-path: ".standards/config.toml"
       standards-ref: "v5"
