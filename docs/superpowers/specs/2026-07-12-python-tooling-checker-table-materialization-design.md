@@ -1,6 +1,6 @@
 # Python Tooling Checker Table Materialization Design
 
-**Date:** 2026-07-12 **Status:** owner-approved; contract audit converged after rounds 1–5 with no significant findings **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
+**Date:** 2026-07-12 **Status:** owner-approved; contract audit converged after rounds 1–5 with no significant findings; oracle provisioning contract amended after plan-audit round 1 (CR-001) **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
 
 ## Problem and goal
 
@@ -113,7 +113,7 @@ Extend conditional materialization to accept a canonical nested option pointer i
 
 ### Repository test dependencies
 
-`pyright` becomes a locked repository test dependency — `pyproject.toml` plus a refreshed `uv.lock` — so the Pyright-selected complete-gate oracle runs offline against a deterministic executable under the oracle environment contract (`UV_OFFLINE=1`, locked local environment). Before the atomic migration the root declares it directly; through migration it travels as `additional_dev_dependencies` so the provider-rendered dev group retains it — see Release integration.
+`pyright` becomes a pinned, locked repository test dependency — `pyproject.toml` plus a refreshed `uv.lock`. The PyPI package is a wrapper that installs its matching Pyright npm payload at runtime into a user cache outside uv's control, so the oracle contract is two-phase (amended after plan-audit round 1, CR-001): runtime provisioning (`uv run pyright --version`) is a declared setup-phase prerequisite equivalent to `uv sync` and `npm ci` — pinned wrapper version for deterministic payload content, network transport confined to environment setup, wired into CI beside dependency sync — and the oracle itself asserts the provisioned runtime, then executes the gate network-isolated (`UV_OFFLINE=1`, locked local environment). A one-time online cache warm is provisioning, never offline evidence. Before the atomic migration the root declares the dependency directly; through migration it travels as `additional_dev_dependencies` so the provider-rendered dev group retains it — see Release integration.
 
 ### Release integration
 
