@@ -8,6 +8,7 @@ from typing import cast
 import pytest
 from pydantic import ValidationError
 
+from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.payload import (
     LegacySignatureDeclaration,
@@ -18,6 +19,7 @@ from project_standards.package_contract.payload import (
     load_option_schema,
     load_payload_manifest,
 )
+from tests.control_plane.planner_helpers import write_payload
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/package_contract"
 _VALID_PAYLOAD = _FIXTURES / "valid/minimal/standards/demo/versions/1.2/payload.toml"
@@ -516,3 +518,112 @@ def test_option_schema_rejects_a_default_that_violates_its_property_schema(
 
     with pytest.raises(PackageContractError, match="default"):
         load_option_schema(payload_dir, PayloadManifest.model_validate(_payload_data()))
+
+
+_ENGINE_SCHEMA: dict[str, object] = {
+    "engine": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"name": {"enum": ["alpha", "beta"]}},
+        "required": ["name"],
+    }
+}
+
+
+def _predicate_payload(tmp_path: Path, option: str) -> InstalledPayload:
+    return write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "conditional",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/alpha",
+                "content": b'[tool.alpha]\nmode = "on"\n',
+                "when_any": [{"option": option, "equals": "alpha"}],
+            }
+        ],
+        option_properties=_ENGINE_SCHEMA,
+    )
+
+
+def test_option_schema_accepts_predicates_naming_declared_paths(tmp_path: Path) -> None:
+    payload = _predicate_payload(tmp_path, "/engine/name")
+
+    load_option_schema(payload.root, payload.manifest)
+
+
+@pytest.mark.parametrize("option", ["undeclared", "/engine/nmae"])
+def test_option_schema_rejects_predicate_naming_undeclared_path(
+    tmp_path: Path,
+    option: str,
+) -> None:
+    payload = _predicate_payload(tmp_path, option)
+
+    with pytest.raises(PackageContractError, match="undeclared option path"):
+        load_option_schema(payload.root, payload.manifest)
+
+
+def test_option_schema_rejects_artifact_predicate_naming_undeclared_path(
+    tmp_path: Path,
+) -> None:
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "conditional",
+                "target": "config.txt",
+                "content": b"configured\n",
+                "when_any": [{"option": "/engine/nmae", "equals": "alpha"}],
+            }
+        ],
+        option_properties=_ENGINE_SCHEMA,
+    )
+
+    with pytest.raises(PackageContractError, match="undeclared option path"):
+        load_option_schema(payload.root, payload.manifest)
+
+
+@pytest.mark.parametrize(
+    "engine_schema",
+    [
+        {"type": ["object", "null"], "properties": {"name": {"type": "string"}}},
+        {"anyOf": [{"type": "object"}, {"type": "null"}]},
+        {"oneOf": [{"type": "object"}]},
+        {"allOf": [{"type": "object"}]},
+        {"$ref": "#/$defs/engine"},
+        {"properties": {"name": {"type": "string"}}},
+    ],
+)
+def test_option_schema_rejects_predicate_through_non_object_intermediate(
+    tmp_path: Path,
+    engine_schema: dict[str, object],
+) -> None:
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "conditional",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/alpha",
+                "content": b'[tool.alpha]\nmode = "on"\n',
+                "when_any": [{"option": "/engine/name", "equals": "alpha"}],
+            }
+        ],
+        option_properties={"engine": engine_schema},
+    )
+
+    with pytest.raises(PackageContractError, match="non-object option"):
+        load_option_schema(payload.root, payload.manifest)
+
+
+def test_every_shipped_payload_satisfies_the_predicate_option_contract() -> None:
+    for manifest_path in sorted(
+        Path(__file__).resolve().parents[2].glob("standards/*/versions/*/payload.toml")
+    ):
+        manifest = load_payload_manifest(manifest_path)
+        load_option_schema(manifest_path.parent, manifest)

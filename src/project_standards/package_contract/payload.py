@@ -1067,6 +1067,28 @@ def _validate_extension_options(
             )
 
 
+def _validate_predicate_options(
+    document: Mapping[str, JsonValue],
+    manifest: PayloadManifest,
+) -> None:
+    for declaration in (*manifest.artifacts, *manifest.contributions):
+        for predicate in declaration.when_any:
+            option = predicate.option
+            segments = option.split("/")[1:] if option.startswith("/") else [option]
+            node: Mapping[str, JsonValue] = document
+            for index, segment in enumerate(segments):
+                child = _object_properties(node).get(segment)
+                if not isinstance(child, dict):
+                    raise PackageContractError(
+                        f"materialization predicate names an undeclared option path: {option}"
+                    )
+                if index + 1 < len(segments) and child.get("type") != "object":
+                    raise PackageContractError(
+                        f"materialization predicate traverses a non-object option: {option}"
+                    )
+                node = child
+
+
 def _schema_error_location(error_path: Iterable[object]) -> str:
     parts = [str(part) for part in error_path]
     return ".".join(parts) or "<root>"
@@ -1131,6 +1153,7 @@ def load_option_schema(
         raise PackageContractError("option schema is not a valid Draft 2020-12 schema") from exc
     _validate_declared_defaults(document)
     _validate_extension_options(document, manifest.extensions)
+    _validate_predicate_options(document, manifest)
 
     return PackageOptionSchema(
         standard_id=manifest.payload.standard,

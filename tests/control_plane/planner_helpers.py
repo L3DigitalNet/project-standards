@@ -28,6 +28,7 @@ class ArtifactFixture(TypedDict):
     content: bytes
     policy: NotRequired[str]
     mode: NotRequired[str | None]
+    when_any: NotRequired[list[dict[str, object]]]
 
 
 class ContributionFixture(TypedDict):
@@ -39,6 +40,7 @@ class ContributionFixture(TypedDict):
     provider: NotRequired[str]
     shared_identity: NotRequired[str]
     policy: NotRequired[str]
+    when_any: NotRequired[list[dict[str, object]]]
 
 
 class ExtensionFixture(TypedDict):
@@ -63,18 +65,19 @@ def write_payload(
     extensions: Sequence[ExtensionFixture] = (),
     render_providers: Sequence[str] = (),
     verify_providers: Sequence[str] = (),
+    option_properties: Mapping[str, object] | None = None,
 ) -> InstalledPayload:
     root.mkdir(parents=True)
-    option_properties: dict[str, object] = {}
+    schema_properties: dict[str, object] = dict(option_properties or {})
     for extension in extensions:
-        option_properties[str(extension["option"])] = {"type": "string"}
+        schema_properties[str(extension["option"])] = {"type": "string"}
     config_schema = json.dumps(
         {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "type": "object",
             "additionalProperties": False,
-            "properties": option_properties,
-            "required": sorted(option_properties),
+            "properties": schema_properties,
+            "required": sorted(schema_properties),
         },
         sort_keys=True,
     ).encode()
@@ -119,21 +122,22 @@ def write_payload(
         path = root / source
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
-        artifact_rows.append(
-            {
-                "id": artifact_id,
-                "target": item["target"],
-                "source": source,
-                "digest": digest(content),
-                "policy": item.get("policy", ArtifactPolicy.MANAGED.value),
-                "mode": item.get("mode", "0644"),
-            }
-        )
+        artifact_row: dict[str, object] = {
+            "id": artifact_id,
+            "target": item["target"],
+            "source": source,
+            "digest": digest(content),
+            "policy": item.get("policy", ArtifactPolicy.MANAGED.value),
+            "mode": item.get("mode", "0644"),
+        }
+        if "when_any" in item:
+            artifact_row["when_any"] = item["when_any"]
+        artifact_rows.append(artifact_row)
 
     contribution_rows: list[dict[str, object]] = []
     for item in contributions:
         contribution_id = str(item["id"])
-        row: dict[str, object] = {
+        contribution_row: dict[str, object] = {
             "id": contribution_id,
             "target": item["target"],
             "adapter": item["adapter"],
@@ -141,10 +145,12 @@ def write_payload(
             "policy": item.get("policy", ArtifactPolicy.MANAGED.value),
         }
         if "shared_identity" in item:
-            row["shared_identity"] = item["shared_identity"]
+            contribution_row["shared_identity"] = item["shared_identity"]
+        if "when_any" in item:
+            contribution_row["when_any"] = item["when_any"]
         provider = item.get("provider")
         if provider is not None:
-            row["provider"] = provider
+            contribution_row["provider"] = provider
         else:
             source = f"contributions/{contribution_id}.txt"
             content = item.get("content")
@@ -153,9 +159,9 @@ def write_payload(
             path = root / source
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(content)
-            row["source"] = source
-            row["source_digest"] = digest(content)
-        contribution_rows.append(row)
+            contribution_row["source"] = source
+            contribution_row["source_digest"] = digest(content)
+        contribution_rows.append(contribution_row)
 
     providers: list[dict[str, object]] = [
         {
