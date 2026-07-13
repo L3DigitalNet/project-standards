@@ -32,7 +32,7 @@ Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independen
 
 - [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
 
-  Coverage Tasks 1–6 and all six checker-table materialization tasks are complete on the isolated feature branch. Canonical nested predicates, fail-closed schema validation, exactly-one-checker rendering, lifecycle/migration proofs, and both complete-gate oracles pass; the root locks the bundled `pyright==1.1.411` runtime. Next, amend parallel-coverage Tasks 9 and 11 for that exact pin, guarded provider-derived dev-group pre-alignment, and frozen predecessor reconstruction; freshly audit those amended tasks before Task 9. Then complete coverage Tasks 7–8, execute Tasks 9–11, refresh the deliberately stale release evidence, and perform the atomic root migration.
+  Coverage Tasks 1–6 and all six checker-table materialization tasks are integrated on `testing` through `26fb984`. Canonical nested predicates, fail-closed schema validation, exactly-one-checker rendering, lifecycle/migration proofs, and both complete-gate oracles pass; the root locks the bundled `pyright==1.1.411` runtime. Next, amend parallel-coverage Tasks 9 and 11 for that exact pin, guarded provider-derived dev-group pre-alignment, and frozen predecessor reconstruction; freshly audit those amended tasks before Task 9. Then complete coverage Tasks 7–8, execute Tasks 9–11, refresh the deliberately stale release evidence, and perform the atomic root migration.
 
 ### P2 — Cut and publish v5.0.0
 

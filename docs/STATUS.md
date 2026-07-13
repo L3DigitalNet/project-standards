@@ -27,7 +27,7 @@
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–6 pass: parallel/subprocess rendering and the paired capture oracle are complete.
-- Checker-table Tasks 1–6 are implemented and checker-owned gates pass. Release replay awaits amended and re-audited coverage Tasks 9 and 11.
+- Checker-table Tasks 1–6 are integrated on `testing` through `26fb984`; checker-owned gates pass. Release replay awaits amended and re-audited coverage Tasks 9 and 11.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
