@@ -49,8 +49,11 @@ _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
 )
 _CALLER_WORKFLOW_DIGEST = "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+_PREVIOUS_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525"
+)
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:0f91dfa7279726126f569c036eaa8d3dde8881543affea588cea720f617c064c"
 )
 
 
@@ -284,6 +287,7 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
     assert {digest.value for digest in signatures["legacy-workflow"].known_content_digests} == {
         _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST,
         _CALLER_WORKFLOW_DIGEST,
+        _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST,
         _CURRENT_SELF_HOST_WORKFLOW_DIGEST,
     }
     assert (
@@ -480,6 +484,8 @@ def test_project_spec_workflow_ci_false_is_a_stable_noop_caller() -> None:
     assert result.content is not None
     assert b"workflow_dispatch:" in result.content
     assert b"if: ${{ false }}" in result.content
+    assert b"config-path:" not in result.content
+    assert b".standards/config.toml" not in result.content
 
 
 def test_project_spec_self_host_mode_renders_immutable_workflow() -> None:
@@ -496,6 +502,10 @@ def test_project_spec_self_host_mode_renders_immutable_workflow() -> None:
         },
     )
     assert result.content == (_PAYLOAD / "resources/self-host-validate-specs.yml").read_bytes()
+    assert result.content is not None
+    assert b"config-path:" not in result.content
+    assert b"--config" not in result.content
+    assert b"PROJECT_STANDARDS_SPEC_CONFIG" not in result.content
 
 
 def test_project_spec_scaffold_preview_returns_content_without_a_target() -> None:
@@ -643,7 +653,8 @@ def test_project_spec_fresh_apply_second_apply_and_disable_converge(tmp_path: Pa
     assert first.applicable, first.findings
     assert apply_reconciliation(ApplyRequest(request, first)).success
     workflow = repo / ".github/workflows/validate-specs.yml"
-    assert b".standards/config.toml" in workflow.read_bytes()
+    assert b".standards/config.toml" not in workflow.read_bytes()
+    assert b"config-path:" not in workflow.read_bytes()
 
     second_request = build_planner_request(repo, distribution, frozenset())
     second = plan_reconciliation(second_request)
@@ -702,7 +713,8 @@ spec:
     result = apply_legacy_migration(plan)
     assert result.success, result
     assert not (repo / ".project-standards.yml").exists()
-    assert b".standards/config.toml" in workflow.read_bytes()
+    assert b".standards/config.toml" not in workflow.read_bytes()
+    assert b"config-path:" not in workflow.read_bytes()
 
 
 def test_project_spec_real_multi_standard_migration_preserves_semantics_and_converges(

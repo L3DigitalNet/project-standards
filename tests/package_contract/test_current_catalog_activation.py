@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:115198a1a343967d785a28052e72deb8a08558f05a246d69cd27920759dca6cb",
+        "sha256:9890ac921d6f7901919c184d6d123109238173bf66333996da86d7c6fb6a3bec",
     ),
     "python-coding": (
         "Python Coding Standard",

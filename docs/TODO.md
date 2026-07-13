@@ -38,7 +38,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   The V2-composed job cannot call this repository at `@v5` before that tag exists. Make the first `main` release run bootstrap-safe, retain a canonical public `workflow_call` endpoint for consumers, and test both pre-tag and published-ref paths.
 
-- [ ] Repair the Project Specification generated workflow under unified authority.
+- [x] Repair the Project Specification generated workflow under unified authority.
 
   Stop the current V2 caller from passing `.standards/config.toml` as an explicit legacy override. Reconcile the resource, provider, adoption guide, root workflow, CLI semantics, and tests with an end-to-end generated-command check.
 

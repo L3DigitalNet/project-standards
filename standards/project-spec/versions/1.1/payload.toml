@@ -29,7 +29,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:401bd4cf5a92afb05cdc0f887f1b2efb4ebcd08ef95e6eeeeb861a700d219624"
+digest = "sha256:23d27278a3f82b6d080df0c3c13cc7752ba2329950c6301f324af73725170c4e"
 
 [[resources]]
 id = "agent-summary"
@@ -85,7 +85,7 @@ id = "workflow-source"
 role = "provider-resource"
 path = "resources/validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:2aa963c7367c99ac0e08f8091febe35ec9cb8c3c7c0d71fd73904a6493127281"
+digest = "sha256:555ce92689f7f226b7b3966774c63d9ad42da11424cad957a691bbb0e34a3990"
 
 [[resources]]
 id = "legacy-workflow"
@@ -99,14 +99,14 @@ id = "self-host-workflow"
 role = "provider-resource"
 path = "resources/self-host-validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:fe1e95a272802bad7a88ad11ee8c394a4697f5018cedff7e2fe5b3a5365068d2"
+digest = "sha256:333dfb3470aef49cdf490ccb3b6b76ce90447a299c440ec919b74844f77e70a0"
 
 [[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:01d05bacea4d5ae4efc8de7de7aa4f7bd4fe228088061a05a1a83ff1c266d973"
+digest = "sha256:d66b60591cf17b74ee7f3b6cc6044aa772d9351e9a57f695cfe240624091ffb3"
 
 [[resources]]
 id = "provider-input"
@@ -306,4 +306,5 @@ known_content_digests = [
   "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
   "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447",
   "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
+  "sha256:0f91dfa7279726126f569c036eaa8d3dde8881543affea588cea720f617c064c",
 ]

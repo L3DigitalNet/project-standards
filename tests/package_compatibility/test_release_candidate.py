@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -57,6 +58,24 @@ _EXPECTED_DIRECT_WRITER_MODULES = (
     "project_standards/standards_graph/model.py",
     "project_standards/standards_graph/validators.py",
 )
+
+
+def _generated_spec_arguments(workflow: bytes) -> tuple[list[str], ...]:
+    """Extract this repository's CLI arguments from the selected workflow bytes."""
+    document = yaml.safe_load(workflow)
+    steps = document["jobs"]["validate-specs"]["steps"]
+    commands = [
+        step["run"]
+        for step in steps
+        if step.get("name") in {"Validate specs (this repo)", "Lint specs (this repo, strict)"}
+    ]
+    prefix = ["uv", "run", "project-standards"]
+    arguments: list[list[str]] = []
+    for command in commands:
+        tokens = shlex.split(command)
+        assert tokens[: len(prefix)] == prefix
+        arguments.append(tokens[len(prefix) :])
+    return tuple(arguments)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1376,6 +1395,19 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
     assert not (_ROOT / ".standards").exists()
 
 
+def test_selected_project_spec_workflow_commands_use_unified_authority() -> None:
+    workflow = (
+        _ROOT
+        / "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml"
+    ).read_bytes()
+
+    assert _generated_spec_arguments(workflow) == (
+        ["spec", "validate"],
+        ["spec", "lint", "--strict"],
+    )
+    assert b"--config" not in workflow
+
+
 def _reconstruct_predecessor(
     source_root: Path,
     target: Path,
@@ -1661,9 +1693,10 @@ def _execute_migration_proof(
     # The root gate becomes meaningful only after Task 11 atomically rewrites the
     # repository's pre-control-plane tests; Task 9 executes both scratch gates instead.
     frontmatter_endpoint = checkout / ".github/workflows/validate-markdown-frontmatter.yml"
-    assert frontmatter_endpoint.read_bytes() == workflows_before[
-        ".github/workflows/validate-markdown-frontmatter.yml"
-    ]
+    assert (
+        frontmatter_endpoint.read_bytes()
+        == workflows_before[".github/workflows/validate-markdown-frontmatter.yml"]
+    )
     assert b"workflow_call:" in frontmatter_endpoint.read_bytes()
     standards_workflow = checkout / ".github/workflows/validate-standards.yml"
     assert standards_workflow.is_file()
@@ -1684,6 +1717,9 @@ def _execute_migration_proof(
         checkout / ".github/workflows/validate-specs.yml"
     ).read_bytes() == expected_spec_workflow
     assert b".project-standards.yml" not in expected_spec_workflow
+    assert b"--config" not in expected_spec_workflow
+    generated_spec_arguments = _generated_spec_arguments(expected_spec_workflow)
+    assert generated_spec_arguments == (["spec", "validate"], ["spec", "lint", "--strict"])
     markdown_adapter = MarkdownBlockAdapter()
     instruction_scopes = (
         "block:agent-handoff",
@@ -1806,8 +1842,7 @@ def _execute_migration_proof(
 
     for arguments in (
         ["validate"],
-        ["spec", "validate"],
-        ["spec", "lint", "--strict"],
+        *generated_spec_arguments,
         ["agent-handoff", "validate", "--repo", "."],
         ["agent-handoff", "drift-check", "--repo", "."],
     ):

@@ -12,6 +12,5 @@ jobs:
     if: ${{ inputs.enabled != false }}
     uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v5
     with:
-      config-path: ".standards/config.toml"
       standards-ref: "v5"
       strict-lint: true

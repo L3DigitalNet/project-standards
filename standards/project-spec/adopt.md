@@ -12,7 +12,7 @@ project-standards reconcile --apply
 
 Options under `[standards.project-spec.config]` select the independent contract, spec include globs, external reference prefixes, default profile, CI, and `workflow_mode`. Use `caller` for the reusable `@v5` workflow or `self-hosted` for an immutable in-repository job. Keep Project Specification and Markdown Frontmatter corpora disjoint.
 
-Reconciliation manages `.github/workflows/validate-specs.yml`. Authoring commands such as `spec new` and `spec upgrade` return typed plans; the platform executor performs file writes after path and precondition checks.
+Reconciliation manages `.github/workflows/validate-specs.yml`. Its validation commands omit `--config` and resolve the selected package from unified `.standards/` authority; explicit `--config` remains a legacy/debug override. Authoring commands such as `spec new` and `spec upgrade` return typed plans; the platform executor performs file writes after path and precondition checks.
 
 ## Migrate a V4 repository
 
