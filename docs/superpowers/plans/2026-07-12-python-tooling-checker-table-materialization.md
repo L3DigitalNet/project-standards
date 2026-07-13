@@ -747,14 +747,21 @@ uv run pyright --version
 
 The wrapper's npm payload version tracks the wrapper release, so the exact pin makes the provisioned content deterministic; only its transport is a setup-phase network step. Record the pinned version in the commit message.
 
-Add the provisioning step to `.github/workflows/check.yml` immediately after the "Sync dependencies" step:
+Add the provisioning step to `.github/workflows/check.yml` immediately after the "Sync dependencies" step, plus a job-level cache location so provisioning and the test step share one explicit Pyright cache:
+
+```yaml
+env:
+  PYRIGHT_PYTHON_CACHE_DIR: ${{ runner.temp }}/pyright-python-cache
+```
 
 ```yaml
 - name: Provision Pyright runtime
   run: uv run pyright --version
 ```
 
-Verify the contract once in a fresh-home model: with an empty `PYRIGHT_PYTHON_CACHE_DIR` (or empty user cache), provisioning succeeds online; afterwards `uv run pyright --version` succeeds with outbound network disabled. A one-time cache warm is provisioning, never offline evidence.
+The resolved exact requirement string (`pyright==X.Y.Z`) is a named release-integration output: coverage Tasks 9 and 11 must carry it verbatim in `additional_dev_dependencies` — never the bare name — so the pin survives the provider-derived dev group and the refreshed lock. Record it in the commit message and in the Task 6 `docs/handoff/specs-plans.md` entry.
+
+Verify the contract once in a fresh-home model: with an empty `PYRIGHT_PYTHON_CACHE_DIR`, provisioning succeeds online; afterwards `uv run pyright --version` succeeds with npm strict offline (`npm_config_offline=true`) and outbound network disabled. A one-time cache warm is provisioning, never offline evidence.
 
 - [ ] **Step 2: Write the failing reconciliation-driven oracle**
 
@@ -799,10 +806,14 @@ def test_greeting() -> None:
     # the root locked tool environment (UV_PROJECT); the scratch package is
     # made importable through the asserted PYTHONPATH seam below. Consumer
     # dependency installation is explicitly out of scope.
+    # npm_config_offline forces the Pyright wrapper runtime to resolve from
+    # its provisioned cache; a missing cache fails the probe below instead of
+    # silently downloading during the network-isolated assertion.
     environment = {
         **os.environ,
         "COVERAGE_FILE": str(repo / ".coverage"),
         "UV_OFFLINE": "1",
+        "npm_config_offline": "true",
         "UV_PROJECT": str(_ROOT),
         "PYTHONPATH": str(repo / "src"),
     }
@@ -907,9 +918,16 @@ uv run python scripts/run_repository_tests.py
 
 Also run the catalog freshness check exactly as `.github/workflows/validate-standards-graph.yml` runs it (its steps around lines 30–37). `pip-audit` is mandatory here because Task 5 added a dependency; the coherence suite is mandatory because `AGENTS.md` requires it after validator/test changes. Expected: all green; `.standards/` still absent at the repository root (`test -e .standards && echo VIOLATION || echo ok`); `git status --short` shows only the intended implementation and documentation changes.
 
-- [ ] **Step 2: Record the pointers**
+- [ ] **Step 2: Record the pointers and run the handoff gates**
 
-Add the design and this plan to `docs/handoff/specs-plans.md`; update `docs/STATUS.md` and `docs/TODO.md`: checker fix implemented, coverage-plan Tasks 9/11 amendment plus fresh audit still pending before Task 9 executes.
+Add the design and this plan (including the recorded exact Pyright pin) to `docs/handoff/specs-plans.md`; update `docs/STATUS.md` and `docs/TODO.md`: checker fix implemented, coverage-plan Tasks 9/11 amendment plus fresh audit still pending before Task 9 executes.
+
+Then run the Agent Handoff conformance gates and keep any required fixes inside this task's staging list:
+
+```bash
+uv run project-standards agent-handoff validate --repo .
+uv run project-standards agent-handoff drift-check --repo .
+```
 
 - [ ] **Step 3: Commit**
 
@@ -927,6 +945,12 @@ git commit -m "docs: record checker-table materialization implementation"
 - **CR-003:** Task 4 gains real-payload transition cycles from both starting selections plus a real disable/re-enable lock proof anchored to the existing real-apply tests; the generic fixture remains complementary and the superseded Task 5 flip-back epilogue is removed.
 - **CR-004:** Task 6 is the complete repository gate: dependency audit, package/graph/catalog validation, and Node/Python coherence after `npm ci`, in addition to the original checks.
 - **CR-005:** the intermediate-shape rejection test is parameterized across nullable, `anyOf`, `oneOf`, `allOf`, `$ref`, and missing-type intermediates.
+
+## Audit round 2 reconciliation
+
+- **CR-001 (residual):** the oracle enforces npm strict offline (`npm_config_offline=true`) in its environment, and CI provisioning shares one explicit `PYRIGHT_PYTHON_CACHE_DIR` with the test step, so a missing wrapper cache fails the probe instead of silently downloading; the design's isolation wording is updated to match.
+- **CR-NEW-001:** the resolved exact `pyright==X.Y.Z` requirement is a named release-integration output; the design's carry-through bullet now requires that exact string — never the bare name — in both migration intents, with post-migration equality assertions against the root pin.
+- **CR-NEW-002:** Task 6 runs `agent-handoff validate` and `drift-check` after the documentation edits and before the final commit, keeping any required fixes in the task's staging list.
 
 ## Plan self-review checklist
 
