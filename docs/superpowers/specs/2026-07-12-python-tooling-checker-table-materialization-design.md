@@ -1,6 +1,6 @@
 # Python Tooling Checker Table Materialization Design
 
-**Date:** 2026-07-12 **Status:** owner-approved; contract audit converged after rounds 1–5 with no significant findings; oracle provisioning contract amended after plan-audit rounds 1–2 (CR-001) **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
+**Date:** 2026-07-12 **Status:** owner-approved; contract audit converged after rounds 1–5; implementation reconciliation records Pyright 1.1.411 packaging drift and the corrected oracle network boundary **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
 
 ## Problem and goal
 
@@ -93,6 +93,12 @@ Extend conditional materialization to accept a canonical nested option pointer i
 - **CTM-NEW-006:** Accepted. Verified: `declare_release_cut_intent` currently performs both intent injection and a hand-maintained before/after dev-group rewrite — the duplicated-list anti-pattern the round-3 contract already forbids — and the flow builds the installed distribution only afterward, so a provider-derived rewrite could not use the installed provider. The normative sequence is now: restore predecessor → set release version → build and extract the installed distribution → inject intent only → resolve options and render through that installed provider → guarded rewrite → preview/apply → refresh and check the lock. The proofs assert the rendering provider comes from the extracted installed tree, and the hand-maintained arrays are retired in favor of the guarded helper.
 - **CTM-NEW-007:** Accepted. Verified: coverage-plan Task 9 Step 1 derives the overlay's required path set from every catalog-5 legacy-signature target plus `.project-standards.yml` and fails on a missing or extra entry, which would reject the new predecessor inputs. The authoritative overlay set is redefined as the exact union of the signature-target set, `.project-standards.yml`, and the guarded predecessor inputs `pyproject.toml` and `uv.lock`; the recomputation test enforces that union with no other extras.
 
+## Implementation reconciliation
+
+Implementation-time dependency resolution selected [`pyright==1.1.411`](https://pypi.org/project/pyright/1.1.411/). Unlike the wrapper behavior observed during plan audit, this release's 6.2 MB wheel contains the matching JavaScript runtime under `pyright/dist` and selects it before npm/cache installation. The cache-provisioning mechanics introduced for CR-001 are therefore superseded for this exact pin: the repository locks the complete wheel, adds no CI provisioning step, and proves `pyright --version` succeeds with uv/npm offline, an empty cache path that remains absent, `PYRIGHT_PYTHON_IGNORE_WARNINGS=true`, and bundled-runtime use required.
+
+The generated complete gate still runs `pip-audit`. Its supported vulnerability services are network-backed, and [upstream offline vulnerability-service support remains open](https://github.com/pypa/pip-audit/issues/698). The oracle's boundary is consequently narrowed to offline locked-tool resolution plus complete gate execution; it does not claim that the `pip-audit` phase is network-isolated. This correction changes neither checker-table materialization nor the release-integration requirement to carry the exact Pyright pin.
+
 ## Contract changes
 
 ### Predicate model and generated schema
@@ -113,7 +119,7 @@ Extend conditional materialization to accept a canonical nested option pointer i
 
 ### Repository test dependencies
 
-`pyright` becomes a pinned, locked repository test dependency — `pyproject.toml` plus a refreshed `uv.lock`. The PyPI package is a wrapper that installs its matching Pyright npm payload at runtime into a user cache outside uv's control, so the oracle contract is two-phase (amended after plan-audit round 1, CR-001): runtime provisioning (`uv run pyright --version`) is a declared setup-phase prerequisite equivalent to `uv sync` and `npm ci` — pinned wrapper version for deterministic payload content, network transport confined to environment setup, wired into CI beside dependency sync — and the oracle itself asserts the provisioned runtime, then executes the gate network-isolated: `UV_OFFLINE=1` for uv, npm strict offline (`npm_config_offline=true`) so the wrapper runtime cannot download during the assertion, one Pyright cache shared between provisioning and the oracle — in CI published as `PYRIGHT_PYTHON_CACHE_DIR=$RUNNER_TEMP/…` through `$GITHUB_ENV` by a setup step, since the `runner` context is unavailable at job-level `env`; the oracle reports the cache in use in its diagnostic — and the locked local environment. A one-time online cache warm is provisioning, never offline evidence. Before the atomic migration the root declares the dependency directly; through migration it travels as `additional_dev_dependencies` so the provider-rendered dev group retains it — see Release integration.
+`pyright==1.1.411` becomes a pinned, locked repository test dependency — `pyproject.toml` plus a refreshed `uv.lock`. Its wheel contains the matching bundled runtime, so `uv sync --locked --all-groups` installs the complete checker without a separate npm/cache provisioning phase. The oracle disables the wrapper's PyPI version-warning check, requires bundled-runtime use, sets uv and npm offline, points the wrapper at an empty cache, and asserts that cache remains absent after the version probe. The subsequent generated gate is complete but not wholly network-isolated because `pip-audit` queries its configured vulnerability service. Before the atomic migration the root declares the dependency directly; through migration it travels as the exact `pyright==1.1.411` `additional_dev_dependencies` entry so the provider-rendered dev group retains it — see Release integration.
 
 ### Release integration
 
@@ -148,7 +154,7 @@ No new engine machinery is required for transitions: the planner already builds 
 | `tests/control_plane/test_planner.py` and `tests/control_plane/test_lifecycle.py` | Exactly-one-table planning and checker-transition lifecycle proofs |
 | `tests/package_contract/test_python_tooling_reconstruction.py` | Rendering, guard, and source/wheel reconstruction coverage |
 | Reconciliation-driven complete-gate oracle beside the Task 6 subprocess oracle | Scratch control-plane apply, exactly-one-table assertion, and execution of the reconciled gate |
-| `pyproject.toml` and `uv.lock` | Locked `pyright` test dependency for the offline Pyright oracle |
+| `pyproject.toml` and `uv.lock` | Locked `pyright==1.1.411` dependency and bundled-runtime oracle |
 | `tests/package_compatibility/release_candidate.py` and `tests/package_compatibility/test_release_candidate.py` | Pyright carry-through, frozen guarded-predecessor overlay (`pyproject.toml`, `uv.lock`), and dev-group pre-alignment proofs, coordinated with coverage-plan Tasks 9 and 11 |
 
 ## Failure behavior
@@ -180,7 +186,7 @@ Follow test-driven development:
 7. Implement the engine contract, cross-contract validation, payload predicates, and provider guard.
 8. Add `pyright` as a locked repository test dependency and refresh `uv.lock`.
 9. Regenerate the payload schema, package digests, and catalog metadata; run `sync-payload-projection --check`.
-10. Add the reconciliation-driven complete-gate oracle: initialize a scratch control plane, reconcile and apply Python Tooling defaults, assert the composed pyproject contains exactly one checker table, then execute the reconciled `scripts/check.py` offline with the locked environment and pass; repeat with the Pyright selection.
+10. Add the reconciliation-driven complete-gate oracle: initialize a scratch control plane, reconcile and apply Python Tooling defaults, assert the composed pyproject contains exactly one checker table, prove checker execution from the locked environment with uv/npm offline and an unused Pyright cache, then execute the reconciled `scripts/check.py` and pass; repeat with the Pyright selection. The `pip-audit` phase retains its configured vulnerability-service network access.
 11. Extend the release-candidate fixture and test in coordination with coverage-plan Tasks 9 and 11: carry `pyright` through `additional_dev_dependencies` in both intents; freeze the guarded-predecessor `pyproject.toml` and `uv.lock` bytes in the legacy overlay under the exact-union path set and restore them in post-atomic reconstruction; follow the normative sequence — restore predecessor, set release version, build and extract the installed distribution, inject intent only, resolve options and render through that installed provider, guarded rewrite, preview/apply, refresh and check the lock — asserting the provider comes from the extracted installed tree; pre-align `/dependency-groups/dev` through the guarded helper — provider-derived value from schema-resolved total options, exact pre-write value and digest preconditions bound after `set_release_version`, bounded single-unit rewrite, before/after and next-lock digest assertions, and a mutation-occurred assertion; add the negative test proving unexpected dependency drift refuses pre-alignment without mutation; prove simulated pre-atomic and reconstructed post-atomic runs produce equivalent release evidence; and prove preview applicability, migrated dev-group and lock ownership, fixed-point convergence, locked offline sync, and both oracle selections after the transition.
 12. Run focused package-contract, control-plane, and Python Tooling reconstruction suites, then the repository gate.
 
@@ -190,7 +196,7 @@ Follow test-driven development:
 - Top-level predicate spellings and behavior are unchanged; existing payloads load and evaluate identically.
 - Every `when_any` path is statically proven against the closed option schema at option-schema load, including the object-typed intermediate rule.
 - Checker transitions, V4 migration, and disable/re-enable cycles preserve lock integrity and second-plan convergence, including a cycle beginning from a Pyright selection.
-- A reconciliation-driven scratch consumer composes exactly one checker table and passes the full reconciled gate end to end with the locked toolchain for both selections, superseding the narrowed subprocess oracle's executability boundary; that oracle remains valid for its own subprocess-coverage claim.
+- A reconciliation-driven scratch consumer composes exactly one checker table, resolves both checkers from the locked toolchain without a Pyright cache or npm download, and passes the full reconciled gate end to end for both selections. `pip-audit` retains vulnerability-service network access; the narrowed subprocess oracle remains valid for its own subprocess-coverage claim.
 - The VS Code mode keys remain unconditional; the consumer-facing `config.schema.json` is byte-identical.
 - All digests and generated schemas are regenerated, and `sync-payload-projection --check` passes.
 - Both migration intents carry Pyright through `additional_dev_dependencies`; the migrated `.standards/config.toml`, dev group, and refreshed `uv.lock` retain it, and both oracle selections pass after the atomic transition.

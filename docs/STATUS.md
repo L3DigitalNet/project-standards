@@ -12,7 +12,7 @@
 - FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
 - The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
 - The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29201533025` passed for cleanup commit `a6bb970`.
-- `SPEC-CP01` is approved rev 0.10; its ownership-relinquishment contract and implementation-plan audits have converged. Generic engine Tasks 1–4 are implemented and independently verified on the isolated feature branch.
+- `SPEC-CP01` rev 0.10 is approved; ownership-relinquishment audits converged, and generic engine Tasks 1–4 pass independent verification.
 - Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
 - `SPEC-BA02` rev 0.11 keeps the nine-family v5 scope and target-bound consumer intent; its implementation plan has converged.
 - The CP01 core and package-migration follow-on are integrated on `testing` through `b6a60fc`; all nine payloads are reconstructed and catalog 5 is active.
@@ -21,16 +21,14 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- The remaining v5 gates are Python Tooling package Tasks 5–8, refreshed release replay/evidence, atomic source-root migration, and release.
+- Remaining v5 gates: coverage Tasks 7–11, refreshed release evidence, atomic source-root migration, and release.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
-- Python Tooling coverage Tasks 5–6 pass: the default remains byte-compatible, opt-in parallel/subprocess rendering is complete, and the offline paired oracle distinguishes executed subprocess code from its no-patch control. The same executable probe found a release-blocking pre-existing dual checker-table configuration; its conditional-materialization fix requires a reviewed design amendment before Tasks 7–11 continue.
-- The checker-table fix is fully designed: an independent second-opinion review empirically reproduced the dual-table rejection with the locked basedpyright 1.39.6, the conditional nested-option-pointer design converged through five contract-audit rounds, and the owner approved it. The six-task TDD implementation plan converged through four adversarial plan-audit rounds (offline Pyright provisioning contract, scratch import seam, real-payload lifecycle proofs, complete repository gate) and is ready for implementation; parallel-coverage Tasks 9 and 11 still require a matching amendment and fresh audit before Task 9 executes.
-- The owner reviewed and accepted the empty SPEC-MT01, SPEC-BA02, and SPEC-CP01 implementation-deviation logs on 2026-07-12. All three specs pass strict validate/lint.
+- Python Tooling coverage Tasks 5–6 pass: parallel/subprocess rendering and the paired capture oracle are complete.
+- Checker-table Tasks 1–6 are implemented and checker-owned gates pass. Release replay awaits amended and re-audited coverage Tasks 9 and 11.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
-- Pruning removed 55 completed or superseded review/plan artifacts and both scratch files. The release-cut evidence and active Agent Handoff plan remain.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
 - GitHub issue #3 and PRs #1, #2, #4, #5, and #6 are closed with no open PRs; incomplete action bumps are consolidated into one v5-wide parity task.

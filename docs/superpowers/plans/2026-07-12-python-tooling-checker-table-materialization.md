@@ -30,9 +30,10 @@
 - `standards/python-tooling/versions/1.1/payload.toml` — conditional checker contributions + digest refresh
 - `standards/python-tooling/versions/1.1/providers/python_tooling.py` — `_checker_table` guard
 - `standards/python-tooling/standard.toml`, `catalogs/5.toml` — aggregate digests
-- `pyproject.toml`, `uv.lock` — pinned, locked `pyright` wrapper test dependency
-- `.github/workflows/check.yml` — Pyright runtime provisioning step beside dependency sync
+- `pyproject.toml`, `uv.lock` — pinned, locked `pyright==1.1.411` test dependency
 - `tests/package_contract/test_payload.py` — predicate + cross-contract tests
+- `tests/package_contract/test_schemas.py` — generated predicate field-description contract
+- `tests/package_contract/test_current_catalog_activation.py` — current Python Tooling digest lock
 - `tests/control_plane/planner_helpers.py` — `when_any` + `option_properties` fixture support
 - `tests/control_plane/test_lifecycle.py` — conditional-unit transition proofs
 - `tests/package_contract/test_python_tooling_reconstruction.py` — payload/provider/planner/oracle proofs
@@ -51,7 +52,7 @@
 
 - Produces: `OptionPointer` type alias; `MaterializationPredicate.option: OptionName | OptionPointer`; unchanged `matches(config) -> bool` signature with nested traversal.
 
-- [ ] **Step 1: Write the failing predicate tests**
+- [x] **Step 1: Write the failing predicate tests**
 
 Add to `tests/package_contract/test_payload.py` (extend the existing imports with `MaterializationPredicate` from `project_standards.package_contract.payload`):
 
@@ -121,7 +122,7 @@ def test_materialization_predicate_top_level_spelling_is_unchanged() -> None:
     assert not predicate.matches({"workflow_ownership": "consumer-owned"})
 ```
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 uv run pytest tests/package_contract/test_payload.py -k materialization_predicate -q
@@ -129,7 +130,7 @@ uv run pytest tests/package_contract/test_payload.py -k materialization_predicat
 
 Expected: pointer acceptance, nested-array, type-exact, and fail-closed tests fail with `ValidationError` (pattern mismatch on the current top-level-only `OptionName`); the rejection and top-level tests pass.
 
-- [ ] **Step 3: Implement the widened predicate**
+- [x] **Step 3: Implement the widened predicate**
 
 In `src/project_standards/package_contract/payload.py`, next to `OptionName` (~line 69):
 
@@ -163,7 +164,7 @@ Update `MaterializationPredicate` (~line 163): change the field to `option: Opti
         )
 ```
 
-- [ ] **Step 4: Run and verify GREEN, then regenerate the payload schema**
+- [x] **Step 4: Run and verify GREEN, then regenerate the payload schema**
 
 ```bash
 uv run pytest tests/package_contract/test_payload.py -k materialization_predicate -q
@@ -173,7 +174,7 @@ uv run pytest tests/package_contract/test_schemas.py -q
 
 Expected: predicate tests pass; the regenerated `src/project_standards/schemas/standard-payload.schema.json` gains the pointer spelling in the `option` contract; schema-canonicality tests pass. If a locked invalid-TOML fixture expectation legitimately changes because the pointer spelling is now valid, update only that fixture's locked expectation.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/project_standards/package_contract/payload.py src/project_standards/schemas/standard-payload.schema.json tests/package_contract/test_payload.py
@@ -194,9 +195,9 @@ git commit -m "feat(package-contract): accept canonical option pointers in mater
 **Interfaces:**
 
 - Consumes: `OptionPointer` spelling from Task 1.
-- Produces: `load_option_schema` raising `PackageContractError` with `"undeclared option path"` / `"non-object option"`; `write_payload(..., option_properties: Mapping[str, object] | None = None)` and `ContributionFixture.when_any: NotRequired[list[dict[str, object]]]` for Tasks 4–5.
+- Produces: `load_option_schema` raising `PackageContractError` with `"undeclared option path"` / `"non-object option"`; `write_payload(..., option_properties: Mapping[str, object] | None = None)` plus `ArtifactFixture.when_any` and `ContributionFixture.when_any` for Tasks 4–5.
 
-- [ ] **Step 1: Extend the fixture harness**
+- [x] **Step 1: Extend the fixture harness**
 
 In `tests/control_plane/planner_helpers.py`:
 
@@ -231,7 +232,7 @@ In the contribution-row loop, pass predicates through:
             row["when_any"] = item["when_any"]
 ```
 
-- [ ] **Step 2: Write the failing cross-contract tests**
+- [x] **Step 2: Write the failing cross-contract tests**
 
 Add to `tests/package_contract/test_payload.py` (import `load_option_schema`, `load_payload_manifest`, `PackageContractError`, and `write_payload` from `tests.control_plane.planner_helpers`):
 
@@ -320,7 +321,7 @@ def test_every_shipped_payload_satisfies_the_predicate_option_contract() -> None
         load_option_schema(manifest_path.parent, manifest)
 ```
 
-- [ ] **Step 3: Run and verify RED**
+- [x] **Step 3: Run and verify RED**
 
 ```bash
 uv run pytest tests/package_contract/test_payload.py -k option_schema -q
@@ -328,7 +329,7 @@ uv run pytest tests/package_contract/test_payload.py -k option_schema -q
 
 Expected: the two rejection tests fail (no error raised yet); the acceptance and shipped-payload tests pass.
 
-- [ ] **Step 4: Implement the cross-contract validator**
+- [x] **Step 4: Implement the cross-contract validator**
 
 In `src/project_standards/package_contract/payload.py`, add near `_validate_default_contract`:
 
@@ -362,7 +363,7 @@ Call it in `load_option_schema` immediately after `_validate_extension_options(d
     _validate_predicate_options(document, manifest)
 ```
 
-- [ ] **Step 5: Run and verify GREEN, including migration-fixture fallout**
+- [x] **Step 5: Run and verify GREEN, including migration-fixture fallout**
 
 ```bash
 uv run pytest tests/package_contract/test_payload.py -k option_schema -q
@@ -372,7 +373,7 @@ uv run pytest tests/control_plane -q
 
 Expected: cross-contract tests pass. If migration tests fail with `undeclared option path: workflow_ownership`, locate the synthetic fixture schema (`grep -n "workflow_ownership" tests/control_plane/test_migration.py`) and declare the option in that fixture payload's config schema — via the new `option_properties` parameter where the payload is written, or by adding `"workflow_ownership": {"type": "string"}` to the fixture's schema properties. Do not weaken the validator.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/project_standards/package_contract/payload.py tests/package_contract/test_payload.py tests/control_plane/planner_helpers.py tests/control_plane/test_migration.py
@@ -388,14 +389,14 @@ git commit -m "feat(package-contract): statically validate when_any paths agains
 - Modify: `standards/python-tooling/versions/1.1/payload.toml` (~lines 159–173)
 - Modify: `standards/python-tooling/versions/1.1/providers/python_tooling.py` (`_checker_table`, ~line 125)
 - Modify: `standards/python-tooling/standard.toml`, `catalogs/5.toml` (aggregate digest)
-- Test: `tests/package_contract/test_python_tooling_reconstruction.py`
+- Test: `tests/package_contract/test_python_tooling_reconstruction.py`, `tests/package_contract/test_current_catalog_activation.py`
 
 **Interfaces:**
 
 - Consumes: pointer predicates (Task 1), cross-contract loading (Task 2).
 - Produces: `basedpyright-config`/`pyright-config` contributions with `when_any`; `_checker_table` raising `ValueError("non-selected checker table must not be rendered")`.
 
-- [ ] **Step 1: Write the failing payload and provider tests**
+- [x] **Step 1: Write the failing payload and provider tests**
 
 Add to `tests/package_contract/test_python_tooling_reconstruction.py`, using its existing `_payload`, `_options`, and `_render` helpers:
 
@@ -439,7 +440,7 @@ def test_python_tooling_selected_checker_table_rendering_is_unchanged() -> None:
 
 If `_render` surfaces provider failures as something other than `ControlPlaneError`, match the file's existing provider-rejection idiom instead (find it with `grep -n "pytest.raises" tests/package_contract/test_python_tooling_reconstruction.py`).
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k checker_table -q
@@ -447,7 +448,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k ch
 
 Expected: the conditional-declaration test fails (`when_any` is empty); the refusal test fails (the off-mode table renders today); the unchanged-rendering test passes.
 
-- [ ] **Step 3: Add the payload predicates and provider guard**
+- [x] **Step 3: Add the payload predicates and provider guard**
 
 In `standards/python-tooling/versions/1.1/payload.toml`, extend the two contributions:
 
@@ -491,7 +492,7 @@ def _checker_table(config: Mapping[str, object], table: str) -> str:
 
 Remove or update any existing test asserting the retired off-mode rendering (`grep -n '"off"' tests/package_contract/test_python_tooling_reconstruction.py`) — the VS Code settings `"off"` values at `python_tooling.py:399-400` stay untouched.
 
-- [ ] **Step 4: Refresh Python Tooling integrity**
+- [x] **Step 4: Refresh Python Tooling integrity**
 
 ```bash
 sha256sum standards/python-tooling/versions/1.1/providers/python_tooling.py
@@ -517,7 +518,7 @@ Write that aggregate to `standards/python-tooling/standard.toml` and the `python
 uv run project-standards standards sync-payload-projection --root . --check
 ```
 
-- [ ] **Step 5: Run and verify GREEN**
+- [x] **Step 5: Run and verify GREEN**
 
 ```bash
 uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -q
@@ -526,7 +527,7 @@ uv run pytest tests/package_contract/test_integrity.py tests/package_contract/te
 
 Expected: checker tests pass; integrity, catalog, and reconstruction suites pass with the refreshed digests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add standards/python-tooling/versions/1.1/payload.toml standards/python-tooling/versions/1.1/providers/python_tooling.py standards/python-tooling/standard.toml catalogs/5.toml tests/package_contract/test_python_tooling_reconstruction.py
@@ -546,7 +547,7 @@ git commit -m "feat(python-tooling): materialize exactly one checker table"
 
 - Consumes: `write_payload(..., option_properties=..., contributions=[{..., "when_any": [...]}])` from Task 2; the conditional real payload from Task 3.
 
-- [ ] **Step 1: Write the failing generic transition test**
+- [x] **Step 1: Write the failing generic transition test**
 
 Add to `tests/control_plane/test_lifecycle.py`, following the file's `write_payload` → `plan_reconciliation` → `_materialize` idiom:
 
@@ -628,7 +629,7 @@ def test_conditional_units_transition_across_pointer_predicate_flips(
 
 Mirror the disable/re-enable shape of `test_enable_update_disable_and_reenable_package_local_artifact` (same file, ~line 204) with a beta-selected config: disable via `_enable_only`, assert the beta unit is removed from file and lock, re-enable with the same config, and assert only `table:/tool/beta` returns and the follow-up plan is empty. Adjust imports (`CentralLock`, `ReconciliationPlan`, `ResolutionRequest`, `ActionKind`) to match the file's existing import block.
 
-- [ ] **Step 2: Write the failing real-payload planner test**
+- [x] **Step 2: Write the failing real-payload planner test**
 
 Add to `tests/package_contract/test_python_tooling_reconstruction.py`:
 
@@ -663,7 +664,7 @@ If `LockedUnit.path` is a plain string in this model, drop `.original`. Also ext
     assert tables == ["basedpyright"]
 ```
 
-- [ ] **Step 3: Write the failing real-payload transition and disable/re-enable tests**
+- [x] **Step 3: Write the failing real-payload transition and disable/re-enable tests**
 
 Add to `tests/package_contract/test_python_tooling_reconstruction.py`, reusing the initialize/enable/plan/apply sequence from `test_python_tooling_real_apply_uses_selected_pyright_everywhere` (~line 753) and the disable flow from `test_python_tooling_fresh_apply_second_apply_drift_and_disable` (~line 703). Shared assertion helper:
 
@@ -703,7 +704,7 @@ def test_python_tooling_real_checker_transitions_preserve_locks(
 
 Disable/re-enable with a retained non-default selection: extend the existing drift-and-disable test (or add a sibling) so that after disable removes the selected checker table and its lock unit, re-enabling with the retained `pyright` selection restores only `table:/tool/pyright`, `_assert_checker_state` passes, and the follow-up plan is empty.
 
-- [ ] **Step 4: Run and verify RED, then GREEN**
+- [x] **Step 4: Run and verify RED, then GREEN**
 
 ```bash
 uv run pytest tests/control_plane/test_lifecycle.py -k conditional_units -q
@@ -712,7 +713,7 @@ uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k "e
 
 Expected: RED only if Tasks 1–3 left a defect — these tests prove existing machinery; on failure fix the engine or payload work from the earlier tasks, never the assertions. Both commands end GREEN.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/control_plane/test_lifecycle.py tests/package_contract/test_python_tooling_reconstruction.py
@@ -721,46 +722,37 @@ git commit -m "test(control-plane): prove conditional checker-table transitions"
 
 ---
 
-### Task 5: Locked Pyright dependency and the reconciliation-driven complete-gate oracle
+### Task 5: Locked bundled Pyright dependency and the reconciliation-driven complete-gate oracle
 
 **Files:**
 
 - Modify: `pyproject.toml` (dev dependency group), `uv.lock`
-- Modify: `.github/workflows/check.yml` (Pyright runtime provisioning step)
 - Test: `tests/package_contract/test_python_tooling_reconstruction.py`
 
 **Interfaces:**
 
 - Consumes: `_installed_distribution`, `initialize_control_plane`, `build_planner_request`, `plan_reconciliation`, `apply_reconciliation` — all already imported at the top of the test file.
 
-- [ ] **Step 1: Add the pinned Pyright wrapper and its provisioning contract**
+- [x] **Step 1: Add the pinned bundled Pyright runtime and verify its isolation boundary**
 
-The PyPI `pyright` package is a wrapper: it installs the matching Pyright npm payload at runtime into a user cache (outside `uv.lock`), and `UV_OFFLINE` does not govern that download. Provisioning is therefore a declared setup-phase step — the same class as `uv sync` and `npm ci` — per the design's amended oracle contract (plan-audit CR-001).
+Implementation-time verification found that the resolved current package, `pyright==1.1.411`, bundles the matching JavaScript runtime in its wheel and uses it before any npm/cache path. The audited cache-provisioning premise therefore no longer applies to the selected pin. The wrapper still performs a PyPI update check unless `PYRIGHT_PYTHON_IGNORE_WARNINGS=true`, so the oracle sets that variable and explicitly requires the bundled runtime. The [PyPI release](https://pypi.org/project/pyright/1.1.411/) publishes the 6.2 MB wheel; the installed `_utils.py` verifies the bundled-runtime precedence.
 
-Resolve the current wrapper release, pin it exactly, and lock (network required; do not set `UV_OFFLINE` for this step):
+Pin and lock the verified release:
 
 ```bash
-uv add --group dev "pyright==<resolved latest>"
+uv add --group dev "pyright==1.1.411"
 uv sync --locked --all-groups
-uv run pyright --version
+UV_OFFLINE=1 PYRIGHT_PYTHON_IGNORE_WARNINGS=true \
+  PYRIGHT_PYTHON_USE_BUNDLED_PYRIGHT=true uv run pyright --version
 ```
 
-The wrapper's npm payload version tracks the wrapper release, so the exact pin makes the provisioned content deterministic; only its transport is a setup-phase network step. Record the pinned version in the commit message.
-
-Add two steps to `.github/workflows/check.yml` immediately after the "Sync dependencies" step. The `runner` context is not available in `jobs.<job_id>.env`, so the shared cache location is published through `$GITHUB_ENV` by a setup step, which every subsequent step in the job inherits:
-
-```yaml
-- name: Set Pyright cache location
-  run: echo "PYRIGHT_PYTHON_CACHE_DIR=$RUNNER_TEMP/pyright-python-cache" >> "$GITHUB_ENV"
-- name: Provision Pyright runtime
-  run: uv run pyright --version
-```
+The exact pin makes the installed wheel and bundled checker content deterministic. No CI cache publication or runtime-provisioning step is required; `uv sync --locked --all-groups` installs the complete runtime.
 
 The resolved exact requirement string (`pyright==X.Y.Z`) is a named release-integration output: coverage Tasks 9 and 11 must carry it verbatim in `additional_dev_dependencies` — never the bare name — so the pin survives the provider-derived dev group and the refreshed lock. Record it in the commit message and in the Task 6 `docs/handoff/specs-plans.md` entry.
 
-Verify the contract once in a fresh-home model: with an empty `PYRIGHT_PYTHON_CACHE_DIR`, provisioning succeeds online; afterwards `uv run pyright --version` succeeds with npm strict offline (`npm_config_offline=true`) and outbound network disabled. A one-time cache warm is provisioning, never offline evidence.
+Verify the contract once with an empty `PYRIGHT_PYTHON_CACHE_DIR`: `uv run pyright --version` succeeds with uv and npm offline, the warning check disabled, bundled-runtime use required, and the cache path still absent afterward.
 
-- [ ] **Step 2: Write the failing reconciliation-driven oracle**
+- [x] **Step 2: Write the reconciliation-driven oracle**
 
 Add to `tests/package_contract/test_python_tooling_reconstruction.py`. Drive the scratch consumer through the real control plane — mirror the existing initialize/apply call shape already used in this file (locate with `grep -n "initialize_control_plane\|apply_reconciliation" tests/package_contract/test_python_tooling_reconstruction.py`):
 
@@ -803,18 +795,19 @@ def test_greeting() -> None:
     # the root locked tool environment (UV_PROJECT); the scratch package is
     # made importable through the asserted PYTHONPATH seam below. Consumer
     # dependency installation is explicitly out of scope.
-    # npm_config_offline forces the Pyright wrapper runtime to resolve from
-    # its provisioned cache; a missing cache fails the probe below instead of
-    # silently downloading during the network-isolated assertion.
+    pyright_cache = repo / ".pyright-cache"
     environment = {
         **os.environ,
         "COVERAGE_FILE": str(repo / ".coverage"),
         "UV_OFFLINE": "1",
         "npm_config_offline": "true",
+        "PYRIGHT_PYTHON_CACHE_DIR": str(pyright_cache),
+        "PYRIGHT_PYTHON_IGNORE_WARNINGS": "true",
+        "PYRIGHT_PYTHON_USE_BUNDLED_PYRIGHT": "true",
         "UV_PROJECT": str(_ROOT),
         "PYTHONPATH": str(repo / "src"),
     }
-    provision = subprocess.run(
+    runtime = subprocess.run(
         ["uv", "run", checker, "--version"],
         cwd=_ROOT,
         env=environment,
@@ -822,15 +815,8 @@ def test_greeting() -> None:
         capture_output=True,
         text=True,
     )
-    if provision.returncode != 0:
-        cache_dir = os.environ.get("PYRIGHT_PYTHON_CACHE_DIR", "<default user cache>")
-        pytest.fail(
-            "checker runtime is not provisioned for the network-isolated oracle "
-            f"(cache: {cache_dir}); "
-            f"run 'uv run {checker} --version' once during environment setup:\n"
-            + provision.stdout
-            + provision.stderr
-        )
+    assert runtime.returncode == 0, runtime.stdout + runtime.stderr
+    assert not pyright_cache.exists()
     probe = subprocess.run(
         [sys.executable, "-c", "import consumer_pkg"],
         cwd=repo,
@@ -849,8 +835,6 @@ def test_greeting() -> None:
         text=True,
     )
     output = result.stdout + result.stderr
-    if result.returncode != 0 and "cache" in output.lower():
-        pytest.fail(f"offline complete-gate oracle is missing a locked cache entry:\n{output}")
     assert result.returncode == 0, output
     subprocess.run(
         [sys.executable, "-m", "coverage", "json", "-o", "coverage.json"],
@@ -875,19 +859,19 @@ version = "0.1.0"
 requires-python = ">=3.14"
 ```
 
-- [ ] **Step 3: Run and verify**
+- [x] **Step 3: Run and verify**
 
 ```bash
 uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k complete_gate_oracle -q
 ```
 
-Expected: both selections pass — the composed pyproject holds exactly one checker table and the full reconciled gate (ruff, checker, coverage lifecycle, pip-audit) exits 0 offline. This supersedes the narrowed subprocess oracle's executability boundary; leave that oracle unchanged for its subprocess-coverage claim.
+Expected: both selections pass — the composed pyproject holds exactly one checker table; checker resolution uses the locked environment with uv/npm offline and no Pyright cache; and the full reconciled gate (Ruff, checker, coverage lifecycle, pip-audit) exits 0. `pip-audit` still queries its configured vulnerability service, so this is not a whole-process network-isolation claim. This supersedes the narrowed subprocess oracle's executability boundary; leave that oracle unchanged for its subprocess-coverage claim.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
-git add pyproject.toml uv.lock .github/workflows/check.yml tests/package_contract/test_python_tooling_reconstruction.py
-git commit -m "test(python-tooling): prove the reconciled complete gate for both checkers"
+git add pyproject.toml uv.lock tests/package_contract/test_python_tooling_reconstruction.py
+git commit -m "test(python-tooling): prove reconciled complete gate with pyright 1.1.411"
 ```
 
 ---
@@ -898,7 +882,7 @@ git commit -m "test(python-tooling): prove the reconciled complete gate for both
 
 - Modify: `docs/handoff/specs-plans.md`, `docs/STATUS.md`, `docs/TODO.md`
 
-- [ ] **Step 1: Run the complete repository gate**
+- [x] **Step 1: Run the repository gate through the owned release boundary**
 
 ```bash
 uv run project-standards standards generate-package-schemas --root . --check
@@ -915,9 +899,11 @@ uv run project-standards validate --config .project-standards.yml
 uv run python scripts/run_repository_tests.py
 ```
 
-Also run the catalog freshness check exactly as `.github/workflows/validate-standards-graph.yml` runs it (its steps around lines 30–37). `pip-audit` is mandatory here because Task 5 added a dependency; the coherence suite is mandatory because `AGENTS.md` requires it after validator/test changes. Expected: all green; `.standards/` still absent at the repository root (`test -e .standards && echo VIOLATION || echo ok`); `git status --short` shows only the intended implementation and documentation changes.
+Also run the catalog freshness check exactly as `.github/workflows/validate-standards-graph.yml` runs it (its steps around lines 30–37). `pip-audit` is mandatory here because Task 5 added a dependency; the coherence suite is mandatory because `AGENTS.md` requires it after validator/test changes. Expected: every checker-plan-owned phase is green; `.standards/` remains absent at the repository root (`test -e .standards && echo VIOLATION || echo ok`); and the repository runner either passes or refuses only the release-evidence currency preflight already assigned to pending parallel-coverage Tasks 9 and 11. Do not refresh or bypass that evidence from this plan.
 
-- [ ] **Step 2: Record the pointers and run the handoff gates**
+Implementation result: every checker-plan-owned gate passed. The repository runner completed 2,591 ordinary tests, all 56 compatibility rows, and the five performance gates; its release-replay phase stopped only at the deliberate evidence-currency preflight because the retained digest predates these release inputs. Do not refresh that evidence here: the checker design assigns the required intent/pre-alignment/predecessor changes and resulting evidence refresh to the separately amended and freshly audited parallel-coverage Tasks 9 and 11.
+
+- [x] **Step 2: Record the pointers and run the handoff gates**
 
 Add the design and this plan (including the recorded exact Pyright pin) to `docs/handoff/specs-plans.md`; update `docs/STATUS.md` and `docs/TODO.md`: checker fix implemented, coverage-plan Tasks 9/11 amendment plus fresh audit still pending before Task 9 executes.
 
@@ -928,10 +914,10 @@ uv run project-standards agent-handoff validate --repo .
 uv run project-standards agent-handoff drift-check --repo .
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
-git add docs/handoff/specs-plans.md docs/STATUS.md docs/TODO.md
+git add docs/superpowers/specs/2026-07-12-python-tooling-checker-table-materialization-design.md docs/superpowers/plans/2026-07-12-python-tooling-checker-table-materialization.md docs/handoff/specs-plans.md docs/handoff/state.md docs/handoff/sessions/2026-07.md docs/STATUS.md docs/TODO.md
 git commit -m "docs: record checker-table materialization implementation"
 ```
 
@@ -955,9 +941,16 @@ git commit -m "docs: record checker-table materialization implementation"
 
 - **CR-001 (regression fixed):** the invalid job-level `${{ runner.temp }}` expression is replaced by a runner-executed setup step that publishes `PYRIGHT_PYTHON_CACHE_DIR=$RUNNER_TEMP/pyright-python-cache` through `$GITHUB_ENV`, inherited by the provisioning and test steps. The oracle's missing-provision diagnostic now reports the cache location in use, so a fallback to the default user cache is visible rather than silent; the design names the same mechanism.
 
+## Implementation reconciliation
+
+- **Independent-review hardening:** Task 1 asserts the generated field description; Task 2 passes and rejects predicates for artifacts as well as contributions; Task 3 verifies the provider's exact wrapped `ValueError` in both checker-selection directions. The Python Tooling digest refresh also updates the current-catalog activation lock that prior coverage commit `b546145` left stale.
+- **Upstream Pyright packaging drift:** the resolved `pyright==1.1.411` wheel bundles its matching JavaScript runtime and selects it before npm/cache installation. The audited CR-001 cache-provisioning mechanics are retained above as audit history but superseded for implementation: the root pins and locks the complete wheel, no workflow provisioning step is added, and the oracle proves execution with an empty cache, uv/npm offline, version warnings disabled, and bundled-runtime use required.
+- **Oracle boundary correction:** the complete generated gate includes `pip-audit`, whose supported vulnerability services are network-backed and whose upstream offline-service request remains open. The oracle therefore proves offline locked-tool resolution and complete gate execution, not whole-process network isolation. The `pip-audit` phase keeps its normal vulnerability-service access.
+- **Release-integration output:** the exact requirement carried into the pending parallel-coverage Tasks 9 and 11 is `pyright==1.1.411`.
+
 ## Plan self-review checklist
 
-- [ ] Every design acceptance criterion owned by this plan maps to a task (predicate grammar → Task 1; static validation → Task 2; payload/provider → Task 3; transitions, migration default, disable/re-enable, both-selection cycles → Task 4; pinned Pyright provisioning + oracle → Task 5; regeneration and full gates → Tasks 1/3/6). Release integration (Pyright carry-through, guarded pre-alignment, predecessor overlay) is explicitly owned by the parallel-coverage plan amendment.
-- [ ] No placeholder steps; the convention-following blocks (lifecycle imports, real-apply initialize/apply sequences, oracle setup) carry exact discovery commands, named in-file precedents, and complete surrounding code.
-- [ ] Names are consistent across tasks: `OptionPointer`, `_observed`, `_validate_predicate_options`, `option_properties`, `when_any`, `_assert_checker_state`, `"non-selected checker table must not be rendered"`.
-- [ ] Commits are per-task and add files by explicit name.
+- [x] Every design acceptance criterion owned by this plan maps to a task (predicate grammar → Task 1; static validation → Task 2; payload/provider → Task 3; transitions, migration default, disable/re-enable, both-selection cycles → Task 4; pinned bundled Pyright + oracle → Task 5; regeneration and full gates → Tasks 1/3/6). Release integration (Pyright carry-through, guarded pre-alignment, predecessor overlay) is explicitly owned by the parallel-coverage plan amendment.
+- [x] No placeholder steps; the convention-following blocks (lifecycle imports, real-apply initialize/apply sequences, oracle setup) carry exact discovery commands, named in-file precedents, and complete surrounding code.
+- [x] Names are consistent across tasks: `OptionPointer`, `_observed`, `_validate_predicate_options`, `option_properties`, `when_any`, `_assert_checker_state`, `"non-selected checker table must not be rendered"`.
+- [x] Commits are per-task and add files by explicit name.
