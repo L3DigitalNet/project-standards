@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:d93fa30ea330f0a5b6b094c120a89887f40e78605a8505ddeadc0288ff83afbd",
+        "sha256:e124181648dbd918b29e7c6d5578953dcd367d93fb84d37fd756d1f2a965a551",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -52,7 +52,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:8c5cb19c6aad0ca8126d5b4fa9775c71bff01b9b28dce7ff371eb60b85dd6eca",
+        "sha256:0d4f89403c4b4c4a2d1dc9c579deddf717f5e01d1c424cac4a103ecb03be12ae",
     ),
     "project-spec": (
         "Project Specification Standard",
@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:2008e189c65576b8af1c78ea80e7c265c0355dc136c6a616fd9c608a9ad6af89",
+        "sha256:115198a1a343967d785a28052e72deb8a08558f05a246d69cd27920759dca6cb",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:95a58ccb8af99618ac2528229e3a27981495c265f77fe312f7ec059233727692",
+        "sha256:bf36d035e20c3533546f4c0aebfad6b737902aa79cb7bad2566b017925ac910e",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",

@@ -18,6 +18,13 @@ from project_standards.specs.document import SpecParseError, parse_document
 from project_standards.specs.model import Finding, Registry
 from project_standards.specs.registry import TIER_FILES, registry_from_templates
 
+_SELF_HOST_WORKFLOW_DIGESTS = frozenset(
+    {
+        "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
+        "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
+    }
+)
+
 
 def _table(value: object, *, name: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
@@ -407,10 +414,7 @@ def run_migrate(
                 continue
             digest = state.get("digest")
             if isinstance(digest, str):
-                if (
-                    digest
-                    == "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
-                ):
+                if digest in _SELF_HOST_WORKFLOW_DIGESTS:
                     config["workflow_mode"] = "self-hosted"
                 claims.append(
                     {

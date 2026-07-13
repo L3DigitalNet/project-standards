@@ -50,7 +50,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:b98f45f211db742bf0729f8d3129be42e11f019b757bfe8c3baf4061a0a811fc"
+digest = "sha256:a1b7df4ce150cf861695d1f02ef76936ad60d6e3b2e78bf29db057f22093215a"
 
 [[resources]]
 id = "python-version-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:1db4607a35bf8ddf571ab91d547070705a0d9b42a856f09cdfcbcbd7be3e9800"
+digest = "sha256:8fa288758868c588ab773f3cac064b4932555d4ea6e2ebbce5c9bdd866f457e5"
 
 [[resources]]
 id = "provider-input"
@@ -657,6 +657,7 @@ known_content_digests = [
   "sha256:f345f6167f040071b925a0c3b507cbe7e62a41b05ffc662055b25fb1f595405a",
   "sha256:68eba3cdc1101d739ae5aafb2407f5237e3d8fdce74ff6a3cc4ba1ff37491aa2",
   "sha256:449b5809bb35cf339664ecf531b1154b3871cb3dcac4d6cf79aa22b75a515148",
+  "sha256:b7b00e3bf4a74e47a19418979925260f73098734c805148ee31384f3e6571b2b",
 ]
 
 [[legacy_signatures]]
@@ -716,4 +717,5 @@ targets = [".vscode/tasks.json"]
 known_content_digests = [
   "sha256:17ba0089915fafae10400a63675808ed67e532e4952544dd8d49cac3348128c1",
   "sha256:8dcb4880139bb708bf20819479bcb7898bb5d1dabd8d79e43b7d64bb3e4b3b08",
+  "sha256:cf4aa30c3e2bfb1d69d0cfb7953d1e351db0e6ab06c5812f48cf9eface79a9f7",
 ]

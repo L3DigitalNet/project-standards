@@ -45,6 +45,13 @@ _FAMILY = _ROOT / "standards/project-spec"
 _PAYLOAD = _FAMILY / "versions/1.1"
 _MARKDOWN_FAMILY = _ROOT / "standards/markdown-tooling"
 _MARKDOWN_PAYLOAD = _MARKDOWN_FAMILY / "versions/1.2"
+_HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
+)
+_CALLER_WORKFLOW_DIGEST = "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525"
+)
 
 
 def _payload() -> InstalledPayload:
@@ -261,7 +268,7 @@ def test_project_spec_manages_only_the_workflow_and_keeps_payload_templates() ->
     }
 
 
-def test_project_spec_declares_the_exact_rendered_v4_workflow_only() -> None:
+def test_project_spec_declares_historical_caller_and_current_workflow_history() -> None:
     payload = _payload()
     signatures = {signature.id: signature for signature in payload.manifest.legacy_signatures}
     rendered_v4 = (
@@ -273,8 +280,15 @@ def test_project_spec_declares_the_exact_rendered_v4_workflow_only() -> None:
     assert set(signatures) == {"legacy-workflow"}
     assert (_PAYLOAD / "resources/legacy-validate-specs.yml").read_bytes() == rendered_v4
     assert b"{{ref}}" not in rendered_v4
-    assert signatures["legacy-workflow"].known_content_digests[-1].value == (
-        f"sha256:{hashlib.sha256(rendered_v4).hexdigest()}"
+    assert f"sha256:{hashlib.sha256(rendered_v4).hexdigest()}" == _CALLER_WORKFLOW_DIGEST
+    assert {digest.value for digest in signatures["legacy-workflow"].known_content_digests} == {
+        _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST,
+        _CALLER_WORKFLOW_DIGEST,
+        _CURRENT_SELF_HOST_WORKFLOW_DIGEST,
+    }
+    assert (
+        f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-specs.yml').read_bytes()).hexdigest()}"
+        == _CURRENT_SELF_HOST_WORKFLOW_DIGEST
     )
 
 
@@ -549,9 +563,38 @@ def test_project_spec_migration_normalizes_v1_and_preserves_ambiguity() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "workflow_digest",
+    [
+        pytest.param(_HISTORICAL_SELF_HOST_WORKFLOW_DIGEST, id="historical"),
+        pytest.param(_CURRENT_SELF_HOST_WORKFLOW_DIGEST, id="current"),
+    ],
+)
+def test_project_spec_migration_classifies_both_self_host_generations(
+    workflow_digest: str,
+) -> None:
+    result = _invoke(
+        "migrate-legacy",
+        ProviderOperation.MIGRATE,
+        snapshots={
+            "legacy_config": {"spec": {}},
+            "legacy_signatures": {
+                "legacy-workflow": {
+                    ".github/workflows/validate-specs.yml": {
+                        "known": True,
+                        "digest": workflow_digest,
+                    }
+                }
+            },
+        },
+    )
+
+    assert result.migration_report is not None
+    assert result.migration_report.package.config == {"workflow_mode": "self-hosted"}
+    assert result.migration_report.findings == ()
+
+
 def test_project_spec_migration_claims_only_its_semantic_config_block_and_workflow() -> None:
-    payload = _payload()
-    signature = payload.manifest.legacy_signatures[0]
     result = _invoke(
         "migrate-legacy",
         ProviderOperation.MIGRATE,
@@ -569,7 +612,7 @@ def test_project_spec_migration_claims_only_its_semantic_config_block_and_workfl
                 "legacy-workflow": {
                     ".github/workflows/validate-specs.yml": {
                         "known": True,
-                        "digest": signature.known_content_digests[-1].value,
+                        "digest": _CALLER_WORKFLOW_DIGEST,
                     }
                 }
             },
@@ -582,6 +625,7 @@ def test_project_spec_migration_claims_only_its_semantic_config_block_and_workfl
         "/spec/include",
         "/spec/version",
     )
+    assert "workflow_mode" not in result.migration_report.package.config
     assert [
         (claim.signature_id, claim.target.original) for claim in result.migration_report.claims
     ] == [("legacy-workflow", ".github/workflows/validate-specs.yml")]

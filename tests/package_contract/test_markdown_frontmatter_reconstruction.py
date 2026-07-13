@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 import shutil
@@ -67,6 +68,10 @@ _FAMILY = _ROOT / "standards/markdown-frontmatter"
 _PAYLOAD = _FAMILY / "versions/1.2"
 _MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _ZERO_DIGEST = f"sha256:{'0' * 64}"
+_HISTORICAL_WORKFLOW_DIGEST = (
+    "sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e"
+)
+_CURRENT_WORKFLOW_DIGEST = "sha256:09eb0cc6d6fe20a12b7c7cc5022f9a902ed29d0cdf35ef42c8685c5c93cea036"
 
 
 def _snapshot_document(path: str, content: bytes) -> JsonObject:
@@ -407,6 +412,7 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         signature.id: signature.known_content_digests[0].value
         for signature in manifest.legacy_signatures
     }
+    signature_digests["legacy-workflow"] = _HISTORICAL_WORKFLOW_DIGEST
 
     result = invoke_provider(
         ProviderInvocation(
@@ -481,6 +487,20 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         ("legacy-skill-script", "adopt"),
         ("legacy-workflow", "remove"),
     }
+
+
+def test_frontmatter_workflow_signature_history_includes_current_root() -> None:
+    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
+    signatures = {signature.id: signature for signature in manifest.legacy_signatures}
+
+    assert {digest.value for digest in signatures["legacy-workflow"].known_content_digests} == {
+        _HISTORICAL_WORKFLOW_DIGEST,
+        _CURRENT_WORKFLOW_DIGEST,
+    }
+    assert (
+        f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-markdown-frontmatter.yml').read_bytes()).hexdigest()}"
+        == _CURRENT_WORKFLOW_DIGEST
+    )
 
 
 def test_frontmatter_real_v4_migration_applies_and_converges(tmp_path: Path) -> None:

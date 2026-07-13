@@ -106,7 +106,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:b73ceb05b87b788453870d428fe353d70a0ddd015b18a6c80fff2d6233c7f158"
+digest = "sha256:3cc878b22679b2ab23d3862aa4376beb18c8118cb58ca530c579d0454d03c52d"
 
 [[resources]]
 id = "provider-input"
@@ -487,6 +487,7 @@ targets = [".github/workflows/lint-markdown.yml"]
 known_content_digests = [
   "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
   "sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845",
+  "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656",
 ]
 
 [[legacy_signatures]]
@@ -496,4 +497,5 @@ targets = [".github/workflows/format.yml"]
 known_content_digests = [
   "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5",
   "sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04",
+  "sha256:901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a",
 ]

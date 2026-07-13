@@ -16,7 +16,7 @@
 		"source_layout": { "enum": ["src", "flat"], "default": "src" },
 		"additional_dev_dependencies": {
 			"type": "array",
-			"items": { "type": "string", "minLength": 1, "pattern": "^[^\\s<>`]+$" },
+			"items": { "type": "string", "minLength": 1, "pattern": "^[^\\s`]+$" },
 			"uniqueItems": true,
 			"default": []
 		},

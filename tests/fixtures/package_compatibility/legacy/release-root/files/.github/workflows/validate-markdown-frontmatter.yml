@@ -1,0 +1,106 @@
+name: Validate Markdown Frontmatter
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+      - "src/**"
+      - ".project-standards.yml"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "src/**"
+      - ".project-standards.yml"
+      - "pyproject.toml"
+
+  # Reusable: call this workflow from any consuming repo. Because the validator
+  # bundles the schema in its wheel, consuming repos do not need to check out this
+  # repo or vendor the schema — `uv tool install` brings both.
+  #
+  #   jobs:
+  #     validate:
+  #       uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
+  #       with:
+  #         config-path: .project-standards.yml
+  #         standards-ref: v4
+  workflow_call:
+    inputs:
+      config-path:
+        description: "Path to the project standards config file in the calling repo."
+        required: false
+        type: string
+        default: ".project-standards.yml"
+      standards-ref:
+        # The git ref the validator + bundled schema install from. Defaults to the
+        # major tag `v4` (NOT `main`) so a caller that pins `uses: ...@v4` but omits
+        # this input still gets pinned, reproducible validation instead of floating
+        # on unreleased changes. Set it to match your `uses:` pin (e.g. `v4`, or a
+        # full version like `v4.0.0` for an immutable pin).
+        description: "project-standards git ref to install the validator from (match your uses: @vN pin)."
+        required: false
+        type: string
+        default: "v4"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Frontmatter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        # SHA-pinned: setup-uv publishes no moving major/minor tag as of v8.0.0
+        # (no @v8), so a tag pin no longer resolves and would break every caller.
+        # Dependabot bumps the SHA via the trailing version comment.
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          # Only this repo ships a uv.lock for the cache to key on. Consuming
+          # repos install the validator via `uv tool install` from git and have
+          # no lockfile, so enabling the cache there only produces the
+          # "cache will never get invalidated" warning. Gate it on the same
+          # caller-identity check the install/validate steps below use.
+          enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
+
+      # Running inside this repo (push/PR or self-call): use the local source.
+      - name: Install validator (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv sync --dev
+
+      - name: Validate frontmatter (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run validate-frontmatter --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Validate id format (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Validate references (this repo)
+        if: github.repository == 'L3DigitalNet/project-standards'
+        run: uv run validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      # Running in a consuming repo: install the validator (and its bundled schema)
+      # from the standards repo as a tool, then validate the caller's files.
+      - name: Install validator (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: |
+          uv tool install \
+            "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref }}"
+
+      - name: Validate frontmatter (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: validate-frontmatter --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Validate id format (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
+
+      - name: Validate references (consuming repo)
+        if: github.repository != 'L3DigitalNet/project-standards'
+        run: validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"

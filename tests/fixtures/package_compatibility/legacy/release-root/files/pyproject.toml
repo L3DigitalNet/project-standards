@@ -1,0 +1,90 @@
+[project]
+name = "project-standards"
+version = "4.3.0"
+description = "Reusable project standards, templates, schemas, and validation tools."
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jsonschema>=4.23.0",
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+project-standards = "project_standards.cli:main"
+validate-frontmatter = "project_standards.validate_frontmatter:main"
+validate-id = "project_standards.validate_id:main"
+sync-vscode-colors = "project_standards.sync_vscode_colors:main"
+sync-standards-include = "project_standards.sync_standards_include:main"
+format-frontmatter = "project_standards.format_frontmatter:main"
+validate-references = "project_standards.validate_references:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.14",
+    "basedpyright",
+    "types-PyYAML",
+    "coverage[toml]",
+    "pip-audit",
+    "pytest-xdist>=3.8",
+    "pyright==1.1.411",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+source-include = ["standards/**", "catalogs/**"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+# Vendored harness/agent-state Python must not be reformatted (byte-identical contract).
+extend-exclude = [".claude/hooks", ".codex/hooks", "docs/handoff"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE", "PTH", "RET", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.basedpyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.14"
+pythonPlatform = "All"
+failOnWarnings = true
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase",
+    "performance: deterministic scale gates run explicitly in CI",
+    "release_replay: disposable release-cut checks run in their own serial phase",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+patch = ["subprocess"]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 85
+# __main__ guards only call sys.exit(main()); main() itself is tested directly.
+exclude_also = ["if __name__ == .__main__.:"]

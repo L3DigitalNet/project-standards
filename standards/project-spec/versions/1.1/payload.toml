@@ -106,7 +106,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:6b9bd80439347337dce054963fc3da388b039f955daf5e12df92084cd4eee7ac"
+digest = "sha256:01d05bacea4d5ae4efc8de7de7aa4f7bd4fe228088061a05a1a83ff1c266d973"
 
 [[resources]]
 id = "provider-input"
@@ -305,4 +305,5 @@ targets = [".github/workflows/validate-specs.yml"]
 known_content_digests = [
   "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
   "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447",
+  "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
 ]

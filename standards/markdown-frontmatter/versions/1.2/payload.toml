@@ -348,4 +348,7 @@ known_content_digests = ["sha256:0f80ec4d966b59d8310f88f4d45478a1272b3b94491cf2a
 id = "legacy-workflow"
 kind = "whole-file"
 targets = [".github/workflows/validate-markdown-frontmatter.yml"]
-known_content_digests = ["sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e"]
+known_content_digests = [
+  "sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e",
+  "sha256:09eb0cc6d6fe20a12b7c7cc5022f9a902ed29d0cdf35ef42c8685c5c93cea036",
+]

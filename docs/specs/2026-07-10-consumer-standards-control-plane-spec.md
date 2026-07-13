@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-12'
+last_reviewed: '2026-07-13'
 supersedes: null
 superseded_by: null
 related:
@@ -58,6 +58,7 @@ related:
 | 0.8 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Reviewed and accepted the empty implementation Deviations Log. No requirement or scope changed; atomic source-root migration remains a release-commit deferral. |
 | 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Add the owner-approved explicit consumer-owned whole-file preservation contract after release planning exposed that unknown signature findings precede provider ownership classification. Preserve exact-signature requirements for every managed, destructive, shared, imported, and bounded-block transition; add a separate reviewed path back to managed ownership. |
 | 0.10 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Bind each ownership-relinquishment intent pointer statically to one single-target whole-file signature, require unknown-and-unclaimed observations to retain the ordinary digest finding, preserve existing known consumer-owned claims without the field, and reconcile traceability and live-state sequencing. |
+| 0.11 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing focused, lifecycle, stale-plan, no-write/no-lock, managed-return, and source/wheel evidence for FR-037 and FR-038. No requirement or scope changed; live-root dogfood remains deferred to the atomic release commit. |
 
 **Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
 
@@ -824,7 +825,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 
 ### 17.1 Definition of Done
 
-- [ ] All Must requirements are implemented and mapped to passing evidence in §17.3; FR-037 and FR-038 remain pending.
+- [x] All Must requirements are implemented and mapped to passing evidence in §17.3; FR-037 and FR-038 pass their focused, lifecycle, and source/wheel gates.
 - [x] ADR 0023 records the consumer control-plane, unified configuration, explicit reconciliation, neutral bootstrap, and central-lock decisions.
 - [x] ADR 0024 records catalog-scoped package channels, candidates, promotion, and embedded versioned payloads.
 - [x] Conflicting ADRs and `meta/versioning.md` are amended or superseded according to §8.3.
@@ -845,7 +846,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 - [x] Every package-local durable entry is committed, centrally hashed, drift-checked, and safely removed; modified or undeclared namespace content blocks package removal.
 - [x] Every provider is phased; read-only operations use immutable snapshots, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
 - [x] Referenced extension inputs remain consumer-owned, cannot alias managed/planned outputs, are centrally hashed without managed ownership, and survive package disable/re-enable.
-- [ ] Explicit consumer-owned whole-file migration preserves unrecognized bytes only under FR-037, leaves no managed output or lock ownership, retains every exact-signature safety rule, and requires the FR-038 path before later takeover.
+- [x] Explicit consumer-owned whole-file migration preserves unrecognized bytes only under FR-037, leaves no managed output or lock ownership, retains every exact-signature safety rule, and requires the FR-038 path before later takeover.
 - [ ] This repository dogfoods the control plane and has no package-specific provenance lock. Deferred to the atomic release commit by plan contract 14; the disposable tracked-tree release cut passes the same migration first.
 - [x] Consumer, package-author, migration, upgrade, and release documentation is current; formatting, Markdown, frontmatter, spec, generated-drift, and independent review gates pass.
 - [x] Full repository quality and coherence gates pass: 2,535 non-performance tests pass at 89% coverage, all three package-compatibility performance rows pass, and the complete documentation, package, audit, build, and coherence gates are green.
@@ -885,7 +886,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | FR-031 | SPEC-BA02 approval, index, supersession, and traceability review | Complete |
 | FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Complete (core) |
 | FR-033 | Candidate-major `latest`/pinned entry, exact exit before/after disable, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, authorization-record replacement/removal, and subsequent-`latest` tests | Complete (core) |
-| FR-037, FR-038, DR-006, AW-012, EC-018, EC-019, ERR-013, R-009 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw owner intent, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, payload-materialization exclusion, stale-plan binding, no-lock/no-write evidence, managed/bounded-block refusal, source/wheel parity, and reviewed return-to-managed lifecycle | Not Started — combined audit round 1 reconciled; convergence audit and implementation pending |
+| FR-037, FR-038, DR-006, AW-012, EC-018, EC-019, ERR-013, R-009 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw owner intent, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, payload-materialization exclusion, stale-plan binding, no-lock/no-write evidence, managed/bounded-block refusal, source/wheel parity, and reviewed return-to-managed lifecycle | Passing — focused migration lifecycle, Python Tooling lifecycle/source-wheel, and both checker-selection scratch oracles rerun 2026-07-13; disposable predecessor/evidence proof is release integration, not a remaining requirement implementation gap |
 | NFR-005 | 100-package/1,000-artifact planning benchmark | Complete |
 | NFR-008 | Human/JSON output and exit-code contract tests | Complete (core) |
 | NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Complete (core) |

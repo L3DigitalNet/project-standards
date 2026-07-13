@@ -40,6 +40,20 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.2"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
+_HISTORICAL_SELF_HOST_FORMAT_DIGEST = (
+    "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
+)
+_HISTORICAL_SELF_HOST_LINT_DIGEST = (
+    "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772"
+)
+_CALLER_FORMAT_DIGEST = "sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04"
+_CALLER_LINT_DIGEST = "sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845"
+_CURRENT_SELF_HOST_FORMAT_DIGEST = (
+    "sha256:901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a"
+)
+_CURRENT_SELF_HOST_LINT_DIGEST = (
+    "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656"
+)
 
 
 def _payload() -> InstalledPayload:
@@ -192,9 +206,42 @@ def test_markdown_tooling_self_host_mode_renders_immutable_workflows() -> None:
         assert result.content == (_PAYLOAD / resource).read_bytes()
 
 
-def test_markdown_tooling_partial_self_host_pair_blocks_migration() -> None:
-    payload = _payload()
-    signatures = {item.id: item for item in payload.manifest.legacy_signatures}
+def test_markdown_tooling_workflow_signature_histories_are_append_only() -> None:
+    signatures = {item.id: item for item in _payload().manifest.legacy_signatures}
+
+    assert {
+        digest.value for digest in signatures["legacy-format-caller"].known_content_digests
+    } == {
+        _HISTORICAL_SELF_HOST_FORMAT_DIGEST,
+        _CALLER_FORMAT_DIGEST,
+        _CURRENT_SELF_HOST_FORMAT_DIGEST,
+    }
+    assert {digest.value for digest in signatures["legacy-lint-caller"].known_content_digests} == {
+        _HISTORICAL_SELF_HOST_LINT_DIGEST,
+        _CALLER_LINT_DIGEST,
+        _CURRENT_SELF_HOST_LINT_DIGEST,
+    }
+
+
+@pytest.mark.parametrize(
+    ("format_digest", "lint_digest"),
+    [
+        pytest.param(
+            _HISTORICAL_SELF_HOST_FORMAT_DIGEST,
+            _HISTORICAL_SELF_HOST_LINT_DIGEST,
+            id="historical",
+        ),
+        pytest.param(
+            _CURRENT_SELF_HOST_FORMAT_DIGEST,
+            _CURRENT_SELF_HOST_LINT_DIGEST,
+            id="current",
+        ),
+    ],
+)
+def test_markdown_tooling_complete_self_host_cohorts_select_self_hosted(
+    format_digest: str,
+    lint_digest: str,
+) -> None:
     result = invoke_provider(
         _invocation(
             "migrate-legacy",
@@ -206,12 +253,73 @@ def test_markdown_tooling_partial_self_host_pair_blocks_migration() -> None:
                     "legacy-format-caller": {
                         ".github/workflows/format.yml": {
                             "known": True,
-                            "digest": signatures["legacy-format-caller"]
-                            .known_content_digests[0]
-                            .value,
+                            "digest": format_digest,
                         }
-                    }
+                    },
+                    "legacy-lint-caller": {
+                        ".github/workflows/lint-markdown.yml": {
+                            "known": True,
+                            "digest": lint_digest,
+                        }
+                    },
                 },
+            },
+        )
+    )
+    assert result.migration_report is not None
+    assert result.migration_report.package.config == {
+        "contract_version": "1.1",
+        "workflow_mode": "self-hosted",
+    }
+    assert result.migration_report.findings == ()
+
+
+@pytest.mark.parametrize(
+    ("format_digest", "lint_digest"),
+    [
+        pytest.param(_HISTORICAL_SELF_HOST_FORMAT_DIGEST, None, id="historical-format-only"),
+        pytest.param(None, _HISTORICAL_SELF_HOST_LINT_DIGEST, id="historical-lint-only"),
+        pytest.param(_CURRENT_SELF_HOST_FORMAT_DIGEST, None, id="current-format-only"),
+        pytest.param(None, _CURRENT_SELF_HOST_LINT_DIGEST, id="current-lint-only"),
+        pytest.param(
+            _HISTORICAL_SELF_HOST_FORMAT_DIGEST,
+            _CURRENT_SELF_HOST_LINT_DIGEST,
+            id="historical-format-current-lint",
+        ),
+        pytest.param(
+            _CURRENT_SELF_HOST_FORMAT_DIGEST,
+            _HISTORICAL_SELF_HOST_LINT_DIGEST,
+            id="current-format-historical-lint",
+        ),
+    ],
+)
+def test_markdown_tooling_partial_self_host_pair_blocks_migration(
+    format_digest: str | None,
+    lint_digest: str | None,
+) -> None:
+    workflow_signatures: JsonObject = {}
+    if format_digest is not None:
+        workflow_signatures["legacy-format-caller"] = {
+            ".github/workflows/format.yml": {
+                "known": True,
+                "digest": format_digest,
+            }
+        }
+    if lint_digest is not None:
+        workflow_signatures["legacy-lint-caller"] = {
+            ".github/workflows/lint-markdown.yml": {
+                "known": True,
+                "digest": lint_digest,
+            }
+        }
+    result = invoke_provider(
+        _invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {"markdown_tooling": {"version": "1.1"}},
+                "legacy_signatures": workflow_signatures,
             },
         )
     )
@@ -627,11 +735,18 @@ def test_markdown_tooling_verify_reports_missing_managed_bytes() -> None:
 
 def test_markdown_tooling_migration_maps_yaml_and_exact_v1_artifacts() -> None:
     payload = _payload()
+    caller_digests = {
+        "legacy-format-caller": _CALLER_FORMAT_DIGEST,
+        "legacy-lint-caller": _CALLER_LINT_DIGEST,
+    }
     signatures: JsonObject = {
         signature.id: {
             signature.targets[0].original: {
                 "known": True,
-                "digest": signature.known_content_digests[-1].value,
+                "digest": caller_digests.get(
+                    signature.id,
+                    signature.known_content_digests[0].value,
+                ),
             }
         }
         for signature in payload.manifest.legacy_signatures

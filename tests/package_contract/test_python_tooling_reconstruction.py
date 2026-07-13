@@ -50,6 +50,24 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
 _PAYLOAD = _FAMILY / "versions/1.1"
+_RELEASE_CURRENT_PRESERVED_CONTAINERS = {
+    "legacy-agents": (
+        "AGENTS.md",
+        "sha256:b7b00e3bf4a74e47a19418979925260f73098734c805148ee31384f3e6571b2b",
+    ),
+    "legacy-claude": (
+        "CLAUDE.md",
+        "sha256:8c9ba6563c70ea051ad36f2054d41f36aa048ce61d813d100d4e7b25d5e05de0",
+    ),
+    "legacy-vscode-settings": (
+        ".vscode/settings.json",
+        "sha256:22f598ebf1f24e29041289891b3c56131f0acc4dddfed802d92a6a3802eab55f",
+    ),
+    "legacy-vscode-tasks": (
+        ".vscode/tasks.json",
+        "sha256:cf4aa30c3e2bfb1d69d0cfb7953d1e351db0e6ab06c5812f48cf9eface79a9f7",
+    ),
+}
 
 
 def _payload() -> InstalledPayload:
@@ -123,6 +141,42 @@ def _migration_report(
                     "legacy-check-workflow": {
                         ".github/workflows/check.yml": {
                             "known": known,
+                            "digest": digest,
+                        }
+                    }
+                },
+            },
+        )
+    )
+    assert result.migration_report is not None
+    return result.migration_report
+
+
+def _legacy_container_report(
+    payload: InstalledPayload,
+    *,
+    signature_id: str,
+    target: str,
+    digest: str,
+) -> MigrationReport:
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=payload.root,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="migrate-legacy",
+            operation=ProviderOperation.MIGRATE,
+            effective_config={},
+            snapshots={
+                "legacy_config": {
+                    "standards_version": "v4",
+                    "python_tooling": {"version": "1.0"},
+                },
+                "legacy_signatures": {
+                    signature_id: {
+                        target: {
+                            "known": True,
                             "digest": digest,
                         }
                     }
@@ -421,6 +475,15 @@ def test_python_tooling_options_are_closed_and_fully_defaulted() -> None:
             schema.resolve_options(options)
 
 
+def test_additional_dev_dependencies_accept_version_comparators() -> None:
+    configured = _options(additional_dev_dependencies=["pytest-xdist>=3.8", "pyright==1.1.411"])
+
+    assert configured["additional_dev_dependencies"] == [
+        "pytest-xdist>=3.8",
+        "pyright==1.1.411",
+    ]
+
+
 @pytest.mark.parametrize(
     ("workflow_ownership", "ci", "expect_workflow"),
     [
@@ -532,6 +595,94 @@ def test_python_tooling_unknown_managed_workflow_remains_blocked() -> None:
     assert [(finding.code, finding.path.original) for finding in report.findings] == [
         ("PT-LEGACY-MODIFIED", ".github/workflows/check.yml")
     ]
+
+
+def test_python_tooling_release_current_preserved_container_contract_is_exact() -> None:
+    payload = _payload()
+    signatures = {signature.id: signature for signature in payload.manifest.legacy_signatures}
+    for signature_id, (_target, digest) in _RELEASE_CURRENT_PRESERVED_CONTAINERS.items():
+        assert digest in {known.value for known in signatures[signature_id].known_content_digests}
+
+    provider_module = ast.parse(
+        (_PAYLOAD / "providers/python_tooling.py").read_text(encoding="utf-8")
+    )
+    assignment = next(
+        node
+        for node in provider_module.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "_PRESERVED_CONTAINER_DIGESTS"
+            for target in node.targets
+        )
+    )
+    preserved = cast("set[str]", ast.literal_eval(assignment.value))
+
+    assert preserved == {
+        digest for _target, digest in _RELEASE_CURRENT_PRESERVED_CONTAINERS.values()
+    }
+
+
+@pytest.mark.parametrize(
+    ("signature_id", "target", "digest"),
+    [
+        (signature_id, target, digest)
+        for signature_id, (target, digest) in _RELEASE_CURRENT_PRESERVED_CONTAINERS.items()
+    ],
+)
+def test_python_tooling_release_current_containers_are_preserved(
+    signature_id: str,
+    target: str,
+    digest: str,
+) -> None:
+    report = _legacy_container_report(
+        _payload(),
+        signature_id=signature_id,
+        target=target,
+        digest=digest,
+    )
+
+    assert report.findings == ()
+    assert len(report.claims) == 1
+    claim = report.claims[0]
+    assert claim.signature_id == signature_id
+    assert claim.target.original == target
+    assert claim.observed_digest.value == digest
+    assert claim.disposition.value == "preserve"
+
+
+@pytest.mark.parametrize(
+    ("signature_id", "target", "current_digest"),
+    [
+        (signature_id, target, digest)
+        for signature_id, (target, digest) in _RELEASE_CURRENT_PRESERVED_CONTAINERS.items()
+    ],
+)
+def test_python_tooling_older_standard_owned_container_histories_still_retire(
+    signature_id: str,
+    target: str,
+    current_digest: str,
+) -> None:
+    payload = _payload()
+    signature = next(item for item in payload.manifest.legacy_signatures if item.id == signature_id)
+    older_digests = [
+        digest.value for digest in signature.known_content_digests if digest.value != current_digest
+    ]
+    assert older_digests
+
+    for digest in older_digests:
+        report = _legacy_container_report(
+            payload,
+            signature_id=signature_id,
+            target=target,
+            digest=digest,
+        )
+        assert report.findings == ()
+        assert len(report.claims) == 1
+        claim = report.claims[0]
+        assert claim.signature_id == signature_id
+        assert claim.target.original == target
+        assert claim.observed_digest.value == digest
+        assert claim.disposition.value == "remove"
 
 
 def test_python_tooling_subprocess_patch_selects_coverage_7_10_floor() -> None:

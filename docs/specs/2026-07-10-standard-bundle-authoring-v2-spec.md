@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-12'
+last_reviewed: '2026-07-13'
 supersedes: SPEC-BA01
 superseded_by: null
 related:
@@ -52,6 +52,7 @@ related:
 | 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Reviewed and accepted the empty implementation Deviations Log. No requirement or scope changed. |
 | 0.10 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Added the owner-approved, fail-closed contract for explicitly relinquishing an unrecognized whole file to consumer ownership during legacy migration. Known package-history signatures remain mandatory for ownership-acquiring, destructive, shared, lock-import, and bounded-block transitions. |
 | 0.11 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Make ownership relinquishment target-verifiable through a static single-target signature pointer binding, preserve unknown-and-unclaimed fail-closed behavior and known-claim compatibility, and reconcile the amended migration traceability. |
+| 0.12 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing source/wheel, migration, stale-plan, no-write/no-lock, and managed-transition evidence for FR-037. No requirement or package-authoring scope changed. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
 
@@ -901,8 +902,8 @@ No regulated or personal data is introduced. Every payload resource and provider
 - [x] Provider mutation/network spies and migration forward/rollback/manual-path suites pass.
 - [x] Pairwise, full-set, randomized-order, integrity, and release-baseline gates pass.
 - [x] Traceability (§17.3), documentation (§18.7), security review, and the owner-accepted empty Deviations Log are complete.
-- [ ] No known blocking defect or unexplained deviation remains after the rev 0.11 amendment converges in audit and is implemented.
-- [ ] FR-037 whole-file ownership relinquishment and its separate managed-takeover boundary pass source/wheel contract, migration, stale-plan, no-write, and no-lock tests.
+- [x] No known blocking defect or unexplained deviation remains after the rev 0.11 amendment converges in audit and is implemented.
+- [x] FR-037 whole-file ownership relinquishment and its separate managed-takeover boundary pass source/wheel contract, migration, stale-plan, no-write, and no-lock tests.
 
 ### 17.2 Test Strategy
 
@@ -956,7 +957,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-032 | Typed-model generated-schema drift tests | Passing |
 | FR-033 | No-package-ID-branch architecture tests plus current-package compatibility review | Passing — `06a33c1` |
 | FR-034 | Source/direct-wheel/sdist-wheel payload tree, symlink dereference, and digest parity | Passing — foundation projection suite, `06a33c1` |
-| FR-037, DR-006 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw `consumer-owned`, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, resolved-target exclusion, preview, stale-plan, no-write/no-lock, source/wheel, and managed-transition refusal tests | Not Started — combined audit round 1 reconciled; convergence audit and implementation pending |
+| FR-037, DR-006 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw `consumer-owned`, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, resolved-target exclusion, preview, stale-plan, no-write/no-lock, source/wheel, and managed-transition refusal tests | Passing — focused migration lifecycle and Python Tooling lifecycle/source-wheel gates rerun 2026-07-13 |
 | NFR-001 | Repeated-generation and randomized-discovery determinism tests | Passing |
 | NFR-002 | Offline build/install and network-deny provider/compatibility suites | Passing — `06a33c1`, `a891973` |
 | NFR-003 | Payload tamper and undeclared-file fixtures | Passing |

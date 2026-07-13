@@ -1,0 +1,104 @@
+name: Format
+
+# Dual-role: this repo's own Prettier dogfood (direct push/PR) AND the reusable
+# formatter gate consumers adopt via markdown-tooling's format.caller.yml. The
+# default remains repo-wide `prettier --check .`; reusable callers can narrow
+# the checked globs and add package-declared ignore patterns. Prettier is pinned inline via
+# npx because a consumer checkout has no package.json/lockfile to `npm ci` from;
+# the pin mirrors this repo's package.json (the SSOT). Supersedes DEC-9's
+# "repo-local, not shipped" clause (see DEC-10).
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_call:
+    inputs:
+      prettier:
+        description: "Run the Prettier check. Set false to defer enforcement (whole job skips)."
+        required: false
+        type: boolean
+        default: true
+      globs:
+        description: "Newline-delimited paths or globs checked by Prettier."
+        required: false
+        type: string
+        default: "."
+      exclusions:
+        description: "Newline-delimited Prettier ignore patterns."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  prettier:
+    name: Prettier
+    # Whole-job gate (SA-NEW-003): opting out skips checkout/setup-node too, so a
+    # deferring consumer gets a clean pass with no setup failure surface. String-
+    # safe comparison (SA-001): a typed boolean `false` must not coerce-compare
+    # unequal to the string 'false'; format() stringifies it deterministically.
+    if: ${{ format('{0}', inputs.prettier) != 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          # setup-node v6 may auto-cache npm; this reusable workflow has no lockfile
+          # from which to derive a safe consumer-specific cache key.
+          package-manager-cache: false
+
+      - name: Check formatting (Prettier)
+        env:
+          FORMAT_GLOBS: ${{ inputs.globs || '.' }}
+          FORMAT_EXCLUSIONS: ${{ inputs.exclusions || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          globs=()
+          while IFS= read -r glob; do
+            if [[ -n "$glob" ]]; then
+              if [[ "$glob" =~ [[:space:]]$ ]]; then
+                printf '%s\n' "format glob must not end in whitespace" >&2
+                exit 2
+              fi
+              globs+=("$glob")
+            fi
+          done <<< "$FORMAT_GLOBS"
+          if ((${#globs[@]} == 0)); then
+            globs=(.)
+          fi
+
+          # Keep ignore sources separate: each pattern stays anchored to its
+          # own directory, and a base file needs no terminal newline.
+          ignore_args=()
+          for ignore_path in .gitignore .prettierignore; do
+            if [[ -f "$ignore_path" ]]; then
+              ignore_args+=(--ignore-path "$ignore_path")
+            fi
+          done
+
+          exclusions=()
+          while IFS= read -r exclusion; do
+            if [[ -n "$exclusion" ]]; then
+              if [[ "$exclusion" =~ [[:space:]]$ ]]; then
+                printf '%s\n' "format exclusion must not end in whitespace" >&2
+                exit 2
+              fi
+              exclusions+=("$exclusion")
+            fi
+          done <<< "$FORMAT_EXCLUSIONS"
+          if ((${#exclusions[@]} > 0)); then
+            exclusions_file="$(mktemp .project-standards-prettier-ignore.XXXXXX)"
+            trap 'rm -f -- "$exclusions_file"' EXIT
+            printf '%s\n' "${exclusions[@]}" > "$exclusions_file"
+            ignore_args+=(--ignore-path "$exclusions_file")
+          fi
+
+          npx --yes prettier@3.8.3 --check --no-error-on-unmatched-pattern "${ignore_args[@]}" -- "${globs[@]}"

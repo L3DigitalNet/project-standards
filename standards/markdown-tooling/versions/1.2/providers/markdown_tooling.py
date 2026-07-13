@@ -333,6 +333,36 @@ _SIGNATURES = {
     "legacy-prettier-config": (".prettierrc.json", "managed", "adopt"),
     "legacy-vscode-extensions": (".vscode/extensions.json", "shared", "preserve"),
 }
+_SELF_HOST_WORKFLOW_COHORTS: tuple[frozenset[tuple[str, str]], ...] = (
+    frozenset(
+        {
+            (
+                "legacy-format-caller",
+                "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5",
+            ),
+            (
+                "legacy-lint-caller",
+                "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
+            ),
+        }
+    ),
+    frozenset(
+        {
+            (
+                "legacy-format-caller",
+                "sha256:901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a",
+            ),
+            (
+                "legacy-lint-caller",
+                "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656",
+            ),
+        }
+    ),
+)
+_SELF_HOST_WORKFLOW_MEMBERS = frozenset(
+    member for cohort in _SELF_HOST_WORKFLOW_COHORTS for member in cohort
+)
+_WORKFLOW_SIGNATURE_IDS = frozenset({"legacy-format-caller", "legacy-lint-caller"})
 
 
 def run_migrate(
@@ -349,18 +379,13 @@ def run_migrate(
         config["contract_version"] = namespace["version"]
         recognized.append("/markdown_tooling/version")
 
-    self_host_digests = {
-        "legacy-format-caller": "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5",
-        "legacy-lint-caller": "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
-    }
-
     signatures = _table(
         snapshots.get("legacy_signatures"),
         name="snapshots.legacy_signatures",
     )
     claims: list[dict[str, object]] = []
     findings: list[dict[str, str]] = []
-    self_host_matches: set[str] = set()
+    workflow_observations: set[tuple[str, str]] = set()
     for signature_id, (target, ownership, disposition) in _SIGNATURES.items():
         raw_signature = signatures.get(signature_id)
         if not isinstance(raw_signature, Mapping):
@@ -371,8 +396,8 @@ def run_migrate(
         state = cast("Mapping[str, object]", observed)
         digest = state.get("digest")
         if state.get("known") is True and isinstance(digest, str):
-            if digest == self_host_digests.get(signature_id):
-                self_host_matches.add(signature_id)
+            if signature_id in _WORKFLOW_SIGNATURE_IDS:
+                workflow_observations.add((signature_id, digest))
             claims.append(
                 {
                     "signature_id": signature_id,
@@ -391,18 +416,18 @@ def run_migrate(
                     "identity": signature_id,
                 }
             )
-    if self_host_matches:
-        if self_host_matches == set(self_host_digests):
-            config["workflow_mode"] = "self-hosted"
-        else:
-            findings.append(
-                {
-                    "code": "MT-LEGACY-WORKFLOW-MODE",
-                    "severity": "error",
-                    "path": ".github/workflows",
-                    "identity": "self-hosted-pair",
-                }
-            )
+    observed_workflow_cohort = frozenset(workflow_observations)
+    if observed_workflow_cohort in _SELF_HOST_WORKFLOW_COHORTS:
+        config["workflow_mode"] = "self-hosted"
+    elif observed_workflow_cohort & _SELF_HOST_WORKFLOW_MEMBERS:
+        findings.append(
+            {
+                "code": "MT-LEGACY-WORKFLOW-MODE",
+                "severity": "error",
+                "path": ".github/workflows",
+                "identity": "self-hosted-pair",
+            }
+        )
     claims.sort(key=lambda item: str(item["signature_id"]).encode())
     findings.sort(key=lambda item: (item["path"].encode(), item["identity"].encode()))
     return {

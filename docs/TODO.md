@@ -32,7 +32,7 @@ Work in priority order. P0 and P2 gate the v5 release; P3 may proceed independen
 
 - [ ] Preserve optimized coverage settings through the atomic Python Tooling migration.
 
-  Coverage Tasks 1–8 and all six checker-table materialization tasks are integrated on `testing` through `d5c8031`. Initial Task 9 implementation exposed an incomplete predecessor overlay; CTM-NEW-008 and the superseding audit now require complete 31-path root-authority reconstruction, Git-known replay, exact `pyright==1.1.411`, and guarded installed-provider dev-group pre-alignment without a CP01 or BA02 backtrack. Next execute Tasks 9–11, refresh the deliberately stale release evidence, and perform the atomic root migration.
+  Coverage Tasks 1–8 and all six checker-table materialization tasks are integrated on `testing` through `d5c8031`. Task 9 closes the 31-path predecessor, both guarded installed-provider alignments, signature/classifier/container currency, locked sync, two-path migration replay, and exact retained-record binding; CP01 rev 0.11 and BA02 rev 0.12 record the passing requirement evidence. Next run Task 10's complete gate, then perform Task 11's atomic root migration, real migrated-root gate, and final complete-release evidence refresh.
 
 ### P2 — Cut and publish v5.0.0
 
