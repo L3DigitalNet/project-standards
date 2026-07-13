@@ -11,7 +11,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`adr`](adr/README.md) | active | 1.1 | default | consumer | 12 | 2 | 1 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
-| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 26 | 4 | 7 |
+| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 28 | 5 | 7 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | default | consumer | 23 | 9 | 1 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
@@ -121,6 +121,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | `template-runbook` | `template` | `standards://markdown-frontmatter/1.2/template-runbook` | `templates/runbook.md` |
 | `markdown-frontmatter@1.2` | `template-spec` | `template` | `standards://markdown-frontmatter/1.2/template-spec` | `templates/spec.md` |
 | `markdown-frontmatter@1.2` | `workflow-caller` | `workflow-template` | `standards://markdown-frontmatter/1.2/workflow-caller` | `validate-markdown-frontmatter.caller.yml` |
+| `markdown-frontmatter@1.2` | `workflow-job-caller` | `provider-resource` | `standards://markdown-frontmatter/1.2/workflow-job-caller` | `workflow-job.yml` |
+| `markdown-frontmatter@1.2` | `workflow-job-local` | `provider-resource` | `standards://markdown-frontmatter/1.2/workflow-job-local` | `workflow-job.local.yml` |
 | `markdown-frontmatter@1.2` | `provider-code` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-code` | `providers/frontmatter.py` |
 | `markdown-frontmatter@1.2` | `provider-input` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-input` | `schemas/provider-input.schema.json` |
 | `markdown-frontmatter@1.2` | `provider-findings` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-findings` | `schemas/findings.schema.json` |
@@ -218,6 +220,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
 | `markdown-frontmatter@1.2` | `fix-frontmatter` | `fix` | `authoring` | `mutation-plan` | `payload:provider-code#run_fix` |
 | `markdown-frontmatter@1.2` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-frontmatter@1.2` | `render-workflow-job` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow_job` |
 | `markdown-tooling@1.2` | `render-lint-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_lint` |
 | `markdown-tooling@1.2` | `render-format-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_format` |
 | `markdown-tooling@1.2` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |

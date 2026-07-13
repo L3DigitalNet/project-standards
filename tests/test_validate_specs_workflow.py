@@ -7,11 +7,10 @@ import yaml
 _WF = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "validate-specs.yml"
 
 
-def test_workflow_exposes_workflow_call_with_config_and_ref() -> None:
+def test_workflow_exposes_workflow_call_with_ref_and_strict_lint() -> None:
     data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
     call = data[True]["workflow_call"]
-    assert set(call["inputs"]) >= {"config-path", "standards-ref", "strict-lint"}
-    assert call["inputs"]["config-path"]["default"] == ".standards/config.toml"
+    assert set(call["inputs"]) == {"standards-ref", "strict-lint"}
     assert call["inputs"]["standards-ref"]["default"] == "v5"
     assert call["inputs"]["strict-lint"]["default"] is True
 
@@ -25,11 +24,8 @@ def test_workflow_triggers_on_v5_and_transitional_dogfood_config() -> None:
 
 
 def test_workflow_has_self_repo_and_consumer_branches() -> None:
-    data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
-    job = data["jobs"]["validate-specs"]
     text = _WF.read_text(encoding="utf-8")
 
-    assert job["env"]["PROJECT_STANDARDS_SPEC_CONFIG"] == "${{ inputs.config-path }}"
     assert "uv sync --dev" in text
     assert "uv run project-standards spec validate" in text
     assert "uv tool install" in text
@@ -45,11 +41,9 @@ def test_direct_events_leave_config_selection_to_the_cli() -> None:
     ]
 
     assert commands
-    assert all(
-        'config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")' in command for command in commands
-    )
-    assert all('"${config_args[@]}"' in command for command in commands)
-    assert all("inputs.config-path ||" not in command for command in commands)
+    assert all("--config" not in command for command in commands)
+    assert all("PROJECT_STANDARDS_SPEC_CONFIG" not in command for command in commands)
+    assert all("inputs.config-path" not in command for command in commands)
 
 
 def test_self_repo_steps_do_not_install_published_tag() -> None:

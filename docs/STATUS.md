@@ -21,13 +21,13 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- V5 release inputs and Task 9 evidence are refreshed; the 649-test package/catalog matrix and two-path replay pass. Independent review is Ready; Task 10 is next.
+- V5 release inputs and Task 9 evidence are current; package/catalog and two-path gates pass, review is Ready, and four Task 10 sync regressions are repaired.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Task 9 is committed at `7d4d5fa`; its plan and release indexes are synchronized. Refresh evidence after P0 fixes; Task 11 owns migrated-root proof.
+- Task 9 is committed on the release-input branch at `cc93f90`; its plan, release indexes, evidence, and adversarial review are synchronized. Task 11 owns migrated-root proof.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
