@@ -4,9 +4,9 @@
 
 **Goal:** Add closed Python Tooling parallel/subprocess coverage options and a generic, fail-closed whole-file ownership-relinquishment path so the optimized repository gate survives the atomic v5 migration.
 
-**Architecture:** The generic control plane owns authorization: an immutable payload signature statically binds one raw owner-intent pointer to one whole-file target, the provider echoes that binding, and the engine clears only the matching held unknown-digest finding after every proof passes. Python Tooling then uses that primitive for a consumer-owned check workflow while independently rendering coverage options, dependency floors, and parallel-aware local/CI commands. Default package output and existing known-history claims remain byte-compatible.
+**Architecture:** The generic control plane owns authorization: an immutable payload signature statically binds one raw owner-intent pointer to one whole-file target, the provider echoes that binding, and the engine clears only the matching held unknown-digest finding after every proof passes. Python Tooling then uses that primitive for a consumer-owned check workflow while independently rendering coverage options, dependency floors, and parallel-aware local/CI commands. Release preparation reconstructs one frozen post-checker predecessor and pre-aligns its owned development-dependency unit through an installed-provider-derived, fail-closed guard before migration. Default package output and existing known-history claims remain byte-compatible.
 
-**Tech Stack:** Python 3.14, Pydantic v2, JSON Schema 2020-12, TOML/YAML, pytest, coverage.py 7.10+, uv, Ruff, BasedPyright, package source/wheel reconstruction tests.
+**Tech Stack:** Python 3.14, Pydantic v2, JSON Schema 2020-12, TOML/YAML, pytest, coverage.py 7.10+, uv, Ruff, BasedPyright, Pyright 1.1.411, package source/wheel reconstruction tests.
 
 ---
 
@@ -17,6 +17,7 @@
 - Keep repository-root `.standards/` absent until the atomic v5 release commit.
 - Keep `src/project_standards/bundles/python-tooling/check.py`, the frozen V1 bundle, and the live root `scripts/check.py` byte-identical until the final atomic-migration task.
 - Treat [the convergence audit](../../reviews/2026-07-12-1824-ownership-relinquishment-contract-convergence-audit.md) and [the approved design](../specs/2026-07-12-python-tooling-parallel-coverage-options-design.md) as controlling inputs.
+- Tasks 9 and 11 also implement the release-integration contract in [the checker-table materialization design](../specs/2026-07-12-python-tooling-checker-table-materialization-design.md): exact `pyright==1.1.411` carry-through, guarded provider-derived `/dependency-groups/dev` pre-alignment, frozen predecessor reconstruction, locked sync, and both complete-gate oracle selections. The amended tasks require a fresh plan audit before Task 9 starts; the prior audit remains authoritative for unchanged Tasks 1–8 and 10.
 
 ## File map
 
@@ -28,7 +29,7 @@
 | Python Tooling package | `standards/python-tooling/versions/1.1/config.schema.json`, `payload.toml`, `providers/python_tooling.py`, `schemas/migration-report.schema.json`, `README.md` | Coverage options, dependency/rendering behavior, conditional workflow ownership, migration claim |
 | Python Tooling tests | `tests/package_contract/test_python_tooling_reconstruction.py` | Defaults, schema rejection, rendering, workflow lifecycle, migration, source/wheel parity |
 | Authoring contract synchronization | `standards/standard-bundle-authoring/versions/2.0/README.md`, `templates/legacy-signature.toml`, self-hosting/reconstruction tests | Distinguish exact package history from the narrow owner-resolution exception |
-| Release proof | `tests/package_compatibility/release_candidate.py`, `test_release_candidate.py`, retained release evidence | Repository-specific options and disposable atomic migration proof |
+| Release proof | `tests/fixtures/package_compatibility/legacy/release-root/**`, `tests/package_compatibility/release_candidate.py`, `test_release_candidate.py`, retained release evidence | Frozen post-checker predecessor, guarded installed-provider dev-group alignment, repository-specific options, and disposable atomic migration proof |
 | Atomic root migration | `scripts/check.py`, `tests/test_adopt_dogfood.py` | Release-commit-only transition from frozen V1 twin to current V2 rendering |
 
 ### Task 1: Add the static payload pointer-to-target declaration
@@ -919,6 +920,8 @@ git commit -m "docs(authoring): explain ownership relinquishment"
 
 - Create: `tests/fixtures/package_compatibility/legacy/release-root/manifest.toml`
 - Create: `tests/fixtures/package_compatibility/legacy/release-root/files/**`
+- Freeze from `26fb984`: `tests/fixtures/package_compatibility/legacy/release-root/files/pyproject.toml`
+- Freeze from `26fb984`: `tests/fixtures/package_compatibility/legacy/release-root/files/uv.lock`
 - Modify: `tests/package_compatibility/release_candidate.py`
 - Modify: `tests/package_compatibility/test_release_candidate.py`
 - Modify: `docs/STATUS.md`
@@ -928,11 +931,41 @@ git commit -m "docs(authoring): explain ownership relinquishment"
 - Modify: `docs/handoff/sessions/2026-07.md`
 - Refresh: `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`
 
-- [ ] **Step 1: Make disposable legacy input independent of live root authority**
+- [ ] **Step 1: Add failing exact-union predecessor-reconstruction tests**
 
-Create a complete pre-intent legacy overlay. Derive its required path set from every catalog-5 payload legacy signature plus `.project-standards.yml`; do not hand-maintain a count. `manifest.toml` records each derived path as `file` or `absent`, and `files/**` stores every pre-atomic regular-file byte, including the optimized unknown workflow, V1 check script, instruction files, VS Code inputs, and Agent Handoff legacy manifest. Add a test that recomputes the declared signature-target set and fails on a missing or extra overlay entry.
+Create a complete pre-intent legacy overlay. Its required path set is the exact union of every catalog-5 payload legacy-signature target, `.project-standards.yml`, `pyproject.toml`, and `uv.lock`; derive that union in the test and fail on any missing or extra manifest entry rather than maintaining a count. `manifest.toml` records every path as `file` or `absent`, and `files/**` stores every pre-atomic regular-file byte, including the optimized unknown workflow, V1 check script, instruction files, VS Code inputs, Agent Handoff legacy manifest, and the post-checker/pre-atomic `pyproject.toml` and `uv.lock` bytes from commit `26fb984`.
 
-Add `prepare_legacy_release_checkout(source_root, target)` that copies the Git-known source tree, removes copied `.standards/` only inside the disposable checkout, removes every manifest-listed path, and then restores only entries declared `file`. This ensures a post-atomic root cannot leak unified or absent bytes into the legacy replay.
+Record and assert the guarded predecessor facts in `manifest.toml`:
+
+```toml
+[guarded_predecessor]
+pyproject_sha256_after_version = "sha256:e52339824c6f106adf4fef1f59068710ecb395bc57d66826bfd2a9a0e7335cf9"
+uv_lock_sha256_after_version = "sha256:7dab9066b9fcbe304978e21fed042cfaa6eff9524d71a0703b3e1084af1fe10f"
+dev_group = [
+  "pytest>=9.0",
+  "ruff>=0.14",
+  "basedpyright",
+  "types-PyYAML",
+  "coverage[toml]",
+  "pip-audit",
+  "pytest-xdist>=3.8",
+  "pyright==1.1.411",
+]
+```
+
+The two SHA-256 values bind the frozen files after `set_release_version` changes only the root release from `4.3.0` to `5.0.0`. Add negative tests for an extra overlay entry, a missing predecessor input, and a post-atomic source root whose live `pyproject.toml` and `uv.lock` differ from the frozen copies.
+
+Run:
+
+```bash
+uv run pytest tests/package_compatibility/test_release_candidate.py -k 'overlay or predecessor' -q
+```
+
+Expected: RED because the exact-union overlay manifest, frozen predecessor files, loader, and reconstruction path do not exist.
+
+- [ ] **Step 2: Implement predecessor reconstruction independent of live authority**
+
+Add `prepare_legacy_release_checkout(source_root, target)` so it copies the Git-known source tree, removes copied `.standards/` only inside the disposable checkout, removes every manifest-listed path, and restores only entries declared `file`:
 
 ```python
 _LEGACY_RELEASE_FIXTURE = Path(
@@ -957,7 +990,7 @@ def prepare_legacy_release_checkout(source_root: Path, target: Path) -> Path:
     return checkout
 ```
 
-The overlay's `.project-standards.yml` is deliberately pre-intent. `declare_release_cut_intent` injects the new Python settings exactly once after preparation. Make `set_release_version` accept either the pre-release `4.3.0` form or an already-versioned `5.0.0` source. Test reconstruction from both a simulated pre-atomic tree and the eventual unified-root shape. Remove direct assertions that the live source root contains `.project-standards.yml`.
+The overlay's `.project-standards.yml` is deliberately pre-intent. Restore the frozen `pyproject.toml` and `uv.lock` before any release-version or intent mutation. Make `set_release_version` accept either the pre-release `4.3.0` form or an already-versioned `5.0.0` source, then assert the two recorded post-version digests. Test reconstruction from both a simulated pre-atomic tree and the eventual unified-root shape. Remove direct assertions that the live source root contains `.project-standards.yml`.
 
 ```python
 content = path.read_text(encoding="utf-8")
@@ -968,14 +1001,45 @@ else:
     assert content.count(after) == 1, path
 ```
 
-- [ ] **Step 2: Add post-implementation release-intent and preservation assertions**
+Use the reconstructed predecessor as the Git patch authority as well as the migration checkout. For a synthetic post-atomic source shape, call `initialize_release_baseline(source_shape)` before `prepare_legacy_release_checkout` so `copy_tracked_checkout` can enumerate Git-known inputs. After reconstruction, call `initialize_release_baseline(reconstructed)` and derive `source_snapshot`, `patch_checkout`, and the replay baseline from that committed predecessor—not from the raw pre- or post-atomic source shape. The release patch must therefore always describe predecessor-to-v5 migration, including removal of `.project-standards.yml`, regardless of the live root's current authority.
 
-Update `declare_release_cut_intent` to write:
+- [ ] **Step 3: Add failing intent, installed-provider, and guard tests**
+
+Define one sparse V2 config object as the source for both legacy-intent rendering and installed-provider pre-alignment:
+
+```python
+_RELEASE_PYTHON_TOOLING_CONFIG: JsonObject = {
+    "contract_version": "1.0",
+    "additional_dev_dependencies": [
+        "types-PyYAML",
+        "pytest-xdist>=3.8",
+        "pyright==1.1.411",
+    ],
+    "ruff": {
+        "line_length": 100,
+        "extend_exclude": [".claude/hooks", ".codex/hooks", "docs/handoff"],
+    },
+    "pytest": {
+        "fail_under": 85,
+        "markers": [
+            "compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase",
+            "performance: deterministic scale gates run explicitly in CI",
+            "release_replay: disposable release-cut checks run in their own serial phase",
+        ],
+        "coverage_exclude_also": ["if __name__ == .__main__.:"],
+    },
+    "coverage": {"parallel": True, "patch": ["subprocess"]},
+    "workflow_ownership": "consumer-owned",
+}
+```
+
+`declare_release_cut_intent` converts only `contract_version` to the V4 `version` spelling and writes the remaining values into `python_tooling` without changing their order or content. The resulting YAML includes:
 
 ```yaml
 additional_dev_dependencies:
   - 'types-PyYAML'
   - 'pytest-xdist>=3.8'
+  - 'pyright==1.1.411'
 coverage:
   parallel: true
   patch:
@@ -983,13 +1047,143 @@ coverage:
 workflow_ownership: 'consumer-owned'
 ```
 
-Retain all three repository markers: `compatibility`, `performance`, and `release_replay`. In the disposable release test, snapshot the optimized root workflow before migration and assert byte identity afterward.
+The intent writer may modify only `.project-standards.yml`; remove its direct `pyproject.toml` replacement. Retain all three repository markers: `compatibility`, `performance`, and `release_replay`. In the disposable release test, snapshot the optimized root workflow before migration and assert byte identity afterward.
 
-- [ ] **Step 3: Separate executable proof from retained-evidence currency**
+Before implementing the guard, add tests that require this exact sequence:
+
+1. restore the frozen predecessor;
+2. set the release version and verify both recorded predecessor digests;
+3. build and extract the candidate wheel;
+4. inject the sparse legacy intent only;
+5. load Python Tooling 1.1 and resolve the sparse migration options through its option schema;
+6. render `key:/dependency-groups/dev` with `render-semantic` from the extracted installed distribution;
+7. pre-align only `/dependency-groups/dev` through the guard;
+8. preview and apply migration;
+9. refresh and check `uv.lock`.
+
+Assert the rendering payload root is beneath `InstalledDistribution.package_root`, the schema-resolved options select BasedPyright, the rendered dependency fragment contains the exact Pyright pin, and the guard reports that a mutation occurred. Add a negative test that inserts `"unexpected-package"` into the dev group and prove the guard raises before writing: `pyproject.toml` remains byte-identical and `uv.lock` remains untouched. Add a second negative case for a correct semantic value with the wrong source digest.
+
+Run:
+
+```bash
+uv run pytest tests/package_compatibility/test_release_candidate.py -k prealign -q
+```
+
+Expected: RED because the guarded pre-alignment helper and its installed-provider contract do not exist.
+
+- [ ] **Step 4: Implement one fail-closed dev-group alignment contract**
+
+Add a frozen result type and one helper used by both the disposable and live release paths:
+
+```python
+@dataclass(frozen=True, slots=True)
+class DevGroupAlignment:
+    source_sha256: str
+    before_semantic_digest: str
+    after_semantic_digest: str
+    rendered_content_digest: str
+    mutated: bool
+
+
+def prealign_release_dev_group(
+    checkout: Path,
+    distribution: InstalledDistribution,
+    sparse_config: JsonObject,
+    *,
+    expected_source_sha256: str,
+    expected_dev_group: tuple[str, ...],
+) -> DevGroupAlignment:
+    path = checkout / "pyproject.toml"
+    source = path.read_bytes()
+    source_sha256 = f"sha256:{sha256(source).hexdigest()}"
+    if source_sha256 != expected_source_sha256:
+        raise AssertionError("guarded predecessor pyproject digest changed")
+
+    adapter = TomlAdapter()
+    state = adapter.inspect(source, ("key:/dependency-groups/dev",))
+    if len(state.units) != 1:
+        raise AssertionError("guarded predecessor dev group is absent")
+    existing = state.units[0]
+    if not isinstance(existing.value, list) or tuple(existing.value) != expected_dev_group:
+        raise AssertionError("guarded predecessor dev group changed")
+
+    catalog = distribution.load_catalog("5")
+    payload = catalog.payload_map[("python-tooling", "1.1")]
+    if not payload.root.is_relative_to(distribution.package_root):
+        raise AssertionError("release rendering did not use the installed distribution")
+    effective = load_option_schema(payload.root, payload.manifest).resolve_options(
+        sparse_config
+    )
+    contribution = next(
+        item
+        for item in payload.manifest.contributions
+        if item.target.original == "pyproject.toml"
+        and item.scope == "key:/dependency-groups/dev"
+    )
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=checkout,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="render-semantic",
+            operation=ProviderOperation.RENDER,
+            effective_config=effective,
+            snapshots={
+                "planned_contribution": {
+                    "id": contribution.id,
+                    "target": contribution.target.original,
+                    "adapter": contribution.adapter.value,
+                    "scope": contribution.scope,
+                }
+            },
+        )
+    )
+    if result.effect is not ProviderEffect.CONTENT or result.content is None:
+        raise AssertionError("installed provider did not render the dev group")
+    rendered = adapter.inspect(result.content, (contribution.scope,))
+    if len(rendered.units) != 1:
+        raise AssertionError("installed provider rendered an invalid dev-group fragment")
+    desired = rendered.units[0]
+    updated = adapter.render(
+        state,
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                contribution.scope,
+                content=result.content,
+                value=desired.value,
+            ),
+        ),
+    )
+
+    before_document = tomllib.loads(source.decode("utf-8"))
+    after_document = tomllib.loads(updated.decode("utf-8"))
+    before_document["dependency-groups"].pop("dev")
+    after_document["dependency-groups"].pop("dev")
+    if before_document != after_document:
+        raise AssertionError("guarded rewrite changed content outside the dev group")
+    if updated == source:
+        raise AssertionError("guarded predecessor was already aligned")
+    path.write_bytes(updated)
+    return DevGroupAlignment(
+        source_sha256=source_sha256,
+        before_semantic_digest=existing.semantic_digest.value,
+        after_semantic_digest=desired.semantic_digest.value,
+        rendered_content_digest=f"sha256:{sha256(result.content).hexdigest()}",
+        mutated=True,
+    )
+```
+
+Implement the body with `distribution.load_catalog("5")`, the installed `python-tooling@1.1` payload, `load_option_schema(payload.root, payload.manifest).resolve_options(sparse_config)`, and `invoke_provider` for the declared `render-semantic` contribution at `key:/dependency-groups/dev`. Inspect the existing and rendered fragments with `TomlAdapter`; require exactly one unit from each. Before rendering or writing, require both the full-file SHA-256 and `tuple(existing.value)` to equal the reviewed preconditions. Render one `ActionKind.UPDATE` `UnitChange`, require every non-dev-group TOML value to remain equal, and perform the single final `write_bytes` only after every precondition and bounded-rewrite assertion passes. Return the before/after semantic digests and rendered-content digest; require `mutated` to be true so an already-aligned shortcut cannot pass.
+
+The helper must not import package code from the source checkout. Its provenance assertion is `payload.root.is_relative_to(distribution.package_root)`, and both Task 9 and Task 11 pass the extracted `InstalledDistribution` explicitly.
+
+- [ ] **Step 5: Separate executable proof from retained-evidence currency**
 
 Remove `assert_release_evidence_current()` from the migration/replay test's preamble. Have the proof helper return the release patch plus config/catalog/lock digests; keep evidence-currency assertions in a separate test so TDD can execute migration before retained prose is refreshed.
 
-- [ ] **Step 4: Run the post-implementation disposable proof**
+- [ ] **Step 6: Run the post-implementation disposable proof**
 
 Run:
 
@@ -997,9 +1191,9 @@ Run:
 uv run pytest tests/package_compatibility/test_release_candidate.py::test_disposable_release_checkout_migrates_and_reaches_fixed_point -q
 ```
 
-Expected: migration, apply, and fixed-point reconciliation pass independently of retained-evidence currency.
+Expected: frozen reconstruction, installed-provider pre-alignment, migration, apply, locked sync, and fixed-point reconciliation pass independently of retained-evidence currency.
 
-- [ ] **Step 5: Complete config, preview, workflow, script, and lock assertions**
+- [ ] **Step 7: Complete config, preview, dependency, workflow, script, and lock assertions**
 
 Assert:
 
@@ -1008,7 +1202,9 @@ python_config = config.standards["python-tooling"].config
 assert python_config["coverage"] == {"parallel": True, "patch": ["subprocess"]}
 assert python_config["workflow_ownership"] == "consumer-owned"
 assert "pytest-xdist>=3.8" in python_config["additional_dev_dependencies"]
+assert "pyright==1.1.411" in python_config["additional_dev_dependencies"]
 assert "coverage[toml]>=7.10.0" in pyproject["dependency-groups"]["dev"]
+assert "pyright==1.1.411" in pyproject["dependency-groups"]["dev"]
 assert pyproject["tool"]["coverage"]["run"]["parallel"] is True
 assert pyproject["tool"]["coverage"]["run"]["patch"] == ["subprocess"]
 assert workflow.read_bytes() == workflow_before
@@ -1017,11 +1213,33 @@ assert "coverage erase" in check_script
 assert "coverage combine" in check_script
 ```
 
-Also prove all markers survive; human and JSON previews expose the exact target/digest/intent plus consumer-owned, preserved, not-semantically-validated labeling; no matching target/unit/action/lock state exists; and the second reconciliation has no create/update/remove actions. Execute the migrated parallel-aware `scripts/check.py` successfully in the disposable checkout rather than relying only on substrings. Prevent recursive execution of the release-replay test itself:
+Also prove all markers survive; human and JSON previews expose the exact target/digest/intent plus consumer-owned, preserved, not-semantically-validated labeling; no matching workflow target/unit/action/lock state exists; migration preview is applicable without `CP-CONSUMER-CONFLICT`; and the second reconciliation has no create/update/remove actions. Locate the `pyproject.toml` / `key:/dependency-groups/dev` entry in `preview.reconciliation.next_lock` and require its semantic digest to equal the guard's `after_semantic_digest`, its owner to be `python-tooling`, and its provenance to be `provider`.
+
+Inside the disposable release test, refresh and verify the migrated checkout's lock with `cwd=checkout`:
+
+```python
+subprocess.run(["uv", "lock"], cwd=checkout, check=True)
+subprocess.run(["uv", "lock", "--check"], cwd=checkout, check=True)
+subprocess.run(
+    ["uv", "sync", "--locked", "--all-groups", "--offline"],
+    cwd=checkout,
+    check=True,
+)
+```
+
+Require exact `pyright==1.1.411` in that refreshed checkout lock. Separately, at the repository root, run:
+
+```bash
+uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k complete_gate_oracle -q
+```
+
+Expected: the disposable lock is current, its locked offline sync passes, and both repository-root BasedPyright and Pyright complete-gate oracle selections pass after migration.
+
+Execute the migrated parallel-aware `scripts/check.py` successfully in the disposable checkout rather than relying only on substrings. Prevent recursive execution of the release-replay test itself:
 
 ```python
 gate_environment = {
-    **environment,
+    **{key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
     "PYTEST_ADDOPTS": '-m "not release_replay"',
 }
 gate = subprocess.run(
@@ -1035,11 +1253,15 @@ gate = subprocess.run(
 assert gate.returncode == 0, gate.stdout + gate.stderr
 ```
 
-- [ ] **Step 6: Reconcile implementation traceability before evidence hashing**
+- [ ] **Step 8: Prove pre-atomic and post-atomic replay equivalence**
+
+Parameterize the proof over a simulated pre-atomic source tree and a reconstructed post-atomic unified root. Git-initialize and commit the synthetic source shape before reconstruction; then Git-initialize and commit each reconstructed predecessor before deriving its `source_snapshot`, `patch_checkout`, and replay baseline. Both paths must restore the same frozen `pyproject.toml` and `uv.lock`, bind the same post-version guard digest, perform the guarded mutation, produce the same changed-path set and release patch/config/catalog/lock digests, replay that patch cleanly against a fresh copy of the same reconstructed predecessor, and reach the same fixed point. Reject a post-atomic path that attempts to use its already-aligned live root bytes or raw unified-root patch baseline without restoration.
+
+- [ ] **Step 9: Reconcile implementation traceability before evidence hashing**
 
 Mark CP01/BA02 FR-037 and CP01 FR-038 Passing only after their focused, source/wheel, and lifecycle tests pass. Update TODO and handoff to leave refreshed release evidence and atomic migration as the remaining P0 work. Do not edit these release-input files again before the retained-evidence test is green.
 
-- [ ] **Step 7: Refresh retained evidence from the stable pre-atomic tree**
+- [ ] **Step 10: Refresh retained evidence from the stable pre-atomic tree**
 
 Update the evidence file's release-input digest from `release_input_digest()`. Run the separate evidence-currency test once to obtain the newly executed release-patch/config/catalog/lock digests, update only those values in the evidence file, then run:
 
@@ -1048,9 +1270,9 @@ uv run pytest tests/package_compatibility/test_release_candidate.py -q
 uv run pytest tests/package_compatibility/test_catalog_matrix.py -q
 ```
 
-Expected: disposable migration, fixed point, retained-evidence currency, source/wheel matrix, and performance rows pass. The evidence file is excluded from its own input digest, so the final evidence-only correction does not invalidate the proof.
+Expected: both predecessor reconstructions, guarded mutation, disposable migration, locked sync, both checker oracles, fixed point, retained-evidence currency, source/wheel matrix, and performance rows pass. The evidence file is excluded from its own input digest, so the final evidence-only correction does not invalidate the proof.
 
-- [ ] **Step 8: Commit the release proof**
+- [ ] **Step 11: Commit the release proof**
 
 ```bash
 git add tests/fixtures/package_compatibility/legacy/release-root tests/package_compatibility/release_candidate.py tests/package_compatibility/test_release_candidate.py tests/package_compatibility/test_catalog_matrix.py docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md docs/STATUS.md docs/TODO.md docs/handoff
@@ -1130,9 +1352,15 @@ Run `git status --short` and compare it with the recorded pre-gate status. Task 
 **Files:**
 
 - Modify then remove atomically: `.project-standards.yml`
+- Modify at release preparation: `pyproject.toml`, `uv.lock`
 - Modify only at release time: `scripts/check.py`
 - Modify only at release time: `tests/test_adopt_dogfood.py`
 - Modify only at release time: `AGENTS.md`
+- Modify only at release time: `CLAUDE.md`
+- Modify only at release time: `docs/usage.md`
+- Modify only at release time: `docs/handoff/conventions.md`
+- Reuse and verify: `tests/fixtures/package_compatibility/legacy/release-root/**`
+- Reuse and verify: `tests/package_compatibility/release_candidate.py`, `tests/package_compatibility/test_release_candidate.py`
 - Preserve: `src/project_standards/bundles/python-tooling/check.py`
 - Create only in the atomic release commit: `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`
 - Refresh: `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`
@@ -1148,30 +1376,69 @@ sha256sum scripts/check.py src/project_standards/bundles/python-tooling/check.py
 
 Expected: the two legacy files are byte-identical before migration.
 
-- [ ] **Step 2: Inject the reviewed live legacy intent and verify preview**
+- [ ] **Step 2: Establish the guarded live predecessor and extracted release provider**
 
-Before preview, apply the same explicit Python Tooling intent used by the disposable fixture to the live `.project-standards.yml`: `types-PyYAML`, `pytest-xdist>=3.8`, all three markers, the retained coverage exclusion, `coverage.parallel = true`, `coverage.patch = ["subprocess"]`, and `workflow_ownership = "consumer-owned"`. This edit is transient: it must be consumed and removed by the same atomic migration, never committed as an intermediate legacy state.
+Before changing the live root, compare `pyproject.toml` and `uv.lock` with the two frozen Task 9 predecessor inputs and require byte identity. Call `set_release_version(Path("."))`, then require the exact post-version digests recorded in the fixture manifest: `sha256:e52339824c6f106adf4fef1f59068710ecb395bc57d66826bfd2a9a0e7335cf9` for `pyproject.toml` and `sha256:7dab9066b9fcbe304978e21fed042cfaa6eff9524d71a0703b3e1084af1fe10f` for `uv.lock`.
+
+Build the candidate wheel offline from that versioned predecessor and extract it outside the repository. Construct `InstalledDistribution(extracted / "project_standards", tool_release="5.0.0")`; this exact object supplies the provider used by the guard and the migration preview/apply process. Do not render from the source checkout.
+
+Establish the operator variables and extraction path explicitly:
+
+```bash
+RELEASE_BUILD_ROOT="$(mktemp -d)"
+RELEASE_INSTALLED="$RELEASE_BUILD_ROOT/installed"
+export RELEASE_BUILD_ROOT RELEASE_INSTALLED
+trap 'rm -rf "$RELEASE_BUILD_ROOT"' EXIT
+uv run --no-sync python -c 'from os import environ; from pathlib import Path; from tests.package_compatibility.release_candidate import build_installed_release; build_installed_release(Path("."), Path(environ["RELEASE_BUILD_ROOT"]))'
+test -d "$RELEASE_INSTALLED/project_standards"
+```
+
+Keep these variables and the cleanup trap active through preview, apply, and the immediate post-apply assertions.
+
+- [ ] **Step 3: Inject intent only and pre-align the live dev group through the guard**
+
+Call `declare_release_cut_intent(Path("."))`. It writes only `.project-standards.yml` and uses the same `_RELEASE_PYTHON_TOOLING_CONFIG` as Task 9: exact `pyright==1.1.411`, `types-PyYAML`, `pytest-xdist>=3.8`, all three markers, the retained coverage exclusion, `coverage.parallel = true`, `coverage.patch = ["subprocess"]`, and `workflow_ownership = "consumer-owned"`. This edit is transient: it must be consumed and removed by the same atomic migration, never committed as an intermediate legacy state.
+
+Call `prealign_release_dev_group` with the extracted distribution, the shared sparse config, the manifest's reviewed source digest, and its exact legacy dev group. Require `mutated is True`; require the before/after semantic digests to differ; require the rewritten dev group to be provider-derived and to contain `coverage[toml]>=7.10.0`, `pytest-xdist>=3.8`, and exact `pyright==1.1.411`; and require every other parsed TOML value to remain unchanged.
+
+Run the negative drift-refusal test from Task 9 immediately before the live operation. Any live source-digest or semantic-value mismatch is a hard stop with no write; do not update the recorded guard to accept unreviewed state.
+
+- [ ] **Step 4: Verify applicable migration previews through the extracted distribution**
 
 Run both previews:
 
 ```bash
-uv run project-standards init --catalog 5 --migrate --repo .
-uv run project-standards init --catalog 5 --migrate --repo . --json
+set +e
+PYTHONPATH="$RELEASE_INSTALLED" uv run --no-sync python -c \
+  'from project_standards.cli import main; raise SystemExit(main(["init", "--catalog", "5", "--migrate", "--repo", "."]))' \
+  >"$RELEASE_BUILD_ROOT/preview.txt"
+human_status=$?
+PYTHONPATH="$RELEASE_INSTALLED" uv run --no-sync python -c \
+  'from project_standards.cli import main; raise SystemExit(main(["init", "--catalog", "5", "--migrate", "--repo", ".", "--json"]))' \
+  >"$RELEASE_BUILD_ROOT/preview.json"
+json_status=$?
+set -e
+test "$human_status" -eq 1
+test "$json_status" -eq 1
 ```
 
-Assert the workflow claim's exact path, observed digest, `intent_pointer`, consumer-owned/preserve disposition, and not-semantically-validated label; assert no workflow action/unit/lock entry and the parallel coverage/script rendering before apply.
+Exit 1 is the expected preview result because applicable migration work remains; any other exit is a failure. Assert both captured previews are applicable with no `CP-CONSUMER-CONFLICT`; the workflow claim has the exact path, observed digest, `intent_pointer`, consumer-owned/preserve disposition, and not-semantically-validated label; there is no workflow action/unit/lock entry; and the parallel coverage/script rendering is present. Locate the next-lock `pyproject.toml` / `key:/dependency-groups/dev` unit and require provider provenance, Python Tooling ownership, and a semantic digest equal to the guard's `after_semantic_digest`.
 
-- [ ] **Step 3: Apply the reviewed v5 migration atomically**
+- [ ] **Step 5: Apply the reviewed v5 migration atomically**
 
 Run:
 
 ```bash
-uv run project-standards init --catalog 5 --migrate --apply --repo .
+PYTHONPATH="$RELEASE_INSTALLED" uv run --no-sync python -c \
+  'from project_standards.cli import main; raise SystemExit(main(["init", "--catalog", "5", "--migrate", "--apply", "--repo", "."]))'
+uv lock
+uv lock --check
+uv sync --locked --all-groups --offline
 ```
 
-The apply must create the three `.standards/` files, replace root `scripts/check.py` with the non-default V2 rendering, preserve the optimized workflow bytes, and remove `.project-standards.yml` in the same reviewed commit.
+The extracted-distribution apply must exit 0, create the three `.standards/` files, replace root `scripts/check.py` with the non-default V2 rendering, preserve the optimized workflow bytes, and remove `.project-standards.yml` in the same reviewed commit. The refreshed `uv.lock` must retain `pyright==1.1.411`; locked offline sync must pass; `.standards/config.toml` and the provider-rendered dev group must retain the same exact requirement; and `.standards/lock.toml` must own the dev-group unit with the previewed semantic digest.
 
-- [ ] **Step 4: Retire only the obsolete root-script dogfood mapping**
+- [ ] **Step 6: Retire only the obsolete root-script dogfood mapping**
 
 Remove `"python-tooling/check.py": "scripts/check.py"` from `_DOGFOOD`. Add separate assertions:
 
@@ -1201,15 +1468,25 @@ def test_root_check_script_matches_current_v2_rendering(tmp_path: Path) -> None:
 
 Do not modify the frozen bundle bytes.
 
-- [ ] **Step 5: Switch root validation commands to unified authority**
+- [ ] **Step 7: Switch root validation commands to unified authority**
 
-Update the AGENTS dogfood command and any active release-checklist command that passes `--config .project-standards.yml` so post-migration validation resolves from `.standards/config.toml`. Keep explicit legacy/debug-config examples only where they intentionally test migration.
+Update both root instruction files—`AGENTS.md` and `CLAUDE.md`—the active commands in `docs/usage.md` and `docs/handoff/conventions.md`, and every active release-checklist command that passes `--config .project-standards.yml` so post-migration validation resolves from `.standards/config.toml`. Verify the sweep with `rg -n -- '--config \.project-standards\.yml' AGENTS.md CLAUDE.md meta docs`; classify every remaining match as an intentional legacy/debug migration example or add its active document to this release-time sweep. Archival review, plan, specification-history, and future-draft matches do not require rewriting solely to erase the string.
 
-- [ ] **Step 6: Rerun the post-atomic release checklist**
+- [ ] **Step 8: Rerun both checker oracles and the post-atomic release checklist**
 
-Rerun the Task 9 disposable proof from the now-stable unified root, refresh its release-input and executed output digests in the retained evidence, and require the separate evidence-currency test to pass. Then rerun Task 10's complete gate with the document commands changed to `project-standards validate`, `project-standards spec validate`, and `project-standards spec lint --strict` without the legacy `--config`. The disposable proof must still pass because it reconstructs its own legacy authority and frozen V1 script. Also run the exact release checklist in `meta/versioning.md`. Confirm the optimized workflow is unchanged, the root script is parallel-aware, `.standards/` is complete, `.project-standards.yml` is absent, and fixed-point reconciliation contains no mutating actions.
+First run:
 
-- [ ] **Step 7: Commit as part of the atomic v5 release commit**
+```bash
+uv run pytest tests/package_contract/test_python_tooling_reconstruction.py -k complete_gate_oracle -q
+```
+
+Expected: both BasedPyright and Pyright selections pass after the live atomic transition.
+
+Rerun the Task 9 disposable proof from the now-stable unified root. It must restore the frozen predecessor before versioning, intent injection, and the guarded mutation; an already-aligned shortcut is a failure. Require the simulated pre-atomic and reconstructed post-atomic paths to produce equivalent release patch/config/catalog/lock digests. Refresh the retained release-input and executed-output digests, and require the separate evidence-currency test to pass.
+
+Then rerun Task 10's complete gate with the document commands changed to `project-standards validate`, `project-standards spec validate`, and `project-standards spec lint --strict` without the legacy `--config`. Also run the exact release checklist in `meta/versioning.md`. Confirm the optimized workflow is byte-identical, the root script is parallel-aware, `.standards/` is complete, `.project-standards.yml` is absent, `pyright==1.1.411` survives in config/dev-group/lock, locked offline sync passes, and fixed-point reconciliation contains no mutating actions.
+
+- [ ] **Step 9: Commit as part of the atomic v5 release commit**
 
 Stage the complete reviewed release set, including `.standards/`, root-script transition, metadata/version changes, release evidence, and legacy-authority removal. Do not create a standalone partial migration commit.
 
@@ -1221,4 +1498,7 @@ Stage the complete reviewed release set, including `.standards/`, root-script tr
 - [x] Provider output, central models, generated schemas, package schemas, payload digests, projections, and source/wheel behavior change together.
 - [x] Standard Bundle Authoring guidance and generated descriptions cannot retain the obsolete absolute unknown-byte statement.
 - [x] Root `.standards/` creation and root-script/V1-twin retirement remain isolated to the atomic release commit.
+- [x] Tasks 9 and 11 carry exact `pyright==1.1.411` through both intents, rendered dependencies, `.standards/config.toml`, and refreshed `uv.lock`, then rerun both complete-gate oracle selections.
+- [x] Both release paths use one guarded installed-provider pre-alignment contract with exact source and semantic preconditions, bounded single-unit mutation, negative drift refusal, next-lock ownership/digest assertions, locked sync, and fixed-point convergence.
+- [x] Post-atomic release replay restores the frozen post-checker predecessor, proves the guarded mutation occurs, and matches simulated pre-atomic release evidence.
 - [x] No step begins `project-toolbox` or `agent-managed-repo` work before v5.0.0.
