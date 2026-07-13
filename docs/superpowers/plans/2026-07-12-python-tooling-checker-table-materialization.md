@@ -747,14 +747,11 @@ uv run pyright --version
 
 The wrapper's npm payload version tracks the wrapper release, so the exact pin makes the provisioned content deterministic; only its transport is a setup-phase network step. Record the pinned version in the commit message.
 
-Add the provisioning step to `.github/workflows/check.yml` immediately after the "Sync dependencies" step, plus a job-level cache location so provisioning and the test step share one explicit Pyright cache:
+Add two steps to `.github/workflows/check.yml` immediately after the "Sync dependencies" step. The `runner` context is not available in `jobs.<job_id>.env`, so the shared cache location is published through `$GITHUB_ENV` by a setup step, which every subsequent step in the job inherits:
 
 ```yaml
-env:
-  PYRIGHT_PYTHON_CACHE_DIR: ${{ runner.temp }}/pyright-python-cache
-```
-
-```yaml
+- name: Set Pyright cache location
+  run: echo "PYRIGHT_PYTHON_CACHE_DIR=$RUNNER_TEMP/pyright-python-cache" >> "$GITHUB_ENV"
 - name: Provision Pyright runtime
   run: uv run pyright --version
 ```
@@ -826,8 +823,10 @@ def test_greeting() -> None:
         text=True,
     )
     if provision.returncode != 0:
+        cache_dir = os.environ.get("PYRIGHT_PYTHON_CACHE_DIR", "<default user cache>")
         pytest.fail(
-            "checker runtime is not provisioned for the network-isolated oracle; "
+            "checker runtime is not provisioned for the network-isolated oracle "
+            f"(cache: {cache_dir}); "
             f"run 'uv run {checker} --version' once during environment setup:\n"
             + provision.stdout
             + provision.stderr
@@ -951,6 +950,10 @@ git commit -m "docs: record checker-table materialization implementation"
 - **CR-001 (residual):** the oracle enforces npm strict offline (`npm_config_offline=true`) in its environment, and CI provisioning shares one explicit `PYRIGHT_PYTHON_CACHE_DIR` with the test step, so a missing wrapper cache fails the probe instead of silently downloading; the design's isolation wording is updated to match.
 - **CR-NEW-001:** the resolved exact `pyright==X.Y.Z` requirement is a named release-integration output; the design's carry-through bullet now requires that exact string — never the bare name — in both migration intents, with post-migration equality assertions against the root pin.
 - **CR-NEW-002:** Task 6 runs `agent-handoff validate` and `drift-check` after the documentation edits and before the final commit, keeping any required fixes in the task's staging list.
+
+## Audit round 3 reconciliation
+
+- **CR-001 (regression fixed):** the invalid job-level `${{ runner.temp }}` expression is replaced by a runner-executed setup step that publishes `PYRIGHT_PYTHON_CACHE_DIR=$RUNNER_TEMP/pyright-python-cache` through `$GITHUB_ENV`, inherited by the provisioning and test steps. The oracle's missing-provision diagnostic now reports the cache location in use, so a fallback to the default user cache is visible rather than silent; the design names the same mechanism.
 
 ## Plan self-review checklist
 
