@@ -7,9 +7,10 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 
 
-def test_workflow_invokes_validate_references():
+def test_workflow_invokes_aggregate_validation_without_legacy_overrides():
     wf = (REPO / ".github/workflows/validate-markdown-frontmatter.yml").read_text()
-    assert "validate-references" in wf
+    assert wf.count("project-standards validate") == 2
+    assert "--config" not in wf
 
 
 def test_hook_entries_map_to_console_scripts():

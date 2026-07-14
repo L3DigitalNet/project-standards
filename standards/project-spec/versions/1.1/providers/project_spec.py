@@ -22,6 +22,8 @@ _SELF_HOST_WORKFLOW_DIGESTS = frozenset(
     {
         "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
         "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
+        "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f",
+        "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc",
     }
 )
 
@@ -348,8 +350,7 @@ def run_render_workflow(
             "jobs:\n  validate-specs:\n"
             f"    if: ${{{{ {enabled} }}}}\n"
             "    uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v5\n"
-            '    with:\n      config-path: ".standards/config.toml"\n'
-            '      standards-ref: "v5"\n      strict-lint: true\n'
+            '    with:\n      standards-ref: "v5"\n      strict-lint: true\n'
         )
     }
 

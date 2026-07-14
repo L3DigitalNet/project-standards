@@ -1,23 +1,6 @@
 name: Validate Markdown Frontmatter
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "**/*.md"
-      - "src/**"
-      - ".standards/config.toml"
-      # Direct pre-release events still use the V4 authority until Task 11.
-      - ".project-standards.yml"
-      - "pyproject.toml"
-  pull_request:
-    paths:
-      - "**/*.md"
-      - "src/**"
-      - ".standards/config.toml"
-      # Direct pre-release events still use the V4 authority until Task 11.
-      - ".project-standards.yml"
-      - "pyproject.toml"
   workflow_call:
     inputs:
       standards-ref:

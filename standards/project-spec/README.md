@@ -155,13 +155,13 @@ spec:
   reference_prefixes: ['RQ', 'GAP', 'MIT'] # cited, not minted here
 ```
 
-Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade --config` read this key; `extract` and `next` never load config.
+Reference prefixes are exempt from the Appendix-A, width, and tier checks. A prefix that collides with a canonical spec-local prefix (e.g. `FR`) is rejected — that would disable validation of your own IDs. Only `validate`, `lint`, and `upgrade` consult the selected package options; `extract` and `next` do not need configuration.
 
 ---
 
 ## 6. Adoption
 
-Adoption seeds only the support scaffolding: a `spec:` config fragment for `.project-standards.yml` and an optional reusable `validate-specs.yml` workflow caller. Installing `project-standards` gives every command in [§5](#5-tooling), and `new` scaffolds real spec documents from the package's bundled templates. The full procedure — prerequisites, choosing a template, wiring the config, and CI/local validation — is in [`adopt.md`](adopt.md); it is not repeated here.
+V5 adoption selects `project-spec@1.1` in `.standards/config.toml` and reconciles a managed `validate-specs.yml` caller or self-hosted workflow. Installing `project-standards` gives every command in [§5](#5-tooling), and `new` scaffolds real spec documents from the selected package's bundled templates. The full procedure—package options, choosing a template, reconciliation, and CI/local validation—is in [`adopt.md`](adopt.md); it is not repeated here.
 
 ---
 

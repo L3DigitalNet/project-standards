@@ -57,7 +57,7 @@ project-standards spec upgrade docs/specs/my-feature.md --to full --stdout
 
 ## Managed output and CI
 
-Reconciliation manages `.github/workflows/validate-specs.yml`. The caller invokes the reusable workflow at `v5`, passes `.standards/config.toml`, and runs strict linting. The reusable workflow installs the matching `standards-ref`, runs `spec validate`, and optionally runs `spec lint --strict`.
+Reconciliation manages `.github/workflows/validate-specs.yml`. The caller invokes the reusable workflow at `v5` and requests strict linting. Both caller and self-hosted modes run bare `spec validate` and `spec lint --strict` commands; the CLI resolves `.standards/` authority and the selected package without an explicit legacy `--config` override.
 
 Verify the selected state and the reconciled caller:
 

@@ -1583,7 +1583,7 @@ def _execute_migration_proof(
     assert not any(target == ".github/workflows/check.yml" for target, _kind in mutating_actions)
     assert (
         ".github/workflows/validate-markdown-frontmatter.yml",
-        "remove",
+        "update",
     ) in mutating_actions
     assert (".github/workflows/validate-standards.yml", "create") in mutating_actions
     assert (".github/workflows/validate-specs.yml", "update") in mutating_actions
@@ -1624,6 +1624,7 @@ def _execute_migration_proof(
     lock = parse_lock((checkout / ".standards/lock.toml").read_bytes())
     assert lock == preview.reconciliation.next_lock
     config = parse_config((checkout / ".standards/config.toml").read_bytes())
+    assert config.standards["markdown-frontmatter"].config["workflow_mode"] == "self-hosted"
     assert config.standards["markdown-tooling"].config["workflow_mode"] == "self-hosted"
     assert config.standards["project-spec"].config["workflow_mode"] == "self-hosted"
     python_config = config.standards["python-tooling"].config
@@ -1658,8 +1659,18 @@ def _execute_migration_proof(
     assert '"coverage", "combine"' in check_script
     # The root gate becomes meaningful only after Task 11 atomically rewrites the
     # repository's pre-control-plane tests; Task 9 executes both scratch gates instead.
-    assert not (checkout / ".github/workflows/validate-markdown-frontmatter.yml").exists()
+    expected_frontmatter_workflow = (
+        installed / "project_standards/payloads/markdown-frontmatter/1.2/resources/"
+        "self-host-validate-markdown-frontmatter.yml"
+    ).read_bytes()
+    assert (
+        checkout / ".github/workflows/validate-markdown-frontmatter.yml"
+    ).read_bytes() == expected_frontmatter_workflow
     assert (checkout / ".github/workflows/validate-standards.yml").is_file()
+    assert (
+        b"uses: ./.github/workflows/validate-markdown-frontmatter.yml"
+        in (checkout / ".github/workflows/validate-standards.yml").read_bytes()
+    )
     for path in (
         ".github/workflows/format.yml",
         ".github/workflows/lint-markdown.yml",

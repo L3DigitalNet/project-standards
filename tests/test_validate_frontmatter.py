@@ -1030,10 +1030,17 @@ EXAMPLE_FILES = sorted(
 
 def test_standard_docs_do_not_ship_repo_local_frontmatter() -> None:
     def intentional_frontmatter_artifact(path: Path) -> bool:
-        return any(part in {"examples", "templates", "skills"} for part in path.parts) or (
-            path.name == "skill.md"
-            and path.parent.name == "managed"
-            and path.parent.parent.name == "provider-resources"
+        return (
+            any(part in {"examples", "templates", "skills"} for part in path.parts)
+            or (
+                path.name == "skill.md"
+                and path.parent.name == "managed"
+                and path.parent.parent.name == "provider-resources"
+            )
+            or (
+                path.name == "legacy-markdown-frontmatter-skill.md"
+                and path.parent.name == "resources"
+            )
         )
 
     offenders = [

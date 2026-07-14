@@ -298,11 +298,9 @@ Exit codes:
 
 `validate-references` checks ID uniqueness, referential integrity, supersede reciprocity, date ordering, and ADR sequence uniqueness only when enabled:
 
-```yaml
-markdown:
-  frontmatter:
-    references:
-      enabled: true
+```toml
+[standards.markdown-frontmatter.config.references]
+enabled = true
 ```
 
 ## Compatibility

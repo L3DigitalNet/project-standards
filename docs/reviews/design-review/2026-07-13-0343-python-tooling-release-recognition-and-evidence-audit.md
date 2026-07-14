@@ -47,7 +47,7 @@ Older known Python Tooling whole-file signatures are deliberately not all preser
 | Owner | Predecessor path | Required transition |
 | --- | --- | --- |
 | Python Tooling | `.github/workflows/check.yml` | Preserve unknown bytes through consumer-owned intent; never create a unit or lock entry. |
-| Markdown Frontmatter | `.github/workflows/validate-markdown-frontmatter.yml` | Recognize and remove the legacy whole file, then compose the selected contributions at `.github/workflows/validate-standards.yml`. |
+| Markdown Frontmatter | `.github/workflows/validate-markdown-frontmatter.yml` | Recognize and adopt the path as the immutable V5 self-host endpoint, then compose a same-commit local call at `.github/workflows/validate-standards.yml`. |
 | Markdown Tooling | `.github/workflows/format.yml`, `.github/workflows/lint-markdown.yml` | Select self-hosted mode from one complete historical/current cohort and preserve the current frozen files byte-for-byte. |
 | Project Spec | `.github/workflows/validate-specs.yml` | Select self-hosted mode from historical/current classifiers and replace the transitional root workflow in place with the immutable v5 self-host resource. |
 
@@ -89,7 +89,7 @@ This prevents Task 11's instruction, documentation, changelog, test, adoption, h
 ## Review provenance
 
 - A completed user-authorized Fable `xhigh` audit produced CTM-NEW-009 through CTM-NEW-013 and returned **Revision Required**.
-- Independent read-only repository audits then corrected instruction bounded-block semantics, Markdown Frontmatter's remove-and-compose workflow transition, positional signature-test assumptions, historical/current classifier compatibility, and exact retirement-view assertions.
+- Independent read-only repository audits then corrected instruction bounded-block semantics, Markdown Frontmatter's endpoint-adoption-and-composition transition, positional signature-test assumptions, historical/current classifier compatibility, and exact retirement-view assertions.
 - A second Fable `xhigh` delta call was stopped at the user's rate-limit warning. It returned no verdict and is not counted as review evidence.
 - The fully amended delta received an independent read-only adversarial review, including CTM-NEW-014's Git-object-tree, replay, self-exclusion, and post-commit verification contract.
 - A final independent implementation review returned **Revision Required** on six high-severity proof gaps: missing locked/root execution claims, ambient Git authority, diff nondeterminism, ambiguous input framing, self-oracled instruction preservation, and unbound retained digests. Executable remediation produced CTM-NEW-015/016. The same reviewer then returned **Approved**, found no remaining Critical or High defect in those six contracts, and independently passed 12 focused regressions, Ruff, BasedPyright, and hostile `GIT_DIFF_OPTS`/`GIT_INDEX_FILE` canonical-hash probes.

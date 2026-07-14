@@ -941,7 +941,7 @@ git commit -m "docs(authoring): explain ownership relinquishment"
 - Modify: `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`
 - Refresh: `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`
 
-- [ ] **Step 1: Add failing exact-union predecessor-reconstruction tests**
+- [x] **Step 1: Add failing exact-union predecessor-reconstruction tests**
 
 Create a complete pre-intent root-authority overlay. Derive its required path set as the exact union of:
 
@@ -982,7 +982,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py -k 'overlay 
 
 Expected: RED because the exact-union overlay manifest, frozen predecessor files, loader, and reconstruction path do not exist.
 
-- [ ] **Step 2: Implement predecessor reconstruction independent of live authority**
+- [x] **Step 2: Implement predecessor reconstruction independent of live authority**
 
 Add `prepare_legacy_release_checkout(source_root, target)` so it copies the Git-known source tree, removes copied `.standards/` only inside the disposable checkout, removes every manifest-listed path, and restores only entries declared `file`:
 
@@ -1024,7 +1024,7 @@ Use the reconstructed predecessor as the Git patch authority as well as the migr
 
 Define the authority tree from `_git_known_worktree_paths`: tracked current paths plus non-ignored additions, with tracked deletions omitted. Add a mode- and symlink-aware `git_known_file_tree` snapshot helper, and change `mirror_release_tree` to enumerate only that source path set. It must never recurse into or copy `.git/**`, and it must exclude ignored runtime artifacts such as `.venv/`, `.coverage*`, `.pytest_cache/`, `.ruff_cache/`, and `__pycache__/`. Use the authority snapshot—not raw `rglob` output—for post-atomic capture, patch mirroring, replay comparison, and pre/post source equivalence. The release patch must therefore always describe predecessor-to-v5 migration, including removal of `.project-standards.yml`, without repository metadata or execution residue, regardless of the live root's current authority.
 
-- [ ] **Step 3: Add failing intent, schema-currency, installed-provider, and guard tests**
+- [x] **Step 3: Add failing intent, schema-currency, installed-provider, and guard tests**
 
 Define one sparse V2 config object as the source for both legacy-intent rendering and installed-provider pre-alignment:
 
@@ -1076,7 +1076,7 @@ Before the migration test, add focused failing contracts that:
 - recompute the exact frozen package-owned workflow and instruction digests and require membership in their named legacy-signature histories without removing older values; explicitly exclude consumer-owned unknown `check.yml` from this membership rule and prove its intent-authorized preserve path instead;
 - require each frozen Python Tooling shared-container digest used by this release to appear in both the corresponding known history and `_PRESERVED_CONTAINER_DIGESTS`;
 - bind Markdown Tooling's historical and current paired self-host cohorts plus Project Spec's historical/current self-host classifier set; prove exact historical/current matches select self-hosted, caller histories remain caller, and partial or cross-generation Markdown pairs fail; and
-- prove Markdown Frontmatter recognizes and removes its frozen legacy workflow before composing `.github/workflows/validate-standards.yml`; prove the frozen Markdown Tooling workflows equal their selected self-host resources; and prove Project Spec's frozen transitional workflow intentionally differs and is replaced in place by its selected self-host resource.
+- prove Markdown Frontmatter recognizes its frozen workflow, selects self-hosted mode, updates that path to the immutable V5 endpoint, and composes a same-commit local call in `.github/workflows/validate-standards.yml`; prove the frozen Markdown Tooling workflows equal their selected self-host resources; and prove Project Spec's frozen transitional workflow intentionally differs and is replaced in place by its selected self-host resource.
 
 Before implementing the guard, add tests that require this exact sequence:
 
@@ -1102,7 +1102,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py -k 'signatur
 
 Expected on first execution: RED because the task guard, release-signature currency, preserved-container coherence, classifier synchronization, and comparator grammar do not yet satisfy the frozen predecessor.
 
-- [ ] **Step 4: Implement the two fail-closed alignment and migration-recognition contracts**
+- [x] **Step 4: Implement the two fail-closed alignment and migration-recognition contracts**
 
 Add a frozen result type and one helper used by both the disposable and live release paths:
 
@@ -1238,11 +1238,11 @@ Load the same installed Python Tooling 1.1 payload and schema-resolved effective
 
 Then append the exact CTM-NEW-010 signature digests; add the frozen `AGENTS.md`, frozen `CLAUDE.md`, and deterministic post-task-alignment digests to Python Tooling's preserved set as specified by CTM-NEW-009/012; implement Markdown Tooling's two explicit complete self-host cohorts and Project Spec's historical/current classifier set; and apply only the comparator item-pattern correction from CTM-NEW-013. Keep every older signature. Do not implement Markdown classifier membership as independent flat sets: only exact historical or current pairs select self-hosted, so mixed-generation pairs cannot pass. Update tests that select signatures positionally: `test_markdown_tooling_partial_self_host_pair_blocks_migration`, `test_markdown_tooling_migration_maps_yaml_and_exact_v1_artifacts`, `test_project_spec_declares_the_exact_rendered_v4_workflow_only`, and `test_project_spec_migration_claims_only_its_semantic_config_block_and_workflow`. Bind caller, historical self-host, and current self-host cases to explicit resource/root digests rather than `[0]`/`[-1]`, then add mixed/partial refusal. Refresh edited resource digests, each of the four family aggregate digests, catalog-5 entries, and activation expectations. Verify source projections and run the focused comparator, signature/classifier/coherence, reconstruction, package, and graph tests before executing the disposable preview.
 
-- [ ] **Step 5: Separate executable proof from retained-evidence currency**
+- [x] **Step 5: Separate executable proof from retained-evidence currency**
 
 Remove `assert_release_evidence_current()` from the migration/replay test's preamble. Have the proof helper return the release patch plus config/catalog/lock digests; keep evidence-currency assertions in a separate test so TDD can execute migration before retained prose is refreshed.
 
-- [ ] **Step 6: Run the post-implementation disposable proof**
+- [x] **Step 6: Run the post-implementation disposable proof**
 
 Run:
 
@@ -1252,7 +1252,7 @@ uv run pytest tests/package_compatibility/test_release_candidate.py::test_dispos
 
 Expected: frozen reconstruction, both installed-provider pre-alignments, migration, apply, locked sync, and fixed-point reconciliation pass independently of retained-evidence currency.
 
-- [ ] **Step 7: Complete config, preview, dependency, workflow, script, and lock assertions**
+- [x] **Step 7: Complete config, preview, dependency, workflow, script, and lock assertions**
 
 Assert:
 
@@ -1277,7 +1277,7 @@ Also prove all markers survive. The JSON CLI preview exposes the exact target, d
 
 Reject every Python Tooling whole-file remove/retirement claim against `AGENTS.md`, `CLAUDE.md`, `.vscode/settings.json`, or `.vscode/tasks.json`; require all four paths absent from `planner.retired_targets` and `legacy_removals`. Do not reject `AGENTS.md` and `CLAUDE.md` from `planner.retired_content`: each entry is the complete frozen instruction file after Agent Handoff's exact recognized legacy bounded block has been stripped, not the block bytes themselves. Require the entry to omit both legacy markers and be smaller than the frozen file. Require the post-apply bytes to begin with that exact `retired_content` residual; inspect the suffix with `MarkdownBlockAdapter` and require it to consist only of one exact current Agent Handoff, Markdown Tooling, and Python Tooling provider envelope plus adapter-inserted newline separators. This avoids using the adapter's removal operation as an equality oracle, because removal deliberately consumes one separator newline. Add a regression proving older standard-owned Python Tooling whole-file signatures keep their existing retirement behavior rather than broadening preservation to all known history.
 
-Require the guarded `.vscode/tasks.json` bytes to remain unchanged by apply and every non-`check` task plus `/version` to remain equal to the frozen predecessor. Require Markdown Frontmatter's preview to remove `.github/workflows/validate-markdown-frontmatter.yml` and compose `.github/workflows/validate-standards.yml`; require both Markdown Tooling workflows to remain byte-identical; and require Project Spec's migration config to select `workflow_mode = "self-hosted"`, its preview to update `.github/workflows/validate-specs.yml`, and the applied bytes to equal the immutable self-host resource. Record all three workflow-effect categories explicitly in the changed-path ledger.
+Require the guarded `.vscode/tasks.json` bytes to remain unchanged by apply and every non-`check` task plus `/version` to remain equal to the frozen predecessor. Require Markdown Frontmatter's migration config to select `workflow_mode = "self-hosted"`, its preview to update `.github/workflows/validate-markdown-frontmatter.yml` to the immutable V5 endpoint, and its composed job in `.github/workflows/validate-standards.yml` to call that endpoint by same-commit local path; require both Markdown Tooling workflows to remain byte-identical; and require Project Spec's migration config to select `workflow_mode = "self-hosted"`, its preview to update `.github/workflows/validate-specs.yml`, and the applied bytes to equal the immutable self-host resource. Record all workflow-effect categories explicitly in the changed-path ledger.
 
 Locate both Python Tooling guarded units in `preview.reconciliation.next_lock`: `pyproject.toml` / `key:/dependency-groups/dev` and `.vscode/tasks.json` / `keyed-set:/tasks#label=check`. Require each semantic digest to equal its guard's `after_semantic_digest`, its owner to be `python-tooling`, and its provenance to be `provider`.
 
@@ -1303,7 +1303,7 @@ Expected: the disposable lock is current, its locked offline sync passes, and bo
 
 Task 9 must not execute the migrated repository-root `scripts/check.py` against the otherwise pre-atomic checkout. Its pytest phase necessarily consumes root dogfood, version, workflow, and legacy-CLI tests that remain bound to `.project-standards.yml` until Task 11 performs their atomic transition. The first literal attempt proved this boundary by reaching 2,586 passing tests but failing the expected pre/post-authority assertions. Task 9 instead requires the migrated script bytes to equal the installed provider output, explicitly asserts the parallel `coverage erase` / `run --parallel-mode` / `combine` sequence, executes both complete reconciled gates in isolated scratch consumers, and completes locked offline sync in both reconstructed migration paths. Task 11 executes the migrated root gate only after every release-only root test, document, workflow, and version edit is final.
 
-- [ ] **Step 8: Prove pre-atomic and post-atomic replay equivalence**
+- [x] **Step 8: Prove pre-atomic and post-atomic replay equivalence**
 
 Run the proof first from the pre-atomic source tree. Use its completed migrated checkout—not a hand-built approximation—as the post-atomic source shape, Git-initialize and commit that authority tree, reconstruct it through the same overlay, and run the proof again. Git-initialize and commit each reconstructed predecessor before deriving its `source_snapshot`, `patch_checkout`, and replay baseline. Before any digest comparison, require `git_known_file_tree(predecessor_a) == git_known_file_tree(predecessor_b)`, including every frozen managed output and every live-copied all-`create-only` target. Both paths must restore the same frozen `pyproject.toml`, `uv.lock`, and `.vscode/tasks.json`; bind the same dev-group source digest, task source/post-alignment digests, and reviewed pre-write values; perform both guarded mutations; refresh/check/sync the lock offline; produce the same changed-path set and release patch/config/catalog/lock digests; replay that patch cleanly against a fresh copy of the same reconstructed predecessor; and reach the same fixed point. Compare both guards' complete result records, including next-lock semantic/provenance equality. Compare replay with the completed checkout through `git_known_file_tree`; ignored environments, caches, bytecode, and coverage files are disposable execution residue and must be absent from mirroring and evidence. Independently derive each expected instruction residual by slicing the sole frozen legacy begin line through the end-line terminator and require exact frozen prefix-plus-suffix equality; planner output is not its own preservation oracle. Reject a post-atomic path that attempts to use its already-aligned live root bytes, leaked non-signature materialized outputs, repository metadata, ignored runtime artifacts, or a raw unified-root patch baseline without restoration.
 
@@ -1325,13 +1325,13 @@ source_root = Path(os.environ.get("RELEASE_REPLAY_SOURCE_ROOT", _ROOT))
 
 Every fixture, overlay, catalog, and predecessor read in the proof must resolve from `source_root`; imported test/helper code may remain the live implementation under test. Ordinary Task 9 TDD runs leave the variable unset and may exercise the current worktree. When the override is set, require it to be an independent clean repository whose committed Git-known tree equals the recorded pre-atomic object tree; run sanitized `fsck`, reject both on-disk and ambient object borrowing, and add focused negative tests for non-Git, dirty, mismatched, or externally backed overrides. Task 11 sets the override to `$RELEASE_PREDECESSOR_ROOT`.
 
-- [ ] **Step 9: Reconcile implementation traceability before evidence hashing**
+- [x] **Step 9: Reconcile implementation traceability before evidence hashing**
 
 Mark CP01/BA02 FR-037 and CP01 FR-038 Passing only after their focused, source/wheel, and lifecycle tests pass. Revise CP01 from 0.10 to 0.11 and BA02 from 0.11 to 0.12 as evidence-only updates, set `last_reviewed` to 2026-07-13, append revision-history rows, and synchronize the revision labels in `docs/handoff/specs-plans.md`; keep CP01's live-root dogfood item pending until Task 11. Update STATUS, TODO, handoff, and the July session ledger to leave the complete gate and atomic migration as the remaining P0 work. Finalize every non-evidence documentation and specification edit before calculating `release_input_digest()`. Do not edit these release-input files again before the retained-evidence test is green.
 
-- [ ] **Step 10: Refresh retained evidence from the stable pre-atomic tree**
+- [x] **Step 10: Refresh retained evidence from the stable pre-atomic tree**
 
-Regenerate the retained evidence's preliminary migration procedure, migration changed-path ledger, workflow facts, container-preservation facts, and release-input/migration-patch/config/catalog/lock digests from the completed executable proof. The procedure must name the frozen complete-root overlay, both installed-provider pre-alignments, signature/classifier currency, no Python Tooling whole-file retirement of the four shared containers, independently derived exact legacy-block-to-three-current-block instruction normalization, real-migrated-tree post-atomic reconstruction, locked offline sync, byte identity for consumer-owned `check.yml` and both Markdown Tooling workflows, Markdown Frontmatter's legacy-workflow removal plus `validate-standards.yml` composition, Project Spec's in-place self-host workflow replacement, and no `check.yml` action/unit/lock entry. Remove the obsolete universal changed-workflow or universal workflow-identity claim. Label this digest and ledger **migration patch**, not complete atomic release content; Task 11 replaces the canonical release-content digest and ledger after all release-only edits.
+Regenerate the retained evidence's preliminary migration procedure, migration changed-path ledger, workflow facts, container-preservation facts, and release-input/migration-patch/config/catalog/lock digests from the completed executable proof. The procedure must name the frozen complete-root overlay, both installed-provider pre-alignments, signature/classifier currency, no Python Tooling whole-file retirement of the four shared containers, independently derived exact legacy-block-to-three-current-block instruction normalization, real-migrated-tree post-atomic reconstruction, locked offline sync, byte identity for consumer-owned `check.yml` and both Markdown Tooling workflows, Markdown Frontmatter's in-place V5 self-host endpoint plus same-commit `validate-standards.yml` composition, Project Spec's in-place self-host workflow replacement, and no `check.yml` action/unit/lock entry. Remove the obsolete universal changed-workflow or universal workflow-identity claim. Label this digest and ledger **migration patch**, not complete atomic release content; Task 11 replaces the canonical release-content digest and ledger after all release-only edits.
 
 `release_input_digest()` is domain-separated and hashes each Git-known path, mode, kind, and arbitrary binary content as an unsigned 64-bit length-prefixed field; a regression proves the old NUL-framing collision cannot recur. The retained document contains exactly one fenced, machine-readable migration record with schema version, release-input digest, migration patch digest/ledger, both complete guard records, and all three control-plane digests. Run the slow proof once with `PROJECT_STANDARDS_REFRESH_RELEASE_EVIDENCE=1` to emit that record without accepting stale retained bytes, update only the evidence file, then rerun without the override so the executed result must exactly equal the parsed retained record. The separate fast evidence test validates the record structure and release-input currency. Because the evidence file is excluded from its own framed input digest, the evidence-only correction does not invalidate the proof. Then run:
 
@@ -1342,12 +1342,22 @@ uv run pytest tests/package_compatibility/test_catalog_matrix.py -q
 
 Expected: both predecessor reconstructions, both guarded mutations, signature/classifier/container coherence, disposable migration, locked sync, both checker oracles, fixed point, retained-evidence currency, source/wheel matrix, and performance rows pass. The evidence file is excluded from its own input digest, so the final evidence-only correction does not invalidate the proof.
 
-- [ ] **Step 11: Commit the release proof**
+- [x] **Step 11: Commit the release proof**
 
 ```bash
 git add catalogs/5.toml standards/markdown-frontmatter standards/markdown-tooling standards/project-spec standards/python-tooling src/project_standards/payloads tests/fixtures/package_compatibility/legacy/release-root tests/package_contract tests/package_compatibility/release_candidate.py tests/package_compatibility/test_release_candidate.py docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md docs/specs/2026-07-10-consumer-standards-control-plane-spec.md docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md docs/STATUS.md docs/TODO.md docs/handoff
 git commit -m "test(v5): preserve optimized Python gate in migration"
 ```
+
+### Audited release-input checkpoint before Task 10
+
+Task 9 is committed at `7d4d5fa`, but its retained evidence is preliminary because the following audited release inputs must change first:
+
+- [x] Make Markdown Frontmatter's first `main` release run self-hosted and pre-tag safe while retaining the public `workflow_call` path for published consumers.
+- [x] Remove Project Specification's explicit legacy config override from its generated caller and reusable workflow commands under unified authority.
+- [x] Reconcile current shipped package, CLI, family, and release guidance without changing frozen legacy resources or historical migration records.
+- [x] Regenerate every affected payload, family, catalog, schema, projection, bundle, and regression digest.
+- [ ] Repeat Task 9's exact predecessor and two-path migration proof, replace the retained preliminary evidence, obtain an independent release-critical review, and commit a clean pre-atomic checkpoint.
 
 ### Task 10: Verify integrity metadata and run the implementation gate
 
@@ -1356,7 +1366,7 @@ git commit -m "test(v5): preserve optimized Python gate in migration"
 - Verify generated digests in: Markdown Frontmatter 1.2, Markdown Tooling 1.2, Project Spec 1.1, Python Tooling 1.1, Standard Bundle Authoring 2.0, their family indexes, and `catalogs/5.toml`
 - Verify projection: `src/project_standards/payloads/**`
 
-- [ ] **Step 1: Check schemas, payload projection, and package integrity**
+- [x] **Step 1: Check schemas, payload projection, and package integrity**
 
 Run:
 
@@ -1432,7 +1442,7 @@ Run `git status --short` and compare it with the recorded pre-gate status. Task 
 - Modify only at release time: `CHANGELOG.md`
 - Modify or verify at release time: `meta/versioning.md`, `docs/STATUS.md`, `docs/TODO.md`, `docs/handoff/state.md`, `docs/handoff/specs-plans.md`, `docs/handoff/sessions/2026-07.md`
 - Verify or modify at release time: `README.md`, `UPGRADING.md`
-- Remove at release time: `.github/workflows/validate-markdown-frontmatter.yml`
+- Replace at release time: `.github/workflows/validate-markdown-frontmatter.yml` with the V5 self-host endpoint
 - Create/compose at release time: `.github/workflows/validate-standards.yml`
 - Preserve at release time: `.github/workflows/check.yml`, `.github/workflows/format.yml`, `.github/workflows/lint-markdown.yml`
 - Replace at release time: `.github/workflows/validate-specs.yml`
@@ -1518,7 +1528,7 @@ test "$json_status" -eq 1
 
 Exit 1 is the expected preview result because applicable migration work remains; any other exit is a failure. Assert the captured JSON preview and the typed plan are applicable with no `CP-CONSUMER-CONFLICT`; the `check.yml` claim has the exact path, observed digest, `intent_pointer`, and consumer-owned/preserve disposition. Render its typed migration report with `render_migration_report` and require the not-semantically-validated human label; do not require the ordinary human CLI action list to duplicate claim fields. Prove there is no `check.yml` action/unit/lock entry and the parallel coverage/script rendering is present.
 
-Require no Python Tooling whole-file remove/retirement claim against `AGENTS.md`, `CLAUDE.md`, `.vscode/settings.json`, or `.vscode/tasks.json`; require all four absent from `planner.retired_targets` and `legacy_removals`. For each instruction path, require `retired_content` to equal the complete frozen file after only Agent Handoff's exact recognized legacy bounded block is stripped. Require Markdown Frontmatter to remove its recognized legacy workflow and compose `validate-standards.yml`; require both Markdown Tooling workflows to remain byte-identical; and require Project Spec to select self-hosted mode and preview the documented in-place replacement of transitional `.github/workflows/validate-specs.yml`. Locate both guarded next-lock units and require Python Tooling ownership, provider provenance, and semantic digests equal to their respective guard results.
+Require no Python Tooling whole-file remove/retirement claim against `AGENTS.md`, `CLAUDE.md`, `.vscode/settings.json`, or `.vscode/tasks.json`; require all four absent from `planner.retired_targets` and `legacy_removals`. For each instruction path, require `retired_content` to equal the complete frozen file after only Agent Handoff's exact recognized legacy bounded block is stripped. Require Markdown Frontmatter to select self-hosted mode, replace its recognized legacy workflow in place with the immutable V5 endpoint, and compose a same-commit local call in `validate-standards.yml`; require both Markdown Tooling workflows to remain byte-identical; and require Project Spec to select self-hosted mode and preview the documented in-place replacement of transitional `.github/workflows/validate-specs.yml`. Locate both guarded next-lock units and require Python Tooling ownership, provider provenance, and semantic digests equal to their respective guard results.
 
 - [ ] **Step 5: Apply the reviewed v5 migration atomically**
 
@@ -1532,7 +1542,7 @@ uv lock --check --offline
 uv sync --locked --all-groups --offline
 ```
 
-The extracted-distribution apply must exit 0, create the three `.standards/` files, replace root `scripts/check.py` with the non-default V2 rendering, preserve the optimized consumer-owned workflow bytes, preserve the guarded task container, avoid Python Tooling whole-file retirement of any instruction/shared container, perform the reviewed Agent Handoff bounded-block transition, remove and replace Markdown Frontmatter's legacy workflow with composed `validate-standards.yml`, replace Project Spec's documented transitional workflow in place, and remove `.project-standards.yml` in the same reviewed commit. Normalize both instruction files through the exact old/new block removals defined in Task 9, require equal residual bytes, and require exactly one byte-identical current block from each provider. The refreshed `uv.lock` must retain `pyright==1.1.411`; locked offline sync must pass; `.standards/config.toml` and the provider-rendered dev group must retain the same exact requirement; and `.standards/lock.toml` must own both guarded units with their previewed semantic digests and provider provenance.
+The extracted-distribution apply must exit 0, create the three `.standards/` files, replace root `scripts/check.py` with the non-default V2 rendering, preserve the optimized consumer-owned workflow bytes, preserve the guarded task container, avoid Python Tooling whole-file retirement of any instruction/shared container, perform the reviewed Agent Handoff bounded-block transition, replace Markdown Frontmatter's legacy workflow in place with the immutable V5 self-host endpoint and compose its local caller in `validate-standards.yml`, replace Project Spec's documented transitional workflow in place, and remove `.project-standards.yml` in the same reviewed commit. Normalize both instruction files through the exact old/new block removals defined in Task 9, require equal residual bytes, and require exactly one byte-identical current block from each provider. The refreshed `uv.lock` must retain `pyright==1.1.411`; locked offline sync must pass; `.standards/config.toml` and the provider-rendered dev group must retain the same exact requirement; and `.standards/lock.toml` must own both guarded units with their previewed semantic digests and provider provenance.
 
 - [ ] **Step 6: Retire only the obsolete root-script dogfood mapping**
 
@@ -1582,7 +1592,7 @@ Expected: both BasedPyright and Pyright selections pass after the live atomic tr
 
 Export `RELEASE_REPLAY_SOURCE_ROOT="$RELEASE_PREDECESSOR_ROOT"` and rerun the Task 9 disposable proof, never sourcing it from the now-finalized live root. It must restore every frozen root-materialization file and absence before versioning, intent injection, and both guarded mutations; prove every excluded all-`create-only` target is the exact pre-atomic committed byte; use the first completed migrated checkout as the second source shape; require byte-identical predecessor trees; and then require equivalent guard results, changed paths, and **migration** patch/config/catalog/lock digests. An already-aligned shortcut, dirty-root source, or leaked v5/release-finalization output is a failure.
 
-Then rerun Task 10's complete gate with the document commands changed to `project-standards validate`, `project-standards spec validate`, and `project-standards spec lint --strict` without the legacy `--config`. Also run the exact release checklist in `meta/versioning.md`. Confirm the consumer-owned workflow and both Markdown Tooling workflows are byte-identical; Markdown Frontmatter's legacy workflow is absent and `validate-standards.yml` is composed; Project Spec's workflow equals its selected immutable self-host resource; instruction residual bytes survive the exact block transition; the guarded task bytes survive apply; the root script is parallel-aware; `.standards/` is complete; `.project-standards.yml` is absent; `pyright==1.1.411` survives in config/dev-group/lock; locked offline sync passes; and fixed-point reconciliation contains no mutating actions.
+Then rerun Task 10's complete gate with the document commands changed to `project-standards validate`, `project-standards spec validate`, and `project-standards spec lint --strict` without the legacy `--config`. Also run the exact release checklist in `meta/versioning.md`. Confirm the consumer-owned workflow and both Markdown Tooling workflows are byte-identical; Markdown Frontmatter's endpoint equals its selected immutable self-host resource and `validate-standards.yml` contains the local caller; Project Spec's workflow equals its selected immutable self-host resource; instruction residual bytes survive the exact block transition; the guarded task bytes survive apply; the root script is parallel-aware; `.standards/` is complete; `.project-standards.yml` is absent; `pyright==1.1.411` survives in config/dev-group/lock; locked offline sync passes; and fixed-point reconciliation contains no mutating actions.
 
 After the gate leaves no new diff, call `complete_release_content_patch(RELEASE_PREDECESSOR_ROOT, Path("."))`. Require its changed-path ledger to equal the Git-known live changes relative to `$PRE_ATOMIC_HEAD`, excluding only `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`; require binary replay to a fresh predecessor tree to equal the final live Git-known tree under the same exclusion; and record the complete release-content patch digest and ledger separately from Task 9's migration-patch digest and ledger. The helper must obtain both artifacts through `canonical_release_diff`, with its fixed diff flags, ref ordering, and evidence pathspec ordering. Calculate `release_input_digest()` from the final live tree, refresh the retained evidence with the complete release facts, then run the separate evidence-currency test plus Prettier, markdownlint, managed-document validation, and `git diff --check` against the final evidence change. After these checks pass, record `VALIDATED_EVIDENCE_SHA256` from the exact worktree evidence bytes. Because evidence is the only excluded path, that final evidence write changes neither complete-patch nor release-input digest. Make no non-evidence edit afterward.
 

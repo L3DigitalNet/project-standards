@@ -11,6 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+import yaml
 from jsonschema import Draft202012Validator
 
 from project_standards.control_plane.cli import build_planner_request
@@ -220,6 +221,7 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
         "contract_version": "1.1",
         "schema": "markdown-frontmatter",
         "schema_path": None,
+        "workflow_mode": "caller",
         "required": True,
         "include": ["README.md", "docs/**/*.md"],
         "exclude": [
@@ -293,6 +295,83 @@ def test_frontmatter_fresh_plan_composes_workflow_and_managed_skill(tmp_path: Pa
     )
 
 
+@pytest.mark.parametrize(
+    ("workflow_mode", "resource_name", "expected_reference"),
+    [
+        pytest.param(
+            "caller",
+            "workflow-job.yml",
+            "L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5",
+            id="published-ref",
+        ),
+        pytest.param(
+            "self-hosted",
+            "workflow-job.self-hosted.yml",
+            "./.github/workflows/validate-markdown-frontmatter.yml",
+            id="pre-tag-local-ref",
+        ),
+    ],
+)
+def test_frontmatter_workflow_modes_render_published_and_pretag_paths(
+    tmp_path: Path,
+    workflow_mode: str,
+    resource_name: str,
+    expected_reference: str,
+) -> None:
+    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
+    payload = InstalledPayload(
+        _PAYLOAD,
+        manifest,
+        validate_payload_integrity(_PAYLOAD, manifest),
+    )
+
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=tmp_path,
+            payload=payload,
+            standard_id="markdown-frontmatter",
+            version=manifest.payload.version,
+            provider_id="render-workflow-job",
+            operation=ProviderOperation.RENDER,
+            effective_config={"workflow_mode": workflow_mode},
+            snapshots={},
+        )
+    )
+
+    content = result.content
+    assert content == (_PAYLOAD / resource_name).read_bytes()
+    assert content is not None
+    assert expected_reference.encode() in content
+    if workflow_mode == "self-hosted":
+        assert b"@v5" not in content
+
+
+def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
+    root_workflow = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
+    public_resource = _PAYLOAD / "resources/self-host-validate-markdown-frontmatter.yml"
+
+    root = yaml.safe_load(root_workflow.read_text(encoding="utf-8"))
+    public = yaml.safe_load(public_resource.read_text(encoding="utf-8"))
+    for event in ("push", "pull_request"):
+        root_paths = root[True][event]["paths"]
+        assert ".project-standards.yml" in root_paths
+    assert set(public[True]) == {"workflow_call"}
+    assert root["permissions"] == public["permissions"]
+    assert root["jobs"] == public["jobs"]
+
+    for workflow in (root, public):
+        call = workflow[True]["workflow_call"]
+        assert set(call["inputs"]) == {"standards-ref"}
+        assert call["inputs"]["standards-ref"]["default"] == "v5"
+        scripts = [
+            str(step.get("run", ""))
+            for step in workflow["jobs"]["validate"]["steps"]
+            if "project-standards validate" in str(step.get("run", ""))
+        ]
+        assert len(scripts) == 2
+        assert all("--config" not in script for script in scripts)
+
+
 def test_frontmatter_declares_version_selected_validate_inspect_and_fix_providers() -> None:
     manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
     providers = {provider.id: provider for provider in manifest.providers}
@@ -313,6 +392,11 @@ def test_frontmatter_declares_version_selected_validate_inspect_and_fix_provider
             "plan",
             ProviderEffect.MIGRATION_REPORT,
         ),
+        "render-workflow-job": (
+            ProviderOperation.RENDER,
+            "plan",
+            ProviderEffect.CONTENT,
+        ),
         "validate-frontmatter": (
             ProviderOperation.VALIDATE,
             "validate",
@@ -321,7 +405,12 @@ def test_frontmatter_declares_version_selected_validate_inspect_and_fix_provider
     }
     assert providers["validate-frontmatter"].resources == ["frontmatter-schema"]
     assert providers["id-next"].resources == ["frontmatter-schema"]
+    assert providers["render-workflow-job"].resources == [
+        "workflow-job-caller",
+        "workflow-job-self-hosted",
+    ]
     assert manifest.migrations[0].affected == [
+        "artifact:self-host-workflow",
         "artifact:skill",
         "artifact:skill-new-doc-id",
         "artifact:skill-openai",
@@ -469,6 +558,7 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
     assert report.package.config == {
         "contract_version": "1.1",
         "schema": "markdown-frontmatter",
+        "workflow_mode": "self-hosted",
         "required": True,
         "include": ["docs/**/*.md"],
         "exclude": ["**/*.template.md", "README.md"],
@@ -485,11 +575,11 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
     assert {(claim.signature_id, claim.disposition.value) for claim in report.claims} == {
         ("legacy-skill", "adopt"),
         ("legacy-skill-script", "adopt"),
-        ("legacy-workflow", "remove"),
+        ("legacy-workflow", "adopt"),
     }
 
 
-def test_frontmatter_workflow_signature_history_includes_current_root() -> None:
+def test_frontmatter_workflow_signature_history_includes_current_v4_release_root() -> None:
     manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
     signatures = {signature.id: signature for signature in manifest.legacy_signatures}
 
@@ -498,7 +588,13 @@ def test_frontmatter_workflow_signature_history_includes_current_root() -> None:
         _CURRENT_WORKFLOW_DIGEST,
     }
     assert (
-        f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-markdown-frontmatter.yml').read_bytes()).hexdigest()}"
+        "sha256:"
+        + hashlib.sha256(
+            (
+                _ROOT
+                / "tests/fixtures/package_compatibility/legacy/release-root/files/.github/workflows/validate-markdown-frontmatter.yml"
+            ).read_bytes()
+        ).hexdigest()
         == _CURRENT_WORKFLOW_DIGEST
     )
 
@@ -524,9 +620,17 @@ markdown:
     workflow = repo / ".github/workflows/validate-markdown-frontmatter.yml"
     workflow.parent.mkdir(parents=True)
     shutil.copy2(_LEGACY_WORKFLOW, workflow)
-    legacy_skill = _FAMILY / "skills/markdown-frontmatter"
     installed_skill = repo / ".agents/skills/markdown-frontmatter"
-    shutil.copytree(legacy_skill, installed_skill)
+    installed_skill.mkdir(parents=True)
+    shutil.copy2(
+        _PAYLOAD / "resources/legacy-markdown-frontmatter-skill.md",
+        installed_skill / "SKILL.md",
+    )
+    (installed_skill / "scripts").mkdir()
+    shutil.copy2(
+        _FAMILY / "skills/markdown-frontmatter/scripts/new-doc-id",
+        installed_skill / "scripts/new-doc-id",
+    )
 
     plan = plan_legacy_migration(repo, distribution, "5")
 
@@ -544,7 +648,13 @@ markdown:
     result = apply_legacy_migration(plan)
     assert result.success, result
     assert not (repo / ".project-standards.yml").exists()
-    assert not workflow.exists()
+    assert (
+        workflow.read_bytes()
+        == (_PAYLOAD / "resources/self-host-validate-markdown-frontmatter.yml").read_bytes()
+    )
+    composed = repo / ".github/workflows/validate-standards.yml"
+    assert b"./.github/workflows/validate-markdown-frontmatter.yml" in composed.read_bytes()
+    assert b"@v5" not in composed.read_bytes()
     assert (installed_skill / "SKILL.md").read_bytes() == (
         _PAYLOAD / "skills/markdown-frontmatter/SKILL.md"
     ).read_bytes()
@@ -552,7 +662,7 @@ markdown:
         _PAYLOAD / "skills/markdown-frontmatter/scripts/new-doc-id"
     ).read_bytes()
     assert (installed_skill / "agents/openai.yaml").read_bytes() == (
-        legacy_skill / "agents/openai.yaml"
+        _PAYLOAD / "skills/markdown-frontmatter/agents/openai.yaml"
     ).read_bytes()
     before = {
         path.relative_to(repo).as_posix(): path.read_bytes()
@@ -601,7 +711,20 @@ markdown:
     workflow.parent.mkdir(parents=True)
     shutil.copy2(_LEGACY_WORKFLOW, workflow)
     installed_skill = repo / ".agents/skills/markdown-frontmatter"
-    shutil.copytree(_FAMILY / "skills/markdown-frontmatter", installed_skill)
+    installed_skill.mkdir(parents=True)
+    shutil.copy2(
+        _PAYLOAD / "resources/legacy-markdown-frontmatter-skill.md",
+        installed_skill / "SKILL.md",
+    )
+    (installed_skill / "scripts").mkdir()
+    shutil.copy2(
+        _FAMILY / "skills/markdown-frontmatter/scripts/new-doc-id",
+        installed_skill / "scripts/new-doc-id",
+    )
+
+    baseline_plan = plan_legacy_migration(repo, distribution, "5")
+    assert baseline_plan.applicable, baseline_plan.findings
+
     changed = installed_skill / modified_path
     changed.write_bytes(changed.read_bytes() + b"\nlocal modification\n")
     before = {

@@ -41,21 +41,21 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:88d8f023c6bedb04337ca4e4951b0b2cd5bd546c9b6dcf8905133c3e795e8391"
+digest = "sha256:f14ca521907ec62b6ad9a5856dcfcc5c22a2289fb882aca8100ad67998b2a65a"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:bf1dc54fcb652f58536d438c913fcf6e94c519386f4c474417a052578d0ddb84"
+digest = "sha256:74905f10c0879e0b33a079211d698644a4580be31911129dbce55058b3cc8c12"
 
 [[resources]]
 id = "structure"
 role = "standard-reference"
 path = "structure.md"
 media_type = "text/markdown"
-digest = "sha256:3cae9ada75f381ce8b11495ed4f0c4409660fe25479262f30b42d587c29aa299"
+digest = "sha256:e47af604f7798089f1c8f7bc0d0b70f664937d95931b2654fb64cb550c6dd8ce"
 
 [[resources]]
 id = "field-values"
@@ -149,6 +149,13 @@ media_type = "text/markdown"
 digest = "sha256:7a04528f6588e947a8c1e0229c04f39a8acdd8da86263e66f0286aaa626a0a52"
 
 [[resources]]
+id = "legacy-skill"
+role = "legacy-reference"
+path = "resources/legacy-markdown-frontmatter-skill.md"
+media_type = "text/markdown"
+digest = "sha256:b4bbac003ee8f0a30dfeae892c145a53bc6002ad162c85a0834553fefd9093a2"
+
+[[resources]]
 id = "workflow-caller"
 role = "workflow-template"
 path = "validate-markdown-frontmatter.caller.yml"
@@ -156,18 +163,32 @@ media_type = "application/yaml"
 digest = "sha256:c45e0a4a5673841add51cfecb988f80360bbb43f8d91da07a76589d54f1774b0"
 
 [[resources]]
+id = "workflow-job-caller"
+role = "provider-resource"
+path = "workflow-job.yml"
+media_type = "application/yaml"
+digest = "sha256:c3e9fce5de356b728481c565f1262f0421b1eb9652018f0022a741ba48fdd1c0"
+
+[[resources]]
+id = "workflow-job-self-hosted"
+role = "provider-resource"
+path = "workflow-job.self-hosted.yml"
+media_type = "application/yaml"
+digest = "sha256:ed9d0ef8a515d2409bf2f916675de4848cf4311a5a266606fc5045c9d3b7b403"
+
+[[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/frontmatter.py"
 media_type = "text/x-python"
-digest = "sha256:fb042d7e53fb43e205bb1b7866b274f49324d5f07f8caa6b20daef46546f38c7"
+digest = "sha256:badcc3b5d5b1f75846d5d6232e1e1986ccb1a9776ec97b5a2ac555b36dc62e79"
 
 [[resources]]
 id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:f899768b4c99449705d8f8452d194baa02bb40b07adeb6859f3322fdcb4aea50"
+digest = "sha256:a889ccc0634aeeee94efc2dec3a84eacb260c79fcc9b1f62c4a21f01e85e4812"
 
 [[resources]]
 id = "provider-findings"
@@ -215,7 +236,7 @@ policy = "managed"
 id = "skill"
 target = ".agents/skills/markdown-frontmatter/SKILL.md"
 source = "skills/markdown-frontmatter/SKILL.md"
-digest = "sha256:b60815276714957c4b090328c1735fd78794c31045f9f6c7f624179d496de777"
+digest = "sha256:a7a70081a9e3de212651e4fa8b53505761a8f7ba601549c1e06a2d343d7cb682"
 policy = "managed"
 
 [[artifacts]]
@@ -232,6 +253,14 @@ source = "skills/markdown-frontmatter/scripts/new-doc-id"
 digest = "sha256:cd35b1bcbd0630e18c9560aa40e579555204918f26b73c9da7ae3f0d48958f95"
 policy = "managed"
 mode = "0755"
+
+[[artifacts]]
+id = "self-host-workflow"
+target = ".github/workflows/validate-markdown-frontmatter.yml"
+source = "resources/self-host-validate-markdown-frontmatter.yml"
+digest = "sha256:d60ddc267153fc3f920ef6bb3bb85153d9562677e3d6e83d2a6361589cecbfbc"
+policy = "managed"
+when_any = [{ option = "workflow_mode", equals = "self-hosted" }]
 
 [[contributions]]
 id = "workflow-name"
@@ -259,8 +288,7 @@ target = ".github/workflows/validate-standards.yml"
 adapter = "yaml"
 scope = "key:/jobs/frontmatter"
 policy = "managed"
-source = "workflow-job.yml"
-source_digest = "sha256:c3e9fce5de356b728481c565f1262f0421b1eb9652018f0022a741ba48fdd1c0"
+provider = "render-workflow-job"
 
 [[extensions]]
 id = "custom-schema"
@@ -268,6 +296,17 @@ option = "schema_path"
 media_type = "application/schema+json"
 path_policy = "repository-relative"
 preferred_root = ".standards/extensions/markdown-frontmatter/"
+
+[[providers]]
+id = "render-workflow-job"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_workflow"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["workflow-job-caller", "workflow-job-self-hosted"]
 
 [[providers]]
 id = "validate-frontmatter"
@@ -327,6 +366,7 @@ affected = [
   "artifact:skill",
   "artifact:skill-new-doc-id",
   "artifact:skill-openai",
+  "artifact:self-host-workflow",
   "config:*",
   "contribution:workflow-frontmatter-job",
 ]

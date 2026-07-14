@@ -9,9 +9,8 @@ on:
 
 jobs:
   validate-specs:
-    if: ${{ inputs.enabled != false }}
+    if: ${{ true }}
     uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v5
     with:
-      config-path: ".standards/config.toml"
       standards-ref: "v5"
       strict-lint: true

@@ -273,7 +273,7 @@ Universal fields stay at the top level. Repo-local fields do not.
 Run schema, ID, and reference validation:
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 This invokes:
@@ -285,7 +285,7 @@ This invokes:
 Run the formatter check for source-style requirements, including quote style, key order, and list layout:
 
 ```bash
-uv run format-frontmatter --check --config .project-standards.yml
+uv run format-frontmatter --check
 ```
 
 Exit codes:
@@ -298,11 +298,9 @@ Exit codes:
 
 `validate-references` checks ID uniqueness, referential integrity, supersede reciprocity, date ordering, and ADR sequence uniqueness only when enabled:
 
-```yaml
-markdown:
-  frontmatter:
-    references:
-      enabled: true
+```toml
+[standards.markdown-frontmatter.config.references]
+enabled = true
 ```
 
 ## Compatibility

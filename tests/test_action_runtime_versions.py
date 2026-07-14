@@ -33,6 +33,7 @@ _UV_ROOT_WORKFLOWS = (
 _CURRENT_V2_WORKFLOWS = (
     "standards/markdown-tooling/versions/1.2/resources/self-host-format.yml",
     "standards/markdown-tooling/versions/1.2/resources/self-host-lint-markdown.yml",
+    "standards/markdown-frontmatter/versions/1.2/resources/self-host-validate-markdown-frontmatter.yml",
     "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml",
     "standards/python-tooling/versions/1.1/resources/check.yml",
 )
@@ -122,6 +123,7 @@ def test_current_v2_workflows_use_reviewed_runtime_contracts() -> None:
     }
 
     for relative_path in (
+        "standards/markdown-frontmatter/versions/1.2/resources/self-host-validate-markdown-frontmatter.yml",
         "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml",
         "standards/python-tooling/versions/1.1/resources/check.yml",
     ):

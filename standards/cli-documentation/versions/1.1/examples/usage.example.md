@@ -26,7 +26,7 @@ license: null
 
 # project-standards
 
-_This is a trimmed worked example of the [CLI Documentation Standard](../README.md)'s canonical usage-reference format. It derives from this repository's own real usage reference, [`docs/usage.md`](https://github.com/L3DigitalNet/project-standards/blob/main/docs/usage.md), kept down to `NAME`, `SYNOPSIS`, `DESCRIPTION`, four of the ten leaf commands, `EXIT STATUS`, two examples, one standalone-command entry, and `SEE ALSO` — enough to show the section registry and option-entry shape without reproducing the whole reference._
+_This is a trimmed worked example of the [CLI Documentation Standard](../README.md)'s canonical usage-reference format. It derives from this repository's V5 command surface, kept down to `NAME`, `SYNOPSIS`, `DESCRIPTION`, four representative commands, `EXIT STATUS`, two examples, one standalone-command entry, and `SEE ALSO`—enough to show the section registry and option-entry shape without reproducing the whole reference._
 
 ## NAME
 
@@ -38,6 +38,8 @@ _This is a trimmed worked example of the [CLI Documentation Standard](../README.
 project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
+project-standards init --catalog <major> [--migrate] [--apply]
+project-standards reconcile [--check | --apply | --recover]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
@@ -46,11 +48,11 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes ten leaf commands under one entry point: the two frontmatter operations (`validate`, `fix`), the two adoption operations (`adopt`, `list`), and a nested `spec` command group of six verbs (`validate`, `lint`, `extract`, `next`, `new`, `upgrade`) that operate on project-specification documents.
+`project-standards` is the unified command-line surface for this repository's tooling. V5 adds neutral control-plane initialization, package selection, reconciliation, provider rendering, and package validation while retaining frontmatter, specification, agent-handoff, and legacy adoption commands under one entry point.
 
-`validate` and `fix` are thin front ends over the standalone validator family: `validate` runs `validate-frontmatter`, `validate-id`, and `validate-references` in sequence and returns the worst exit code, so a single call checks the whole frontmatter contract; `fix` formats and repairs in place, then re-runs the same check. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
+Under unified authority, `validate` and `fix` invoke the exact selected Markdown Frontmatter package providers and effective options. Without `.standards/`, the warned V5 legacy path runs the standalone validator family against `.project-standards.yml`. The six standalone console scripts documented under [Standalone commands](#standalone-commands) remain installed for focused diagnosis and compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 10 leaf commands plus the `spec` group overview, documented on this single page because the two-group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged**—the command groups are documented on one usage page because the hierarchy remains navigable without generated per-command pages.
 
 Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
 
@@ -71,7 +73,7 @@ project-standards validate [<file>...] [--config <path>] [--schema <path>] [--gl
 Options (all flags are forwarded unchanged to every validator):
 
 - **`<file>...`** — Zero or more Markdown files to validate. With no files, globs, or config includes, the underlying validators default to all `**/*.md` under the current directory.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A `--config` that names a non-existent file is an operator error (exit 2), never a silent default.
+- **`--config <path>`** — Explicit read-only legacy/debug config. Unified repositories resolve authority from `.standards/` and reject this override; a named nonexistent file is an operator error (exit 2).
 - **`--schema <path>`** — Custom JSON Schema to validate against. Frontmatter-only, and it also causes `validate-id` to skip (a custom schema may use a different id convention). Environment/config interaction: overrides the config's `markdown.frontmatter.schema`.
 - **`--glob <pattern>`** — Glob (relative to the current directory) to validate instead of the config include list; combines with explicit `<file>` arguments. Note: this scopes `validate-frontmatter` and `validate-id`, but `validate-references` ignores it and always indexes the full configured set.
 - **`--no-require-frontmatter`** — Do not fail files that have no frontmatter block. Frontmatter-only; no effect on the id or reference passes.
@@ -90,7 +92,7 @@ project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
 Options:
 
 - **`<file>...`** — Markdown files to fix. Omit to use the config include list.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug config. It cannot override active `.standards/` authority; a named nonexistent file exits 2.
 - **`--glob <pattern>`** — Glob to select files instead of the include list; combines with explicit `<file>` arguments. Forwarded to each stage.
 - **`-q`, `--quiet`** — Suppress per-file output.
 
@@ -147,18 +149,18 @@ The table gives the repository-wide convention; per-command deviations are noted
 ### Validate the whole configured file set
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
-### Preview an adoption without writing anything
+### Preview reconciliation without writing anything
 
 ```bash
-uv run project-standards adopt markdown-tooling --dry-run
+uv run project-standards reconcile
 ```
 
 ## Standalone commands
 
-Six console scripts are installed alongside `project-standards`. Each is a separate `[project.scripts]` entry point and therefore a public command. The `validate` and `fix` subcommands are the unified front ends over these; the standalone forms remain for scripting and back-compatibility.
+Six console scripts are installed alongside `project-standards`. Each is a separate `[project.scripts]` entry point and therefore a public command. In unified repositories the aggregate subcommands use selected package providers; the standalone forms remain for focused diagnosis and legacy compatibility.
 
 ### `validate-frontmatter`
 
@@ -174,7 +176,7 @@ Options:
 - **`--version`** — Print the version and exit 0.
 - **`--schema <path>`** — JSON Schema file to validate against; overrides the config schema.
 - **`--glob <pattern>`** — Validate files matching the pattern (relative to the current directory) instead of the config include list; combines with explicit files.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug config. It cannot override active `.standards/` authority; a named nonexistent file exits 2.
 - **`--no-require-frontmatter`** — Do not fail files with no frontmatter block.
 - **`-q`, `--quiet`** — Suppress success output.
 

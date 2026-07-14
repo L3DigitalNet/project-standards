@@ -36,7 +36,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:bdb3798e05fe15872fc6fe59dffe7bab6014c9c15bc5327e5baff2f1de48ef83",
+        "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42d43442445",
     ),
     "markdown-frontmatter": (
         "Markdown Frontmatter Standard",
@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:e124181648dbd918b29e7c6d5578953dcd367d93fb84d37fd756d1f2a965a551",
+        "sha256:93ecfd6bc8db7f2cbe052937dfd96c5e3727b36964ab471d274e8ba557ebda0d",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:115198a1a343967d785a28052e72deb8a08558f05a246d69cd27920759dca6cb",
+        "sha256:b3d38f50c06adcd4bdcfee74b53fc184dc3538dac10099b8a100bab08b114093",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -68,7 +68,7 @@ _PACKAGES = {
         "draft",
         "0.5",
         "reference-only",
-        "sha256:d427ddb6ad6f04f010c2ef897d7668c577bda7f1c0d2b50c943dd56fa98634bc",
+        "sha256:c027af45f85e84717e7ce9909adcd71363745e688538bd88a303dd813a351d80",
     ),
     "python-tooling": (
         "Python Tooling SSOT Standard",

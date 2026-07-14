@@ -12,6 +12,15 @@ from project_standards.id_format import slugify
 
 _REPO = Path(__file__).resolve().parent.parent
 _SKILL = _REPO / "standards" / "markdown-frontmatter" / "skills" / "markdown-frontmatter"
+_LEGACY_SKILL = (
+    _REPO
+    / "standards"
+    / "markdown-frontmatter"
+    / "versions"
+    / "1.2"
+    / "resources"
+    / "legacy-markdown-frontmatter-skill.md"
+)
 _NEW_DOC_ID = _SKILL / "scripts" / "new-doc-id"
 
 
@@ -29,7 +38,12 @@ def test_skill_points_at_current_standard_pages() -> None:
     assert "schema_version: '1.1'" in text
     assert "structure.md" in text
     assert "field-values.md" in text
-    assert "project-standards@v4" in text
+    assert "V5 CI workflow" in text
+    assert "project-standards@v4" not in text
+    assert ".project-standards.yml" not in text
+    legacy_text = _LEGACY_SKILL.read_text(encoding="utf-8")
+    assert "project-standards@v4" in legacy_text
+    assert ".project-standards.yml" in legacy_text
     assert "infrastructure" in text and "network" in text and "it" in text
 
 

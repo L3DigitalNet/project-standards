@@ -16,11 +16,6 @@ on:
       - "pyproject.toml"
   workflow_call:
     inputs:
-      config-path:
-        description: "Path to the project standards config file in the calling repo."
-        required: false
-        type: string
-        default: ".standards/config.toml"
       standards-ref:
         description: "project-standards git ref to install from (match your uses: @vN pin)."
         required: false
@@ -39,10 +34,6 @@ jobs:
   validate-specs:
     name: Specs
     runs-on: ubuntu-latest
-    # workflow_call receives the V5 default above. Direct events have no inputs,
-    # so an empty value intentionally lets the CLI use this checkout's authority.
-    env:
-      PROJECT_STANDARDS_SPEC_CONFIG: ${{ inputs.config-path }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -58,50 +49,22 @@ jobs:
 
       - name: Validate specs (this repo)
         if: github.repository == 'L3DigitalNet/project-standards'
-        shell: bash
-        run: |
-          set -euo pipefail
-          config_args=()
-          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
-            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
-          fi
-          uv run project-standards spec validate "${config_args[@]}"
+        run: uv run project-standards spec validate
 
       - name: Lint specs (this repo, strict)
-        if: github.repository == 'L3DigitalNet/project-standards' && inputs.strict-lint
-        shell: bash
-        run: |
-          set -euo pipefail
-          config_args=()
-          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
-            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
-          fi
-          uv run project-standards spec lint --strict "${config_args[@]}"
+        if: github.repository == 'L3DigitalNet/project-standards' && (github.event_name != 'workflow_call' || inputs.strict-lint)
+        run: uv run project-standards spec lint --strict
 
       - name: Install (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'
         env:
-          PROJECT_STANDARDS_REF: ${{ inputs.standards-ref }}
+          PROJECT_STANDARDS_REF: ${{ github.event_name == 'workflow_call' && inputs.standards-ref || 'v5' }}
         run: uv tool install "git+https://github.com/L3DigitalNet/project-standards@${PROJECT_STANDARDS_REF}"
 
       - name: Validate specs (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'
-        shell: bash
-        run: |
-          set -euo pipefail
-          config_args=()
-          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
-            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
-          fi
-          project-standards spec validate "${config_args[@]}"
+        run: project-standards spec validate
 
       - name: Lint specs (consuming repo, strict)
-        if: github.repository != 'L3DigitalNet/project-standards' && inputs.strict-lint
-        shell: bash
-        run: |
-          set -euo pipefail
-          config_args=()
-          if [[ -n "$PROJECT_STANDARDS_SPEC_CONFIG" ]]; then
-            config_args=(--config "$PROJECT_STANDARDS_SPEC_CONFIG")
-          fi
-          project-standards spec lint --strict "${config_args[@]}"
+        if: github.repository != 'L3DigitalNet/project-standards' && (github.event_name != 'workflow_call' || inputs.strict-lint)
+        run: project-standards spec lint --strict

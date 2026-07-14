@@ -27,6 +27,7 @@ version = "1.2"
 
 [standards.markdown-frontmatter.config]
 contract_version = "1.1"
+workflow_mode = "caller"
 schema = "markdown-frontmatter"
 required = true
 include = ["README.md", "docs/**/*.md"]
@@ -45,13 +46,14 @@ exclude = [
 enabled = false
 ```
 
-Follow the V5 CLI guide for preview and apply mechanics. Applying this package installs the repo-local skill under `.agents/skills/markdown-frontmatter/`, records the package summary under `.standards/packages/markdown-frontmatter/`, and composes the Frontmatter job into `.github/workflows/validate-standards.yml`. A second reconciliation must report no changes.
+Follow the V5 CLI guide for preview and apply mechanics. Applying this package installs the repo-local skill under `.agents/skills/markdown-frontmatter/`, records the package summary under `.standards/packages/markdown-frontmatter/`, and composes the Frontmatter job into `.github/workflows/validate-standards.yml`. In `self-hosted` mode it also manages `.github/workflows/validate-markdown-frontmatter.yml`, which the composed job calls from the same commit. A second reconciliation must report no changes.
 
 ## Package options
 
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `contract_version` | `"1.1"` | Select the frontmatter document contract independently of package version `1.2`. |
+| `workflow_mode` | `"caller"` | Use the published reusable workflow; select `"self-hosted"` when the endpoint must come from the same repository commit. |
 | `schema` | `"markdown-frontmatter"` | Use the bundled schema; set to `"custom"` only with `schema_path`. |
 | `schema_path` | omitted | Repository-relative path to a consumer-owned custom JSON Schema. |
 | `required` | `true` | Require a frontmatter block on every selected document. |
@@ -120,7 +122,7 @@ When `.project-standards.yml` contains `markdown.frontmatter`, preview migration
 project-standards init --catalog 5 --migrate
 ```
 
-The migration maps the recognized namespace to package options and recognizes only the exact previously shipped Frontmatter workflow, skill, and skill-script bytes. Modified or unknown content blocks automatic ownership transfer and remains untouched. Review the complete report, then follow the V5 CLI guide's explicit migration-apply procedure without changing the inspected repository state.
+The migration maps the recognized namespace to package options and recognizes only the exact previously shipped Frontmatter workflow, skill, and skill-script bytes. A recognized workflow selects `workflow_mode = "self-hosted"`: migration adopts that path as the V5 reusable endpoint and composes a same-commit caller, so the first release run does not depend on an unpublished `v5` tag. Modified or unknown content blocks automatic ownership transfer and remains untouched. Review the complete report, then follow the V5 CLI guide's explicit migration-apply procedure without changing the inspected repository state.
 
 The legacy YAML file is removed only after unified configuration, reconciliation, provider verification, and central-lock publication succeed.
 
@@ -132,6 +134,7 @@ The legacy YAML file is removed only after unified configuration, reconciliation
 - [ ] Ordinary IDs use `{doc_type}-{base36-6}-{frozen-kebab-slug}`; ADR IDs use the ADR format.
 - [ ] `.agents/skills/markdown-frontmatter/` matches the selected payload.
 - [ ] `.github/workflows/validate-standards.yml` contains the V5 Frontmatter job.
+- [ ] In `self-hosted` mode, `.github/workflows/validate-markdown-frontmatter.yml` matches the selected payload and the composed job uses its local path.
 - [ ] `project-standards validate` and `format-frontmatter --check` exit `0`.
 - [ ] A second `project-standards reconcile` is a no-op.
 

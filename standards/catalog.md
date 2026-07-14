@@ -11,7 +11,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`adr`](adr/README.md) | active | 1.1 | default | consumer | 12 | 2 | 1 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
-| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 26 | 4 | 7 |
+| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 29 | 5 | 8 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | default | consumer | 23 | 9 | 1 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
@@ -120,7 +120,10 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | `template-research` | `template` | `standards://markdown-frontmatter/1.2/template-research` | `templates/research.md` |
 | `markdown-frontmatter@1.2` | `template-runbook` | `template` | `standards://markdown-frontmatter/1.2/template-runbook` | `templates/runbook.md` |
 | `markdown-frontmatter@1.2` | `template-spec` | `template` | `standards://markdown-frontmatter/1.2/template-spec` | `templates/spec.md` |
+| `markdown-frontmatter@1.2` | `legacy-skill` | `legacy-reference` | `standards://markdown-frontmatter/1.2/legacy-skill` | `resources/legacy-markdown-frontmatter-skill.md` |
 | `markdown-frontmatter@1.2` | `workflow-caller` | `workflow-template` | `standards://markdown-frontmatter/1.2/workflow-caller` | `validate-markdown-frontmatter.caller.yml` |
+| `markdown-frontmatter@1.2` | `workflow-job-caller` | `provider-resource` | `standards://markdown-frontmatter/1.2/workflow-job-caller` | `workflow-job.yml` |
+| `markdown-frontmatter@1.2` | `workflow-job-self-hosted` | `provider-resource` | `standards://markdown-frontmatter/1.2/workflow-job-self-hosted` | `workflow-job.self-hosted.yml` |
 | `markdown-frontmatter@1.2` | `provider-code` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-code` | `providers/frontmatter.py` |
 | `markdown-frontmatter@1.2` | `provider-input` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-input` | `schemas/provider-input.schema.json` |
 | `markdown-frontmatter@1.2` | `provider-findings` | `provider-resource` | `standards://markdown-frontmatter/1.2/provider-findings` | `schemas/findings.schema.json` |
@@ -214,6 +217,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
 | `cli-documentation@1.1` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `cli-documentation@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-frontmatter@1.2` | `render-workflow-job` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
 | `markdown-frontmatter@1.2` | `validate-frontmatter` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `markdown-frontmatter@1.2` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
 | `markdown-frontmatter@1.2` | `fix-frontmatter` | `fix` | `authoring` | `mutation-plan` | `payload:provider-code#run_fix` |
@@ -266,6 +270,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | artifact | `skill` | `.agents/skills/markdown-frontmatter/SKILL.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill-openai` | `.agents/skills/markdown-frontmatter/agents/openai.yaml` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill-new-doc-id` | `.agents/skills/markdown-frontmatter/scripts/new-doc-id` | `managed` | whole-file |
+| `markdown-frontmatter@1.2` | artifact | `self-host-workflow` | `.github/workflows/validate-markdown-frontmatter.yml` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | contribution | `workflow-name` | `.github/workflows/validate-standards.yml` | `create-only` | `yaml` / `key:/name` |
 | `markdown-frontmatter@1.2` | contribution | `workflow-on` | `.github/workflows/validate-standards.yml` | `create-only` | `yaml` / `key:/on` |
 | `markdown-frontmatter@1.2` | contribution | `workflow-frontmatter-job` | `.github/workflows/validate-standards.yml` | `managed` | `yaml` / `key:/jobs/frontmatter` |

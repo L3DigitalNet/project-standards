@@ -173,4 +173,4 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 - [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
 - [Field Values](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
 - [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
-- `src/project_standards/schemas/markdown-frontmatter.schema.json` (in project-standards) — the authoritative contract; wins on any conflict.
+- `standards/markdown-frontmatter/versions/1.2/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.

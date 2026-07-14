@@ -4,6 +4,11 @@
 	"additionalProperties": false,
 	"properties": {
 		"contract_version": { "type": "string", "enum": ["1.1"], "default": "1.1" },
+		"workflow_mode": {
+			"type": "string",
+			"enum": ["caller", "self-hosted"],
+			"default": "caller"
+		},
 		"schema": {
 			"type": "string",
 			"enum": ["markdown-frontmatter", "custom"],

@@ -241,8 +241,10 @@ A spec is still an unfilled template if any of these are present — useful for 
 Consumer specs are checked with the packaged CLI:
 
 ```bash
-project-standards spec validate [FILE ...] --config .project-standards.yml
+project-standards spec validate [FILE ...]
 ```
+
+With unified authority, the command resolves the selected Project Specification package from `.standards/`. An explicit `--config PATH` is reserved for read-only legacy/debug operation and cannot override an active unified control plane.
 
 Exit `0` = all selected specs conform; `1` = at least one finding; `2` = bad invocation or discovery/configuration error. Suitable for CI / pre-commit. It checks: frontmatter key-set/profile/sentinel; section subset + ascending order + gap annotation; appendix lettering; `§`/anchor reference resolution; ID format; Appendix-A registry (used ⊆ declared, Defined-In identity); per-spec ID uniqueness; and table column consistency.
 

@@ -55,6 +55,20 @@ def _digest(content: bytes) -> Sha256Digest:
     return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
+def run_render_workflow(
+    request: Mapping[str, object], resources: Mapping[str, bytes]
+) -> dict[str, str]:
+    """Render the published or same-commit reusable workflow job."""
+    mode = _table(request.get("config"), name="config").get("workflow_mode")
+    if mode == "caller":
+        resource_id = "workflow-job-caller"
+    elif mode == "self-hosted":
+        resource_id = "workflow-job-self-hosted"
+    else:
+        raise ValueError("workflow_mode must be caller or self-hosted")
+    return {"content": resources[resource_id].decode("utf-8")}
+
+
 def _entries(request: Mapping[str, object]) -> tuple[SnapshotEntry, ...]:
     snapshots = _table(request.get("snapshots"), name="snapshots")
     documents = _sequence(snapshots.get("documents"), name="snapshots.documents")
@@ -623,7 +637,7 @@ def run_migrate(
     dispositions = {
         "legacy-workflow": (
             ".github/workflows/validate-markdown-frontmatter.yml",
-            "remove",
+            "adopt",
         ),
         "legacy-skill": (".agents/skills/markdown-frontmatter/SKILL.md", "adopt"),
         "legacy-skill-script": (
@@ -645,6 +659,8 @@ def run_migrate(
         digest = cast("Mapping[str, object]", observed).get("digest")
         if not isinstance(digest, str):
             raise ValueError("known legacy signature omitted its digest")
+        if signature_id == "legacy-workflow":
+            config["workflow_mode"] = "self-hosted"
         claims.append(
             {
                 "signature_id": signature_id,

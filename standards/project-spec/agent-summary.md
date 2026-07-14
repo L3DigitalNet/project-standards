@@ -2,7 +2,7 @@
 
 The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
 
-Lifecycle: active. Adoption: `cli`, with copy-adopt support scaffolding.
+Lifecycle: active. Consumer package: `project-spec@1.1` through the V5 control plane.
 
 ## Use this summary when
 
@@ -20,15 +20,15 @@ Create, inspect, validate, or implement a durable specification for a project, f
 ## Commands and artifacts
 
 ```bash
-project-standards spec validate --config .project-standards.yml
-project-standards spec lint --config .project-standards.yml --strict
+project-standards spec validate
+project-standards spec lint --strict
 project-standards spec extract FILE SELECTOR
 project-standards spec next FILE PREFIX
 project-standards spec new PATH --profile TIER --title TITLE --stdout
 project-standards spec upgrade FILE --to TIER --stdout
 ```
 
-`validate`, `lint`, `extract`, and `next` are read-only. `new` and `upgrade` support preview-first operation, refuse unsafe overwrites without explicit force, self-validate generated results, and never rewrite existing prose.
+`validate`, `lint`, `extract`, and `next` are read-only. With unified authority, they resolve the selected package through `.standards/`; an explicit `--config` is a legacy/debug path and cannot override that authority. `new` and `upgrade` support preview-first operation, refuse unsafe overwrites without explicit force, self-validate generated results, and never rewrite existing prose.
 
 ## Boundaries and companions
 

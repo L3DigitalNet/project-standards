@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:b85c5176ba032230232ed1c540a88d40411171f0a5d45732bc32bf5aa2b8e6fe"
+digest = "sha256:4955abb4a0bddc286fc0fa9a924e204c9115d4e3cda84784c1139c7ff0d9c454"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:401bd4cf5a92afb05cdc0f887f1b2efb4ebcd08ef95e6eeeeb861a700d219624"
+digest = "sha256:7f274719411e4b3249081c9bdd1b00d2e8c620b83cc7aa7f84075ee5bf96234b"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:2a8789dcab647c14781fd71151e1a0924394379cc6125a0c4369a72088a21beb"
+digest = "sha256:7087c3ba170c182c19e6775b6f0bf1d04fef72a4e6da58d2d42bb030109671e4"
 
 [[resources]]
 id = "config-schema"
@@ -57,7 +57,7 @@ id = "tooling-notes"
 role = "tooling-note"
 path = "resources/tooling-notes.md"
 media_type = "text/markdown"
-digest = "sha256:77d0c1ddcf0cd781e9b822182ce724b16d5cc0c1adea895c147a08679989de57"
+digest = "sha256:7a274bcb9a1ca8274114a7477fc8367dc0a78d62122886f7696ebd99ca9b2347"
 
 [[resources]]
 id = "template-light"
@@ -85,7 +85,7 @@ id = "workflow-source"
 role = "provider-resource"
 path = "resources/validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:2aa963c7367c99ac0e08f8091febe35ec9cb8c3c7c0d71fd73904a6493127281"
+digest = "sha256:dd3cc398f3f4264aba826e88b9c5f911d0cd6b930343b361ac2604a6b1a8e89b"
 
 [[resources]]
 id = "legacy-workflow"
@@ -99,14 +99,14 @@ id = "self-host-workflow"
 role = "provider-resource"
 path = "resources/self-host-validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:fe1e95a272802bad7a88ad11ee8c394a4697f5018cedff7e2fe5b3a5365068d2"
+digest = "sha256:b0ba97bfdb06c6f76f075b2289ef0c86f96bbccfa94c1480cc4e2383e6ef952f"
 
 [[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:01d05bacea4d5ae4efc8de7de7aa4f7bd4fe228088061a05a1a83ff1c266d973"
+digest = "sha256:c33485a8c95249d87975ad2094667a8dda9d9775ae4c63e3b8d8a242ca17ed6a"
 
 [[resources]]
 id = "provider-input"
@@ -306,4 +306,6 @@ known_content_digests = [
   "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8",
   "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447",
   "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
+  "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f",
+  "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc",
 ]

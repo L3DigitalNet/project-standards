@@ -1,12 +1,12 @@
 # Consumer Standards Control Plane Release-Cut Evidence
 
-**Evidence date:** 2026-07-13
+**Evidence date:** 2026-07-14
 
 **Source branch:** `testing`
 
 **Release candidate:** `project-standards 5.0.0` from two independently reconstructed disposable migration authorities
 
-Release-input SHA-256: `bee996639bbae715b705d5a596902b8391d00a04e974bcbdd1284c8171a8bc06`
+Release-input SHA-256: `2f25a788d3e8924f26e5ccff6d2eb724711bbc6b8b96cf7bda47b27079a67cf1`
 
 ## Result
 
@@ -41,7 +41,7 @@ Current release signatures match the selected package manifests. The predecessor
 | --- | --- | --- |
 | Python Tooling | `.github/workflows/check.yml` | Consumer-owned bytes remain identical; no mutating action, reconciliation unit, lock entry, or migration-ledger entry exists. |
 | Markdown Tooling | `.github/workflows/format.yml`, `.github/workflows/lint-markdown.yml` | The complete historical/current self-host cohort is recognized and both files remain byte-identical. |
-| Markdown Frontmatter | `.github/workflows/validate-markdown-frontmatter.yml` | The recognized legacy file is removed and `.github/workflows/validate-standards.yml` is composed. |
+| Markdown Frontmatter | `.github/workflows/validate-markdown-frontmatter.yml` | The recognized path is updated to the immutable V5 self-host endpoint and `.github/workflows/validate-standards.yml` composes a same-commit local call. |
 | Project Spec | `.github/workflows/validate-specs.yml` | The transitional workflow is replaced in place by the immutable installed self-host resource. |
 
 These are four distinct ownership transitions. There is no universal workflow-change or universal workflow-identity rule.
@@ -73,7 +73,7 @@ git diff --binary --no-ext-diff --no-textconv --no-renames HEAD -- .
 Migration patch SHA-256:
 
 ```text
-317cc2e1e86b2664cfc84515cd65584064634b14ad1b14921e735cd9cb621a1a
+4f3510c9614337361732ae88d3c445ce7353c9bf856a263754dc08e8ed310adc
 ```
 
 Ordered migration ledger:
@@ -85,7 +85,7 @@ A	.agents/skills/markdown-frontmatter/SKILL.md
 A	.agents/skills/markdown-frontmatter/agents/openai.yaml
 A	.agents/skills/markdown-frontmatter/scripts/new-doc-id
 M	.codex/config.toml
-D	.github/workflows/validate-markdown-frontmatter.yml
+M	.github/workflows/validate-markdown-frontmatter.yml
 M	.github/workflows/validate-specs.yml
 A	.github/workflows/validate-standards.yml
 D	.project-standards.yml
@@ -107,9 +107,9 @@ M	uv.lock
 Control-plane SHA-256 digests:
 
 ```text
-catalog.toml 7e72f7aa2d0cbb5cb4a5d96fdcbfc20519a296d7cc4534b8771d50afdb778667
-config.toml  90bf9c40c1e90eff02cf06bdf55f95886f9f9b0c99c3f0874a1d38875a3dbe1c
-lock.toml    03f7ee2a26a015e3b4d7c1d93aba62032a57870f0379af62831b606fa4da5f1c
+catalog.toml b8665fa962fed8241504a520f267347df1cf72e34e913f7730029253a3e253a8
+config.toml  cad9e800c2acbcf58d9b0329ff1e39274543f08ebeaf6a73b44be638fb30af11
+lock.toml    0f47628fc1326f21f97ef43dd914978b33e30bede5ac24cd2392c8446619124e
 ```
 
 Replay reproduces the completed migrated Git-known tree and all three control-plane digests. Both reconstructed authority paths produce the same ordered ledger, binary patch bytes, and digest.
@@ -132,9 +132,9 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"source_sha256": "sha256:8dcb4880139bb708bf20819479bcb7898bb5d1dabd8d79e43b7d64bb3e4b3b08"
 	},
 	"control_plane_sha256": {
-		"catalog.toml": "7e72f7aa2d0cbb5cb4a5d96fdcbfc20519a296d7cc4534b8771d50afdb778667",
-		"config.toml": "90bf9c40c1e90eff02cf06bdf55f95886f9f9b0c99c3f0874a1d38875a3dbe1c",
-		"lock.toml": "03f7ee2a26a015e3b4d7c1d93aba62032a57870f0379af62831b606fa4da5f1c"
+		"catalog.toml": "b8665fa962fed8241504a520f267347df1cf72e34e913f7730029253a3e253a8",
+		"config.toml": "cad9e800c2acbcf58d9b0329ff1e39274543f08ebeaf6a73b44be638fb30af11",
+		"lock.toml": "0f47628fc1326f21f97ef43dd914978b33e30bede5ac24cd2392c8446619124e"
 	},
 	"dev_group_alignment": {
 		"after_semantic_digest": "sha256:b43668aa2af8d3512418b06dd4ca146948a271bfb18e1d189bcdd9d7b71dc527",
@@ -150,7 +150,7 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"A\t.agents/skills/markdown-frontmatter/agents/openai.yaml",
 		"A\t.agents/skills/markdown-frontmatter/scripts/new-doc-id",
 		"M\t.codex/config.toml",
-		"D\t.github/workflows/validate-markdown-frontmatter.yml",
+		"M\t.github/workflows/validate-markdown-frontmatter.yml",
 		"M\t.github/workflows/validate-specs.yml",
 		"A\t.github/workflows/validate-standards.yml",
 		"D\t.project-standards.yml",
@@ -168,8 +168,8 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"M\tscripts/check.py",
 		"M\tuv.lock"
 	],
-	"migration_patch_sha256": "317cc2e1e86b2664cfc84515cd65584064634b14ad1b14921e735cd9cb621a1a",
-	"release_input_sha256": "bee996639bbae715b705d5a596902b8391d00a04e974bcbdd1284c8171a8bc06"
+	"migration_patch_sha256": "4f3510c9614337361732ae88d3c445ce7353c9bf856a263754dc08e8ed310adc",
+	"release_input_sha256": "2f25a788d3e8924f26e5ccff6d2eb724711bbc6b8b96cf7bda47b27079a67cf1"
 }
 ```
 <!-- release-migration-record:end -->

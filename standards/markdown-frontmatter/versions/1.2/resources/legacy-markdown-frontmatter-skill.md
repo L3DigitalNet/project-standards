@@ -24,7 +24,7 @@ This skill ships with the standard package and is installed repo-local at `.agen
 - A `project-standards validate`, `validate-frontmatter`, or `format-frontmatter --check` run failed and you need to fix the block.
 - Deciding which `doc_type` / `status` / other controlled value to set.
 
-**When NOT to use: files that must NEVER carry frontmatter.** Agent-instruction and agent-skill files are harness config, not managed documents: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. That includes this installed skill at `.agents/skills/markdown-frontmatter`. Exclude those paths through the package's `exclude` option in `.standards/config.toml` instead of adding metadata. A repo may also exclude its root `README.md` if it prefers no metadata table on its landing page.
+**When NOT to use: files that must NEVER carry frontmatter.** Agent-instruction and agent-skill files are harness config, not managed documents: `CLAUDE.md`, `AGENTS.md`, and anything under `.claude/`, `.agents/`, `.codex/`. That includes this installed skill at `.agents/skills/markdown-frontmatter`. Exclude those paths in `.project-standards.yml` instead of adding metadata. A repo may also exclude its root `README.md` if it prefers no metadata table on its landing page.
 
 ## Required fields (the eleven)
 
@@ -83,7 +83,7 @@ These fields accept only these values (the schema is the source of truth):
 
 ## The `id` field — standard-enforced format
 
-> **This is a standard rule, not a local addition.** `markdown-frontmatter@1.2` enforces the id format below via `validate-id` (run by `project-standards validate` and the V5 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
+> **This is a standard rule, not a local addition.** project-standards **v4** enforces the id format below via `validate-id` (run by `project-standards validate` and the v4 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
 
 ```text
 {doc_type}-{base36-6}-{document-name}
@@ -139,10 +139,11 @@ license: null
 
 ## Validate
 
-Compliance = `project-standards validate` exits `0`. Run it from the repository root:
+Compliance = `project-standards validate` exits `0`. Run it with no local checkout:
 
 ```bash
-project-standards validate
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
+  project-standards validate --config .project-standards.yml
 ```
 
 That command runs schema validation, ID-format validation, and reference validation. Exit codes: `0` all matched files valid (or none matched); `1` one or more documents failed; `2` config/schema error.
@@ -150,10 +151,11 @@ That command runs schema validation, ID-format validation, and reference validat
 Use the formatter check for canonical quote style, key order, and list layout:
 
 ```bash
-format-frontmatter --check
+uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' \
+  format-frontmatter --check --config .project-standards.yml
 ```
 
-To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewrite an invalid id through the platform executor).
+To check or repair a single file's id: `uvx --from 'git+https://github.com/L3DigitalNet/project-standards@v4' validate-id <file>` (add `--fix` to rewrite an invalid id in place, preserving its token).
 
 ## Common mistakes
 
@@ -163,7 +165,7 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 | Unquoted date `created: 2026-06-07` | Quote it: `'2026-06-07'`. |
 | `doc_type: 'readme'` for a README | README/index → `doc_type: 'index'`. |
 | Extra top-level key (`version:`, `category:`) | Move under `project:`/`x_project:`, or drop it. |
-| Frontmatter added to `CLAUDE.md` / `.claude/**` / `.agents/**` | Remove it; add the path to the package `exclude` option. |
+| Frontmatter added to `CLAUDE.md` / `.claude/**` / `.agents/**` | Remove it; exclude the path in `.project-standards.yml`. |
 | Omitting required arrays (`tags`/`aliases`/`related`) | Always present; empty = `[]`. |
 | `doc_type: 'stub'` | `stub` is a `status`, not a `doc_type`. |
 
@@ -172,5 +174,5 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 - [Standard README](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/README.md) — overview and adoption surface.
 - [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
 - [Field Values](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
-- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
-- `standards/markdown-frontmatter/versions/1.2/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.
+- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/adopt.md) — `.project-standards.yml`, CI workflow, repo-local skill install, and compliance procedure.
+- `src/project_standards/schemas/markdown-frontmatter.schema.json` (in project-standards) — the authoritative contract; wins on any conflict.

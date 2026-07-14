@@ -1,6 +1,6 @@
 # Python Coding Standard
 
-- **Status:** Draft (version 0.4) — in development, reference-only; not registered for adoption or validation
+- **Status:** Draft (package version 0.5) — in development, reference-only; not available for consumer adoption or validation
 - **Owner:** Project standards / repository template
 - **Last updated:** 2026-07-01
 - **Last source check:** 2026-06-07

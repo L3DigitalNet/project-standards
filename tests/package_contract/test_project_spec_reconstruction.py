@@ -49,8 +49,14 @@ _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
 )
 _CALLER_WORKFLOW_DIGEST = "sha256:ade301e9fde40f76a75b81116f0e9e80879a39f1808f8d20715ea6532087e447"
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+_PREVIOUS_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525"
+)
+_UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f"
+)
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc"
 )
 
 
@@ -284,6 +290,8 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
     assert {digest.value for digest in signatures["legacy-workflow"].known_content_digests} == {
         _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST,
         _CALLER_WORKFLOW_DIGEST,
+        _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST,
+        _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST,
         _CURRENT_SELF_HOST_WORKFLOW_DIGEST,
     }
     assert (
@@ -482,6 +490,15 @@ def test_project_spec_workflow_ci_false_is_a_stable_noop_caller() -> None:
     assert b"if: ${{ false }}" in result.content
 
 
+def test_project_spec_caller_uses_unified_authority_without_explicit_config() -> None:
+    result = _invoke("render-workflow", ProviderOperation.RENDER)
+
+    expected = (_PAYLOAD / "resources/validate-specs.yml").read_bytes()
+    assert result.content == expected
+    assert b"config-path" not in expected
+    assert b"if: ${{ true }}" in expected
+
+
 def test_project_spec_self_host_mode_renders_immutable_workflow() -> None:
     result = _invoke(
         "render-workflow",
@@ -495,7 +512,10 @@ def test_project_spec_self_host_mode_renders_immutable_workflow() -> None:
             "ci": True,
         },
     )
-    assert result.content == (_PAYLOAD / "resources/self-host-validate-specs.yml").read_bytes()
+    expected = (_PAYLOAD / "resources/self-host-validate-specs.yml").read_bytes()
+    assert result.content == expected
+    assert b"config-path" not in expected
+    assert b"--config" not in expected
 
 
 def test_project_spec_scaffold_preview_returns_content_without_a_target() -> None:
@@ -567,6 +587,11 @@ def test_project_spec_migration_normalizes_v1_and_preserves_ambiguity() -> None:
     "workflow_digest",
     [
         pytest.param(_HISTORICAL_SELF_HOST_WORKFLOW_DIGEST, id="historical"),
+        pytest.param(_PREVIOUS_SELF_HOST_WORKFLOW_DIGEST, id="previous"),
+        pytest.param(
+            _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST,
+            id="unified-authority",
+        ),
         pytest.param(_CURRENT_SELF_HOST_WORKFLOW_DIGEST, id="current"),
     ],
 )
@@ -643,7 +668,8 @@ def test_project_spec_fresh_apply_second_apply_and_disable_converge(tmp_path: Pa
     assert first.applicable, first.findings
     assert apply_reconciliation(ApplyRequest(request, first)).success
     workflow = repo / ".github/workflows/validate-specs.yml"
-    assert b".standards/config.toml" in workflow.read_bytes()
+    assert b".standards/config.toml" not in workflow.read_bytes()
+    assert b"project-standards/.github/workflows/validate-specs.yml@v5" in workflow.read_bytes()
 
     second_request = build_planner_request(repo, distribution, frozenset())
     second = plan_reconciliation(second_request)
@@ -702,7 +728,8 @@ spec:
     result = apply_legacy_migration(plan)
     assert result.success, result
     assert not (repo / ".project-standards.yml").exists()
-    assert b".standards/config.toml" in workflow.read_bytes()
+    assert b".standards/config.toml" not in workflow.read_bytes()
+    assert b"project-standards/.github/workflows/validate-specs.yml@v5" in workflow.read_bytes()
 
 
 def test_project_spec_real_multi_standard_migration_preserves_semantics_and_converges(
