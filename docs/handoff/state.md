@@ -2,12 +2,12 @@
 
 ## Current focus
 
-- The audited workflow, guidance, integrity, and Task 9 evidence blockers are fixed and independently reviewed.
-- Commit the catalog/workflow-test remediation with refreshed evidence, then restart Task 10's clean pre-atomic gate.
-- Keep the freeze and root migration atomic through Task 11, hosted `main` gates, signed refs, and artifact verification.
+- Task 10 is green at `91f09e0`; Task 11 migrated the root and passed 491 focused tests in the isolated worktree.
+- Fix editable-source V2 loading, rerun Task 11, refresh evidence, and prepare the release-candidate commit.
+- Keep the release freeze active until hosted gates, signed refs, and published-artifact verification complete.
 - After v5, finish Agent Handoff retirement; hold `project-toolbox` and `agent-managed-repo` for dedicated cycles.
 
 ## Active incidents
 
-- V5 is blocked on the Task 10 restart, atomic Task 11 migration, and hosted release gates.
+- V5 is blocked by editable source projection rejection (89 ordinary failures); preserve installed-wheel checks.
 - Engine deletion is blocked until all consumers validate, v5 is published, the final search is clean, and the owner approves.

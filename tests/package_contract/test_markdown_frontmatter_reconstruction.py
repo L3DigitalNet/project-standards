@@ -72,6 +72,9 @@ _HISTORICAL_WORKFLOW_DIGEST = (
     "sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e"
 )
 _CURRENT_WORKFLOW_DIGEST = "sha256:09eb0cc6d6fe20a12b7c7cc5022f9a902ed29d0cdf35ef42c8685c5c93cea036"
+_RELEASE_CURRENT_WORKFLOW_DIGEST = (
+    "sha256:ca1565d4d380c70f93acad17841043c5ff49f2f86af8562b492f0491fbbdf1cb"
+)
 
 
 def _snapshot_document(path: str, content: bytes) -> JsonObject:
@@ -604,7 +607,7 @@ def test_frontmatter_workflow_signature_history_includes_current_root() -> None:
     }
     assert (
         f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-markdown-frontmatter.yml').read_bytes()).hexdigest()}"
-        == _CURRENT_WORKFLOW_DIGEST
+        == _RELEASE_CURRENT_WORKFLOW_DIGEST
     )
 
 

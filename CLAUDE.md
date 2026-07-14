@@ -20,14 +20,64 @@ Maintained Project Specification documents live under `docs/specs/`.
 
 ## Non-Negotiables
 
-- Dogfood the standards: `uv run project-standards validate --config .project-standards.yml` must pass.
+- Dogfood the standards: `uv run project-standards validate` must pass.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
 - Keep the `AGENTS.md` toolchain gate green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.
 
-<!-- BEGIN agent-handoff managed instructions -->
-Use the repo-local `$agent-handoff` skill at startup and closeout.
-Do not reread `docs/handoff/state.md` when SessionStart already injected it.
-Keep current status and tasks in `docs/STATUS.md` and `docs/TODO.md`; route durable facts through `docs/handoff/`.
-At closeout, update only changed facts, preserve user-authored work, store credential references only, and run relevant validation.
-<!-- END agent-handoff managed instructions -->
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:agent-handoff -->
+# Agent Handoff
+
+Use the repo-local `agent-handoff` skill at session startup and closeout. Do not reread state already injected by SessionStart. Keep project knowledge inside this repository and store credential references only, never values.
+<!-- END project-standards:agent-handoff -->
+
+<!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:markdown-tooling -->
+# Markdown and structured-text tooling
+
+Prettier owns physical formatting and markdownlint owns Markdown structure. Do not add overlapping tools.
+
+Enabled checks: format, lint.
+Markdown scope: **/*.md.
+Structured-config scope: **/*.json, **/*.jsonc, **/*.yml, **/*.yaml.
+
+Run the enabled checks before claiming completion.
+<!-- END project-standards:markdown-tooling -->
+
+<!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:python-tooling -->
+# Python tooling
+
+Use uv for environments and dependency changes. Ruff owns formatting, linting, and imports.
+Use basedpyright in strict mode for type checking. Do not add a competing Python gate.
+
+Run before claiming completion:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run basedpyright
+uv run coverage erase
+uv run coverage run --parallel-mode -m pytest
+uv run coverage combine
+uv run coverage report
+uv run pip-audit
+```
+
+When the gate reports formatting or lint findings, run:
+
+```bash
+uv run ruff format .
+uv run ruff check . --fix
+```
+<!-- END project-standards:python-tooling -->
+
+<!-- prettier-ignore-end -->

@@ -156,7 +156,11 @@ def test_repository_root_activates_exact_catalog_and_relative_projections() -> N
     } == {
         (standard_id, values[3], values[4], values[5]) for standard_id, values in _PACKAGES.items()
     }
-    assert not (_ROOT / ".standards").exists()
+    assert {path.name for path in (_ROOT / ".standards").iterdir() if path.is_file()} == {
+        "catalog.toml",
+        "config.toml",
+        "lock.toml",
+    }
     assert sync_payload_projection(_ROOT, check=True) == ()
     for link in plan_payload_projection(_ROOT).links:
         assert link.destination.is_symlink()

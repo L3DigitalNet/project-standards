@@ -227,7 +227,7 @@ This decision is confirmed when:
 - the bundle includes a repository-frontmatter ADR template;
 - this ADR validates as an active example;
 - the ADR index includes ADR 0014;
-- `uv run project-standards validate --config .project-standards.yml` exits `0`.
+- `uv run project-standards validate` exits `0`.
 
 ## Pros and Cons of the Options
 

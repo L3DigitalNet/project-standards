@@ -55,7 +55,7 @@ uv run project-standards standards validate-graph --root . --require-all-manifes
 uv run project-standards standards generate-package-schemas --root . --check
 uv run project-standards standards sync-payload-projection --root . --check
 uv run project-standards standards render-catalog --root . --check
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 uv run project-standards spec validate <durable-specs>
 uv run project-standards spec lint --strict <durable-specs>
 uv run pytest tests/test_standard_manifest.py tests/test_standards_composition.py \

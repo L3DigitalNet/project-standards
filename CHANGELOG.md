@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-12'
+updated: '2026-07-13'
 reviewed: null
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -22,7 +22,7 @@ related:
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'standards/agent-handoff/README.md'
   - 'docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md'
-  - '.project-standards.yml'
+  - 'UPGRADING.md'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -35,9 +35,9 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.0.0] - 2026-07-13
 
-> **Ships in v5.0.0.** Per the release freeze (see [`meta/versioning.md`](meta/versioning.md)), no interim release is cut before v5.0.0; entries here accumulate and are promoted together at that MAJOR cut.
+> **Why MAJOR:** V5 replaces fragmented legacy adoption and `.project-standards.yml` authority with catalog-selected immutable packages, typed reconciliation, and one central lock. Existing V4 repositories must run the reviewed migration described in [`UPGRADING.md`](UPGRADING.md), commit the complete transition atomically, and re-pin workflows to `@v5`.
 
 ### Added
 
@@ -69,7 +69,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Security
 
-- **Dev-tooling bump: `markdownlint-cli2` `0.22.1` → `0.23.0`** (markdownlint `0.40.0` → `0.41.0`), the reusable `lint-markdown.yml` action `DavidAnson/markdownlint-cli2-action` `v23` → `v24`, and `tests/coherence/test_pins.py` updated so the local pin and the CI-bundled version stay in lock-step. Clears two moderate npm advisories in transitive dev-only dependencies — js-yaml merge-key quadratic DoS (`GHSA-h67p-54hq-rp68`; now `5.2.0`) and markdown-it smartquotes quadratic DoS (`GHSA-6v5v-wf23-fmfq`; now `14.2.0`); `npm audit` reports 0 vulnerabilities. markdownlint 0.41 adds **no new rules** (it refines MD022/MD028/MD035/MD042/MD051/MD060 and removes inline-directive handling), and the repo's 85-file corpus lints clean under it, so consumer-visible risk via the `@v4` reusable workflow is low — the action bump ships with v5.0.0 rather than as a silent interim change.
+- **Dev-tooling bump: `markdownlint-cli2` `0.22.1` → `0.23.0`** (markdownlint `0.40.0` → `0.41.0`), the reusable `lint-markdown.yml` action `DavidAnson/markdownlint-cli2-action` `v23` → `v24`, and `tests/coherence/test_pins.py` updated so the local pin and the CI-bundled version stay in lock-step. Clears two moderate npm advisories in transitive dev-only dependencies — js-yaml merge-key quadratic DoS (`GHSA-h67p-54hq-rp68`; now `5.2.0`) and markdown-it smartquotes quadratic DoS (`GHSA-6v5v-wf23-fmfq`; now `14.2.0`); `npm audit` reports 0 vulnerabilities. markdownlint 0.41 adds **no new rules** (it refines MD022/MD028/MD035/MD042/MD051/MD060 and removes inline-directive handling), and the repo's 85-file corpus lints clean under it, so the action bump ships with v5.0.0 rather than as a silent interim change.
 
 ## [4.3.0] - 2026-07-07
 

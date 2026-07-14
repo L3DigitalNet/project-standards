@@ -6,13 +6,13 @@ on:
     paths:
       - "**/*.md"
       - "src/**"
-      - ".project-standards.yml"
+      - ".standards/**"
       - "pyproject.toml"
   pull_request:
     paths:
       - "**/*.md"
       - "src/**"
-      - ".project-standards.yml"
+      - ".standards/**"
       - "pyproject.toml"
 
   # Reusable: call this workflow from any consuming repo. Because the validator
@@ -21,27 +21,27 @@ on:
   #
   #   jobs:
   #     validate:
-  #       uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
+  #       uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5
   #       with:
-  #         config-path: .project-standards.yml
-  #         standards-ref: v4
+  #         config-path: .standards/config.toml
+  #         standards-ref: v5
   workflow_call:
     inputs:
       config-path:
-        description: "Path to the project standards config file in the calling repo."
+        description: "Path to the unified project standards config in the calling repo."
         required: false
         type: string
-        default: ".project-standards.yml"
+        default: ".standards/config.toml"
       standards-ref:
         # The git ref the validator + bundled schema install from. Defaults to the
-        # major tag `v4` (NOT `main`) so a caller that pins `uses: ...@v4` but omits
+        # major tag `v5` (NOT `main`) so a caller that pins `uses: ...@v5` but omits
         # this input still gets pinned, reproducible validation instead of floating
-        # on unreleased changes. Set it to match your `uses:` pin (e.g. `v4`, or a
-        # full version like `v4.0.0` for an immutable pin).
+        # on unreleased changes. Set it to match your `uses:` pin (e.g. `v5`, or a
+        # full version like `v5.0.0` for an immutable pin).
         description: "project-standards git ref to install the validator from (match your uses: @vN pin)."
         required: false
         type: string
-        default: "v4"
+        default: "v5"
 
 permissions:
   contents: read
@@ -68,22 +68,21 @@ jobs:
           # caller-identity check the install/validate steps below use.
           enable-cache: ${{ github.repository == 'L3DigitalNet/project-standards' }}
 
+      - name: Confirm unified config authority
+        env:
+          CONFIG_PATH: ${{ inputs.config-path || '.standards/config.toml' }}
+        run: |
+          test "$CONFIG_PATH" = ".standards/config.toml"
+          test -f "$CONFIG_PATH"
+
       # Running inside this repo (push/PR or self-call): use the local source.
       - name: Install validator (this repo)
         if: github.repository == 'L3DigitalNet/project-standards'
         run: uv sync --dev
 
-      - name: Validate frontmatter (this repo)
+      - name: Validate standards (this repo)
         if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv run validate-frontmatter --config "${{ inputs.config-path || '.project-standards.yml' }}"
-
-      - name: Validate id format (this repo)
-        if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv run validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
-
-      - name: Validate references (this repo)
-        if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv run validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        run: uv run project-standards validate
 
       # Running in a consuming repo: install the validator (and its bundled schema)
       # from the standards repo as a tool, then validate the caller's files.
@@ -93,14 +92,6 @@ jobs:
           uv tool install \
             "git+https://github.com/L3DigitalNet/project-standards@${{ inputs.standards-ref }}"
 
-      - name: Validate frontmatter (consuming repo)
+      - name: Validate standards (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'
-        run: validate-frontmatter --config "${{ inputs.config-path || '.project-standards.yml' }}"
-
-      - name: Validate id format (consuming repo)
-        if: github.repository != 'L3DigitalNet/project-standards'
-        run: validate-id --config "${{ inputs.config-path || '.project-standards.yml' }}"
-
-      - name: Validate references (consuming repo)
-        if: github.repository != 'L3DigitalNet/project-standards'
-        run: validate-references --config "${{ inputs.config-path || '.project-standards.yml' }}"
+        run: project-standards validate

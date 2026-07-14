@@ -1,0 +1,13 @@
+jobs:
+  frontmatter:
+    name: Frontmatter
+    uses: ./.github/workflows/validate-markdown-frontmatter.yml
+    with:
+      config-path: ".standards/config.toml"
+      standards-ref: "v5"
+name: Validate project standards
+"on":
+  pull_request: {}
+  push:
+    branches:
+      - main

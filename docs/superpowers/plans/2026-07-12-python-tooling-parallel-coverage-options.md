@@ -1403,9 +1403,9 @@ Expected: every command exits 0, combined coverage meets the configured threshol
 - [ ] **Step 4: Run package, document, spec, and handoff gates**
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
-uv run project-standards spec validate --config .project-standards.yml
-uv run project-standards spec lint --strict --config .project-standards.yml
+uv run project-standards validate
+uv run project-standards spec validate
+uv run project-standards spec lint --strict
 uv run project-standards agent-handoff validate --repo .
 uv run project-standards agent-handoff drift-check --repo .
 git diff --check

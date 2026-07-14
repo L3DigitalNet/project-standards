@@ -78,6 +78,22 @@ def _generated_spec_arguments(workflow: bytes) -> tuple[list[str], ...]:
     return tuple(arguments)
 
 
+def test_release_frontmatter_endpoint_uses_unified_v5_authority() -> None:
+    endpoint = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
+    content = endpoint.read_text(encoding="utf-8")
+    document = yaml.safe_load(content)
+    inputs = document[True]["workflow_call"]["inputs"]
+
+    assert set(inputs) == {"config-path", "standards-ref"}
+    assert inputs["config-path"]["default"] == ".standards/config.toml"
+    assert inputs["standards-ref"]["default"] == "v5"
+    assert ".project-standards.yml" not in content
+    assert "v4" not in content
+
+    caller = (_ROOT / ".github/workflows/validate-standards.yml").read_text(encoding="utf-8")
+    assert "uses: ./.github/workflows/validate-markdown-frontmatter.yml" in caller
+
+
 @dataclass(frozen=True, slots=True)
 class _ReconstructedPredecessor:
     root: Path = field(compare=False, repr=False)
@@ -383,40 +399,9 @@ def test_prepare_legacy_predecessor_restores_frozen_post_checker_inputs(
     tmp_path: Path,
 ) -> None:
     post_atomic = copy_tracked_checkout(tmp_path / "post-atomic")
-    set_release_version(post_atomic)
-    pyproject_path = post_atomic / "pyproject.toml"
-    pyproject = pyproject_path.read_text(encoding="utf-8")
-    predecessor_group = """dev = [
-    "pytest>=9.0",
-    "ruff>=0.14",
-    "basedpyright",
-    "types-PyYAML",
-    "coverage[toml]",
-    "pip-audit",
-    "pytest-xdist>=3.8",
-    "pyright==1.1.411",
-]
-"""
-    aligned_group = """dev = [
-    "basedpyright",
-    "coverage[toml]>=7.10.0",
-    "pip-audit",
-    "pytest>=9.0",
-    "ruff>=0.14.11",
-    "types-PyYAML",
-    "pytest-xdist>=3.8",
-    "pyright==1.1.411",
-]
-"""
-    assert pyproject.count(predecessor_group) == 1
-    pyproject_path.write_text(
-        pyproject.replace(predecessor_group, aligned_group),
-        encoding="utf-8",
-    )
-    (post_atomic / ".project-standards.yml").unlink()
     standards_state = post_atomic / ".standards/config.toml"
-    standards_state.parent.mkdir()
-    standards_state.write_text('schema_version = "1.0"\n', encoding="utf-8")
+    assert standards_state.is_file()
+    assert not (post_atomic / ".project-standards.yml").exists()
     changed_managed_files = (
         Path(".agents/hooks/agent-handoff/session_start.py"),
         Path(".agents/skills/agent-handoff/SKILL.md"),
@@ -427,10 +412,6 @@ def test_prepare_legacy_predecessor_restores_frozen_post_checker_inputs(
         Path(".agents/skills/markdown-frontmatter/agents/openai.yaml"),
         Path(".github/workflows/validate-standards.yml"),
     )
-    for relative in (*changed_managed_files, *created_managed_files):
-        path = post_atomic / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("migrated output\n", encoding="utf-8")
     initialize_release_baseline(post_atomic)
     live_pyproject = (post_atomic / "pyproject.toml").read_bytes()
     live_lock = (post_atomic / "uv.lock").read_bytes()
@@ -1378,7 +1359,6 @@ def test_retained_release_evidence_is_current() -> None:
 def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Path) -> None:
     source_versions = {path: (_ROOT / path).read_bytes() for path in ("pyproject.toml", "uv.lock")}
     checkout = copy_tracked_checkout(tmp_path / "checkout")
-    set_release_version(checkout)
     installed = build_installed_release(checkout, tmp_path / "build")
     environment = _release_subprocess_environment(pythonpath=installed)
 
@@ -1397,8 +1377,8 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
 
     assert result.stdout.strip() == "project-standards 5.0.0"
     assert {path: (_ROOT / path).read_bytes() for path in source_versions} == source_versions
-    assert (_ROOT / ".project-standards.yml").is_file()
-    assert not (_ROOT / ".standards").exists()
+    assert not (_ROOT / ".project-standards.yml").exists()
+    assert (_ROOT / ".standards/config.toml").is_file()
 
 
 def test_selected_project_spec_workflow_commands_use_unified_authority() -> None:

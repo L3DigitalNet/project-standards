@@ -39,5 +39,6 @@
 			"color": "foldercolorizer.color_d7af00"
 		},
 		{ "folderPath": "project-standards/meta/", "color": "foldercolorizer.color_d7af00" }
-	]
+	],
+	"python.analysis.typeCheckingMode": "off"
 }

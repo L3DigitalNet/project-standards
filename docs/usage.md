@@ -676,7 +676,7 @@ uv run project-standards spec new docs/specs/my-feature.md --profile standard --
 ### Validate the project specs
 
 ```bash
-uv run project-standards spec validate --config .project-standards.yml
+uv run project-standards spec validate
 ```
 
 ### Preview a spec upgrade without writing

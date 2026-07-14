@@ -1,24 +1,24 @@
 # Consumer Standards Control Plane Release-Cut Evidence
 
-**Evidence date:** 2026-07-13
+**Evidence date:** 2026-07-14
 
-**Source branch:** `feature/v5-release-inputs` from `testing`
+**Source branch:** `feature/v5-release-inputs` from verified predecessor `91f09e0c90a9be317023efe989f8567f14e588c7`
 
-**Release candidate:** `project-standards 5.0.0` from two independently reconstructed disposable migration authorities
+**Migration checkpoint:** `project-standards 5.0.0` from two independently reconstructed disposable migration authorities
 
-Release-input SHA-256: `1db6d23ea4478853fb5228ea44b3fdac3ab55c3b361b5e218e6dd0a1324638f7`
+Release-input SHA-256: `7c1267b48ffe1f5a9a7ce84ba7b338cb89cb6885c72dcd080941a554b4dbae9b`
 
 ## Result
 
-The Task 9 proof reconstructs the same frozen v5 predecessor through two source shapes, migrates each with the extracted candidate distribution, and reaches identical guard records, migration patch and ledger, control-plane digests, completed Git-known tree, and fixed point. Replaying the executed binary patch whose digest and ledger are retained against a fresh committed predecessor reproduces the completed migrated tree exactly.
+The Task 11 proof reconstructs the same frozen v5 predecessor through two source shapes, migrates each with the extracted candidate distribution, and reaches identical guard records, migration patch and ledger, control-plane digests, completed Git-known tree, and fixed point. Replaying the executed binary patch whose digest and ledger are retained against a fresh committed predecessor reproduces the completed migrated tree exactly.
 
-This is preliminary **migration patch** evidence, not the complete atomic release-content record or a publication claim. The live root remains on package version `4.3.0`, retains `.project-standards.yml`, and has no `.standards/` directory. Task 11 performs the atomic root transition and supplements this retained migration record with a separate complete release-content record only after every release-only edit and the post-atomic gate are final.
+The separate **complete release-content** record below covers the complete Git-known transition from `91f09e0` to this local Task 11 migration checkpoint, excluding only this self-referential evidence file. It includes the unified `.standards/` authority, legacy-authority removal, v5 workflows, current V2 root checker, release metadata, active documentation, and release oracles. The checkpoint is not promotion-ready: the ordinary repository gate remains blocked because editable-source loading rejects the canonical symlink-only catalog projection.
 
 The installed-wheel human and JSON previews agree on the exact action set; mutation occurs through installed `init --migrate --apply`; and installed `reconcile --apply` reaches a byte-stable fixed point with no mutating action.
 
 ## Frozen authority and reconstruction
 
-The root-materialization authority is frozen at commit `26fb984835fdaf66f33174c7138a3250bda689aa`. The proof derives one complete 31-path overlay from every selected catalog-5 legacy target, every non-`.standards/` non-create-only materialization target, and the three pinned authority inputs: `.project-standards.yml`, `pyproject.toml`, and `uv.lock`. The overlay contains 25 exact files and 6 required absences, including file modes.
+The root-materialization authority is frozen at commit `91f09e0c90a9be317023efe989f8567f14e588c7`. The proof derives one complete 31-path overlay from every selected catalog-5 legacy target, every non-`.standards/` non-create-only materialization target, and the three pinned authority inputs: `.project-standards.yml`, `pyproject.toml`, and `uv.lock`. The overlay contains 25 exact files and 6 required absences, including file modes.
 
 The first path reconstructs that predecessor from the stable pre-atomic source. The second starts from the first path's completed migrated authority, reapplies the same overlay, and requires the two reconstructed predecessors to be identical before performing another migration. Both predecessors are independent committed repositories. Comparisons use Git-known paths, modes, symlink targets, and bytes; ignored environments, caches, bytecode, and coverage residue are excluded as execution artifacts.
 
@@ -73,7 +73,7 @@ git diff --binary --no-ext-diff --no-textconv --no-renames HEAD -- .
 Migration patch SHA-256:
 
 ```text
-9c2158d533f66ae4d06b73e4694a83b50f50f8f3c7d96d98944c0323d374be73
+f9207e615cef02be53c8a4a05e1252e8a9145af8b49c3bfdae9fe43c304048d5
 ```
 
 Ordered migration ledger:
@@ -108,12 +108,70 @@ Control-plane SHA-256 digests:
 ```text
 catalog.toml 3464f2b9636647f31820df22daf50b752d858380e57263c1c4348a76c3523c9c
 config.toml  5a50b95dba149d3ffb6b5efb5a8076efcc0ff7ba03dd23511cdddb26510bb5e4
-lock.toml    888d81142eca0ae821823fe1c83154d36eee3301803ab707ae2fcb5f8d6727a9
+lock.toml    0d9b62b6e9a3d6b00e3b14bc512bf00e03a4652a4cd2378b382af0169900799d
 ```
 
 Replay reproduces the completed migrated Git-known tree and all three control-plane digests. Both reconstructed authority paths produce the same ordered ledger, binary patch bytes, and digest.
 
-This Task 9 digest and ledger describe the preliminary migration patch only. Task 11 supplements this retained migration record with a separate broader canonical complete release-content patch after all release-only root edits and the post-atomic gate are final.
+This migration digest and ledger describe the installed-provider migration itself. The complete release-content record below additionally covers every release-only root edit.
+
+## Complete release-content identity
+
+`complete_release_content_patch` mirrors the final Git-known root onto a committed copy of the exact predecessor, marks non-ignored additions intent-to-add, derives the canonical binary diff while excluding only this evidence file, replays it onto a fresh predecessor, and requires exact path, mode, symlink, and byte equality.
+
+Complete release-content patch SHA-256:
+
+```text
+5f12a940d1b92d9bf910d31d8cf0f4e25ee284de906b9049da4aeb3cc4a43d1d
+```
+
+Ordered complete release-content ledger:
+
+```text
+D	.agents/agent-handoff/manifest.json
+M	.agents/skills/agent-handoff/SKILL.md
+A	.agents/skills/markdown-frontmatter/SKILL.md
+A	.agents/skills/markdown-frontmatter/agents/openai.yaml
+A	.agents/skills/markdown-frontmatter/scripts/new-doc-id
+M	.codex/config.toml
+M	.github/workflows/validate-markdown-frontmatter.yml
+M	.github/workflows/validate-specs.yml
+A	.github/workflows/validate-standards.yml
+M	.markdownlint-cli2.jsonc
+D	.project-standards.yml
+A	.standards/catalog.toml
+A	.standards/config.toml
+A	.standards/lock.toml
+A	.standards/packages/agent-handoff/policy.toml
+A	.standards/packages/markdown-frontmatter/agent-summary.md
+M	.vscode/settings.json
+M	.vscode/tasks.json
+M	AGENTS.md
+M	CHANGELOG.md
+M	CLAUDE.md
+M	README.md
+M	docs/STATUS.md
+M	docs/TODO.md
+M	docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md
+A	docs/adr/adr.template.md
+M	docs/handoff/conventions.md
+M	docs/handoff/sessions/2026-07.md
+M	docs/handoff/specs-plans.md
+M	docs/handoff/state.md
+M	docs/mcp-readiness.md
+M	docs/superpowers/plans/2026-07-09-agent-handoff-standard-package.md
+M	docs/superpowers/plans/2026-07-12-python-tooling-parallel-coverage-options.md
+M	docs/usage.md
+M	meta/versioning.md
+M	pyproject.toml
+M	scripts/check.py
+M	tests/package_compatibility/test_release_candidate.py
+M	tests/package_contract/test_current_catalog_activation.py
+M	tests/package_contract/test_markdown_frontmatter_reconstruction.py
+M	tests/package_contract/test_project_spec_reconstruction.py
+M	tests/test_adopt_dogfood.py
+M	uv.lock
+```
 
 ## Machine-readable migration record
 
@@ -133,7 +191,7 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 	"control_plane_sha256": {
 		"catalog.toml": "3464f2b9636647f31820df22daf50b752d858380e57263c1c4348a76c3523c9c",
 		"config.toml": "5a50b95dba149d3ffb6b5efb5a8076efcc0ff7ba03dd23511cdddb26510bb5e4",
-		"lock.toml": "888d81142eca0ae821823fe1c83154d36eee3301803ab707ae2fcb5f8d6727a9"
+		"lock.toml": "0d9b62b6e9a3d6b00e3b14bc512bf00e03a4652a4cd2378b382af0169900799d"
 	},
 	"dev_group_alignment": {
 		"after_semantic_digest": "sha256:b43668aa2af8d3512418b06dd4ca146948a271bfb18e1d189bcdd9d7b71dc527",
@@ -166,8 +224,8 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"M\tscripts/check.py",
 		"M\tuv.lock"
 	],
-	"migration_patch_sha256": "9c2158d533f66ae4d06b73e4694a83b50f50f8f3c7d96d98944c0323d374be73",
-	"release_input_sha256": "1db6d23ea4478853fb5228ea44b3fdac3ab55c3b361b5e218e6dd0a1324638f7"
+	"migration_patch_sha256": "f9207e615cef02be53c8a4a05e1252e8a9145af8b49c3bfdae9fe43c304048d5",
+	"release_input_sha256": "7c1267b48ffe1f5a9a7ce84ba7b338cb89cb6885c72dcd080941a554b4dbae9b"
 }
 ```
 <!-- release-migration-record:end -->

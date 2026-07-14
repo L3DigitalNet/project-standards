@@ -56,13 +56,19 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
 ### P1 — Complete the pre-atomic gate
 
-- [ ] Run coverage Task 10's complete verification-only gate.
+- [x] Run coverage Task 10's complete verification-only gate.
 
   Run the integrity/catalog, focused, full repository, package, document, spec, handoff, dependency, and performance checks from the stable checkpoint. Require a clean tree and no generated diff.
 
 ### P2 — Cut and publish v5.0.0
 
-- [ ] Create Task 11 as one atomic v5 release commit on `main`.
+- [ ] Resolve editable-source V2 distribution loading and rerun the Task 11 gates.
+
+  The migrated root discovers `.standards/`, but `InstalledDistribution.current()` rejects the canonical symlink-only source projection before direct CLI behavior runs.
+
+  Design and approve a source-checkout adapter that keeps installed-wheel checks fail closed. Add regression coverage, update release-only expectations, rerun both gates, and refresh evidence. Current checkpoint: 491 focused tests pass; the ordinary phase has 89 failures.
+
+- [ ] Complete Task 11 and prepare the v5 release candidate for promotion to `main`.
 
   Start from the verified predecessor. Migrate the source root to V2, create `.standards/`, remove `.project-standards.yml`, transition root workflows and commands, bump project and lock versions, promote the changelog, and finish the active v4-to-v5 reference sweep. Do not stage `.standards/` earlier.
 

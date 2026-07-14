@@ -24,17 +24,67 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 
 - **Sub-agents.** Individual agents and headless Codex are pre-authorized. Ask before agent teams or orchestration, with a cost sketch. Never use Fable; use Haiku only for mechanical work, Sonnet+ for substantive work, and Opus for adversarial review. Set the model.
 - **Self-containment.** This conventions source does not import global agent conventions. It dogfoods repo-local Agent Handoff; do not add workstation ownership.
-- **Dogfood.** Validate managed Markdown with `uv run project-standards validate --config .project-standards.yml`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
+- **Dogfood.** Validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
 - **Keep the toolchain green** before committing validator/test changes: Ruff format/check, BasedPyright, `uv run python scripts/run_repository_tests.py`, `pip-audit`, and `tests/coherence` after `npm ci`. The repository test runner keeps ordinary/release/performance phases serial and parallelizes only the source/wheel compatibility matrix.
-- **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`. Keep `.standards/` absent until atomic v5 release commit.
+- **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`. Keep `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` synchronized in every release change.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.
 
-<!-- BEGIN agent-handoff managed instructions -->
-Use the repo-local `$agent-handoff` skill at startup and closeout.
-Do not reread `docs/handoff/state.md` when SessionStart already injected it.
-Keep current status and tasks in `docs/STATUS.md` and `docs/TODO.md`; route durable facts through `docs/handoff/`.
-At closeout, update only changed facts, preserve user-authored work, store credential references only, and run relevant validation.
-<!-- END agent-handoff managed instructions -->
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:agent-handoff -->
+# Agent Handoff
+
+Use the repo-local `agent-handoff` skill at session startup and closeout. Do not reread state already injected by SessionStart. Keep project knowledge inside this repository and store credential references only, never values.
+<!-- END project-standards:agent-handoff -->
+
+<!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:markdown-tooling -->
+# Markdown and structured-text tooling
+
+Prettier owns physical formatting and markdownlint owns Markdown structure. Do not add overlapping tools.
+
+Enabled checks: format, lint.
+Markdown scope: **/*.md.
+Structured-config scope: **/*.json, **/*.jsonc, **/*.yml, **/*.yaml.
+
+Run the enabled checks before claiming completion.
+<!-- END project-standards:markdown-tooling -->
+
+<!-- prettier-ignore-end -->
+
+<!-- prettier-ignore-start -->
+
+<!-- BEGIN project-standards:python-tooling -->
+# Python tooling
+
+Use uv for environments and dependency changes. Ruff owns formatting, linting, and imports.
+Use basedpyright in strict mode for type checking. Do not add a competing Python gate.
+
+Run before claiming completion:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run basedpyright
+uv run coverage erase
+uv run coverage run --parallel-mode -m pytest
+uv run coverage combine
+uv run coverage report
+uv run pip-audit
+```
+
+When the gate reports formatting or lint findings, run:
+
+```bash
+uv run ruff format .
+uv run ruff check . --fix
+```
+<!-- END project-standards:python-tooling -->
+
+<!-- prettier-ignore-end -->

@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; `testing` carries unreleased v5.0.0 work through coverage Task 9 at `7d4d5fa`.
+- `main` remains the released v4.3.0 line; the verified v5 predecessor is `91f09e0`, and the local Task 11 migration checkpoint is blocked before release-candidate promotion.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
@@ -27,7 +27,8 @@
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Task 9 is committed on the release-input branch at `cc93f90`; its plan, release indexes, evidence, and adversarial review are synchronized. Task 11 owns migrated-root proof.
+- Task 9 is committed at `cc93f90`; Task 10's focused 490-test suite and complete repository gate pass at `91f09e0`, including 2,633 ordinary tests, 56 compatibility rows, 35 release-replay tests, five performance tests, and 89% coverage.
+- Task 11 migrated the root; 491 focused tests pass. The ordinary gate has 89 source-projection failures. Fix editable loading, rerun, and refresh evidence.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.

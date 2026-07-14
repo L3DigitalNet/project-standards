@@ -55,6 +55,9 @@ _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST = (
 _CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:0f91dfa7279726126f569c036eaa8d3dde8881543affea588cea720f617c064c"
 )
+_RELEASE_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:333dfb3470aef49cdf490ccb3b6b76ce90447a299c440ec919b74844f77e70a0"
+)
 
 
 def _payload() -> InstalledPayload:
@@ -292,7 +295,11 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
     }
     assert (
         f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-specs.yml').read_bytes()).hexdigest()}"
-        == _CURRENT_SELF_HOST_WORKFLOW_DIGEST
+        == _RELEASE_CURRENT_SELF_HOST_WORKFLOW_DIGEST
+    )
+    assert (
+        f"sha256:{hashlib.sha256((_PAYLOAD / 'resources/self-host-validate-specs.yml').read_bytes()).hexdigest()}"
+        == _RELEASE_CURRENT_SELF_HOST_WORKFLOW_DIGEST
     )
 
 
