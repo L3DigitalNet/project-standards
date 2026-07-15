@@ -1357,7 +1357,7 @@ Task 9 is committed at `7d4d5fa`, but its retained evidence is preliminary becau
 - [x] Remove Project Specification's explicit legacy config override from its generated caller and reusable workflow commands under unified authority.
 - [x] Reconcile current shipped package, CLI, family, and release guidance without changing frozen legacy resources or historical migration records.
 - [x] Regenerate every affected payload, family, catalog, schema, projection, bundle, and regression digest.
-- [ ] Repeat Task 9's exact predecessor and two-path migration proof, replace the retained preliminary evidence, obtain an independent release-critical review, and commit a clean pre-atomic checkpoint.
+- [x] Repeat Task 9's exact predecessor and two-path migration proof, replace the retained preliminary evidence, obtain an independent release-critical review, and commit a clean pre-atomic checkpoint.
 
 ### Task 10: Verify integrity metadata and run the implementation gate
 
@@ -1385,7 +1385,7 @@ trap - EXIT
 
 Expected: all commands exit 0 and generated checks report no drift. The catalog round trip uses a temporary output so the root `.standards/` directory remains absent until the atomic v5 release commit. Any schema/projection drift returns to the task that owns those bytes and requires another evidence refresh; this final gate does not mutate release inputs.
 
-- [ ] **Step 2: Run focused suites**
+- [x] **Step 2: Run focused suites**
 
 ```bash
 uv run pytest tests/package_contract/test_paths.py tests/package_contract/test_payload.py tests/package_contract/test_schemas.py tests/package_contract/test_self_hosting.py tests/control_plane/test_migration.py tests/control_plane/test_schemas.py tests/package_contract/test_markdown_frontmatter_reconstruction.py tests/package_contract/test_markdown_tooling_reconstruction.py tests/package_contract/test_project_spec_reconstruction.py tests/package_contract/test_python_tooling_reconstruction.py tests/package_contract/test_current_catalog_activation.py tests/package_compatibility/test_release_candidate.py tests/package_compatibility/test_catalog_matrix.py -q
@@ -1393,7 +1393,7 @@ uv run pytest tests/package_contract/test_paths.py tests/package_contract/test_p
 
 Expected: all selected tests pass.
 
-- [ ] **Step 3: Run the complete repository gate**
+- [x] **Step 3: Run the complete repository gate**
 
 ```bash
 uv run ruff format --check .
@@ -1410,12 +1410,12 @@ npx markdownlint-cli2
 
 Expected: every command exits 0, combined coverage meets the configured threshold, coverage shards are removed, and both Python and npm dependency audits report no actionable vulnerability.
 
-- [ ] **Step 4: Run package, document, spec, and handoff gates**
+- [x] **Step 4: Run package, document, spec, and handoff gates**
 
 ```bash
 uv run project-standards validate --config .project-standards.yml
-uv run project-standards spec validate --config .project-standards.yml
-uv run project-standards spec lint --strict --config .project-standards.yml
+uv run project-standards spec validate
+uv run project-standards spec lint --strict
 uv run project-standards agent-handoff validate --repo .
 uv run project-standards agent-handoff drift-check --repo .
 git diff --check
@@ -1423,7 +1423,7 @@ git diff --check
 
 Expected: all commands exit 0; only documented pre-existing append-only session warnings may remain.
 
-- [ ] **Step 5: Confirm the final gate introduced no new diff**
+- [x] **Step 5: Confirm the final gate introduced no new diff**
 
 Run `git status --short` and compare it with the recorded pre-gate status. Task 10 is verification-only; any new tracked or untracked output is a failure to clean up or a return to the owning implementation task, not a catch-all commit.
 

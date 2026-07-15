@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; `testing` carries unreleased v5.0.0 work through coverage Task 9 at `7d4d5fa`.
+- `main` remains the released v4.3.0 line; `testing` carries the verified pre-atomic v5.0.0 checkpoint through Task 10 at `ef99faa`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
@@ -21,13 +21,13 @@
 - Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
 - The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
 - CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Frontmatter pre-tag, Project Spec unified authority, guidance, and integrity are repaired; final Task 9 evidence precedes Task 10 and atomic Task 11.
+- Frontmatter pre-tag, Project Spec unified authority, guidance, and integrity are repaired; Task 9 evidence and Task 10 verification pass before atomic Task 11.
 - The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
 - Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Task 9 proofs pass and review found no major issues. Task 10 exposed and repaired stale catalog expectations and managed instruction formatting; refresh evidence next.
+- Task 9 evidence is current and independent review found no major issues. Task 10 passes 2,632 ordinary, 56 compatibility, 34 release, and five performance tests at 89% coverage.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.

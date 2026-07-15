@@ -50,7 +50,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   Refresh payload, family, and catalog digests; schemas; installed projections; bundled resources; and source/wheel regression expectations. Prove package validation, graph validation, and fixed-point projection remain clean.
 
-- [ ] Re-run coverage Task 9 and replace the retained preliminary evidence.
+- [x] Re-run coverage Task 9 and replace the retained preliminary evidence.
 
   Repeat the exact predecessor and two-path migration replay only after P0 inputs stabilize. Bind the new release-input hash and patch, obtain an independent release-critical review, and leave a committed clean pre-atomic checkpoint.
 
@@ -83,10 +83,12 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 - Focused proof: 488 tests passed; its sole mismatch showed the instruction repair changes only the migration patch and migrated lock digests.
 - Evidence diagnosis: 488/489 focused tests passed; an isolated probe reproduced the changed lock, proving stale evidence rather than nondeterminism.
 - Full-gate follow-up: corrected the current/legacy skill contract, signed-resource frontmatter exemption, and generated catalog; focused tests pass.
+- Final Task 9 proof and evidence currency pass; independent review has no Critical or Important findings.
+- Task 10 passes the full repository, package, document, spec, handoff, dependency, formatting, and performance gates at clean `ef99faa`.
 
 ### P1 — Complete the pre-atomic gate
 
-- [ ] Run coverage Task 10's complete verification-only gate.
+- [x] Run coverage Task 10's complete verification-only gate.
 
   Run the integrity/catalog, focused, full repository, package, document, spec, handoff, dependency, and performance checks from the stable checkpoint. Require a clean tree and no generated diff.
 

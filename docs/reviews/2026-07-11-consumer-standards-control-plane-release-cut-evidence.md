@@ -6,7 +6,7 @@
 
 **Release candidate:** `project-standards 5.0.0` from two independently reconstructed disposable migration authorities
 
-Release-input SHA-256: `2f25a788d3e8924f26e5ccff6d2eb724711bbc6b8b96cf7bda47b27079a67cf1`
+Release-input SHA-256: `0c06f7d27bcf8b23271af2ae27f4a3ba7a48621e03d26b28c4075bf954a0a93e`
 
 ## Result
 
@@ -73,7 +73,7 @@ git diff --binary --no-ext-diff --no-textconv --no-renames HEAD -- .
 Migration patch SHA-256:
 
 ```text
-4f3510c9614337361732ae88d3c445ce7353c9bf856a263754dc08e8ed310adc
+890d5bd08133d08fccf0f9a4a15579031e74ab93d89482a1481cacca6b752cf8
 ```
 
 Ordered migration ledger:
@@ -109,7 +109,7 @@ Control-plane SHA-256 digests:
 ```text
 catalog.toml b8665fa962fed8241504a520f267347df1cf72e34e913f7730029253a3e253a8
 config.toml  cad9e800c2acbcf58d9b0329ff1e39274543f08ebeaf6a73b44be638fb30af11
-lock.toml    0f47628fc1326f21f97ef43dd914978b33e30bede5ac24cd2392c8446619124e
+lock.toml    c526424bbf5540cea04d7bd5558204ff54e6a76c087e8525bb765ea2fbdc511a
 ```
 
 Replay reproduces the completed migrated Git-known tree and all three control-plane digests. Both reconstructed authority paths produce the same ordered ledger, binary patch bytes, and digest.
@@ -134,7 +134,7 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 	"control_plane_sha256": {
 		"catalog.toml": "b8665fa962fed8241504a520f267347df1cf72e34e913f7730029253a3e253a8",
 		"config.toml": "cad9e800c2acbcf58d9b0329ff1e39274543f08ebeaf6a73b44be638fb30af11",
-		"lock.toml": "0f47628fc1326f21f97ef43dd914978b33e30bede5ac24cd2392c8446619124e"
+		"lock.toml": "c526424bbf5540cea04d7bd5558204ff54e6a76c087e8525bb765ea2fbdc511a"
 	},
 	"dev_group_alignment": {
 		"after_semantic_digest": "sha256:b43668aa2af8d3512418b06dd4ca146948a271bfb18e1d189bcdd9d7b71dc527",
@@ -168,8 +168,8 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"M\tscripts/check.py",
 		"M\tuv.lock"
 	],
-	"migration_patch_sha256": "4f3510c9614337361732ae88d3c445ce7353c9bf856a263754dc08e8ed310adc",
-	"release_input_sha256": "2f25a788d3e8924f26e5ccff6d2eb724711bbc6b8b96cf7bda47b27079a67cf1"
+	"migration_patch_sha256": "890d5bd08133d08fccf0f9a4a15579031e74ab93d89482a1481cacca6b752cf8",
+	"release_input_sha256": "0c06f7d27bcf8b23271af2ae27f4a3ba7a48621e03d26b28c4075bf954a0a93e"
 }
 ```
 <!-- release-migration-record:end -->
