@@ -1,13 +1,7 @@
 {
 	"version": "2.0.0",
 	"tasks": [
-		{
-			"label": "check",
-			"type": "shell",
-			"command": "uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit",
-			"group": "test",
-			"problemMatcher": []
-		},
+		{"label":"check","type":"shell","command":"uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage erase && uv run coverage run --parallel-mode -m pytest && uv run coverage combine && uv run coverage report && uv run pip-audit","problemMatcher":[],"group":"test"},
 		{
 			"label": "fix",
 			"type": "shell",

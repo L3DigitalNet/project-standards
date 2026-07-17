@@ -92,15 +92,7 @@ Work from P0 through P2 for the shortest safe path to v5.0.0. P3 and P4 are expl
 
   Run the integrity/catalog, focused, full repository, package, document, spec, handoff, dependency, and performance checks from the stable checkpoint. Require a clean tree and no generated diff.
 
-### P2 — Cut and publish v5.0.0
-
-- [ ] Create Task 11 as one atomic v5 release commit on `main`.
-
-  Start from the verified predecessor. Migrate the source root to V2, create `.standards/`, remove `.project-standards.yml`, transition root workflows and commands, bump project and lock versions, promote the changelog, and finish the active v4-to-v5 reference sweep. Do not stage `.standards/` earlier.
-
-- [ ] Bind final release evidence and verify the atomic parent-to-release diff.
-
-  Run the migrated-root gate, repeat the Task 9 proof against the actual release tree, derive the complete-release record, rerun all local release gates, and prove the single commit contains exactly the intended transition.
+### P2 — Publish and close v5.0.0
 
 - [ ] Land the exact release commit on remote `main` and pass hosted gates.
 

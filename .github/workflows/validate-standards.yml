@@ -1,0 +1,10 @@
+jobs:
+  frontmatter:
+    name: Frontmatter
+    uses: ./.github/workflows/validate-markdown-frontmatter.yml
+name: Validate project standards
+"on":
+  pull_request: {}
+  push:
+    branches:
+      - main

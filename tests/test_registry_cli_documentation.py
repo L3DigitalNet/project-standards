@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -47,20 +48,36 @@ def _run_with_config(tmp_path: Path, version_yaml: str) -> int:
     return validate_frontmatter.main(["--config", str(cfg)])
 
 
-def test_known_version_accepted_silently(tmp_path: Path) -> None:
+def test_known_version_accepted_silently(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
     assert _run_with_config(tmp_path, _CONFIG_KNOWN.format(version="1.0")) == 0
 
 
-def test_unknown_version_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_unknown_version_exits_2(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
     assert _run_with_config(tmp_path, _CONFIG_KNOWN.format(version="9.9")) == 2
     assert "unknown cli_documentation.version" in capsys.readouterr().err
 
 
-def test_non_string_version_exits_2(tmp_path: Path) -> None:
+def test_non_string_version_exits_2(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
     bad = _CONFIG_KNOWN.replace('version: "{version}"', "version: 1.0")  # bare float
     assert _run_with_config(tmp_path, bad) == 2
 
 
-def test_dogfood_config_selects_1_0() -> None:
-    cfg = validate_frontmatter.load_config(Path(".project-standards.yml"))
-    assert cfg.cli_documentation_version == "1.0"
+def test_dogfood_config_selects_cli_documentation_v1_1() -> None:
+    config = tomllib.loads(Path(".standards/config.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads(Path(".standards/lock.toml").read_text(encoding="utf-8"))
+
+    assert config["standards"]["cli-documentation"]["config"]["contract_version"] == "1.0"
+    assert lock["standards"]["cli-documentation"]["resolved"] == "1.1"

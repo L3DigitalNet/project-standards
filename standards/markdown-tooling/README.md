@@ -293,12 +293,12 @@ The linter half ships as a reusable workflow, `.github/workflows/lint-markdown.y
 - `globs` — newline-delimited glob(s) of Markdown to lint (default `**/*.md`). Passed explicitly because the action's own default glob is the non-recursive `*.{md,markdown}` [S06].
 - `config` — path to a base config file; empty means no `--config` flag is passed, so the underlying `markdownlint-cli2` auto-discovers config from the caller's repo (its own `.markdownlint.json` / `.markdownlint-cli2.jsonc`) [S03].
 
-Consumer opt-in (pin `@v4`):
+Consumer opt-in (pin `@v5`):
 
 ```yaml
 jobs:
   lint-markdown:
-    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v4
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v5
     with:
       globs: '**/*.md'
 ```

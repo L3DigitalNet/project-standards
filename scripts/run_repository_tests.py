@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
@@ -45,6 +46,7 @@ def test_commands(*, workers: int) -> tuple[tuple[str, ...], ...]:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -56,6 +58,7 @@ def test_commands(*, workers: int) -> tuple[tuple[str, ...], ...]:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -72,6 +75,7 @@ def test_commands(*, workers: int) -> tuple[tuple[str, ...], ...]:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -95,6 +99,16 @@ def _build_compatibility_wheel(scratch: Path) -> Path:
     if len(wheels) != 1:
         raise RuntimeError(f"compatibility build produced {len(wheels)} wheels")
     return wheels[0].resolve()
+
+
+def _extract_candidate_runtime(wheel: Path, scratch: Path) -> Path:
+    """Extract and return the candidate wheel's import root."""
+    installed = scratch / "installed"
+    with zipfile.ZipFile(wheel) as archive:
+        archive.extractall(installed)
+    if not (installed / "project_standards").is_dir():
+        raise RuntimeError("candidate wheel does not contain project_standards")
+    return installed
 
 
 def _execute(command: Sequence[str], environment: Mapping[str, str]) -> int:
@@ -126,7 +140,12 @@ def run_gate(
     _remove_coverage_data(coverage_root)
     try:
         wheel = build_wheel(scratch)
-        environment = {**os.environ, _WHEEL_ENV: str(wheel)}
+        runtime = _extract_candidate_runtime(wheel, scratch)
+        environment = {
+            **os.environ,
+            "PYTHONPATH": str(runtime),
+            _WHEEL_ENV: str(wheel),
+        }
         for command in test_commands(workers=workers):
             if return_code := execute(command, environment):
                 return return_code

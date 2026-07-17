@@ -55,8 +55,11 @@ _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST = (
 _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f"
 )
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+_PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc"
+)
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
 )
 
 
@@ -292,7 +295,7 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
         _CALLER_WORKFLOW_DIGEST,
         _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST,
         _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST,
-        _CURRENT_SELF_HOST_WORKFLOW_DIGEST,
+        _PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST,
     }
     assert (
         f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-specs.yml').read_bytes()).hexdigest()}"

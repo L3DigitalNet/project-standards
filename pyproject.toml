@@ -1,6 +1,6 @@
 [project]
 name = "project-standards"
-version = "4.3.0"
+version = "5.0.0"
 description = "Reusable project standards, templates, schemas, and validation tools."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -23,12 +23,12 @@ validate-references = "project_standards.validate_references:main"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0",
-    "ruff>=0.14",
     "basedpyright",
-    "types-PyYAML",
-    "coverage[toml]",
+    "coverage[toml]>=7.10.0",
     "pip-audit",
+    "pytest>=9.0",
+    "ruff>=0.14.11",
+    "types-PyYAML",
     "pytest-xdist>=3.8",
     "pyright==1.1.411",
 ]
@@ -81,6 +81,9 @@ branch = true
 parallel = true
 patch = ["subprocess"]
 source = ["src"]
+
+[tool.coverage.paths]
+source = ["src/project_standards", "*/project_standards"]
 
 [tool.coverage.report]
 show_missing = true

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import tomllib
+import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from types import ModuleType
@@ -24,6 +25,12 @@ def _load_gate() -> ModuleType:
     return module
 
 
+def _write_candidate_wheel(path: Path) -> Path:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("project_standards/catalogs/5.toml", "catalog = 5\n")
+    return path
+
+
 def test_gate_separates_covered_phases_before_one_combine() -> None:
     gate = _load_gate()
 
@@ -40,6 +47,7 @@ def test_gate_separates_covered_phases_before_one_combine() -> None:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -51,6 +59,7 @@ def test_gate_separates_covered_phases_before_one_combine() -> None:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -67,6 +76,7 @@ def test_gate_separates_covered_phases_before_one_combine() -> None:
             "coverage",
             "run",
             "--parallel-mode",
+            "--source=project_standards",
             "-m",
             "pytest",
             "-m",
@@ -81,7 +91,7 @@ def test_gate_separates_covered_phases_before_one_combine() -> None:
 def test_gate_builds_one_wheel_before_running_test_phases(tmp_path: Path) -> None:
     gate = _load_gate()
     events: list[tuple[str, object]] = []
-    wheel = tmp_path / "project_standards-5.0.0-py3-none-any.whl"
+    wheel = _write_candidate_wheel(tmp_path / "project_standards-5.0.0-py3-none-any.whl")
 
     def build(_scratch: Path) -> Path:
         events.append(("build", wheel))
@@ -106,9 +116,48 @@ def test_gate_builds_one_wheel_before_running_test_phases(tmp_path: Path) -> Non
     assert len([event for event in events if event[0] == "command"]) == 7
 
 
+def test_gate__candidate_wheel__is_runtime_authority_for_every_phase(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gate = _load_gate()
+    wheel = _write_candidate_wheel(tmp_path / "project_standards-5.0.0-py3-none-any.whl")
+    environments: list[Mapping[str, str]] = []
+    monkeypatch.setenv("PYTHONPATH", "/ambient/source-checkout")
+
+    def execute(_command: Sequence[str], environment: Mapping[str, str]) -> int:
+        environments.append(environment)
+        return 0
+
+    def build(_scratch: Path) -> Path:
+        return wheel
+
+    result = gate.run_gate(
+        tmp_path,
+        workers=4,
+        coverage_root=tmp_path,
+        build_wheel=build,
+        execute=cast("Callable[[Sequence[str], Mapping[str, str]], int]", execute),
+    )
+
+    assert result == 0
+    assert len(environments) == 7
+    runtime_roots = {environment["PYTHONPATH"] for environment in environments}
+    assert len(runtime_roots) == 1
+    runtime_root = Path(runtime_roots.pop())
+    assert runtime_root == tmp_path / "installed"
+    assert (runtime_root / "project_standards/catalogs/5.toml").read_text(
+        encoding="utf-8"
+    ) == "catalog = 5\n"
+    assert all(
+        environment["PROJECT_STANDARDS_COMPATIBILITY_WHEEL"] == str(wheel)
+        for environment in environments
+    )
+
+
 def test_gate_removes_coverage_data_when_a_phase_fails(tmp_path: Path) -> None:
     gate = _load_gate()
-    wheel = tmp_path / "project_standards-5.0.0-py3-none-any.whl"
+    wheel = _write_candidate_wheel(tmp_path / "project_standards-5.0.0-py3-none-any.whl")
     combined = tmp_path / ".coverage"
     shard = tmp_path / ".coverage.worker"
     combined.touch()
@@ -138,10 +187,16 @@ def test_gate_configuration_declares_parallelism_without_global_xdist_addopts() 
     dev_dependencies = project["dependency-groups"]["dev"]
     pytest_config = project["tool"]["pytest"]["ini_options"]
     coverage_run = project["tool"]["coverage"]["run"]
+    coverage_paths = project["tool"]["coverage"]["paths"]
 
     assert "pytest-xdist>=3.8" in dev_dependencies
     assert coverage_run["parallel"] is True
     assert coverage_run["patch"] == ["subprocess"]
+    assert coverage_run["source"] == ["src"]
+    assert coverage_paths["source"] == [
+        "src/project_standards",
+        "*/project_standards",
+    ]
     assert any(marker.startswith("compatibility:") for marker in pytest_config["markers"])
     assert any(marker.startswith("release_replay:") for marker in pytest_config["markers"])
     assert not any(argument.startswith("-n") for argument in pytest_config["addopts"])

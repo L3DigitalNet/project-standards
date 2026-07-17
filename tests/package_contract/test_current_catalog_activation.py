@@ -44,7 +44,7 @@ _PACKAGES = {
         "active",
         "1.2",
         "default",
-        "sha256:93ecfd6bc8db7f2cbe052937dfd96c5e3727b36964ab471d274e8ba557ebda0d",
+        "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -60,7 +60,7 @@ _PACKAGES = {
         "active",
         "1.1",
         "default",
-        "sha256:b3d38f50c06adcd4bdcfee74b53fc184dc3538dac10099b8a100bab08b114093",
+        "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -156,7 +156,11 @@ def test_repository_root_activates_exact_catalog_and_relative_projections() -> N
     } == {
         (standard_id, values[3], values[4], values[5]) for standard_id, values in _PACKAGES.items()
     }
-    assert not (_ROOT / ".standards").exists()
+    assert not (_ROOT / ".project-standards.yml").exists()
+    assert all(
+        (_ROOT / ".standards" / name).is_file()
+        for name in ("catalog.toml", "config.toml", "lock.toml")
+    )
     assert sync_payload_projection(_ROOT, check=True) == ()
     for link in plan_payload_projection(_ROOT).links:
         assert link.destination.is_symlink()

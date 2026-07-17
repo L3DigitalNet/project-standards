@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 _REPO = Path(__file__).resolve().parent.parent
 _REGISTRY = _REPO / "src" / "project_standards" / "schemas" / "registry.json"
@@ -17,8 +16,9 @@ def test_markdown_tooling_default_is_1_1_and_1_0_still_known() -> None:
     assert set(mt["versions"]) == {"1.0", "1.1"}
 
 
-def test_dogfood_config_selects_1_1() -> None:
-    # CR-003: parse YAML and assert the *markdown_tooling* version specifically —
-    # a substring check false-passes on the unrelated frontmatter `version: "1.1"`.
-    cfg: dict[str, Any] = yaml.safe_load((_REPO / ".project-standards.yml").read_text("utf-8"))
-    assert cfg["markdown_tooling"]["version"] == "1.1"
+def test_dogfood_config_selects_markdown_tooling_v1_2() -> None:
+    config = tomllib.loads((_REPO / ".standards/config.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
+
+    assert config["standards"]["markdown-tooling"]["config"]["contract_version"] == "1.1"
+    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.2"

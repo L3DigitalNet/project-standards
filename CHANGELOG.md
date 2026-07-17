@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-12'
+updated: '2026-07-17'
 reviewed: null
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -22,7 +22,7 @@ related:
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'standards/agent-handoff/README.md'
   - 'docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md'
-  - '.project-standards.yml'
+  - '.standards/config.toml'
 source: []
 confidence: 'high'
 visibility: 'internal'
@@ -37,7 +37,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
-> **Ships in v5.0.0.** Per the release freeze (see [`meta/versioning.md`](meta/versioning.md)), no interim release is cut before v5.0.0; entries here accumulate and are promoted together at that MAJOR cut.
+## [5.0.0] — 2026-07-17
+
+> **Why MAJOR:** v5 replaces the legacy `.project-standards.yml` and package-specific provenance plane with the unified `.standards/` control plane, activates immutable catalog-5 packages, and carries validator and tooling changes that may newly fail a previously-passing v4 consumer. Follow [`UPGRADING.md`](UPGRADING.md) to preview and apply the migration before repinning workflows and the CLI.
 
 ### Added
 

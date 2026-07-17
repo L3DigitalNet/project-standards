@@ -442,11 +442,11 @@ def test_legacy_list_and_adopt_emit_v5_deprecation_notices(
         project_standards_main(
             ["adopt", "markdown-frontmatter", "--dest", str(tmp_path), "--dry-run"]
         )
-        == 0
+        == 2
     )
     adopted = capsys.readouterr()
     assert "deprecated" in adopted.err
-    assert "control plane" in adopted.err
+    assert "requires explicit init, enable, and reconcile preview" in adopted.err
     assert not (tmp_path / ".standards").exists()
 
 

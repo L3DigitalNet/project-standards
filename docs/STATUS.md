@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; `testing` carries the verified pre-atomic v5.0.0 checkpoint through Task 10 at `ef99faa`.
+- `main` remains the released v4.3.0 line; the atomic v5.0.0 release commit is prepared from verified predecessor `96d069e` for exact landing on `main`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
 - The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
@@ -27,7 +27,8 @@
 - Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
 - All five serial performance gates pass, and failed runs remove parallel coverage shards.
 - Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Task 9 evidence is current and independent review found no major issues. Task 10 passes 2,632 ordinary, 56 compatibility, 34 release, and five performance tests at 89% coverage.
+- Task 9 evidence is current and independent review found no major issues. Task 10 passes 2,629 ordinary tests with three expected skips, 56 compatibility tests, 34 release tests, and five performance tests at 89% coverage.
+- Task 11 atomically migrates the source root to catalog 5, preserves consumer-owned workflows and shared containers, binds the complete parent-to-release diff, and passes the migrated-root release gate. Remote `main`, hosted checks, signed refs, and artifact publication remain.
 - The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
 - Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
 - The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
@@ -35,7 +36,7 @@
 - Deferred decisions are closed: existing symlink checks and OpenAPI policy stand; catalog 5 drift tooling supersedes the old v2.2 `check` plan.
 - Current handoff instructions, architecture, and bug lessons meet size and shape targets; only accepted append-only session warnings remain.
 - All 15 retained Project Specification documents now live under `docs/specs/`, are indexed, and pass validate/lint; future package specs remain post-v5.
-- The release freeze remains active until v5.0.0; versioned changes accumulate under CHANGELOG `[Unreleased]`.
+- The release commit promotes CHANGELOG `[5.0.0]`; the freeze remains active until the exact commit, signed refs, and artifact are published from `main`.
 - Durable implementation history is in `docs/handoff/sessions/2026-07.md`.
 - Future-artifact disposition, Python Coding status, Usage Documentation Site review, `project-toolbox`, and `agent-managed-repo` are post-v5 programs, not release prerequisites.
 - Final pre-release housekeeping and SPEC-MT01 Step 07 are complete. MCP server work remains deferred behind v5 and fresh protocol/SDK research.

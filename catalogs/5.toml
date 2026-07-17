@@ -22,7 +22,7 @@ role = "default"
 [[packages]]
 id = "markdown-frontmatter"
 version = "1.2"
-digest = "sha256:93ecfd6bc8db7f2cbe052937dfd96c5e3727b36964ab471d274e8ba557ebda0d"
+digest = "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c"
 role = "default"
 
 [[packages]]
@@ -34,7 +34,7 @@ role = "default"
 [[packages]]
 id = "project-spec"
 version = "1.1"
-digest = "sha256:b3d38f50c06adcd4bdcfee74b53fc184dc3538dac10099b8a100bab08b114093"
+digest = "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e"
 role = "default"
 
 [[packages]]

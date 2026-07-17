@@ -1435,8 +1435,10 @@ Run `git status --short` and compare it with the recorded pre-gate status. Task 
 - Modify at release preparation: `pyproject.toml`, `.vscode/tasks.json`, `uv.lock`
 - Modify only at release time: `scripts/check.py`
 - Modify only at release time: `tests/test_adopt_dogfood.py`
+- Modify only at release time: `scripts/run_repository_tests.py`, `tests/test_repository_test_gate.py`
 - Modify only at release time: `AGENTS.md`
 - Modify only at release time: `CLAUDE.md`
+- Modify only at release time: `.markdownlint-cli2.jsonc`
 - Modify only at release time: `docs/usage.md`
 - Modify only at release time: `docs/handoff/conventions.md`
 - Modify only at release time: `CHANGELOG.md`
@@ -1448,13 +1450,16 @@ Run `git status --short` and compare it with the recorded pre-gate status. Task 
 - Replace at release time: `.github/workflows/validate-specs.yml`
 - Verify or modify at release time: `standards/*/adopt.md`
 - Reuse and verify: `tests/fixtures/package_compatibility/legacy/release-root/**`
-- Reuse and verify: `tests/package_compatibility/release_candidate.py`, `tests/package_compatibility/test_release_candidate.py`
+- Reuse and verify: `tests/package_compatibility/release_candidate.py`
+- Modify and verify: `tests/package_compatibility/test_release_candidate.py`
+- Modify and verify at release time: post-atomic root and explicit legacy-fallback tests under `tests/agent_handoff/`, `tests/control_plane/`, `tests/package_contract/`, and the affected root `tests/test_*.py` modules
+- Refresh at release time: `tests/fixtures/package_contract/valid/full/expected/catalog.toml`
 - Preserve: `src/project_standards/bundles/python-tooling/check.py`
 - Create only in the atomic release commit: `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`
 - Refresh: `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`
 - Record outside the repository: the clean pre-atomic commit ID and its materialized Git object tree
 
-- [ ] **Step 1: Verify the pre-migration twin and frozen V1 digest**
+- [x] **Step 1: Verify the pre-migration twin and frozen V1 digest**
 
 Run:
 
@@ -1465,7 +1470,7 @@ sha256sum scripts/check.py src/project_standards/bundles/python-tooling/check.py
 
 Expected: the two legacy files are byte-identical before migration.
 
-- [ ] **Step 2: Establish the guarded live predecessor and extracted release provider**
+- [x] **Step 2: Establish the guarded live predecessor and extracted release provider**
 
 Require a clean Task 10 worktree before changing the live root. Record `PRE_ATOMIC_HEAD=$(git rev-parse HEAD)` and materialize that exact Git object tree outside the repository as `RELEASE_PREDECESSOR_ROOT`, preserving regular-file modes and symlinks. Require its tree to match `git ls-tree -r "$PRE_ATOMIC_HEAD"`, then initialize and commit it as an independent repository so the Git-known reconstruction helpers can consume it without referencing mutable live metadata. Do not source later reconstruction from the dirty or finalized live worktree. Keep both values through commit verification.
 
@@ -1497,7 +1502,7 @@ test -d "$RELEASE_INSTALLED/project_standards"
 
 Keep these variables and the combined cleanup trap active through preview, apply, complete-release derivation, the atomic commit, and post-commit verification in Step 9.
 
-- [ ] **Step 3: Inject intent only and run both guarded live pre-alignments**
+- [x] **Step 3: Inject intent only and run both guarded live pre-alignments**
 
 Call `declare_release_cut_intent(Path("."))`. It writes only `.project-standards.yml` and uses the same `RELEASE_PYTHON_TOOLING_CONFIG` as Task 9: exact `pyright==1.1.411`, `types-PyYAML`, `pytest-xdist>=3.8`, all three markers, the retained coverage exclusion, `coverage.parallel = true`, `coverage.patch = ["subprocess"]`, and `workflow_ownership = "consumer-owned"`. This edit is transient: it must be consumed and removed by the same atomic migration, never committed as an intermediate legacy state.
 
@@ -1507,7 +1512,7 @@ Call `prealign_release_check_task` with the same extracted distribution and spar
 
 Run both guards' negative drift-refusal tests from Task 9 immediately before the live operation. Any live source-digest or semantic-value mismatch, or either already-aligned input, is a hard stop with no write; do not update the recorded guards to accept unreviewed state.
 
-- [ ] **Step 4: Verify applicable migration previews through the extracted distribution**
+- [x] **Step 4: Verify applicable migration previews through the extracted distribution**
 
 Run both previews:
 
@@ -1530,7 +1535,7 @@ Exit 1 is the expected preview result because applicable migration work remains;
 
 Require no Python Tooling whole-file remove/retirement claim against `AGENTS.md`, `CLAUDE.md`, `.vscode/settings.json`, or `.vscode/tasks.json`; require all four absent from `planner.retired_targets` and `legacy_removals`. For each instruction path, require `retired_content` to equal the complete frozen file after only Agent Handoff's exact recognized legacy bounded block is stripped. Require Markdown Frontmatter to select self-hosted mode, replace its recognized legacy workflow in place with the immutable V5 endpoint, and compose a same-commit local call in `validate-standards.yml`; require both Markdown Tooling workflows to remain byte-identical; and require Project Spec to select self-hosted mode and preview the documented in-place replacement of transitional `.github/workflows/validate-specs.yml`. Locate both guarded next-lock units and require Python Tooling ownership, provider provenance, and semantic digests equal to their respective guard results.
 
-- [ ] **Step 5: Apply the reviewed v5 migration atomically**
+- [x] **Step 5: Apply the reviewed v5 migration atomically**
 
 Run:
 
@@ -1544,7 +1549,7 @@ uv sync --locked --all-groups --offline
 
 The extracted-distribution apply must exit 0, create the three `.standards/` files, replace root `scripts/check.py` with the non-default V2 rendering, preserve the optimized consumer-owned workflow bytes, preserve the guarded task container, avoid Python Tooling whole-file retirement of any instruction/shared container, perform the reviewed Agent Handoff bounded-block transition, replace Markdown Frontmatter's legacy workflow in place with the immutable V5 self-host endpoint and compose its local caller in `validate-standards.yml`, replace Project Spec's documented transitional workflow in place, and remove `.project-standards.yml` in the same reviewed commit. Normalize both instruction files through the exact old/new block removals defined in Task 9, require equal residual bytes, and require exactly one byte-identical current block from each provider. The refreshed `uv.lock` must retain `pyright==1.1.411`; locked offline sync must pass; `.standards/config.toml` and the provider-rendered dev group must retain the same exact requirement; and `.standards/lock.toml` must own both guarded units with their previewed semantic digests and provider provenance.
 
-- [ ] **Step 6: Retire only the obsolete root-script dogfood mapping**
+- [x] **Step 6: Retire only the obsolete root-script dogfood mapping**
 
 Remove `"python-tooling/check.py": "scripts/check.py"` from `_DOGFOOD`. Add separate assertions:
 
@@ -1574,13 +1579,17 @@ def test_root_check_script_matches_current_v2_rendering(tmp_path: Path) -> None:
 
 Do not modify the frozen bundle bytes.
 
-- [ ] **Step 7: Switch root validation commands to unified authority**
+- [x] **Step 7: Switch root validation commands to unified authority**
 
 Update both root instruction files—`AGENTS.md` and `CLAUDE.md`—the active commands in `README.md`, `docs/usage.md`, and `docs/handoff/conventions.md`, and every active release-checklist command that passes `--config .project-standards.yml` so post-migration validation resolves from `.standards/config.toml`. Update `CHANGELOG.md`, the current STATUS/TODO and handoff/session facts, and review every release metadata surface required by `meta/versioning.md` before the final evidence refresh: both reusable-workflow defaults, `README.md`, every `standards/*/adopt.md`, and the v4-to-v5 `UPGRADING.md`. A surface already carrying correct v5 bytes may remain unchanged, but its verification is still part of the release proof. Verify the sweep with `rg -n -- '--config \.project-standards\.yml' AGENTS.md CLAUDE.md README.md meta docs`; classify every remaining match as an intentional legacy/debug migration example or add its active document to this release-time sweep. Archival review, plan, specification-history, and future-draft matches do not require rewriting solely to erase the string.
 
 Record the exact Git-known changed-path list relative to `$PRE_ATOMIC_HEAD` after cleanup. Every non-evidence release edit must be final before Step 8 calculates release-input or complete-patch evidence. Treat the root as stable after this step: any later non-evidence edit invalidates the complete release-content patch, replay equality, release-input currency, and full verification gate.
 
-- [ ] **Step 8: Rerun both checker oracles and the post-atomic release checklist**
+- [x] **Step 8: Rerun both checker oracles and the post-atomic release checklist**
+
+Before running the migrated-root gate, update the consumer-owned repository runner to build one candidate wheel, extract it under the runner scratch root, and replace ambient `PYTHONPATH` with that extracted import root for every test phase. Keep `.github/workflows/check.yml` byte-identical. Map every collected `*/project_standards` package directory back to canonical `src/project_standards`, regardless of the temporary extraction-directory name, and require nested installed-wheel tests to clear the inherited outer `PYTHONPATH` before installing or executing their own wheel. Focused tests must prove the wheel is built once, all seven phases share the exact extracted runtime, ambient source paths are excluded, coverage remapping is configured, and inner venvs remain isolated.
+
+The self-repository branches of the Markdown Frontmatter and Project Spec workflows must likewise build the event commit as one wheel and install that wheel before validation; an editable `uv sync` cannot satisfy the installed-catalog boundary. Keep each root workflow byte-identical to its selected package resource and refresh only the two affected integrity chains and catalog entries.
 
 First run:
 
@@ -1596,7 +1605,7 @@ Then rerun Task 10's complete gate with the document commands changed to `projec
 
 After the gate leaves no new diff, call `complete_release_content_patch(RELEASE_PREDECESSOR_ROOT, Path("."))`. Require its changed-path ledger to equal the Git-known live changes relative to `$PRE_ATOMIC_HEAD`, excluding only `docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md`; require binary replay to a fresh predecessor tree to equal the final live Git-known tree under the same exclusion; and record the complete release-content patch digest and ledger separately from Task 9's migration-patch digest and ledger. The helper must obtain both artifacts through `canonical_release_diff`, with its fixed diff flags, ref ordering, and evidence pathspec ordering. Calculate `release_input_digest()` from the final live tree, refresh the retained evidence with the complete release facts, then run the separate evidence-currency test plus Prettier, markdownlint, managed-document validation, and `git diff --check` against the final evidence change. After these checks pass, record `VALIDATED_EVIDENCE_SHA256` from the exact worktree evidence bytes. Because evidence is the only excluded path, that final evidence write changes neither complete-patch nor release-input digest. Make no non-evidence edit afterward.
 
-- [ ] **Step 9: Commit as part of the atomic v5 release commit**
+- [x] **Step 9: Commit as part of the atomic v5 release commit**
 
 Stage the complete reviewed release set, including `.standards/`, root-script transition, metadata/version changes, release evidence, and legacy-authority removal. Require `git diff --cached --name-status --no-renames` to match the retained complete release ledger plus the one evidence path. Before commit, require no unstaged change, require the worktree evidence SHA-256 still equals `VALIDATED_EVIDENCE_SHA256`, and hash `git show :docs/reviews/2026-07-11-consumer-standards-control-plane-release-cut-evidence.md` to prove the staged blob equals that same validated digest. Commit once; do not create a standalone partial migration commit.
 

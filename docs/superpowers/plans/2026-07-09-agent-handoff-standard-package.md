@@ -1259,7 +1259,7 @@ uv run coverage run -m pytest
 uv run coverage report
 uv run pip-audit
 uv run pytest tests/coherence
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 uv run project-standards spec validate docs/specs/2026-07-09-agent-handoff-standard-package.md
 uv run project-standards spec lint docs/specs/2026-07-09-agent-handoff-standard-package.md
 uv run project-standards standards validate-graph --root . --require-all-manifests

@@ -21,14 +21,14 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 
 ## 1. Dogfood the standards
 
-**Applies when:** editing local managed Markdown declared in `.project-standards.yml` — currently `CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `docs/workflows/**/*.md`, `meta/**/*.md`, and `docs/adr/**/*.md`.
+**Applies when:** editing local managed Markdown selected by `.standards/config.toml` — currently `CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `docs/mcp-readiness.md`, `docs/workflows/**/*.md`, `meta/**/*.md`, and `docs/adr/**/*.md`.
 
 **Rule:** local managed Markdown carries canonical frontmatter and must validate; run the validator before finishing. Standard-package content under `standards/**` is deliberately excluded by ADR 0015 so this repo does not ship repo-local metadata inside reusable standards. Intentional frontmatter artifacts there may still exist in examples, templates, and skill metadata because they teach or implement the standard rather than describe this repository's local document lifecycle.
 
 **Code:**
 
 ```bash
-uv run validate-frontmatter --config .project-standards.yml
+uv run project-standards validate
 ```
 
 **Why:** this repo is the source of the standard; if its own managed local docs don't validate, the standard isn't credible. Published standard packages have a different boundary: they must be reusable without carrying project-standards-specific document metadata.

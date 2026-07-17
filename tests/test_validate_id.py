@@ -382,12 +382,14 @@ def _cfg(tmp_path: Path, include: list[str]) -> Path:
 
 def test_main_valid_file_exits_zero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     doc = _write(tmp_path, "id: note-a3f9zk-my-note\ndoc_type: note\ntitle: My Note\n")
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("sys.argv", ["validate-id", str(doc)])
     assert main() == 0
 
 
 def test_main_invalid_file_exits_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     doc = _write(tmp_path, "id: old-style\ndoc_type: note\ntitle: Old Style\n")
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("sys.argv", ["validate-id", str(doc)])
     assert main() == 1
 
@@ -396,6 +398,7 @@ def test_main_quiet_suppresses_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     doc = _write(tmp_path, "id: old-style\ndoc_type: note\ntitle: Old Style\n")
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("sys.argv", ["validate-id", "--quiet", str(doc)])
     rc = main()
     assert rc == 1
@@ -970,6 +973,7 @@ def test_violations_print_to_stderr(
     # README contract: exit 1 prints each error, then a summary count, to stderr
     # (F9) — matching validate-frontmatter so stream-filtering CI sees both.
     doc = _write(tmp_path, "id: old-style\ndoc_type: note\ntitle: Old Style\n")
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("sys.argv", ["validate-id", str(doc)])
     assert main() == 1
     captured = capsys.readouterr()

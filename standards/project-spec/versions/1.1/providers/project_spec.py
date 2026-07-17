@@ -24,6 +24,7 @@ _SELF_HOST_WORKFLOW_DIGESTS = frozenset(
         "sha256:0be22314a96e41f9861897e75baf7bfcf35b2f3ae51870db0f9cc6e982fa5525",
         "sha256:abf536c4b4811ee0eb5e16d5d5a79a8a2370118da4278c612e0ee9461ba6045f",
         "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc",
+        "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8",
     }
 )
 

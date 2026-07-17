@@ -9,18 +9,20 @@
 	// explicitly because the action's own default is the non-recursive
 	// `*.{md,markdown}`.
 	"globs": ["**/*.md"],
-	// `ignores` excludes Markdown that is machine-generated or agent-authored
-	// session state rather than authored prose held to the body-style standard —
-	// the same boundary `.project-standards.yml` already draws for FRONTMATTER
-	// validation (it excludes docs/handoff/**). These paths are regenerated
-	// artifacts (codex review transcripts; Agent Handoff session state), so
-	// body-linting them is churn, not quality, and would keep CI permanently red on
-	// content no human wrote to a style bar. The spec fixtures are deliberately
-	// mutated/generated Markdown used to exercise parser failures, not authored docs.
-	// Legacy compatibility fixtures likewise preserve arbitrary consumer bytes.
+	// `ignores` excludes provider-composed agent instructions, machine-generated
+	// Markdown, and agent-authored session state rather than authored prose held to
+	// the body-style standard. The same boundary appears in the selected Frontmatter
+	// package config. These paths are regenerated artifacts (managed instruction
+	// blocks, review transcripts, and Agent Handoff session state), so body-linting
+	// them is churn, not quality, and would keep CI red on content no human wrote to a
+	// style bar. The spec fixtures are deliberately mutated/generated Markdown used
+	// to exercise parser failures, not authored docs. Legacy compatibility fixtures
+	// likewise preserve arbitrary consumer bytes.
 	// Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
 	// ignored — they stay gated.
 	"ignores": [
+		"AGENTS.md",
+		"CLAUDE.md",
 		"docs/handoff/**",
 		"tests/fixtures/specs/**",
 		"tests/fixtures/package_compatibility/legacy/**"

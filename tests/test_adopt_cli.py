@@ -5,8 +5,8 @@ Covers the full CLI surface via main():
 - adopt: dest validation, file materialization, shared-artifact dedup, idempotency,
   fragment reporting, and the ADR template-exclusion guidance
 - validate: early-dispatch architecture (cannot use argparse REMAINDER for flags like
-  --config), --help interception before forwarding, flag pass-through to both validators,
-  exit-code-is-max(rc_frontmatter, rc_id) contract, --schema and config custom-schema bypass
+  --config), --help interception before forwarding, flag pass-through to all validators,
+  worst-exit-code selection, --schema, and config custom-schema bypass
 """
 
 from __future__ import annotations
@@ -21,6 +21,21 @@ from project_standards.cli import main, v5_catalog_has_all_adoptable_defaults
 from project_standards.control_plane.codec import parse_catalog
 from project_standards.package_contract.catalog import render_consumer_catalog
 from project_standards.package_contract.repository import build_package_repository
+
+
+@pytest.fixture(autouse=True)
+def use_legacy_adopt_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    def legacy_route(
+        _standards: list[str],
+        _dest: Path,
+        *,
+        force: bool,
+        dry_run: bool,
+        unsupported_options: bool = False,
+    ) -> None:
+        del force, dry_run, unsupported_options
+
+    monkeypatch.setattr("project_standards.cli._try_v5_adopt", legacy_route)
 
 
 def test_list_plain_lists_packaged_adopt_standards(
@@ -159,21 +174,31 @@ def test_adopt_unknown_standard_exits_2(capsys: pytest.CaptureFixture[str]) -> N
     assert "unknown standard" in capsys.readouterr().err
 
 
-def test_validate_help_shows_both_validators(capsys: pytest.CaptureFixture[str]) -> None:
+def test_validate_help_shows_all_validators(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["validate", "--help"])
     out = capsys.readouterr().out
     assert rc == 0
     assert "validate-id" in out
     assert "validate-frontmatter" in out
+    assert "validate-references" in out
 
 
-def test_validate_subcommand_delegates_flags(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Both validators must receive the same argv — regression guard for the argparse
+def test_validate_subcommand_delegates_flags(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # All validators must receive the same argv — regression guard for the argparse
     # REMAINDER trap that previously caused exit 2 before delegating.
     import project_standards.cli as cli
 
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".project-standards.yml").write_text(
+        "standards_version: v4\n",
+        encoding="utf-8",
+    )
     captured_fm: list[list[str]] = []
     captured_id: list[list[str]] = []
+    captured_refs: list[list[str]] = []
 
     def fake_fm(argv: list[str]) -> int:
         captured_fm.append(list(argv))
@@ -183,21 +208,39 @@ def test_validate_subcommand_delegates_flags(monkeypatch: pytest.MonkeyPatch) ->
         captured_id.append(list(argv))
         return 0
 
+    def fake_refs(argv: list[str]) -> int:
+        captured_refs.append(list(argv))
+        return 0
+
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
     monkeypatch.setattr(cli.validate_id, "main", fake_id)
+    monkeypatch.setattr(cli.validate_references, "main", fake_refs)
     rc = main(["validate", "--config", ".project-standards.yml", "--quiet"])
     assert rc == 0
     assert captured_fm == [["--config", ".project-standards.yml", "--quiet"]]
     assert captured_id == [["--config", ".project-standards.yml", "--quiet"]]
+    assert captured_refs == [["--config", ".project-standards.yml", "--quiet"]]
 
 
-def test_validate_exit_code_is_maximum_of_both(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Combined command returns max(rc_frontmatter, rc_id) — neither validator's failure
-    # is silently masked by the other's success.
+def test_validate_exit_code_is_maximum_of_all(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Combined command returns the worst validator exit code, so no failure is masked.
     import project_standards.cli as cli
 
-    cases = [(0, 0, 0), (1, 0, 1), (0, 1, 1), (2, 0, 2), (0, 2, 2), (1, 2, 2)]
-    for rc_fm, rc_id, expected in cases:
+    monkeypatch.chdir(tmp_path)
+    cases = [
+        (0, 0, 0, 0),
+        (1, 0, 0, 1),
+        (0, 1, 0, 1),
+        (0, 0, 1, 1),
+        (2, 0, 0, 2),
+        (0, 2, 0, 2),
+        (0, 0, 2, 2),
+        (1, 2, 1, 2),
+    ]
+    for rc_fm, rc_id, rc_refs, expected in cases:
 
         def fake_fm(_argv: list[str], _r: int = rc_fm) -> int:
             return _r
@@ -205,9 +248,13 @@ def test_validate_exit_code_is_maximum_of_both(monkeypatch: pytest.MonkeyPatch) 
         def fake_id(_argv: list[str], _r: int = rc_id) -> int:
             return _r
 
+        def fake_refs(_argv: list[str], _r: int = rc_refs) -> int:
+            return _r
+
         monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
         monkeypatch.setattr(cli.validate_id, "main", fake_id)
-        assert main(["validate"]) == expected, f"max({rc_fm}, {rc_id}) should be {expected}"
+        monkeypatch.setattr(cli.validate_references, "main", fake_refs)
+        assert main(["validate"]) == expected
 
 
 def test_validate_schema_flag_skips_id_check(
@@ -219,6 +266,7 @@ def test_validate_schema_flag_skips_id_check(
 
     schema_file = tmp_path / "custom.json"
     schema_file.write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     def fake_fm(_argv: list[str]) -> int:
         return 0
@@ -244,6 +292,7 @@ def test_validate_config_custom_schema_skips_id_check(
         f"markdown:\n  frontmatter:\n    schema: '{custom_schema}'\n",
         encoding="utf-8",
     )
+    monkeypatch.chdir(tmp_path)
 
     def fake_fm(_argv: list[str]) -> int:
         return 0
@@ -254,11 +303,16 @@ def test_validate_config_custom_schema_skips_id_check(
     assert rc == 0
 
 
-def test_validate_glob_forwarded_to_both_validators(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_glob_forwarded_to_all_validators(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import project_standards.cli as cli
 
+    monkeypatch.chdir(tmp_path)
     captured_fm: list[list[str]] = []
     captured_id: list[list[str]] = []
+    captured_refs: list[list[str]] = []
 
     def fake_fm(argv: list[str]) -> int:
         captured_fm.append(list(argv))
@@ -268,18 +322,29 @@ def test_validate_glob_forwarded_to_both_validators(monkeypatch: pytest.MonkeyPa
         captured_id.append(list(argv))
         return 0
 
+    def fake_refs(argv: list[str]) -> int:
+        captured_refs.append(list(argv))
+        return 0
+
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
     monkeypatch.setattr(cli.validate_id, "main", fake_id)
+    monkeypatch.setattr(cli.validate_references, "main", fake_refs)
     main(["validate", "--glob", "standards/**/*.md"])
     assert "--glob" in captured_fm[0] and "standards/**/*.md" in captured_fm[0]
     assert "--glob" in captured_id[0] and "standards/**/*.md" in captured_id[0]
+    assert "--glob" in captured_refs[0] and "standards/**/*.md" in captured_refs[0]
 
 
-def test_validate_no_require_frontmatter_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_no_require_frontmatter_forwarded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import project_standards.cli as cli
 
+    monkeypatch.chdir(tmp_path)
     captured_fm: list[list[str]] = []
     captured_id: list[list[str]] = []
+    captured_refs: list[list[str]] = []
 
     def fake_fm(argv: list[str]) -> int:
         captured_fm.append(list(argv))
@@ -289,11 +354,17 @@ def test_validate_no_require_frontmatter_forwarded(monkeypatch: pytest.MonkeyPat
         captured_id.append(list(argv))
         return 0
 
+    def fake_refs(argv: list[str]) -> int:
+        captured_refs.append(list(argv))
+        return 0
+
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
     monkeypatch.setattr(cli.validate_id, "main", fake_id)
+    monkeypatch.setattr(cli.validate_references, "main", fake_refs)
     main(["validate", "--no-require-frontmatter"])
     assert "--no-require-frontmatter" in captured_fm[0]
     assert "--no-require-frontmatter" in captured_id[0]
+    assert "--no-require-frontmatter" in captured_refs[0]
 
 
 def test_adopt_dest_not_a_directory_exits_2(tmp_path: Path) -> None:

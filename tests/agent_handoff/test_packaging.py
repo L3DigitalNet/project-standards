@@ -15,6 +15,7 @@ from project_standards.cli import main
 _REPO = Path(__file__).parents[2]
 _SOURCE = _REPO / "standards/agent-handoff"
 _BUNDLE = _REPO / "src/project_standards/bundles/agent-handoff"
+_V2_MANAGED = _SOURCE / "versions/1.1/provider-resources/managed"
 
 
 def _source_files() -> tuple[Path, ...]:
@@ -102,27 +103,32 @@ def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
     assert "project-standards agent-handoff" in package_readme
 
 
-def test_repository_dogfoods_agent_handoff_v1() -> None:
-    config = yaml.safe_load((_REPO / ".project-standards.yml").read_text(encoding="utf-8"))
-    manifest = json.loads(
-        (_REPO / ".agents/agent-handoff/manifest.json").read_text(encoding="utf-8")
-    )
+def test_repository_dogfoods_agent_handoff_v5() -> None:
+    config = tomllib.loads((_REPO / ".standards/config.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
     claude = (_REPO / ".claude/settings.json").read_text(encoding="utf-8")
     codex = (_REPO / ".codex/config.toml").read_text(encoding="utf-8")
     prettier_ignores = set((_REPO / ".prettierignore").read_text(encoding="utf-8").splitlines())
 
-    assert config["agent_handoff"] == {
-        "version": "1.0",
-        "startup": "automatic",
-        "harnesses": ["claude-code", "codex"],
+    assert config["standards"]["agent-handoff"] == {
+        "enabled": True,
+        "version": "latest",
+        "config": {
+            "contract_version": "1.0",
+            "startup": "automatic",
+            "harnesses": ["claude-code", "codex"],
+        },
     }
-    assert manifest["standard"] == "agent-handoff"
-    assert manifest["version"] == "1.0"
+    assert lock["standards"]["agent-handoff"]["resolved"] == "1.1"
+    assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
     assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
-        _BUNDLE / "hooks/session-start/session_start.py"
+        _V2_MANAGED / "hook.py"
     ).read_bytes()
     assert (_REPO / ".agents/skills/agent-handoff/SKILL.md").read_bytes() == (
-        _BUNDLE / "skills/agent-handoff/SKILL.md"
+        _V2_MANAGED / "skill.md"
+    ).read_bytes()
+    assert (_REPO / ".standards/packages/agent-handoff/policy.toml").read_bytes() == (
+        _V2_MANAGED / "policy.toml"
     ).read_bytes()
     assert ".agents/hooks/agent-handoff/session_start.py" in claude
     assert ".agents/hooks/agent-handoff/session_start.py" in codex
@@ -143,8 +149,6 @@ def test_automatic_adoption_preserves_executable_hook_mode(tmp_path: Path) -> No
                 "agent-handoff",
                 "--dest",
                 str(tmp_path),
-                "--harness",
-                "codex",
             ]
         )
         == 0
@@ -186,16 +190,17 @@ def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: 
     )
     (wheel,) = dist.glob("*.whl")
     venv = tmp_path / "venv"
+    environment = {**os.environ, "PYTHONPATH": ""}
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(
         [str(venv / "bin/python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        env=environment,
         check=True,
         capture_output=True,
     )
     repository = tmp_path / "consumer"
     repository.mkdir()
     executable = venv / "bin/project-standards"
-    environment = {**os.environ, "PYTHONPATH": ""}
 
     adopted = subprocess.run(
         [
@@ -204,11 +209,6 @@ def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: 
             "agent-handoff",
             "--dest",
             str(repository),
-            "--harness",
-            "claude-code",
-            "--harness",
-            "codex",
-            "--json",
         ],
         cwd=repository,
         env=environment,
@@ -217,7 +217,6 @@ def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: 
         text=True,
     )
     assert adopted.returncode == 0, adopted.stderr
-    assert json.loads(adopted.stdout)["summary"]["errors"] == 0
 
     validated = subprocess.run(
         [str(executable), "agent-handoff", "validate", "--repo", str(repository), "--json"],

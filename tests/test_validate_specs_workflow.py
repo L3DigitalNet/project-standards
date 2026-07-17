@@ -19,12 +19,12 @@ def test_workflow_exposes_workflow_call_with_ref_and_strict_lint() -> None:
     assert call["inputs"]["strict-lint"]["default"] is True
 
 
-def test_workflow_triggers_on_v5_and_transitional_dogfood_config() -> None:
+def test_workflow_triggers_on_v5_dogfood_config_only() -> None:
     data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
     for event in ("push", "pull_request"):
         paths = data[True][event]["paths"]
         assert ".standards/config.toml" in paths
-        assert ".project-standards.yml" in paths
+        assert ".project-standards.yml" not in paths
 
 
 def test_workflow_has_self_repo_and_consumer_branches() -> None:
@@ -33,8 +33,19 @@ def test_workflow_has_self_repo_and_consumer_branches() -> None:
     text = _WF.read_text(encoding="utf-8")
 
     assert "env" not in job
-    assert "uv sync --dev" in text
-    assert "uv run project-standards spec validate" in text
+    self_repo_steps = [
+        step
+        for step in job["steps"]
+        if step.get("if", "").startswith("github.repository == 'L3DigitalNet/project-standards'")
+    ]
+    install = next(
+        step for step in self_repo_steps if step["name"] == "Install candidate wheel (this repo)"
+    )
+    assert "uv build --wheel" in install["run"]
+    assert 'uv tool install "$wheel"' in install["run"]
+    assert all("uv sync" not in str(step.get("run", "")) for step in self_repo_steps)
+    assert "uv run project-standards" not in text
+    assert "project-standards spec validate" in text
     assert "uv tool install" in text
 
 
@@ -57,7 +68,9 @@ def test_self_repo_steps_do_not_install_published_tag() -> None:
     data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
     for step in data["jobs"]["validate-specs"]["steps"]:
         if step.get("if", "").strip() == "github.repository == 'L3DigitalNet/project-standards'":
-            assert "uv tool install" not in step.get("run", "")
+            script = step.get("run", "")
+            assert "git+https://" not in script
+            assert "PROJECT_STANDARDS_REF" not in script
 
 
 def test_consumer_install_treats_the_requested_ref_as_data() -> None:

@@ -350,11 +350,10 @@ def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
     root_workflow = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
     public_resource = _PAYLOAD / "resources/self-host-validate-markdown-frontmatter.yml"
 
+    assert root_workflow.read_bytes() == public_resource.read_bytes()
     root = yaml.safe_load(root_workflow.read_text(encoding="utf-8"))
     public = yaml.safe_load(public_resource.read_text(encoding="utf-8"))
-    for event in ("push", "pull_request"):
-        root_paths = root[True][event]["paths"]
-        assert ".project-standards.yml" in root_paths
+    assert set(root[True]) == {"workflow_call"}
     assert set(public[True]) == {"workflow_call"}
     assert root["permissions"] == public["permissions"]
     assert root["jobs"] == public["jobs"]
@@ -363,6 +362,19 @@ def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
         call = workflow[True]["workflow_call"]
         assert set(call["inputs"]) == {"standards-ref"}
         assert call["inputs"]["standards-ref"]["default"] == "v5"
+        self_repo_steps = [
+            step
+            for step in workflow["jobs"]["validate"]["steps"]
+            if step.get("if") == "github.repository == 'L3DigitalNet/project-standards'"
+        ]
+        install = next(
+            step
+            for step in self_repo_steps
+            if step["name"] == "Install candidate wheel (this repo)"
+        )
+        assert "uv build --wheel" in install["run"]
+        assert 'uv tool install "$wheel"' in install["run"]
+        assert all("uv sync" not in str(step.get("run", "")) for step in self_repo_steps)
         scripts = [
             str(step.get("run", ""))
             for step in workflow["jobs"]["validate"]["steps"]
@@ -370,6 +382,7 @@ def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
         ]
         assert len(scripts) == 2
         assert all("--config" not in script for script in scripts)
+        assert "uv run" not in scripts[0]
 
 
 def test_frontmatter_declares_version_selected_validate_inspect_and_fix_providers() -> None:

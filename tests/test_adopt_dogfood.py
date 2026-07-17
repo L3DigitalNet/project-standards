@@ -14,9 +14,11 @@ from __future__ import annotations
 import json
 import re
 import shlex
+import shutil
 import stat
 import subprocess
 import tomllib
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -24,9 +26,29 @@ import yaml
 
 from project_standards.adopt.engine import major_ref, resolve_source
 from project_standards.adopt.manifest import available_standards, load_manifest
+from project_standards.control_plane.cli import build_planner_request
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.planner import plan_reconciliation
 
 _REPO = Path(__file__).resolve().parent.parent
 _BUNDLES = _REPO / "src" / "project_standards" / "bundles"
+FROZEN_V1_CHECK_DIGEST = "2dd6b7c11db910458add9696ade9b37c9f5ae4e23004da5333b52e3669bd15e5"
+
+
+@pytest.fixture(autouse=True)
+def use_legacy_adopt_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    def legacy_route(
+        _standards: list[str],
+        _dest: Path,
+        *,
+        force: bool,
+        dry_run: bool,
+        unsupported_options: bool = False,
+    ) -> None:
+        del force, dry_run, unsupported_options
+
+    monkeypatch.setattr("project_standards.cli._try_v5_adopt", legacy_route)
+
 
 # Bundle source file -> repo root working file it must stay byte-identical to.
 _DOGFOOD = {
@@ -34,7 +56,6 @@ _DOGFOOD = {
     "_shared/vscode-extensions.json": ".vscode/extensions.json",
     "markdown-tooling/markdownlint.json": ".markdownlint.json",
     "markdown-tooling/prettierrc.json": ".prettierrc.json",
-    "python-tooling/check.py": "scripts/check.py",
     # ADR bundle template ↔ its canonical copy under standards/ (guards silent drift —
     # the project-spec templates have the analogous guard in test_spec_packaging.py).
     "adr/adr.template.md": "standards/adr/templates/adr.md",
@@ -66,6 +87,31 @@ _DOGFOOD = {
 def test_dogfoodable_templates_match_repo_root_byte_for_byte() -> None:
     for bundle_rel, root_rel in _DOGFOOD.items():
         assert (_BUNDLES / bundle_rel).read_bytes() == (_REPO / root_rel).read_bytes(), bundle_rel
+
+
+def _sha256(path: Path) -> str:
+    return sha256(path.read_bytes()).hexdigest()
+
+
+def test_frozen_v1_python_check_bundle_digest() -> None:
+    assert _sha256(_BUNDLES / "python-tooling/check.py") == FROZEN_V1_CHECK_DIGEST
+
+
+def test_root_check_script_matches_current_v2_rendering(tmp_path: Path) -> None:
+    installed = tmp_path / "project_standards"
+    shutil.copytree(
+        _REPO / "src/project_standards",
+        installed,
+        symlinks=False,
+    )
+    distribution = InstalledDistribution(
+        installed,
+        tool_release="5.0.0",
+    )
+    request = build_planner_request(_REPO, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    assert (_REPO / "scripts/check.py").read_bytes() == plan.proposed_content("scripts/check.py")
 
 
 def test_every_manifest_source_resolves_to_one_file() -> None:

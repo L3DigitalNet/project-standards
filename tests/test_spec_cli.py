@@ -11,6 +11,14 @@ from project_standards.specs.cli import run
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
 
+@pytest.fixture(autouse=True)
+def use_legacy_spec_repository(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_spec_validate_valid_exit0(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["spec", "validate", str(_FIX / "valid_standard.md")]) == 0
     assert "OK" in capsys.readouterr().out
@@ -86,11 +94,11 @@ def test_validate_honors_reference_prefixes(tmp_path: Path) -> None:
         base.replace("## Revision History", "External backlog: RQ-123.\n\n## Revision History", 1),
         encoding="utf-8",
     )
-    cfg = tmp_path / ".project-standards.yml"
-    cfg.write_text("spec:\n  include: ['s.md']\n  reference_prefixes: ['RQ']\n", encoding="utf-8")
     # Sanity: without the config the same file fails (RQ-123 trips SV-ID-UNDECLARED).
     assert run(["validate", str(spec)]) == 1
     # With RQ declared as an external reference, the file is clean again.
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text("spec:\n  include: ['s.md']\n  reference_prefixes: ['RQ']\n", encoding="utf-8")
     assert run(["validate", str(spec), "--config", str(cfg)]) == 0
 
 

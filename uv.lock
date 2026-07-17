@@ -425,7 +425,7 @@ wheels = [
 
 [[package]]
 name = "project-standards"
-version = "4.3.0"
+version = "5.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },
@@ -455,12 +455,12 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright" },
-    { name = "coverage", extras = ["toml"] },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.10.0" },
     { name = "pip-audit" },
     { name = "pyright", specifier = "==1.1.411" },
     { name = "pytest", specifier = ">=9.0" },
     { name = "pytest-xdist", specifier = ">=3.8" },
-    { name = "ruff", specifier = ">=0.14" },
+    { name = "ruff", specifier = ">=0.14.11" },
     { name = "types-pyyaml" },
 ]
 

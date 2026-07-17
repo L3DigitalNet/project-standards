@@ -99,14 +99,14 @@ id = "self-host-workflow"
 role = "provider-resource"
 path = "resources/self-host-validate-specs.yml"
 media_type = "text/yaml"
-digest = "sha256:b0ba97bfdb06c6f76f075b2289ef0c86f96bbccfa94c1480cc4e2383e6ef952f"
+digest = "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
 
 [[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/project_spec.py"
 media_type = "text/x-python"
-digest = "sha256:c33485a8c95249d87975ad2094667a8dda9d9775ae4c63e3b8d8a242ca17ed6a"
+digest = "sha256:cc20e9950ef112620f67b67a9cfc5192f41f335ff797ebec8d1ab1cdc0724b2c"
 
 [[resources]]
 id = "provider-input"

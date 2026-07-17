@@ -28,6 +28,10 @@ _SCRIPTS = tuple(
 )
 
 
+def _venv_environment(**extra: str) -> dict[str, str]:
+    return {**os.environ, "PYTHONPATH": "", **extra}
+
+
 @pytest.fixture(scope="module")
 def installed_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     tmp = tmp_path_factory.mktemp("wheel-smoke")
@@ -39,6 +43,7 @@ def installed_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(
         [str(venv / "bin" / "python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        env=_venv_environment(),
         check=True,
         capture_output=True,
     )
@@ -129,6 +134,7 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(
         [str(venv / "bin/python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        env=_venv_environment(),
         check=True,
         capture_output=True,
     )
@@ -173,6 +179,7 @@ def selected_command_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     subprocess.run(["uv", "venv", "--seed", str(venv)], check=True, capture_output=True)
     subprocess.run(
         [str(venv / "bin/python"), "-m", "pip", "install", "--quiet", str(wheel)],
+        env=_venv_environment(),
         check=True,
         capture_output=True,
     )
@@ -180,7 +187,7 @@ def selected_command_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 def _run(venv: Path, cmd: str, *args: str) -> subprocess.CompletedProcess[str]:
-    env = {**os.environ, "NO_COLOR": "1", "COLUMNS": "100"}
+    env = _venv_environment(NO_COLOR="1", COLUMNS="100")
     return subprocess.run([str(venv / "bin" / cmd), *args], capture_output=True, text=True, env=env)
 
 
@@ -196,6 +203,7 @@ def test_installed_wheel_matches_every_catalog_advertised_source_byte(
         check=True,
         capture_output=True,
         text=True,
+        env=_venv_environment(),
     )
     installed_root = Path(located.stdout.strip())
     source_root = Path("src/project_standards").resolve()
@@ -295,6 +303,7 @@ assert tree() == before
 """
     result = subprocess.run(
         [str(migration_venv / "bin/python"), "-c", script, str(repo)],
+        env=_venv_environment(),
         capture_output=True,
         text=True,
     )
@@ -429,6 +438,7 @@ assert main(["render", "project-spec", "render-workflow", "--repo", str(spec)]) 
 """
     result = subprocess.run(
         [str(selected_command_venv / "bin/python"), "-c", script, str(tmp_path)],
+        env=_venv_environment(),
         capture_output=True,
         text=True,
     )

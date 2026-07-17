@@ -1,0 +1,102 @@
+[project_standards]
+schema_version = "1.0"
+catalog = "5"
+release = "5.0.0"
+digest = "sha256:38147459914453058d4e42a19797ad30db576144741e0b867b51783b1b6c35e7"
+
+[standards.adr]
+status = "active"
+available = ["1.1"]
+default = "1.1"
+candidates = []
+
+[standards.adr.versions."1.1"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:82e9e3ae5d50a641b4b47366ef5d66fd85b13555ffda0d9ac1c99aadd1c6c719"
+
+[standards.agent-handoff]
+status = "active"
+available = ["1.1"]
+default = "1.1"
+candidates = []
+
+[standards.agent-handoff.versions."1.1"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:e5e300e761c3b95bb36a95d0e001c2fa428c21843e15cdbf66202327fdb6ded1"
+
+[standards.cli-documentation]
+status = "active"
+available = ["1.1"]
+default = "1.1"
+candidates = []
+
+[standards.cli-documentation.versions."1.1"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42d43442445"
+
+[standards.markdown-frontmatter]
+status = "active"
+available = ["1.2"]
+default = "1.2"
+candidates = []
+
+[standards.markdown-frontmatter.versions."1.2"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c"
+
+[standards.markdown-tooling]
+status = "active"
+available = ["1.2"]
+default = "1.2"
+candidates = []
+
+[standards.markdown-tooling.versions."1.2"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:0d4f89403c4b4c4a2d1dc9c579deddf717f5e01d1c424cac4a103ecb03be12ae"
+
+[standards.project-spec]
+status = "active"
+available = ["1.1"]
+default = "1.1"
+candidates = []
+
+[standards.project-spec.versions."1.1"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e"
+
+[standards.python-coding]
+status = "draft"
+available = ["0.5"]
+candidates = []
+
+[standards.python-coding.versions."0.5"]
+channel = "reference-only"
+availability = "reference-only"
+payload_digest = "sha256:c027af45f85e84717e7ce9909adcd71363745e688538bd88a303dd813a351d80"
+
+[standards.python-tooling]
+status = "active"
+available = ["1.1"]
+default = "1.1"
+candidates = []
+
+[standards.python-tooling.versions."1.1"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:bf36d035e20c3533546f4c0aebfad6b737902aa79cb7bad2566b017925ac910e"
+
+[standards.standard-bundle-authoring]
+status = "active"
+available = ["2.0"]
+candidates = []
+
+[standards.standard-bundle-authoring.versions."2.0"]
+channel = "internal"
+availability = "internal"
+payload_digest = "sha256:5fec499e321fc4d20ea9ddb50f6dceae1da800dd66d909ebea2dbd23e84597ca"

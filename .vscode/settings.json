@@ -27,5 +27,18 @@
 		"**/.ruff_cache": true,
 		"**/.mypy_cache": true,
 		"**/.coverage": true
-	}
+	},
+	"folder-color.useGlobalSettings": false,
+	"folder-color.pathColors": [
+		{
+			"filePath": "project-standards/CHANGELOG.md",
+			"color": "foldercolorizer.color_d7af00"
+		},
+		{
+			"folderPath": "project-standards/standards/",
+			"color": "foldercolorizer.color_d7af00"
+		},
+		{ "folderPath": "project-standards/meta/", "color": "foldercolorizer.color_d7af00" }
+	],
+	"python.analysis.typeCheckingMode": "off"
 }

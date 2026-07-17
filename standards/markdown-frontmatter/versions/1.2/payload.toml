@@ -258,7 +258,7 @@ mode = "0755"
 id = "self-host-workflow"
 target = ".github/workflows/validate-markdown-frontmatter.yml"
 source = "resources/self-host-validate-markdown-frontmatter.yml"
-digest = "sha256:d60ddc267153fc3f920ef6bb3bb85153d9562677e3d6e83d2a6361589cecbfbc"
+digest = "sha256:9e0cbf157e76a76542ad919a4a78fa563d11a342efc93cfb1057b31f24a3a717"
 policy = "managed"
 when_any = [{ option = "workflow_mode", equals = "self-hosted" }]
 

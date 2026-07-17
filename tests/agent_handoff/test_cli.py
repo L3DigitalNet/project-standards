@@ -7,6 +7,8 @@ import pytest
 
 from project_standards.adopt.errors import UsageError
 from project_standards.cli import main
+from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.standard_manifest import ProviderOperation
 
 
@@ -48,8 +50,14 @@ def test_agent_handoff_adopt_requires_exactly_one_startup_selection(
 
 
 def test_agent_handoff_adopt_json_dry_run_is_aggregate_and_non_mutating(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
+    def unavailable() -> InstalledDistribution:
+        raise PackageContractError("V2 distribution unavailable")
+
+    monkeypatch.setattr(InstalledDistribution, "current", staticmethod(unavailable))
     rc = main(
         [
             "adopt",
@@ -142,6 +150,7 @@ def test_agent_handoff_command_maps_to_generic_operation(
     command: str,
     operation: ProviderOperation,
     prefix: list[str],
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     seen: list[tuple[ProviderOperation, list[str]]] = []
@@ -155,12 +164,14 @@ def test_agent_handoff_command_maps_to_generic_operation(
         capture,
     )
 
-    assert main(["agent-handoff", command, "--repo", "."]) == 0
-    assert seen == [(operation, [*prefix, "--repo", "."])]
+    assert main(["agent-handoff", command, "--repo", str(tmp_path)]) == 0
+    assert seen == [(operation, [*prefix, "--repo", str(tmp_path)])]
 
 
 def test_agent_handoff_provider_error_preserves_exit_code(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     def fail(_sid: str, _op: ProviderOperation, _argv: list[str]) -> int:
         raise UsageError("bad provider arguments")
@@ -170,5 +181,5 @@ def test_agent_handoff_provider_error_preserves_exit_code(
         fail,
     )
 
-    assert main(["agent-handoff", "validate", "--repo", "."]) == 2
+    assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 2
     assert "bad provider arguments" in capsys.readouterr().err

@@ -27,13 +27,19 @@ jobs:
 
       # The standards repository must validate the event commit without requiring
       # the v5 tag that this same commit will publish.
-      - name: Install (this repo)
+      - name: Install candidate wheel (this repo)
         if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv sync --dev
+        run: |
+          wheel_dir="${RUNNER_TEMP}/project-standards-dist"
+          uv build --wheel --out-dir "$wheel_dir"
+          mapfile -t wheels < <(find "$wheel_dir" -maxdepth 1 -type f -name 'project_standards-*.whl' -print)
+          test "${#wheels[@]}" -eq 1
+          wheel="${wheels[0]}"
+          uv tool install "$wheel"
 
       - name: Validate (this repo)
         if: github.repository == 'L3DigitalNet/project-standards'
-        run: uv run project-standards validate
+        run: project-standards validate
 
       - name: Install (consuming repo)
         if: github.repository != 'L3DigitalNet/project-standards'

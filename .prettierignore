@@ -18,6 +18,9 @@ CLAUDE.md
 docs/STATUS.md
 docs/TODO.md
 
+# The control-plane migration guard owns the exact shared-container bytes.
+.vscode/tasks.json
+
 # Machine-generated JSON Schema: its canonical byte format is owned by the
 # standard_manifest.standard_schema_json() writer and enforced by a byte-drift
 # test (json.dumps indent=2, key order preserved). Prettier's JSON style (inline

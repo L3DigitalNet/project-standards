@@ -389,15 +389,11 @@ def test_prepare_legacy_predecessor_restores_frozen_post_checker_inputs(
     "pyright==1.1.411",
 ]
 """
-    assert pyproject.count(predecessor_group) == 1
-    pyproject_path.write_text(
-        pyproject.replace(predecessor_group, aligned_group),
-        encoding="utf-8",
-    )
-    (post_atomic / ".project-standards.yml").unlink()
+    assert predecessor_group not in pyproject
+    assert pyproject.count(aligned_group) == 1
+    assert not (post_atomic / ".project-standards.yml").exists()
     standards_state = post_atomic / ".standards/config.toml"
-    standards_state.parent.mkdir()
-    standards_state.write_text('schema_version = "1.0"\n', encoding="utf-8")
+    assert standards_state.is_file()
     changed_managed_files = (
         Path(".agents/hooks/agent-handoff/session_start.py"),
         Path(".agents/skills/agent-handoff/SKILL.md"),
@@ -1371,8 +1367,10 @@ def test_disposable_checkout_builds_release_without_mutating_source(tmp_path: Pa
 
     assert result.stdout.strip() == "project-standards 5.0.0"
     assert {path: (_ROOT / path).read_bytes() for path in source_versions} == source_versions
-    assert (_ROOT / ".project-standards.yml").is_file()
-    assert not (_ROOT / ".standards").exists()
+    assert not (_ROOT / ".project-standards.yml").exists()
+    assert (_ROOT / ".standards/config.toml").is_file()
+    assert (_ROOT / ".standards/catalog.toml").is_file()
+    assert (_ROOT / ".standards/lock.toml").is_file()
 
 
 def _reconstruct_predecessor(

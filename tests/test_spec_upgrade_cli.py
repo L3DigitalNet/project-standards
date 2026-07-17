@@ -12,6 +12,14 @@ from project_standards.specs.cli import run
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
 
 
+@pytest.fixture(autouse=True)
+def use_legacy_spec_repository(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def _run(argv: list[str]) -> int:
     return run(["upgrade", *argv])
 
