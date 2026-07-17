@@ -1,12 +1,12 @@
 # Consumer Standards Control Plane Release-Cut Evidence
 
-**Evidence date:** 2026-07-14
+**Evidence date:** 2026-07-17
 
 **Source branch:** `testing`
 
 **Release candidate:** `project-standards 5.0.0` from two independently reconstructed disposable migration authorities
 
-Release-input SHA-256: `0c06f7d27bcf8b23271af2ae27f4a3ba7a48621e03d26b28c4075bf954a0a93e`
+Release-input SHA-256: `734e700c1893ffcf47e20258907018e0424f40cde290b4635f38dc1f8ff4481e`
 
 ## Result
 
@@ -169,7 +169,7 @@ This Task 9 digest and ledger describe the preliminary migration patch only. Tas
 		"M\tuv.lock"
 	],
 	"migration_patch_sha256": "890d5bd08133d08fccf0f9a4a15579031e74ab93d89482a1481cacca6b752cf8",
-	"release_input_sha256": "0c06f7d27bcf8b23271af2ae27f4a3ba7a48621e03d26b28c4075bf954a0a93e"
+	"release_input_sha256": "734e700c1893ffcf47e20258907018e0424f40cde290b4635f38dc1f8ff4481e"
 }
 ```
 <!-- release-migration-record:end -->
