@@ -219,7 +219,7 @@ def resolve_referenced_inputs(
     enabled: bool,
 ) -> tuple[LockedInput, ...]:
     """Hash declared consumer-owned inputs without claiming or changing them."""
-    if not enabled:
+    if not enabled or not extensions:
         return ()
     root = _safe_repo(repo)
     managed = {_canonical_target(root, target) for target in managed_targets}

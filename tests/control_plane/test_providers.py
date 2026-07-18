@@ -185,6 +185,26 @@ def test_disabled_reference_is_removed_from_state_but_consumer_file_is_preserved
     assert target.read_text(encoding="utf-8") == "consumer-owned"
 
 
+def test_referenced_input__no_extensions__skips_managed_target_resolution(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    (tmp_path / "managed").symlink_to(outside, target_is_directory=True)
+
+    inputs = resolve_referenced_inputs(
+        tmp_path,
+        standard_id="demo",
+        version=PackageVersion("1.2"),
+        config={},
+        extensions=(),
+        managed_targets=(SafeRelativePath.parse("managed/output.txt"),),
+        enabled=True,
+    )
+
+    assert inputs == ()
+
+
 def test_optional_reference_is_absent_when_nullable_option_is_unset(tmp_path: Path) -> None:
     inputs = resolve_referenced_inputs(
         tmp_path,
