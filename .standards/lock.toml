@@ -999,8 +999,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.1" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:b0039e500ada1320be4f7a2250e19c2b2e154faf0d21c54b2c8fe2bf90dcf213"
-content_digest = "sha256:b0039e500ada1320be4f7a2250e19c2b2e154faf0d21c54b2c8fe2bf90dcf213"
+semantic_digest = "sha256:a90dedf44d5028b07797627193fafa86d5bab503f3a8a1fa2e49bdef784496b9"
+content_digest = "sha256:a90dedf44d5028b07797627193fafa86d5bab503f3a8a1fa2e49bdef784496b9"
 created_container = false
 
 [[artifacts]]
@@ -1011,8 +1011,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.1" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:f36fe2e18363facdc66b3b50c2424afea7f99697698effbaef09293a7d84345b"
-content_digest = "sha256:f36fe2e18363facdc66b3b50c2424afea7f99697698effbaef09293a7d84345b"
+semantic_digest = "sha256:41c9513b932de1ed39f9f7eb05f14ff2d06f475807676722d126421137182cf4"
+content_digest = "sha256:41c9513b932de1ed39f9f7eb05f14ff2d06f475807676722d126421137182cf4"
 created_container = false
 
 [[artifacts]]
@@ -1083,8 +1083,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.1" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:2f9a0f3c8d1539d596a2c890523fb87f90b9ae07a43a959564bb18b6ad4ba8a0"
-content_digest = "sha256:2f9a0f3c8d1539d596a2c890523fb87f90b9ae07a43a959564bb18b6ad4ba8a0"
+semantic_digest = "sha256:ea4e3e3be4b2a879c14def1da422502145141248ecca96c626c78a81076d9464"
+content_digest = "sha256:ea4e3e3be4b2a879c14def1da422502145141248ecca96c626c78a81076d9464"
 created_container = false
 
 [[artifacts]]
@@ -1119,8 +1119,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.1" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:152bd8c3f1155ca318966ff2bcc5be546812c5e0c55785521b76eb308a8c50e1"
-content_digest = "sha256:152bd8c3f1155ca318966ff2bcc5be546812c5e0c55785521b76eb308a8c50e1"
+semantic_digest = "sha256:b64433cc22bfe8df59e0d9562181f10997feb34bfe9406aa9ca1b7eee3cb5893"
+content_digest = "sha256:b64433cc22bfe8df59e0d9562181f10997feb34bfe9406aa9ca1b7eee3cb5893"
 created_container = false
 
 [[artifacts]]

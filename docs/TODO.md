@@ -26,44 +26,24 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
-### Post-v5 maintenance
+### Maintenance
 
 - [ ] Finish Agent Handoff consumer retirement.
 
-  Refresh the consumer ledger, resolve remaining concrete-evidence default-branch rows through authorized workflows, run the final dependency search, and obtain owner approval before deleting the deprecated engine.
+- [ ] Complete the approved future-artifact cleanup.
 
-- [ ] Resolve the owner-reviewed future-artifact dispositions.
+- [ ] Decide whether Python Coding 0.5 remains reference-only or proceeds toward release.
 
-  Delete the two approved superseded transcripts, consolidate retained Project Specification guidance into its durable owner, then update `docs/future-standards/README.md` and inbound links.
+### Future programs
 
-- [ ] Decide and complete the Python Coding package's post-v5 status path.
+- [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 
-  Keep 0.5 reference-only until its requirements, adoption posture, and release criteria are accepted or the package is deliberately retained as reference material.
+- [ ] Continue MCP enablement from SPEC-RD01 and SPEC-MS01 after refreshing current protocol and SDK inputs.
 
-- [ ] Review the Usage Documentation Site specification set.
+- [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
 
-  Treat the eight-document set as a separate program: reconcile requirements and decisions, obtain formal specification approval, then design and plan implementation.
+  - [ ] After release, design template-repository autopopulation against `project-toolbox`.
 
-- [ ] Continue MCP server enablement.
+- [ ] Specify and release the `agent-managed-repo` standard after `project-toolbox`.
 
-  Before SPEC-MS01 MS-0, recheck the MCP protocol, Python SDK, licensing, and client capabilities; resolve remaining owner decisions before implementation.
-
-### Future package programs
-
-- [ ] Create and release the provider-neutral `project-toolbox` standard.
-
-  Develop this as its own design, review, implementation, and release cycle. Package the proven workflows and routing skill under `.agents/workflows/project-toolbox/`; retain `docs/workflows/` for local extensions.
-
-  - [ ] Convert the installed Codex `review-orchestrator` skill into a managed `project-toolbox` workflow.
-
-- [ ] Add template-repository autopopulation after `project-toolbox` is released.
-
-  Design bootstrap and update flows against the released provider-neutral package.
-
-- [ ] Create and release the `agent-managed-repo` standard.
-
-  Develop this only after `project-toolbox` closes. Use `docs/future-standards/github-repository-governance-standard.md` as provisional input to a separate cycle.
-
-- [ ] Reconcile this repository's GitHub settings with `agent-managed-repo`.
-
-  After that package is released, apply its required-review, required-check, action-security, Dependabot, and release-policy rules here.
+  - [ ] After release, reconcile this repository's GitHub settings against `agent-managed-repo`.
