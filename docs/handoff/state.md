@@ -8,5 +8,5 @@
 
 ## Active incidents
 
-- Project Standards 5.0.0 is published; signed `v5.0.0` and `v5` refs and release assets are live.
+- Project Standards 5.0.1 is the current patch release; signed `v5.0.1` and moving `v5` refs and release assets are the publication surfaces.
 - Engine deletion is blocked until all consumers validate, v5 is published, the final search is clean, and the owner approves.

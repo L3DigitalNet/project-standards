@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- Project Standards 5.0.0 is published from release commit `8869a08`; signed `v5.0.0` and `v5` refs and GitHub release assets are live.
+- Project Standards 5.0.1 is the current patch release; signed `v5.0.1` and moving `v5` refs and GitHub release assets are the publication surfaces.
 - `main` includes the follow-up Node dependency setup fix at `4d81602`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
 - The repository dogfoods the unified `.standards/` control plane; legacy `.project-standards.yml` authority is absent.

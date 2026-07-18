@@ -37,6 +37,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.0.1] — 2026-07-18
+
+> **Why PATCH:** this release corrects internal provider integrity, command error classification, repository enforcement, and current documentation without changing any immutable package payload, catalog selection, public command, accepted input, or conforming consumer outcome.
+
 ### Fixed
 
 - **Declared provider integrity checks are bounded to declared inputs.** Provider execution no longer scans or hashes the whole repository. It rechecks only declared file and directory snapshots, including immediate directory membership, entry type, and permission bits, so unrelated repository activity cannot produce false mutation findings while declared writes remain blocked.

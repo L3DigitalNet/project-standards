@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from project_standards._version import package_version
 from project_standards.adopt.engine import major_ref, resolve_source
 from project_standards.adopt.manifest import available_standards, load_manifest
 from project_standards.control_plane.cli import build_planner_request
@@ -102,7 +103,7 @@ def test_root_check_script_matches_current_v2_rendering(tmp_path: Path) -> None:
     )
     distribution = InstalledDistribution(
         installed,
-        tool_release="5.0.0",
+        tool_release=package_version(),
     )
     request = build_planner_request(_REPO, distribution, frozenset())
     plan = plan_reconciliation(request)
