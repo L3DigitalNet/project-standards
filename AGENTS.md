@@ -27,7 +27,7 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 - **Dogfood.** Validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
-- **Keep the toolchain green** before committing validator/test changes: Ruff format/check, BasedPyright, `uv run python scripts/run_repository_tests.py`, `pip-audit`, and `tests/coherence` after `npm ci`. The repository test runner keeps ordinary/release/performance phases serial and parallelizes only the source/wheel compatibility matrix.
+- **Keep the toolchain green** before committing validator/test changes: Ruff format/check and BasedPyright from the source environment; then build/extract the candidate wheel and run ordinary pytest under coverage, the xdist compatibility matrix, serial performance tests, `coverage report`, `pip-audit`, and `tests/coherence` after `npm ci` with the extracted wheel first on `PYTHONPATH`.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.
 - `README.md` is the human-facing landing page, excluded from frontmatter validation.
@@ -72,9 +72,7 @@ Run before claiming completion:
 uv run ruff format --check .
 uv run ruff check .
 uv run basedpyright
-uv run coverage erase
-uv run coverage run --parallel-mode -m pytest
-uv run coverage combine
+uv run coverage run -m pytest
 uv run coverage report
 uv run pip-audit
 ```

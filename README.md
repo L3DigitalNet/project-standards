@@ -164,7 +164,7 @@ The migration removes `.project-standards.yml` only after unified validation and
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v5` after release), never `@main`. For an immutable pin, use a full version (`@v5.0.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.0.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
@@ -183,7 +183,16 @@ Working on the standards or the validator itself:
 
 ```bash
 uv sync --dev                                                # set up the environment
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run python scripts/run_repository_tests.py && uv run pip-audit
+uv run ruff format --check . && uv run ruff check . && uv run basedpyright
+uv build --wheel --out-dir dist
+python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+export PYTHONPATH="$PWD/build/wheel-runtime"
+uv run coverage erase
+uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
+uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
+uv run pytest -m performance
+uv run coverage report
+uv run pip-audit
 uv run project-standards validate                              # dogfood: schema, id, and references
 ```
 

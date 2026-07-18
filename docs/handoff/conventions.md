@@ -58,10 +58,21 @@ uv run project-standards validate
 **Code:**
 
 ```bash
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run python scripts/run_repository_tests.py && uv run pip-audit
+uv run ruff format --check .
+uv run ruff check .
+uv run basedpyright
+uv build --wheel --out-dir dist
+python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+export PYTHONPATH="$PWD/build/wheel-runtime"
+uv run coverage erase
+uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
+uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
+uv run pytest -m performance
+uv run coverage report
+uv run pip-audit
 ```
 
-**Why:** `main` must stay releasable; consumers pin to tags. The repository runner preserves serial ordinary, release-replay, and performance phases while parallelizing only the isolated source/wheel compatibility matrix, then combines coverage before enforcing the threshold.
+**Why:** `main` must stay releasable; consumers pin to tags. Direct commands keep the ordinary, compatibility, performance, and coverage responsibilities visible without a repository-specific orchestrator.
 
 **Sources:** pre-v3 `AGENTS.md`.
 

@@ -11,6 +11,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/build/wheel-runtime
 
     steps:
       - uses: actions/checkout@v7
@@ -46,10 +48,26 @@ jobs:
       - name: Type check
         run: uv run basedpyright
 
-      - name: Test, coverage, and performance
-        env:
-          PROJECT_STANDARDS_TEST_WORKERS: "4"
-        run: uv run python scripts/run_repository_tests.py
+      - name: Build candidate wheel
+        run: uv build --wheel --out-dir dist
+
+      - name: Extract candidate wheel
+        run: python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+
+      - name: Reset coverage data
+        run: uv run coverage erase
+
+      - name: Ordinary tests with coverage
+        run: uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
+
+      - name: Compatibility matrix
+        run: uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
+
+      - name: Performance gates
+        run: uv run pytest -m performance
+
+      - name: Coverage report
+        run: uv run coverage report
 
       - name: Dependency audit
         run: uv run pip-audit

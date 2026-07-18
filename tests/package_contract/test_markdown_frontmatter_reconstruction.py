@@ -604,8 +604,7 @@ def test_frontmatter_workflow_signature_history_includes_current_v4_release_root
         "sha256:"
         + hashlib.sha256(
             (
-                _ROOT
-                / "tests/fixtures/package_compatibility/legacy/release-root/files/.github/workflows/validate-markdown-frontmatter.yml"
+                _ROOT / "tests/fixtures/package_contract/markdown_frontmatter_v4_workflow.yml"
             ).read_bytes()
         ).hexdigest()
         == _CURRENT_WORKFLOW_DIGEST

@@ -98,7 +98,7 @@ None found.
 - Adversarial angle: Checked the claimed complete closeout against the repository-local Agent Handoff skill rather than only the Python/package CI workflows.
 - Plan reference: Task 6 files and documentation commit, lines 885-919.
 - Finding: Task 6 updates `docs/handoff/specs-plans.md`, `docs/STATUS.md`, and `docs/TODO.md` but does not run `project-standards agent-handoff validate --repo .` or `drift-check --repo .`. The repository-local skill requires those relevant validations at closeout. Focused Python tests do not substitute for checking the live handoff layout, pointers, and managed ownership state.
-- Repository evidence: `.agents/skills/agent-handoff/SKILL.md:67-79` requires closeout validation and drift checking after current facts or future work change. The sibling parallel-coverage plan already includes both commands at `docs/superpowers/plans/2026-07-12-python-tooling-parallel-coverage-options.md:1117-1118`, establishing the local plan convention.
+- Repository evidence: `.agents/skills/agent-handoff/SKILL.md:67-79` requires closeout validation and drift checking after current facts or future work change.
 - External research evidence: Not applicable.
 - Why it matters: Task 6 can commit an invalid or drifting handoff state while calling the repository gate complete, weakening the cold-resume contract the task is specifically updating.
 - Recommended action for the authoring agent: Add both Agent Handoff commands after the documentation edits and before the final documentation commit. Keep any required handoff fixes within Task 6's explicit staging list.

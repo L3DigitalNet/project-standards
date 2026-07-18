@@ -24,7 +24,7 @@ validate-references = "project_standards.validate_references:main"
 [dependency-groups]
 dev = [
     "basedpyright",
-    "coverage[toml]>=7.10.0",
+    "coverage[toml]",
     "pip-audit",
     "pytest>=9.0",
     "ruff>=0.14.11",
@@ -73,17 +73,11 @@ addopts = ["-ra", "--strict-markers", "--strict-config"]
 markers = [
     "compatibility: catalog-derived source and wheel lifecycle rows run in the parallel phase",
     "performance: deterministic scale gates run explicitly in CI",
-    "release_replay: disposable release-cut checks run in their own serial phase",
 ]
 
 [tool.coverage.run]
 branch = true
-parallel = true
-patch = ["subprocess"]
 source = ["src"]
-
-[tool.coverage.paths]
-source = ["src/project_standards", "*/project_standards"]
 
 [tool.coverage.report]
 show_missing = true

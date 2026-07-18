@@ -2,60 +2,15 @@
 
 ## Current snapshot
 
-- `main` remains the released v4.3.0 line; the atomic v5.0.0 release commit is prepared from verified predecessor `96d069e` for exact landing on `main`.
+- Project Standards 5.0.0 is published from release commit `8869a08`; signed `v5.0.0` and `v5` refs and GitHub release assets are live.
+- `main` includes the follow-up Node dependency setup fix at `4d81602`.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
-- Agent Handoff v1 package and dogfood adoption are integrated on `testing` at `93296d6`; the 1,373-test acceptance gate and four installed-wheel probes pass.
-- The package is repository-local: shared hook, skill, provenance lock, state, status, and tasks all remain inside the adopting repo.
-- ADRs 0023-0024 govern the unified `.standards/` control plane and catalog-scoped package channels; conflicting legacy decisions are superseded.
-- SPEC-MT01 is approved at rev 0.9. Step 07 passes with no blocking gaps; `docs/mcp-readiness.md` is the durable completion report.
-- Pre-Step-07 remediation (`70b20ee`…`342a802`) reconciles SPEC-MT01 traceability, v5 migration guidance, and numbered bug-record targeting.
-- FR-013 remediation (`529ec72`…`9463dcb`) gives all nine standards compact agent summaries, catalog URIs, and 3,000-byte enforcement; 1,382 tests pass.
-- The catalog 5 MCP-exposure review clears all nine packages. Python Tooling's summary backlink gap is fixed and guarded; 494 package-contract tests pass.
-- The dedicated graph/catalog workflow covers pull requests plus pushes to `testing` and `main`; hosted run `29249551448` passed for `7d4d5fa`.
-- `SPEC-CP01` rev 0.11 is approved; FR-037/FR-038 focused, lifecycle, stale-plan, no-write/no-lock, managed-return, and source/wheel evidence passes.
-- Root-artifact composition is approved after round-2 convergence: consumer-owned containers, typed contributions, and no precedence; ADR 0023 adopts the model.
-- `SPEC-BA02` rev 0.12 keeps the nine-family v5 scope and records passing FR-037 migration/source-wheel evidence without changing the authoring contract.
-- The CP01 core and package-migration follow-on are integrated on `testing` through `b6a60fc`; all nine payloads are reconstructed and catalog 5 is active.
-- The V2 control plane covers resolution, composition, lifecycle planning, transactional apply/recovery, public commands, legacy migration, and same-major refresh.
-- Public package commands resolve exact applied payload/config state under command-lifetime locks; authoring diagnostics remain typed and executor-only.
-- Real-package compatibility passes 56 correctness rows and three performance rows across source and wheel.
-- The disposable 5.0.0 release cut migrates, validates, refreshes, replays, and converges.
-- CP01 documentation and traceability are reconciled; independent review, the 2,535-test local gate, and hosted run `29195839078` pass for `b6a60fc`.
-- Frontmatter pre-tag, Project Spec unified authority, guidance, and integrity are repaired; Task 9 evidence and Task 10 verification pass before atomic Task 11.
-- The Action upgrade is complete across live root and current V2 authority: checkout v7, setup-node v6/Node 24, and setup-uv v8.3.2.
-- Lockfile-free caches are disabled, payload digests/projections are current, legacy bytes remain frozen, and integrated tests pass.
-- Four workers pass the matrix in 177.10 seconds versus 711.78 seconds serially; covered phases combine to 89% coverage.
-- All five serial performance gates pass, and failed runs remove parallel coverage shards.
-- Python Tooling coverage Tasks 5–8 pass through `d5c8031`: parallel coverage/oracles, consumer-owned workflow preservation, and authoring guidance are complete.
-- Task 9 evidence is current and independent review found no major issues. Task 10 passes 2,629 ordinary tests with three expected skips, 56 compatibility tests, 34 release tests, and five performance tests at 89% coverage.
-- Task 11 atomically migrates the source root to catalog 5, preserves consumer-owned workflows and shared containers, binds the complete parent-to-release diff, and passes the migrated-root release gate. Remote `main`, hosted checks, signed refs, and artifact publication remain.
-- The sole retained release-cut review passes the scoped structural and local-link audit after artifact pruning; no retained review-link follow-up remains.
-- Release-readiness cleanup `a6bb970` passes 2,542 tests at 89% coverage, required package/document gates, Prettier, markdownlint, `pip-audit`, and `npm audit`.
-- The retained source-document audit resolves 1,924 local links across 305 Markdown files with zero failures; only owner-retained review artifacts need a post-disposition rerun.
-- No GitHub issues or PRs remain open. Two Dependabot alerts on `main` are fixed on `testing`; confirm closure after release landing.
-- Deferred decisions are closed: existing symlink checks and OpenAPI policy stand; catalog 5 drift tooling supersedes the old v2.2 `check` plan.
-- Current handoff instructions, architecture, and bug lessons meet size and shape targets; only accepted append-only session warnings remain.
-- All 15 retained Project Specification documents now live under `docs/specs/`, are indexed, and pass validate/lint; future package specs remain post-v5.
-- The release commit promotes CHANGELOG `[5.0.0]`; the freeze remains active until the exact commit, signed refs, and artifact are published from `main`.
-- Durable implementation history is in `docs/handoff/sessions/2026-07.md`.
-- Future-artifact disposition, Python Coding status, Usage Documentation Site review, `project-toolbox`, and `agent-managed-repo` are post-v5 programs, not release prerequisites.
-- Final pre-release housekeeping and SPEC-MT01 Step 07 are complete. MCP server work remains deferred behind v5 and fresh protocol/SDK research.
-- Nineteen known consumers validate on v1 branches; six concrete-evidence default branches, a published v5 wheel check, the final dependency search, and owner approval remain.
-- `progressive-apparel` is the first migrated consumer (`2b062b6`); its Codex-only profile validates cleanly on `main`.
-- `doc-proc-scripts` is migrated (`e1db276`); its full 532-test, 100%-coverage gate and Codex profile pass on `main`.
-- `cc-usage-monitor` is migrated (`81d464d`); its full 150-test gate and dual Claude/Codex profile pass on `main`.
-- `control-center` is migrated (`1be92ec`); its full 283-test gate and dual profile pass on `main` after two vulnerable locks were refreshed.
-- `website-aboutme` validates on `testing` (`ab6bc3d`) with a clean Astro build; branch policy still requires integration to `main`.
-- `Markdown-Keeper` is migrated (`d373df1`); 174 unit tests and the dual profile pass on `main`.
-- `HomeBase` is migrated (`ec3df46`); 466 tests and the dual profile pass on `main`.
-- `Russ-Estate-Paperwork` is migrated (`ab71b83`); the dual profile passes and current task metadata no longer carries financial identifiers.
-- `star-trek-retro-remake` is migrated (`9d4e19e`); 11,212 tests, strict mypy, Ruff, and five import contracts pass on `main`.
-- `agent-pseudocode` is migrated (`21ade51`); 48 tests, Ruff, BasedPyright, three pseudocode checks, and the dual profile pass on `main`.
-- `Claude-Code-Plugins` is migrated (`0fdbd98`); marketplace validation, npm audit, targeted Markdown, and the dual profile pass on `main`.
-- `dotfiles` is migrated (`baf8705`); its complete 170-test `make check` gate and the dual profile pass on `main`.
-- `finances` is migrated (`f3e1d01`); Ruff, 361 PostgreSQL-backed tests, an empty legacy report, and the dual profile pass on `main`.
-- `homelab` is migrated (`ceba125`); changed-doc frontmatter and Markdown, npm audit, llm-wiki citations, and the dual profile pass on `main`.
-- `website-l3digital.net` validates on `testing` (`87dabc2`) with a clean Astro build; branch policy still requires integration to `main`.
-- `docmend` validates on `dev` (`1657e2e`) with 619 tests, 97% coverage, and its full local gate; branch policy still requires integration to `main`.
-- `hw-radar` validates on `dev` (`cbe77be`) with 357 tests, 93% coverage, and its full local gate; branch policy still requires integration to `main`.
-- The `projects` workspace meta-repo is migrated (`3da7641`); its dual profile, 298 tests, and full local gate pass on `main`.
+- The repository dogfoods the unified `.standards/` control plane; legacy `.project-standards.yml` authority is absent.
+- The retained repository gate is direct: ordinary tests with coverage, the catalog-derived compatibility matrix on four xdist workers, performance tests, and a coverage report.
+- Release-only replay, retained self-referential evidence, the custom test orchestrator, and their frozen predecessor fixture have been removed as unnecessary release-preparation machinery.
+- Generic consumer-owned workflow support and optional parallel/subprocess coverage remain part of the immutable Python Tooling 1.1 package API; this repository simply no longer selects parallel coverage.
+- Core control-plane, package, migration, source/wheel compatibility, composition, performance, formatting, typing, dependency, and documentation checks remain required.
+- Cleanup verification passes: 2,628 ordinary tests at 89% coverage, 56 compatibility rows, 5 performance gates, package/graph/schema/projection checks, 8 coherence tests, Ruff, BasedPyright, and dependency audits.
+- MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
+- Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
+- Durable implementation history remains in `docs/handoff/sessions/2026-07.md`.

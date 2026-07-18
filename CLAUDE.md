@@ -65,9 +65,7 @@ Run before claiming completion:
 uv run ruff format --check .
 uv run ruff check .
 uv run basedpyright
-uv run coverage erase
-uv run coverage run --parallel-mode -m pytest
-uv run coverage combine
+uv run coverage run -m pytest
 uv run coverage report
 uv run pip-audit
 ```

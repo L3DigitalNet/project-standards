@@ -455,7 +455,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright" },
-    { name = "coverage", extras = ["toml"], specifier = ">=7.10.0" },
+    { name = "coverage", extras = ["toml"] },
     { name = "pip-audit" },
     { name = "pyright", specifier = "==1.1.411" },
     { name = "pytest", specifier = ">=9.0" },

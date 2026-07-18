@@ -20,7 +20,6 @@ aliases:
   - consumer-owned workflow migration
   - unknown legacy whole-file preservation
 related:
-  - docs/superpowers/specs/2026-07-12-python-tooling-parallel-coverage-options-design.md
   - docs/specs/2026-07-10-consumer-standards-control-plane-spec.md
   - docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md
   - docs/adr/adr-0023-unified-consumer-standards-control-plane.md
@@ -64,7 +63,7 @@ The current sequence is:
 4. The provider receives the signature snapshot and can return a claim.
 5. Claim validation independently requires the observed signature to be known.
 
-The relevant implementation is [`migration.py`](../../src/project_standards/control_plane/migration.py). Python Tooling's current signature declaration is [`payload.toml`](../../standards/python-tooling/versions/1.1/payload.toml), and the intended ownership option is in the [parallel coverage design](../superpowers/specs/2026-07-12-python-tooling-parallel-coverage-options-design.md).
+The relevant implementation is [`migration.py`](../../src/project_standards/control_plane/migration.py). Python Tooling's current signature declaration is [`payload.toml`](../../standards/python-tooling/versions/1.1/payload.toml), and the ownership contract is recorded in [SPEC-CP01](../specs/2026-07-10-consumer-standards-control-plane-spec.md) and [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md).
 
 This ordering protects managed adoption: modified bytes cannot be silently treated as package-owned and replaced. It also means ownership intent cannot currently resolve an unknown whole file even when the selected package explicitly promises not to render, lock, update, disable, or remove it.
 

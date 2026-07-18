@@ -3,7 +3,7 @@ schema_version = "1.0"
 catalog = "5"
 release = "5.0.0"
 catalog_digest = "sha256:38147459914453058d4e42a19797ad30db576144741e0b867b51783b1b6c35e7"
-config_digest = "sha256:43ff7f9f99b5b813d3c407726b45e44ca740d2daa666a59c4f9f81606bc197e5"
+config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]
 requested = "latest"
@@ -52,7 +52,7 @@ requested = "latest"
 resolved = "1.1"
 selection = "stable"
 payload_digest = "sha256:bf36d035e20c3533546f4c0aebfad6b737902aa79cb7bad2566b017925ac910e"
-effective_config_digest = "sha256:0504605c9d36e3d4a5c255170f4dcaa78fac05073eccab31068cc9898c852974"
+effective_config_digest = "sha256:629c2706445c1c5d791a9d09188c754dc6a33b0952b822277d277f9a5ff450a8"
 
 [[artifacts]]
 path = ".agents/hooks/agent-handoff/session_start.py"
@@ -879,8 +879,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:119597ceaea2647bae17e3261ad820bf1a7ffec997a33b431c9396797e03ff6d"
-content_digest = "sha256:f012b1b230bb00f757c7adc11849c8ee07a5097331d5d3877c6381461663f4d7"
+semantic_digest = "sha256:795429ac8d09458d1b9110a105d6e57442e66bacab4d683c5a8c06731f3766d6"
+content_digest = "sha256:45c96808eab9aa488aa9e38143497219d76ba6e6ae0f3bf231abb8a70fafa8ba"
 created_container = false
 
 [[artifacts]]
@@ -951,8 +951,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:c74061e5a9fd08b2009b7f8bd3038b581d97b47b8c89266e3921ad36adba9bf1"
-content_digest = "sha256:c74061e5a9fd08b2009b7f8bd3038b581d97b47b8c89266e3921ad36adba9bf1"
+semantic_digest = "sha256:94ebbc05ddcc3ef6b4f59a17ab17bf856a837078456f18affecf6dcb99e5541e"
+content_digest = "sha256:94ebbc05ddcc3ef6b4f59a17ab17bf856a837078456f18affecf6dcb99e5541e"
 created_container = false
 
 [[artifacts]]
@@ -987,8 +987,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:c74061e5a9fd08b2009b7f8bd3038b581d97b47b8c89266e3921ad36adba9bf1"
-content_digest = "sha256:c74061e5a9fd08b2009b7f8bd3038b581d97b47b8c89266e3921ad36adba9bf1"
+semantic_digest = "sha256:94ebbc05ddcc3ef6b4f59a17ab17bf856a837078456f18affecf6dcb99e5541e"
+content_digest = "sha256:94ebbc05ddcc3ef6b4f59a17ab17bf856a837078456f18affecf6dcb99e5541e"
 created_container = false
 
 [[artifacts]]
@@ -1143,8 +1143,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:b43668aa2af8d3512418b06dd4ca146948a271bfb18e1d189bcdd9d7b71dc527"
-content_digest = "sha256:ac21f57f7cdef7f9596d664c98d91c18cceefdaf2ec21993d4b2e0dadfd4e827"
+semantic_digest = "sha256:fbb151376cca1bc5b9daa93b45247089cc50da186ba2f38da63751c468db5b21"
+content_digest = "sha256:5c9b1570c9082cac9f06426c86879cd56f9bb58ed1fbe891f1ea58653681382d"
 created_container = false
 
 [[artifacts]]
@@ -1191,8 +1191,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:dabfe34d7ab83a48ec973af5f4845debdf209045b0fd19e0c8f6583c75f1dbde"
-content_digest = "sha256:36464a31915b972ad9e5abd85dc677458d71492147da7564814e357572a1f491"
+semantic_digest = "sha256:6fc5718b0801bc98b8bafcf3b5f16914f9934194008ab2e4fd26f7ce9e9adfc9"
+content_digest = "sha256:b77a1d259fdf09504bf3ea5910b4946cae6939288060cc4cdb30c38d278b3ddf"
 created_container = false
 
 [[artifacts]]
@@ -1203,8 +1203,8 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:4a02c6c6013e4f736cbc1fbdbafb758f671988a57acafaa965acb5569b8de5d0"
-content_digest = "sha256:c2369d67f4e915c310c2c23311e994d36e8d95cacfebe2ad6d465e0d26bc81d9"
+semantic_digest = "sha256:583a4b4b4888af4c91d73f558816bc5caf0e6ba8a56cd551b659dac9168c1abf"
+content_digest = "sha256:dfc531ee83fb23ba8dbeee11707768074e03315c9061cd6bab978f7eb32db215"
 created_container = false
 
 [[artifacts]]
@@ -1227,6 +1227,6 @@ owners = ["python-tooling"]
 versions = { python-tooling = "1.1" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:b1ab6d01491ad24d430356d1783afdc24497de4a850889872dde3f47224a140a"
-content_digest = "sha256:b1ab6d01491ad24d430356d1783afdc24497de4a850889872dde3f47224a140a"
+semantic_digest = "sha256:3e4372ec5c51594b3bbb3a4b270999ab8251d3876390f230b5a9855cc51bb0e6"
+content_digest = "sha256:3e4372ec5c51594b3bbb3a4b270999ab8251d3876390f230b5a9855cc51bb0e6"
 created_container = false

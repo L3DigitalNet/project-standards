@@ -32,7 +32,7 @@ license: null
 
 **Step 07 passes with no blocking gaps.** The repository is ready to support a separately specified MCP implementation without hardcoding standards or bypassing package, graph, composition, and provider contracts.
 
-This result authorizes only the next design/research phase. It does not start MCP server implementation, select an MCP SDK or protocol version, or relax the v5 release freeze. Those decisions remain governed by `SPEC-RD01`, `SPEC-MS01`, and a fresh protocol/SDK review before server MS-0.
+This result authorizes only the next design/research phase. It does not start MCP server implementation or select an MCP SDK or protocol version. Those decisions remain governed by `SPEC-RD01`, `SPEC-MS01`, and a fresh protocol/SDK review before server MS-0.
 
 ## Readiness Checklist
 
@@ -43,7 +43,7 @@ This result authorizes only the next design/research phase. It does not start MC
 | Independent composition | Pass | Individual, pairwise, and all-standard fixtures pass. The focused manifest, graph, composition, and current-catalog suite passes 162 tests. Companion and extension relationships remain explicit and indexed. |
 | Documentation and traceability | Pass | Managed frontmatter validates 33 files. All six durable project specifications pass strict validation and lint. `SPEC-MT01` Must requirements are traceable, its empty deviation log is owner-accepted, and generated indexes are current. |
 | Migration and compatibility | Pass | Legacy migration remains fail-closed, registered legacy bytes are frozen, and current source/wheel authority is reconstructed from immutable packages. The complete ordinary phase passes 2,506 tests; all 56 catalog-derived source/wheel lifecycle rows pass with four workers. |
-| Repository hygiene | Pass | Completed artifacts are pruned, retained release evidence is the sole review artifact, coverage shards are cleaned on gate success or failure, and the remaining TODO queue contains only release, post-release, and owner-defined work. Accepted append-only Agent Handoff history warnings are non-blocking. |
+| Repository hygiene | Pass | Completed release-preparation artifacts are pruned, the repository gate uses direct commands, and the remaining TODO queue contains only post-release and owner-defined work. Accepted append-only Agent Handoff history warnings are non-blocking. |
 
 ## Verification Commands
 
@@ -61,7 +61,7 @@ uv run project-standards spec lint --strict <durable-specs>
 uv run pytest tests/test_standard_manifest.py tests/test_standards_composition.py \
   tests/test_standards_graph_catalog.py tests/test_standards_graph_validators.py \
   tests/package_contract/test_current_catalog_activation.py
-uv run pytest -m "not performance and not compatibility and not release_replay"
+uv run pytest -m "not performance and not compatibility"
 uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
 ```
 
@@ -69,8 +69,8 @@ Observed results were zero package or graph findings, current generated artifact
 
 ## Remaining Work That Does Not Block MCP Readiness
 
-- Complete the v5 release evidence refresh, integrated repository gate, atomic root migration, and publication workflow.
+- Maintain the published v5 line without reintroducing release-only proof infrastructure.
 - Recheck the MCP protocol, Python SDK, licenses, and supported client capabilities before server MS-0.
 - Keep `project-toolbox` and `agent-managed-repo` in their dedicated post-v5 package programs.
 
-No MCP server code should begin until the v5 release priority permits the separately governed `SPEC-RD01` Step 08 work.
+No MCP server code should begin until the separately governed `SPEC-RD01` Step 08 work is explicitly started.
