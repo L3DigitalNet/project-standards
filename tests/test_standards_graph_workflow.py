@@ -43,6 +43,8 @@ def test_repository_graph_workflow_contract() -> None:
     assert baseline["shell"] == "bash"
     assert "git for-each-ref" in baseline["run"]
     assert "git ls-tree" in baseline["run"]
+    assert 'git diff --quiet "$baseline" -- catalogs standards' in baseline["run"]
+    assert 'baseline=""' in baseline["run"]
     release_gate = next(
         step for step in job["steps"] if step.get("name") == "Check released V2 payloads"
     )

@@ -51,6 +51,10 @@ jobs:
                 fi
               done
           )"
+          if [[ -n "$baseline" ]] && git diff --quiet "$baseline" -- catalogs standards; then
+            echo 'Released V2 package surface is unchanged.'
+            baseline=""
+          fi
           if [[ -n "$baseline" ]]; then
             printf 'ref=%s\n' "$baseline" >> "$GITHUB_OUTPUT"
           else
