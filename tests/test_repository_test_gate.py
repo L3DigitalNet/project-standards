@@ -221,6 +221,24 @@ def test_repository_workflow_delegates_all_test_phases_to_the_gate() -> None:
     )
 
 
+def test_repository_workflow_installs_node_dependencies_before_the_test_gate() -> None:
+    workflow = yaml.safe_load((_ROOT / ".github/workflows/check.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["check"]["steps"]
+    setup_node_index = next(
+        index
+        for index, step in enumerate(steps)
+        if str(step.get("uses", "")).startswith("actions/setup-node@")
+    )
+    npm_ci_index = next(index for index, step in enumerate(steps) if step.get("run") == "npm ci")
+    test_gate_index = next(
+        index
+        for index, step in enumerate(steps)
+        if step.get("name") == "Test, coverage, and performance"
+    )
+
+    assert setup_node_index < npm_ci_index < test_gate_index
+
+
 def test_worker_count_uses_explicit_environment_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

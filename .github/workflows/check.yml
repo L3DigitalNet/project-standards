@@ -15,6 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Sync Node dependencies
+        run: npm ci
+
       - uses: actions/setup-python@v6
         with:
           python-version-file: ".python-version"
