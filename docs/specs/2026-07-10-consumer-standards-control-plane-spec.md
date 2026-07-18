@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-13'
+last_reviewed: '2026-07-18'
 supersedes: null
 superseded_by: null
 related:
@@ -59,8 +59,10 @@ related:
 | 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Add the owner-approved explicit consumer-owned whole-file preservation contract after release planning exposed that unknown signature findings precede provider ownership classification. Preserve exact-signature requirements for every managed, destructive, shared, imported, and bounded-block transition; add a separate reviewed path back to managed ownership. |
 | 0.10 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Bind each ownership-relinquishment intent pointer statically to one single-target whole-file signature, require unknown-and-unclaimed observations to retain the ordinary digest finding, preserve existing known consumer-owned claims without the field, and reconcile traceability and live-state sequencing. |
 | 0.11 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing focused, lifecycle, stale-plan, no-write/no-lock, managed-return, and source/wheel evidence for FR-037 and FR-038. No requirement or scope changed; live-root dogfood remains deferred to the atomic release commit. |
+| 0.12 | 2026-07-18 | Codex with owner-directed drift remediation | Record completed root dogfood and reopen declared-path provider integrity and performance evidence after a post-release audit found repository-wide fingerprinting. No requirement or scope changed. |
+| 0.13 | 2026-07-18 | Codex with owner-directed verification closeout | Record the corrected declared-path provider boundary and complete integrated verification; close DEV-001 without changing requirements or scope. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane is a v5 platform contract and must be approved before its implementation plan or the separate `project-toolbox` specification proceeds.
+**Spec lifecycle:** This document is approved and change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane shipped as the v5 platform contract; later package programs remain separately governed.
 
 ---
 
@@ -825,7 +827,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 
 ### 17.1 Definition of Done
 
-- [x] All Must requirements are implemented and mapped to passing evidence in §17.3; FR-037 and FR-038 pass their focused, lifecycle, and source/wheel gates.
+- [x] All Must requirements are implemented and mapped to passing evidence in §17.3; FR-037, FR-038, and the corrected declared-path provider boundary pass their focused and integrated gates.
 - [x] ADR 0023 records the consumer control-plane, unified configuration, explicit reconciliation, neutral bootstrap, and central-lock decisions.
 - [x] ADR 0024 records catalog-scoped package channels, candidates, promotion, and embedded versioned payloads.
 - [x] Conflicting ADRs and `meta/versioning.md` are amended or superseded according to §8.3.
@@ -844,13 +846,13 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 - [x] Missing config, catalog, and lock states produce only their sanctioned read-only recovery plans.
 - [x] Shared/exclusive control-plane concurrency tests prevent overlapping mutation without creating a lock artifact.
 - [x] Every package-local durable entry is committed, centrally hashed, drift-checked, and safely removed; modified or undeclared namespace content blocks package removal.
-- [x] Every provider is phased; read-only operations use immutable snapshots, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
+- [x] Every provider is phased; read-only operations use declared immutable snapshots without repository-wide scanning, current `fix`/`scaffold`/`upgrade` operations return complete typed plans, and the platform executor performs every supported artifact write.
 - [x] Referenced extension inputs remain consumer-owned, cannot alias managed/planned outputs, are centrally hashed without managed ownership, and survive package disable/re-enable.
 - [x] Explicit consumer-owned whole-file migration preserves unrecognized bytes only under FR-037, leaves no managed output or lock ownership, retains every exact-signature safety rule, and requires the FR-038 path before later takeover.
-- [ ] This repository dogfoods the control plane and has no package-specific provenance lock. Deferred to the atomic release commit by plan contract 14; the disposable tracked-tree release cut passes the same migration first.
+- [x] This repository dogfoods the control plane and has no package-specific provenance lock.
 - [x] Consumer, package-author, migration, upgrade, and release documentation is current; formatting, Markdown, frontmatter, spec, generated-drift, and independent review gates pass.
-- [x] Full repository quality and coherence gates pass: 2,535 non-performance tests pass at 89% coverage, all three package-compatibility performance rows pass, and the complete documentation, package, audit, build, and coherence gates are green.
-- [x] Deviations Log is reviewed and accepted by the owner; no implementation deviation is recorded.
+- [x] The current full repository quality and coherence gates pass after DEV-001 correction; the 2026-07-18 evidence is recorded in §17.3.
+- [x] The owner reviewed the Deviations Log and accepted DEV-001 as corrected and verified.
 
 ### 17.2 Test Strategy
 
@@ -875,7 +877,7 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | FR-011, FR-012, FR-013, FR-014, FR-015 | Default, pin, candidate `latest`/target-major authorization, disable/re-enable retention, unavailable-track failure, catalog-promotion normalization, sticky-intent, and no-downgrade resolver tests | Complete (core) |
 | FR-016, FR-028, DR-004 | `tests/package_compatibility/`, package projection/integrity suites, and offline installed-wheel provider execution | Passing — `06a33c1`, `a891973` |
 | FR-017, FR-026 | Unified entrypoint, adoption-wrapper, non-destructive config-edit, and CLI contract tests | Complete (core) |
-| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased providers, direct-writer inventories, executor-only authoring, package-local state, central lock, and Agent Handoff migration/removal suites | Passing — package commits `27d3e99` through `b90bfb7`; `94f3183`, `a891973` |
+| FR-018, FR-019, FR-020, FR-034, FR-035, DR-005, ERR-011, ERR-012 | Version-selected/phased providers, declared immutable snapshots, direct-writer inventories, executor-only authoring, package-local state, central lock, and Agent Handoff migration/removal suites | Passing — package commits `27d3e99` through `b90bfb7`; `94f3183`, `a891973`; corrected declared-target snapshot runner, no-repository-scan regression, declared-target write-integrity test, 95 focused provider/Agent Handoff/integration tests, and complete integrated gates verified 2026-07-18 |
 | FR-021, FR-022, DR-006 | `tests/control_plane/test_migration.py`, all-namespace compatibility migration, ambiguity/fallback/dual-authority tests, and disposable installed-CLI apply | Passing — `11ef081`, `f5286d3`, `a903b54`, `06a33c1`, `a891973` |
 | FR-023, NFR-006, NFR-007 | Catalog-derived seven individual, 21 pairwise, full-set, fresh/migrated, package-ID-neutral, source/wheel matrix | Passing — `06a33c1` |
 | FR-024, FR-036, DR-007 | Closed real option schemas, option migration, referenced-extension ownership/hash/collision/preservation, and package compatibility suites | Passing — `27d3e99` through `b90bfb7`; `06a33c1`, `a891973` |
@@ -887,11 +889,13 @@ No regulatory or personal-data processing requirement applies. All embedded payl
 | FR-032 | Partial-control-plane detection, catalog regeneration, lock reconstruction, candidate reauthorization, and missing-config refusal tests | Complete (core) |
 | FR-033 | Candidate-major `latest`/pinned entry, exact exit before/after disable, rollback support, target-major authorization, catalog-promotion exemption, sticky tracks, authorization-record replacement/removal, and subsequent-`latest` tests | Complete (core) |
 | FR-037, FR-038, DR-006, AW-012, EC-018, EC-019, ERR-013, R-009 | Static single-target `consumer_owned_intent_pointer` declaration, claim/declaration/target equality, literal raw owner intent, unknown-and-unclaimed fail-closed retention, known-claim backward compatibility, payload-materialization exclusion, stale-plan binding, no-lock/no-write evidence, managed/bounded-block refusal, source/wheel parity, and reviewed return-to-managed lifecycle | Passing — focused migration lifecycle, Python Tooling lifecycle/source-wheel, and both checker-selection scratch oracles rerun 2026-07-13; disposable predecessor/evidence proof is release integration, not a remaining requirement implementation gap |
-| NFR-005 | 100-package/1,000-artifact planning benchmark | Complete |
+| NFR-005 | 100-package/1,000-artifact planning benchmark plus provider-runner regression proving repository-wide discovery is not used | Passing — no-repository-scan regression and focused provider suite pass; five serial performance tests and complete integrated gates verified 2026-07-18 |
 | NFR-008 | Human/JSON output and exit-code contract tests | Complete (core) |
 | NFR-009, ERR-010 | Multiprocess shared/exclusive directory-lock, fail-fast, failed-init cleanup, full-lifecycle, and process-exit tests | Complete (core) |
 | IR-004 | Unified provider-backed Frontmatter, Project Specification, Agent Handoff, CLI Documentation, workflow, and installed command-matrix fixtures | Passing — `94f3183`, `a891973` |
 | NFR-003, ERR-001, ERR-002, ERR-003, ERR-004, ERR-005, ERR-006, ERR-007, ERR-008, ERR-009 | Security boundary, provider refusal, migration/apply/recovery, stale-plan, path/symlink, and real-package failure suites | Passing — `a903b54`, `af33689`, package reconstruction commits, `a891973` |
+
+The owner-directed DEV-001 correction closeout on 2026-07-18 used the current extracted candidate wheel first on `PYTHONPATH`. The ordinary coverage suite passed with 2,656 tests and 61 deselections (139.95 seconds); the four-worker compatibility matrix passed all 56 tests with `--dist load --max-worker-restart=0` (180.80 seconds); all five serial performance tests and all eight coherence tests passed. Ruff format and lint checks covered 274 files, BasedPyright reported zero errors or warnings, total coverage was 89%, and `pip-audit` reported no known vulnerabilities. The focused provider, Agent Handoff, and integration suite passed all 95 tests; the corrected packaging and exit-code regressions passed all 30 tests.
 
 ---
 
@@ -1083,11 +1087,9 @@ No implementation-blocking design question remains after owner review.
 
 ## Deviations Log
 
-| ID  | Date | Requirement | Deviation               | Reason | Approved By | Status |
-| --- | ---- | ----------- | ----------------------- | ------ | ----------- | ------ |
-| —   | —    | —           | No deviations recorded. | —      | —           | —      |
-
-The owner reviewed and accepted this empty log on 2026-07-12.
+| ID | Date | Requirement | Deviation | Reason | Approved By | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| DEV-001 | 2026-07-18 | FR-018, FR-035, NFR-005, ERR-012 | Before correction, the provider runner fingerprinted the full repository before and after provider calls instead of rechecking only declared snapshot targets. | Post-release drift audit found undeclared reads, repository-size-dependent work, and false mutation findings from unrelated concurrent Git metadata changes. | Chris Purcell / L3DigitalNet | corrected and verified |
 
 ---
 
@@ -1110,8 +1112,8 @@ The owner reviewed and accepted this empty log on 2026-07-12.
 
 - [Meta-repository MCP readiness — SPEC-MT01](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md)
 - [Current generated standards catalog](../../standards/catalog.md)
-- [Current consumer configuration example](../../.project-standards.yml)
-- [Current adopt-engine documentation](../../src/project_standards/README.md#adopt-engine)
+- [Current consumer configuration](../../.standards/config.toml)
+- [Current V5 control-plane implementation map](../../src/project_standards/README.md#v5-control-plane-and-package-contract)
 
 ---
 

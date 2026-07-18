@@ -24,7 +24,7 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 
 - **Sub-agents.** Individual agents and headless Codex are pre-authorized. Ask before agent teams or orchestration, with a cost sketch. Never use Fable; use Haiku only for mechanical work, Sonnet+ for substantive work, and Opus for adversarial review. Set the model.
 - **Self-containment.** This conventions source does not import global agent conventions. It dogfoods repo-local Agent Handoff; do not add workstation ownership.
-- **Dogfood.** Validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
+- **Dogfood.** After extracting the candidate wheel and putting it first on `PYTHONPATH` as shown in [README.md](README.md#developing-this-repository), validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
 - **Keep the toolchain green** before committing validator/test changes: Ruff format/check and BasedPyright from the source environment; then build/extract the candidate wheel and run ordinary pytest under coverage, the xdist compatibility matrix, serial performance tests, `coverage report`, `pip-audit`, and `tests/coherence` after `npm ci` with the extracted wheel first on `PYTHONPATH`.

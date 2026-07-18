@@ -10,7 +10,7 @@
 - Release-only replay, retained self-referential evidence, the custom test orchestrator, and their frozen predecessor fixture have been removed as unnecessary release-preparation machinery.
 - Generic consumer-owned workflow support and optional parallel/subprocess coverage remain part of the immutable Python Tooling 1.1 package API; this repository simply no longer selects parallel coverage.
 - Core control-plane, package, migration, source/wheel compatibility, composition, performance, formatting, typing, dependency, and documentation checks remain required.
-- Cleanup verification passes: 2,628 ordinary tests at 89% coverage, 56 compatibility rows, 5 performance gates, package/graph/schema/projection checks, 8 coherence tests, Ruff, BasedPyright, and dependency audits.
+- Verification claims are command-based; rerun the retained gate against current HEAD before claiming completion.
 - MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
 - Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
 - Durable implementation history remains in `docs/handoff/sessions/2026-07.md`.

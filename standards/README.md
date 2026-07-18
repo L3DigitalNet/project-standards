@@ -1,6 +1,6 @@
 # Standards
 
-This directory holds the **governing standards** this repository defines. Each standard is a self-contained **bundle** — open its folder and the standard renders.
+This directory holds the **governing standards** this repository defines. Each standard is a self-contained **bundle**. Its mutable root README is a current-family landing page that routes to the exact immutable version selected by Catalog 5.
 
 The generated [standards catalog](catalog.md) exposes validated V2 family, payload, channel, capability, relationship, resource, provider, and managed-output facts. Regenerate it with `uv run project-standards standards render-catalog --root .`; use `--check` in verification to detect drift.
 

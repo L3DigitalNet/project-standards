@@ -11,7 +11,10 @@ from pathlib import Path
 
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import semantic_digest
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ControlPlaneConfigurationError,
+    ControlPlaneError,
+)
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.locking import LockMode, control_plane_lock
 from project_standards.control_plane.models import CentralLock, ConsumerCatalog, DesiredConfig
@@ -40,6 +43,10 @@ from project_standards.package_contract.payload import (
 
 class CommandResolutionError(ValueError):
     """Report an unusable command authority or package selection."""
+
+
+class CommandConfigurationError(CommandResolutionError):
+    """Report invalid selected-package configuration to public commands."""
 
 
 _legacy_warning_emitted = False
@@ -204,6 +211,10 @@ def _resolve_state(
         return None
     if state.kind is StateKind.UNINITIALIZED:
         return None
+    if state.kind is StateKind.MALFORMED and state.malformed_file == "config.toml":
+        raise CommandConfigurationError(state.detail or "control-plane config is invalid")
+    if state.kind is StateKind.INCOMPLETE and "config.toml" in state.missing_files:
+        raise CommandConfigurationError(state.detail or "control-plane config is missing")
     if (
         state.kind is not StateKind.INITIALIZED
         or state.config is None
@@ -289,6 +300,8 @@ def _resolve_state_for_command(
         )
     except CommandResolutionError:
         raise
+    except ControlPlaneConfigurationError as exc:
+        raise CommandConfigurationError(str(exc)) from exc
     except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
         raise CommandResolutionError(str(exc)) from exc
 
@@ -324,7 +337,10 @@ def selected_command(
 ) -> Generator[SelectedCommandPackage | None]:
     """Resolve and retain one authority generation for a complete public command."""
     installed = distribution or InstalledDistribution.current()
-    initial = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
+    try:
+        initial = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
+    except ValueError as exc:
+        raise CommandConfigurationError(str(exc)) from exc
     if initial.kind is not StateKind.INITIALIZED:
         yield _resolve_state_for_command(
             initial,

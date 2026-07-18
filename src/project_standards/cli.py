@@ -459,7 +459,8 @@ def main(argv: list[str] | None = None) -> int:
         fix_args = args_list[1:]
         if "--help" in fix_args or "-h" in fix_args:
             print(
-                "usage: project-standards fix [FILE ...] [--config PATH] [--glob PATTERN] [--quiet]\n"
+                "usage: project-standards fix [FILE ...] [--config PATH] [--schema PATH] "
+                "[--glob PATTERN] [--no-require-frontmatter] [--quiet]\n"
                 "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
                 "Skips entirely under a custom schema."
             )

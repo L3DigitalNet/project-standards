@@ -1,6 +1,6 @@
 # Architecture
 
-**Last updated:** 2026-07-12
+**Last updated:** 2026-07-18
 
 ## Components
 
@@ -16,13 +16,13 @@
 
 - Catalog 5 consumers select immutable packages in `.standards/config.toml`; one lock records exact payload and configuration state.
 - `reconcile` resolves, composes, applies, repairs, and checks drift transactionally while preserving consumer-owned content.
-- The legacy `.project-standards.yml` validator and `adopt` bundles remain bounded migration and compatibility inputs through v5.
+- Legacy `.project-standards.yml`, `registry.json`, and copy-adopt bundles are bounded migration and compatibility inputs only; they are not current authorities.
 - This repo dogfoods frontmatter only on configured managed docs. ADR 0015 excludes `standards/**` so packages do not ship repo-specific metadata.
 - Schemas, manifests, payloads, generated projections, provider output, and installed-wheel behavior form versioned package contracts.
 
 ## Standing backlog
 
 - **Repo-root-relative link enforcement:** breaking and deferred to a future major.
-- **MCP enablement:** complete SPEC-MT01 Step 07 before SPEC-RD01 or the thin, local, read-only-first SPEC-MS01 server.
+- **MCP enablement:** SPEC-MT01 Step 07 is complete. SPEC-RD01 governs any next sequencing, and SPEC-MS01 remains deferred until its protocol and SDK research is refreshed.
 - Packages remain independent by default. Profiles recommend combinations; the future MCP layer surfaces relationships without enforcing hidden dependencies.
 - SPEC-MT01 ADRs 0001-0013 are accepted. Later MCP-server decisions remain deferred; see `specs-plans.md`.

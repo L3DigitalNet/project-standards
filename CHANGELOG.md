@@ -6,21 +6,21 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-17'
-reviewed: null
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
   - 'changelog'
 aliases: []
 related:
-  - 'standards/markdown-frontmatter/README.md'
-  - 'standards/markdown-frontmatter/structure.md'
-  - 'standards/markdown-frontmatter/field-values.md'
+  - 'standards/markdown-frontmatter/versions/1.2/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/structure.md'
+  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
-  - 'standards/agent-handoff/README.md'
+  - 'standards/agent-handoff/versions/1.1/README.md'
   - 'docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md'
   - '.standards/config.toml'
 source: []
@@ -36,6 +36,16 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Fixed
+
+- **Declared provider integrity checks are bounded to declared inputs.** Provider execution no longer scans or hashes the whole repository. It rechecks only declared file and directory snapshots, including immediate directory membership, entry type, and permission bits, so unrelated repository activity cannot produce false mutation findings while declared writes remain blocked.
+- **Agent Handoff command failures use the documented exit taxonomy.** Missing or malformed operator configuration exits 2, invalid catalog or lock state and internal prerequisites exit 3, and recoverable upgrade-apply failures return an `AH-APPLY-FAILED` finding with exit 1 instead of escaping as an internal error.
+- **Current Catalog 5 documentation and CLI reference match the shipped implementation.** Public help now lists the supported `fix` options; maintained specifications, ADRs, family landing pages, usage guidance, status, and authority links consistently distinguish mutable navigation from immutable payload authority and V5 routing from retained V1 compatibility.
+
+### Changed
+
+- **Repository package drift enforcement now covers every generated contract.** The graph workflow checks packages, graph structure, generated schemas, payload projection, and catalog rendering. Package tests prove exact source, direct-wheel, and sdist-derived-wheel parity without changing immutable payloads or catalog selections.
 
 ## [5.0.0] — 2026-07-17
 
@@ -71,7 +81,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Security
 
-- **Dev-tooling bump: `markdownlint-cli2` `0.22.1` → `0.23.0`** (markdownlint `0.40.0` → `0.41.0`), the reusable `lint-markdown.yml` action `DavidAnson/markdownlint-cli2-action` `v23` → `v24`, and `tests/coherence/test_pins.py` updated so the local pin and the CI-bundled version stay in lock-step. Clears two moderate npm advisories in transitive dev-only dependencies — js-yaml merge-key quadratic DoS (`GHSA-h67p-54hq-rp68`; now `5.2.0`) and markdown-it smartquotes quadratic DoS (`GHSA-6v5v-wf23-fmfq`; now `14.2.0`); `npm audit` reports 0 vulnerabilities. markdownlint 0.41 adds **no new rules** (it refines MD022/MD028/MD035/MD042/MD051/MD060 and removes inline-directive handling), and the repo's 85-file corpus lints clean under it, so consumer-visible risk via the `@v4` reusable workflow is low — the action bump ships with v5.0.0 rather than as a silent interim change.
+- **Dev-tooling bump: `markdownlint-cli2` `0.22.1` → `0.23.0`** (markdownlint `0.40.0` → `0.41.0`), the reusable `lint-markdown.yml` action `DavidAnson/markdownlint-cli2-action` `v23` → `v24`, and `tests/coherence/test_pins.py` updated so the local pin and the CI-bundled version stay in lock-step. Clears two moderate npm advisories in transitive dev-only dependencies — js-yaml merge-key quadratic DoS (`GHSA-h67p-54hq-rp68`; now `5.2.0`) and markdown-it smartquotes quadratic DoS (`GHSA-6v5v-wf23-fmfq`; now `14.2.0`); `npm audit` reports 0 vulnerabilities. markdownlint 0.41 adds **no new rules** (it refines MD022/MD028/MD035/MD042/MD051/MD060 and removes inline-directive handling), and the repo's 85-file corpus lints clean under it, so consumer-visible risk via the `@v5` reusable workflow is low — the action bump ships with v5.0.0 rather than as a silent interim change.
 
 ## [4.3.0] - 2026-07-07
 

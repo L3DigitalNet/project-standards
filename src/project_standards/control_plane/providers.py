@@ -28,6 +28,7 @@ from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import LockedInput
 from project_standards.control_plane.schemas import MutationPlanSchema, ProviderInputSchema
+from project_standards.control_plane.snapshot import RepositorySnapshot
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
@@ -369,30 +370,90 @@ def _read_payload_resource(
     return content
 
 
-def _fingerprint_repo(root: Path) -> dict[str, tuple[object, ...]]:
-    fingerprint: dict[str, tuple[object, ...]] = {}
+def _declared_snapshot_paths(snapshots: JsonObject) -> tuple[SafeRelativePath, ...]:
+    raw_paths: set[str] = set()
+    container_keys = {
+        "authoring",
+        "documents",
+        "legacy_config",
+        "legacy_evidence",
+        "legacy_signatures",
+        "managed_units",
+        "planned_contribution",
+        "preview",
+        "referenced_input_content",
+        "referenced_inputs",
+    }
+
+    for key, value in snapshots.items():
+        if key in container_keys:
+            continue
+        if not isinstance(value, dict) or "kind" not in value:
+            continue
+        declared_path = value.get("path")
+        if isinstance(declared_path, str):
+            raw_paths.add(declared_path)
+        else:
+            raw_paths.add(key)
+
+    for collection in (
+        "documents",
+        "referenced_inputs",
+        "referenced_input_content",
+        "managed_units",
+    ):
+        raw_items = snapshots.get(collection)
+        if not isinstance(raw_items, list):
+            continue
+        for raw_item in raw_items:
+            if not isinstance(raw_item, dict):
+                continue
+            value = raw_item.get("path", raw_item.get("target"))
+            if isinstance(value, str):
+                raw_paths.add(value)
+
+    for key in ("authoring", "planned_contribution", "preview"):
+        raw_item = snapshots.get(key)
+        if isinstance(raw_item, dict):
+            value = raw_item.get("target")
+            if isinstance(value, str):
+                raw_paths.add(value)
+
+    if "legacy_config" in snapshots:
+        raw_paths.add(".project-standards.yml")
+    raw_signatures = snapshots.get("legacy_signatures")
+    if isinstance(raw_signatures, dict):
+        for raw_targets in raw_signatures.values():
+            if isinstance(raw_targets, dict):
+                raw_paths.update(raw_targets)
+    legacy_evidence = snapshots.get("legacy_evidence")
+    if isinstance(legacy_evidence, dict):
+        findings = legacy_evidence.get("findings")
+        if isinstance(findings, list):
+            for finding in findings:
+                if isinstance(finding, dict):
+                    path = finding.get("path")
+                    if isinstance(path, str):
+                        raw_paths.add(path)
+
     try:
-        entries = sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
-        for entry in entries:
-            relative = entry.relative_to(root).as_posix()
-            metadata = entry.lstat()
-            mode = stat.S_IFMT(metadata.st_mode)
-            if stat.S_ISLNK(metadata.st_mode):
-                fingerprint[relative] = (mode, entry.readlink(), metadata.st_mtime_ns)
-            elif stat.S_ISREG(metadata.st_mode):
-                fingerprint[relative] = (
-                    mode,
-                    stat.S_IMODE(metadata.st_mode),
-                    metadata.st_mtime_ns,
-                    _sha256(entry.read_bytes()).value,
-                )
-            elif stat.S_ISDIR(metadata.st_mode):
-                fingerprint[relative] = (mode, stat.S_IMODE(metadata.st_mode))
-            else:
-                fingerprint[relative] = (mode, metadata.st_mtime_ns)
-    except OSError as exc:
-        raise ControlPlaneError("repository could not be fingerprinted") from exc
-    return fingerprint
+        return tuple(SafeRelativePath.parse(path) for path in sorted(raw_paths))
+    except ValueError as exc:
+        raise ControlPlaneError("provider snapshot declares an invalid repository path") from exc
+
+
+def _assert_declared_paths_unchanged(before: RepositorySnapshot) -> None:
+    try:
+        after = RepositorySnapshot.capture(before.root, before.targets)
+    except ControlPlaneError as exc:
+        raise ControlPlaneError(
+            "CP-PROVIDER-INTEGRITY: provider made a declared live path unsafe"
+        ) from exc
+    for expected, observed in zip(before.entries, after.entries, strict=True):
+        if expected.precondition_digest != observed.precondition_digest:
+            raise ControlPlaneError(
+                f"CP-PROVIDER-INTEGRITY: provider changed live path {expected.path.original}"
+            )
 
 
 def _output_notice(stdout: _OutputSink, stderr: _OutputSink) -> str | None:
@@ -625,7 +686,7 @@ def _bind_authoring_actions_to_snapshot(
 
 
 def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
-    """Invoke one declared Python provider and reject any observed live write."""
+    """Invoke one declared Python provider and reject changes to declared live targets."""
     root = _safe_repo(invocation.repo)
     payload = invocation.payload
     identity = payload.manifest.payload
@@ -688,7 +749,10 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
     code_resource = resources[cast(str, provider.entrypoint_resource)]
     code_path = payload.root / code_resource.path.normalized
     symbol = provider.entrypoint.rsplit("#", 1)[1]
-    before = _fingerprint_repo(root)
+    before = RepositorySnapshot.capture(
+        root,
+        _declared_snapshot_paths(effective_invocation.snapshots),
+    )
     stdout = _OutputSink()
     stderr = _OutputSink()
     result: object | None = None
@@ -713,13 +777,10 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
             result = callable_provider(frozen_input, frozen_resources)
     except BaseException as exc:
         failure = exc
-    after = _fingerprint_repo(root)
-    changed = sorted(set(before) | set(after), key=str)
-    changed = [path for path in changed if before.get(path) != after.get(path)]
-    if changed:
-        raise ControlPlaneError(
-            f"CP-PROVIDER-INTEGRITY: provider changed live path {changed[0]}"
-        ) from failure
+    try:
+        _assert_declared_paths_unchanged(before)
+    except ControlPlaneError as exc:
+        raise exc from failure
     if failure is not None:
         raise ControlPlaneError(f"provider failed with {type(failure).__name__}") from failure
 

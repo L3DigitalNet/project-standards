@@ -260,7 +260,15 @@ def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
 
 def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
     if behavior == "write":
-        body = "Path('provider-wrote.txt').write_text('bad', encoding='utf-8')\n    return {'content': 'bad'}"
+        body = (
+            "Path('README.md').write_text('bad', encoding='utf-8')\n    return {'content': 'bad'}"
+        )
+        imports = "from pathlib import Path\n"
+    elif behavior == "write-child":
+        body = (
+            "Path('docs/handoff/sessions/provider.md').write_text('bad', encoding='utf-8')"
+            "\n    return {'content': 'bad'}"
+        )
         imports = "from pathlib import Path\n"
     elif behavior == "network":
         body = "socket.socket()\n    return {'content': 'bad'}"
@@ -468,7 +476,12 @@ def _invocation(repo: Path, payload: InstalledPayload) -> ProviderInvocation:
         provider_id="test-provider",
         operation=payload.manifest.providers[0].operation,
         effective_config={"mode": "strict"},
-        snapshots={"README.md": {"digest": _digest(b"repo\n")}},
+        snapshots={
+            "README.md": {
+                "kind": "missing",
+                "precondition_digest": _digest(b"repo\n"),
+            }
+        },
     )
 
 
@@ -855,3 +868,130 @@ def test_observed_live_write_is_integrity_incident_and_prior_lock_is_untouched(
         invoke_provider(_invocation(repo, payload))
 
     assert (repo / "lock.toml").read_bytes() == prior_lock
+
+
+def test_provider_integrity_checks_single_document_snapshot_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="write")
+    invocation = _invocation(repo, payload)
+    document_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "document": {
+                "path": "README.md",
+                "kind": "missing",
+                "precondition_digest": _digest(b"repo\n"),
+            }
+        },
+    )
+    monkeypatch.chdir(repo)
+
+    with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+        invoke_provider(document_invocation)
+
+
+def test_provider_integrity_checks_legacy_evidence_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="write")
+    invocation = _invocation(repo, payload)
+    legacy_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={"legacy_evidence": {"findings": [{"path": "README.md"}]}},
+    )
+    monkeypatch.chdir(repo)
+
+    with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+        invoke_provider(legacy_invocation)
+
+
+def test_provider_integrity_checks_preview_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload", behavior="write")
+    invocation = _invocation(repo, payload)
+    preview_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={"preview": {"target": "README.md"}},
+    )
+    monkeypatch.chdir(repo)
+
+    with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+        invoke_provider(preview_invocation)
+
+
+def test_provider_integrity_checks_children_of_declared_directories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    sessions = repo / "docs/handoff/sessions"
+    sessions.mkdir(parents=True)
+    payload = _write_provider_payload(tmp_path / "payload", behavior="write-child")
+    invocation = _invocation(repo, payload)
+    directory_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "docs/handoff/sessions": {
+                "kind": "directory",
+                "precondition_digest": _digest(b"directory"),
+            }
+        },
+    )
+    monkeypatch.chdir(repo)
+
+    with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+        invoke_provider(directory_invocation)
+
+
+def test_provider_integrity_check_does_not_scan_undeclared_repository_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "unrelated.txt").write_text("not a provider input\n", encoding="utf-8")
+    payload = _write_provider_payload(tmp_path / "payload")
+
+    def reject_recursive_scan(_path: Path, _pattern: str) -> object:
+        raise AssertionError("provider runner scanned the repository")
+
+    monkeypatch.setattr(Path, "rglob", reject_recursive_scan)
+
+    result = invoke_provider(_invocation(repo, payload))
+
+    assert result.content == b"1.2:1.2:declared-data"

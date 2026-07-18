@@ -162,6 +162,52 @@ def test_snapshot_precondition_detects_concurrent_content_or_mode_change(
         snapshot.assert_current()
 
 
+@pytest.mark.parametrize("mutation", ["add", "remove", "replace-type", "chmod"])
+def test_directory_snapshot_precondition_detects_inventory_or_mode_change(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    directory = tmp_path / "declared"
+    directory.mkdir()
+    directory.chmod(0o755)
+    child = directory / "child"
+    child.write_text("before", encoding="utf-8")
+    snapshot = RepositorySnapshot.capture(tmp_path, (_path("declared"),))
+    entry = snapshot.entry(_path("declared"))
+    assert entry.kind is EntryKind.DIRECTORY
+    assert entry.mode == "0755"
+
+    if mutation == "add":
+        (directory / "added").write_text("new", encoding="utf-8")
+    elif mutation == "remove":
+        child.unlink()
+    elif mutation == "replace-type":
+        child.unlink()
+        child.mkdir()
+    else:
+        directory.chmod(0o700)
+
+    with pytest.raises(ControlPlaneError, match="precondition changed"):
+        snapshot.assert_current()
+
+
+@pytest.mark.parametrize("special_mode", [0o1755, 0o2755])
+def test_directory_snapshot_accepts_and_binds_special_mode_bits(
+    tmp_path: Path,
+    special_mode: int,
+) -> None:
+    directory = tmp_path / "declared"
+    directory.mkdir()
+    directory.chmod(special_mode)
+
+    snapshot = RepositorySnapshot.capture(tmp_path, (_path("declared"),))
+
+    assert snapshot.entry(_path("declared")).mode == "0755"
+    directory.chmod(0o755)
+    with pytest.raises(ControlPlaneError, match="precondition changed"):
+        snapshot.assert_current()
+
+
 def test_whole_file_adapter_inspects_and_renders_the_only_valid_scope() -> None:
     adapter = WholeFileAdapter()
     state = adapter.inspect(b"old\n", ("$file",))

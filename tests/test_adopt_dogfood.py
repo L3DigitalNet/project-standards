@@ -13,11 +13,9 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
 import shutil
 import stat
 import subprocess
-import tomllib
 from hashlib import sha256
 from pathlib import Path
 
@@ -70,8 +68,6 @@ _DOGFOOD = {
     "markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id": (
         "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id"
     ),
-    "agent-handoff/README.md": "standards/agent-handoff/README.md",
-    "agent-handoff/agent-summary.md": "standards/agent-handoff/agent-summary.md",
     "agent-handoff/hooks/session-start/session_start.py": (
         "standards/agent-handoff/hooks/session-start/session_start.py"
     ),
@@ -150,46 +146,6 @@ def test_generated_workflow_yaml_has_no_tabs() -> None:
     assert "\t" not in (_BUNDLES / "python-tooling" / "check.yml").read_text()
 
 
-_PY_TOOLING_DOC = _REPO / "standards" / "python-tooling" / "README.md"
-
-
-def test_standard_doc_check_yml_block_matches_current_package_semantics() -> None:
-    # The readable standard scaffold and generated V2 resource may use different
-    # labels and spacing, but their ordered action and command contracts must agree.
-    doc = _PY_TOOLING_DOC.read_text()
-    blocks = re.findall(r"```yaml\n(.*?)```", doc, re.DOTALL)
-    assert len(blocks) == 1  # §15 is the document's only YAML fence
-    block = blocks[0]
-    current = _REPO / "standards/python-tooling/versions/1.1/resources/check.yml"
-    doc_steps = yaml.safe_load(block)["jobs"]["check"]["steps"]
-    current_steps = yaml.safe_load(current.read_text())["jobs"]["check"]["steps"]
-
-    def contract(step: dict[str, object]) -> tuple[str, object]:
-        if uses := step.get("uses"):
-            return ("uses", uses)
-        return ("run", tuple(shlex.split(str(step["run"]))))
-
-    assert [contract(step) for step in doc_steps] == [contract(step) for step in current_steps]
-    assert "\t" not in block  # YAML forbids tab indentation
-    yaml.safe_load(block)
-    assert "<!-- prettier-ignore -->\n```yaml\n" in doc
-
-
-def test_standard_doc_pyproject_block_matches_bundle_fragment() -> None:
-    # §6's baseline and the CLI-reported fragment must agree semantically. The doc
-    # block additionally carries an illustrative [project] table, so compare only
-    # the tables the fragment defines (comments and formatting are free to differ).
-    doc = _PY_TOOLING_DOC.read_text()
-    blocks = re.findall(r"```toml\n(\[project\].*?)```", doc, re.DOTALL)
-    assert len(blocks) == 1
-    doc_toml = tomllib.loads(blocks[0])
-    fragment = tomllib.loads(
-        (_BUNDLES / "python-tooling" / "pyproject.python-tooling.toml").read_text()
-    )
-    for table, value in fragment.items():
-        assert doc_toml[table] == value, table
-
-
 @pytest.mark.parametrize(
     "standard_id,version",
     [("markdown-frontmatter", "1.2"), ("adr", "1.1"), ("project-spec", "1.1")],
@@ -202,13 +158,6 @@ def test_current_adoption_guides_use_v5_packages_not_v1_fragments(
     assert f"versions/{version}/adopt.md" in doc
     assert "project-standards init --catalog 5 --migrate" in doc
     assert "```yaml" not in doc
-
-
-def test_md_tooling_doc_prettierrc_fence_matches_bundle() -> None:
-    doc = (_REPO / "standards" / "markdown-tooling" / "README.md").read_text()
-    fences = re.findall(r"```json\n(.*?)```", doc, re.DOTALL)
-    assert (_BUNDLES / "markdown-tooling" / "prettierrc.json").read_text() in fences
-    assert "<!-- prettier-ignore -->\n```json\n" in doc
 
 
 def test_no_yaml_fence_in_standards_docs_contains_tabs() -> None:
@@ -230,13 +179,10 @@ def test_doc_workflow_snippets_reference_current_major() -> None:
     pat = re.compile(
         r"uses: L3DigitalNet/project-standards/\.github/workflows/([\w.-]+\.yml)@(\S+)"
     )
-    seen = 0
     for md in (_REPO / "standards").rglob("*.md"):
         for workflow, used_ref in pat.findall(md.read_text()):
             assert workflow in workflows, f"{md}: {workflow}"
             assert used_ref == ref, f"{md}: {workflow}@{used_ref}"
-            seen += 1
-    assert seen >= 1  # retained normative/versioned workflow references remain pinned
 
 
 def test_adopt_python_tooling_delivers_vscode_settings_and_tasks(tmp_path: Path) -> None:

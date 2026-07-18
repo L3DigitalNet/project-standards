@@ -7,6 +7,10 @@ import pytest
 
 from project_standards.adopt.errors import UsageError
 from project_standards.cli import main
+from project_standards.control_plane.command_resolution import (
+    CommandConfigurationError,
+    CommandResolutionError,
+)
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.standard_manifest import ProviderOperation
@@ -183,3 +187,42 @@ def test_agent_handoff_provider_error_preserves_exit_code(
 
     assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 2
     assert "bad provider arguments" in capsys.readouterr().err
+
+
+def test_agent_handoff_configuration_failure_exits_two(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_selection(*_args: object, **_kwargs: object) -> object:
+        raise CommandConfigurationError("selected package configuration is invalid")
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.selected_command",
+        fail_selection,
+    )
+
+    assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 2
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        CommandResolutionError("selected package is unavailable"),
+        OSError("provider prerequisite is unavailable"),
+        RuntimeError("provider runtime failed"),
+    ],
+)
+def test_agent_handoff_prerequisite_and_internal_failures_exit_three(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Exception,
+) -> None:
+    def fail_selection(*_args: object, **_kwargs: object) -> object:
+        raise failure
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.selected_command",
+        fail_selection,
+    )
+
+    assert main(["agent-handoff", "validate", "--repo", str(tmp_path)]) == 3

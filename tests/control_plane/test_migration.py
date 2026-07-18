@@ -1551,6 +1551,30 @@ def test_unknown_key_inside_a_known_namespace_remains_unclaimed(tmp_path: Path) 
     )
 
 
+def test_descriptor_shaped_legacy_values_remain_unclaimed_settings(tmp_path: Path) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(
+        tmp_path,
+        (
+            "standards_version: v4\n"
+            "alpha:\n"
+            "  enabled: true\n"
+            "kind: user-data\n"
+            "path: /tmp/not-a-snapshot-target\n"
+        ),
+    )
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    unclaimed = {
+        finding.identity
+        for finding in plan.findings
+        if finding.code == "CP-MIGRATION-UNCLAIMED-SETTING"
+    }
+    assert {"/kind", "/path"} <= unclaimed
+
+
 def test_provider_claim_for_missing_setting_blocks_without_hiding_the_remainder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -20,7 +20,7 @@ Maintained Project Specification documents live under `docs/specs/`.
 
 ## Non-Negotiables
 
-- Dogfood the standards: `uv run project-standards validate` must pass.
+- Dogfood the standards through the extracted candidate-wheel runtime described in [README.md](README.md#developing-this-repository): `uv run project-standards validate` must pass with that runtime first on `PYTHONPATH`.
 - Never add frontmatter to `CLAUDE.md`, `AGENTS.md`, or `.claude/**`.
 - Keep the `AGENTS.md` toolchain gate green; coherence tests require `npm ci`.
 - The schema is a versioned contract — see `docs/handoff/conventions.md`.

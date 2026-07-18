@@ -42,6 +42,8 @@ class ControlPlaneState:
     catalog: ConsumerCatalog | None = None
     lock: CentralLock | None = None
     detail: str | None = None
+    malformed_file: str | None = None
+    missing_files: tuple[str, ...] = ()
 
 
 def _safe_repo(repo: Path) -> Path:
@@ -53,8 +55,21 @@ def _safe_repo(repo: Path) -> Path:
         raise ValueError("repository root could not be resolved") from exc
 
 
-def _state(kind: StateKind, repo: Path, detail: str | None = None) -> ControlPlaneState:
-    return ControlPlaneState(kind=kind, repo=repo, detail=detail)
+def _state(
+    kind: StateKind,
+    repo: Path,
+    detail: str | None = None,
+    *,
+    malformed_file: str | None = None,
+    missing_files: tuple[str, ...] = (),
+) -> ControlPlaneState:
+    return ControlPlaneState(
+        kind=kind,
+        repo=repo,
+        detail=detail,
+        malformed_file=malformed_file,
+        missing_files=missing_files,
+    )
 
 
 def _load_initialized_state(
@@ -76,29 +91,53 @@ def _load_initialized_state(
         }
     except ValueError:
         return _state(StateKind.MALFORMED, repo, "control-plane files could not be inspected")
-    if "unsafe" in kinds.values():
+    unsafe = next((name for name, kind in kinds.items() if kind == "unsafe"), None)
+    if unsafe is not None:
         return _state(
             StateKind.MALFORMED,
             repo,
             "control plane contains an unsafe required-file entry",
+            malformed_file=unsafe,
         )
     missing = [name for name, kind in kinds.items() if kind == "missing"]
     if missing:
         return _state(
             StateKind.INCOMPLETE,
             repo,
-            "control plane is missing one or more required regular files",
+            (
+                "control-plane config is missing"
+                if missing == ["config.toml"]
+                else "control plane is missing one or more required regular files"
+            ),
+            missing_files=tuple(missing),
         )
 
     try:
         config = parse_config(control.read_bytes("config.toml"))
+    except ValueError:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "control-plane config is invalid",
+            malformed_file="config.toml",
+        )
+    try:
         catalog = parse_catalog(control.read_bytes("catalog.toml"))
+    except ValueError:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "control-plane catalog is invalid",
+            malformed_file="catalog.toml",
+        )
+    try:
         lock = parse_lock(control.read_bytes("lock.toml"))
     except ValueError:
         return _state(
             StateKind.MALFORMED,
             repo,
-            "one or more control-plane files are invalid",
+            "control-plane lock is invalid",
+            malformed_file="lock.toml",
         )
     try:
         backup_kind = control.file_kind(CATALOG_REFRESH_BACKUP)

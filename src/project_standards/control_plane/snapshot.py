@@ -160,6 +160,66 @@ def _regular_entry(
     )
 
 
+def _directory_inventory(descriptor: int) -> bytes:
+    """Encode the immediate child names and entry types of an open directory."""
+    inventory = bytearray()
+    for name in sorted(os.listdir(descriptor), key=os.fsencode):
+        encoded_name = os.fsencode(name)
+        metadata = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+        entry_type = stat.S_IFMT(metadata.st_mode)
+        inventory.extend(len(encoded_name).to_bytes(8, "big"))
+        inventory.extend(encoded_name)
+        inventory.extend(entry_type.to_bytes(4, "big"))
+    return bytes(inventory)
+
+
+def _directory_entry(
+    path: SafeRelativePath,
+    parent_descriptor: int,
+    name: str,
+) -> SnapshotEntry:
+    """Capture directory mode and immediate membership through one safe descriptor."""
+    try:
+        descriptor = os.open(
+            name,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+            dir_fd=parent_descriptor,
+        )
+    except OSError as exc:
+        raise ControlPlaneError("snapshot directory could not be opened safely") from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISDIR(before.st_mode):
+            raise ControlPlaneError("snapshot target changed type during capture")
+        inventory = _directory_inventory(descriptor)
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise ControlPlaneError("snapshot directory changed during capture") from exc
+    finally:
+        os.close(descriptor)
+    stable_fields = ("st_dev", "st_ino", "st_mtime_ns", "st_mode")
+    if any(getattr(before, field) != getattr(after, field) for field in stable_fields):
+        raise ControlPlaneError("snapshot directory changed during capture")
+    permissions = stat.S_IMODE(after.st_mode)
+    # Provider-facing modes stay within the regular-file `0NNN` contract, while
+    # the precondition also binds directory-only sticky/set-id bits.
+    mode = f"0{permissions & 0o777:03o}"
+    precondition_mode = f"{permissions:04o}"
+    return SnapshotEntry(
+        path=path,
+        kind=EntryKind.DIRECTORY,
+        content=None,
+        mode=mode,
+        link_target=None,
+        content_digest=None,
+        precondition_digest=_precondition(
+            EntryKind.DIRECTORY,
+            mode=precondition_mode,
+            content=inventory,
+        ),
+    )
+
+
 def _read_entry(
     root_descriptor: int,
     path: SafeRelativePath,
@@ -202,7 +262,9 @@ def _read_entry(
                 None,
                 _precondition(EntryKind.SYMLINK, link_target=target),
             )
-        kind = EntryKind.DIRECTORY if stat.S_ISDIR(metadata.st_mode) else EntryKind.OTHER
+        if stat.S_ISDIR(metadata.st_mode):
+            return _directory_entry(path, parent_descriptor, name)
+        kind = EntryKind.OTHER
         return SnapshotEntry(
             path,
             kind,

@@ -6,8 +6,8 @@ description: 'Records the decision that skills shipped by standard packages inst
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -20,9 +20,9 @@ aliases:
   - 'ADR 0021'
   - 'Standard-packaged skill installation methodology'
 related:
-  - 'standards/standard-bundle-authoring/README.md'
-  - 'standards/markdown-frontmatter/README.md'
-  - 'standards/markdown-frontmatter/adopt.md'
+  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/adopt.md'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
@@ -37,11 +37,11 @@ related:
 supersedes: []
 superseded_by: null
 source:
-  - 'standards/standard-bundle-authoring/README.md'
-  - 'standards/markdown-frontmatter/README.md'
-  - 'standards/markdown-frontmatter/adopt.md'
-  - 'standards/markdown-frontmatter/skills/markdown-frontmatter/SKILL.md'
-  - 'src/project_standards/bundles/markdown-frontmatter/adopt.toml'
+  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/adopt.md'
+  - 'standards/markdown-frontmatter/versions/1.2/skills/markdown-frontmatter/SKILL.md'
+  - 'standards/markdown-frontmatter/versions/1.2/payload.toml'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
@@ -99,15 +99,15 @@ Any skill shipped by a standard package and installed through standard adoption 
 
 Standard adoption tooling must not install standard-packaged skills into user-global, agent-global, home-directory, machine-level, or filesystem-root locations. It must not write to locations such as global agent skill roots, global agent configuration, `~/.agents`, `~/.codex`, `~/.claude`, or other user-level installation targets as part of normal adoption.
 
-If a future supported agent requires a different project-local skill path, that destination may be added only when it remains inside the consumer repository or project and is declared explicitly in the package's adoption artifacts. The policy is project-local installation, not one hard-coded directory name forever.
+If a future supported agent requires a different project-local skill path, that destination may be added only when it remains inside the consumer repository or project and is declared explicitly in the selected payload manifest. The policy is project-local installation, not one hard-coded directory name forever.
 
-The standard package remains the canonical owner of the skill. A standard-owned skill should live under `standards/<id>/skills/<skill-id>/`, and any packaged copy under `src/project_standards/bundles/<id>/` must follow the artifact provenance rules in ADR 0019. Adoption manifests must declare skill sources and project-local destinations explicitly.
+The standard package remains the canonical owner of the skill. Under Catalog 5, a standard-owned skill lives under `standards/<id>/versions/<version>/skills/<skill-id>/`; the version's `payload.toml` declares its source, digest, policy, and project-local destination. The symlink-only `src/project_standards/payloads/<id>/<version>/` projection carries those canonical bytes into built distributions and must pass projection and package-parity checks. Historical V1 copies under unversioned family roots or `src/project_standards/bundles/<id>/` remain migration evidence only and do not define the current package.
 
 Installed skills are agent harness artifacts, not managed project documents. A consumer repository must exclude installed skill paths from managed Markdown frontmatter validation, formatting, linting, type checking, or other standards when those tools would interpret the skill files as ordinary project content. The adopting standard may seed those exclusions when needed.
 
 Global or home-level skill installation may still exist as a separate workstation convenience. That operation must be opt-in, documented outside the standard adoption path, and never required for a repository to comply with a standard. A global copy must not be treated as the source of truth for a standard-packaged skill.
 
-Graph validation, adopt-manifest validation, and package tests should enforce this boundary where possible. A standard package that declares a skill artifact with a global destination is invalid unless a later ADR creates a narrow exception.
+Graph validation, payload-manifest validation, projection checks, and package tests should enforce this boundary where possible. A standard package that declares a skill artifact with a global destination is invalid unless a later ADR creates a narrow exception.
 
 ### Consequences
 
@@ -116,13 +116,14 @@ Graph validation, adopt-manifest validation, and package tests should enforce th
 - Good, because skills become reviewable, reproducible project artifacts rather than hidden workstation prerequisites.
 - Good, because cloned repositories, CI-like agent environments, and other maintainers can receive the same agent operating layer.
 - Neutral, because users may still maintain personal global skills outside the standard adoption contract.
-- Bad, because multiple repositories may contain duplicate installed skill copies and need explicit upgrade or drift-check behavior.
+- Bad, because multiple repositories may contain duplicate installed skill copies and need explicit reconciliation, upgrade, and drift-check behavior.
 
 ## More Information
 
-- Standard bundle authoring contract: [`standards/standard-bundle-authoring/README.md`](../../standards/standard-bundle-authoring/README.md)
-- Markdown Frontmatter Standard skill guidance: [`standards/markdown-frontmatter/README.md`](../../standards/markdown-frontmatter/README.md)
-- Markdown Frontmatter adoption procedure: [`standards/markdown-frontmatter/adopt.md`](../../standards/markdown-frontmatter/adopt.md)
+- Standard bundle authoring contract: [`standards/standard-bundle-authoring/versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
+- Markdown Frontmatter Standard skill guidance: [`standards/markdown-frontmatter/versions/1.2/README.md`](../../standards/markdown-frontmatter/versions/1.2/README.md)
+- Markdown Frontmatter adoption procedure: [`standards/markdown-frontmatter/versions/1.2/adopt.md`](../../standards/markdown-frontmatter/versions/1.2/adopt.md)
+- Markdown Frontmatter payload manifest: [`standards/markdown-frontmatter/versions/1.2/payload.toml`](../../standards/markdown-frontmatter/versions/1.2/payload.toml)
 - ADR 0001, standard bundle authoring contract: [`adr-0001-standard-bundle-authoring-contract.md`](adr-0001-standard-bundle-authoring-contract.md)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0005, stable generic agent and tooling interface: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)

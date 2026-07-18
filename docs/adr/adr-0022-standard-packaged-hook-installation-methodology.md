@@ -6,8 +6,8 @@ description: 'Records the project-local source and installation convention for h
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -21,7 +21,8 @@ aliases:
   - 'Standard-packaged hook installation methodology'
 related:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'standards/standard-bundle-authoring/README.md'
+  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
+  - 'standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py'
   - 'docs/adr/adr-0001-standard-bundle-authoring-contract.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
@@ -35,7 +36,9 @@ supersedes: []
 superseded_by: null
 source:
   - 'docs/specs/2026-07-09-agent-handoff-standard-package.md'
-  - 'standards/standard-bundle-authoring/README.md'
+  - 'standards/standard-bundle-authoring/versions/2.0/README.md'
+  - 'standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py'
+  - 'standards/agent-handoff/versions/1.1/payload.toml'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
   - 'docs/adr/adr-0007-standard-graph-validation-gate.md'
@@ -80,13 +83,13 @@ This decision governs hooks shipped by standard packages as a class. It does not
 
 Chosen option: **install one shared project-local hook under `.agents/hooks/`**.
 
-A standard-owned hook's canonical authored source lives under `standards/<standard-id>/hooks/<hook-id>/`. Any distribution copy under `src/project_standards/bundles/<standard-id>/` follows ADR 0019 provenance: byte parity for a source-owned mirror or a declared deterministic transform when identity is not the correct contract.
+Under Catalog 5, a standard-owned hook's canonical authored source lives under `standards/<standard-id>/versions/<version>/hooks/<hook-id>/` and its versioned `payload.toml` declares the managed destination. The current Agent Handoff source is `standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py`; the symlink-only `src/project_standards/payloads/agent-handoff/1.1/` projection carries that byte-identical source into built distributions. Historical V1 bundle copies are migration evidence only.
 
 Standard adoption installs hook files under `.agents/hooks/<standard-id>/` at the consuming project root. Harness-specific project configuration may reference that shared installed path. A package with multiple hook entrypoints may place them together under the standard's directory, while filenames remain part of that standard's declared contract.
 
 Standard adoption must not install or inspect standard-packaged hooks in user-global, agent-global, home-directory, machine-level, filesystem-root, or sibling-repository locations. A future alternative destination requires another ADR or a superseding decision and must remain project-local unless the standard-adoption authority model itself changes.
 
-Installed hooks are managed standard-owned artifacts. Their adopt manifest records source, destination, provenance, install policy, and executable mode. Drift validation identifies changed or stale installed hooks, and the package's owned upgrade path refreshes them only after its normal precondition and ambiguity checks. Consumer project knowledge is not a hook artifact and receives no overwrite authority from this decision.
+Installed hooks are managed standard-owned artifacts. Their payload manifest records source, destination, digest, install policy, and executable mode. Drift validation identifies changed or stale installed hooks, and the package's owned upgrade path refreshes them only after its normal precondition and ambiguity checks. Consumer project knowledge is not a hook artifact and receives no overwrite authority from this decision.
 
 The consuming harness retains control of registration, project trust, hook review, approval, enablement, and execution. Adoption may create or structurally merge only the exact declared project-level registration. It must not modify global trust, global hook approval, or machine policy to make the hook run.
 
@@ -99,17 +102,19 @@ Installed hook paths are agent harness configuration, not managed Markdown docum
 - Good, because standard adoption stays within its project-level authority boundary.
 - Good, because provenance and drift checks can identify the canonical source and installed state.
 - Neutral, because each harness still needs a small project-specific registration adapter.
-- Bad, because `.agents/hooks/` is a new repository convention that graph/adopt validation and documentation must learn.
+- Bad, because `.agents/hooks/` is a repository convention that graph and payload validation plus documentation must enforce.
 - Bad, because repositories adopting the same standard contain duplicate managed hook copies and require explicit upgrades.
 
 ### Confirmation
 
-Graph and adopt-manifest validation reject standard-packaged hook destinations outside `.agents/hooks/<standard-id>/`. Package parity tests prove canonical-to-bundled provenance. Adoption fixtures prove that multiple harness profiles reference one shared installed file, global locations remain untouched, drift is detected, and owned upgrades preserve unrelated configuration.
+Graph and payload-manifest validation reject standard-packaged hook destinations outside `.agents/hooks/<standard-id>/`. Projection and package-parity tests prove canonical-to-installed provenance. Reconciliation fixtures prove that multiple harness profiles reference one shared installed file, global locations remain untouched, drift is detected, and owned upgrades preserve unrelated configuration.
 
 ## More Information
 
 - Agent Handoff v1 package specification: [`docs/specs/2026-07-09-agent-handoff-standard-package.md`](../specs/2026-07-09-agent-handoff-standard-package.md)
-- Standard bundle authoring contract: [`standards/standard-bundle-authoring/README.md`](../../standards/standard-bundle-authoring/README.md)
+- Standard bundle authoring contract: [`standards/standard-bundle-authoring/versions/2.0/README.md`](../../standards/standard-bundle-authoring/versions/2.0/README.md)
+- Agent Handoff 1.1 hook source: [`standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py`](../../standards/agent-handoff/versions/1.1/hooks/session-start/session_start.py)
+- Agent Handoff 1.1 payload manifest: [`standards/agent-handoff/versions/1.1/payload.toml`](../../standards/agent-handoff/versions/1.1/payload.toml)
 - ADR 0003, separate standard and artifact manifests: [`adr-0003-separate-standard-and-artifact-manifests.md`](adr-0003-separate-standard-and-artifact-manifests.md)
 - ADR 0005, stable generic agent and tooling interface: [`adr-0005-stable-generic-agent-tooling-interface.md`](adr-0005-stable-generic-agent-tooling-interface.md)
 - ADR 0007, standard graph validation gate: [`adr-0007-standard-graph-validation-gate.md`](adr-0007-standard-graph-validation-gate.md)

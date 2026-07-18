@@ -176,3 +176,20 @@ def test_catalog_agent_summaries_link_to_their_canonical_standard() -> None:
 
         assert "(README.md)" in summary, standard_id
         assert "authoritative" in summary, standard_id
+
+
+def test_mutable_family_navigation_defers_to_immutable_payload_authority() -> None:
+    for standard_id, (_name, _summary, _status, version, _role, _digest) in _PACKAGES.items():
+        family = _ROOT / "standards" / standard_id
+        payload = family / "versions" / version
+        root_readme = (family / "README.md").read_text(encoding="utf-8")
+        root_summary = (family / "agent-summary.md").read_text(encoding="utf-8")
+
+        assert f"versions/{version}/README.md" in root_readme, standard_id
+        assert f"versions/{version}/agent-summary.md" in root_readme, standard_id
+        assert f"versions/{version}/README.md" in root_summary, standard_id
+        assert f"versions/{version}/agent-summary.md" in root_summary, standard_id
+        assert (family / "README.md").read_bytes() != (payload / "README.md").read_bytes()
+        assert (family / "agent-summary.md").read_bytes() != (
+            payload / "agent-summary.md"
+        ).read_bytes()

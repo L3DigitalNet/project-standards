@@ -6,8 +6,8 @@ description: 'Decision record for how project-standards applies and demonstrates
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -20,19 +20,20 @@ aliases:
   - 'Frontmatter value policy'
   - 'Metadata field values'
 related:
-  - 'standards/markdown-frontmatter/README.md'
-  - 'standards/markdown-frontmatter/structure.md'
-  - 'standards/markdown-frontmatter/field-values.md'
-  - 'standards/markdown-frontmatter/templates/repository-frontmatter-adr.md'
-  - '.project-standards.yml'
+  - 'standards/markdown-frontmatter/versions/1.2/README.md'
+  - 'standards/markdown-frontmatter/versions/1.2/structure.md'
+  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
+  - 'standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md'
+  - '.standards/config.toml'
   - 'docs/adr/README.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
 supersedes: []
 superseded_by: null
 source:
-  - 'standards/markdown-frontmatter/templates/repository-frontmatter-adr.md'
-  - 'standards/markdown-frontmatter/field-values.md'
+  - '.standards/config.toml'
+  - 'standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md'
+  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
 confidence: 'high'
 visibility: 'internal'
@@ -48,7 +49,7 @@ project:
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** This repository-local field-value policy remains in force. Consumer package configuration moves from `.project-standards.yml` into owned namespaces under `.standards/config.toml`; the current repository keeps its legacy file only until it dogfoods the new control plane. Managed project documentation includes `docs/workflows/**`.
+> **Amended by ADR 0023.** This repository-local field-value policy remains in force. `.standards/config.toml` is the current consumer configuration authority; `.project-standards.yml` is legacy migration input only. Managed project documentation includes `docs/workflows/**`.
 
 ## Context and Problem Statement
 
@@ -78,20 +79,9 @@ This decision does not change `schema_version`, the JSON schema, or validator be
 
 ### Governed scope
 
-The existing `.project-standards.yml` remains the source of truth for this repository's managed Markdown scope. Today it validates:
+The `standards.markdown-frontmatter.config` table in `.standards/config.toml` is the source of truth for this repository's managed Markdown scope. It includes the release and upgrade documents, usage and MCP-readiness documentation, workflow documentation, `meta/**/*.md`, and `docs/adr/**/*.md`.
 
-```yaml
-include:
-  - 'CHANGELOG.md'
-  - 'UPGRADING.md'
-  - 'docs/usage.md'
-  - 'meta/**/*.md'
-  - 'docs/adr/**/*.md'
-exclude:
-  - 'standards/**'
-```
-
-ADR 0015 excludes `standards/**` from this repository's local frontmatter scope so standard-bundle content is not required to carry repo-local metadata. The config also excludes the root README, agent-instruction files, and handoff state. This ADR does not widen that scope.
+ADR 0015 excludes `standards/**` from this repository's local frontmatter scope so standard-package content is not required to carry repo-local metadata. The current config also excludes templates, the root README, agent-instruction and agent-configuration files, and handoff documents. This ADR does not widen that scope.
 
 ### Frontmatter profile
 
@@ -227,7 +217,7 @@ This decision is confirmed when:
 - the bundle includes a repository-frontmatter ADR template;
 - this ADR validates as an active example;
 - the ADR index includes ADR 0014;
-- `uv run project-standards validate --config .project-standards.yml` exits `0`.
+- validation through the selected Catalog 5 Markdown Frontmatter package exits `0` against `.standards/config.toml`.
 
 ## Pros and Cons of the Options
 
@@ -252,4 +242,4 @@ This decision is confirmed when:
 
 ## More Information
 
-The reusable template lives at [`standards/markdown-frontmatter/templates/repository-frontmatter-adr.md`](../../standards/markdown-frontmatter/templates/repository-frontmatter-adr.md). The global value guidance lives at [`standards/markdown-frontmatter/field-values.md`](../../standards/markdown-frontmatter/field-values.md).
+The reusable template lives at [`standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md`](../../standards/markdown-frontmatter/versions/1.2/templates/repository-frontmatter-adr.md). The global value guidance lives at [`standards/markdown-frontmatter/versions/1.2/field-values.md`](../../standards/markdown-frontmatter/versions/1.2/field-values.md).

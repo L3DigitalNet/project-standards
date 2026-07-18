@@ -23,6 +23,7 @@ from project_standards.agent_handoff.model import (
 )
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 from project_standards.control_plane.command_resolution import (
+    CommandConfigurationError,
     CommandResolutionError,
     SelectedCommandPackage,
     capture_command_snapshot,
@@ -347,9 +348,16 @@ def _run_upgrade(selected: SelectedCommandPackage, args: _V2Args) -> int:
         return _emit(report, as_json=args.json)
     applied = apply_authoring_plan(selected.repo, plan)
     if not applied.success:
-        raise CommandResolutionError(
-            f"Agent Handoff upgrade failed: {applied.error_code or 'unknown error'}"
+        active_path = changes[0].path if changes else "."
+        failure = Finding(
+            code="AH-APPLY-FAILED",
+            severity="error",
+            path=active_path,
+            locus="upgrade apply",
+            message=f"Agent Handoff upgrade failed: {applied.error_code or 'unknown error'}",
+            guidance="Resolve the precondition or I/O failure, then re-plan before retrying.",
         )
+        report = _report(selected, findings=(failure,), changes=changes)
     return _emit(report, as_json=args.json)
 
 
@@ -409,12 +417,9 @@ def run(
             if selected is None:
                 return _run_provider(operation, provider_args)
             return _run_selected(selected, V2ProviderOperation(operation.value), provider_args)
-    except (
-        _ArgumentError,
-        CommandResolutionError,
-        RepositoryBoundaryError,
-        OSError,
-        RuntimeError,
-    ) as exc:
+    except (_ArgumentError, CommandConfigurationError, RepositoryBoundaryError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except (CommandResolutionError, OSError, RuntimeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3

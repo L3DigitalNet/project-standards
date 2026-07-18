@@ -1,49 +1,12 @@
-# Agent Handoff Standard: Agent Summary
+# Agent Handoff family: Agent Summary
 
-The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
+Current authority is the Catalog 5 consumer payload [`agent-handoff@1.1`](versions/1.1/agent-summary.md). Its [versioned standard](versions/1.1/README.md) and installed repo-local skill win over this mutable navigation summary.
 
-Lifecycle: active. Adoption: `cli` with scaffold and managed integration support.
-
-## Use this summary when
-
-Start or close an agent session, route a durable repository fact, change handoff files, adopt the standard, or investigate conformance drift. Use the installed [repo-local skill](skills/agent-handoff/SKILL.md) for the operating procedure.
-
-## Core rules
-
-- The adopting repository is the complete authority boundary. Do not read sibling repositories or workstation-global state for project handoff.
-- Consumer knowledge is create-only; standard-owned skills, hooks, bounded integration entries, and the provenance lock are managed. Preserve user-authored tasks and unrelated instruction or configuration content.
+- Keep all project handoff knowledge inside the adopting repository.
+- Preserve consumer-owned `docs/STATUS.md`, `docs/TODO.md`, and `docs/handoff/**`; package operations create them only when absent.
+- Route facts by lifetime: current snapshot to `STATUS.md`, work queues to `TODO.md`, immediate focus to `state.md`, and durable deployment, architecture, conventions, spec/plan, session, or bug facts to their named owners.
 - Do not reread `state.md` when SessionStart already injected it. In manual mode, read it and inspect Git state.
-- Keep current facts eager and route durable detail by lifetime:
+- Store credential references only, never values.
+- The standard owns only its repo-local skill, optional shared hook, package policy, and declared bounded integration units.
 
-| Fact | Owner |
-| --- | --- |
-| Current snapshot | `docs/STATUS.md` |
-| User and agent work queues | `docs/TODO.md` |
-| Next-session focus and active incidents | `docs/handoff/state.md` |
-| Deployment truth | `docs/handoff/deployed.md` |
-| Stable architecture and patterns | `docs/handoff/architecture.md`, `conventions.md` |
-| Credential references, never values | `docs/handoff/credentials.md` |
-| Active spec and plan pointers | `docs/handoff/specs-plans.md` |
-| Compact history and durable lessons | `docs/handoff/sessions/YYYY-MM.md`, `bugs/NNN-slug.md` |
-
-- At closeout, update only changed facts, move completed work out of eager state, preserve user work, append compact history when useful, validate, and review the diff.
-- Automatic Claude Code and Codex profiles use the same repository-local hook. Manual mode supports other agents without claiming automatic injection.
-
-## Commands and artifacts
-
-```bash
-project-standards agent-handoff validate --repo .
-project-standards agent-handoff drift-check --repo .
-project-standards agent-handoff size-report --repo .
-project-standards agent-handoff shape-check --repo .
-project-standards agent-handoff legacy-report --repo . --json
-project-standards agent-handoff upgrade --repo . --dry-run --json
-```
-
-## Boundaries and companions
-
-Agent Handoff does not own workstation configuration, global hooks or skills, credentials, fleet rollout, sibling repositories, or consumer-authored knowledge after creation. Store credential names and retrieval references only.
-
-## Canonical resources
-
-Read the [standard](README.md), [adoption and maintenance guide](adopt.md), and [legacy migration guide](resources/legacy-migration.md).
+Validate with `project-standards agent-handoff validate --repo .` and check managed drift with `project-standards agent-handoff drift-check --repo .`. See the [current adoption guide](adopt.md) for configuration and migration.

@@ -228,3 +228,65 @@ source-include = ["standards/**"]
     with tarfile.open(sdist) as archive:
         names = archive.getnames()
     assert any(name.endswith("/standards/demo/versions/1.0/README.md") for name in names)
+
+
+def test_current_root_build__direct_and_sdist_wheels__match_projected_assets(
+    tmp_path: Path,
+) -> None:
+    root = Path(__file__).resolve().parents[2]
+    direct = tmp_path / "direct"
+    subprocess.run(
+        [
+            "uv",
+            "build",
+            "--offline",
+            "--sdist",
+            "--wheel",
+            "--out-dir",
+            str(direct),
+        ],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (sdist,) = direct.glob("*.tar.gz")
+    (direct_wheel,) = direct.glob("*.whl")
+
+    from_sdist = tmp_path / "from-sdist"
+    subprocess.run(
+        [
+            "uv",
+            "build",
+            "--offline",
+            "--wheel",
+            str(sdist),
+            "--out-dir",
+            str(from_sdist),
+        ],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (sdist_wheel,) = from_sdist.glob("*.whl")
+
+    package = root / "src/project_standards"
+    projected_directories = ("catalogs", "families", "payloads")
+    expected_assets = {
+        path.relative_to(root / "src").as_posix(): path.resolve(strict=True).read_bytes()
+        for directory in projected_directories
+        for path in sorted((package / directory).rglob("*"))
+        if path.is_file()
+    }
+    prefixes = tuple(f"project_standards/{directory}/" for directory in projected_directories)
+    assert all(any(name.startswith(prefix) for name in expected_assets) for prefix in prefixes)
+
+    for wheel in (direct_wheel, sdist_wheel):
+        with zipfile.ZipFile(wheel) as archive:
+            actual_assets = {
+                name: archive.read(name)
+                for name in archive.namelist()
+                if name.startswith(prefixes) and not name.endswith("/")
+            }
+        assert actual_assets.keys() == expected_assets.keys()
+        for name, expected in expected_assets.items():
+            assert actual_assets[name] == expected, name

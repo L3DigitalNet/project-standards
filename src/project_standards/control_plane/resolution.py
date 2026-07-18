@@ -9,7 +9,10 @@ from enum import StrEnum
 from typing import cast
 
 from project_standards.control_plane.codec import semantic_digest
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ControlPlaneConfigurationError,
+    ControlPlaneError,
+)
 from project_standards.control_plane.models import (
     AcceptedTrack,
     AppliedPackage,
@@ -474,7 +477,7 @@ def _resolve_enabled(
     try:
         effective = payload.option_schema.resolve_options(desired.config)
     except PackageContractError as exc:
-        raise ControlPlaneError(
+        raise ControlPlaneConfigurationError(
             f"configured package options are invalid for {standard_id}"
         ) from exc
 

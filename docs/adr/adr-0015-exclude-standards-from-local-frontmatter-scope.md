@@ -6,8 +6,8 @@ description: 'Records the decision to exclude standards/** from project-standard
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -19,7 +19,7 @@ aliases:
   - 'ADR 0015'
   - 'Standards frontmatter exclusion'
 related:
-  - '.project-standards.yml'
+  - '.standards/config.toml'
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
@@ -28,7 +28,7 @@ related:
 supersedes: []
 superseded_by: null
 source:
-  - '.project-standards.yml'
+  - '.standards/config.toml'
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
 confidence: 'high'
 visibility: 'internal'
@@ -44,7 +44,7 @@ project:
 
 MADR status: **accepted**.
 
-> **Amended by ADR 0023.** The published `standards/**` exclusion remains in force. After control-plane migration, package-managed resources under `.standards/packages/**` are also outside ordinary consumer-managed Markdown policy unless a package explicitly declares a document as consumer-owned input. The current `.project-standards.yml` scope remains transitional repository state.
+> **Amended by ADR 0023.** The published `standards/**` exclusion remains in force. Package-managed resources under `.standards/packages/**` are also outside ordinary consumer-managed Markdown policy unless a package explicitly declares a document as consumer-owned input. `.standards/config.toml` is the current scope authority.
 
 ## Context and Problem Statement
 
@@ -62,7 +62,7 @@ ADR 0014 records this repository's local frontmatter field-value policy. That po
 
 Chosen option: exclude `standards/**` from local frontmatter validation and strip repo-local metadata from standard docs, because the standards tree is the content this repository ships to consumers. The local frontmatter validator should not require that shipped content to carry this repository's own maintenance metadata, and standard documentation pages should not begin with this repo's local metadata block.
 
-`.project-standards.yml` keeps `CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `meta/**/*.md`, and `docs/adr/**/*.md` in the local frontmatter corpus, but excludes `standards/**`.
+The `standards.markdown-frontmatter.config` table in `.standards/config.toml` keeps the release, upgrade, usage, MCP-readiness, workflow, meta, and ADR documents in the local frontmatter corpus, but excludes `standards/**`.
 
 Intentional standard artifacts under `standards/**` may still contain frontmatter when frontmatter is the artifact itself: examples, templates, and agent skill metadata. Those blocks are not this repository's local managed-document metadata.
 
@@ -78,5 +78,5 @@ This decision does not change the Markdown Frontmatter Standard, the schema, or 
 
 ## More Information
 
-- Local scope config: [`.project-standards.yml`](../../.project-standards.yml)
+- Local scope config: [`.standards/config.toml`](../../.standards/config.toml)
 - Field-value policy: [ADR 0014](adr-0014-markdown-frontmatter-field-value-policy.md)

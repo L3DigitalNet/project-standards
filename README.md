@@ -4,6 +4,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
+- **Using the CLI?** See the complete [`project-standards` usage reference](docs/usage.md).
 
 ## Table of Contents
 
@@ -31,50 +32,50 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 
 ```text
 project-standards/
-├── standards/                 # governing standards — one self-contained bundle per standard
-│   ├── README.md              #   index + bundle anatomy
-│   ├── markdown-frontmatter/  #   standard + adopt + templates/ + examples/ + skills/
-│   ├── adr/                   #   standard + adopt + templates/ + examples/
-│   ├── python-tooling/        #   standard + immutable payload + providers
-│   ├── markdown-tooling/      #   standard + immutable payload + providers
-│   ├── project-spec/          #   standard + adopt + templates/ + examples/ + CLI (spec)
-│   ├── cli-documentation/     #   standard + adopt + templates/ + examples/ + resources/
-│   ├── agent-handoff/         #   standard + adopt + templates/ + skill + shared hook
-│   ├── python-coding/         #   draft standard (reference-only; README only)
-│   └── standard-bundle-authoring/ # internal/reference meta-standard (README + standard.toml + template)
-├── meta/                      # docs about THIS repo (e.g. versioning) — not governed standards
-├── src/project_standards/     # the Python validator + bundled schema
-├── tests/                     # validator tests
+├── standards/                 # V2 families: mutable index/landing + immutable versions/
+│   ├── README.md              #   family and payload anatomy + Catalog 5 index
+│   ├── markdown-frontmatter/  #   family index + immutable 1.2 payload
+│   ├── adr/                   #   family index + immutable 1.1 payload
+│   ├── python-tooling/        #   family index + immutable 1.1 payload
+│   ├── markdown-tooling/      #   family index + immutable 1.2 payload
+│   ├── project-spec/          #   family index + immutable 1.1 payload
+│   ├── cli-documentation/     #   family index + immutable 1.1 payload
+│   ├── agent-handoff/         #   family index + immutable 1.1 payload
+│   ├── python-coding/         #   reference-only family + immutable 0.5 payload
+│   └── standard-bundle-authoring/ # internal family + immutable 2.0 payload
+├── meta/                      # repository policy, including release/versioning
+├── src/project_standards/     # CLI/control plane + installed package projections
+├── tests/                     # implementation, package, compatibility, and coherence tests
 ├── scripts/                   # optional helper — check.py runs the verification gate
-├── docs/                      # agent session-handoff state + specs/plans (not consumer-facing)
-└── .github/                   # reusable CI workflows
+├── docs/                      # usage, ADRs, maintained specs, and handoff knowledge
+└── .github/                   # repository and reusable consumer workflows
 ```
 
-Each standard is a self-contained **bundle**: the deep detail lives in the bundle, and this README stays a map. See [`standards/README.md`](standards/README.md) for the bundle index and anatomy.
+Each standard is a V2 **family**: mutable root metadata and landing pages index immutable `versions/<major.minor>/` payloads. This README stays a map; [`standards/README.md`](standards/README.md) defines the family and payload anatomy.
 
 ## Standards
 
-The standards this repository defines. Each lives in its own bundle under [`standards/`](standards/) — see the [standards index](standards/README.md).
+The standards this repository defines. Each lives in a family under [`standards/`](standards/), with current authority in the exact versioned payload linked below; see the [standards index](standards/README.md).
 
 ### Markdown Frontmatter Standard
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/README.md`](standards/markdown-frontmatter/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/field-values.md)
-- **Schema:** [`src/project_standards/schemas/markdown-frontmatter.schema.json`](src/project_standards/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.2/README.md`](standards/markdown-frontmatter/versions/1.2/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.2/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.2/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.2/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.2/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.2/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.2/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.2/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.2/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.2/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.2/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/README.md`](standards/adr/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](standards/adr/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](standards/adr/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/adopt.md).
+- **Standard:** [`standards/adr/versions/1.1/README.md`](standards/adr/versions/1.1/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](standards/adr/versions/1.1/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.1/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.1/adopt.md).
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
@@ -82,49 +83,49 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
-- **Standard:** [`standards/python-tooling/README.md`](standards/python-tooling/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.1/README.md`](standards/python-tooling/versions/1.1/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.1/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/README.md`](standards/markdown-tooling/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.2/README.md`](standards/markdown-tooling/versions/1.2/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.2/adopt.md)
 
 ### Project Specification Standard
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/README.md`](standards/project-spec/README.md)
-- **Templates:** [`templates/`](standards/project-spec/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.1/README.md`](standards/project-spec/versions/1.1/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.1/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.1/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.1/adopt.md)
 
 ### CLI Documentation Standard
 
 User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
-- **Standard:** [`standards/cli-documentation/README.md`](standards/cli-documentation/README.md)
-- **Templates:** [`templates/`](standards/cli-documentation/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/adopt.md)
+- **Standard:** [`standards/cli-documentation/versions/1.1/README.md`](standards/cli-documentation/versions/1.1/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/versions/1.1/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.1/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.1/adopt.md)
 
 ### Agent Handoff Standard
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/README.md`](standards/agent-handoff/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.1/README.md`](standards/agent-handoff/versions/1.1/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.1/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.1/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.1/resources/legacy-migration.md)
 
 ### Python Coding Standard (draft)
 
 Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.5`:** reference-only and not consumer-selectable.
 
-- **Standard:** [`standards/python-coding/README.md`](standards/python-coding/README.md)
+- **Standard:** [`standards/python-coding/versions/0.5/README.md`](standards/python-coding/versions/0.5/README.md)
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
 The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.0`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/README.md`](standards/standard-bundle-authoring/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.0/README.md`](standards/standard-bundle-authoring/versions/2.0/README.md)
 
 ## Consuming the standards
 
@@ -137,7 +138,7 @@ project-standards reconcile
 project-standards reconcile --apply
 ```
 
-Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs together. The package selector chooses an immutable payload; package options such as `contract_version` remain independent. Each bundle's `adopt.md` links to the current version-specific options, outputs, migration, verification, and troubleshooting.
+Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs together. The package selector chooses an immutable payload; package options such as `contract_version` remain independent. Each versioned adoption guide defines the package-specific options, outputs, migration, verification, and troubleshooting.
 
 > **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
 
@@ -145,13 +146,13 @@ Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.tom
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.2` | [`standards/markdown-frontmatter/adopt.md`](standards/markdown-frontmatter/adopt.md) |
-| ADR | `1.1` | [`standards/adr/adopt.md`](standards/adr/adopt.md) |
-| Python Tooling | `1.1` | [`standards/python-tooling/adopt.md`](standards/python-tooling/adopt.md) |
-| Markdown Tooling | `1.2` | [`standards/markdown-tooling/adopt.md`](standards/markdown-tooling/adopt.md) |
-| Project Specification | `1.1` | [`standards/project-spec/adopt.md`](standards/project-spec/adopt.md) |
-| CLI Documentation | `1.1` | [`standards/cli-documentation/adopt.md`](standards/cli-documentation/adopt.md) |
-| Agent Handoff | `1.1` | [`standards/agent-handoff/adopt.md`](standards/agent-handoff/adopt.md) |
+| Markdown Frontmatter | `1.2` | [`standards/markdown-frontmatter/versions/1.2/adopt.md`](standards/markdown-frontmatter/versions/1.2/adopt.md) |
+| ADR | `1.1` | [`standards/adr/versions/1.1/adopt.md`](standards/adr/versions/1.1/adopt.md) |
+| Python Tooling | `1.1` | [`standards/python-tooling/versions/1.1/adopt.md`](standards/python-tooling/versions/1.1/adopt.md) |
+| Markdown Tooling | `1.2` | [`standards/markdown-tooling/versions/1.2/adopt.md`](standards/markdown-tooling/versions/1.2/adopt.md) |
+| Project Specification | `1.1` | [`standards/project-spec/versions/1.1/adopt.md`](standards/project-spec/versions/1.1/adopt.md) |
+| CLI Documentation | `1.1` | [`standards/cli-documentation/versions/1.1/adopt.md`](standards/cli-documentation/versions/1.1/adopt.md) |
+| Agent Handoff | `1.1` | [`standards/agent-handoff/versions/1.1/adopt.md`](standards/agent-handoff/versions/1.1/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 

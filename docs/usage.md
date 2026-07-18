@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-11'
-reviewed: '2026-07-11'
+updated: '2026-07-18'
+reviewed: '2026-07-18'
 owner: ''
 consumer: 'mix'
 tags:
@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'project-standards-usage'
 related:
-  - 'standards/cli-documentation/README.md'
+  - 'standards/cli-documentation/versions/1.1/README.md'
 source: []
 confidence: 'high'
 visibility: 'public'
@@ -35,7 +35,7 @@ license: null
 ```text
 project-standards <command> [<args>...]
 project-standards validate [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
-project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
+project-standards fix [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
@@ -96,17 +96,19 @@ Exit status: `0` all valid · `1` validation or control-plane findings · `2` op
 Under unified authority, request one complete format-and-ID mutation plan from the selected package, apply it through the platform executor, then revalidate against the same provider contract (references included). The v5 legacy-only fallback retains the `format-frontmatter --write` plus `validate-id --fix` sequence.
 
 ```text
-project-standards fix [<file>...] [--config <path>] [--glob <pattern>] [--quiet]
+project-standards fix [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 ```
 
 Options:
 
 - **`<file>...`** — Markdown files to fix. Omit to use the config include list.
 - **`--config <path>`** — Explicit legacy/debug config path. Unified authority resolves from `.standards/config.toml` and rejects this override; a non-existent path exits 2.
+- **`--schema <path>`** — Custom JSON Schema override. Because the bundled formatter and ID rules are undefined for a custom schema, `fix` reports the skip and exits 0 without changing files.
 - **`--glob <pattern>`** — Glob to select files instead of the include list; combines with explicit `<file>` arguments. Forwarded to each stage.
+- **`--no-require-frontmatter`** — Do not require a frontmatter block when the post-fix validation runs. The fix itself still scaffolds schema-valid metadata, including an ID, for a selected document that has no frontmatter.
 - **`-q`, `--quiet`** — Suppress per-file output.
 
-Safety: `fix` writes to disk (frontmatter reformatting and id rewrites are in-place, atomic, mode-preserving). It skips entirely, with a note on standard error and exit 0, when a custom schema is in use (via `--schema` in the config or a config-level schema path) — custom-schema repos own their own id and format conventions.
+Safety: `fix` writes to disk (frontmatter reformatting and id rewrites are in-place, atomic, mode-preserving). It skips entirely, with a note on standard error and exit 0, when a custom schema is in use (via `--schema <path>` or a selected package/legacy config schema path) — custom-schema repos own their own id and format conventions.
 
 Exit status: `0` success (or skipped under a custom schema) · `1` findings remain after the fix · `2` operator error (missing/broken config).
 
@@ -170,7 +172,7 @@ Arguments and options:
 - **`--repo <dir>`** — Initialized repository whose selected package state supplies the provider configuration. Default: current directory.
 - **`--json`** — Emit `{ok, standard_id, provider_id, content}` instead of the raw rendered content.
 
-`render` writes rendered bytes only to standard output through its public interface and has no destination or output-path option. Installed provider resources are integrity-verified and providers are forbidden to write repository files. The runner refuses a provider when it detects a repository mutation, but detected provider mutation is an integrity incident, not an automatic rollback; inspect and restore any affected path before continuing.
+`render` writes rendered bytes only to standard output through its public interface and has no destination or output-path option. The provider contract forbids repository writes, and installed provider resources are integrity-verified. The runner rechecks declared live snapshot targets and refuses detected changes, but it is not an operating-system sandbox and cannot detect a write to an undeclared path. A detected provider mutation is an integrity incident, not an automatic rollback; inspect and restore any affected path before continuing.
 
 To create a consumer-owned file, render first to an external scratch file, review and validate those complete bytes, and then publish with a no-clobber redirection. Shell redirection is the explicit consumer-owned materialization step:
 
@@ -231,7 +233,7 @@ Exit status: `0` success · `2` registry/bundle drift.
 
 ### `agent-handoff`
 
-Command group for validating and maintaining an adopted Agent Handoff v1 repository. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
+Command group for validating and maintaining an Agent Handoff repository. Unified authority routes the selected Agent Handoff 1.1 package; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
 
 ```text
 project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade} [--repo <dir>] [--json]
@@ -248,11 +250,11 @@ All verbs accept **`--repo <dir>`** (default: current directory). Read-only repo
 | `legacy-report` | Detect recognized and unclassified repo-local historical evidence without mutation |
 | `upgrade` | Preview or apply a provenance-guarded refresh of standard-owned artifacts |
 
-Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite failure.
+Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite or internal failure.
 
 ### `agent-handoff validate`
 
-Validate the complete v1 repository contract without writing files.
+Under unified authority, validate the complete selected Agent Handoff repository contract without writing files. Legacy-only repositories use the warned V1 provider fallback.
 
 ```text
 project-standards agent-handoff validate [--repo <dir>] [--json]
@@ -499,8 +501,8 @@ project-standards spec validate [<file>...] [--config <config>] [--json] [--stri
 
 Options:
 
-- **`<file>...`** — Spec files to validate. Omit to use the `spec.include` globs from the config.
-- **`--config <config>`** — Project config file. Default: `.project-standards.yml`.
+- **`<file>...`** — Spec files to validate. Under unified authority, omit to use the selected package's `include_patterns`; the legacy fallback uses the config's `spec.include` globs.
+- **`--config <config>`** — Explicit legacy/debug config. Under unified authority, omit this option: the command resolves the selected `project-spec` package and effective options through `.standards/` and rejects a legacy override. In a legacy-only repository, the fallback default is `.project-standards.yml`.
 - **`--json`** — Emit a JSON findings payload instead of the text `OK`/`FAIL` listing. Default: off.
 - **`--strict`** — Accepted for symmetry with `spec lint`; `validate` already fails on any finding, so this flag does not change its exit code.
 
@@ -516,8 +518,8 @@ project-standards spec lint [<file>...] [--config <config>] [--json] [--strict]
 
 Options:
 
-- **`<file>...`** — Spec files to lint. Omit to use the `spec.include` globs.
-- **`--config <config>`** — Project config file. Default: `.project-standards.yml`.
+- **`<file>...`** — Spec files to lint. Under unified authority, omit to use the selected package's `include_patterns`; the legacy fallback uses the config's `spec.include` globs.
+- **`--config <config>`** — Explicit legacy/debug config. Under unified authority, omit this option: the command resolves the selected `project-spec` package and effective options through `.standards/` and rejects a legacy override. In a legacy-only repository, the fallback default is `.project-standards.yml`.
 - **`--json`** — Emit a JSON findings payload. Default: off.
 - **`--strict`** — Treat any lint finding as a failure. Default: off (warnings never fail). This flag is what turns a finding into a non-zero exit.
 
@@ -574,7 +576,7 @@ Options:
 - **`--stdout`** — Write the scaffold to standard output instead of a file. Mutually exclusive with `<path>` and with `--force`.
 - **`--force`** — Overwrite an existing destination file. No meaning with `--stdout`. Safety: destructive on `<path>`.
 - **`--json`** — Emit a JSON result envelope (including on failure). Default: off.
-- **`--config <config>`** — Project config file used to resolve reference prefixes and existing ids. Default: `.project-standards.yml`.
+- **`--config <config>`** — Explicit legacy/debug config used by the fallback to resolve reference prefixes and existing IDs. Under unified authority, omit this option: the selected `project-spec` package supplies those values through `.standards/` and rejects a legacy override. In a legacy-only repository, the fallback default is `.project-standards.yml`.
 
 Exit status: `0` scaffold written or streamed · `2` any refusal — usage error, bad field value, bad or colliding `--id`, config error, id space exhausted, target-type conflict, or self-validation failure.
 
@@ -595,7 +597,7 @@ Options:
 - **`-i`, `--in-place`** — Overwrite the source in place. Mutually exclusive with `--output` and `--stdout`.
 - **`--force`** — Allow overwriting an existing `--output` target. Applies only with `--output`. Safety: destructive.
 - **`--json`** — Emit a JSON result envelope (including on failure). Default: off.
-- **`--config <config>`** — Project config file for reference prefixes. Default: none — with no `--config`, `.project-standards.yml` is never read, preserving the pre-4.0 default behavior exactly.
+- **`--config <config>`** — Explicit legacy/debug config for reference prefixes. Under unified authority, omit this option: the selected `project-spec` package supplies effective options through `.standards/` and rejects a legacy override. In the legacy fallback the default is none, so omitting `--config` never reads `.project-standards.yml`.
 
 Exit status: `0` upgraded (written or previewed) · `2` any refusal — usage error, flag conflict, source not found or unreadable, source invalid or not upgradeable, or self-validation failure.
 
@@ -603,14 +605,14 @@ Exit status: `0` upgraded (written or previewed) · `2` any refusal — usage er
 
 The table gives the repository-wide convention; per-command deviations are noted in each command's entry above.
 
-| Code | Meaning                                                                    |
-| ---- | -------------------------------------------------------------------------- |
-| `0`  | Success                                                                    |
-| `1`  | Findings — validation errors, remaining fix errors, or a not-found extract |
-| `2`  | Operator error — bad invocation, missing/broken config, registry drift     |
-| `3`  | Missing or malformed bundle manifest (`adopt` only)                        |
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | Findings — validation errors, remaining fix errors, or a not-found extract |
+| `2` | Operator error — bad invocation, missing/broken config, registry drift |
+| `3` | Package/provider prerequisite, malformed non-configuration authority, or internal failure |
 
-`spec lint` returns `1` only with `--strict`. `adopt` is the only command that reaches `3`. The top-level dispatcher returns the selected subcommand's code and falls back to argparse's exit `2` for an unknown command.
+`spec lint` returns `1` only with `--strict`. Agent Handoff and `adopt` can reach `3` as described in their command-specific entries. The top-level dispatcher returns the selected subcommand's code and falls back to argparse's exit `2` for an unknown command.
 
 ## ENVIRONMENT
 
@@ -824,5 +826,5 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## SEE ALSO
 
-- [`standards/cli-documentation/README.md`](../standards/cli-documentation/README.md) — the standard this document conforms to.
+- [`standards/cli-documentation/versions/1.1/README.md`](../standards/cli-documentation/versions/1.1/README.md) — the standard this document conforms to.
 - [`src/project_standards/README.md`](../src/project_standards/README.md) — the package's implementation and developer reference.

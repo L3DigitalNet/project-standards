@@ -1,6 +1,6 @@
-# `project_standards` — source layout
+# project-standards source layout
 
-This is the Python package that ships the validator, adopt engine, bundled schemas, and standard bundles for the **project-standards** tool suite.
+This is the Python package that ships the Catalog 5 control plane, package-contract validators, provider runner, selected-package command adapters, and bounded V1 compatibility surfaces for the **project-standards** tool suite.
 
 **Usage reference:** user-facing CLI documentation lives in [`docs/usage.md`](../../docs/usage.md); this file documents implementation internals.
 
@@ -8,14 +8,14 @@ This is the Python package that ships the validator, adopt engine, bundled schem
 
 ## Table of Contents
 
-- [`project_standards` — source layout](#project_standards--source-layout)
+- [project-standards source layout](#project-standards-source-layout)
   - [Table of Contents](#table-of-contents)
   - [CLI surface](#cli-surface)
   - [Validators and formatters](#validators-and-formatters)
     - [validate-frontmatter](#validate-frontmatter)
     - [validate-id](#validate-id)
-      - [Standard format — all `doc_type` values except `adr`](#standard-format--all-doc_type-values-except-adr)
-      - [ADR format — `doc_type: adr`](#adr-format--doc_type-adr)
+      - [Standard format for all document types except ADR](#standard-format-for-all-document-types-except-adr)
+      - [ADR document format](#adr-document-format)
     - [validate-references](#validate-references)
     - [format-frontmatter](#format-frontmatter)
     - [project-standards validate (combined command)](#project-standards-validate-combined-command)
@@ -23,43 +23,52 @@ This is the Python package that ships the validator, adopt engine, bundled schem
     - [project-standards spec (nested command group)](#project-standards-spec-nested-command-group)
     - [project-standards agent-handoff (nested command group)](#project-standards-agent-handoff-nested-command-group)
   - [Module map](#module-map)
-  - [Adopt engine](#adopt-engine)
-    - [Artifact kinds](#artifact-kinds)
-    - [Ownership and deduplication](#ownership-and-deduplication)
-  - [Contract-version registry (`registry.json`)](#contract-version-registry-registryjson)
+  - [V5 control plane and package contract](#v5-control-plane-and-package-contract)
+  - [Legacy compatibility boundary](#legacy-compatibility-boundary)
   - [Exit codes](#exit-codes)
-  - [Configuration file (`.project-standards.yml`)](#configuration-file-project-standardsyml)
-  - [Adding a new standard](#adding-a-new-standard)
+  - [Configuration authority](#configuration-authority)
+  - [Adding a standard package](#adding-a-standard-package)
 
 ## CLI surface
 
-Console scripts registered by `pyproject.toml`:
+The installed `project-standards` entry point exposes these top-level command surfaces:
 
 | Command | Module | Purpose |
 | --- | --- | --- |
-| `project-standards adopt STANDARD …` | `cli.py` | Materialize a standard's files into a target repo |
-| `project-standards list [--json]` | `cli.py` | List standards with packaged adopt artifacts |
-| `project-standards validate [FLAGS] [FILE …]` | `cli.py` | Run all three validators (schema + id + references) in one pass |
-| `project-standards fix [FLAGS] [FILE …]` | `cli.py` | Format frontmatter, fix ids, then re-validate (bundled schema only) |
+| `project-standards init …` | `control_plane/cli.py` | Create neutral unified state or preview/apply a V4 migration |
+| `project-standards standards {list\|show\|enable\|disable\|version\|validate-graph\|render-catalog\|validate-packages\|render-consumer-catalog\|generate-package-schemas\|sync-payload-projection} …` | `standards_graph/cli.py` | Inspect selections and validate or generate package-contract artifacts |
+| `project-standards reconcile …` | `control_plane/cli.py` | Plan, check, apply, or repair unified desired/applied state |
+| `project-standards render STANDARD PROVIDER …` | `control_plane/cli.py` | Run one selected render provider and write its bytes to standard output |
+| `project-standards validate [FLAGS] [FILE …]` | `cli.py`, `frontmatter_commands.py` | Run selected Frontmatter validation plus unified repository validation |
+| `project-standards fix [FLAGS] [FILE …]` | `cli.py`, `frontmatter_commands.py` | Apply the selected Frontmatter fix plan, then revalidate |
 | `project-standards spec {validate\|lint\|extract\|next\|new\|upgrade} …` | `specs/cli.py` | Nested command group over project specs — see [project-standards spec (nested command group)](#project-standards-spec-nested-command-group) |
-| `project-standards standards {validate-graph\|render-catalog} …` | `standards_graph/cli.py` | Validate standard composition or render/check the generated standards catalog |
-| `project-standards agent-handoff {validate\|drift-check\|size-report\|shape-check\|legacy-report\|upgrade} …` | `agent_handoff/cli.py` | Validate and maintain repository-local Agent Handoff v1 |
+| `project-standards packages check-release …` | `package_contract/cli.py` | Compare current packages with an immutable released baseline |
+| `project-standards agent-handoff {validate\|drift-check\|size-report\|shape-check\|legacy-report\|upgrade} …` | `agent_handoff/cli.py` | Validate and maintain selected Agent Handoff 1.1 state, or use the warned V1 fallback when unified state is absent |
+| `project-standards adopt …`, `project-standards list …` | `cli.py`, `adopt/` | Warned V1 compatibility surfaces retained for migration only |
+
+Seven console scripts are registered by `pyproject.toml`:
+
+| Script | Module | Purpose |
+| --- | --- | --- |
 | `validate-frontmatter [FLAGS] [FILE …]` | `validate_frontmatter.py` | Validate YAML frontmatter against the JSON Schema |
 | `validate-id [FLAGS] [FILE …]` | `validate_id.py` | Validate `id` field format per `doc_type` |
 | `validate-references [FLAGS]` | `validate_references.py` | Cross-file checks (id uniqueness, referential integrity, etc.) |
 | `format-frontmatter [FLAGS] [FILE …]` | `format_frontmatter.py` | Reformat frontmatter (canonical key order, quoting, transforms) |
+| `sync-vscode-colors …` | `sync_vscode_colors.py` | Legacy maintenance synchronization from include patterns to VS Code colours |
+| `sync-standards-include …` | `sync_standards_include.py` | Legacy inverse synchronization from VS Code colours to include patterns |
+| `project-standards …` | `cli.py` | Unified command dispatcher |
 
-All seven installed console scripts (the five above plus the `sync-vscode-colors` and `sync-standards-include` maintenance commands — see [Module map](#module-map)) support both `--help` and `--version`, the latter via the shared `_version.py` helper. See [`docs/usage.md`](../../docs/usage.md) for the full user-facing usage reference this repo dogfoods under the CLI Documentation standard.
+All seven installed scripts support `--help` and `--version`, with version output supplied by the shared `_version.py` helper. See [`docs/usage.md`](../../docs/usage.md) for the complete public contract.
 
-`project-standards validate` is an early-dispatch command that forwards its full argv to `validate_frontmatter.main()`, `validate_id.main()`, and `validate_references.main()` and returns the worst exit code so no validator's errors are masked by another's success. `validate-references` self-gates on `references_enabled` — it exits 0 immediately unless the repo has opted in via `.project-standards.yml`.
+When `.standards/` is authoritative, reconciled validation and maintenance commands resolve the exact applied payload and effective options from the central config, catalog, and lock. `render` intentionally resolves the desired selected payload without requiring applied-state parity so it can bootstrap a named consumer-owned file. Provider-backed reads consume immutable snapshots; provider-backed writes return typed plans that the platform executor applies after precondition checks. An explicit legacy `--config` cannot override unified authority.
 
-`project-standards fix` is an early-dispatch command that runs `format_frontmatter.main(["--write", …])`, then `validate_id.main(["--fix", …])`, and finally the full `validate` contract (schema + id + references). It skips entirely when a custom schema is in use (flag `--schema` or `markdown.frontmatter.schema:` pointing to a file path).
+When unified state is absent, the frontmatter, specification, and Agent Handoff commands may use their warned, bounded V1 fallback. The compatibility route preserves the historical provider or validator behavior and `.project-standards.yml` authority; it is not the authoring model for new packages.
 
 ---
 
 ## Validators and formatters
 
-Three validators and one formatter enforce and repair the managed-document contract. They share the same config file and the same `collect_paths()` logic, and are all invoked by `project-standards validate` / `project-standards fix`.
+Three validators and one formatter provide the shared primitives for enforcing and repairing the managed-document contract. Under unified authority, selected provider functions use those primitives and return findings or one complete fix plan; direct console scripts and the warned V1 fallback invoke the standalone command functions.
 
 ### validate-frontmatter
 
@@ -70,7 +79,7 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 - The file has a frontmatter block (`---…---`) — unless `--no-require-frontmatter` or `required: false` in config.
 - The YAML block is valid and parses without error.
 - Every field matches the JSON Schema (required fields present, types correct, enum values valid, date formats correct, etc.).
-- The configured `version:` selects the bundled schema; the document's `schema_version` must be allowed by that schema.
+- Under unified authority, the selected package option chooses the bundled or custom schema. In the V1 fallback, the configured `version:` selects a bundled schema. The document's `schema_version` must be allowed by the effective schema.
 - For ADR docs (`doc_type: adr`), when `require_sections: true`, enforces the three required `##` headings: `## Context and Problem Statement`, `## Considered Options`, `## Decision Outcome` (MADR 4.0).
 
 **Key flags:**
@@ -78,13 +87,13 @@ Validates YAML frontmatter blocks against a JSON Schema (Draft 2020-12 via `json
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
-| `--config PATH` | `.project-standards.yml` | Config file |
+| `--config PATH` | None under unified authority; `.project-standards.yml` in the legacy fallback | Explicit legacy/debug config; rejected when `.standards/` is authoritative |
 | `--schema PATH` | bundled schema | Override JSON Schema; skips built-in schema, uses the supplied file |
 | `--glob PATTERN` | — | Additional glob relative to cwd |
 | `--no-require-frontmatter` | — | Do not fail files with no frontmatter block |
 | `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 
-**Custom schema and bundled schema names:** `--schema` accepts a path OR a bundled name (e.g. `markdown-frontmatter`). `schema_value_is_path()` in `validate_frontmatter.py` detects paths by looking for `/`, `\`, or `.json` suffix. A bare token is treated as a bundled name. The same logic governs `markdown.frontmatter.schema:` in the config file.
+**Custom schema and legacy bundled names:** `--schema PATH` always supplies a custom schema path; unified authority confines that path to the repository and snapshots its bytes. The V1 fallback also permits `markdown.frontmatter.schema:` in `.project-standards.yml` to name a bundled schema with a bare token such as `markdown-frontmatter`; `schema_value_is_path()` distinguishes those legacy config values from paths.
 
 ---
 
@@ -96,7 +105,7 @@ Validates the `id` field of each document against its `doc_type`. Entry point: `
 
 **Two id formats:**
 
-#### Standard format — all `doc_type` values except `adr`
+#### Standard format for all document types except ADR
 
 ```text
 {doc_type}-{base36token}-{readable-slug}
@@ -112,7 +121,7 @@ Example: `note-a3f9zk-tailscale-acl-tag-ordering-gotcha`
 
 The readable-slug is generated via `slugify(title)` at creation but is never re-checked against a changed title. This ensures ids are stable even when documents are renamed.
 
-#### ADR format — `doc_type: adr`
+#### ADR document format
 
 ```text
 adr-{NNNN}-{repo-name}-{short-title}
@@ -134,14 +143,14 @@ Example: `adr-0001-homelab-use-postgresql-for-persistent-storage`
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `FILE …` | (from config) | Files to validate; if omitted, uses `include`/`exclude` from config |
-| `--config PATH` | `.project-standards.yml` | Config file |
+| `--config PATH` | None under unified authority; `.project-standards.yml` in the legacy fallback | Explicit legacy/debug config; rejected when `.standards/` is authoritative |
 | `--schema PATH` | — | **Skip id validation entirely** — custom schemas may define different id conventions, so running the bundled rules would produce false positives |
 | `--glob PATTERN` | — | Additional glob relative to cwd |
 | `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 | `--no-require-frontmatter` | — | Accepted but ignored (id validation already skips files with no frontmatter) |
 | `--fix` | — | Rewrite non-compliant ids in place (see below) |
 
-**`--schema` skip logic:** When `--schema PATH` is provided on the CLI, OR when `markdown.frontmatter.schema:` in the config file is a path (detected by the `"/" in value or "\\" in value or value.endswith(".json")` check in `validate_id.py`), id validation prints a note and exits 0. A bare bundled name like `markdown-frontmatter` does NOT trigger the skip.
+**`--schema` skip logic:** When `--schema PATH` supplies a custom schema, or when the effective unified/V1 config selects a custom schema path, id validation prints a note and exits 0. A bare bundled name such as `markdown-frontmatter` is available only through V1 config and does not trigger the skip.
 
 **`--fix` mode:**
 
@@ -159,7 +168,7 @@ Rewrites each non-compliant file's `id:` value in place:
 
 ### validate-references
 
-Cross-file checks that JSON Schema cannot express. Entry point: `validate_references.main(argv)`. **Disabled by default** — opt in via `markdown.frontmatter.references.enabled: true` in `.project-standards.yml`.
+Cross-file checks that JSON Schema cannot express. Entry point: `validate_references.main(argv)`. The selected package option controls this pass under unified authority; the V1 fallback reads `markdown.frontmatter.references.enabled` from `.project-standards.yml`.
 
 **What it checks:**
 
@@ -184,7 +193,7 @@ Reformats frontmatter to canonical style. Entry point: `format_frontmatter.main(
 | `--check` | — | Check only; exit 1 if any file would change |
 | `--stdin` | — | Read one document from stdin, write formatted result to stdout; incompatible with `FILE`, `--glob`, and `--write` |
 | `--bump-updated` | — | Set `updated:` to today when the frontmatter block changes |
-| `--config PATH` | `.project-standards.yml` | Config file |
+| `--config PATH` | None under unified authority; `.project-standards.yml` in the legacy fallback | Explicit legacy/debug config; rejected when `.standards/` is authoritative |
 | `--glob PATTERN` | — | Additional glob relative to cwd |
 | `--quiet` / `-q` | — | Suppress per-file output; exit code only |
 
@@ -203,40 +212,29 @@ Works only with the bundled schema. Skips files under a custom schema.
 
 ### project-standards validate (combined command)
 
-`project-standards validate [FLAGS] [FILE …]` runs all three validators in a single pass:
+`project-standards validate [FLAGS] [FILE …]` first resolves the selected Markdown Frontmatter payload. Under unified authority it captures the requested documents, invokes the payload's validate providers (plus enabled companion validation), and validates the complete control-plane state without writing. The command returns the worst finding class so package or repository failures cannot be masked by another clean provider.
 
-```python
-rc_frontmatter = validate_frontmatter.main(validator_args)
-rc_id = validate_id.main(validator_args)
-rc_refs = validate_references.main(validator_args)
-return max(rc_frontmatter, rc_id, rc_refs)
-```
+When unified authority is absent, the warned V1 fallback runs `validate-frontmatter`, `validate-id`, and `validate-references`, then returns their worst exit code. All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`) preserve their established fallback semantics.
 
-All flags (`--config`, `--schema`, `--glob`, `--no-require-frontmatter`, `--quiet`) are forwarded unchanged to all validators. The worst exit code is returned so no validator's errors can be masked by another's success.
-
-`--schema` causes `validate-id` to skip automatically (custom schemas may use different id conventions). `validate-references` self-gates on `references_enabled`.
+`--schema` supplies an explicit custom schema and causes bundled ID/reference conventions to skip where they are undefined. Reference checks also honor the selected package's effective option (or `references_enabled` in the V1 fallback).
 
 `--help` is intercepted before forwarding and prints combined documentation.
 
 **Dogfood command:**
 
 ```bash
-uv run project-standards validate --config .project-standards.yml
+uv run project-standards validate
 ```
 
 ---
 
 ### project-standards fix (combined fix command)
 
-`project-standards fix [FLAGS] [FILE …]` is a three-phase pipeline:
+`project-standards fix [FLAGS] [FILE …]` resolves the selected Markdown Frontmatter payload, captures exact input state, requests one typed format-and-ID mutation plan, and applies that plan through the platform executor. It then runs the selected validation contract as a postcondition. A validation finding remains non-zero even when the preceding writes succeeded.
 
-1. `format_frontmatter.main(["--write", …])` — reformat frontmatter in place.
-2. `validate_id.main(["--fix", …])` — regenerate non-compliant ids in place.
-3. Full `validate` contract — schema + id + references — as a postcondition.
+When unified authority is absent, the fallback uses the bundled authoring planner and the same executor, then runs the local schema, ID, and reference validators. `--schema`, `--no-require-frontmatter`, file, glob, and quiet options are accepted by both routes.
 
-Returns the worst exit code across all three phases. If the final validate fails (e.g. a duplicate-id reference error), the exit code is non-zero even though the write phases succeeded.
-
-**Custom-schema skip (CR-001):** when `--schema` is passed, or `markdown.frontmatter.schema:` in the config is a path, `fix` prints a note and exits 0 without touching any files — bundled transforms are semantically undefined for non-standard schemas.
+When an explicit or configured custom schema is active, `fix` prints a note and exits 0 without touching files because bundled formatting and ID transforms are semantically undefined for that schema.
 
 ---
 
@@ -246,7 +244,7 @@ Returns the worst exit code across all three phases. If the final validate fails
 
 | Verb | Purpose |
 | --- | --- |
-| `spec validate [FILE …] [--config PATH]` | Validate spec documents against the configured `spec:` schema (exits 2 with no vacuous green run if `.project-standards.yml` has no `spec:` block) |
+| `spec validate [FILE …] [--config PATH]` | Validate spec documents through the selected package; the legacy fallback refuses a vacuous run when its config has no `spec:` block |
 | `spec lint [FILE …] [--config PATH] [--strict]` | Lint spec documents for style/structure issues beyond schema validation; `--strict` turns warnings into a failing exit (default exits 0 with findings printed). `--strict` is also accepted on `spec validate` for argparse symmetry but is a no-op there — `validate` already exits 1 on any finding |
 | `spec extract FILE SELECTOR [--json]` | Print a slice (ID row, numbered section, heading match, or appendix) from a spec document as raw Markdown |
 | `spec next FILE PREFIX [--json]` | Print the next free ID for a prefix (e.g. `FR-013`), registry- and format-aware |
@@ -257,16 +255,18 @@ Each verb is implemented in `src/project_standards/specs/cli.py`; `spec new` and
 
 ### project-standards agent-handoff (nested command group)
 
-`project-standards agent-handoff` routes manifest-declared providers for the Agent Handoff v1 standard. `validate` accumulates full conformance findings; `drift-check` limits findings to standard-owned artifacts, integrations, and provenance; `size-report` and `shape-check` expose policy views; `legacy-report` detects repo-local historical evidence without mutation; and `upgrade` refreshes only clean managed content.
+Under unified authority, `project-standards agent-handoff` routes manifest-declared providers for the selected Agent Handoff 1.1 payload. When unified state is absent, it emits the migration warning and routes the packaged V1 provider fallback. `validate` accumulates full conformance findings; `drift-check` limits findings to standard-owned artifacts, integrations, and provenance; `size-report` and `shape-check` expose policy views; `legacy-report` detects repo-local historical evidence without mutation; and `upgrade` refreshes only clean managed content.
 
-Specialized adoption is intercepted before the generic parser so startup profile flags remain available while the complete ordered standard list still forms one aggregate preflight:
+Current adoption uses the unified control plane:
 
 ```bash
-project-standards adopt agent-handoff --dest . --manual --dry-run --json
+project-standards standards enable agent-handoff --version 1.1
+project-standards reconcile
+project-standards reconcile --apply
 project-standards agent-handoff validate --repo . --json
 ```
 
-The provider implementation lives under `agent_handoff/`. All consumer I/O is confined to a resolved repository root, dynamic writes carry content-hash preconditions, and the provenance lock is written last.
+The provider implementation lives under `agent_handoff/`. All consumer I/O is confined to a resolved repository root, dynamic writes carry content-hash preconditions, and central-lock ownership is published only after successful verification.
 
 ---
 
@@ -274,120 +274,92 @@ The provider implementation lives under `agent_handoff/`. All consumer I/O is co
 
 ```text
 src/project_standards/
-├── cli.py                        # Unified CLI: adopt | list | validate | fix dispatch
-├── validate_frontmatter.py       # Schema validator (Draft 2020-12 via jsonschema)
-├── validate_id.py                # id-format validator (base-36 and ADR formats)
-├── validate_references.py        # Cross-file reference checker (opt-in)
-├── format_frontmatter.py         # Frontmatter formatter (--write / --check)
-├── registry.py                   # Contract-version registry (reads registry.json)
-├── sync_standards_include.py     # Internal maintenance: sync include lists
-├── sync_vscode_colors.py         # Internal maintenance: VS Code colour tokens
-│
-├── schemas/
-│   ├── markdown-frontmatter.schema.json   # Bundled JSON Schema (Draft 2020-12)
-│   └── registry.json                      # Contract-version compatibility matrix
-│
-├── adopt/
-│   ├── engine.py      # build_plan() + execute_plan() — plan-and-execute model
-│   ├── manifest.py    # adopt.toml reader; Artifact + Manifest dataclasses
-│   └── errors.py      # AdoptError hierarchy with exit codes
-├── agent_handoff/               # v1 planner, adapters, policy, validation, and providers
-│
-└── bundles/
-    ├── _shared/               # Artifacts shared across multiple standards
-    │   ├── editorconfig
-    │   └── vscode-extensions.json
-    ├── adr/                   # ADR standard bundle
-    ├── markdown-frontmatter/  # Markdown Frontmatter bundle + repo-local skill artifacts
-    ├── markdown-tooling/      # Markdown Tooling standard bundle
-    ├── python-tooling/        # Python Tooling standard bundle
-    ├── cli-documentation/     # CLI Documentation standard bundle
-    └── agent-handoff/         # docs, templates, skill, hook, policy, and manifests
+├── cli.py                  # Public dispatcher and V1 compatibility entry points
+├── control_plane/         # Unified state, planning, providers, adapters, locking, executor
+├── package_contract/      # V2 family/payload/catalog validation, schemas, release checks
+├── provider_runner.py     # V1 packaged-provider compatibility dispatcher
+├── frontmatter_commands.py
+├── frontmatter_authoring.py
+│                           # Selected Markdown Frontmatter command adapters and plans
+├── specs/                 # Project Specification parser, commands, and selected providers
+├── agent_handoff/         # Agent Handoff command adapters and conformance providers
+├── standards_graph/       # Catalog inventory, selection, graph, and generation commands
+├── schemas/               # Platform and compatibility schemas
+├── families/              # Build projection of mutable family indexes/landings
+├── payloads/              # Symlink-only build projection of immutable payloads
+├── catalogs/              # Build projection of catalog sources
+├── validate_frontmatter.py
+├── validate_id.py
+├── validate_references.py
+├── format_frontmatter.py  # Standalone commands and bounded V1 fallback implementations
+├── adopt/                 # Warned V1 adoption compatibility engine
+├── bundles/               # Frozen V1 migration/adoption evidence
+└── registry.py            # V1 contract-version compatibility registry
 ```
 
 ---
 
-## Adopt engine
+## V5 control plane and package contract
 
-The engine follows a **plan-then-execute** model:
+The active architecture has three distinct layers:
 
-1. **`build_plan(standard_ids)`** — reads each bundle's `adopt.toml`, resolves source paths, deduplicates shared artifacts, and raises `UsageError` on unknown standards or destination collisions between owned artifacts.
+1. `package_contract/` validates mutable family indexes, complete immutable payloads, catalog sources, schemas, resources, providers, migrations, semantic ownership, projections, and release compatibility.
+2. `control_plane/` resolves desired and applied state from `.standards/`, composes all enabled packages into one plan, captures immutable snapshots, invokes declared providers, and applies typed plans through the sole platform executor.
+3. Public command adapters such as `frontmatter_commands.py`, `specs/cli.py`, and `agent_handoff/cli.py` resolve the exact selected package and delegate package-specific behavior without reading mutable family roots.
 
-2. **`execute_plan(plan, dest_root, …)`** — classifies each action (create / skip / overwrite / symlink-skip), substitutes `{{ref}}` in workflow-caller files with the installed package's major ref (e.g. `v2`), applies any explicit artifact `mode`, and writes atomically via a temp-file + `os.replace`. Fragments are never written — they are collected in `Report.fragments` and printed so the operator can paste them in manually.
+`src/project_standards/families/`, `payloads/`, and `catalogs/` are build projections. Family and payload files are authored under repository-root `standards/`; catalog sources are authored under repository-root `catalogs/`. The payload projection must contain relative file symlinks only, and wheel builds must prove projected bytes match canonical source bytes.
 
-### Artifact kinds
+Providers execute offline from immutable payload resources and return their declared effect. They never receive authority to write the live repository. The platform executor validates paths, ownership, preconditions, and mutation-plan shape before changing consumer state.
 
-| Kind | Written to disk? | Notes |
-| --- | --- | --- |
-| `file` | Yes (to `dest`) | Static file copied verbatim |
-| `workflow-caller` | Yes (to `dest`) | `{{ref}}` replaced with `v<major>` at write time |
-| `fragment` | No | Snippet printed for manual insertion into `target` |
+## Legacy compatibility boundary
 
-### Ownership and deduplication
+`adopt/`, `bundles/`, `registry.py`, and the standalone fallback implementations remain for exact V1 migration recognition and warned compatibility only. New packages and package versions must not be added through those surfaces. Current authoring uses family indexes, immutable payload manifests, catalog declarations, package schemas, providers, migrations, and the central control-plane lock.
 
-Each artifact declares `owner = true/false`. Shared artifacts (e.g. `.editorconfig`) reference a path under `bundles/_shared/` via `shared =` instead of `source =`. When two standards share the same source file, `build_plan` collapses them to one action. Two _different_ sources targeting the same destination is a manifest authoring bug and raises `UsageError` (exit 2).
-
-Written artifacts may declare `mode = "0755"` (octal string) when the installed file must be executable, such as a helper script. Omit `mode` for normal documents and configs; new files then use a umask-respecting `0666` baseline, and overwrites preserve the existing target mode.
-
----
-
-## Contract-version registry (`registry.json`)
-
-The registry encodes the two-plane versioning model:
-
-- **Frontmatter** — maps contract version labels (`"1.0"`, `"1.1"`) to bundled schema file names; one label is the `default` used when no version is pinned.
-- **ADR** — each ADR contract version declares `supports_frontmatter: […]`, the Frontmatter versions it is compatible with. The validator enforces this at config load time.
-- **Python Tooling / Markdown Tooling / CLI Documentation / Agent Handoff** — flat lists of known label versions; validated as metadata only (never used to select a schema).
-
-`cli.py` asserts at startup that the set of bundles and the set of registry-tracked standards are identical in both directions (bundle-only or registry-only → exit 2).
+The top-level `adopt` and `list` commands remain public during the V5 compatibility window, emit deprecation notices, and are scheduled for removal with the legacy fallback. They are not an alternative V5 ownership model.
 
 ---
 
 ## Exit codes
 
+These are the common classes; command-group documentation in [`docs/usage.md`](../../docs/usage.md) defines the exact mapping for each surface.
+
 | Code | Meaning |
 | --- | --- |
-| 0 | All files valid / adopt succeeded |
-| 1 | Validation errors found (or recoverable I/O failure during adopt) |
-| 2 | Invocation or config error (bad flags, unknown standard, registry/bundle drift) |
-| 3 | Missing prerequisite (broken manifest, absent bundle source file) |
+| 0 | Command succeeded |
+| 1 | Validation, drift, release-policy, or other command finding |
+| 2 | Invalid invocation, unsafe state/path, unavailable authority, or configuration error on generic command surfaces |
+| 3 | Agent Handoff package/provider prerequisite or internal failure; also a missing or malformed bundle prerequisite on the V1 adoption route |
 
 ---
 
-## Configuration file (`.project-standards.yml`)
+## Configuration authority
 
-```yaml
-markdown:
-  frontmatter:
-    version: '1.0' # pin to a bundled Frontmatter contract version
-    schema: my-schema.json # OR supply a custom schema path (mutually exclusive with version)
-    include:
-      - 'docs/**/*.md'
-    exclude:
-      - 'docs/generated/**' # exclude machine-generated docs; do NOT exclude docs/adr/** (ADRs are managed)
-    required: true # fail files that have no frontmatter (default: true)
-  adr:
-    require_sections: true # enforce the three MADR-required ## headings
-    version: '1.0' # pin to a bundled ADR contract version
+Catalog 5 consumers use three central files:
 
-python_tooling:
-  version: '1.0' # metadata only; validated but not used to select a schema
+- `.standards/config.toml` records desired package selectors and package options.
+- `.standards/catalog.toml` records the exact committed catalog snapshot available to the consumer.
+- `.standards/lock.toml` records applied versions, effective-option digests, managed ownership, referenced inputs, and the reconciled generation.
 
-markdown_tooling:
-  version: '1.0' # metadata only; validated but not used to select a schema
+Commands resolve unified authority from the repository root and reject an explicit `.project-standards.yml` override or dual authority. A repository with no `.standards/` may use the warned V1 fallback during migration: `.project-standards.yml` remains a read-only authority input, while explicitly mutating fallback commands retain their documented writes. New configuration and new package behavior belong only in the unified plane.
 
-cli_documentation:
-  version: '1.0' # metadata only; validated but not used to select a schema
+## Adding a standard package
+
+Follow the active internal [Standard Bundle Authoring 2.0 workflow](../../standards/standard-bundle-authoring/versions/2.0/README.md#author-workflow). In summary:
+
+1. Create or update the mutable `standards/<id>/standard.toml` family index and author the complete new payload under `standards/<id>/versions/<major.minor>/` from the versioned templates.
+2. Declare the closed package options, canonical standard, agent summary, every resource and output, providers, relationships, migrations, and legacy signatures in the payload. Do not add undeclared regular files.
+3. Validate the payload and schemas, compute its aggregate digest, and index that exact version and digest in the family.
+4. Add the exact package/version/digest with the correct role to the target catalog source.
+5. Regenerate or check package schemas and the symlink-only build projection, then validate the package graph and generated catalog.
+6. Prove source, direct-wheel, sdist-derived-wheel, migration, compatibility, and release-baseline behavior before publishing.
+
+The minimum repository checks are:
+
+```bash
+uv run project-standards standards validate-packages --root . --json
+uv run project-standards standards validate-graph --root . --require-all-manifests --json
+uv run project-standards standards generate-package-schemas --root . --check
+uv run project-standards standards sync-payload-projection --root . --check
 ```
 
----
-
-## Adding a new standard
-
-1. Create `bundles/<standard-id>/` with an `adopt.toml` and the artifact source files.
-2. Add the standard's contract versions to `schemas/registry.json` under the appropriate key.
-3. Extend `registry.py`: add `<id>_default`/`<id>_versions` constructor params, an `is_known_<id>()` method, and loader parsing plus cross-field default-in-versions validation — mirror the `cli_documentation` precedent.
-4. Extend `validate_frontmatter.py`: add a `<id>_version` field to `ProjectConfig`, its config-parsing block, its term in the `needs_registry` check, and the unknown-version exit-2 gate.
-5. Add a `_contract_version()` mapping entry in `cli.py` (`_REGISTRY_STANDARD_IDS`).
-6. Update test fixtures: raw `Registry(...)` calls and inline registry-JSON fixture strings across the test suite need the new block/kwargs — the `cli_documentation` registration touched six test files.
-7. The registry/bundle parity check in `_assert_registry_bundle_parity()` will catch any mismatch before any command emits output.
+Released payload directories are immutable. Correct released content with a new package version; never edit the published payload in place.

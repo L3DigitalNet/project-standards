@@ -89,7 +89,9 @@ def test_detects_incomplete_dual_and_malformed_authority(tmp_path: Path) -> None
     control = tmp_path / ".standards"
     control.mkdir()
     (control / "config.toml").write_bytes(render_empty_config("5"))
-    assert detect_control_plane_state(tmp_path, tool_release="5.0.0").kind is StateKind.INCOMPLETE
+    incomplete = detect_control_plane_state(tmp_path, tool_release="5.0.0")
+    assert incomplete.kind is StateKind.INCOMPLETE
+    assert incomplete.missing_files == ("catalog.toml", "lock.toml")
 
     (tmp_path / ".project-standards.yml").write_text("version: 1\n", encoding="utf-8")
     assert (
@@ -101,6 +103,7 @@ def test_detects_incomplete_dual_and_malformed_authority(tmp_path: Path) -> None
     (control / "lock.toml").write_text("not = [valid", encoding="utf-8")
     state = detect_control_plane_state(tmp_path, tool_release="5.0.0")
     assert state.kind is StateKind.MALFORMED
+    assert state.malformed_file == "catalog.toml"
     assert "not =" not in (state.detail or "")
 
 

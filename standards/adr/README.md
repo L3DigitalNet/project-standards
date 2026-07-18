@@ -1,177 +1,29 @@
 # Architecture Decision Record (ADR) Standard
 
-- **Status:** Source-checked standard, contract version `1.0` (supports Frontmatter `1.1`; selected by consumers via `markdown.adr.version` — see [`meta/versioning.md`](../../meta/versioning.md#package-release-and-contract-versions))
-- **Owner:** Project standards / repository template
-- **Last updated:** 2026-07-01
-- **Last source check:** 2026-06-07
-- **Scope:** Architecture Decision Records in repositories governed by the Markdown Frontmatter Standard.
+This is the Catalog 5 family landing page for the active consumer package `adr@1.1`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
----
+## Current authority
 
-## Table of Contents
+- [ADR 1.1 standard](versions/1.1/README.md) — normative MADR and document contract
+- [ADR 1.1 adoption guide](versions/1.1/adopt.md) — exact options, outputs, migration, and verification
+- [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
+- [ADR 1.1 agent summary](versions/1.1/agent-summary.md) — compact operating rules
+- [Family index](standard.toml) — indexed payload and digest
 
-- [Architecture Decision Record (ADR) Standard](#architecture-decision-record-adr-standard)
-  - [Table of Contents](#table-of-contents)
-  - [Evidence convention](#evidence-convention)
-  - [Purpose](#purpose)
-  - [When to write an ADR](#when-to-write-an-adr)
-  - [Frontmatter for ADRs](#frontmatter-for-adrs)
-    - [MADR field → canonical field](#madr-field--canonical-field)
-    - [MADR status → canonical `status`](#madr-status--canonical-status)
-  - [Body structure (MADR)](#body-structure-madr)
-  - [Directory and index convention](#directory-and-index-convention)
-  - [Supersession workflow](#supersession-workflow)
-  - [References](#references)
-  - [Source coverage map](#source-coverage-map)
-  - [Source register](#source-register)
+## Use this standard when
 
-## Evidence convention
+Use ADRs for significant, costly-to-reverse architecture decisions. Package 1.1 supplies a create-only ADR scaffold and optional validation of MADR's three required level-2 sections. Markdown Frontmatter is a companion, not a package dependency; enable it separately when ADR metadata also needs schema and ID validation.
 
-This document separates **source-backed facts** from **project policy decisions**.
+## Adopt
 
-- Source-backed facts cite source IDs such as `[S01]`.
-- Every source ID is listed in the [Source register](#source-register), with `Last checked: 2026-06-07`.
-- Policy decisions are explicit local choices for this project ecosystem — informed by sources, but not mandated by them. The ADR-specific ones: the `id` embeds the `repo-name` while the filename omits it; ADRs live under `docs/adr/`; and the MADR body-section check is opt-in and off by default.
-- MADR is the single external authority for body structure and status vocabulary. Re-verify it against [S01] whenever this standard is reviewed — the upstream spec has shifted before (the 3.x→4.0 rename, and the four-→three required-section change).
-
----
-
-## Purpose
-
-An **Architecture Decision Record (ADR)** captures a single significant, hard-to-reverse decision: the context that forced it, the options considered, the option chosen, and the consequences. ADRs are the durable, reviewable memory of _why_ a system is the way it is.
-
-This standard adopts **[MADR](https://adr.github.io/madr/)** (Markdown Architectural Decision Records) [S01] as the body format, layered on top of the repository's [Markdown Frontmatter Standard](../markdown-frontmatter/README.md) for metadata. General ADR background is at <https://adr.github.io/> [S02].
-
-## When to write an ADR
-
-Write an ADR when a decision is **significant** and **costly to reverse**: choosing a datastore, a network segmentation model, an auth approach, a deployment target, a directory convention that many files will follow. Do not write an ADR for routine, easily-reversed choices — use a `doc_type: decision` note or an ordinary `note` for those.
-
-## Frontmatter for ADRs
-
-ADRs use the **standard** canonical frontmatter profile with `doc_type: adr`. MADR's own metadata maps onto canonical fields; ADR-specific people-roles live under the sanctioned `project` namespace (the schema rejects unknown top-level fields, so they cannot sit at the top level).
-
-```yaml
----
-schema_version: '1.1'
-id: 'adr-0001-homelab-use-postgresql-for-persistent-storage'
-title: 'ADR 0001: Use PostgreSQL for persistent storage'
-description: 'One-sentence summary of the decision.'
-doc_type: 'adr'
-status: 'active'
-created: '2026-06-02'
-updated: '2026-06-02'
-reviewed: null
-owner: 'repo-maintainers'
-tags: []
-aliases: []
-related: []
-supersedes: []
-superseded_by: null
-source: []
-confidence: 'unknown'
-visibility: 'internal'
-license: null
-project:
-  decision_makers: []
-  consulted: []
-  informed: []
----
+```bash
+project-standards standards enable adr --version 1.1
+project-standards reconcile
+project-standards reconcile --apply
 ```
 
-### MADR field → canonical field
+Review [adopt.md](adopt.md) before applying. Reconciliation preserves consumer-authored ADRs and creates the scaffold only when it is absent.
 
-| MADR field | Canonical home | Notes |
-| --- | --- | --- |
-| `status` | `status` (top level) | Mapped — see the status table below. |
-| `date` | `updated` (and `created` on first write) | ISO `YYYY-MM-DD`. |
-| `decision-makers` | `project.decision_makers` | List of people who made the decision. |
-| `consulted` | `project.consulted` | Two-way input; subject-matter experts. |
-| `informed` | `project.informed` | One-way; kept up to date. |
-| "superseded by X" | `superseded_by` + `status: superseded` | Use `supersedes` on the replacement ADR. |
+## Legacy boundary
 
-### MADR status → canonical `status`
-
-MADR's decision-state vocabulary [S01] maps onto the canonical lifecycle enum. The MADR-native word may also be stated in prose at the top of the ADR body for readers familiar with MADR.
-
-| MADR status  | Canonical `status` | Meaning                                       |
-| ------------ | ------------------ | --------------------------------------------- |
-| (drafting)   | `draft`            | Still being written.                          |
-| `proposed`   | `review`           | Proposed; awaiting a decision.                |
-| `accepted`   | `active`           | Decision is in force.                         |
-| `rejected`   | `archived`         | Considered and declined; kept for the record. |
-| `deprecated` | `deprecated`       | Superseded direction; avoid for new work.     |
-| `superseded` | `superseded`       | Replaced by another ADR; set `superseded_by`. |
-
-## Body structure (MADR)
-
-**Required sections** — the three MADR 4.0 marks required [S01], each a level-2 (`##`) heading:
-
-1. **Context and Problem Statement** — the situation, forces, and the question being decided.
-2. **Considered Options** — the meaningful options on the table.
-3. **Decision Outcome** — the chosen option and the justification.
-
-**Optional sections** (include when they add value):
-
-- **Decision Drivers** — qualities, constraints, or forces that weighed on the choice.
-- **Consequences** (`### Consequences`, nested under Decision Outcome) — the resulting good/bad/neutral effects.
-- **Confirmation** (`### Confirmation`, nested under Decision Outcome) — how compliance with the decision is/will be verified (review, test, fitness function).
-- **Pros and Cons of the Options** — per-option arguments.
-- **More Information** — evidence, team agreement, revisit conditions, links.
-
-> **Opt-in section check.** Set `markdown.adr.require_sections: true` in `.project-standards.yml` to have the validator assert that every `doc_type: adr` document contains the three required `##` sections above (exact, case-sensitive, level-2 headings; headings inside code fences don't count). It is **off by default**, and the optional sections are never required — honoring MADR's short→large flexibility. This lives under a separate `markdown.adr` config key from the `markdown.frontmatter` settings.
-
-Templates for each verbosity level live in [`templates/`](templates/): [`adr.md`](templates/adr.md) (full, with explanations), [`adr-minimal.md`](templates/adr-minimal.md) (required sections, with explanations), [`adr-bare.md`](templates/adr-bare.md) (all sections, empty), and [`adr-bare-minimal.md`](templates/adr-bare-minimal.md) (required sections, empty).
-
-- **`id`**: `adr-NNNN-repo-name-short-title` in lowercase kebab-case, e.g. `adr-0001-homelab-use-netbox-as-source-of-truth`. `NNNN` is a zero-padded, repo-scoped sequence number; the **`repo-name` segment makes the id globally unique across every repository**, so an ADR stays unambiguous when referenced from another repo's `related:` list. The `adr-` prefix keeps it self-identifying as an ADR.
-- **Filename**: `adr-NNNN-short-title.md`, e.g. `adr-0001-use-netbox-as-source-of-truth.md`. The filename carries the `adr-` prefix but **omits the `repo-name` segment** — it lives inside its own repo, where the repo is implied, so repeating the repo-name in every filename would be redundant.
-- **`title`**: human form, e.g. `ADR 0001: Use NetBox as source of truth`.
-
-> **ADRs are the one document type where the filename and `id` intentionally differ.** Both carry the `adr-NNNN-` prefix, but the **`id` additionally embeds the `repo-name`** for global uniqueness (it is path-independent by design — see the [Markdown Frontmatter Standard](../markdown-frontmatter/README.md)), while the **filename omits it** to stay short and repo-local. For every other `doc_type`, deriving the filename from the `id` slug remains the norm. (This deliberately diverges from upstream [MADR](https://adr.github.io/madr/) filenames, which start with the bare number; MADR tooling is an optional convenience here, not a conformance target, so at-a-glance `adr-` filenames win.)
-
-## Directory and index convention
-
-In a consuming repository, ADRs live together under `docs/adr/`, with a `README.md` index:
-
-```text
-docs/adr/
-├── README.md                                       # doc_type: index — links every ADR
-├── adr-0001-use-netbox-as-source-of-truth.md       # id: adr-0001-homelab-use-netbox-as-source-of-truth
-└── adr-0002-segment-iot-onto-its-own-vlan.md       # id: adr-0002-homelab-segment-iot-onto-its-own-vlan
-```
-
-The index `README.md` carries `doc_type: index` frontmatter and lists each ADR by number and title. (This standards repository documents the convention but does not itself host a `docs/adr/` tree, since it is the source of the standard rather than a consumer of it.)
-
-## Supersession workflow
-
-When a new ADR replaces an old one, update **both** documents in the same change:
-
-- New ADR: add the old ID to `supersedes`.
-- Old ADR: set `superseded_by` to the new ID and `status: superseded`.
-
-## References
-
-- [MADR — Markdown Architectural Decision Records](https://adr.github.io/madr/)
-- [Architectural Decision Records](https://adr.github.io/)
-- [Markdown Frontmatter Standard](../markdown-frontmatter/README.md)
-
-## Source coverage map
-
-| Section                                        | Source IDs used |
-| ---------------------------------------------- | --------------- |
-| Purpose / MADR adoption                        | [S01], [S02]    |
-| Frontmatter for ADRs (field + status mappings) | [S01]           |
-| Body structure (required/optional sections)    | [S01]           |
-
-## Source register
-
-| ID | Source | URL | What it supports | Last checked |
-| --- | --- | --- | --- | --- |
-| S01 | MADR 4.0 — Markdown Architectural Decision Records | [https://adr.github.io/madr/](https://adr.github.io/madr/) | Acronym expansion; required vs optional body sections; decision-status vocabulary; MADR→canonical field mapping | 2026-06-07 |
-| S02 | Architectural Decision Records (ADR) | [https://adr.github.io/](https://adr.github.io/) | General ADR background and rationale | 2026-06-07 |
-
-MADR's latest release is **4.0.0** (2024-09-17), confirmed current on 2026-06-07.
-
-<!-- Citation reference-link definitions: each [Sxx] marker resolves to the Source register. GFM cannot anchor individual table rows, so all citations jump to the section. -->
-
-[S01]: #source-register
-[S02]: #source-register
+Copy-adopt commands, `.project-standards.yml` fragments, and unversioned V1 templates are migration evidence only. They do not define current Catalog 5 behavior. Use `.standards/config.toml`, the central lock, and the exact `versions/1.1/` payload.

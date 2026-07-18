@@ -6,9 +6,9 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
-owner: ''
+updated: '2026-07-18'
+reviewed: '2026-07-18'
+owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
   - 'versioning'
@@ -50,13 +50,15 @@ license: null
   - [Consuming repositories](#consuming-repositories)
   - [Pre-1.0 releases](#pre-10-releases)
 
-> **Active release policy — release freeze until v5.0.0 (set 2026-07-07).** The next release will be **v5.0.0**, carrying the Meta-Repository MCP-readiness work (`SPEC-MT01`) and every standards change that accrues before it. Until v5.0.0 ships, **no interim PATCH or MINOR release is cut** — all version-affecting changes (including per-standard contract-version bumps) accumulate under `## [Unreleased]` in the [CHANGELOG](../CHANGELOG.md) and are promoted together at the v5.0.0 cut. This deliberately removes per-change release friction while the standards platform is reshaped for the Meta-repo work. Keep classifying every change as you make it (the [previously-passing rule](#the-previously-passing-rule) still governs, so the aggregate rationale is ready at release), and keep contract-version bumps recorded in `[Unreleased]` — just do not tag a release between now and v5.0.0.
+> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.0.0 is published. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. The moving `v5` tag tracks the newest 5.x release. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
+
+**Historical policy:** From 2026-07-07 until the v5.0.0 publication, the repository intentionally accumulated all release-affecting work under one v5 freeze. That freeze ended when release commit `8869a08` and the signed `v5.0.0` and `v5` refs were published.
 
 ## Purpose
 
 This repository ships **several components under one version number**: seven standards — [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), [Markdown Tooling](../standards/markdown-tooling/README.md), [Project Specification](../standards/project-spec/README.md), [CLI Documentation](../standards/cli-documentation/README.md), and [Agent Handoff](../standards/agent-handoff/README.md) — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflows** (`.github/workflows/validate-markdown-frontmatter.yml`, `validate-specs.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific adoption mechanics are migration inputs rather than the future authority. Seven standards are released or staged for consumer use, [Python Coding](../standards/python-coding/README.md) remains a draft, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) remains an internal authoring contract pending its successor specification.
+All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific V1 adoption mechanics are migration inputs rather than current authority. Catalog 5 has seven consumer packages, [Python Coding](../standards/python-coding/README.md) as reference-only package `0.5`, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) as internal package `2.0`.
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -66,7 +68,7 @@ Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 
 > **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all shipped components.
 
-This reframing is what makes the moving major tag (`@v4`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
+This reframing is what makes the current moving major tag (`@v5`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
 
 ## Version grammar
 
@@ -164,7 +166,7 @@ Every release MUST:
 Pin the reusable workflow and the CLI by **major tag** to receive non-breaking fixes automatically:
 
 ```yaml
-uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v4
+uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5
 ```
 
 - **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule protects ordinary defaults and prior valid selections; breaking package candidates require explicit package-major authorization.

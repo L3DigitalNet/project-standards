@@ -6,6 +6,9 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
+from project_standards.cli import main
 from project_standards.specs.cli import (
     _VERBS,  # pyright: ignore[reportPrivateUsage]
 )
@@ -120,3 +123,13 @@ def test_agent_handoff_group_and_every_verb_documented() -> None:
     assert _has_entry("agent-handoff"), "agent-handoff group overview missing"
     missing = [v for v in _AGENT_HANDOFF_VERBS if not _has_entry(f"agent-handoff {v}")]
     assert not missing, f"agent-handoff verbs missing from docs/usage.md: {missing}"
+
+
+def test_fix_help__supported_selection_options__are_advertised(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["fix", "--help"]) == 0
+
+    output = capsys.readouterr().out
+    assert "--schema PATH" in output
+    assert "--no-require-frontmatter" in output

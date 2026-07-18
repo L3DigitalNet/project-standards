@@ -22,21 +22,23 @@ def _source_files() -> tuple[Path, ...]:
     return tuple(sorted(path for path in _SOURCE.rglob("*") if path.is_file()))
 
 
-def _v1_source_files() -> tuple[Path, ...]:
+def _legacy_mirrored_source_files() -> tuple[Path, ...]:
     return tuple(
         path
         for path in _source_files()
         if path.relative_to(_SOURCE).parts[0] != "versions"
-        and path.name not in {"adopt.md", "standard.toml"}
+        and path.name not in {"README.md", "adopt.md", "agent-summary.md", "standard.toml"}
     )
 
 
 def test_every_standard_source_file_has_byte_identical_bundle_mirror() -> None:
-    source_relatives = {path.relative_to(_SOURCE) for path in _v1_source_files()}
+    source_relatives = {path.relative_to(_SOURCE) for path in _legacy_mirrored_source_files()}
     bundled_relatives = {
         path.relative_to(_BUNDLE)
         for path in _BUNDLE.rglob("*")
-        if path.is_file() and path.name not in {"adopt.md", "adopt.toml", "standard.toml"}
+        if path.is_file()
+        and path.name
+        not in {"README.md", "adopt.md", "adopt.toml", "agent-summary.md", "standard.toml"}
     }
 
     assert source_relatives == bundled_relatives
@@ -170,13 +172,12 @@ def test_wheel_contains_complete_agent_handoff_bundle(tmp_path: Path) -> None:
     (wheel,) = tmp_path.glob("*.whl")
     names = set(zipfile.ZipFile(wheel).namelist())
 
-    for source in _v1_source_files():
-        relative = source.relative_to(_SOURCE).as_posix()
+    for bundled in _BUNDLE.rglob("*"):
+        if not bundled.is_file():
+            continue
+        relative = bundled.relative_to(_BUNDLE).as_posix()
         expected = f"project_standards/bundles/agent-handoff/{relative}"
         assert any(name.endswith(expected) for name in names), expected
-    assert any(
-        name.endswith("project_standards/bundles/agent-handoff/adopt.toml") for name in names
-    )
 
 
 def test_installed_wheel_adopts_and_validates_without_source_checkout(tmp_path: Path) -> None:

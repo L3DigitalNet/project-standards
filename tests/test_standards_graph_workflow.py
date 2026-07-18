@@ -35,9 +35,14 @@ def test_repository_graph_workflow_contract() -> None:
     assert job["name"] == "Standards graph and catalog"
     commands = [step.get("run") for step in job["steps"]]
     assert "uv sync --locked --all-groups" in commands
+    assert "uv run project-standards standards validate-packages --root ." in commands
     assert (
         "uv run project-standards standards validate-graph --root . --require-all-manifests"
     ) in commands
+    assert (
+        "uv run project-standards standards generate-package-schemas --root . --check" in commands
+    )
+    assert "uv run project-standards standards sync-payload-projection --root . --check" in commands
     assert "uv run project-standards standards render-catalog --root . --check" in commands
     baseline = next(step for step in job["steps"] if step.get("id") == "v2-baseline")
     assert baseline["shell"] == "bash"

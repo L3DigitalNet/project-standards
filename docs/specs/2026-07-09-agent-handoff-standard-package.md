@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-09'
-last_reviewed: '2026-07-09'
+last_reviewed: '2026-07-18'
 supersedes: null
 superseded_by: null
 related:
@@ -17,6 +17,8 @@ related:
     - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
     - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
     - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
+    - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+    - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
   tickets: []
   repositories:
     - 'L3DigitalNet/project-standards'
@@ -35,8 +37,11 @@ related:
 | 0.3 | 2026-07-09 | Codex with owner approval | Name the canonical hook source and bundle-anatomy change required by accepted ADR 0022; approve the specification for implementation planning. |
 | 0.4 | 2026-07-09 | Codex with owner-directed plan review | Make the installed hook path the repository trust anchor and correct the repository/legacy licensing contract. |
 | 0.5 | 2026-07-09 | Codex with owner direction | Remove a package-specific license for `agent-handoff`; inherit the repository license while preserving notices for MIT-licensed legacy inputs. |
+| 0.6 | 2026-07-18 | Codex with owner direction | Record the approved Catalog 5/V2 supersession, current package `1.1` implementation, approved/change-controlled lifecycle, and remaining legacy-engine retirement gate without rewriting the V1 baseline. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
+**Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
+
+**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The accepted successor implementation is the `agent-handoff` `1.1` payload selected in `.standards/config.toml` and recorded in the central lock. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Technical implementation is complete under that successor contract; Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
 
 ---
 
@@ -658,18 +663,21 @@ Consumer project knowledge remains owned and governed by the consumer repository
 
 ### 17.1 Definition of Done
 
-- [ ] The `agent-handoff` bundle, manifest, resources, artifact manifest, skill, and providers are complete and graph-valid.
-- [ ] The released package operates from an installed wheel with no source checkout.
-- [ ] Fresh manual, Claude-only, Codex-only, and dual-profile adoption fixtures pass and rerun idempotently.
-- [ ] Existing complex config and instruction fixtures preserve all unrelated content.
-- [ ] Hook behavior, transport, byte limits, failure degradation, and security boundaries pass.
-- [ ] Validator, drift, size, shape, and legacy-report human/JSON contracts pass.
-- [ ] Multiple historical legacy-layout fixtures are detected without mutation.
-- [ ] Package provenance and parity tests cover every reusable artifact.
-- [ ] The complete repository toolchain and coherence gate pass.
-- [ ] This repository dogfoods the v1 standard successfully.
-- [ ] Representative consumers migrate and pass v1 validation.
-- [ ] The owner approves the release and later approves legacy repository deletion after the retirement gate.
+The completed items below are accepted through the Catalog 5 successor recorded in DEV-001; they do not assert that the superseded V1 packaging mechanics remain current.
+
+- [x] The `agent-handoff` family, payload, resources, skill, hook, and providers are complete and graph-valid.
+- [x] The released package operates from an installed wheel with no source checkout.
+- [x] Fresh manual, Claude-only, Codex-only, and dual-profile adoption fixtures pass and rerun idempotently.
+- [x] Existing complex config and instruction fixtures preserve all unrelated content.
+- [x] Hook behavior, transport, byte limits, failure degradation, and security boundaries pass.
+- [x] Validator, drift, size, shape, and legacy-report human/JSON contracts pass.
+- [x] Multiple historical legacy-layout fixtures are detected without mutation.
+- [x] Package provenance and parity tests cover every reusable artifact.
+- [x] The release acceptance toolchain and coherence gate passed.
+- [x] This repository dogfoods the accepted `agent-handoff` `1.1` Catalog 5 successor.
+- [ ] Every remaining known consumer completes migration and passes current Agent Handoff validation.
+- [x] The owner approved the package release.
+- [ ] The owner approves legacy-engine deletion after every Task 18 retirement gate passes.
 
 ### 17.2 Test Strategy
 
@@ -897,9 +905,9 @@ No implementation-blocking questions remain after design approval.
 
 ## Deviations Log
 
-| ID  | Date | Requirement | Deviation               | Reason | Approved By | Status |
-| --- | ---- | ----------- | ----------------------- | ------ | ----------- | ------ |
-| —   | —    | —           | No deviations recorded. | —      | —           | —      |
+| ID | Date | Requirement | Deviation | Reason | Approved By | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| DEV-001 | 2026-07-18 | FR-001, FR-002, FR-010, IR-001, IR-003, DR-001, DR-003, DR-004 | Catalog 5 implements Agent Handoff as immutable package `1.1` selected through `.standards/config.toml`, with payload providers and central-lock reconciliation replacing the V1 copy-adopt, manifest, and YAML-configuration mechanics. | SPEC-CP01, SPEC-BA02, ADR 0023, and ADR 0024 superseded the shared package platform after this V1 baseline was approved. | Chris Purcell / L3DigitalNet | accepted |
 
 ---
 
@@ -914,7 +922,9 @@ No implementation-blocking questions remain after design approval.
 - [ADR 0019 — Packaged Artifact Parity and Provenance](../adr/adr-0019-packaged-artifact-parity-and-provenance.md)
 - [ADR 0020 — Standard Package Versioning](../adr/adr-0020-standard-package-versioning-methodology.md)
 - [ADR 0021 — Standard-Packaged Skill Installation](../adr/adr-0021-standard-packaged-skill-installation-methodology.md)
-- [ADR 0022 — Standard-Packaged Hook Installation (proposed)](../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
+- [ADR 0022 — Standard-Packaged Hook Installation](../adr/adr-0022-standard-packaged-hook-installation-methodology.md)
+- [ADR 0023 — Unified Consumer Standards Control Plane](../adr/adr-0023-unified-consumer-standards-control-plane.md)
+- [ADR 0024 — Catalog-Scoped Package Version Channels](../adr/adr-0024-catalog-scoped-package-version-channels.md)
 
 ### Harness Contracts
 

@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-13'
+last_reviewed: '2026-07-18'
 supersedes: SPEC-BA01
 superseded_by: null
 related:
@@ -53,8 +53,9 @@ related:
 | 0.10 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Added the owner-approved, fail-closed contract for explicitly relinquishing an unrecognized whole file to consumer ownership during legacy migration. Known package-history signatures remain mandatory for ownership-acquiring, destructive, shared, lock-import, and bounded-block transitions. |
 | 0.11 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Make ownership relinquishment target-verifiable through a static single-target signature pointer binding, preserve unknown-and-unclaimed fail-closed behavior and known-claim compatibility, and reconcile the amended migration traceability. |
 | 0.12 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing source/wheel, migration, stale-plan, no-write/no-lock, and managed-transition evidence for FR-037. No requirement or package-authoring scope changed. |
+| 0.13 | 2026-07-18 | Codex with owner-directed drift remediation | Clarify that the ordered author workflow in the published V2 README is FR-028's template checklist, with no separate checklist artifact or immutable payload edit; record V1 as already-replaced history. |
 
-**Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the implemented V1 package remains migration history until the approved plan replaces it.
+**Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the V1 package has been replaced and remains only as historical migration evidence.
 
 ---
 
@@ -224,7 +225,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-025 | Removing an advertised payload, incompatibly changing an ordinary default, or promoting a breaking candidate shall follow ADR 0024's tool/catalog-major rules. | Author actions must preserve consumer version guarantees. | Release classification tests and review evidence map every catalog diff to the required tool release level. | Must |
 | FR-026 | Package adoption guides shall cover suitability, package options, artifacts/contributions, companions, migrations, and verification while linking to—not restating—common control-plane mechanics. | One entry point should reduce contradictory package procedures. | Documentation checks detect legacy imperative adoption instructions and required package-specific sections. | Must |
 | FR-027 | Root `README.md` shall be a mutable family landing page; the selected payload's `README.md` shall be authoritative for that version, and its agent summary shall link to that versioned README with the canonical-authority notice. | Current navigation and historical normative content have different lifecycles. | Link/authority/3,000-byte checks pass for every payload summary. | Must |
-| FR-028 | The standard shall define an author workflow that creates the payload, validates schemas/content, computes digests, indexes it, proves conformance, assigns a catalog role, and only then publishes it. | Publication ordering prevents incomplete catalog entries. | The V2 README and template checklist enumerate the workflow and CI enforces its prepublication gates. | Must |
+| FR-028 | The standard shall define an author workflow that creates the payload, validates schemas/content, computes digests, indexes it, proves conformance, assigns a catalog role, and only then publishes it. | Publication ordering prevents incomplete catalog entries. | The ordered author workflow in the V2 README is the required template checklist; it enumerates the workflow, and CI enforces its prepublication gates. A separate checklist file is not required. | Must |
 | FR-029 | Every current package shall be reconstructed as V2 payload data and pass fresh, migrated, individual, pairwise, and all-package compatibility tests before being advertised as V5-compatible. | V5 must not strand or silently weaken current standards. | A compatibility matrix records all current packages, payloads, surfaces, migrations, and passing evidence. | Must |
 | FR-030 | Legacy `standard.toml`, `adopt.toml`, `registry.json`, YAML fragments, `_shared` files, package-specific locks, and deployed Markdown/TOML/YAML managed-block marker formats shall be migration inputs only after V2 activation, not parallel V2 authorities. | Split authoring and consumer authority would make reconciliation non-deterministic, while deployed bounded blocks need an explicit ownership transition. | Dependency/runtime searches find no V2 reads except explicit migration adapters; Agent Handoff fixtures recognize its exact legacy instruction, Codex-hook, and project-config markers without treating them as canonical V2 delimiters. | Must |
 | FR-031 | The Standard Bundle Authoring package shall dogfood this contract as internal package version `2.0`, ship family/payload/catalog templates, and replace its V1 README only after SPEC-BA02 approval. | The meta-standard must demonstrate its own contract without prematurely retiring BA01. | Self-hosting schema/graph/catalog tests pass; BA01 remains historical and is marked superseded only on approval. | Must |
@@ -950,7 +951,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-025 | Catalog-diff release classification and same-major compatibility tests | Passing — foundation release suite, `af33689`, `a891973` |
 | FR-026 | Seven current package adoption guides cover package-specific suitability, closed options, outputs, migration, verification, and troubleshooting | Passing — Task 18 documentation/spec/generated-drift gates and independent review |
 | FR-027 | Family/payload authority, link, resource role, projection, and agent-summary size/integrity tests | Passing — package contract and projection suites |
-| FR-028 | Author workflow, package validation/schema/projection commands, release evidence, and CI gate documentation | Passing — Task 18 documentation/spec/generated-drift gates and release-cut proof |
+| FR-028 | V2 README author-workflow checklist, package validation/schema/projection commands, release evidence, and CI gate documentation | Passing — Task 18 documentation/spec/generated-drift gates and release-cut proof; checklist interpretation clarified in rev 0.13 |
 | FR-029 | Seven individual, 21 pairwise, full-set, fresh/migrated, source/wheel compatibility rows | Passing — `06a33c1` |
 | FR-030 | Classified tracked/installed legacy dependency inventory, all-namespace migration, exact marker/artifact fixtures | Passing — `06a33c1`, `a891973` |
 | FR-031 | Standard Bundle Authoring `2.0` self-hosting, schema, graph, catalog, and template tests | Passing — `1b257c7` |
@@ -1130,8 +1131,9 @@ No implementation deviations are recorded. The initial design is represented dir
 
 ### Standards
 
-- [Standard Bundle Authoring V1](../../standards/standard-bundle-authoring/README.md) — implemented contract to be superseded after BA02 approval.
-- [Project Specification Standard](../../standards/project-spec/README.md) — specification structure and validation.
+- [Standard Bundle Authoring V1 (SPEC-BA01)](archive/2026-07-07-standard-bundle-authoring-standard.md) — superseded historical design and migration evidence.
+- [Standard Bundle Authoring 2.0](../../standards/standard-bundle-authoring/versions/2.0/README.md) — current implemented authoring contract.
+- [Project Specification Standard 1.1](../../standards/project-spec/versions/1.1/README.md) — specification structure and validation.
 - [Repository Versioning Standard](../../meta/versioning.md) — tool/catalog/package version rules.
 
 ### Project References

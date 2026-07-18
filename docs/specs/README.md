@@ -9,9 +9,9 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved rev 0.9; complete | Step 07 passed with no blocking gaps; evidence is in [`docs/mcp-readiness.md`](../mcp-readiness.md) |
 | [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | draft rev 0.6; Step 08 deferred | Sequencing from readiness through MCP delivery |
 | [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | draft rev 0.5; implementation deferred | Thin, local, read-only-first MCP server |
-| [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.5; implemented | Catalog 5 Agent Handoff package and retirement gates |
-| [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.11; implemented except atomic root dogfood | Catalog/config/lock/reconciliation control plane; FR-037/FR-038 evidence passes |
-| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.12; implemented | Immutable family/payload authoring contract; nine-family V5 reconstruction passes |
+| [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.6; implementation complete; retirement pending | V1 baseline plus accepted Catalog 5 package `1.1` supersession and Task 18 retirement gates |
+| [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.13; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
+| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.13; implemented | Immutable family/payload authoring contract; FR-028 checklist interpretation clarified without payload changes |
 
 ## Future maintained specifications
 
@@ -25,4 +25,4 @@ This directory is the durable home for Project Specification Standard documents 
 | --- | --- | --- |
 | [SPEC-BA01 — Standard Bundle Authoring](archive/2026-07-07-standard-bundle-authoring-standard.md) | superseded by SPEC-BA02 | Versioned requirements and implementation history |
 
-Every specification listed here is gated by `project-standards spec validate` and `spec lint`. During the pre-atomic V5 checkpoint, moving a document requires updating the transitional `.project-standards.yml`, this index, and all repository references in the same change. Task 11 transfers that selection atomically to `.standards/config.toml`; after the migration, unified config is the sole active authority.
+Every specification listed here is gated by `project-standards spec validate` and `spec lint`. `.standards/config.toml` is the sole active selection authority; moving a maintained specification requires updating it, this index, and repository references in the same change.

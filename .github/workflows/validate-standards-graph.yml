@@ -30,8 +30,17 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --all-groups
 
+      - name: Validate package contracts
+        run: uv run project-standards standards validate-packages --root .
+
       - name: Validate standards graph
         run: uv run project-standards standards validate-graph --root . --require-all-manifests
+
+      - name: Check generated package schemas
+        run: uv run project-standards standards generate-package-schemas --root . --check
+
+      - name: Check payload projection
+        run: uv run project-standards standards sync-payload-projection --root . --check
 
       - name: Check standards catalog freshness
         run: uv run project-standards standards render-catalog --root . --check

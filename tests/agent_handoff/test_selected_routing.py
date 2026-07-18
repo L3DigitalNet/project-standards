@@ -12,13 +12,18 @@ from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
-from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+from project_standards.control_plane.executor import (
+    ApplyRequest,
+    AuthoringApplyResult,
+    apply_reconciliation,
+)
 from project_standards.control_plane.locking import (
     ControlPlaneBusyError,
     LockMode,
     control_plane_lock,
 )
 from project_standards.control_plane.planner import plan_reconciliation
+from project_standards.control_plane.schemas import MutationPlanSchema
 
 
 @pytest.fixture(scope="module")
@@ -103,6 +108,32 @@ def test_unified_upgrade_is_a_noop_when_managed_bytes_are_current(
 
     assert run(["upgrade", "--repo", str(repo), "--json"], distribution=distribution) == 0
     assert json.loads(capsys.readouterr().out)["changes"] == []
+
+
+def test_unified_upgrade_reports_recoverable_apply_failure_as_a_finding(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+
+    def fail_apply(_repo: Path, _plan: MutationPlanSchema) -> AuthoringApplyResult:
+        return AuthoringApplyResult(False, (), "CP-PRECONDITION")
+
+    monkeypatch.setattr(
+        agent_handoff_cli,
+        "apply_authoring_plan",
+        fail_apply,
+    )
+
+    assert run(["upgrade", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert report["findings"][0]["code"] == "AH-APPLY-FAILED"
+    assert report["findings"][0]["path"] == "."
+    assert "CP-PRECONDITION" in report["findings"][0]["message"]
+    assert "Traceback" not in captured.err
 
 
 def test_unified_upgrade_dry_run_holds_a_read_lock(
@@ -203,6 +234,79 @@ def test_unified_command_reports_invalid_pending_options_without_traceback(
     assert run(["validate", "--repo", str(repo)], distribution=distribution) == 2
     captured = capsys.readouterr()
     assert "configured package options are invalid" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_unified_command_reports_malformed_config_as_operator_error(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / ".standards/config.toml").write_text("not = [valid", encoding="utf-8")
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 2
+    captured = capsys.readouterr()
+    assert "config" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_unified_command_reports_missing_config_as_operator_error(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / ".standards/config.toml").unlink()
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 2
+    captured = capsys.readouterr()
+    assert "config" in captured.err
+    assert "Traceback" not in captured.err
+
+
+@pytest.mark.parametrize("filename", ["catalog.toml", "lock.toml"])
+def test_unified_command_reports_malformed_control_state_as_prerequisite_failure(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+    filename: str,
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / ".standards" / filename).write_text("not = [valid", encoding="utf-8")
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 3
+    captured = capsys.readouterr()
+    assert "invalid" in captured.err
+    assert "Traceback" not in captured.err
+
+
+@pytest.mark.parametrize("filename", ["catalog.toml", "lock.toml"])
+def test_unified_command_reports_missing_control_state_as_prerequisite_failure(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+    filename: str,
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / ".standards" / filename).unlink()
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 3
+    captured = capsys.readouterr()
+    assert "missing" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_unified_command_reports_nonexistent_repo_as_operator_error(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "missing"
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 2
+    captured = capsys.readouterr()
+    assert "repository root" in captured.err
     assert "Traceback" not in captured.err
 
 

@@ -6,32 +6,34 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 
 | # | Title | Applies when |
 | --- | --- | --- |
-| 1 | Dogfood the standards | Editing local managed Markdown declared in `.project-standards.yml` |
-| 2 | Never frontmatter agent-instruction files | Touching `CLAUDE.md`, `AGENTS.md`, `.claude/**` |
+| 1 | Dogfood the standards | Editing local managed Markdown declared in `.standards/config.toml` |
+| 2 | Never frontmatter agent-instruction files | Touching `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, or `.codex/**` |
 | 3 | Keep the toolchain green | Changing the validator or its tests |
 | 4 | The schema is a versioned contract | Changing the schema or controlled vocabularies |
 | 5 | Python tooling follows the SSOT standard | Adding or changing Python tooling, CI gate, or layout |
-| 6 | Standards live in per-standard bundles | Adding/moving a standard, template, or example |
+| 6 | Standards live in V2 families | Adding/moving a standard, template, or example |
 | 7 | Style gates exclude generated/template content | Wiring or debugging markdownlint / Prettier / frontmatter gates |
 | 8 | `except A, B:` is ruff-canonical — NOT a Python-2 bug | Reviewing/fixing multi-exception clauses in `src/` |
 | 9 | Doc-embedded scaffolds are byte-locked to their bundle twin | Editing a copy-paste scaffold fence inside a standard doc |
-| 10 | V1 and V2 manifests coexist through a preamble boundary | Discovering package-family indexes during the V5 migration |
+| 10 | V2 family indexes are canonical | Discovering current packages or inspecting V1 migration input |
 | 11 | Installed V2 payloads use a symlink-only source projection | Adding or packaging canonical versioned payloads |
 | 12 | Managed Markdown ranges use paired Prettier guards | Composing formatter-stable package blocks in consumer Markdown |
 
 ## 1. Dogfood the standards
 
-**Applies when:** editing local managed Markdown selected by `.standards/config.toml` — currently `CHANGELOG.md`, `UPGRADING.md`, `docs/usage.md`, `docs/mcp-readiness.md`, `docs/workflows/**/*.md`, `meta/**/*.md`, and `docs/adr/**/*.md`.
+**Applies when:** editing local managed Markdown selected by `.standards/config.toml`.
 
-**Rule:** local managed Markdown carries canonical frontmatter and must validate; run the validator before finishing. Standard-package content under `standards/**` is deliberately excluded by ADR 0015 so this repo does not ship repo-local metadata inside reusable standards. Intentional frontmatter artifacts there may still exist in examples, templates, and skill metadata because they teach or implement the standard rather than describe this repository's local document lifecycle.
+**Rule:** local managed Markdown carries canonical frontmatter and must validate. ADR 0015 excludes reusable `standards/**` package content; intentional templates, examples, and skill metadata may still contain frontmatter as package data.
 
 **Code:**
 
+After building and extracting the candidate wheel as required by the repository toolchain gate:
+
 ```bash
-uv run project-standards validate
+PYTHONPATH="$PWD/build/wheel-runtime" uv run project-standards validate
 ```
 
-**Why:** this repo is the source of the standard; if its own managed local docs don't validate, the standard isn't credible. Published standard packages have a different boundary: they must be reusable without carrying project-standards-specific document metadata.
+**Why:** the repository must dogfood local metadata without shipping that repository-specific metadata in reusable packages.
 
 **Sources:** pre-v3 `AGENTS.md` "General" section.
 
@@ -41,11 +43,11 @@ uv run project-standards validate
 
 **Applies when:** touching `CLAUDE.md`, `AGENTS.md`, or anything under `.claude/`, `.agents/`, `.codex/`.
 
-**Rule:** these are harness configuration, not managed documents — never add frontmatter. They are excluded from validation in `.project-standards.yml`.
+**Rule:** these are harness configuration, not managed documents — never add frontmatter. They are excluded through the Markdown Frontmatter options in `.standards/config.toml`.
 
 **Why:** frontmatter on a harness file is meaningless and would fail the schema's date/id patterns.
 
-**Sources:** pre-v3 `AGENTS.md`; `.project-standards.yml`.
+**Sources:** pre-v3 `AGENTS.md`; `.standards/config.toml`.
 
 **Related:** 1.
 
@@ -53,7 +55,7 @@ uv run project-standards validate
 
 **Applies when:** changing the validator (`src/project_standards/`) or its tests.
 
-**Rule:** run all six before committing — every one must pass.
+**Rule:** run the complete gate before committing; every phase must pass.
 
 **Code:**
 
@@ -94,19 +96,26 @@ uv run pip-audit
 
 **Applies when:** adding or changing Python tooling, the CI gate, package layout, or agent instructions for Python projects.
 
-**Rule:** follow `standards/python-tooling/README.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
+**Rule:** follow `standards/python-tooling/versions/1.1/README.md` — `uv_build` backend, `src/` layout, `basedpyright` strict, branch coverage (`fail_under = 85`), `pip-audit`, and the six-step gate.
 
 **Why:** ensures every Python project in this ecosystem is recoverable, repeatable, and self-explaining for agents.
 
-**Sources:** `standards/python-tooling/README.md` (adopted 2026-06-06).
+**Sources:** `standards/python-tooling/versions/1.1/README.md` (adopted 2026-06-06; current payload selected 2026-07-18).
 
 **Related:** 3.
 
-## 6. Standards live in per-standard bundles
+## 6. Standards live in V2 families
 
 **Applies when:** adding, moving, or renaming a standard, template, or example.
 
-**Rule:** each governing standard is a self-contained bundle — `standards/<name>/{README.md, adopt.md, templates/, examples/}` (`templates/`/`examples/` optional; Python-tooling is doc-only). The standard doc is always `README.md`; repo-meta (versioning) lives in `meta/`, not `standards/`. A new standard = copy the anatomy documented in `standards/README.md`.
+**Rule:** each governing standard is a self-contained V2 family.
+
+- `standards/<name>/standard.toml` indexes immutable `versions/<major.minor>/` payloads.
+- The family-root `README.md` is a mutable landing page.
+- Each payload declares its manifest, canonical documentation, resources, providers, schemas, and other package data.
+- Repository policy such as versioning lives in `meta/`, not a package.
+
+Follow the Standard Bundle Authoring 2.0 workflow when adding a family or payload.
 
 **Why:** keeps each standard browseable and independently adoptable, and makes adding the next one mechanical.
 
@@ -120,7 +129,7 @@ uv run pip-audit
 
 **Rule:** machine-generated or template Markdown is **excluded** from style gates, not reformatted. Draw one boundary and mirror it across gates:
 
-- `.project-standards.yml` excludes `docs/handoff/**` from frontmatter validation.
+- `.standards/config.toml` excludes `docs/handoff/**` from frontmatter validation.
 - `.markdownlint-cli2.jsonc` ignores append-only `docs/handoff/**`; verify local and CI behavior.
 - `.prettierignore` mirrors the markdownlint ignore boundary.
 
@@ -150,7 +159,7 @@ uv run pip-audit
 
 **Applies when:** editing a copy-paste scaffold fence inside a standard doc or adding a new one.
 
-**Rule:** a scaffold that exists both as a fenced block in a standard doc and as an adopt bundle artifact is one artifact with two representations. Keep them in sync via a drift test in `tests/test_adopt_dogfood.py`.
+**Rule:** when package documentation embeds a declared payload resource verbatim, treat both representations as one artifact and add a focused package-contract drift test.
 
 Use byte equality for verbatim blocks and semantic TOML/YAML comparison when the doc intentionally adds illustrative content.
 
@@ -160,19 +169,19 @@ For YAML fences:
 - Put a bare `<!-- prettier-ignore -->` before verbatim YAML fences so Prettier does not rewrite quote style.
 - TOML fences need no guard because Prettier has no TOML parser.
 
-**Why:** manual copy-adopters use the doc block, the CLI ships the bundle; drift means the two adoption paths deliver different (or broken) tooling.
+**Why:** readers may use the documented scaffold while package providers materialize its declared payload resource; drift would make those two representations deliver different or broken tooling.
 
 **Sources:** 2026-07-01 python-tooling review and same-day markdown-standards sweep.
 
 **Related:** 1, 5, 6.
 
-## 10. V1 and V2 manifests coexist through a preamble boundary
+## 10. V2 family indexes are canonical
 
-**Applies when:** discovering `standards/{id}/standard.toml` while V1 and V2 package data coexist during the V5 migration.
+**Applies when:** discovering `standards/{id}/standard.toml` or inspecting legacy package material.
 
-**Rule:** V2 discovery may inspect only the bounded beginning of a regular `standard.toml` and selects a family only when that preamble declares `schema_version = "2.0"`. It must not parse a V1 manifest and reinterpret its fields as V2 facts. An explicit family allowlist still requires the selected path to be a regular file and reports a missing family instead of falling back to V1 behavior.
+**Rule:** current package discovery selects only regular family indexes whose bounded preamble declares `schema_version = "2.0"`. Never reinterpret a V1 manifest as V2 facts or fall back from a missing V2 family to V1 runtime behavior. V1 manifests, `adopt.toml`, `registry.json`, and copy-adopt resources are migration or compatibility evidence only.
 
-**Why:** the migration keeps the operational V1 runtime intact until current packages are reconstructed. A format probe provides one deterministic authority boundary without merging V1 and V2 models or requiring package-ID exceptions.
+**Why:** Catalog 5 has one deterministic package-authority boundary. The bounded format probe preserves explicit legacy migration without creating parallel current authorities or package-ID exceptions.
 
 **Sources:** `project_standards.package_contract.discovery`; SPEC-BA02 foundation implementation.
 

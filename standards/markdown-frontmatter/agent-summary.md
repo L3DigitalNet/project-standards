@@ -1,36 +1,12 @@
-# Markdown Frontmatter Standard: Agent Summary
+# Markdown Frontmatter family: Agent Summary
 
-The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
+Current authority is the Catalog 5 consumer payload [`markdown-frontmatter@1.2`](versions/1.2/agent-summary.md). Its [versioned standard](versions/1.2/README.md) wins over this mutable navigation summary.
 
-Lifecycle: active. Package: `markdown-frontmatter@1.2`.
+- Apply metadata rules only to paths selected by the package options in `.standards/config.toml`.
+- Keep the independent package version and document `contract_version` distinct.
+- Preserve canonical field order, quoting, list form, ID rules, lifecycle values, and extension boundaries from the selected payload.
+- Never add managed-document frontmatter to `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, or `.codex/**`; exclude harness files from managed scope.
+- Use the package's selected validation and fix providers; custom schemas remain consumer-owned inputs and intentionally skip bundled authoring transforms.
+- Treat Markdown Tooling and ADR as companions, not implicit dependencies.
 
-## Use this summary when
-
-Add, repair, or validate metadata on Markdown paths selected by the `markdown-frontmatter` package options in `.standards/config.toml`.
-
-## Core rules
-
-- Every managed document has the eleven minimal fields in canonical order: `schema_version`, `id`, `title`, `description`, `doc_type`, `status`, `created`, `updated`, `tags`, `aliases`, and `related`. Most project docs use the richer standard profile.
-- Quote strings and dates with single quotes. Use block-style non-empty lists with quoted items and `[]` for empty lists. Reject duplicate list items and unknown top-level fields; extensions belong under `publish`, `project`, or `x_project`.
-- Ordinary IDs are `{doc_type}-{six-character-base36-token}-{frozen-kebab-slug}`. ADR IDs are `adr-NNNN-repo-name-short-title`. Generate ordinary IDs with tooling.
-- Structure rules define schema, order, syntax, and ID shape. Field-value policy defines lifecycle, ownership, tags, relationships, confidence, visibility, and repository-local vocabulary; adopters should record that policy in an ADR.
-- Never add managed-document frontmatter to `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, or `.codex/**`; exclude those harness files from managed scope.
-
-## Commands and artifacts
-
-```bash
-project-standards validate
-format-frontmatter --check
-validate-id
-validate-references
-```
-
-The aggregate validator covers schema, ID, and enabled reference checks. `format-frontmatter` checks or fixes canonical source style. The repo-local [agent skill](skills/markdown-frontmatter/SKILL.md) guides authoring and ID generation in adopting repositories.
-
-## Boundaries and companions
-
-This standard governs metadata, not Markdown body formatting. Markdown Tooling is a companion. ADR is a companion document profile; neither relation silently changes adoption behavior.
-
-## Canonical resources
-
-Use the [standard](README.md), [structure rules](structure.md), [field-value policy](field-values.md), and [adoption guide](adopt.md) for complete requirements.
+Enable `markdown-frontmatter@1.2`, preview with `project-standards reconcile`, and apply only after reviewing the plan. See the [current adoption guide](adopt.md) for the complete procedure.

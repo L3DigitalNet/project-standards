@@ -17,6 +17,10 @@ class ControlPlaneError(ValueError):
     """Report an invalid control-plane boundary without leaking input content."""
 
 
+class ControlPlaneConfigurationError(ControlPlaneError):
+    """Report invalid desired configuration at a control-plane boundary."""
+
+
 class ActionKind(StrEnum):
     """Repository mutation or preservation decisions emitted by planning."""
 

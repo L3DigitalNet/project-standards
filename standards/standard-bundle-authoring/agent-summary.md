@@ -1,11 +1,12 @@
-# Standard Bundle Authoring family summary
+# Standard Bundle Authoring family: Agent Summary
 
-The canonical [README](README.md) is authoritative and wins if this summary conflicts with it.
+Current authority is the active Catalog 5 internal payload [`standard-bundle-authoring@2.0`](versions/2.0/agent-summary.md). Its [versioned standard](versions/2.0/README.md) wins over this mutable navigation summary.
 
-This is a navigation summary for the package family. Use [`versions/2.0/agent-summary.md`](versions/2.0/agent-summary.md) for the selected payload and [`versions/2.0/README.md`](versions/2.0/README.md) for the normative contract.
+- Keep mutable family identity and indexed version digests in `standards/<id>/standard.toml`.
+- Put each complete immutable payload under `standards/<id>/versions/<major.minor>/`.
+- Assign channel and availability roles only in catalog sources.
+- Declare and digest every payload file; released payload corrections require a new package version.
+- Give contributions the smallest normalized adapter scope; providers run offline against immutable snapshots and never write the live repository.
+- Prove source, graph, projection, direct-wheel, sdist-derived-wheel, migration, and compatibility parity before release.
 
-- Operational root manifest: bounded V1 until the catalog activation task
-- Staged V2 reconstruction: `2.0`
-- Availability: `internal`; consumers cannot enable it
-- Canonical payload templates: `versions/2.0/templates/`
-- Authority: the versioned payload, not the family landing page
+Version 2.0 is active and internal, not staged or consumer-selectable. Use its [author workflow](versions/2.0/README.md#author-workflow) and [templates](versions/2.0/templates/).
