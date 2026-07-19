@@ -33,7 +33,7 @@ The user has decided to reverse this and adopt v3. This is a **governance change
 3. **`AGENTS.md` self-containment rule = carve-out** — keep the broader "this repo is a conventions source; do not import _other_ external/global conventions" principle, but rewrite the handoff paragraph so v3 is the single sanctioned exception, adopted 2026-06-05.
 4. **`.project-standards.yml`** gains an explicit `docs/handoff/**` exclude (with comment) — instructive, since this file is the canonical downstream example; it documents that handoff state is _not_ a managed document.
 5. **No `CHANGELOG.md` entry** — the changelog tracks the standards _product_ that consumers pin to; an internal handoff migration is not consumer-facing.
-6. **The 46 KiB DEC-1…9 trail moves verbatim** (`git mv`) into `docs/superpowers/specs/`, preserving history — not summarized.
+6. **The 46 KiB DEC-1…9 trail moves verbatim** (`git mv`) into `docs/specs/archive/`, preserving history — not summarized.
 
 ## The v3 contract this migration must satisfy
 
@@ -54,8 +54,8 @@ Verified against `~/projects/agent-configs/scripts/handoff/validate-layout.sh` a
 | `working/HANDOFF.md` → _Current state_ + gate-green readout | `docs/handoff/state.md` | Compress to ≤ 2 KiB live slice |
 | `working/HANDOFF.md` → 1.3.0 history / DEC summary | `docs/handoff/sessions/2026-06.md` | Two session rows (06-04 planning, 06-05 impl) with commit refs |
 | `working/HANDOFF.md` → _Locked decisions_, backlog (pre-commit deferred; 2.0.0 link enforcement) | `docs/handoff/architecture.md` | Component graph + standing backlog |
-| `working/linting-formatting/linting-formatting-stack.md` (46 KiB DEC-1…9 trail) | `docs/superpowers/specs/2026-06-04-linting-formatting-stack.md` | `git mv` verbatim; row in `specs-plans.md` |
-| `working/archive/v1.1.0/` (plans + schema proposals) | `docs/superpowers/plans/v1.1.0/` | `git mv` verbatim; row in `specs-plans.md` |
+| `working/linting-formatting/linting-formatting-stack.md` (46 KiB DEC-1…9 trail) | `docs/specs/archive/2026-06-04-linting-formatting-stack.md` | `git mv` verbatim; row in `specs-plans.md` |
+| `working/archive/v1.1.0/` (plans + schema proposals) | `docs/plans/v1.1.0/` | `git mv` verbatim; row in `specs-plans.md` |
 | `working/README.md` | — | Delete (obsoleted by v3) |
 | Published tags v1.0.x–v1.2.0 + pending 1.3.0 | `docs/handoff/deployed.md` | "Deployed" = published git refs consumers pin to |
 | `AGENTS.md` _General_ rules (dogfood, no-frontmatter-on-agent-files, toolchain-green, schema-is-a-contract) | `docs/handoff/conventions.md` | 4 numbered entries (durable patterns, not live state) |

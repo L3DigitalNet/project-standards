@@ -16,9 +16,10 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 | `meta/` | repo policy, including the release contract |
 | `src/project_standards/`, `tests/` | Python implementation and tests |
 | `.github/workflows/` | reusable consumer workflows |
-| `docs/specs/` | maintained Project Specification documents |
+| `docs/specs/` | maintained Project Specification documents; `archive/` holds superseded specs and historical designs |
 | `docs/handoff/` | durable Agent Handoff project knowledge and session state |
-| `docs/superpowers/` | historical designs, research, and implementation plans |
+| `docs/plans/` | active implementation plans (completed plans are deleted) |
+| `docs/research/` | research corpus and reference packs, indexed by `index.md` |
 
 ## Working Rules
 
@@ -27,6 +28,7 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 - **Dogfood.** After extracting the candidate wheel and putting it first on `PYTHONPATH` as shown in [README.md](README.md#developing-this-repository), validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
 - **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
+- **`docs/superpowers/` is a forbidden path** — retired 2026-07-19; never recreate it. Designs go to `docs/specs/archive/`, plans to `docs/plans/`, research to `docs/research/`.
 - **Keep the toolchain green** before committing validator/test changes: Ruff format/check and BasedPyright from the source environment; then build/extract the candidate wheel and run ordinary pytest under coverage, the xdist compatibility matrix, serial performance tests, `coverage report`, `pip-audit`, and `tests/coherence` after `npm ci` with the extracted wheel first on `PYTHONPATH`.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.

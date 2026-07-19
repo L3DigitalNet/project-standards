@@ -1,1 +1,0 @@
-../../specs/2026-07-10-standard-bundle-authoring-v2-spec.md

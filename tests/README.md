@@ -80,7 +80,7 @@ These guard the _product_, not the code:
 - **Bundle source files match repo root.** Files that are both bundled (in `bundles/`) _and_ dogfooded in this repo (e.g. `.editorconfig`, `check.yml`) must be byte-identical. `test_adopt_dogfood.py` asserts this so that fixing the repo copy without updating the bundle (or vice versa) is caught immediately.
 - **Bundle workflow callers have the correct `{{ref}}` substitution.** After materialization, workflow-caller files should reference `uses: …@v<major>`.
 
-Templates are intentionally **excluded** from dogfood validation — they carry placeholders (most notably `YYYY-MM-DD` dates) that deliberately fail the schema (see the `exclude` list in [.project-standards.yml](../.project-standards.yml)).
+Templates are intentionally **excluded** from dogfood validation — they carry placeholders (most notably `YYYY-MM-DD` dates) that deliberately fail the schema (see the `exclude` list in the `markdown-frontmatter` config inside [.standards/config.toml](../.standards/config.toml)).
 
 ### 5. Packaging — the shipped wheel
 

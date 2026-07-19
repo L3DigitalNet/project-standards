@@ -6,7 +6,7 @@ description: 'Index of the project-standards Architecture Decision Records, incl
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-18'
+updated: '2026-07-19'
 reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -22,7 +22,7 @@ related:
   - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
   - '.standards/config.toml'
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
-  - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
+  - 'docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 ---

@@ -89,7 +89,7 @@ It is intended for the agent or maintainer doing the work. Use it as supporting 
 | Existing registry | `src/project_standards/schemas/registry.json` | `SPEC-MT01`, `SPEC-MS01` | Current machine-readable standard/version registry. The readiness spec expands this into richer graph metadata. |
 | Adopt manifest loader | `src/project_standards/adopt/manifest.py` | `SPEC-MT01`, `SPEC-MS01` | Current pattern for discovering adoptable standards from bundle manifests and validating artifact declarations. Provides the model for manifest-first MCP expansion. |
 | Adopt engine | `src/project_standards/adopt/engine.py` | `SPEC-MT01`, `SPEC-MS01` | Current generic planner/executor for adoption artifacts. Its dry-run, deduplication, collision detection, fragments, and atomic writes inform the MCP planning model. |
-| Existing specs directory | `docs/superpowers/specs/` | All three specs | Likely migration target for the three primary specs if this remains the repository's spec convention. |
+| Existing specs directory | `docs/specs/archive/` | All three specs | Likely migration target for the three primary specs if this remains the repository's spec convention. |
 | ADR directory | `docs/adr/` | All three specs | Target location for required ADRs. |
 | Repository validation config | `.project-standards.yml` | `SPEC-MT01`, `SPEC-RD01`, `SPEC-MS01` | Governs managed docs/spec paths and validation behavior. Must be updated if new specs/resources require inclusion/exclusion changes. |
 | Local check script | `scripts/check.py` | `SPEC-MT01`, `SPEC-RD01`, `SPEC-MS01` | Candidate integration point for local verification gates, if present and current. |
@@ -205,6 +205,6 @@ The server should prefer the official SDK but keep it behind an adapter boundary
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| REF-OQ-001 | Where should this reference pack live after migration? | Resolved (2026-07-07): ingested to `docs/superpowers/research/`, beside the three specs under `docs/superpowers/`. `docs/research/` was rejected — its `index.md` is qdev-generated ("do not edit by hand"), so a hand-authored pack there would drift. Frontmatter conforms to the Markdown Frontmatter Standard but the path is not in the `.project-standards.yml` frontmatter include globs, so it is compatible-but-unenforced. | No | Owner | Before merge | Resolved |
+| REF-OQ-001 | Where should this reference pack live after migration? | Resolved (2026-07-07): ingested to `docs/research/`, beside the three specs under `docs/superpowers/`. `docs/research/` was rejected — its `index.md` is qdev-generated ("do not edit by hand"), so a hand-authored pack there would drift. Frontmatter conforms to the Markdown Frontmatter Standard but the path is not in the `.project-standards.yml` frontmatter include globs, so it is compatible-but-unenforced. | No | Owner | Before merge | Resolved |
 | REF-OQ-002 | Should source URLs be mirrored into a formal source register table for validator support? | Keep this document as a Markdown source register until a resource-doc standard exists. | No | Owner | Before final review | Open |
 | REF-OQ-003 | Which MCP SDK version will implementation use? | Recheck during `SPEC-MS01` MS-0 and pin exact version. | Yes for implementation | Owner/implementer | Server MS-0 | Open |

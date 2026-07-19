@@ -23,7 +23,7 @@ related:
   repositories:
     - 'L3DigitalNet/project-standards'
   prior_specs:
-    - 'docs/superpowers/specs/2026-06-05-handoff-v3-migration-design.md'
+    - 'docs/specs/archive/2026-06-05-handoff-v3-migration-design.md'
 ---
 
 # Agent Handoff Standard Package — Specification (Full)
@@ -937,7 +937,7 @@ No implementation-blocking questions remain after design approval.
 ### Project References
 
 - Legacy ingestion baseline: repository commit `56b24df7279572c485c2512783b0cc7e5395429b`.
-- [Prior repository-local handoff migration design](../superpowers/specs/2026-06-05-handoff-v3-migration-design.md) — legacy context only, not the v1 contract.
+- [Prior repository-local handoff migration design](archive/2026-06-05-handoff-v3-migration-design.md) — legacy context only, not the v1 contract.
 - [MCP meta-repository readiness specification](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md)
 
 ---

@@ -6,7 +6,7 @@ description: 'Establishes one neutral .standards control plane with explicit rec
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-12'
+updated: '2026-07-19'
 reviewed: '2026-07-12'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -20,7 +20,7 @@ aliases:
   - 'Unified consumer standards control plane'
 related:
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
-  - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
+  - 'docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/adr/adr-0003-separate-standard-and-artifact-manifests.md'
   - 'docs/adr/adr-0004-authority-map-and-conflict-free-composition.md'
   - 'docs/adr/adr-0006-standard-provider-plugin-model.md'
@@ -39,7 +39,7 @@ supersedes:
 superseded_by: null
 source:
   - 'docs/specs/2026-07-10-consumer-standards-control-plane-spec.md'
-  - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
+  - 'docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
   - 'docs/research/2026-07-12-python-tooling-consumer-owned-workflow-migration.md'
 confidence: 'high'
 visibility: 'internal'
@@ -156,5 +156,5 @@ Conformance requires schema round trips, offline installed-wheel tests, real app
 ## More Information
 
 - Controlling specification: [`2026-07-10-consumer-standards-control-plane-spec.md`](../specs/2026-07-10-consumer-standards-control-plane-spec.md)
-- Semantic composition design: [`2026-07-10-root-artifact-ownership-semantic-composition-design.md`](../superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md)
+- Semantic composition design: [`2026-07-10-root-artifact-ownership-semantic-composition-design.md`](../specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md)
 - Version-channel decision: [`adr-0024-catalog-scoped-package-version-channels.md`](adr-0024-catalog-scoped-package-version-channels.md)

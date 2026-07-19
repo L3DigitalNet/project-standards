@@ -22,7 +22,7 @@ aliases:
 related:
   - docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md
   - docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md
-  - docs/superpowers/research/2026-07-07-project-standards-mcp-specification-reference-pack.md
+  - docs/research/2026-07-07-project-standards-mcp-specification-reference-pack.md
 confidence: high
 visibility: internal
 license: null

@@ -24,6 +24,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The current snapshot is concise; define durable formatting rules so future updates preserve that shape.
 
+- [x] Create durable repo rule: `docs/superpowers/` is a forbidden path. Nothing should get saved here. Use `docs/plans/` and `docs/specs/` instead. _(Done 2026-07-19: the directory is deleted, its contents relocated, and the rule is recorded in `AGENTS.md` Working Rules.)_
+
+- [ ] Ensure full meta-repo tooling functionality is documented.
+
 ## Agent tasks
 
 ### Maintenance
@@ -41,9 +45,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 - [ ] Continue MCP enablement from SPEC-RD01 and SPEC-MS01 after refreshing current protocol and SDK inputs.
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
-
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.
 
 - [ ] Specify and release the `agent-managed-repo` standard after `project-toolbox`.
-
   - [ ] After release, reconcile this repository's GitHub settings against `agent-managed-repo`.

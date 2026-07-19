@@ -2,7 +2,7 @@
 concern, and the exact config assertion that keeps markdownlint and Prettier
 co-satisfiable. Formalizes the Prettier-alignment rationale already documented
 inline in tests/test_markdownlint_config.py's CUSTOMIZATIONS dict, and adds the
-Prettier-side assertions. See docs/superpowers/specs/2026-07-06-markdown-tooling-
+Prettier-side assertions. See docs/specs/archive/2026-07-06-markdown-tooling-
 formatter-authority-design.md Component C."""
 
 from __future__ import annotations

@@ -32,7 +32,7 @@ related:
     - 'SPEC-BA01'
     - 'SPEC-MT01'
     - 'SPEC-CP01'
-    - 'docs/superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
+    - 'docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md'
 ---
 
 # `Standard Bundle Authoring V2` — Specification (Full)
@@ -1140,7 +1140,7 @@ No implementation deviations are recorded. The initial design is represented dir
 
 - [SPEC-BA01](archive/2026-07-07-standard-bundle-authoring-standard.md) — historical Light specification.
 - [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md) — controlling consumer runtime contract.
-- [Root-artifact ownership and semantic composition](../superpowers/specs/2026-07-10-root-artifact-ownership-semantic-composition-design.md) — adapter and ownership requirements.
+- [Root-artifact ownership and semantic composition](archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md) — adapter and ownership requirements.
 - [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md) — unified control plane and semantic composition.
 - [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) — catalog-scoped channels and accepted package majors.
 

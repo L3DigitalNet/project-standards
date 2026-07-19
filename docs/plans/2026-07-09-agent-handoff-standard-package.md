@@ -402,7 +402,7 @@ git commit -m "feat(v5): execute packaged Python providers"
 
 - Create: `standards/agent-handoff/` files from the Artifact Matrix
 - Create: `src/project_standards/bundles/agent-handoff/` mirrors and manifests
-- Create: `docs/superpowers/research/2026-07-09-agent-handoff-ingestion-inventory.md`
+- Create: `docs/research/2026-07-09-agent-handoff-ingestion-inventory.md`
 - Modify: `src/project_standards/schemas/registry.json`
 - Modify: `src/project_standards/registry.py`
 - Modify: `src/project_standards/cli.py`
@@ -476,7 +476,7 @@ Add `agent_handoff: {default: "1.0", versions: ["1.0"]}` to `registry.json`, typ
 uv run project-standards standards validate-graph --root . --require-all-manifests
 uv run project-standards standards render-catalog --root . --check
 uv run pytest tests/test_standard_manifest.py tests/test_adopt_manifest.py tests/test_adopt_packaging.py tests/test_standards_graph_catalog.py tests/test_standards_composition.py -q
-git add standards/agent-handoff src/project_standards/bundles/agent-handoff src/project_standards/registry.py src/project_standards/schemas/registry.json src/project_standards/cli.py tests/test_standard_manifest.py tests/test_adopt_manifest.py tests/test_adopt_packaging.py tests/test_registry_cli_documentation.py tests/test_standards_graph_catalog.py tests/test_standards_composition.py docs/superpowers/research/2026-07-09-agent-handoff-ingestion-inventory.md
+git add standards/agent-handoff src/project_standards/bundles/agent-handoff src/project_standards/registry.py src/project_standards/schemas/registry.json src/project_standards/cli.py tests/test_standard_manifest.py tests/test_adopt_manifest.py tests/test_adopt_packaging.py tests/test_registry_cli_documentation.py tests/test_standards_graph_catalog.py tests/test_standards_composition.py docs/research/2026-07-09-agent-handoff-ingestion-inventory.md
 git commit -m "feat(v5): add agent-handoff package resources"
 ```
 
@@ -1241,7 +1241,7 @@ git commit -m "chore(v5): adopt agent-handoff v1"
 - Modify: `CHANGELOG.md`
 - Modify: `UPGRADING.md`
 - Modify: `meta/versioning.md` if release classification text needs the new standard listed
-- Create: `docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md`
+- Create: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`
 - Modify: `docs/handoff/state.md`
 - Modify: `docs/handoff/specs-plans.md`
 - Modify: `docs/handoff/sessions/2026-07.md`
@@ -1294,7 +1294,7 @@ The retirement inventory must show every known consumer validated, the released 
 
 ```bash
 git diff --check
-git add CHANGELOG.md UPGRADING.md meta/versioning.md docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md docs/handoff/state.md docs/handoff/specs-plans.md docs/handoff/sessions/2026-07.md docs/STATUS.md docs/TODO.md
+git add CHANGELOG.md UPGRADING.md meta/versioning.md docs/research/2026-07-09-agent-handoff-retirement-inventory.md docs/handoff/state.md docs/handoff/specs-plans.md docs/handoff/sessions/2026-07.md docs/STATUS.md docs/TODO.md
 git commit -m "docs(v5): record agent-handoff release readiness"
 ```
 

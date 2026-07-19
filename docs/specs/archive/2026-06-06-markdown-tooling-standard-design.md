@@ -31,7 +31,7 @@
 
 ## Problem / Goal
 
-This repo defines a deliberately **tool-neutral** Markdown Frontmatter Standard (`standards/markdown-frontmatter/README.md`, line 35: "not an Obsidian/Hugo/Jekyll/Quarto schema"). It governs the YAML metadata block and says nothing about how the Markdown _body_ — or the JSON/YAML config files that live alongside docs — should be linted or formatted. Yet the repo already runs a complete toolchain for exactly that: Prettier (formatter, repo-wide over `md`/`json`/`jsonc`/`yaml`) + markdownlint-cli2 (Markdown linter) + EditorConfig (floor). That toolchain's design is recorded only as a scratch decision trail (`docs/superpowers/specs/2026-06-04-linting-formatting-stack.md`, DEC-1…9) and as comments inside the config files. There is no **governing reference** a reader or downstream consumer can adopt.
+This repo defines a deliberately **tool-neutral** Markdown Frontmatter Standard (`standards/markdown-frontmatter/README.md`, line 35: "not an Obsidian/Hugo/Jekyll/Quarto schema"). It governs the YAML metadata block and says nothing about how the Markdown _body_ — or the JSON/YAML config files that live alongside docs — should be linted or formatted. Yet the repo already runs a complete toolchain for exactly that: Prettier (formatter, repo-wide over `md`/`json`/`jsonc`/`yaml`) + markdownlint-cli2 (Markdown linter) + EditorConfig (floor). That toolchain's design is recorded only as a scratch decision trail (`docs/specs/archive/2026-06-04-linting-formatting-stack.md`, DEC-1…9) and as comments inside the config files. There is no **governing reference** a reader or downstream consumer can adopt.
 
 The goal is a new governed standard — the tool-specific complement to the tool-neutral Frontmatter standard — that documents the recommended linting/formatting tools and their settings for Markdown and the structured-text/config files Prettier handles, is cross-linked from the Frontmatter standard, and follows the established per-standard bundle pattern so it adopts and versions like the others.
 
@@ -64,7 +64,7 @@ The standard documents reality. The repo's current toolchain:
 | `.vscode/settings.json` | `[markdown]`/`[json]`/`[jsonc]`/`[yaml]` → `esbenp.prettier-vscode`; `[python]` has `formatOnSave` but `[markdown]` does **not** | Present; gains Markdown `formatOnSave` via this work (SA-005) |
 | `.vscode/extensions.json` | Recommends `esbenp.prettier-vscode` + `DavidAnson.vscode-markdownlint` | Present |
 
-The decision trail (DEC-3/4/7/8/9) that produced these lives in `docs/superpowers/specs/2026-06-04-linting-formatting-stack.md`.
+The decision trail (DEC-3/4/7/8/9) that produced these lives in `docs/specs/archive/2026-06-04-linting-formatting-stack.md`.
 
 ## Design
 

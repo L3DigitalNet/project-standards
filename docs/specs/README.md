@@ -1,6 +1,6 @@
 # Project Specifications
 
-This directory is the durable home for Project Specification Standard documents that the repository keeps and maintains. Historical design and brainstorming artifacts remain under `docs/superpowers/specs/`; only active implementation plans remain under `docs/superpowers/plans/`.
+This directory is the durable home for Project Specification Standard documents that the repository keeps and maintains. Historical design and brainstorming artifacts remain under `docs/specs/archive/`; only active implementation plans remain under `docs/plans/`.
 
 ## Current specifications
 
@@ -24,5 +24,7 @@ This directory is the durable home for Project Specification Standard documents 
 | Specification | Status | Reason retained |
 | --- | --- | --- |
 | [SPEC-BA01 — Standard Bundle Authoring](archive/2026-07-07-standard-bundle-authoring-standard.md) | superseded by SPEC-BA02 | Versioned requirements and implementation history |
+
+[`archive/`](archive/README.md) also holds the historical design documents for released features; its own index covers them. Archived design documents are informal records outside the `spec validate` scope.
 
 Every specification listed here is gated by `project-standards spec validate` and `spec lint`. `.standards/config.toml` is the sole active selection authority; moving a maintained specification requires updating it, this index, and repository references in the same change.

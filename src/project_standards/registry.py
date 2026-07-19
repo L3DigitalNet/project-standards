@@ -2,7 +2,7 @@
 
 The validator ships one tool release that bundles a known set of *contract
 versions* per standard (the two-plane model — see meta/versioning.md and
-docs/superpowers/specs/2026-06-06-per-standard-versioning-design.md). This module
+docs/specs/archive/2026-06-06-per-standard-versioning-design.md). This module
 is the sole reader of registry.json: it maps each bundled Frontmatter contract
 version to its schema name, records which Frontmatter versions each ADR contract
 version supports, and lists the known Python Tooling, Markdown Tooling, CLI
