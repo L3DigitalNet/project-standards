@@ -6,14 +6,15 @@ import argparse
 import base64
 import os
 import posixpath
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import NoReturn, cast
-from urllib.parse import unquote
 
 from project_standards.adopt.errors import AdoptError
+from project_standards.agent_handoff.integrations.links import (
+    _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
+)
 from project_standards.agent_handoff.legacy import legacy_report
 from project_standards.agent_handoff.model import (
     ChangeKind,
@@ -80,8 +81,6 @@ _UPGRADE_RESOURCES = {
     ".agents/skills/agent-handoff/SKILL.md": "skill",
     ".agents/skills/agent-handoff/agents/openai.yaml": "skill-openai",
 }
-
-_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 
 
 class _ArgumentError(ValueError):
@@ -173,10 +172,7 @@ def _read_snapshots(selected: SelectedCommandPackage) -> JsonObject:
         if not isinstance(encoded, str):
             continue
         text = base64.b64decode(encoded).decode("utf-8", errors="replace")
-        for raw_target in _LINK_RE.findall(text):
-            target = unquote(
-                raw_target.strip().strip("<>").split(maxsplit=1)[0].split("#", maxsplit=1)[0]
-            )
+        for target in _normalized_link_targets(text):
             if not target or "://" in target or target.startswith(("mailto:", "#")):
                 continue
             for candidate in (PurePosixPath(target), PurePosixPath(source).parent / target):

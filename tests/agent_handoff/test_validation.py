@@ -7,6 +7,9 @@ from pathlib import Path
 import pytest
 
 import project_standards.agent_handoff.validation as validation
+from project_standards.agent_handoff.integrations.links import (
+    _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # focused internal contract
+)
 from project_standards.agent_handoff.model import Finding, Harness, StartupMode
 from project_standards.agent_handoff.paths import RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption
@@ -168,7 +171,7 @@ def test_symlinked_required_path_is_reported_without_following(tmp_path: Path) -
     assert outside.read_text(encoding="utf-8") == "outside"
 
 
-def test_missing_local_markdown_pointer_is_reported(tmp_path: Path) -> None:
+def test_missing_local_markdown_link_is_reported(tmp_path: Path) -> None:
     _adopt(tmp_path)
     state = tmp_path / "docs/handoff/state.md"
     state.write_text(
@@ -177,9 +180,70 @@ def test_missing_local_markdown_pointer_is_reported(tmp_path: Path) -> None:
     )
 
     assert any(
-        finding.code == "AH-REFERENCE-MISSING"
+        finding.code == "AH-REFERENCE-MISSING" and finding.locus == "Markdown link: docs/missing.md"
         for finding in validate_repository(RepositoryRoot(tmp_path))
     )
+
+
+def test_reference_validation__empty_targets__reports_missing_findings(tmp_path: Path) -> None:
+    _adopt(tmp_path)
+    state = tmp_path / "docs/handoff/state.md"
+    state.write_text(
+        state.read_text(encoding="utf-8")
+        + "\n[Literal empty]()\n"
+        + "[Whitespace]( )\n"
+        + "[Angle brackets](<>)\n",
+        encoding="utf-8",
+    )
+
+    missing = [
+        finding
+        for finding in validate_repository(RepositoryRoot(tmp_path))
+        if finding.code == "AH-REFERENCE-MISSING"
+    ]
+
+    assert len(missing) == 3
+    assert all(finding.locus == "Markdown link: " for finding in missing)
+
+
+@pytest.mark.parametrize(
+    ("markdown", "expected"),
+    [
+        pytest.param("[Literal empty]()", ("",), id="literal-empty"),
+        pytest.param("[Whitespace]( )", ("",), id="whitespace-empty"),
+        pytest.param("[Angle brackets](<>)", ("",), id="angle-empty"),
+        pytest.param(
+            "[Angle path](<docs/handoff/path with spaces.md>)",
+            ("docs/handoff/path with spaces.md",),
+            id="angle-path-with-spaces",
+        ),
+        pytest.param(
+            '[Angle path](<docs/handoff/path with spaces.md> "Reference")',
+            ("docs/handoff/path with spaces.md",),
+            id="angle-path-with-title",
+        ),
+        pytest.param(
+            "[Local](docs/handoff/local.md)",
+            ("docs/handoff/local.md",),
+            id="ordinary-local",
+        ),
+        pytest.param(
+            "[URL](https://example.invalid/reference)",
+            ("https://example.invalid/reference",),
+            id="url",
+        ),
+        pytest.param(
+            "[Mail](mailto:owner@example.invalid)",
+            ("mailto:owner@example.invalid",),
+            id="mail",
+        ),
+        pytest.param("[Fragment](#current)", ("#current",), id="fragment"),
+    ],
+)
+def test_link_target_normalizer__supported_forms__preserves_caller_decisions(
+    markdown: str, expected: tuple[str, ...]
+) -> None:
+    assert tuple(_normalized_link_targets(markdown)) == expected
 
 
 def test_reference_validation_decodes_urls_and_ignores_code_examples(tmp_path: Path) -> None:
@@ -187,10 +251,18 @@ def test_reference_validation_decodes_urls_and_ignores_code_examples(tmp_path: P
     target = tmp_path / "docs with spaces/reference.md"
     target.parent.mkdir()
     target.write_text("# Reference\n", encoding="utf-8")
+    local = tmp_path / "docs/handoff/local-reference.md"
+    local.write_text("# Local reference\n", encoding="utf-8")
     architecture = tmp_path / "docs/handoff/architecture.md"
     architecture.write_text(
         architecture.read_text(encoding="utf-8")
         + "\n[Encoded path](docs%20with%20spaces/reference.md)\n"
+        + "\n[Angle path](<docs with spaces/reference.md>)\n"
+        + '\n[Angle path with title](<docs with spaces/reference.md> "Reference")\n'
+        + "\n[Local path](local-reference.md)\n"
+        + "\n[URL](https://example.invalid/reference)\n"
+        + "\n[Mail](mailto:owner@example.invalid)\n"
+        + "\n[Fragment](#current)\n"
         + "\n`[inline example](url)`\n"
         + "\n```markdown\n[fenced example](missing.md)\n```\n"
         + "\n    [indented example](also-missing.md)\n",

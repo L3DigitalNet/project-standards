@@ -8,7 +8,6 @@ import stat
 from glob import has_magic
 from pathlib import PurePosixPath
 from typing import Literal, cast
-from urllib.parse import unquote
 
 from project_standards.adopt.engine import build_plan, render_action
 from project_standards.adopt.errors import AdoptError
@@ -22,6 +21,9 @@ from project_standards.agent_handoff.integrations.codex import merge_codex_confi
 from project_standards.agent_handoff.integrations.instructions import (
     instruction_targets,
     merge_instruction_block,
+)
+from project_standards.agent_handoff.integrations.links import (
+    _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
 )
 from project_standards.agent_handoff.integrations.markers import IntegrationConflictError
 from project_standards.agent_handoff.integrations.project_config import merge_project_config
@@ -40,7 +42,6 @@ from project_standards.agent_handoff.policy import (
 _POLICY_PATH = BUNDLES_DIR / "agent-handoff/resources/policy.toml"
 _HOOK_PATH = ".agents/hooks/agent-handoff/session_start.py"
 _LOCK_PATH = ".agents/agent-handoff/manifest.json"
-_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 _FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
 _INLINE_CODE_RE = re.compile(r"(`+)(.*?)\1")
 
@@ -465,22 +466,20 @@ def _references(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[Find
             text = data.decode("utf-8")
         except RepositoryBoundaryError, UnicodeDecodeError:
             continue
-        for raw_target in _LINK_RE.findall(_reference_text(text)):
-            target = unquote(
-                raw_target.strip().strip("<>").split(maxsplit=1)[0].split("#", maxsplit=1)[0]
-            )
-            if not target or "://" in target or target.startswith(("mailto:", "#")):
+        for target in _normalized_link_targets(_reference_text(text)):
+            if "://" in target or target.startswith(("mailto:", "#")):
                 continue
-            candidates = (root / target, (root / relative).parent / target)
-            contained = [candidate.resolve(strict=False) for candidate in candidates]
-            if any(path.is_relative_to(root) and path.exists() for path in contained):
-                continue
+            if target:
+                candidates = (root / target, (root / relative).parent / target)
+                contained = [candidate.resolve(strict=False) for candidate in candidates]
+                if any(path.is_relative_to(root) and path.exists() for path in contained):
+                    continue
             findings.append(
                 _finding(
                     "AH-REFERENCE-MISSING",
                     relative,
                     "local Markdown link target is missing or outside the repository",
-                    locus="Markdown link",
+                    locus=f"Markdown link: {target}",
                 )
             )
     return _sorted(findings)
