@@ -389,8 +389,8 @@ def run_init(
         )
     repo = cast("Path", args.repo).resolve()
     major = cast("CatalogMajor", args.catalog)
-    selected_distribution = distribution or InstalledDistribution.current()
     try:
+        selected_distribution = distribution or InstalledDistribution.current()
         if not cast("bool", args.migrate):
             result = initialize_control_plane(
                 repo,
@@ -610,9 +610,9 @@ def run(
 
     repo = cast("Path", args.repo).resolve()
     json_mode = cast("bool", args.json)
-    selected_distribution = distribution or InstalledDistribution.current()
     allowed_majors = frozenset(cast("list[MajorAuthorization]", args.allow_major))
     try:
+        selected_distribution = distribution or InstalledDistribution.current()
         state = detect_control_plane_state(
             repo,
             tool_release=selected_distribution.tool_release.value,
@@ -708,8 +708,8 @@ def validate_repository(
     distribution: InstalledDistribution | None = None,
 ) -> int:
     """Report unified-state drift without changing any repository path."""
-    selected_distribution = distribution or InstalledDistribution.current()
     try:
+        selected_distribution = distribution or InstalledDistribution.current()
         state = detect_control_plane_state(
             repo,
             tool_release=selected_distribution.tool_release.value,

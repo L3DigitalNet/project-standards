@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from project_standards.cli import main as project_standards_main
 from project_standards.control_plane.bootstrap import initialize_control_plane
-from project_standards.control_plane.cli import run, validate_repository
+from project_standards.control_plane.cli import run, run_init, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, ApplyResult
@@ -266,6 +267,41 @@ def test_render_distribution_discovery_failure_uses_public_error_boundary(
     assert result.err == ""
     assert '"code": "CP-RENDER"' in result.out
     assert "distribution unavailable" in result.out
+
+
+@pytest.mark.parametrize(
+    ("entrypoint_name", "expected_error"),
+    [
+        pytest.param("run", "error: distribution unavailable\n", id="run"),
+        pytest.param("run_init", "error: distribution unavailable\n", id="run-init"),
+        pytest.param(
+            "validate_repository",
+            "error: control-plane validation failed: distribution unavailable\n",
+            id="validate-repository",
+        ),
+    ],
+)
+def test_distribution_discovery_failure_is_caught_by_all_entrypoints(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    entrypoint_name: str,
+    expected_error: str,
+) -> None:
+    def unavailable() -> InstalledDistribution:
+        raise PackageContractError("distribution unavailable")
+
+    monkeypatch.setattr(InstalledDistribution, "current", staticmethod(unavailable))
+    entrypoints: dict[str, Callable[[], int]] = {
+        "run": lambda: run(["--repo", str(tmp_path)]),
+        "run_init": lambda: run_init(["--catalog", "5", "--repo", str(tmp_path)]),
+        "validate_repository": lambda: validate_repository(tmp_path),
+    }
+
+    assert entrypoints[entrypoint_name]() == 2
+    result = capsys.readouterr()
+    assert result.out == ""
+    assert result.err == expected_error
 
 
 def test_init_json_reports_created_and_idempotent(
