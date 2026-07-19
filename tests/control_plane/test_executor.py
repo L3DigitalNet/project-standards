@@ -4,11 +4,13 @@ import base64
 import os
 import stat
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
+import project_standards.control_plane.executor as executor
 from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import ControlFinding
 from project_standards.control_plane.executor import (
@@ -75,6 +77,28 @@ def _apply(
             verification_runner=verification_runner,
         )
     )
+
+
+def test_stage_bytes_stages_exact_content_mode_and_temporary_name(tmp_path: Path) -> None:
+    parent_descriptor = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY)
+    temporary: str | None = None
+    try:
+        temporary = executor._stage_bytes(  # pyright: ignore[reportPrivateUsage]
+            parent_descriptor,
+            b"staged\n",
+            "0640",
+        )
+        staged = tmp_path / temporary
+
+        assert temporary.startswith(".project-standards-")
+        assert temporary.endswith(".tmp")
+        assert staged.read_bytes() == b"staged\n"
+        assert stat.S_IMODE(staged.stat().st_mode) == 0o640
+    finally:
+        if temporary is not None:
+            with suppress(OSError):
+                os.unlink(temporary, dir_fd=parent_descriptor)
+        os.close(parent_descriptor)
 
 
 def test_success_stages_replaces_verifies_and_writes_lock_last(
@@ -308,6 +332,7 @@ def test_verification_receives_only_its_package_referenced_inputs(tmp_path: Path
     ("phase", "identity", "expected_applied"),
     [
         ("stage", "alpha.txt", ()),
+        ("stage", "nested/beta.txt", ()),
         ("precondition", "alpha.txt", ()),
         ("publish", "alpha.txt", ()),
         ("precondition", "nested/beta.txt", ("alpha.txt",)),
@@ -317,12 +342,26 @@ def test_verification_receives_only_its_package_referenced_inputs(tmp_path: Path
 )
 def test_failure_returns_exact_published_prefix_and_preserves_previous_lock(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     phase: str,
     identity: str,
     expected_applied: tuple[str, ...],
 ) -> None:
     repo, planner, plan = _fixture(tmp_path, verify=True)
     previous = (repo / ".standards/lock.toml").read_bytes()
+    original_open_parent = executor._open_parent  # pyright: ignore[reportPrivateUsage]
+    parent_descriptors: list[int] = []
+
+    def tracked_open_parent(
+        root_descriptor: int,
+        parent: PurePosixPath,
+        created: list[PurePosixPath],
+    ) -> int:
+        descriptor = original_open_parent(root_descriptor, parent, created)
+        parent_descriptors.append(descriptor)
+        return descriptor
+
+    monkeypatch.setattr(executor, "_open_parent", tracked_open_parent)
 
     def fault(observed_phase: str, observed_identity: str) -> None:
         if (observed_phase, observed_identity) == (phase, identity):
@@ -337,12 +376,22 @@ def test_failure_returns_exact_published_prefix_and_preserves_previous_lock(
             findings=(),
         ),
     )
+    leaked_descriptors: list[int] = []
+    for descriptor in parent_descriptors:
+        try:
+            os.fstat(descriptor)
+        except OSError:
+            continue
+        leaked_descriptors.append(descriptor)
+    for descriptor in leaked_descriptors:
+        with suppress(OSError):
+            os.close(descriptor)
 
     assert not result.success
     assert result.applied_action_ids == expected_applied
     assert not result.lock_written
     assert (repo / ".standards/lock.toml").read_bytes() == previous
-    assert not list(repo.rglob(".project-standards-*.tmp"))
+    assert (list(repo.rglob(".project-standards-*.tmp")), leaked_descriptors) == ([], [])
 
 
 @pytest.mark.parametrize("race", ["content", "symlink"])

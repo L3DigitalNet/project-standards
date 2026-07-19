@@ -208,7 +208,6 @@ def _open_parent(
 
 def _stage_bytes(
     parent_descriptor: int,
-    destination: str,
     content: bytes,
     mode: str | None,
 ) -> str:
@@ -254,38 +253,51 @@ def _stage_targets(
 ) -> dict[str, _StagedTarget]:
     targets = {target.target: target for target in plan.targets}
     staged: dict[str, _StagedTarget] = {}
-    for action in plan.actions:
-        if action.kind not in {ActionKind.CREATE, ActionKind.UPDATE}:
-            continue
-        _fault(request, "stage", action.target)
-        relative = SafeRelativePath.parse(action.target)
-        parent_descriptor = _open_parent(root_descriptor, relative.normalized.parent, created)
-        source_descriptor = (
-            staging_descriptor if staging_descriptor is not None else parent_descriptor
-        )
-        target = targets[action.target]
-        try:
-            if os.fstat(source_descriptor).st_dev != os.fstat(parent_descriptor).st_dev:
-                raise _ApplyFailure(
-                    "CP-APPLY-STAGE",
-                    "catalog refresh targets must share the control-plane filesystem",
-                )
-            temporary = _stage_bytes(
-                source_descriptor,
-                relative.normalized.name,
-                target.content,
-                target.mode or "0644",
+    try:
+        for action in plan.actions:
+            if action.kind not in {ActionKind.CREATE, ActionKind.UPDATE}:
+                continue
+            _fault(request, "stage", action.target)
+            relative = SafeRelativePath.parse(action.target)
+            parent_descriptor = _open_parent(
+                root_descriptor,
+                relative.normalized.parent,
+                created,
             )
-        except BaseException:
-            os.close(parent_descriptor)
-            raise
-        staged[action.target] = _StagedTarget(
-            action.target,
-            source_descriptor,
-            parent_descriptor,
-            temporary,
-            relative.normalized.name,
-        )
+            source_descriptor = (
+                staging_descriptor if staging_descriptor is not None else parent_descriptor
+            )
+            try:
+                target = targets[action.target]
+                if os.fstat(source_descriptor).st_dev != os.fstat(parent_descriptor).st_dev:
+                    raise _ApplyFailure(
+                        "CP-APPLY-STAGE",
+                        "catalog refresh targets must share the control-plane filesystem",
+                    )
+                temporary = _stage_bytes(
+                    source_descriptor,
+                    target.content,
+                    target.mode or "0644",
+                )
+            except BaseException:
+                os.close(parent_descriptor)
+                raise
+            staged[action.target] = _StagedTarget(
+                action.target,
+                source_descriptor,
+                parent_descriptor,
+                temporary,
+                relative.normalized.name,
+            )
+    except BaseException:
+        # Callers receive the mapping only after full success, so a mid-loop
+        # failure must release the partial resources before they become unreachable.
+        for item in staged.values():
+            with suppress(OSError):
+                os.unlink(item.temporary, dir_fd=item.source_descriptor)
+            with suppress(OSError):
+                os.close(item.parent_descriptor)
+        raise
     return staged
 
 
@@ -363,7 +375,6 @@ def apply_authoring_plan(repo: Path, plan: MutationPlanSchema) -> AuthoringApply
             try:
                 temporary = _stage_bytes(
                     parent_descriptor,
-                    relative.normalized.name,
                     action.content_bytes or b"",
                     mode,
                 )
@@ -737,7 +748,6 @@ def _apply_locked(
                 committed_catalog = control.read_bytes("catalog.toml")
                 catalog_backup_temporary = _stage_bytes(
                     control.descriptor,
-                    "catalog.toml",
                     committed_catalog,
                     "0644",
                 )
@@ -761,9 +771,7 @@ def _apply_locked(
                     f".standards/{CATALOG_REFRESH_BACKUP}",
                 )
             lock_temporary = (
-                _stage_bytes(control.descriptor, "lock.toml", new_lock, "0644")
-                if lock_changed
-                else None
+                _stage_bytes(control.descriptor, new_lock, "0644") if lock_changed else None
             )
             staged = _stage_targets(
                 request,
@@ -1148,7 +1156,6 @@ def apply_legacy_migration(
                     raise _ApplyFailure("CP-STALE-PLAN", "migration control file is unsafe")
                 control_staged[name] = _stage_bytes(
                     control.descriptor,
-                    name,
                     content,
                     "0644",
                 )
