@@ -637,7 +637,11 @@ def _retirement_views(
             if signature.kind is LegacySignatureKind.WHOLE_FILE:
                 whole.add(claim.target)
                 continue
-            current = bounded.get(claim.target, legacy_files[claim.target.original])
+            current = bounded.get(claim.target)
+            if current is None:
+                current = legacy_files.get(claim.target.original)
+            if current is None:
+                raise ControlPlaneError("legacy claim targets an unobserved file")
             bounded[claim.target] = _strip_bounded_block(current, signature)
     return frozenset(whole), tuple(
         sorted(bounded.items(), key=lambda item: item[0].original.encode("utf-8"))

@@ -1026,6 +1026,58 @@ def test_apply_legacy_migration_refuses_a_stale_preview_without_writing(
     assert (repo / ".project-standards.yml").exists()
 
 
+def test_retirement_views_reject_unobserved_claim_target(tmp_path: Path) -> None:
+    import project_standards.control_plane.migration as migration_module
+
+    installed = installed_distribution(tmp_path).load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse("missing.md")
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-alpha",
+            "kind": "bounded-block",
+            "format": "markdown",
+            "targets": [target.original],
+            "begin": "<!-- BEGIN legacy alpha -->",
+            "end": "<!-- END legacy alpha -->",
+            "known_content_digests": [_digest()],
+        }
+    )
+    payload = InstalledPayload(
+        alpha.root,
+        alpha.manifest.model_copy(update={"legacy_signatures": (signature,)}),
+        alpha.integrity,
+    )
+    report = MigrationReport(
+        schema_version="1.0",
+        package=MigratedPackage.model_validate(
+            {
+                "standard_id": "alpha",
+                "version": "2.0",
+                "selector": "latest",
+            }
+        ),
+        claims=(
+            LegacyClaim.model_validate(
+                {
+                    "signature_id": signature.id,
+                    "target": target.original,
+                    "observed_digest": _digest(),
+                    "ownership": "managed",
+                    "disposition": "remove",
+                }
+            ),
+        ),
+    )
+
+    with pytest.raises(ControlPlaneError, match="legacy claim targets an unobserved file"):
+        migration_module._retirement_views(  # pyright: ignore[reportPrivateUsage]
+            (report,),
+            {("alpha", "2.0"): payload},
+            {},
+        )
+
+
 def test_bounded_block_without_replacement_target_never_removes_whole_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
