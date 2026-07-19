@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.cli import main
+from project_standards.package_contract import PackageContractError
 from project_standards.package_contract import cli as package_cli
 from project_standards.package_contract.cli import run_packages, run_standards
 from project_standards.package_contract.repository import (
@@ -190,6 +191,121 @@ def test_render_consumer_catalog_rejects_output_escape(
     payload = json.loads(capsys.readouterr().out)
     assert payload["code"] == "bad_output"
     assert not outside.exists()
+
+
+def test_render_consumer_catalog__output_path_oserror__reports_bad_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    output = root / "generated/catalog.toml"
+    original_is_symlink = Path.is_symlink
+
+    def failing_output_probe(path: Path) -> bool:
+        if path == output:
+            raise OSError("path probe denied")
+        return original_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", failing_output_probe)
+
+    assert (
+        run_standards(
+            [
+                "render-consumer-catalog",
+                "--root",
+                str(root),
+                "--catalog-major",
+                "5",
+                "--output",
+                str(output),
+                "--json",
+            ]
+        )
+        == 2
+    )
+    assert json.loads(capsys.readouterr().out) == {
+        "ok": False,
+        "code": "bad_output",
+        "error": "path probe denied",
+    }
+
+
+def test_render_consumer_catalog__output_write_oserror__reports_bad_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    output = root / "generated/catalog.toml"
+
+    def failing_write(_output: Path, _content: bytes, *, check: bool) -> bool:
+        assert not check
+        raise OSError("disk full")
+
+    monkeypatch.setattr(package_cli, "write_consumer_catalog", failing_write)
+
+    assert (
+        run_standards(
+            [
+                "render-consumer-catalog",
+                "--root",
+                str(root),
+                "--catalog-major",
+                "5",
+                "--output",
+                str(output),
+                "--json",
+            ]
+        )
+        == 2
+    )
+    assert json.loads(capsys.readouterr().out) == {
+        "ok": False,
+        "code": "bad_output",
+        "error": "disk full",
+    }
+
+
+def test_render_consumer_catalog__unrelated_error_mentions_output__reports_catalog_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    output = root / "generated/catalog.toml"
+
+    def failing_load(
+        _root: Path,
+        *,
+        catalog_major: int | None = None,
+        family_allowlist: Iterable[str] | None = None,
+    ) -> PackageRepository:
+        del catalog_major, family_allowlist
+        raise PackageContractError("provider output is invalid")
+
+    monkeypatch.setattr(package_cli, "build_package_repository", failing_load)
+
+    assert (
+        run_standards(
+            [
+                "render-consumer-catalog",
+                "--root",
+                str(root),
+                "--catalog-major",
+                "5",
+                "--output",
+                str(output),
+                "--json",
+            ]
+        )
+        == 2
+    )
+    assert json.loads(capsys.readouterr().out) == {
+        "ok": False,
+        "code": "catalog_error",
+        "error": "provider output is invalid",
+    }
 
 
 def test_sync_payload_projection_write_check_and_stale_exit(

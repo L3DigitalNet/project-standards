@@ -53,6 +53,10 @@ class _ArgparseError(Exception):
     """Replace argparse process exits with the repository's exit-code contract."""
 
 
+class _OutputPathError(PackageContractError):
+    """An output path could not be resolved safely within the repository."""
+
+
 class _Parser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         raise _ArgparseError(message)
@@ -177,11 +181,14 @@ def _run_validate_packages(argv: list[str]) -> int:
 
 def _resolved_output(root: Path, output_arg: Path) -> Path:
     candidate = output_arg if output_arg.is_absolute() else root / output_arg
-    if candidate.is_symlink():
-        raise PackageContractError("consumer catalog output cannot be a symlink")
-    resolved = candidate.resolve(strict=False)
+    try:
+        if candidate.is_symlink():
+            raise _OutputPathError("consumer catalog output cannot be a symlink")
+        resolved = candidate.resolve(strict=False)
+    except OSError as exc:
+        raise _OutputPathError(str(exc)) from exc
     if not resolved.is_relative_to(root):
-        raise PackageContractError(f"output escapes root: {resolved}")
+        raise _OutputPathError(f"output escapes root: {resolved}")
     return resolved
 
 
@@ -214,7 +221,10 @@ def _run_render_consumer_catalog(argv: list[str]) -> int:
             tool_release=cast("str | None", args.tool_release) or package_version(),
         )
         check = cast("bool", args.check)
-        fresh = write_consumer_catalog(output, rendered, check=check)
+        try:
+            fresh = write_consumer_catalog(output, rendered, check=check)
+        except OSError as exc:
+            return _emit_error(json_mode, "bad_output", str(exc))
         if not fresh:
             if json_mode:
                 print(json.dumps({"ok": False, "code": "stale", "path": str(output)}))
@@ -229,9 +239,10 @@ def _run_render_consumer_catalog(argv: list[str]) -> int:
         return 0
     except _ArgparseError as exc:
         return _emit_error("--json" in argv, "bad_args", str(exc))
+    except _OutputPathError as exc:
+        return _emit_error("--json" in argv, "bad_output", str(exc))
     except (OSError, PackageContractError) as exc:
-        code = "bad_output" if "output" in str(exc) else "catalog_error"
-        return _emit_error("--json" in argv, code, str(exc))
+        return _emit_error("--json" in argv, "catalog_error", str(exc))
 
 
 def _run_generate_package_schemas(argv: list[str]) -> int:
