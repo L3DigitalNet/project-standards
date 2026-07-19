@@ -49,6 +49,13 @@ def extract_slice(doc: SpecDocument, selector: str) -> ExtractResult:
         letter = parts[1].upper()
         appendix = _appendix_slice(body, letter)
         return ExtractResult("appendix", appendix is not None, appendix, selector)
-    m = re.search(rf"^#+\s.*{re.escape(selector)}.*?(?=^#+\s|\Z)", body, re.M | re.S)
+    if "\n" in selector or "\r" in selector:
+        return ExtractResult("heading", False, None, selector)
+    m = re.search(
+        rf"^(?=#+[^\S\r\n][^\r\n]*{re.escape(selector)})"
+        r"#+\s.*?(?=^#+\s|\Z)",
+        body,
+        re.M | re.S,
+    )
     heading = m.group(0).rstrip() if m else None
     return ExtractResult("heading", heading is not None, heading, selector)
