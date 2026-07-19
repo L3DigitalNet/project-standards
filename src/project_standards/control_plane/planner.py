@@ -8,7 +8,6 @@ whole-file preconditions and proposed bytes in a later phase.
 
 from __future__ import annotations
 
-import hashlib
 import os
 import stat
 from collections import defaultdict
@@ -31,7 +30,7 @@ from project_standards.control_plane.adapters import (
 from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
 from project_standards.control_plane.adapters.jsonc import container_value_without_comments
 from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
-from project_standards.control_plane.codec import render_catalog, semantic_digest
+from project_standards.control_plane.codec import content_digest, render_catalog, semantic_digest
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -92,10 +91,6 @@ from project_standards.package_contract.payload import (
 )
 
 type ProviderRunner = Callable[[ProviderInvocation], ProviderResult]
-
-
-def _digest(content: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -384,7 +379,7 @@ def _read_payload_file(
         content = resolved.read_bytes()
     except OSError as exc:
         raise ControlPlaneError("planned payload source could not be read") from exc
-    if _digest(content) != expected:
+    if content_digest(content) != expected:
         raise ControlPlaneError("planned payload source changed after integrity validation")
     return content
 
@@ -1075,7 +1070,7 @@ def _target_action(
             kind = ActionKind.NOOP
     else:
         kind = ActionKind.UPDATE
-    after = None if kind is ActionKind.REMOVE else _digest(rendered).value
+    after = None if kind is ActionKind.REMOVE else content_digest(rendered).value
     return ControlAction(
         kind=kind,
         target=entry.path.original,
@@ -1353,7 +1348,7 @@ def _locked_after(
                     provenance=group.provenance,
                     policy=group.policy,
                     semantic_digest=unit.semantic_digest,
-                    content_digest=_digest(unit.raw),
+                    content_digest=content_digest(unit.raw),
                     mode=group.mode,
                     created_container=(
                         entry.kind is EntryKind.MISSING
@@ -1537,7 +1532,7 @@ def _safe_undeclared_digest(path: Path) -> Sha256Digest:
     stable = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_mode")
     if any(getattr(before, field) != getattr(after, field) for field in stable):
         raise ControlPlaneError("undeclared package entry changed during inspection")
-    return _digest(b"".join(chunks))
+    return content_digest(b"".join(chunks))
 
 
 def _namespace_prunes(
@@ -1625,7 +1620,7 @@ def _catalog_refresh_target(
                 f"{refresh.before.release} to {refresh.after.release}"
             ),
             before_digest=entry.precondition_digest.value,
-            after_digest=_digest(installed).value,
+            after_digest=content_digest(installed).value,
             content=installed,
         ),
         PlannedTarget(path.original, installed, "0644"),
@@ -1674,7 +1669,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
                         content=replacement_content[entry.path.original],
                         mode=entry.mode,
                         link_target=None,
-                        content_digest=_digest(replacement_content[entry.path.original]),
+                        content_digest=content_digest(replacement_content[entry.path.original]),
                         precondition_digest=entry.precondition_digest,
                     )
                     if entry.path.original in replacement_content

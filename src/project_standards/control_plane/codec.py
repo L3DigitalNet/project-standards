@@ -1,4 +1,4 @@
-"""Canonical semantic digests and TOML codecs for consumer control-plane state."""
+"""Canonical typed digests and TOML codecs for consumer control-plane state."""
 
 from __future__ import annotations
 
@@ -43,6 +43,11 @@ def _canonical_json(value: JsonValue) -> bytes:
 def semantic_digest(value: JsonValue) -> Sha256Digest:
     """Hash one validated semantic value using the plan-pinned JSON encoding."""
     return Sha256Digest(f"sha256:{hashlib.sha256(_canonical_json(value)).hexdigest()}")
+
+
+def content_digest(content: bytes) -> Sha256Digest:
+    """Hash exact bytes as a canonical typed SHA-256 content identifier."""
+    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 def _toml_string(value: str) -> str:

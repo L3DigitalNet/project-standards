@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 
 from project_standards.control_plane.adapters.base import (
@@ -10,6 +9,7 @@ from project_standards.control_plane.adapters.base import (
     AdapterUnit,
     UnitChange,
 )
+from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -18,16 +18,8 @@ from project_standards.control_plane.diagnostics import (
 )
 from project_standards.control_plane.models import LockedUnit
 from project_standards.control_plane.snapshot import EntryKind, SnapshotEntry
-from project_standards.package_contract.paths import (
-    PackageVersion,
-    SafeRelativePath,
-    Sha256Digest,
-)
+from project_standards.package_contract.paths import PackageVersion, SafeRelativePath
 from project_standards.package_contract.payload import AdapterKind, ArtifactPolicy
-
-
-def _digest(content: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 class WholeFileAdapter:
@@ -38,7 +30,7 @@ class WholeFileAdapter:
     def inspect(self, content: bytes, scopes: tuple[str, ...]) -> AdapterState:
         if scopes != ("$file",):
             raise ControlPlaneError("whole-file inspection requires one $file scope")
-        digest = _digest(content)
+        digest = content_digest(content)
         return AdapterState(
             content=content,
             units=(AdapterUnit("$file", content, content, digest),),
@@ -118,7 +110,7 @@ def _action(
     mode: str | None,
     created_container: bool,
 ) -> WholeFilePlan:
-    after = _digest(content).value if content is not None else None
+    after = content_digest(content).value if content is not None else None
     return WholeFilePlan(
         action=ControlAction(
             kind=kind,
@@ -240,7 +232,7 @@ def plan_whole_file(
             created_container=True,
         )
 
-    desired_digest = _digest(intent.content)
+    desired_digest = content_digest(intent.content)
     if previous is None:
         if entry.kind is EntryKind.MISSING:
             return _action(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from dataclasses import dataclass
 
@@ -11,8 +10,8 @@ from project_standards.control_plane.adapters.base import (
     AdapterUnit,
     UnitChange,
 )
+from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
-from project_standards.package_contract.paths import Sha256Digest
 from project_standards.package_contract.payload import AdapterKind, normalize_scope
 
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
@@ -211,17 +210,13 @@ def _normalized(content: bytes | str) -> bytes:
     return text.replace("\r\n", "\n").encode()
 
 
-def _digest(value: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(value).hexdigest()}")
-
-
 def _unit(document: MarkdownDocument, scope: str, marker_id: str) -> AdapterUnit | None:
     block = _block(document, marker_id)
     if block is None:
         return None
     raw = document.text[block.content_start : block.content_end].encode()
     value = _normalized(raw)
-    return AdapterUnit(scope, value, raw, _digest(value))
+    return AdapterUnit(scope, value, raw, content_digest(value))
 
 
 def _desired(content: bytes) -> tuple[str, bytes]:

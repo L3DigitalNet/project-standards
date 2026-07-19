@@ -6,6 +6,7 @@ import pytest
 
 from project_standards.control_plane.codec import (
     bind_catalog_digest,
+    content_digest,
     parse_catalog,
     parse_config,
     parse_lock,
@@ -16,10 +17,20 @@ from project_standards.control_plane.codec import (
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.models import CentralLock, ConsumerCatalog
+from project_standards.package_contract.paths import Sha256Digest
 from project_standards.package_contract.payload import JsonValue
 
 _DIGEST_A = f"sha256:{'a' * 64}"
 _DIGEST_B = f"sha256:{'b' * 64}"
+
+
+def test_content_digest_is_canonical() -> None:
+    digest = content_digest(b"abc")
+
+    assert isinstance(digest, Sha256Digest)
+    assert digest.value == (
+        "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    )
 
 
 def _catalog() -> ConsumerCatalog:

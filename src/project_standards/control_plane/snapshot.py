@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 
+from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.package_contract.paths import (
     SafeRelativePath,
@@ -40,10 +41,6 @@ class SnapshotEntry:
     link_target: str | None
     content_digest: Sha256Digest | None
     precondition_digest: Sha256Digest
-
-
-def _digest(content: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 def _precondition(
@@ -155,7 +152,7 @@ def _regular_entry(
         content=content,
         mode=mode,
         link_target=None,
-        content_digest=_digest(content),
+        content_digest=content_digest(content),
         precondition_digest=_precondition(EntryKind.REGULAR, mode=mode, content=content),
     )
 

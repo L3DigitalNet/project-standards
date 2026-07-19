@@ -23,6 +23,7 @@ from yaml.nodes import MappingNode
 from yaml.tokens import AliasToken, AnchorToken
 
 from project_standards.control_plane.codec import (
+    content_digest,
     parse_config,
     parse_lock,
     render_catalog,
@@ -401,9 +402,9 @@ class LegacyMigrationPlan:
             ),
             "findings": cast(JsonValue, findings_to_jsonable(self.findings)),
             "actions": cast(JsonValue, actions_to_jsonable(self.actions)),
-            "config_digest": _digest(self.config_content).value,
+            "config_digest": content_digest(self.config_content).value,
             "catalog_digest": self.catalog.project_standards.digest.value,
-            "lock_digest": _digest(self.lock_content).value,
+            "lock_digest": content_digest(self.lock_content).value,
         }
 
 
@@ -421,10 +422,6 @@ def apply_legacy_migration(
         fault_hook=fault_hook,
         verification_runner=verification_runner,
     )
-
-
-def _digest(content: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 def legacy_migration_content_fingerprint(
@@ -699,7 +696,7 @@ def _inspect_signatures(
                     )
                 )
                 continue
-            digest = _digest(candidate)
+            digest = content_digest(candidate)
             known = digest in signature.known_content_digests
             item = _ObservedSignature(
                 payload.manifest.payload.standard,
@@ -1594,7 +1591,7 @@ def _plan_legacy_migration(
     )
     removals = _removal_actions(ordered_reports, replacement_targets) if applicable else ()
     legacy_preconditions = tuple(
-        (path, _digest(content)) for path, content in sorted(legacy_files.items())
+        (path, content_digest(content)) for path, content in sorted(legacy_files.items())
     )
     catalog_content = render_catalog(catalog)
     lock_content = render_lock(reconciliation.next_lock)

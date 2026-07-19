@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import io
 import json
 import os
@@ -19,6 +18,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError as JsonSchemaError
 from pydantic import ValidationError
 
+from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
@@ -45,10 +45,6 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
     ResourceDeclaration,
 )
-
-
-def _sha256(content: bytes) -> Sha256Digest:
-    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 def _safe_repo(repo: Path) -> Path:
@@ -130,7 +126,7 @@ def read_locked_input_bytes(repo: Path, locked: LockedInput) -> bytes:
         if descriptor != root_descriptor:
             os.close(descriptor)
         os.close(root_descriptor)
-    if _sha256(content) != locked.digest:
+    if content_digest(content) != locked.digest:
         raise ControlPlaneError("locked referenced input digest changed")
     return content
 
@@ -249,7 +245,7 @@ def resolve_referenced_inputs(
                 standard_id=standard_id,
                 extension_id=extension.id,
                 path=relative,
-                digest=_sha256(content),
+                digest=content_digest(content),
             )
         )
     return tuple(sorted(inputs, key=lambda item: item.natural_key))
@@ -365,7 +361,7 @@ def _read_payload_resource(
         content = resolved.read_bytes()
     except OSError as exc:
         raise ControlPlaneError("provider resource could not be read") from exc
-    if _sha256(content) != resource.digest:
+    if content_digest(content) != resource.digest:
         raise ControlPlaneError("provider resource changed after integrity validation")
     return content
 
@@ -473,7 +469,7 @@ def _provider_input(
         version=invocation.version,
         operation=invocation.operation,
         config=invocation.effective_config,
-        resources={name: _sha256(content) for name, content in resource_bytes.items()},
+        resources={name: content_digest(content) for name, content in resource_bytes.items()},
         snapshots=invocation.snapshots,
     )
 
