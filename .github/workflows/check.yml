@@ -51,8 +51,16 @@ jobs:
       - name: Build candidate wheel
         run: uv build --wheel --out-dir dist
 
+      - name: Select candidate wheel
+        shell: bash
+        run: |
+          mapfile -t candidate_wheels < <(find "${{ github.workspace }}/dist" -maxdepth 1 -type f -name 'project_standards-*.whl' -print)
+          test "${#candidate_wheels[@]}" -eq 1
+          candidate_wheel="$(realpath "${candidate_wheels[0]}")"
+          printf 'PROJECT_STANDARDS_COMPATIBILITY_WHEEL=%s\n' "$candidate_wheel" >> "$GITHUB_ENV"
+
       - name: Extract candidate wheel
-        run: python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+        run: python -m zipfile -e "$PROJECT_STANDARDS_COMPATIBILITY_WHEEL" build/wheel-runtime
 
       - name: Reset coverage data
         run: uv run coverage erase

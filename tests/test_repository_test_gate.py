@@ -57,6 +57,40 @@ def test_repository_workflow_installs_node_dependencies_before_ordinary_tests() 
     assert setup_node_index < npm_ci_index < wheel_extract_index < ordinary_test_index
 
 
+def test_repository_workflow__candidate_wheel__reused_for_compatibility() -> None:
+    steps = _workflow_steps()
+    build_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Build candidate wheel"
+    )
+    select_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Select candidate wheel"
+    )
+    extract_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Extract candidate wheel"
+    )
+    compatibility_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Compatibility matrix"
+    )
+    commands = [str(step["run"]) for step in steps if "run" in step]
+
+    assert build_index < select_index < extract_index < compatibility_index
+    assert steps[select_index]["shell"] == "bash"
+    assert steps[select_index]["run"] == (
+        'mapfile -t candidate_wheels < <(find "${{ github.workspace }}/dist" '
+        "-maxdepth 1 -type f -name 'project_standards-*.whl' -print)\n"
+        'test "${#candidate_wheels[@]}" -eq 1\n'
+        'candidate_wheel="$(realpath "${candidate_wheels[0]}")"\n'
+        "printf 'PROJECT_STANDARDS_COMPATIBILITY_WHEEL=%s\\n' "
+        '"$candidate_wheel" >> "$GITHUB_ENV"\n'
+    )
+    assert steps[extract_index]["run"] == (
+        'python -m zipfile -e "$PROJECT_STANDARDS_COMPATIBILITY_WHEEL" build/wheel-runtime'
+    )
+    assert [command for command in commands if "uv build" in command] == [
+        "uv build --wheel --out-dir dist"
+    ]
+
+
 def test_repository_configuration_keeps_only_retained_test_groups() -> None:
     project = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dev_dependencies = cast("list[str]", project["dependency-groups"]["dev"])
