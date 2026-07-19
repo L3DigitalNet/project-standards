@@ -97,6 +97,7 @@ class _V2Args:
     repo: Path
     json: bool
     dry_run: bool
+    view: str
 
 
 def _print_help() -> None:
@@ -140,10 +141,17 @@ def _parse_v2(operation: V2ProviderOperation, argv: list[str]) -> _V2Args:
     parser = _Parser(prog=f"project-standards agent-handoff {operation.value}")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
+    if operation is V2ProviderOperation.VALIDATE:
+        parser.add_argument("--view", choices=("full", "size", "shape"), default="full")
     if operation is V2ProviderOperation.UPGRADE:
         parser.add_argument("--dry-run", action="store_true")
     parsed = parser.parse_args(argv)
-    return _V2Args(parsed.repo, parsed.json, bool(getattr(parsed, "dry_run", False)))
+    return _V2Args(
+        parsed.repo,
+        parsed.json,
+        bool(getattr(parsed, "dry_run", False)),
+        cast(str, getattr(parsed, "view", "full")),
+    )
 
 
 def _walk_handoff_paths(repo: Path) -> tuple[str, ...]:
@@ -296,8 +304,13 @@ def _upgrade_plan(
             )
             continue
         resource = next(
-            item for item in selected.payload.manifest.resources if item.id == resource_id
+            (item for item in selected.payload.manifest.resources if item.id == resource_id),
+            None,
         )
+        if resource is None:
+            raise CommandResolutionError(
+                f"selected Agent Handoff payload is missing resource {resource_id!r}"
+            )
         if state["content_digest"] == resource.digest.value:
             continue
         result = invoke_selected_provider(
@@ -363,16 +376,10 @@ def _run_selected(
     operation: V2ProviderOperation,
     argv: list[str],
 ) -> int:
-    view = "full"
-    filtered = list(argv)
-    if operation is V2ProviderOperation.VALIDATE and filtered[:2] == ["--view", "size"]:
-        view, filtered = "size", filtered[2:]
-    elif operation is V2ProviderOperation.VALIDATE and filtered[:2] == ["--view", "shape"]:
-        view, filtered = "shape", filtered[2:]
-    args = _parse_v2(operation, filtered)
+    args = _parse_v2(operation, argv)
     if operation is V2ProviderOperation.UPGRADE:
         return _run_upgrade(selected, args)
-    return _run_read_command(selected, operation, view, args)
+    return _run_read_command(selected, operation, args.view, args)
 
 
 def run_adopt(argv: list[str]) -> int:

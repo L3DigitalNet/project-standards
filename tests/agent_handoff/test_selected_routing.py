@@ -111,6 +111,25 @@ def test_unified_upgrade_is_a_noop_when_managed_bytes_are_current(
     assert json.loads(capsys.readouterr().out)["changes"] == []
 
 
+def test_unified_upgrade__missing_resource__exits_three_without_traceback(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    monkeypatch.setitem(
+        agent_handoff_cli._UPGRADE_RESOURCES,  # pyright: ignore[reportPrivateUsage]
+        ".agents/skills/agent-handoff/SKILL.md",
+        "missing-resource",
+    )
+
+    assert run(["upgrade", "--repo", str(repo)], distribution=distribution) == 3
+    captured = capsys.readouterr()
+    assert "selected Agent Handoff payload is missing resource 'missing-resource'" in captured.err
+    assert "Traceback" not in captured.err
+
+
 def test_unified_upgrade_reports_recoverable_apply_failure_as_a_finding(
     tmp_path: Path,
     distribution: InstalledDistribution,
@@ -171,6 +190,37 @@ def test_unified_size_report_preserves_numeric_budget_message(
     finding = next(item for item in report["findings"] if item["code"] == "AH-SIZE-CAP")
     assert finding["message"] == "document exceeds 2048 byte hard cap by 952 bytes"
     assert finding["locus"] == "byte budget"
+
+
+@pytest.mark.parametrize(
+    ("view_arguments", "expected_code_prefix"),
+    [
+        pytest.param(("--repo", "{repo}", "--view", "size"), "AH-SIZE", id="after-repo"),
+        pytest.param(("--repo", "{repo}", "--view=size"), "AH-SIZE", id="equals-form"),
+        pytest.param(
+            ("--view", "size", "--repo", "{repo}", "--view", "shape"),
+            "AH-SHAPE",
+            id="repeated-last-wins",
+        ),
+    ],
+)
+def test_unified_validate__parser_compatible_view_forms__select_expected_findings(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+    view_arguments: tuple[str, ...],
+    expected_code_prefix: str,
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / "docs/handoff/state.md").write_bytes(b"x" * 3000)
+    arguments = [str(repo) if item == "{repo}" else item for item in view_arguments]
+
+    assert run(["validate", *arguments, "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    codes = [item["code"] for item in report["findings"]]
+
+    assert codes
+    assert all(code.startswith(expected_code_prefix) for code in codes)
 
 
 def test_unified_validate_uses_the_last_repeated_repo_option(
