@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import codecs
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -140,6 +141,71 @@ def test_duplicate_claude_injection_is_reported(tmp_path: Path) -> None:
     codes = {finding.code for finding in validate_repository(RepositoryRoot(tmp_path))}
 
     assert "AH-CLAUDE-CONFIG-INVALID" in codes
+
+
+def test_claude_settings_inspection_accepts_jsonc(tmp_path: Path) -> None:
+    _adopt(tmp_path, StartupMode.AUTOMATIC, (Harness.CLAUDE_CODE,))
+    settings = tmp_path / ".claude/settings.json"
+    payload = json.loads(settings.read_text(encoding="utf-8"))
+    managed_hooks = json.dumps(payload["hooks"], indent=2)
+    settings.write_text(
+        "{\n"
+        "  // real line comment\n"
+        '  "url": "https://example.test/a//b", // real inline comment\n'
+        "  /* real block comment */\n"
+        '  "comment-literal": "/* not a block comment */ // not a line comment",\n'
+        '  "comma-literal": ",} and ,]",\n'
+        '  "escaped-quote": "quote: \\" // still a string",\n'
+        '  "trap-array": ["value",],\n'
+        f'  "hooks": {managed_hooks},\n'
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_repository(RepositoryRoot(tmp_path))
+
+    assert not any(finding.code == "AH-CLAUDE-CONFIG-INVALID" for finding in findings)
+
+
+def test_claude_settings_inspection_rejects_malformed_jsonc(tmp_path: Path) -> None:
+    _adopt(tmp_path, StartupMode.AUTOMATIC, (Harness.CLAUDE_CODE,))
+    settings = tmp_path / ".claude/settings.json"
+    settings.write_text('{"hooks": {} /* unterminated', encoding="utf-8")
+
+    findings = validate_repository(RepositoryRoot(tmp_path))
+
+    invalid = [finding for finding in findings if finding.code == "AH-CLAUDE-CONFIG-INVALID"]
+    assert len(invalid) == 1
+    assert invalid[0].message == "Claude SessionStart registration is invalid or duplicated"
+
+
+def test_claude_settings_inspection__invalid_utf8__reports_controlled_finding(
+    tmp_path: Path,
+) -> None:
+    _adopt(tmp_path, StartupMode.AUTOMATIC, (Harness.CLAUDE_CODE,))
+    settings = tmp_path / ".claude/settings.json"
+    settings.write_bytes(b'\xff{"hooks": {}}')
+
+    findings = validate_repository(RepositoryRoot(tmp_path))
+
+    invalid = [finding for finding in findings if finding.code == "AH-CLAUDE-CONFIG-INVALID"]
+    assert len(invalid) == 1
+    assert invalid[0].message == "Claude SessionStart registration is invalid or duplicated"
+
+
+def test_claude_settings_inspection__utf8_bom_jsonc__remains_valid(tmp_path: Path) -> None:
+    _adopt(tmp_path, StartupMode.AUTOMATIC, (Harness.CLAUDE_CODE,))
+    settings = tmp_path / ".claude/settings.json"
+    payload = json.loads(settings.read_bytes())
+    managed_hooks = json.dumps(payload["hooks"], indent=2)
+    content = (
+        f'{{\n  // UTF-8 BOM input remains JSONC-tolerant.\n  "hooks": {managed_hooks},\n}}\n'
+    ).encode()
+    settings.write_bytes(codecs.BOM_UTF8 + content)
+
+    findings = validate_repository(RepositoryRoot(tmp_path))
+
+    assert not any(finding.code == "AH-CLAUDE-CONFIG-INVALID" for finding in findings)
 
 
 def test_hook_mode_artifact_and_lock_drift_are_reported(tmp_path: Path) -> None:
