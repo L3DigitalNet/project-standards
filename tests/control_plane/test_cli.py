@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from project_standards.control_plane.cli import run, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, ApplyResult
+from project_standards.control_plane.locking import LockMode, control_plane_lock
 from project_standards.control_plane.migration import (
     apply_legacy_migration,
     plan_legacy_migration,
@@ -45,6 +47,78 @@ def _legacy_repo(root: Path, *, extra_yaml: str = "") -> Path:
     extension.parent.mkdir(parents=True)
     extension.write_text("consumer = true\n", encoding="utf-8")
     return repo
+
+
+def _assert_busy_result(
+    result: int,
+    out: str,
+    err: str,
+    *,
+    json_mode: bool,
+) -> None:
+    assert result == 1
+    assert "Traceback" not in out
+    assert "Traceback" not in err
+    if json_mode:
+        assert err == ""
+        assert json.loads(out)["code"] == "CP-BUSY"
+    else:
+        assert out == ""
+        assert "CP-BUSY" in err
+
+
+@pytest.mark.parametrize(
+    "boundary",
+    ["reconcile", "init", "recovery", "render"],
+)
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_initialized_cli__lock_busy__returns_stable_diagnostic(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    boundary: str,
+    json_mode: bool,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _use_distribution(monkeypatch, distribution)
+    arguments = {
+        "reconcile": ["reconcile", "--repo", str(repo)],
+        "init": ["init", "--catalog", "5", "--repo", str(repo)],
+        "recovery": ["reconcile", "--repair-state", "--repo", str(repo)],
+        "render": ["render", "alpha", "render-alpha", "--repo", str(repo)],
+    }[boundary]
+    if boundary == "recovery":
+        (repo / ".standards/lock.toml").unlink()
+    if json_mode:
+        arguments.append("--json")
+
+    with control_plane_lock(repo, LockMode.WRITE):
+        result = project_standards_main(arguments)
+
+    captured = capsys.readouterr()
+    _assert_busy_result(result, captured.out, captured.err, json_mode=json_mode)
+
+
+def test_top_level_validate__lock_busy__returns_one_without_traceback(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _use_distribution(monkeypatch, distribution)
+    monkeypatch.chdir(repo)
+
+    with control_plane_lock(repo, LockMode.WRITE):
+        result = project_standards_main(["validate"])
+
+    captured = capsys.readouterr()
+    _assert_busy_result(result, captured.out, captured.err, json_mode=False)
 
 
 def test_reconcile_help_documents_mutation_and_recovery_flags(

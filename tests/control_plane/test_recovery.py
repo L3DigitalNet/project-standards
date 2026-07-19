@@ -6,6 +6,8 @@ from typing import cast
 
 import pytest
 
+from project_standards.control_plane.bootstrap import initialize_control_plane
+from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import (
     parse_lock,
     render_catalog,
@@ -14,6 +16,7 @@ from project_standards.control_plane.codec import (
     semantic_digest,
 )
 from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.locking import LockMode, control_plane_lock
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.recovery import (
     RecoveryKind,
@@ -54,6 +57,48 @@ def _control(repo: Path) -> Path:
     control = repo / ".standards"
     control.mkdir(parents=True)
     return control
+
+
+def test_plan_recovery__lock_busy__returns_cp_busy_finding(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+
+    with control_plane_lock(repo, LockMode.WRITE):
+        plan = plan_recovery(RecoveryRequest(repo, distribution))
+
+    assert not plan.applicable
+    assert plan.kind is RecoveryKind.UNRECOVERABLE
+    assert plan.findings[0].code == "CP-BUSY"
+
+
+@pytest.mark.parametrize(
+    "recovery_case",
+    ["missing-catalog", "catalog-refresh"],
+)
+def test_apply_recovery__lock_busy__returns_cp_busy_result(
+    tmp_path: Path,
+    recovery_case: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    control = repo / ".standards"
+    if recovery_case == "missing-catalog":
+        (control / "catalog.toml").unlink()
+    else:
+        (control / CATALOG_REFRESH_BACKUP).write_bytes((control / "catalog.toml").read_bytes())
+    request = RecoveryRequest(repo, distribution)
+    plan = plan_recovery(request)
+    assert plan.applicable
+
+    with control_plane_lock(repo, LockMode.READ):
+        result = apply_recovery(request, plan, apply=True, repair_state=True)
+
+    assert not result.success
+    assert result.error_code == "CP-BUSY"
 
 
 def test_missing_user_config_refuses_inference_or_apply(tmp_path: Path) -> None:

@@ -22,7 +22,11 @@ from project_standards.control_plane.command_resolution import (
 from project_standards.control_plane.diagnostics import sort_findings
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import apply_authoring_plan
-from project_standards.control_plane.locking import LockMode, control_plane_lock
+from project_standards.control_plane.locking import (
+    ControlPlaneBusyError,
+    LockMode,
+    control_plane_lock,
+)
 from project_standards.control_plane.providers import ProviderResult
 from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.control_plane.state import StateKind, detect_control_plane_state
@@ -632,6 +636,9 @@ def run_validate(
             return 1
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except ControlPlaneBusyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     except (
         _ArgumentError,
         validate_frontmatter.ConfigError,

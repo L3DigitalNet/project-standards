@@ -21,6 +21,7 @@ from project_standards.control_plane.distribution import (
     InstalledDistribution,
 )
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+from project_standards.control_plane.locking import ControlPlaneBusyError
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
@@ -238,6 +239,8 @@ def run_render(
         else:
             sys.stdout.write(content)
         return 0
+    except ControlPlaneBusyError as exc:
+        return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
     except (
         CommandResolutionError,
         ControlPlaneError,
@@ -470,6 +473,8 @@ def run_init(
         else:
             print(f"error: migration failed ({result.error_code})", file=sys.stderr)
         return 0 if result.success else 1
+    except ControlPlaneBusyError as exc:
+        return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
     except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
         return _emit_error(json_mode, "CP-MIGRATION-STATE", str(exc), exit_code=2)
 
@@ -662,6 +667,8 @@ def run(
             mode=mode,
             json_mode=json_mode,
         )
+    except ControlPlaneBusyError as exc:
+        return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
     except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
         # Resolution refusals are actionable reconciliation findings, while state,
         # package, and filesystem boundary failures are invocation/config errors.
@@ -730,6 +737,9 @@ def validate_repository(
         if drift:
             print("CP-DRIFT: unified standards state requires reconciliation", file=sys.stderr)
         return 1 if drift or not plan.applicable else 0
+    except ControlPlaneBusyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     except ControlPlaneError as exc:
         print(f"CP-RESOLUTION: {exc}", file=sys.stderr)
         return 1

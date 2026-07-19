@@ -19,6 +19,7 @@ from project_standards.control_plane.config_edit import (
     set_standard_version,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.locking import LockMode, control_plane_lock
 from project_standards.control_plane.models import CentralLock, ConsumerCatalog
 from project_standards.package_contract.payload import JsonValue
 from project_standards.standards_graph.cli import run
@@ -269,6 +270,44 @@ def test_standards_help_advertises_all_desired_state_commands(
     output = capsys.readouterr().out
     for command in ("list", "show", "enable", "disable", "version"):
         assert command in output
+
+
+@pytest.mark.parametrize(
+    ("arguments", "held_mode"),
+    [
+        pytest.param(["list"], LockMode.WRITE, id="list"),
+        pytest.param(["show", "alpha"], LockMode.WRITE, id="show"),
+        pytest.param(["enable", "alpha"], LockMode.READ, id="enable"),
+        pytest.param(["disable", "alpha"], LockMode.READ, id="disable"),
+        pytest.param(["version", "alpha", "2.0"], LockMode.READ, id="version"),
+    ],
+)
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_standards_control_command__lock_busy__returns_stable_diagnostic(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    arguments: list[str],
+    held_mode: LockMode,
+    json_mode: bool,
+) -> None:
+    _write_control_plane(tmp_path)
+    invocation = [*arguments, "--repo", str(tmp_path)]
+    if json_mode:
+        invocation.append("--json")
+
+    with control_plane_lock(tmp_path, held_mode):
+        result = run(invocation)
+
+    captured = capsys.readouterr()
+    assert result == 1
+    assert "Traceback" not in captured.out
+    assert "Traceback" not in captured.err
+    if json_mode:
+        assert captured.err == ""
+        assert json.loads(captured.out)["code"] == "CP-BUSY"
+    else:
+        assert captured.out == ""
+        assert "CP-BUSY" in captured.err
 
 
 def test_standards_cli_edits_match_equivalent_manual_desired_state(

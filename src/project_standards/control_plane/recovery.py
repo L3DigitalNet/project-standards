@@ -38,6 +38,7 @@ from project_standards.control_plane.executor import (
     apply_reconciliation,
 )
 from project_standards.control_plane.locking import (
+    ControlPlaneBusyError,
     LockedControlDirectory,
     LockMode,
     control_plane_lock,
@@ -400,6 +401,13 @@ def plan_recovery(request: RecoveryRequest) -> RecoveryPlan:
     try:
         with control_plane_lock(request.repo, LockMode.READ) as control:
             return _plan_locked(request, control)
+    except ControlPlaneBusyError as exc:
+        return _refused(
+            RecoveryKind.UNRECOVERABLE,
+            exc.code,
+            str(exc),
+            "retry after the concurrent standards operation completes",
+        )
     except ValueError, OSError:
         return _refused(
             RecoveryKind.UNRECOVERABLE,
@@ -456,6 +464,8 @@ def _publish_catalog(
                 with suppress(OSError):
                     os.unlink(temporary, dir_fd=control.descriptor)
             return ApplyResult(True, (".standards/catalog.toml",), False)
+    except ControlPlaneBusyError:
+        return ApplyResult(False, (), False, "CP-BUSY")
     except ValueError, OSError:
         return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
 
@@ -515,6 +525,8 @@ def _publish_catalog_refresh_recovery(
                     with suppress(OSError):
                         os.unlink(temporary, dir_fd=control.descriptor)
             return ApplyResult(True, tuple(applied), False)
+    except ControlPlaneBusyError:
+        return ApplyResult(False, (), False, "CP-BUSY")
     except ValueError, OSError:
         return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
 
