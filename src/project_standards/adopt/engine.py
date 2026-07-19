@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-import contextlib
 import hashlib
 import os
-import stat
-import tempfile
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+from project_standards._filesystem import (
+    _directory_descriptor,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    _PublishedCleanupError,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    _write_bytes,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+)
 from project_standards.adopt.errors import ManifestError, UsageError, WriteError
 from project_standards.adopt.manifest import (
     BUNDLES_DIR,
@@ -229,81 +231,35 @@ def _check_precondition(action: Action, target: Path) -> None:
 
 
 def _atomic_write(
-    target: Path, data: bytes, mode: int | None = None, *, replace: bool = True
+    target: Path,
+    data: bytes,
+    mode: int | None = None,
+    *,
+    replace: bool = True,
 ) -> bool:
-    """Stage data beside target, then install it atomically.
-
-    EVERY filesystem step (mkdir, mkstemp, write, publish) is inside the guard so a
-    recoverable failure surfaces as WriteError (exit 1), never a raw traceback. Staging
-    cleanup is always attempted, including after KeyboardInterrupt / generator-throw.
-    Persistent cleanup failure is explicitly reported and may leave the staging alias
-    beside an installed destination for manual removal; an existing destination remains
-    intact when publication fails.
-
-    Return ``False`` only when a non-replacing install loses a destination-creation
-    race. Managed installs use atomic replacement; create-only installs use an atomic
-    hard-link operation that cannot overwrite a destination created after classification.
-    Create-only publication therefore requires hard-link support in the destination
-    filesystem; unsupported link operations fail cleanly instead of falling back to a
-    non-atomic write.
-
-    Mode: if overwriting an existing file, copy its permissions. For a new file, use
-    a umask-respecting 0o666 (same behaviour as open()), avoiding the mkstemp default
-    of 0600 which would leave adopted files owner-only.
-    """
-    tmp: Path | None = None
-    published = False
+    """Map the shared descriptor-safe publisher into adopt's error contract."""
+    lexical_target = target if target.is_absolute() else Path.cwd() / target
+    absolute_target = Path(os.path.normpath(lexical_target))
+    root = Path(absolute_target.anchor)
+    relative = PurePosixPath(absolute_target.relative_to(root).as_posix())
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".adopt-", suffix=".tmp")
-        tmp = Path(tmp_name)
-        # Set permissions BEFORE writing data so the file never exists world-readable
-        # with content, but also never stays at 0600 after the write.
-        if mode is not None:
-            with contextlib.suppress(OSError):
-                tmp.chmod(stat.S_IMODE(mode))
-        elif target.exists():
-            # Preserve the existing file's mode (copy-on-overwrite).
-            with contextlib.suppress(OSError):
-                tmp.chmod(target.stat().st_mode & 0o777)
-        else:
-            # New file: apply umask so the result behaves like a normal file creation.
-            mask = os.umask(0)
-            os.umask(mask)
-            with contextlib.suppress(OSError):
-                tmp.chmod(stat.S_IMODE(0o666 & ~mask))
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(data)
-        if replace:
-            # Module-level os.replace (not Path.replace) so the failure-injection test can
-            # monkeypatch this exact atomic-rename call.
-            os.replace(tmp, target)  # noqa: PTH105
-        else:
-            try:
-                # Both paths share a directory/filesystem. link(2) publishes the staged
-                # inode atomically but returns EEXIST instead of replacing consumer content.
-                # Filesystems without hard-link support fail closed through WriteError.
-                os.link(tmp, target)
-                published = True
-            except FileExistsError:
-                tmp.unlink(missing_ok=True)
-                return False
-            tmp.unlink()
-        return True
+        with _directory_descriptor(root) as root_descriptor:
+            return _write_bytes(
+                root_descriptor,
+                relative,
+                data,
+                mode=mode,
+                replace=replace,
+                temporary_prefix=".adopt-",
+            )
+    except _PublishedCleanupError as exc:
+        temporary = target.parent / exc.temporary
+        raise WriteError(
+            f"destination {target} was installed but staging cleanup failed for "
+            f"{temporary}: {exc.cause}"
+        ) from exc.cause
     except OSError as exc:
-        if tmp is not None:
-            with contextlib.suppress(OSError):
-                tmp.unlink(missing_ok=True)
-        if published:
-            raise WriteError(
-                f"destination {target} was installed but staging cleanup failed for {tmp}: {exc}"
-            ) from exc
         raise WriteError(f"failed writing {target}: {exc}") from exc
-    except BaseException:
-        if tmp is not None:
-            with contextlib.suppress(OSError):
-                tmp.unlink(missing_ok=True)
-        raise
 
 
 def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: bool) -> Report:
@@ -343,7 +299,10 @@ def execute_plan(plan: list[Action], dest_root: Path, *, force: bool, dry_run: b
                 abs_dest,
                 rendered,
                 action.mode,
-                replace=action.install_policy is InstallPolicy.MANAGED,
+                replace=(
+                    action.install_policy is InstallPolicy.MANAGED
+                    and (force or action.precondition_sha256 is not None)
+                ),
             )
             if not installed:
                 report.skipped.append(action.dest)

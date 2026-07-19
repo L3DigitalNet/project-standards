@@ -366,20 +366,19 @@ def test_mkdir_failed_when_output_parent_is_a_file(
     assert rc == 2 and obj["code"] == "mkdir_failed"
 
 
-def test_write_failed_when_atomic_replace_raises(
+def test_write_failed_when_atomic_link_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # Best-effort per the plan: forcing the OSError via monkeypatch of os.replace (used by
-    # _safe_atomic_write) is deterministic across environments (root ignores read-only-dir
-    # mode bits, so chmod(0o500) is not reliable here) — mirrors
-    # test_spec_new_cli.test_json_code_write_failed.
+    # An absent non-force output publishes through a descriptor-relative hard link.
+    # Inject there because root can ignore read-only-directory mode bits, making chmod
+    # an unreliable way to force this error across environments.
     src = _valid_light_src(tmp_path)
     out = tmp_path / "out.md"
 
-    def _boom(_src: object, _dst: object) -> None:
+    def _boom(_src: str, _dst: str, **_kwargs: object) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    monkeypatch.setattr(spec_cli.os, "link", _boom)
     rc = _run([str(src), "--to", "standard", "-o", str(out), "--json"])
     obj = json.loads(capsys.readouterr().out)
     assert rc == 2 and obj["code"] == "write_failed"

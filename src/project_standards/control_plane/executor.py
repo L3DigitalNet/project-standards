@@ -21,6 +21,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from project_standards._filesystem import (
+    _prune_empty_directory,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+)
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import (
@@ -525,13 +528,10 @@ def _publish_targets(
         applied.append(action.target)
         _fault(request, "published", action.target)
     for namespace in plan.namespace_prunes:
-        path = request.planner.repo / namespace
         try:
-            for directory in sorted(path.rglob("*"), reverse=True):
-                if directory.is_dir():
-                    directory.rmdir()
-            path.rmdir()
-        except OSError as exc:
+            relative = SafeRelativePath.parse(namespace)
+            _prune_empty_directory(root_descriptor, relative.normalized)
+        except (OSError, ValueError) as exc:
             raise _ApplyFailure("CP-APPLY-PUBLISH", "namespace pruning failed") from exc
         applied.append(f"prune:{namespace}")
 

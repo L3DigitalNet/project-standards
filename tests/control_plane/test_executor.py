@@ -34,7 +34,13 @@ from project_standards.control_plane.providers import (
     materialize_referenced_input_snapshots,
 )
 from project_standards.package_contract.payload import ProviderEffect
-from tests.control_plane.planner_helpers import resolution_request, write_payload
+from tests.control_plane.planner_helpers import (
+    digest,
+    locked_unit,
+    previous_lock,
+    resolution_request,
+    write_payload,
+)
 
 type FaultHook = Callable[[str, str], None]
 
@@ -539,6 +545,63 @@ def test_remove_action_uses_atomic_unlink_path(tmp_path: Path) -> None:
     assert result.applied_action_ids == ("alpha.txt", "nested/beta.txt")
     assert not (repo / "alpha.txt").exists()
     assert not (repo / "nested/beta.txt").exists()
+
+
+def test_namespace_prune_symlink_swap_race_does_not_delete_outside(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    target = repo / ".standards/packages/demo/state.txt"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"state\n")
+    target.chmod(0o644)
+    payload = write_payload(tmp_path / "payload", "demo")
+    lock = previous_lock(
+        locked_unit(
+            path=".standards/packages/demo/state.txt",
+            adapter="whole-file",
+            scope="$file",
+            owners=["demo"],
+            semantic_digest=digest(b"state\n"),
+            content_digest=digest(b"state\n"),
+        )
+    )
+    (repo / ".standards/lock.toml").write_bytes(render_lock(lock))
+    resolution = resolution_request((payload,), previous_lock=lock)
+    disabled = resolution.desired.model_copy(
+        update={
+            "standards": {
+                "demo": resolution.desired.standards["demo"].model_copy(update={"enabled": False})
+            }
+        }
+    )
+    planner = PlannerRequest(
+        repo,
+        replace(resolution, desired=disabled),
+        (payload,),
+    )
+    plan = plan_reconciliation(planner)
+    namespace = repo / ".standards/packages/demo"
+    detached = repo / ".standards/packages/detached"
+    outside_child = tmp_path / "outside/empty"
+    outside_child.mkdir(parents=True)
+
+    def swap_after_removal(phase: str, identity: str) -> None:
+        if (phase, identity) != (
+            "published",
+            ".standards/packages/demo/state.txt",
+        ):
+            return
+        namespace.rename(detached)
+        namespace.symlink_to(outside_child.parent, target_is_directory=True)
+
+    result = _apply(planner, plan, fault_hook=swap_after_removal)
+
+    assert not result.success
+    assert result.error_code == "CP-APPLY-PUBLISH"
+    assert result.applied_action_ids == (".standards/packages/demo/state.txt",)
+    assert outside_child.is_dir()
+    assert detached.is_dir()
 
 
 def test_keyboard_interrupt_reports_already_published_prefix(tmp_path: Path) -> None:

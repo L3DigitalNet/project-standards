@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from contextlib import AbstractContextManager
 from pathlib import Path
 
 import pytest
@@ -125,6 +126,63 @@ def test_refuse_existing_then_force(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert target.read_text(encoding="utf-8") == "PRIOR WORK\n"  # untouched
     assert run(["new", "--profile", "light", "--id", "SPEC-7F3Q", "--force", str(target)]) == 0
     assert "spec_id: SPEC-7F3Q" in target.read_text(encoding="utf-8")
+
+
+def test_nonforce_target_created_after_inspection_race_does_not_clobber(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "raced.md"
+    original_is_file = Path.is_file
+    raced = False
+
+    def racing_is_file(path: Path) -> bool:
+        nonlocal raced
+        result = original_is_file(path)
+        if path == target and not result and not raced:
+            raced = True
+            target.write_text("concurrent consumer content\n", encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(Path, "is_file", racing_is_file)
+
+    assert run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(target)]) == 2
+    assert target.read_text(encoding="utf-8") == "concurrent consumer content\n"
+    assert not list(tmp_path.glob(".spec-write-*.tmp"))
+
+
+def test_relative_target__cwd_root_replaced_before_open__stays_with_process_cwd(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current = tmp_path / "current"
+    detached = tmp_path / "detached"
+    current.mkdir()
+    monkeypatch.chdir(current)
+    original_directory_descriptor = spec_cli._directory_descriptor  # pyright: ignore[reportPrivateUsage]
+    swapped = False
+
+    def swap_before_open(root: Path) -> AbstractContextManager[int]:
+        nonlocal swapped
+        if not swapped:
+            # A relative path is rooted in the process cwd inode. Reopening its old
+            # pathname after this swap would redirect publication into `current`.
+            current.rename(detached)
+            current.mkdir()
+            swapped = True
+        return original_directory_descriptor(root)
+
+    monkeypatch.setattr(spec_cli, "_directory_descriptor", swap_before_open)
+
+    rc = run(["new", "--profile", "light", "--id", "SPEC-7F3Q", "out.md"])
+
+    assert rc == 0
+    assert Path("out.md").is_file()
+    content = Path("out.md").read_text(encoding="utf-8")
+    assert "spec_id: SPEC-7F3Q" in content
+    assert (detached / "out.md").read_text(encoding="utf-8") == content
+    assert not (current / "out.md").exists()
 
 
 def test_directory_and_symlink_targets_refused_even_with_force(
@@ -333,10 +391,10 @@ def test_json_code_write_failed(
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    def _boom(src: object, dst: object) -> None:
+    def _boom(_src: str, _dst: str, **_kwargs: object) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    monkeypatch.setattr(spec_cli.os, "link", _boom)
     rc, code = _json_code(
         ["new", "--profile", "light", "--json", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")], capsys
     )
@@ -344,15 +402,55 @@ def test_json_code_write_failed(
     assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, no destination left
 
 
+def test_nonforce_write__persistent_cleanup_failure__reports_installed_destination(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "s.md"
+    real_unlink = os.unlink
+    attempts = 0
+
+    def blocked_unlink(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        dir_fd: int | None = None,
+    ) -> None:
+        nonlocal attempts
+        if isinstance(path, str) and path.startswith(".spec-write-"):
+            attempts += 1
+            raise PermissionError("staging cleanup blocked")
+        real_unlink(path, dir_fd=dir_fd)
+
+    monkeypatch.setattr(spec_cli.os, "unlink", blocked_unlink)
+
+    with pytest.raises(spec_cli.NewError) as exc_info:
+        spec_cli._safe_atomic_write(  # pyright: ignore[reportPrivateUsage]
+            target,
+            "complete payload\n",
+            force=False,
+        )
+
+    assert exc_info.value.code == "write_failed"
+    assert (
+        f"destination {target} was installed but staging cleanup failed" in exc_info.value.message
+    )
+    assert isinstance(exc_info.value.__cause__, PermissionError)
+    assert target.read_text(encoding="utf-8") == "complete payload\n"
+    staged = list(tmp_path.glob(".spec-write-*.tmp"))
+    assert len(staged) == 1
+    assert staged[0].read_text(encoding="utf-8") == "complete payload\n"
+    assert attempts == 2
+
+
 def test_write_cleanup_on_interruption(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # CR-NEW-001: a non-OSError (KeyboardInterrupt) after temp creation must still remove
     # the temp file and leave no destination — full parity with adopt/engine._atomic_write.
     monkeypatch.chdir(tmp_path)
 
-    def _boom(src: object, dst: object) -> None:
+    def _boom(_src: str, _dst: str, **_kwargs: object) -> None:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(spec_cli.os, "replace", _boom)
+    monkeypatch.setattr(spec_cli.os, "link", _boom)
     with pytest.raises(KeyboardInterrupt):
         run(["new", "--profile", "light", "--id", "SPEC-7F3Q", str(tmp_path / "s.md")])
     assert [p.name for p in tmp_path.iterdir()] == []  # temp cleaned up, destination untouched

@@ -6,7 +6,7 @@ Covers the full attack surface the engine defends against:
   - Symlinked-leaf destinations (skipped even with --force)
   - Symlinked parent directories that could redirect writes outside --dest
   - Broken (dangling) symlinks
-  - WriteError mapping for mkstemp failure, unreadable source, and os.replace failure
+  - WriteError mapping for staging failure, unreadable source, and os.replace failure
   - Create-only hard-link publication, cleanup failures, and unsupported filesystems
   - Fragment target path-safety (UsageError on traversal even though fragments never write)
 """
@@ -14,6 +14,7 @@ Covers the full attack surface the engine defends against:
 from __future__ import annotations
 
 import errno
+import os
 from pathlib import Path
 
 import pytest
@@ -80,7 +81,7 @@ def test_atomic_write_failure_preserves_original(
     target.write_text("original\n")
     plan = [_file_action(tmp_path, "keep.txt")]
 
-    def boom(_src: Path, _dst: Path) -> None:  # os.replace stand-in that fails post-write
+    def boom(_src: str, _dst: str, **_kwargs: object) -> None:
         raise OSError("disk full")
 
     monkeypatch.setattr(eng.os, "replace", boom)
@@ -96,18 +97,22 @@ def test_create_only_transient_cleanup_failure_reports_installed_destination(
     from project_standards.adopt.engine import _atomic_write  # pyright: ignore[reportPrivateUsage]
 
     target = tmp_path / "STATUS.md"
-    real_unlink = Path.unlink
+    real_unlink = os.unlink
     attempts = 0
 
-    def flaky_unlink(path: Path, missing_ok: bool = False) -> None:
+    def flaky_unlink(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        dir_fd: int | None = None,
+    ) -> None:
         nonlocal attempts
-        if path.name.startswith(".adopt-"):
+        if isinstance(path, str) and path.startswith(".adopt-"):
             attempts += 1
             if attempts == 1:
                 raise PermissionError("staging cleanup blocked")
-        real_unlink(path, missing_ok=missing_ok)
+        real_unlink(path, dir_fd=dir_fd)
 
-    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+    monkeypatch.setattr(os, "unlink", flaky_unlink)
 
     with pytest.raises(
         WriteError, match=r"destination .* was installed but staging cleanup failed"
@@ -126,17 +131,21 @@ def test_create_only_persistent_cleanup_failure_never_masks_writeerror(
     from project_standards.adopt.engine import _atomic_write  # pyright: ignore[reportPrivateUsage]
 
     target = tmp_path / "STATUS.md"
-    real_unlink = Path.unlink
+    real_unlink = os.unlink
     attempts = 0
 
-    def blocked_unlink(path: Path, missing_ok: bool = False) -> None:
+    def blocked_unlink(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        dir_fd: int | None = None,
+    ) -> None:
         nonlocal attempts
-        if path.name.startswith(".adopt-"):
+        if isinstance(path, str) and path.startswith(".adopt-"):
             attempts += 1
             raise PermissionError("staging cleanup blocked")
-        real_unlink(path, missing_ok=missing_ok)
+        real_unlink(path, dir_fd=dir_fd)
 
-    monkeypatch.setattr(Path, "unlink", blocked_unlink)
+    monkeypatch.setattr(os, "unlink", blocked_unlink)
 
     with pytest.raises(
         WriteError, match=r"destination .* was installed but staging cleanup failed"
@@ -158,7 +167,7 @@ def test_create_only_unsupported_hard_link_fails_cleanly(
 
     target = tmp_path / "STATUS.md"
 
-    def unsupported_link(_src: Path, _dst: Path) -> None:
+    def unsupported_link(_src: str, _dst: str, **_kwargs: object) -> None:
         raise OSError(errno.EOPNOTSUPP, "hard links unsupported")
 
     monkeypatch.setattr(engine.os, "link", unsupported_link)
@@ -206,15 +215,25 @@ def test_format_report_keeps_multiple_fragments_for_one_target() -> None:
     assert "block A" in out and "block B" in out  # neither snippet dropped
 
 
-def test_execute_maps_mkstemp_failure_to_writeerror(
+def test_execute_maps_staging_open_failure_to_writeerror(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import project_standards.adopt.engine as eng
 
-    def boom(*_a: object, **_k: object) -> tuple[int, str]:
-        raise OSError("no temp")
+    real_open = os.open
 
-    monkeypatch.setattr(eng.tempfile, "mkstemp", boom)
+    def boom(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+        mode: int = 0o777,
+        *,
+        dir_fd: int | None = None,
+    ) -> int:
+        if isinstance(path, str) and path.startswith(".adopt-"):
+            raise OSError("no temp")
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(eng.os, "open", boom)
     plan = [_file_action(tmp_path, "x.txt")]
     with pytest.raises(WriteError):
         eng.execute_plan(plan, tmp_path, force=False, dry_run=False)
@@ -268,6 +287,73 @@ def test_symlinked_parent_dir_not_written_through(tmp_path: Path) -> None:
     r = execute_plan([_file_action(tmp_path, "linkdir/f.txt")], dest, force=True, dry_run=False)
     assert r.symlink_skipped == ["linkdir/f.txt"]
     assert not (outside / "f.txt").exists()  # nothing written outside --dest
+
+
+def test_parent_symlink_swap_race_does_not_escape(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.adopt.engine as engine
+
+    root = tmp_path / "repo"
+    parent = root / "nested"
+    parent.mkdir(parents=True)
+    detached = root / "detached"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    original_render = engine.render_action
+
+    def racing_render(action: Action, ref: str | None = None) -> bytes:
+        content = original_render(action, ref)
+        parent.rename(detached)
+        parent.symlink_to(outside, target_is_directory=True)
+        return content
+
+    monkeypatch.setattr(engine, "render_action", racing_render)
+
+    with pytest.raises(WriteError):
+        execute_plan(
+            [_file_action(tmp_path, "nested/managed.txt")],
+            root,
+            force=False,
+            dry_run=False,
+        )
+
+    assert not (outside / "managed.txt").exists()
+    assert not (detached / "managed.txt").exists()
+
+
+def test_leaf_symlink_swap_race_does_not_clobber(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.adopt.engine as engine
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    target = root / "managed.txt"
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside\n", encoding="utf-8")
+    original_render = engine.render_action
+
+    def racing_render(action: Action, ref: str | None = None) -> bytes:
+        content = original_render(action, ref)
+        target.symlink_to(outside)
+        return content
+
+    monkeypatch.setattr(engine, "render_action", racing_render)
+
+    report = execute_plan(
+        [_file_action(tmp_path, "managed.txt")],
+        root,
+        force=False,
+        dry_run=False,
+    )
+
+    assert target.is_symlink()
+    assert outside.read_text(encoding="utf-8") == "outside\n"
+    assert report.created == []
+    assert report.skipped == ["managed.txt"]
 
 
 def test_atomic_write_new_file_is_group_other_readable(tmp_path: Path) -> None:

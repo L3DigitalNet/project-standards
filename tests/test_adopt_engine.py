@@ -8,6 +8,7 @@ files cover the path-safety / symlink surface (test_adopt_safety.py), full CLI i
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -236,9 +237,22 @@ def test_create_only_race_preserves_destination(
     target = tmp_path / "consumer" / "docs" / "STATUS.md"
     real_link = engine.os.link
 
-    def racing_link(src: Path, dst: Path) -> None:
+    def racing_link(
+        src: str,
+        dst: str,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+        follow_symlinks: bool = True,
+    ) -> None:
         target.write_text("consumer knowledge\n", encoding="utf-8")
-        real_link(src, dst)
+        real_link(
+            src,
+            dst,
+            src_dir_fd=src_dir_fd,
+            dst_dir_fd=dst_dir_fd,
+            follow_symlinks=follow_symlinks,
+        )
 
     monkeypatch.setattr(engine.os, "link", racing_link)
     action = Action(
@@ -256,6 +270,43 @@ def test_create_only_race_preserves_destination(
     assert report.created == []
     assert report.skipped == ["docs/STATUS.md"]
     assert list(target.parent.glob(".adopt-*.tmp")) == []
+
+
+def test_managed_nonforce_absent_destination_race_does_not_clobber(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.adopt.engine as engine
+
+    source = tmp_path / "source.md"
+    source.write_text("template\n", encoding="utf-8")
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    target = consumer / "docs/managed.md"
+    original_render = engine.render_action
+
+    def racing_render(action: Action, ref: str | None = None) -> bytes:
+        content = original_render(action, ref)
+        target.parent.mkdir(parents=True)
+        target.write_text("concurrent consumer content\n", encoding="utf-8")
+        return content
+
+    monkeypatch.setattr(engine, "render_action", racing_render)
+    action = Action(
+        kind="file",
+        source_path=source,
+        dest="docs/managed.md",
+        target=None,
+        standards=("x",),
+        install_policy=InstallPolicy.MANAGED,
+    )
+
+    report = execute_plan([action], consumer, force=False, dry_run=False)
+
+    assert target.read_text(encoding="utf-8") == "concurrent consumer content\n"
+    assert report.created == []
+    assert report.skipped == ["docs/managed.md"]
+    assert not list(target.parent.glob(".adopt-*.tmp"))
 
 
 def test_create_only_flows_from_manifest_through_execution(tmp_path: Path) -> None:
@@ -306,16 +357,24 @@ def test_validate_dest_lexical_escape_raises(monkeypatch: pytest.MonkeyPatch) ->
 def test_atomic_write_interrupt_before_tmp_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # An interrupt before mkstemp succeeds means there is no temp file to clean
+    # An interrupt before staging succeeds means there is no temp file to clean
     # up; the handler must re-raise without touching anything.
-    import tempfile
-
     from project_standards.adopt.engine import _atomic_write  # pyright: ignore[reportPrivateUsage]
 
-    def boom(*_a: object, **_k: object) -> tuple[int, str]:
-        raise KeyboardInterrupt
+    real_open = os.open
 
-    monkeypatch.setattr(tempfile, "mkstemp", boom)
+    def boom(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+        mode: int = 0o777,
+        *,
+        dir_fd: int | None = None,
+    ) -> int:
+        if isinstance(path, str) and path.startswith(".adopt-"):
+            raise KeyboardInterrupt
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "open", boom)
     with pytest.raises(KeyboardInterrupt):
         _atomic_write(tmp_path / "out.txt", b"data")
     assert list(tmp_path.iterdir()) == []

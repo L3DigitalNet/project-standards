@@ -4,21 +4,24 @@ from __future__ import annotations
 
 import argparse
 import base64
-import contextlib
 import dataclasses
 import json
 import os
 import random
 import re
-import stat
 import sys
-import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import NoReturn, cast
 
+from project_standards._filesystem import (
+    _directory_descriptor,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    _ParentDirectoryError,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    _PublishedCleanupError,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    _write_bytes,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+)
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
     SelectedCommandPackage,
@@ -619,6 +622,29 @@ def _target_type_conflict(target: Path) -> bool:
     return os.path.lexists(target) and not target.is_file()  # dir / fifo / device / socket
 
 
+def _descriptor_target(target: Path) -> tuple[Path, PurePosixPath]:
+    """Anchor a target for descriptor-relative mutation without changing CLI reach."""
+    working_directory = Path.cwd()
+    lexical = target if target.is_absolute() else working_directory / target
+    normalized = Path(os.path.normpath(lexical))
+    if normalized.is_relative_to(working_directory):
+        # Relative paths stay bound to the process cwd descriptor even if its
+        # pathname is concurrently renamed and replaced by another directory.
+        root = working_directory if target.is_absolute() else Path()
+        return (
+            root,
+            PurePosixPath(normalized.relative_to(working_directory).as_posix()),
+        )
+
+    # Absolute and explicit outside-cwd targets have always been supported. Resolve
+    # their parent once before opening descriptors so an allowed symlink above cwd
+    # selects a physical directory, while the final destination is never followed.
+    resolved_parent = target.parent.resolve(strict=False)
+    resolved_target = resolved_parent / target.name
+    anchor = Path(resolved_target.anchor)
+    return anchor, PurePosixPath(resolved_target.relative_to(anchor).as_posix())
+
+
 def _safe_atomic_write(target: Path, text: str, *, force: bool) -> bool:
     """Write text atomically to target with mode preservation. Returns whether file was overwritten.
 
@@ -633,40 +659,32 @@ def _safe_atomic_write(target: Path, text: str, *, force: bool) -> bool:
     overwritten = target.is_file()
     if overwritten and not force:
         raise NewError("exists", f"refusing to overwrite existing file: {target} (use --force)")
+    root, relative = _descriptor_target(target)
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
+        with _directory_descriptor(root) as root_descriptor:
+            installed = _write_bytes(
+                root_descriptor,
+                relative,
+                text.encode("utf-8"),
+                mode=None,
+                replace=force or overwritten,
+                temporary_prefix=".spec-write-",
+            )
+    except _ParentDirectoryError as exc:
         raise NewError(
             "mkdir_failed", f"cannot create parent directory for {target}: {exc}"
         ) from exc
-
-    tmp: Path | None = None
-    try:
-        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".spec-write-", suffix=".tmp")
-        tmp = Path(tmp_name)
-        # Mode (mirrors adopt/engine._atomic_write): preserve on overwrite; umask-respecting
-        # 0o666 for a new file, so the result is not left at mkstemp's owner-only 0600.
-        if target.exists():
-            with contextlib.suppress(OSError):
-                tmp.chmod(target.stat().st_mode & 0o777)
-        else:
-            mask = os.umask(0)
-            os.umask(mask)
-            with contextlib.suppress(OSError):
-                tmp.chmod(stat.S_IMODE(0o666 & ~mask))
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(text)
-        os.replace(tmp, target)  # noqa: PTH105
+    except _PublishedCleanupError as exc:
+        temporary = target.parent / exc.temporary
+        raise NewError(
+            "write_failed",
+            f"destination {target} was installed but staging cleanup failed for "
+            f"{temporary}: {exc.cause}",
+        ) from exc.cause
     except OSError as exc:
-        if tmp is not None:
-            tmp.unlink(missing_ok=True)
         raise NewError("write_failed", f"cannot write {target}: {exc}") from exc
-    except BaseException:
-        # Full parity with adopt/engine._atomic_write: also clean up on interruption /
-        # unexpected non-OSError (KeyboardInterrupt, generator-throw), then re-raise as-is.
-        if tmp is not None:
-            tmp.unlink(missing_ok=True)
-        raise
+    if not installed:
+        raise NewError("exists", f"refusing to overwrite existing file: {target} (use --force)")
     return overwritten
 
 
