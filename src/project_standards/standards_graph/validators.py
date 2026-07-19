@@ -127,6 +127,7 @@ def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
     for node in graph.standards:
         artifact_link = node.manifest.artifacts
         declared = artifact_link is not None
+        mislinked = False
         if artifact_link is not None:
             assert node.artifact_manifest_path is not None
             expected = (
@@ -147,6 +148,7 @@ def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
                         "link the standard's packaged adopt.toml inside the repository bundle tree",
                     )
                 )
+                mislinked = True
             elif node.artifact_manifest_path != expected:
                 findings.append(
                     _finding(
@@ -157,7 +159,8 @@ def _validate_artifact_manifests(graph: StandardsGraph) -> list[GraphFinding]:
                         f"set manifest to src/project_standards/bundles/{node.standard_id}/adopt.toml",
                     )
                 )
-        if declared and node.artifact_manifest is None:
+                mislinked = True
+        if declared and node.artifact_manifest is None and not mislinked:
             assert node.artifact_manifest_path is not None
             findings.append(
                 _finding(

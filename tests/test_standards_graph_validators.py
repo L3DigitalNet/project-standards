@@ -115,7 +115,9 @@ def test_declared_artifact_manifest_must_exist(tmp_path: Path) -> None:
     assert "SG-ARTIFACT-MANIFEST-MISSING" in _codes(tmp_path)
 
 
-def test_artifact_manifest_link_must_name_own_bundle(tmp_path: Path) -> None:
+def test_artifact_manifest_link__bundle_mismatch__emits_only_mismatch_findings(
+    tmp_path: Path,
+) -> None:
     alpha = _write_artifact_manifest(tmp_path, "alpha")
     beta = _write_artifact_manifest(tmp_path, "beta")
     write_standard(
@@ -133,10 +135,17 @@ def test_artifact_manifest_link_must_name_own_bundle(tmp_path: Path) -> None:
         artifact_manifest=alpha,
     )
 
-    assert "SG-ARTIFACT-MANIFEST-MISMATCH" in _codes(tmp_path)
+    findings = validate_graph(build_graph(tmp_path))
+
+    assert [(finding.code, finding.standard_id) for finding in findings] == [
+        ("SG-ARTIFACT-MANIFEST-MISMATCH", "alpha"),
+        ("SG-ARTIFACT-MANIFEST-MISMATCH", "beta"),
+    ]
 
 
-def test_artifact_manifest_link_must_not_escape_through_symlink(tmp_path: Path) -> None:
+def test_artifact_manifest_link__symlink_escape__emits_only_escape_finding(
+    tmp_path: Path,
+) -> None:
     outside = tmp_path.parent / f"{tmp_path.name}-outside"
     packaged = outside / "bundles/alpha/adopt.toml"
     packaged.parent.mkdir(parents=True)
@@ -152,7 +161,11 @@ def test_artifact_manifest_link_must_not_escape_through_symlink(tmp_path: Path) 
         artifact_manifest="src/project_standards/bundles/alpha/adopt.toml",
     )
 
-    assert "SG-ARTIFACT-MANIFEST-ESCAPE" in _codes(tmp_path)
+    findings = validate_graph(build_graph(tmp_path))
+
+    assert [(finding.code, finding.standard_id) for finding in findings] == [
+        ("SG-ARTIFACT-MANIFEST-ESCAPE", "alpha")
+    ]
 
 
 def test_non_adoptable_standard_must_not_link_artifact_manifest(tmp_path: Path) -> None:
