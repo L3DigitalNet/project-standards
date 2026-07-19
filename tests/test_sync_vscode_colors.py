@@ -13,6 +13,9 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.jsonc import (
+    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]
+)
 from project_standards.sync_vscode_colors import (
     patterns_to_path_colors,
     read_include_patterns,
@@ -116,9 +119,104 @@ def test_replaces_existing_path_colors(tmp_path: Path) -> None:
     assert data["other"] == 1
 
 
+def test_rewrite_settings_splices_only_existing_path_colors_value(tmp_path: Path) -> None:
+    old_value = (
+        f'[\n\t\t{{\n\t\t\t"filePath": "repo/old].md",\n\t\t\t"color": "{_COLOR}"\n\t\t}}\n\t]'
+    )
+    content = (
+        "{\n"
+        "\t// preserve this comment with [brackets]\n"
+        '\t"nested": {"values": [1, {"text": "] not the end"}]},\n'
+        '\t"escaped": "quote: \\" and bracket [",\n'
+        f'\t"folder-color.pathColors": {old_value}, // keep inline comment\n'
+        '    "tail": "/* not a comment */",\n'
+        "}\n"
+    )
+    settings = _make_settings(tmp_path, content)
+    entries = [{"folderPath": "repo/docs/", "color": _COLOR}]
+    value_start = content.index(old_value)
+    expected_value = json.dumps(entries, indent="\t").replace("\n", "\n\t")
+
+    rewrite_settings(settings, entries)
+
+    assert settings.read_text() == (
+        content[:value_start] + expected_value + content[value_start + len(old_value) :]
+    )
+
+
+def test_rewrite_settings_inserts_missing_path_colors_without_reserializing(
+    tmp_path: Path,
+) -> None:
+    nested_value = '{"text": "} in string", "values": [1, {"item": "]"}]}'
+    content = f'{{\n\t"nested": {nested_value}\n\t// preserve trailing comment\n}}\n'
+    settings = _make_settings(tmp_path, content)
+    entries = [{"filePath": "repo/CHANGELOG.md", "color": _COLOR}]
+    last_value_end = content.index(nested_value) + len(nested_value)
+    close_line_start = content.rindex("\n", 0, content.rindex("}")) + 1
+    serialized = json.dumps(entries, indent="\t").replace("\n", "\n\t")
+    inserted = f'\t"folder-color.pathColors": {serialized}\n'
+
+    rewrite_settings(settings, entries)
+
+    assert settings.read_text() == (
+        content[:last_value_end]
+        + ","
+        + content[last_value_end:close_line_start]
+        + inserted
+        + content[close_line_start:]
+    )
+
+
+def test_rewrite_settings_preserves_crlf_when_replacing_last_path_colors(
+    tmp_path: Path,
+) -> None:
+    old_value = (
+        "[\r\n"
+        "\t\t{\r\n"
+        f'\t\t\t"filePath": "repo/old.md",\r\n'
+        f'\t\t\t"color": "{_COLOR}"\r\n'
+        "\t\t}\r\n"
+        "\t]"
+    )
+    content = (
+        f'{{\r\n\t"other": ["] in string"],\r\n\t"folder-color.pathColors": {old_value}\r\n}}\r\n'
+    )
+    settings = _make_settings(tmp_path, content)
+    entries = [{"folderPath": "repo/docs/", "color": _COLOR}]
+    value_start = content.index(old_value)
+    expected_value = json.dumps(entries, indent="\t").replace("\n", "\r\n\t")
+
+    rewrite_settings(settings, entries)
+
+    assert settings.read_bytes().decode() == (
+        content[:value_start] + expected_value + content[value_start + len(old_value) :]
+    )
+
+
+def test_rewrite_settings_preserves_crlf_when_inserting_after_trailing_comma(
+    tmp_path: Path,
+) -> None:
+    content = (
+        "{\r\n"
+        '\t"nested": {"text": "} in string", "values": ["]"]},\r\n'
+        "\t// preserve trailing comment\r\n"
+        "}\r\n"
+    )
+    settings = _make_settings(tmp_path, content)
+    entries = [{"filePath": "repo/CHANGELOG.md", "color": _COLOR}]
+    close_line_start = content.rindex("\n", 0, content.rindex("}")) + 1
+    serialized = json.dumps(entries, indent="\t").replace("\n", "\r\n\t")
+    inserted = f'\t"folder-color.pathColors": {serialized}\r\n'
+
+    rewrite_settings(settings, entries)
+
+    assert settings.read_bytes().decode() == (
+        content[:close_line_start] + inserted + content[close_line_start:]
+    )
+
+
 def test_preserves_jsonc_header_comments(tmp_path: Path) -> None:
-    # VS Code writes settings.json as JSONC (JSON with comments); json.dumps strips them,
-    # so rewrite_settings must capture and re-inject leading // lines before serializing.
+    # The bounded splice must leave comments outside the managed value untouched.
     content = '{\n\t// This is a header comment\n\t"key": "value"\n}\n'
     settings = _make_settings(tmp_path, content)
     rewrite_settings(settings, [])
@@ -144,10 +242,14 @@ def test_rewrite_settings__jsonc_extensions__accepts_inline_comments_and_trailin
 
     rewrite_settings(settings, entries)
 
-    data = json.loads(settings.read_text().replace("\t// preserved header\n", ""))
+    rewritten = settings.read_text()
+    data = json.loads(_sanitize_jsonc(rewritten))
     assert data["literal"] == "https://example.test/* literal */,}"
     assert data["nested"] == {"enabled": True}
     assert data["folder-color.pathColors"] == entries
+    assert "// preserved header" in rewritten
+    assert "// inline comment" in rewritten
+    assert "/* block comment */" in rewritten
 
 
 def test_rewrite_settings__malformed_jsonc__exits_with_controlled_error(tmp_path: Path) -> None:
@@ -233,8 +335,7 @@ def test_repo_root_returns_git_toplevel(tmp_path: Path, monkeypatch: pytest.Monk
 
 
 def test_rewrite_settings_single_line_file(tmp_path: Path) -> None:
-    # A one-line settings file has no lines after the opening "{" — the header-
-    # comment scan must handle the zero-iteration case.
+    # Root insertion must create a valid member boundary when both braces share a line.
     p = tmp_path / "settings.json"
     p.write_text("{}")
     rewrite_settings(p, [{"filePath": "x/y.md", "color": _COLOR}])
