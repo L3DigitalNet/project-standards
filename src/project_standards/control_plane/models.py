@@ -224,9 +224,11 @@ class ConsumerCatalog(StrictModel):
         return _sorted_mapping(value)
 
 
-class LockHeader(ControlHeader):
+class LockHeader(StrictModel):
     """Digests binding applied state to one tool release, catalog, and config."""
 
+    schema_version: Literal["1.0", "1.1"]
+    catalog: CatalogMajor
     release: ToolRelease
     catalog_digest: Sha256Digest
     config_digest: Sha256Digest
@@ -268,8 +270,8 @@ class UnitProvenance(StrEnum):
     EXTERNAL = "external"
 
 
-class LockedUnit(StrictModel):
-    """Central ownership and drift record for one normalized semantic unit."""
+class _OwnedLockRecord(StrictModel):
+    """Ownership identity shared by live and absent central-lock records."""
 
     path: SafeRelativePath
     adapter: AdapterKind
@@ -278,18 +280,13 @@ class LockedUnit(StrictModel):
     shared_identity: SharedIdentity | None = None
     versions: dict[KebabId, PackageVersion]
     provenance: UnitProvenance
-    policy: ArtifactPolicy
-    semantic_digest: Sha256Digest
-    content_digest: Sha256Digest
-    mode: PosixMode | None = None
-    created_container: bool
 
     @model_validator(mode="after")
-    def _consistent_ownership(self) -> LockedUnit:
+    def _consistent_ownership(self) -> _OwnedLockRecord:
         if len(self.owners) != len(set(self.owners)):
-            raise ValueError("locked unit contains a duplicate owner")
+            raise ValueError("owned lock record contains a duplicate owner")
         if set(self.versions) != set(self.owners):
-            raise ValueError("locked unit version keys must exactly match owners")
+            raise ValueError("owned lock record version keys must exactly match owners")
         if len(self.owners) > 1 and self.shared_identity is None:
             raise ValueError("shared_identity is required for several owners")
         if len(self.owners) > 1 and self.adapter is AdapterKind.WHOLE_FILE:
@@ -309,6 +306,20 @@ class LockedUnit(StrictModel):
     def natural_key(self) -> tuple[str, str, str]:
         """Return the normalized identity used for lock ordering and uniqueness."""
         return (self.path.original, self.adapter.value, self.scope)
+
+
+class LockedUnit(_OwnedLockRecord):
+    """Central ownership and drift record for one normalized semantic unit."""
+
+    policy: ArtifactPolicy
+    semantic_digest: Sha256Digest
+    content_digest: Sha256Digest
+    mode: PosixMode | None = None
+    created_container: bool
+
+
+class CreateOnlyAbsence(_OwnedLockRecord):
+    """Ownership facts retained for an absent create-only semantic unit."""
 
 
 class LockedInput(StrictModel):
@@ -332,13 +343,18 @@ class CentralLock(StrictModel):
     standards: dict[KebabId, AppliedPackage] = Field(default_factory=dict)
     accepted_tracks: dict[KebabId, AcceptedTrack] = Field(default_factory=dict)
     artifacts: list[LockedUnit] = Field(default_factory=list)
+    create_only_absences: list[CreateOnlyAbsence] = Field(default_factory=list)
     referenced_inputs: list[LockedInput] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _unique_sorted_collections(self) -> CentralLock:
         artifact_keys = [artifact.natural_key for artifact in self.artifacts]
-        if len(artifact_keys) != len(set(artifact_keys)):
-            raise ValueError("central lock contains a duplicate artifact unit")
+        absence_keys = [absence.natural_key for absence in self.create_only_absences]
+        owned_keys = [*artifact_keys, *absence_keys]
+        if len(owned_keys) != len(set(owned_keys)):
+            raise ValueError("central lock contains a duplicate artifact or create-only absence")
+        if self.project_standards.schema_version == "1.0" and self.create_only_absences:
+            raise ValueError("lock schema 1.0 cannot carry create-only absences")
         input_keys = [item.natural_key for item in self.referenced_inputs]
         if len(input_keys) != len(set(input_keys)):
             raise ValueError("central lock contains a duplicate referenced input")
@@ -352,6 +368,11 @@ class CentralLock(StrictModel):
             self,
             "artifacts",
             sorted(self.artifacts, key=lambda item: item.natural_key),
+        )
+        object.__setattr__(
+            self,
+            "create_only_absences",
+            sorted(self.create_only_absences, key=lambda item: item.natural_key),
         )
         object.__setattr__(
             self,

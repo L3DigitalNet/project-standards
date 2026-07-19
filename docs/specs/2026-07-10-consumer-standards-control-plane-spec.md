@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-18'
+last_reviewed: '2026-07-19'
 supersedes: null
 superseded_by: null
 related:
@@ -61,6 +61,7 @@ related:
 | 0.11 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing focused, lifecycle, stale-plan, no-write/no-lock, managed-return, and source/wheel evidence for FR-037 and FR-038. No requirement or scope changed; live-root dogfood remains deferred to the atomic release commit. |
 | 0.12 | 2026-07-18 | Codex with owner-directed drift remediation | Record completed root dogfood and reopen declared-path provider integrity and performance evidence after a post-release audit found repository-wide fingerprinting. No requirement or scope changed. |
 | 0.13 | 2026-07-18 | Codex with owner-directed verification closeout | Record the corrected declared-path provider boundary and complete integrated verification; close DEV-001 without changing requirements or scope. |
+| 0.14 | 2026-07-19 | Codex with owner-directed review remediation | Version the central lock at schema 1.1 with a create-only absence partition while retaining canonical schema 1.0 reads. Config and catalog schemas remain 1.0; no planner lifecycle or downgrade support is added by this revision. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The control plane shipped as the v5 platform contract; later package programs remain separately governed.
 
@@ -255,7 +256,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | FR-003 | `config.toml` shall declare the expected catalog major and, under each `standards.STANDARD_ID` record, the enabled state, version selector, and package settings in its `config` table. | Desired state and options need one user-owned source. | Schema fixtures accept valid selectors/settings and reject unknown or misplaced keys. | Must |
 | FR-004 | Every consumer-facing package version shall publish a machine-readable configuration schema with defaults for its fixed `standards.STANDARD_ID.config` namespace. | Options must be version-aware and collision-free. | Catalog validation rejects missing schemas, invalid defaults, and options outside the selected package record. | Must |
 | FR-005 | `catalog.toml` shall list every package available in the installed distribution, including non-enabled, reference-only, internal, stable, retained, and candidate versions. | Users and tools need complete local discovery. | The generated catalog matches packaged manifests and includes all graph nodes and version channels. | Must |
-| FR-006 | `lock.toml` shall record the exact tool release, catalog major and digest, config digest, enabled-package applied records, effective-option digests, artifact ownership/provenance/hashes, referenced-input paths/digests, shared references, and accepted package-major tracks in a separate persistent authorization partition. | Applied state and authorization history must be reproducible without conflating disabled packages with installed ones. | Lock schema and reconciliation tests detect every material mismatch, keep disabled packages out of applied records, retain their accepted tracks, and assign no managed ownership to referenced inputs. | Must |
+| FR-006 | `lock.toml` shall record the exact tool release, catalog major and digest, config digest, enabled-package applied records, effective-option digests, live artifact ownership/provenance/hashes, create-only absence ownership facts, referenced-input paths/digests, shared references, and accepted package-major tracks in separate typed partitions. An absence record shall contain only path, adapter, normalized scope, owners, optional shared identity, owner package versions, and provenance. | Applied state, absent create-only ownership, and authorization history must be reproducible without claiming bytes for absent content or conflating disabled packages with installed ones. | Lock schema and reconciliation tests reject duplicate natural keys within or across the live-artifact and absence partitions, detect every material mismatch, keep disabled packages out of applied records, retain their accepted tracks, and assign no managed ownership to referenced inputs. | Must |
 | FR-007 | `project-standards reconcile` shall build and display a complete read-only plan from config, catalog, lock, live repository state, and a virtual tree containing every planned semantic contribution. | Users must inspect changes before mutation, and cross-package conflicts must be known before writes. | Plan fixtures cover create, semantic merge, update, repair, remove, preserve, no-op, and conflict actions without filesystem writes. | Must |
 | FR-008 | `project-standards reconcile --apply` shall execute only a conflict-free plan, run post-apply verification, and write the lock last. | Mutation requires explicit, recoverable authorization. | Apply tests prove precondition rechecks, atomic replacement, verification, and lock-last behavior. | Must |
 | FR-009 | `project-standards validate` and `reconcile --check` shall report desired-state, lock, config, catalog, and artifact drift without applying changes. | Validation and CI must remain safe. | Mutation spies prove all validation/check paths are read-only. | Must |
@@ -312,7 +313,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | IR-003 | CLI reconciliation | The system shall expose `project-standards reconcile [--check] [--apply] [--allow-major ID@MAJOR] [--repair-state]`. | Plan by default; check is read-only; apply mutates; repeatable authorization is package-and-target-major scoped; repair is explicit. | Full command matrix, ambiguous-candidate, and exit-code tests pass. |
 | IR-004 | CLI validation | Existing validators and generic providers shall resolve unified config by repository root and accept explicit override only for supported migration/debug use. | `.standards/config.toml` is canonical; legacy fallback is v5-only. | Every validator and reusable workflow passes unified-config fixtures. |
 | IR-005 | Desired-state file | `.standards/config.toml` shall use a versioned TOML schema with a platform container and package-keyed `standards` records whose `config` tables are validated by the selected payload. | UTF-8 TOML; repository-relative references only. | Schema, formatter, migration, and round-trip tests pass. |
-| IR-006 | Catalog and lock files | `.standards/catalog.toml` and `.standards/lock.toml` shall use generated canonical TOML with stable ordering. | Tool-owned UTF-8 TOML; committed and reviewable. | Generation is deterministic and parser/generator round trips are lossless. |
+| IR-006 | Catalog and lock files | `.standards/catalog.toml` and `.standards/lock.toml` shall use generated canonical TOML with stable ordering. | Tool-owned UTF-8 TOML; committed and reviewable. Catalog remains schema 1.0. Lock schema 1.0 reads as an empty absence partition; every lock write uses schema 1.1. | Generation is deterministic, current-version parser/generator round trips are lossless, and canonical lock 1.0 input normalizes to canonical 1.1 output. |
 
 ### 7.4 Data Requirements
 
@@ -320,7 +321,7 @@ Files that external tools discover at fixed paths remain there. The lock records
 | --- | --- | --- | --- | --- |
 | DR-001 | Desired config | Store catalog-major intent, package selectors, and package settings without applied-state claims. | Versioned schema; declared namespaces/options only; no secrets or executable values. | Consumer-owned. |
 | DR-002 | Catalog snapshot | Store the complete inventory and version-channel metadata supplied by the installed distribution. | Must match the installed catalog digest and configured major; no consumer edits. | Platform-owned. |
-| DR-003 | Central lock | Store enabled-package applied records separately from persistent accepted-major authorization records, plus digests, effective config, referenced inputs, artifacts, owners, policies, and shared references. | Written last; canonical order; disabled packages have no applied record; accepted tracks contain only standard ID by key, accepted non-default major, and authorizing catalog lineage; artifact/input hashes verify; referenced inputs carry no managed owner; no duplicate package locks. | Platform-owned. |
+| DR-003 | Central lock | Store enabled-package applied records separately from persistent accepted-major authorization records, plus digests, effective config, referenced inputs, live artifacts, create-only absences, owners, policies, and shared references. | Written last; canonical order; disabled packages have no applied record; accepted tracks contain only standard ID by key, accepted non-default major, and authorizing catalog lineage; artifact/input hashes verify; absence records contain no policy, semantic/content digest, mode, or created-container claim; live and absent natural keys are unique across both partitions; referenced inputs carry no managed owner; no duplicate package locks. | Platform-owned. |
 | DR-004 | Versioned payload | Retain one immutable complete payload per advertised package version. | Version/digest identity, contained paths, config schema, manifests, resources, providers, and migration graph required. | Standard package-owned. |
 | DR-005 | Package-local durable state | Store deterministic, non-generic package resources or state only below `.standards/packages/STANDARD_ID/`. | Every entry is declared by the selected payload or provider-output contract, committed, centrally inventoried and hashed; no transient/cache data, ignore-only paths, secrets, or duplicate locks. | Declaring package-owned. |
 | DR-006 | Migration evidence | Report legacy sources, inferred ownership, explicit consumer-owned relinquishment, preserved ambiguity, and applied conversion without storing sensitive content. | Repository-confined; read-only until apply; stable JSON schema. An unrecognized-whole-file relinquishment claim records its target, observed digest, `intent_pointer`, and no managed unit; the pointer must match the payload's single-target signature binding, be provider-recognized, and resolve to raw `consumer-owned`. A known-history consumer-owned preserve claim carries no `intent_pointer`. | Platform-owned report; consumer owns source content. |
@@ -551,7 +552,7 @@ The catalog is generated from the installed distribution and committed. It inclu
 
 ```toml
 [project_standards]
-schema_version = '1.0'
+schema_version = '1.1'
 catalog = '5'
 release = '5.3.0'
 catalog_digest = 'sha256:catalog-content-digest'
@@ -570,15 +571,30 @@ authorized_catalog = '5'
 
 [[artifacts]]
 path = '.standards/packages/markdown-frontmatter/agent-summary.md'
+adapter = 'whole-file'
+scope = '$file'
 owners = ['markdown-frontmatter']
+versions = { markdown-frontmatter = '2.0' }
 policy = 'managed'
-provenance = 'source-owned'
+provenance = 'source'
+semantic_digest = 'sha256:artifact-semantic-digest'
 content_digest = 'sha256:artifact-content-digest'
+created_container = false
+
+[[create_only_absences]]
+path = 'docs/consumer-owned-notes.md'
+adapter = 'whole-file'
+scope = '$file'
+owners = ['markdown-frontmatter']
+versions = { markdown-frontmatter = '2.0' }
+provenance = 'source'
 ```
 
 The example assumes candidate major `2` was selected by applying `latest` with matching `ID@2` authorization, so compatible updates can continue within the accepted major. An exact candidate selector would instead remain pinned under FR-012. The lock records resolved facts, not user intent. The `standards` partition contains enabled-package applied state only. The separate `accepted_tracks` partition is durable evidence that a non-default package major was authorized; it records only the package key, accepted major, and authorizing catalog lineage. `authorized_catalog` is audit provenance for diagnostics and migration reports, not a resolver input.
 
 On successful disable, the package's applied, artifact, and referenced-input records are removed, but its accepted-track record remains. Re-enable with `latest` resumes that major without new authorization; if the catalog no longer advertises a compatible version on the retained major, resolution fails closed instead of falling back to the ordinary default. An FR-033 transition to another non-default major replaces the record, while exit to the selected catalog's default removes it. A matching catalog promotion also removes the exceptional record whether the package is enabled or disabled; exact pins and accepted tracks on other majors remain sticky. Missing-lock recovery never reconstructs this authorization history. Shared artifacts list every current owner, and package-local artifacts use the same central records, hashes, and drift rules as conventional-path artifacts.
+
+Lock schema 1.1 adds `create_only_absences` without reusing a stale live-artifact record. Each absence contains exactly `path`, `adapter`, normalized `scope`, `owners`, optional `shared_identity`, owner `versions`, and `provenance`; it carries no artifact policy, semantic or content digest, mode, or created-container claim because no managed bytes are present. The natural key is `(path, adapter, scope)`, and it must be unique within and across the live `artifacts` and `create_only_absences` partitions. Canonical lock schema 1.0 input reads as an empty absence partition and normalizes in memory; every lock write emits canonical schema 1.1. Desired config and catalog schemas remain 1.0. Once a 1.1 lock is written, using a 5.0.x tool release is an unsupported downgrade.
 
 ### Package Release Payload
 
@@ -918,7 +934,9 @@ There is no daemon, database, background worker, or network listener.
 
 | Setting | Required? | Default | Description |
 | --- | --- | --- | --- |
-| `project_standards.schema_version` | Yes | `1.0` at v5 launch | Control-plane config schema. |
+| `.standards/config.toml` `project_standards.schema_version` | Yes | `1.0` | Desired-config schema; unchanged by lock schema 1.1. |
+| `.standards/catalog.toml` `project_standards.schema_version` | Yes | `1.0` | Catalog schema; unchanged by lock schema 1.1. |
+| `.standards/lock.toml` `project_standards.schema_version` | Yes | `1.1` on write | Central-lock schema; canonical 1.0 reads with an empty absence partition and normalizes to 1.1. |
 | `project_standards.catalog` | Yes | Supplied explicitly to init | Expected `project-standards` catalog major. |
 | `standards.STANDARD_ID.enabled` | Yes for selected record | `false` when absent | Desired package presence. |
 | `standards.STANDARD_ID.version` | Yes when enabled | `latest` | Exact package version or catalog-default selector. |

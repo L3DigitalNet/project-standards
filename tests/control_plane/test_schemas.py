@@ -52,6 +52,53 @@ def test_control_plane_schema_set_is_deterministic_and_structurally_closed() -> 
         assert json.loads(control_plane_schema_bytes()[name]) == document
 
 
+@pytest.mark.parametrize(
+    ("schema_name", "central_lock_definition"),
+    [
+        ("consumer-lock.schema.json", None),
+        ("reconciliation-plan.schema.json", "CentralLock"),
+    ],
+)
+def test_lock_bearing_schemas_define_closed_create_only_absences(
+    schema_name: str,
+    central_lock_definition: str | None,
+) -> None:
+    schema = control_plane_schema_documents()[schema_name]
+    definitions = cast("dict[str, object]", schema["$defs"])
+    absence = cast("dict[str, object]", definitions["CreateOnlyAbsence"])
+    properties = cast("dict[str, object]", absence["properties"])
+    central_lock = (
+        schema
+        if central_lock_definition is None
+        else cast("dict[str, object]", definitions[central_lock_definition])
+    )
+    lock_properties = cast("dict[str, object]", central_lock["properties"])
+
+    assert absence["additionalProperties"] is False
+    assert set(properties) == {
+        "path",
+        "adapter",
+        "scope",
+        "owners",
+        "shared_identity",
+        "versions",
+        "provenance",
+    }
+    assert set(cast("list[str]", absence["required"])) == {
+        "path",
+        "adapter",
+        "scope",
+        "owners",
+        "versions",
+        "provenance",
+    }
+    assert lock_properties["create_only_absences"] == {
+        "items": {"$ref": "#/$defs/CreateOnlyAbsence"},
+        "title": "Create Only Absences",
+        "type": "array",
+    }
+
+
 def test_migration_claim_schema_exposes_optional_intent_pointer() -> None:
     schema = control_plane_schema_documents()["migration-report.schema.json"]
     definitions = cast("dict[str, object]", schema["$defs"])

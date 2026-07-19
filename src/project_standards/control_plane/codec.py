@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import tomllib
+from typing import Literal
 
 from pydantic import ValidationError
 
@@ -144,12 +145,12 @@ def _render_inline_versions(versions: dict[str, PackageVersion]) -> str:
     return "{ " + ", ".join(entries) + " }"
 
 
-def render_lock(lock: CentralLock) -> bytes:
-    """Render complete applied state in deterministic, reviewable TOML."""
+def _render_lock(lock: CentralLock, *, schema_version: Literal["1.0", "1.1"]) -> bytes:
+    """Render the selected canonical lock encoding for compatibility checks."""
     header = lock.project_standards
     lines = [
         "[project_standards]",
-        'schema_version = "1.0"',
+        f"schema_version = {_toml_string(schema_version)}",
         f"catalog = {_toml_string(header.catalog.value)}",
         f"release = {_toml_string(header.release)}",
         f"catalog_digest = {_toml_string(header.catalog_digest.value)}",
@@ -206,6 +207,26 @@ def render_lock(lock: CentralLock) -> bytes:
                 "",
             ]
         )
+    if schema_version == "1.1":
+        for absence in lock.create_only_absences:
+            lines.extend(
+                [
+                    "[[create_only_absences]]",
+                    f"path = {_toml_string(absence.path.original)}",
+                    f"adapter = {_toml_string(absence.adapter.value)}",
+                    f"scope = {_toml_string(absence.scope)}",
+                    f"owners = {_toml_array(absence.owners)}",
+                ]
+            )
+            if absence.shared_identity is not None:
+                lines.append(f"shared_identity = {_toml_string(absence.shared_identity)}")
+            lines.extend(
+                [
+                    f"versions = {_render_inline_versions(absence.versions)}",
+                    f"provenance = {_toml_string(absence.provenance.value)}",
+                    "",
+                ]
+            )
     for referenced in lock.referenced_inputs:
         lines.extend(
             [
@@ -218,6 +239,11 @@ def render_lock(lock: CentralLock) -> bytes:
             ]
         )
     return _finish(lines)
+
+
+def render_lock(lock: CentralLock) -> bytes:
+    """Render complete applied state as canonical lock schema 1.1 TOML."""
+    return _render_lock(lock, schema_version="1.1")
 
 
 def _load_toml(content: bytes, *, kind: str) -> dict[str, object]:
@@ -258,6 +284,11 @@ def parse_lock(content: bytes) -> CentralLock:
         lock = CentralLock.model_validate(_load_toml(content, kind="lock"))
     except ValidationError as exc:
         raise ControlPlaneError(f"lock violates its schema: {validation_summary(exc)}") from exc
-    if render_lock(lock) != content:
+    input_version = lock.project_standards.schema_version
+    canonical = _render_lock(lock, schema_version=input_version)
+    if canonical != content:
         raise ControlPlaneError("lock is not in canonical form")
+    if input_version == "1.0":
+        header = lock.project_standards.model_copy(update={"schema_version": "1.1"})
+        return lock.model_copy(update={"project_standards": header})
     return lock

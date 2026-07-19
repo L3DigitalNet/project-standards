@@ -114,6 +114,13 @@
           "title": "Artifacts",
           "type": "array"
         },
+        "create_only_absences": {
+          "items": {
+            "$ref": "#/$defs/CreateOnlyAbsence"
+          },
+          "title": "Create Only Absences",
+          "type": "array"
+        },
         "project_standards": {
           "$ref": "#/$defs/LockHeader"
         },
@@ -138,6 +145,69 @@
         "project_standards"
       ],
       "title": "CentralLock",
+      "type": "object"
+    },
+    "CreateOnlyAbsence": {
+      "additionalProperties": false,
+      "description": "Ownership facts retained for an absent create-only semantic unit.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "owners": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Owners",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/UnitProvenance"
+        },
+        "scope": {
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "shared_identity": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:[./_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared Identity"
+        },
+        "versions": {
+          "patternProperties": {
+            "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "title": "Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "path",
+        "adapter",
+        "scope",
+        "owners",
+        "versions",
+        "provenance"
+      ],
+      "title": "CreateOnlyAbsence",
       "type": "object"
     },
     "LockHeader": {
@@ -165,7 +235,10 @@
           "type": "string"
         },
         "schema_version": {
-          "const": "1.0",
+          "enum": [
+            "1.0",
+            "1.1"
+          ],
           "title": "Schema Version",
           "type": "string"
         }

@@ -87,6 +87,26 @@ def _unit(
     return unit
 
 
+def _absence(
+    *,
+    path: str = "pyproject.toml",
+    scope: str = "table:/tool/ruff",
+    owners: list[str] | None = None,
+) -> dict[str, object]:
+    selected_owners = ["python-tooling"] if owners is None else owners
+    absence: dict[str, object] = {
+        "path": path,
+        "adapter": "toml",
+        "scope": scope,
+        "owners": selected_owners,
+        "versions": dict.fromkeys(selected_owners, "1.1"),
+        "provenance": "source",
+    }
+    if len(selected_owners) > 1:
+        absence["shared_identity"] = "shared-unit"
+    return absence
+
+
 def test_desired_config_is_strict_frozen_and_deterministically_ordered() -> None:
     config = DesiredConfig.model_validate(
         {
@@ -350,6 +370,88 @@ def test_lock_rejects_duplicate_or_inconsistent_artifact_ownership(
                 "standards": {},
                 "accepted_tracks": {},
                 "artifacts": artifacts,
+                "referenced_inputs": [],
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("artifacts", "create_only_absences"),
+    [
+        ([_unit()], [_absence()]),
+        ([], [_absence(), _absence()]),
+    ],
+    ids=["cross-partition", "within-absence-partition"],
+)
+def test_lock_rejects_duplicate_keys_across_artifacts_and_create_only_absences(
+    artifacts: list[dict[str, object]],
+    create_only_absences: list[dict[str, object]],
+) -> None:
+    with pytest.raises(
+        ValidationError,
+        match="duplicate artifact or create-only absence",
+    ):
+        CentralLock.model_validate(
+            {
+                "project_standards": {**_lock_header(), "schema_version": "1.1"},
+                "standards": {},
+                "accepted_tracks": {},
+                "artifacts": artifacts,
+                "create_only_absences": create_only_absences,
+                "referenced_inputs": [],
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "absence",
+    [
+        _absence(owners=["demo", "demo"]),
+        {**_absence(owners=["demo"]), "versions": {"other": "1.1"}},
+        {**_absence(owners=["alpha", "demo"]), "shared_identity": None},
+        {
+            **_absence(owners=["alpha", "demo"]),
+            "adapter": "whole-file",
+            "scope": "$file",
+        },
+        _absence(
+            path=".standards/packages/demo/state.toml",
+            owners=["other"],
+        ),
+    ],
+    ids=[
+        "duplicate-owner",
+        "owner-version-mismatch",
+        "missing-shared-identity",
+        "shared-whole-file",
+        "package-namespace-owner-mismatch",
+    ],
+)
+def test_lock_rejects_inconsistent_create_only_absence_ownership(
+    absence: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError):
+        CentralLock.model_validate(
+            {
+                "project_standards": {**_lock_header(), "schema_version": "1.1"},
+                "standards": {},
+                "accepted_tracks": {},
+                "artifacts": [],
+                "create_only_absences": [absence],
+                "referenced_inputs": [],
+            }
+        )
+
+
+def test_lock_schema_1_0_rejects_create_only_absences() -> None:
+    with pytest.raises(ValidationError, match=r"schema 1\.0"):
+        CentralLock.model_validate(
+            {
+                "project_standards": _lock_header(),
+                "standards": {},
+                "accepted_tracks": {},
+                "artifacts": [],
+                "create_only_absences": [_absence()],
                 "referenced_inputs": [],
             }
         )
