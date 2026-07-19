@@ -24,6 +24,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
   - [Consuming the standards](#consuming-the-standards)
     - [Current consumer packages](#current-consumer-packages)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
+    - [Pre-commit hooks](#pre-commit-hooks)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
   - [License](#license)
@@ -203,6 +204,7 @@ uv build --wheel --out-dir dist
 python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
 export PYTHONPATH="$PWD/build/wheel-runtime"
 uv run coverage erase
+npm ci
 uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
 uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
 uv run pytest -m performance

@@ -6,7 +6,7 @@ description: 'Step 07 evidence that the standards repository is manifest-driven,
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-12'
-updated: '2026-07-12'
+updated: '2026-07-19'
 reviewed: '2026-07-12'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -47,7 +47,7 @@ This result authorizes only the next design/research phase. It does not start MC
 
 ## Verification Commands
 
-The Step 07 pass is backed by these repository gates on 2026-07-12:
+The Step 07 pass is backed by these repository gates on 2026-07-12. The explicit `--config` invocation records the pre-migration repository state; current unified-control-plane checkouts use plain `uv run project-standards validate`.
 
 ```bash
 uv run project-standards standards validate-packages --root . --json

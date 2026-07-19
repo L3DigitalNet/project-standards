@@ -12,7 +12,7 @@ Superseded specifications and informal design records for `project-standards`, i
 
 | Date | Design | Outcome | What it covers |
 | --- | --- | --- | --- |
-| 2026-06-04 | [Linting / Formatting Stack](2026-06-04-linting-formatting-stack.md) | implemented (v1.3.0) | Research doc pinning the exact linting + formatting stack for frontmatter validation and the ADR/MADR standard |
+| 2026-06-04 | [Linting / Formatting Stack](2026-06-04-linting-formatting-stack.md) | implemented (shipped in v2.0.0; originally targeted an unreleased 1.3.0) | Research doc pinning the exact linting + formatting stack for frontmatter validation and the ADR/MADR standard |
 | 2026-06-05 | [Handoff v3 Migration](2026-06-05-handoff-v3-migration-design.md) | implemented | Migrate `project-standards` to the handoff-system-v3 `docs/handoff/` session-state layout |
 | 2026-06-06 | [Python Tooling SSOT Adoption](2026-06-06-python-tooling-ssot-adoption-design.md) | released (v2.0.0) | Adopt the Python Tooling SSOT Standard in this repo — `uv` build backend, `src/` layout, `basedpyright`, `pip-audit` |
 | 2026-06-06 | [Standards Bundle Restructure](2026-06-06-standards-bundle-restructure-design.md) | released (v2.0.0) | Per-standard bundle directories under `src/project_standards/bundles/` replacing the old flat layout |

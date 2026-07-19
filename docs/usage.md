@@ -40,7 +40,7 @@ project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [-
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
-project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--dry-run] [--json]
+project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
 project-standards standards <verb> [<args>...]

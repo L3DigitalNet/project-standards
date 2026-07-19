@@ -45,7 +45,7 @@
 | Standards bundle restructure design | `docs/specs/archive/2026-06-06-standards-bundle-restructure-design.md` | approved; plan released (`v2.0.0`) |
 | Python Tooling SSOT adoption design | `docs/specs/archive/2026-06-06-python-tooling-ssot-adoption-design.md` | approved; plan released (`v2.0.0`) |
 | Handoff v3 migration design | `docs/specs/archive/2026-06-05-handoff-v3-migration-design.md` | approved; plan implemented |
-| Linting/formatting stack (DEC-1…9 trail) | `docs/specs/archive/2026-06-04-linting-formatting-stack.md` | implemented (1.3.0) |
+| Linting/formatting stack (DEC-1…9 trail) | `docs/specs/archive/2026-06-04-linting-formatting-stack.md` | implemented (shipped in v2.0.0; originally targeted an unreleased 1.3.0) |
 
 ## Storage
 
