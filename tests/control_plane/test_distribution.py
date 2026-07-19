@@ -17,7 +17,8 @@ from project_standards.package_contract.projection import sync_payload_projectio
 from project_standards.package_contract.repository import build_package_repository
 from tests.wheel_helpers import extract_pure_python_wheel
 
-_FULL = Path("tests/fixtures/package_contract/valid/full")
+_ROOT = Path(__file__).resolve().parents[2]
+_FULL = _ROOT / "tests/fixtures/package_contract/valid/full"
 
 
 def _installed_fixture(tmp_path: Path) -> Path:
@@ -129,7 +130,7 @@ def test_extracted_wheel_loads_catalog_offline_through_importlib_resources(
     shutil.copytree(_FULL / "standards", project / "standards")
     shutil.copytree(_FULL / "catalogs", project / "catalogs")
     shutil.copytree(
-        Path("src/project_standards"),
+        _ROOT / "src/project_standards",
         project / "src/project_standards",
         ignore=shutil.ignore_patterns("catalogs", "families", "payloads"),
     )

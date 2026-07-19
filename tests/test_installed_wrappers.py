@@ -23,8 +23,9 @@ from project_standards.package_contract.projection import (
     sync_payload_projection,
 )
 
+_ROOT = Path(__file__).resolve().parents[1]
 _SCRIPTS = tuple(
-    tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["scripts"]
+    tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["scripts"]
 )
 
 
@@ -36,7 +37,10 @@ def _venv_environment(**extra: str) -> dict[str, str]:
 def installed_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     tmp = tmp_path_factory.mktemp("wheel-smoke")
     subprocess.run(
-        ["uv", "build", "--wheel", "--out-dir", str(tmp)], check=True, capture_output=True
+        ["uv", "build", "--wheel", "--out-dir", str(tmp)],
+        cwd=_ROOT,
+        check=True,
+        capture_output=True,
     )
     (wheel,) = tmp.glob("*.whl")
     venv = tmp / "venv"
@@ -56,7 +60,7 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     tmp = tmp_path_factory.mktemp("migration-wheel")
     source = tmp / "source"
     shutil.copytree(
-        Path.cwd(),
+        _ROOT,
         source,
         ignore=shutil.ignore_patterns(
             ".git",
@@ -147,7 +151,7 @@ def selected_command_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     tmp = tmp_path_factory.mktemp("selected-command-wheel")
     source = tmp / "source"
     shutil.copytree(
-        Path.cwd(),
+        _ROOT,
         source,
         ignore=shutil.ignore_patterns(
             ".git",
@@ -206,9 +210,9 @@ def test_installed_wheel_matches_every_catalog_advertised_source_byte(
         env=_venv_environment(),
     )
     installed_root = Path(located.stdout.strip())
-    source_root = Path("src/project_standards").resolve()
+    source_root = _ROOT / "src/project_standards"
 
-    for link in plan_payload_projection(Path.cwd()).links:
+    for link in plan_payload_projection(_ROOT).links:
         relative = link.destination.relative_to(source_root)
         installed = installed_root / relative
         assert installed.is_file(), relative
@@ -266,11 +270,11 @@ def test_installed_v5_wheel_migrates_all_legacy_namespaces_offline_at_fixed_poin
     repo = tmp_path / "consumer"
     repo.mkdir()
     shutil.copyfile(
-        "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml",
+        _ROOT / "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml",
         repo / ".project-standards.yml",
     )
     shutil.copyfile(
-        "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0/legacy.md",
+        _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0/legacy.md",
         repo / "legacy-alpha.md",
     )
     extension = repo / "config/alpha-options.toml"

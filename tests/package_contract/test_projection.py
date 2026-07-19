@@ -209,7 +209,7 @@ def test_projection_apply_removes_stale_symlinks_but_refuses_regular_files(
 
 
 def test_current_build_configuration_includes_canonical_sources_in_sdist() -> None:
-    config = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    config = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
     assert config["tool"]["uv"]["build-backend"]["source-include"] == [
         "standards/**",

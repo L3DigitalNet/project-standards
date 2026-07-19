@@ -16,7 +16,8 @@ from project_standards.package_contract.projection import sync_payload_projectio
 from tests.control_plane.planner_helpers import resolution_request, write_payload
 from tests.wheel_helpers import extract_pure_python_wheel
 
-_FULL = Path("tests/fixtures/package_contract/valid/full")
+_ROOT = Path(__file__).resolve().parents[2]
+_FULL = _ROOT / "tests/fixtures/package_contract/valid/full"
 
 
 def _tree_bytes(repo: Path) -> dict[str, bytes]:
@@ -131,7 +132,7 @@ def test_unknown_declarative_package_needs_no_shared_source_dispatch(
 
     assert plan.applicable
     assert plan.proposed_content("unknown.txt") == b"known\n"
-    shared_sources = Path("src/project_standards/control_plane").rglob("*.py")
+    shared_sources = (_ROOT / "src/project_standards/control_plane").rglob("*.py")
     assert all(standard_id not in path.read_text(encoding="utf-8") for path in shared_sources)
 
 
@@ -182,7 +183,7 @@ def test_extracted_wheel_runs_offline_lifecycle_and_repairs_partial_apply(
     shutil.copytree(_FULL / "standards", project / "standards")
     shutil.copytree(_FULL / "catalogs", project / "catalogs")
     shutil.copytree(
-        Path("src/project_standards"),
+        _ROOT / "src/project_standards",
         project / "src/project_standards",
         ignore=shutil.ignore_patterns("catalogs", "families", "payloads"),
     )

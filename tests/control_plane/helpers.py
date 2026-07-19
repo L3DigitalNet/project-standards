@@ -6,7 +6,8 @@ from pathlib import Path
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.package_contract.projection import sync_payload_projection
 
-_FULL = Path("tests/fixtures/package_contract/valid/full")
+_ROOT = Path(__file__).resolve().parents[2]
+_FULL = _ROOT / "tests/fixtures/package_contract/valid/full"
 
 
 def installed_distribution(tmp_path: Path) -> InstalledDistribution:

@@ -8,6 +8,7 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 
+_ROOT = Path(__file__).resolve().parents[2]
 _AUTHORING = {
     ProviderOperation.FIX,
     ProviderOperation.SCAFFOLD,
@@ -28,7 +29,7 @@ _PACKAGE_IDS = (
 
 
 def _current_payloads() -> tuple[Path, ...]:
-    return tuple(sorted(Path("standards").glob("*/versions/*/payload.toml")))
+    return tuple(sorted((_ROOT / "standards").glob("*/versions/*/payload.toml")))
 
 
 def test_advertised_authoring_providers_return_executor_plans() -> None:
@@ -49,9 +50,9 @@ def test_advertised_authoring_providers_return_executor_plans() -> None:
 
 def test_shared_command_boundary_contains_no_package_dispatch() -> None:
     shared = (
-        Path("src/project_standards/control_plane/command_resolution.py"),
-        Path("src/project_standards/control_plane/providers.py"),
-        Path("src/project_standards/control_plane/executor.py"),
+        _ROOT / "src/project_standards/control_plane/command_resolution.py",
+        _ROOT / "src/project_standards/control_plane/providers.py",
+        _ROOT / "src/project_standards/control_plane/executor.py",
     )
     source = "\n".join(path.read_text(encoding="utf-8") for path in shared)
 

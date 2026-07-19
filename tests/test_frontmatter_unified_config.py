@@ -39,6 +39,7 @@ from project_standards.package_contract.paths import PackageVersion, Sha256Diges
 from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderEffect
 from project_standards.validate_frontmatter import ConfigError, load_cli_config
 
+_ROOT = Path(__file__).resolve().parents[1]
 _PAYLOAD_DIGEST = f"sha256:{'a' * 64}"
 _EFFECTIVE_CONFIG_DIGEST = f"sha256:{'b' * 64}"
 
@@ -48,7 +49,7 @@ def installed_v5_distribution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> InstalledDistribution:
     installed = tmp_path / "installed/project_standards"
-    shutil.copytree(Path("src/project_standards"), installed, symlinks=False)
+    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
     distribution = InstalledDistribution(installed, tool_release="5.2.0")
     monkeypatch.setattr(
         InstalledDistribution,

@@ -23,7 +23,8 @@ from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import ProviderEffect
 from tests.control_plane.helpers import installed_distribution
 
-_FULL_ALPHA = Path("tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0")
+_ROOT = Path(__file__).resolve().parents[2]
+_FULL_ALPHA = _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0"
 
 
 def _use_distribution(

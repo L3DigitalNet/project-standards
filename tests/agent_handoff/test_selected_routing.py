@@ -26,11 +26,13 @@ from project_standards.control_plane.locking import (
 from project_standards.control_plane.planner import plan_reconciliation
 from project_standards.control_plane.schemas import MutationPlanSchema
 
+_ROOT = Path(__file__).resolve().parents[2]
+
 
 @pytest.fixture(scope="module")
 def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribution:
     installed = tmp_path_factory.mktemp("agent-handoff-v2") / "project_standards"
-    shutil.copytree(Path("src/project_standards"), installed, symlinks=False)
+    shutil.copytree(_ROOT / "src/project_standards", installed, symlinks=False)
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 

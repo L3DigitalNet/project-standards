@@ -13,7 +13,8 @@ from project_standards.specs.cli import (
     _VERBS,  # pyright: ignore[reportPrivateUsage]
 )
 
-_USAGE = Path("docs/usage.md").read_text(encoding="utf-8")
+_ROOT = Path(__file__).resolve().parents[1]
+_USAGE = (_ROOT / "docs/usage.md").read_text(encoding="utf-8")
 
 # Top-level leaves are argparse-registered in cli.py; keep in sync with the parser.
 _FRONTMATTER_LEAVES = (
@@ -68,7 +69,7 @@ def _has_entry(name: str) -> bool:
 
 
 def test_every_console_script_documented() -> None:
-    scripts = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"][
+    scripts = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
         "scripts"
     ]
     missing = [name for name in scripts if not _has_entry(name)]

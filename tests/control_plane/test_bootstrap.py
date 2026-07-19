@@ -18,7 +18,8 @@ from project_standards.control_plane.locking import LockedControlDirectory
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.wheel_helpers import extract_pure_python_wheel
 
-_FULL = Path("tests/fixtures/package_contract/valid/full")
+_ROOT = Path(__file__).resolve().parents[2]
+_FULL = _ROOT / "tests/fixtures/package_contract/valid/full"
 
 
 def _installed_fixture(tmp_path: Path, *, tool_release: str = "5.0.0") -> InstalledDistribution:
@@ -289,7 +290,7 @@ def test_extracted_wheel_initializes_offline_with_the_exact_scaffold(tmp_path: P
     shutil.copytree(_FULL / "standards", project / "standards")
     shutil.copytree(_FULL / "catalogs", project / "catalogs")
     shutil.copytree(
-        Path("src/project_standards"),
+        _ROOT / "src/project_standards",
         project / "src/project_standards",
         ignore=shutil.ignore_patterns("catalogs", "families", "payloads"),
     )
