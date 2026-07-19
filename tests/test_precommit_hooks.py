@@ -1,4 +1,3 @@
-# tests/test_precommit_hooks.py
 import tomllib
 from pathlib import Path
 
@@ -7,13 +6,13 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 
 
-def test_workflow_invokes_aggregate_validation_without_legacy_overrides():
+def test_workflow_invokes_aggregate_validation_without_legacy_overrides() -> None:
     wf = (REPO / ".github/workflows/validate-markdown-frontmatter.yml").read_text()
     assert wf.count("project-standards validate") == 2
     assert "--config" not in wf
 
 
-def test_hook_entries_map_to_console_scripts():
+def test_hook_entries_map_to_console_scripts() -> None:
     hooks = yaml.safe_load((REPO / ".pre-commit-hooks.yaml").read_text())
     scripts = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["scripts"]
     ids = {h["id"] for h in hooks}
@@ -29,6 +28,6 @@ def test_hook_entries_map_to_console_scripts():
         assert h["language"] == "python"
 
 
-def test_references_hook_runs_whole_repo():
+def test_references_hook_runs_whole_repo() -> None:
     hooks = {h["id"]: h for h in yaml.safe_load((REPO / ".pre-commit-hooks.yaml").read_text())}
     assert hooks["validate-references"]["pass_filenames"] is False

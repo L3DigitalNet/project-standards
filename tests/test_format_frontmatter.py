@@ -131,28 +131,28 @@ def test_format_text__schema_read__uses_explicit_utf8(
     assert encodings == ["utf-8"]
 
 
-def test_clean_input_is_byte_identical():
+def test_clean_input_is_byte_identical() -> None:
     # format_text returns (new_text, changed, warnings). Already-canonical -> no change.
     new, changed, _warnings = format_text(CLEAN, path=None)
     assert new == CLEAN
     assert changed is False
 
 
-def test_no_frontmatter_is_noop():
+def test_no_frontmatter_is_noop() -> None:
     body = "# Just a body\n\nNo frontmatter here.\n"
     new, changed, _warnings = format_text(body, path=None)
     assert new == body
     assert changed is False
 
 
-def test_comment_block_preserved_on_roundtrip():
+def test_comment_block_preserved_on_roundtrip() -> None:
     src = CLEAN.replace("id: 'note-a3f9zk-x'\n", "id: 'note-a3f9zk-x'  # frozen at creation\n")
     new, changed, _warnings = format_text(src, path=None)
     assert "# frozen at creation" in new
     assert changed is False
 
 
-def test_duplicate_top_level_key_is_refused():
+def test_duplicate_top_level_key_is_refused() -> None:
     # PyYAML silently keeps the last duplicate; the formatter must NOT rewrite such a
     # block (it would erase the human-visible conflict). It skips with a warning. (CR-002)
     src = CLEAN.replace("tags: []\n", "tags: []\ntags: ['x']\n")
@@ -162,7 +162,7 @@ def test_duplicate_top_level_key_is_refused():
     assert any("duplicate" in w for w in warnings)
 
 
-def test_reorder_to_canonical_order():
+def test_reorder_to_canonical_order() -> None:
     src = (
         "---\n"
         "title: 'X'\n"
@@ -184,7 +184,7 @@ def test_reorder_to_canonical_order():
     assert changed is True
 
 
-def test_unknown_key_sorts_after_known_keys():
+def test_unknown_key_sorts_after_known_keys() -> None:
     src = (
         "---\n"
         "schema_version: '1.1'\n"
@@ -228,7 +228,7 @@ def _doc(*, title: str = "X", extra: str = "", tags_line: str = "tags: []") -> s
     )
 
 
-def test_unquoted_scalars_get_single_quoted():
+def test_unquoted_scalars_get_single_quoted() -> None:
     src = (
         "---\n"
         "schema_version: 1.1\n"  # identifier-like number -> '1.1'
@@ -252,14 +252,14 @@ def test_unquoted_scalars_get_single_quoted():
     assert changed is True
 
 
-def test_null_license_stays_null():
+def test_null_license_stays_null() -> None:
     src = _doc(extra="license: null\n")  # helper defined below
     new, _, _ = format_text(src, path=None)
     assert "license: null" in new
     assert "license: 'null'" not in new
 
 
-def test_double_quoted_becomes_single_quoted():
+def test_double_quoted_becomes_single_quoted() -> None:
     src = _doc(title='"Hello"')
     new, _, _ = format_text(src, path=None)
     assert "title: 'Hello'" in new
@@ -273,26 +273,26 @@ def test_boolean_like_scalar_kept_as_string(token: str) -> None:
     assert f"title: '{token}'" in new
 
 
-def test_hash_in_plain_scalar_is_not_a_comment():
+def test_hash_in_plain_scalar_is_not_a_comment() -> None:
     # `C#` has no whitespace before '#', so it is scalar content, not a comment (CR-NEW-003).
     src = _doc(title="C# guide")
     new, _, _ = format_text(src, path=None)
     assert "title: 'C# guide'" in new
 
 
-def test_url_fragment_preserved():
+def test_url_fragment_preserved() -> None:
     src = _doc(title="http://example.com/p#frag")
     new, _, _ = format_text(src, path=None)
     assert "title: 'http://example.com/p#frag'" in new
 
 
-def test_real_inline_comment_preserved_on_scalar():
+def test_real_inline_comment_preserved_on_scalar() -> None:
     src = _doc(title="X  # keep me")  # whitespace + '#' IS a real comment
     new, _, _ = format_text(src, path=None)
     assert "title: 'X'  # keep me" in new
 
 
-def test_flow_list_becomes_block_and_dedupes():
+def test_flow_list_becomes_block_and_dedupes() -> None:
     src = _doc(tags_line="tags: ['a', 'b', 'a']")
     new, changed, _ = format_text(src, path=None)
     assert "tags:\n  - 'a'\n  - 'b'\n" in new
@@ -300,13 +300,13 @@ def test_flow_list_becomes_block_and_dedupes():
     assert changed is True
 
 
-def test_empty_block_list_becomes_flow_empty():
+def test_empty_block_list_becomes_flow_empty() -> None:
     src = _doc(tags_line="tags:")  # key with no value and no items -> tags: []
     new, _, _ = format_text(src, path=None)
     assert "tags: []" in new
 
 
-def test_boolean_like_list_items_kept_as_strings():
+def test_boolean_like_list_items_kept_as_strings() -> None:
     # list items must not be coerced (BaseLoader); [on, off, yes, no] stay strings (CR-NEW-001).
     src = _doc(tags_line="tags: [on, off, yes, no]")
     new, _, _ = format_text(src, path=None)
@@ -344,34 +344,34 @@ def test_block_list_as_last_field_no_trailing_blank_line() -> None:
     assert twice == new and changed2 is False  # idempotent
 
 
-def test_inline_comment_preserved_on_flow_list():
+def test_inline_comment_preserved_on_flow_list() -> None:
     src = _doc(tags_line="tags: [a, b]  # keep")  # CR-NEW-004
     new, _, _ = format_text(src, path=None)
     assert "tags:  # keep" in new  # comment moves to the block key line
     assert "- 'a'" in new and "- 'b'" in new
 
 
-def test_inline_comment_preserved_on_empty_list():
+def test_inline_comment_preserved_on_empty_list() -> None:
     src = _doc(tags_line="tags: []  # keep")  # CR-NEW-004
     new, _, _ = format_text(src, path=None)
     assert "tags: []  # keep" in new
 
 
-def test_hash_inside_quoted_list_item_not_a_comment():
+def test_hash_inside_quoted_list_item_not_a_comment() -> None:
     src = _doc(extra="source: ['Issue #123']\n")  # CR-NEW-005: '#' inside quote is literal
     new, _, _ = format_text(src, path=Path("docs/x.md"))
     assert "- 'Issue #123'" in new  # whole item preserved, '#' kept
     assert "source: []" not in new  # not emptied / mis-split
 
 
-def test_real_comment_after_quoted_list_item_preserved():
+def test_real_comment_after_quoted_list_item_preserved() -> None:
     src = _doc(extra="source: ['Issue #123']  # keep\n")  # CR-NEW-005
     new, _, _ = format_text(src, path=Path("docs/x.md"))
     assert "- 'Issue #123'" in new
     assert "source:  # keep" in new
 
 
-def test_type_renamed_to_doc_type_when_absent():
+def test_type_renamed_to_doc_type_when_absent() -> None:
     src = _doc().replace("doc_type: 'note'\n", "type: 'note'\n")
     new, changed, _ = format_text(src, path=None)
     assert "doc_type: 'note'" in new
@@ -379,14 +379,14 @@ def test_type_renamed_to_doc_type_when_absent():
     assert changed is True
 
 
-def test_both_type_and_doc_type_present_warns_keeps_both():
+def test_both_type_and_doc_type_present_warns_keeps_both() -> None:
     src = _doc(extra="type: 'x'\n")
     new, _, warnings = format_text(src, path=None)
     assert "doc_type: 'note'" in new
     assert any("type" in w.lower() for w in warnings)
 
 
-def test_missing_required_arrays_injected():
+def test_missing_required_arrays_injected() -> None:
     src = (
         "---\n"
         "schema_version: '1.1'\n"
@@ -404,13 +404,13 @@ def test_missing_required_arrays_injected():
     assert changed is True
 
 
-def test_schema_version_injected_when_missing():
+def test_schema_version_injected_when_missing() -> None:
     src = _doc().replace("schema_version: '1.1'\n", "")
     new, _, _ = format_text(src, path=None)
     assert "schema_version: '1.1'" in new
 
 
-def test_doc_type_filled_from_readme_path_when_missing():
+def test_doc_type_filled_from_readme_path_when_missing() -> None:
     src = _doc().replace("doc_type: 'note'\n", "")  # no doc_type
     new, _, _ = format_text(src, path=Path("README.md"))
     assert "doc_type: 'index'" in new
@@ -437,14 +437,14 @@ def test_doc_type_research_rule_rejects_prefix_lookalike() -> None:
     assert "doc_type: 'research'" not in new
 
 
-def test_valid_doc_type_never_overridden_by_path():
+def test_valid_doc_type_never_overridden_by_path() -> None:
     src = _doc().replace("doc_type: 'note'\n", "doc_type: 'reference'\n")
     new, _, _ = format_text(src, path=Path("README.md"))
     assert "doc_type: 'reference'" in new  # SA-001: valid value preserved
     assert "doc_type: 'index'" not in new
 
 
-def test_denylisted_paths_are_refused():
+def test_denylisted_paths_are_refused() -> None:
     from project_standards.format_frontmatter import is_denylisted
 
     assert is_denylisted(Path("CLAUDE.md"))
@@ -454,7 +454,7 @@ def test_denylisted_paths_are_refused():
     assert not is_denylisted(Path("docs/note.md"))
 
 
-def test_extension_object_nested_bytes_preserved():
+def test_extension_object_nested_bytes_preserved() -> None:
     src = (
         "---\n"
         "schema_version: '1.1'\n"
@@ -480,7 +480,7 @@ def test_extension_object_nested_bytes_preserved():
     assert warnings == []
 
 
-def test_crlf_line_endings_preserved():
+def test_crlf_line_endings_preserved() -> None:
     src = _doc().replace("\n", "\r\n")
     src = src.replace("title: X\r\n", "title: X\r\n") if "title: X" in src else src
     # Force one change (unquoted) and assert CRLF survives on unchanged lines.
@@ -491,7 +491,7 @@ def test_crlf_line_endings_preserved():
     assert "title: 'X'\r\n" in new
 
 
-def test_scaffold_injects_schema_valid_block():
+def test_scaffold_injects_schema_valid_block() -> None:
     body = "# Real Title\n\nSome content.\n"
     new, changed, _ = format_text(
         body, path=Path("docs/guide.md"), scaffold=True, today="2026-06-08"
@@ -505,13 +505,13 @@ def test_scaffold_injects_schema_valid_block():
     assert changed is True
 
 
-def test_scaffold_disabled_leaves_body_untouched():
+def test_scaffold_disabled_leaves_body_untouched() -> None:
     body = "# Title\n\nContent.\n"
     new, changed, _ = format_text(body, path=Path("docs/guide.md"), scaffold=False)
     assert new == body and changed is False
 
 
-def test_scaffold_uses_path_doc_type_rule():
+def test_scaffold_uses_path_doc_type_rule() -> None:
     new, _, _ = format_text("# R\n", path=Path("README.md"), scaffold=True, today="2026-06-08")
     assert "doc_type: 'index'" in new
 

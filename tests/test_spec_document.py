@@ -137,7 +137,7 @@ def test_fenced_definition_rows_do_not_create_definition_sites() -> None:
     assert [full_id for full_id, _line in definition_sites(doc)["FR"]] == ["FR-001"]
 
 
-def test_skip_set_zero_config():
+def test_skip_set_zero_config() -> None:
     doc = parse_document(
         "t.md",
         _body(
@@ -158,7 +158,7 @@ def test_skip_set_zero_config():
     assert "FR-1" not in [fid for fid, _ in doc.used_ids["FR"]]
 
 
-def test_reference_prefixes_param_skips_configured():
+def test_reference_prefixes_param_skips_configured() -> None:
     doc = parse_document("t.md", _body("Backlog RQ-123 and GAP-56."), frozenset({"RQ", "GAP"}))
     assert "RQ" not in doc.used_ids
     assert "GAP" not in doc.used_ids

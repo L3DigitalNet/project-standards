@@ -3,11 +3,11 @@ import re
 from project_standards.id_format import random_token, slugify
 
 
-def test_slugify_basic():
+def test_slugify_basic() -> None:
     assert slugify("Tailscale ACL tag ordering gotcha") == "tailscale-acl-tag-ordering-gotcha"
 
 
-def test_slugify_strips_accents_and_punctuation():
+def test_slugify_strips_accents_and_punctuation() -> None:
     assert (
         slugify("Standards Adoption & Compliance Procedure")
         == "standards-adoption-compliance-procedure"
@@ -15,16 +15,16 @@ def test_slugify_strips_accents_and_punctuation():
     assert slugify("café déjà") == "cafe-deja"
 
 
-def test_slugify_empty_for_symbol_only():
+def test_slugify_empty_for_symbol_only() -> None:
     assert slugify("!!!") == ""
 
 
-def test_random_token_is_six_base36_chars():
+def test_random_token_is_six_base36_chars() -> None:
     tok = random_token()
     assert re.fullmatch(r"[0-9a-z]{6}", tok)
 
 
-def test_random_token_varies():
+def test_random_token_varies() -> None:
     assert len({random_token() for _ in range(50)}) > 1
 
 
