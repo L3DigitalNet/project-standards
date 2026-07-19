@@ -24,6 +24,20 @@ def test_discovery_uses_the_v2_preamble_and_ignores_v1_manifests(tmp_path: Path)
     assert result.findings == ()
 
 
+def test_discovery__v2_preamble_beyond_4096_bytes__is_discovered(tmp_path: Path) -> None:
+    repository = copy_minimal_repository(tmp_path)
+    manifest = repository / "standards/demo/standard.toml"
+    original = manifest.read_text(encoding="utf-8")
+    preamble = "# retained author context\n\n" * 256
+    assert len(preamble.encode("utf-8")) > 4096
+    manifest.write_text(preamble + original, encoding="utf-8")
+
+    result = discover_v2_families(repository)
+
+    assert [path.parent.name for path in result.paths] == ["demo"]
+    assert result.findings == ()
+
+
 def test_discovery_allowlist_is_explicit_and_deterministic(tmp_path: Path) -> None:
     repository = copy_minimal_repository(tmp_path)
     shutil.copytree(repository / "standards/demo", repository / "standards/other")

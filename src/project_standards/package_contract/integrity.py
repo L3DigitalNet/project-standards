@@ -124,6 +124,8 @@ def _live_files(payload_dir: Path) -> dict[str, Path]:
         relative_path = entry.relative_to(payload_dir)
         relative_text = relative_path.as_posix()
         if "__pycache__" in relative_path.parts:
+            # Runtime imports create caches beside payload Python. Only cache directories and
+            # .pyc files are ephemeral; all other content still fails inventory validation.
             if entry.is_dir() or entry.suffix == ".pyc":
                 continue
             raise PackageContractError(
@@ -161,7 +163,11 @@ def validate_payload_integrity(
     *,
     expected_digest: Sha256Digest | None = None,
 ) -> PayloadIntegrity:
-    """Verify every payload byte before returning its canonical aggregate identity."""
+    """Verify payload bytes and return their canonical aggregate identity.
+
+    Interpreter-generated `__pycache__/*.pyc` files are ephemeral and excluded
+    from the inventory and digest chain.
+    """
     declared = _declared_files(manifest)
     live = _live_files(payload_dir)
     expected_paths = set(declared) | {"payload.toml"}

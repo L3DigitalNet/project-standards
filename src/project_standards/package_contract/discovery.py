@@ -14,8 +14,11 @@ from project_standards.package_contract.diagnostics import (
     sort_findings,
 )
 
-_V2_PREAMBLE = re.compile(
-    rb"\A(?:[ \t]*(?:\#[^\r\n]*)?\r?\n)*[ \t]*schema_version[ \t]*=[ \t]*[\"']2\.0[\"']",
+_V2_SCHEMA_LINE = re.compile(
+    rb"\A[ \t]*schema_version[ \t]*=[ \t]*[\"']2\.0[\"']",
+)
+_V2_PREAMBLE_PADDING = re.compile(
+    rb"[ \t]*(?:\#[^\r\n]*)?(?:\r?\n)?",
 )
 
 
@@ -70,10 +73,14 @@ def _has_v2_preamble(path: Path) -> bool:
         if path.is_symlink() or not path.is_file():
             return False
         with path.open("rb") as stream:
-            prefix = stream.read(4096)
+            for line in stream:
+                if _V2_SCHEMA_LINE.match(line) is not None:
+                    return True
+                if _V2_PREAMBLE_PADDING.fullmatch(line) is None:
+                    return False
     except OSError as exc:
         raise PackageContractError("family preamble could not be inspected safely") from exc
-    return _V2_PREAMBLE.match(prefix) is not None
+    return False
 
 
 def discover_v2_families(

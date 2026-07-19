@@ -103,6 +103,7 @@ def _validate_relations(
                     extends_edges.add((standard_id, target))
                     extends_versions[(standard_id, target)].add(version)
 
+        # Defense-in-depth for hand-built repos; PayloadManifest validation is canonical.
         expected_evidence = {
             (RelationEvidenceKind.EXTENDS.value, target) for target in payload.relations.extends
         } | {
@@ -380,6 +381,7 @@ def _validate_migrations(
                 ):
                     invalid_endpoint = True
                 if endpoint.legacy_state is not None:
+                    # Defense-in-depth for hand-built repos; PayloadManifest validation is canonical.
                     if endpoint.legacy_state not in legacy_state_ids:
                         invalid_endpoint = True
                     else:
@@ -414,6 +416,7 @@ def _validate_migrations(
                 migration_edges[standard_id][source.value].add(target.value)
                 if migration.reversible:
                     migration_edges[standard_id][target.value].add(source.value)
+        # Defense-in-depth for hand-built repos; PayloadManifest validation is canonical.
         if legacy_state_ids - used_legacy_states:
             findings.append(
                 _finding(
@@ -458,6 +461,8 @@ def _validate_migrations(
             continue
         for entry in entries:
             if entry.version.major == default.version.major:
+                continue
+            if entry.role in {CatalogRole.INTERNAL, CatalogRole.REFERENCE_ONLY}:
                 continue
             if not _reachable(
                 migration_edges[standard_id],

@@ -3,6 +3,8 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+import pytest
+
 from project_standards.package_contract import graph as package_graph
 from project_standards.package_contract.catalog import (
     CatalogPackageEntry,
@@ -30,6 +32,7 @@ from project_standards.package_contract.payload import (
     LegacyStateDeclaration,
     MigrationDeclaration,
     MigrationMode,
+    PayloadAvailability,
     PayloadIdentity,
     PayloadManifest,
     ProviderDeclaration,
@@ -403,14 +406,23 @@ def test_graph_rejects_unregistered_legacy_state_endpoints() -> None:
     assert validate_package_graph(_repository([registered])) == ()
 
 
-def test_candidate_major_requires_entry_and_exit_paths() -> None:
+@pytest.mark.parametrize(
+    "role",
+    [
+        pytest.param(CatalogRole.CANDIDATE, id="candidate"),
+        pytest.param(CatalogRole.RETAINED, id="retained"),
+    ],
+)
+def test_migration_paths__consumer_role_on_another_major__are_required(
+    role: CatalogRole,
+) -> None:
     alpha_v1 = _manifest("alpha", version="1.2")
     alpha_v2 = _manifest("alpha", version="2.0")
     repository = _repository(
         [alpha_v1, alpha_v2],
         [
             _catalog_entry("1.2", CatalogRole.DEFAULT),
-            _catalog_entry("2.0", CatalogRole.CANDIDATE),
+            _catalog_entry("2.0", role),
         ],
     )
 
@@ -420,6 +432,41 @@ def test_candidate_major_requires_entry_and_exit_paths() -> None:
         "PC-MIGRATION-ENTRY",
         "PC-MIGRATION-EXIT",
     ]
+
+
+@pytest.mark.parametrize(
+    ("role", "availability"),
+    [
+        pytest.param(
+            CatalogRole.INTERNAL,
+            PayloadAvailability.INTERNAL,
+            id="internal",
+        ),
+        pytest.param(
+            CatalogRole.REFERENCE_ONLY,
+            PayloadAvailability.REFERENCE_ONLY,
+            id="reference-only",
+        ),
+    ],
+)
+def test_migration_paths__nonconsumer_role_on_another_major__are_not_required(
+    role: CatalogRole,
+    availability: PayloadAvailability,
+) -> None:
+    alpha_v1 = _manifest("alpha", version="1.2")
+    alpha_v2 = _manifest("alpha", version="2.0")
+    alpha_v2 = alpha_v2.model_copy(
+        update={"payload": alpha_v2.payload.model_copy(update={"availability": availability})}
+    )
+    repository = _repository(
+        [alpha_v1, alpha_v2],
+        [
+            _catalog_entry("1.2", CatalogRole.DEFAULT),
+            _catalog_entry("2.0", role),
+        ],
+    )
+
+    assert validate_package_graph(repository) == ()
 
 
 def test_reversible_candidate_migration_supplies_entry_and_exit_paths() -> None:
