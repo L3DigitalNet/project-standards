@@ -19,7 +19,7 @@
 #   bash build-validate-id-pyz.sh /path/to/project-standards/src/project_standards
 # Or via env var:
 #   PS_SRC=/path/to/project-standards/src/project_standards bash build-validate-id-pyz.sh
-# Default source: ~/projects/project-standards/src/project_standards
+# Default source: this repo's src/project_standards (falls back to ~/projects/project-standards)
 
 set -euo pipefail
 
@@ -31,15 +31,15 @@ else
     REPO_DIR="$SCRIPT_DIR"
 fi
 
-# Source package: argument > env var > sibling project-standards repo > this repo.
+# Source package: argument > env var > this repo > workstation fallback.
 if [[ -n "${1:-}" ]]; then
     PS_PKG="$(cd "$1" && pwd)"
 elif [[ -n "${PS_SRC:-}" ]]; then
     PS_PKG="$(cd "$PS_SRC" && pwd)"
-elif [[ -d "$HOME/projects/project-standards/src/project_standards" ]]; then
-    PS_PKG="$HOME/projects/project-standards/src/project_standards"
 elif [[ -d "$SCRIPT_DIR/../src/project_standards" ]]; then
     PS_PKG="$(cd "$SCRIPT_DIR/../src/project_standards" && pwd)"
+elif [[ -d "$HOME/projects/project-standards/src/project_standards" ]]; then
+    PS_PKG="$HOME/projects/project-standards/src/project_standards"
 else
     echo "error: cannot find project_standards source." >&2
     echo "  Pass the path as an argument: $0 /path/to/project-standards/src/project_standards" >&2
@@ -83,10 +83,16 @@ from .exceptions import SchemaError as SchemaError  # noqa: F401
 
 class Draft202012Validator:
     def __init__(self, schema: object) -> None: ...
-    def iter_errors(self, instance: object): return iter([])
+    def iter_errors(self, instance: object):
+        raise NotImplementedError(
+            "jsonschema is stubbed out in validate-id.pyz; schema validation is unavailable"
+        )
 
     @classmethod
-    def check_schema(cls, schema: object) -> None: ...
+    def check_schema(cls, schema: object) -> None:
+        raise NotImplementedError(
+            "jsonschema is stubbed out in validate-id.pyz; schema validation is unavailable"
+        )
 EOF
 
 # ── 3. project_standards package ──────────────────────────────────────────
