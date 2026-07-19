@@ -96,6 +96,11 @@ def test_reference_prefixes_bad_shape_rejected(tmp_path: Path) -> None:
         load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: ['rq']\n"))
 
 
+def test_reference_prefixes_non_string_error_names_the_field(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match=r"spec\.reference_prefixes"):
+        load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: [1]\n"))
+
+
 def test_reference_prefixes_canonical_collision_rejected(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="canonical spec-local prefix"):
         load_spec_config(_write(tmp_path, "spec:\n  reference_prefixes: ['FR']\n"))

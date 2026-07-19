@@ -71,7 +71,12 @@ def split_front_matter(text: str) -> tuple[str, str]:
     """Return (frontmatter, body), raising ValueError for an unterminated fence."""
     if not text.startswith("---\n"):
         return "", text
-    end = text.index("\n---\n", 4)
+    try:
+        end = text.index("\n---\n", 4)
+    except ValueError:
+        if text.endswith("\n---"):
+            return text[4:-4], ""
+        raise ValueError("unterminated frontmatter fence") from None
     return text[4:end], text[end + 5 :]
 
 
@@ -102,13 +107,22 @@ def _masked_structural_view(text: str) -> str:
     return "".join(out)
 
 
-def headings(body: str) -> list[tuple[int, str, int]]:
-    """Return Markdown heading tuples as (level, title, 1-based body line)."""
+def _headings(body: str, *, minimum: int, maximum: int) -> list[tuple[int, str, int]]:
     out: list[tuple[int, str, int]] = []
     for i, line in enumerate(_masked_structural_view(body).splitlines(), 1):
-        if m := re.match(r"^(#{2,4})\s+(.*)$", line):
+        if m := re.match(rf"^(#{{{minimum},{maximum}}})\s+(.*)$", line):
             out.append((len(m.group(1)), m.group(2).rstrip(), i))
     return out
+
+
+def headings(body: str) -> list[tuple[int, str, int]]:
+    """Return H2-H4 section tuples as (level, title, 1-based body line)."""
+    return _headings(body, minimum=2, maximum=4)
+
+
+def anchor_headings(body: str) -> list[tuple[int, str, int]]:
+    """Return every GitHub anchor-bearing H1-H6 heading outside fences."""
+    return _headings(body, minimum=1, maximum=6)
 
 
 def section_numbers(hs: list[tuple[int, str, int]]) -> list[tuple[str, int]]:

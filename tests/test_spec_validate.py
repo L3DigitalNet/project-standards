@@ -41,12 +41,14 @@ def test_bad_fixture_reports_code(name: str, code: str) -> None:
     assert code in _codes(name)
 
 
-def test_undeclared_message_names_reference_prefixes() -> None:
-    doc = parse_document("t.md", "---\nspec_id: SPEC-0001\n---\nBody cites RQ-123 as an id.\n")
+def test_undeclared_message_names_appendix_a_and_reference_prefixes() -> None:
+    doc = parse_document("t.md", "---\nspec_id: SPEC-0001\n---\nBody cites FR-001 as an id.\n")
     findings = validate_document(doc, load_registry())
-    undeclared = [f for f in findings if f.code == "SV-ID-UNDECLARED" and f.locus == "RQ-"]
-    assert undeclared, "expected an SV-ID-UNDECLARED for RQ-"
+    undeclared = [f for f in findings if f.code == "SV-ID-UNDECLARED" and f.locus == "FR-"]
+    assert undeclared, "expected an SV-ID-UNDECLARED for FR-"
+    assert "not declared in this spec's Appendix A" in undeclared[0].message
     assert "spec.reference_prefixes" in undeclared[0].message
+    assert "not a canonical spec-local prefix" not in undeclared[0].message
 
 
 def test_shipped_dogfood_example_validates_and_lints_clean() -> None:

@@ -95,6 +95,26 @@ def test_fenced_ids_headings_and_declarations_do_not_become_structure() -> None:
     assert doc.declared_prefixes == {"FR": "§1"}
 
 
+def test_anchor_slugs_include_h1_h5_h6_without_promoting_sections() -> None:
+    doc = parse_document(
+        "t.md",
+        _body(
+            "# Project Title\n\n"
+            "## 1. Purpose\n\n"
+            "##### 9. Deep Anchor\n\n"
+            "###### 10. Deepest Anchor\n\n"
+            "```markdown\n"
+            "# Fenced Title\n"
+            "##### 11. Fenced Deep Anchor\n"
+            "```\n"
+        ),
+    )
+
+    assert [number for number, _line in doc.sections] == ["1"]
+    assert {"project-title", "1-purpose", "9-deep-anchor", "10-deepest-anchor"} <= doc.slugs
+    assert {"fenced-title", "11-fenced-deep-anchor"}.isdisjoint(doc.slugs)
+
+
 def test_fenced_definition_rows_do_not_create_definition_sites() -> None:
     doc = parse_document(
         "t.md",

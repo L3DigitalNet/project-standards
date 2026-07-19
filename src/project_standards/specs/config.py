@@ -29,7 +29,7 @@ class SpecConfig:
     reference_prefixes: list[str] = field(default_factory=list)
 
 
-def _str_list(value: Any) -> list[str]:
+def _str_list(value: Any, *, field: str) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
@@ -38,7 +38,7 @@ def _str_list(value: Any) -> list[str]:
         raw = cast("list[object]", value)
         if all(isinstance(item, str) for item in raw):
             return cast("list[str]", raw)
-    raise ConfigError("spec.include/spec.exclude must be strings or lists of strings")
+    raise ConfigError(f"spec.{field} must be a string or a list of strings")
 
 
 def _version_str(value: Any) -> str | None:
@@ -102,10 +102,10 @@ def load_spec_config(path: Path) -> SpecConfig:
                         raise ConfigError(str(exc)) from exc
                     if not registry.is_known_project_spec(version):
                         raise ConfigError(f"unknown spec.version {version!r}")
-                include = _str_list(b.get("include"))
-                exclude = _str_list(b.get("exclude"))
+                include = _str_list(b.get("include"), field="include")
+                exclude = _str_list(b.get("exclude"), field="exclude")
                 reference_prefixes = _validate_reference_prefixes(
-                    _str_list(b.get("reference_prefixes"))
+                    _str_list(b.get("reference_prefixes"), field="reference_prefixes")
                 )
     return SpecConfig(
         include=include,

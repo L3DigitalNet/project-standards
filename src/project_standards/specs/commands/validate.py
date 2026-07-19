@@ -155,10 +155,9 @@ def _check_ids(doc: SpecDocument, reg: Registry) -> list[Finding]:
             out.append(
                 _f(
                     "SV-ID-UNDECLARED",
-                    f"prefix {pfx}- is not a canonical spec-local prefix. If it names an "
-                    "external namespace (backlog, tickets, another spec), add it to "
-                    "spec.reference_prefixes; otherwise declare it in Appendix A with a "
-                    "canonical prefix.",
+                    f"prefix {pfx}- is not declared in this spec's Appendix A. If it names "
+                    "an external namespace (backlog, tickets, another spec), add it to "
+                    "spec.reference_prefixes; otherwise declare it in Appendix A.",
                     locus=f"{pfx}-",
                 )
             )

@@ -20,6 +20,7 @@ from project_standards.specs.registry import (
     ID_TOKEN,
     NOT_AN_ID,
     _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    anchor_headings,
     declared_prefixes,
     gh_slug,
     headings,
@@ -86,6 +87,7 @@ def parse_document(
         raise SpecParseError(f"{path}: malformed frontmatter fence: {exc}") from exc
     structural_body = _masked_structural_view(body)
     hs = headings(structural_body)
+    anchors = anchor_headings(structural_body)
     scalars = _scalar_frontmatter(fm)
     nl_offsets = [i for i, ch in enumerate(body) if ch == "\n"]
     used: dict[str, list[tuple[str, int]]] = {}
@@ -108,7 +110,7 @@ def parse_document(
         frontmatter=scalars,
         body=body,
         sections=section_numbers(hs),
-        slugs=_anchor_slugs(hs),
+        slugs=_anchor_slugs(anchors),
         used_ids=used,
         declared_prefixes=declared,
     )

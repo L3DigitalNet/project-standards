@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from project_standards.specs.registry import load_registry
+import pytest
+
+from project_standards.specs.registry import load_registry, split_front_matter
 
 
 def test_canonical_sections_include_full_ladder() -> None:
@@ -24,6 +26,16 @@ def test_appendix_c_is_full_only() -> None:
     assert "C" in reg.full_only_appendices
     assert reg.frontmatter_keys[0] == "spec_id"
     assert reg.sentinel == "SPEC-____"
+
+
+def test_frontmatter_closing_fence_at_eof_is_complete() -> None:
+    frontmatter, body = split_front_matter("---\nspec_id: SPEC-0001\n---")
+
+    assert frontmatter == "spec_id: SPEC-0001"
+    assert body == ""
+
+    with pytest.raises(ValueError, match="unterminated frontmatter fence"):
+        split_front_matter("---\nspec_id: SPEC-0001\n# body")
 
 
 def test_fence_mask_preserves_offsets_lines_and_outside_text() -> None:
