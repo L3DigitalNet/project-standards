@@ -1,10 +1,13 @@
 import io
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+import project_standards.format_frontmatter as format_frontmatter
 from project_standards.format_frontmatter import (
     Entry,
     _leading_run,  # pyright: ignore[reportPrivateUsage]
@@ -14,6 +17,7 @@ from project_standards.format_frontmatter import (
     main,
     tokenize,
 )
+from project_standards.validate_frontmatter import ConfigError
 
 CLEAN = (
     "---\n"
@@ -31,6 +35,100 @@ CLEAN = (
     "---\n"
     "# Body\n"
 )
+
+
+def _clear_schema_enum_cache() -> None:
+    loader = getattr(format_frontmatter, "_valid_doc_types", None)
+    if loader is not None:
+        loader.cache_clear()
+
+
+@pytest.mark.parametrize("schema_state", ["missing", "corrupt", "invalid_utf8"])
+def test_help__broken_schema__remains_available(
+    tmp_path: Path,
+    schema_state: str,
+) -> None:
+    isolated_src = tmp_path / "src"
+    package = isolated_src / "project_standards"
+    shutil.copytree(Path(__file__).parents[1] / "src" / "project_standards", package)
+    schema = package / "schemas" / "markdown-frontmatter.schema.json"
+    if schema_state == "missing":
+        schema.unlink()
+    elif schema_state == "corrupt":
+        schema.write_text("{", encoding="utf-8")
+    else:
+        schema.write_bytes(b"\xff")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(isolated_src)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import project_standards.frontmatter_authoring\n"
+            "from project_standards.format_frontmatter import main\n"
+            "main(['--help'])\n",
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "usage: format-frontmatter" in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("schema_state", ["missing", "corrupt", "invalid_utf8"])
+def test_format_text__broken_schema__raises_config_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    schema_state: str,
+) -> None:
+    schema = tmp_path / "markdown-frontmatter.schema.json"
+    if schema_state == "corrupt":
+        schema.write_text("{", encoding="utf-8")
+    elif schema_state == "invalid_utf8":
+        schema.write_bytes(b"\xff")
+    _clear_schema_enum_cache()
+    monkeypatch.setattr(format_frontmatter, "_SCHEMA_PATH", schema)
+    source = CLEAN.replace("doc_type: 'note'", "doc_type: 'invalid'")
+
+    try:
+        with pytest.raises(ConfigError, match="cannot load doc_type enum"):
+            format_text(source, path=Path("docs/research/example.md"))
+    finally:
+        _clear_schema_enum_cache()
+
+
+def test_format_text__schema_read__uses_explicit_utf8(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    encodings: list[str | None] = []
+
+    class SchemaText:
+        def read_text(self, *, encoding: str | None = None) -> str:
+            encodings.append(encoding)
+            return '{"properties": {"doc_type": {"enum": ["note", "research"]}}}'
+
+    _clear_schema_enum_cache()
+    monkeypatch.setattr(format_frontmatter, "_SCHEMA_PATH", SchemaText())
+    source = CLEAN.replace("doc_type: 'note'", "doc_type: 'invalid'")
+
+    try:
+        new, changed, warnings = format_text(
+            source,
+            path=Path("docs/research/example.md"),
+        )
+    finally:
+        _clear_schema_enum_cache()
+
+    assert changed is True
+    assert warnings == []
+    assert "doc_type: 'research'" in new
+    assert encodings == ["utf-8"]
 
 
 def test_clean_input_is_byte_identical():
@@ -720,6 +818,44 @@ def _cfg(tmp_path: Path, *, include: str = "['**/*.md']", extra: str = "") -> Pa
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text(f"markdown:\n  frontmatter:\n    include: {include}\n{extra}")
     return cfg
+
+
+@pytest.mark.parametrize("schema_state", ["missing", "corrupt", "invalid_utf8"])
+def test_main_check__broken_schema__reports_clean_config_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    schema_state: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    document = tmp_path / "docs" / "research" / "example.md"
+    document.parent.mkdir(parents=True)
+    document.write_text(
+        CLEAN.replace("doc_type: 'note'", "doc_type: 'invalid'"),
+        encoding="utf-8",
+    )
+    config = _cfg(tmp_path)
+    schema = tmp_path / "broken.schema.json"
+    if schema_state == "corrupt":
+        schema.write_text("{", encoding="utf-8")
+    elif schema_state == "invalid_utf8":
+        schema.write_bytes(b"\xff")
+    _clear_schema_enum_cache()
+    monkeypatch.setattr(
+        format_frontmatter,
+        "_SCHEMA_PATH",
+        schema,
+    )
+
+    try:
+        result = main(["--check", "--config", str(config), str(document)])
+    finally:
+        _clear_schema_enum_cache()
+
+    captured = capsys.readouterr()
+    assert result == 2
+    assert "error: cannot load doc_type enum" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def test_main_check_exits_1_when_file_would_change(

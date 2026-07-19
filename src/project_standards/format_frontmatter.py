@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import functools
 import json
 import re
 import sys
@@ -28,14 +29,27 @@ _FM_RE = re.compile(r"\A(---[ \t]*\r?\n)(.*?)(\r?\n---[ \t]*(?:\r?\n|$))", re.DO
 # A top-level (column 0) mapping key line: `key:` optionally followed by a value.
 _TOP_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):(.*)$")
 
-# The doc_type enum, read at import from the bundled DEFAULT schema. The formatter
-# is hardwired to the bundled default contract (see BUNDLED_SCHEMA_VERSION below,
-# which scaffolds write) — unlike validate_id, which resolves the enum per pinned
-# frontmatter.version through a lazy loader.
+# The formatter is hardwired to the bundled default contract (see
+# BUNDLED_SCHEMA_VERSION below, which scaffolds write) — unlike validate_id,
+# which resolves the enum per pinned frontmatter.version.
 _SCHEMA_PATH = Path(__file__).parent / "schemas" / "markdown-frontmatter.schema.json"
-VALID_DOC_TYPES: frozenset[str] = frozenset(
-    json.loads(_SCHEMA_PATH.read_text())["properties"]["doc_type"]["enum"]
-)
+
+
+@functools.cache
+def _valid_doc_types() -> frozenset[str]:
+    """Return the bundled ``doc_type`` enum, cached after its first use.
+
+    Delaying the read keeps imports and ``--help`` available when an installed
+    schema is broken. Actual schema use raises ConfigError, which CLI
+    boundaries already report as a clean operator error.
+    """
+    try:
+        raw: Any = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+        enum_values = cast("list[Any]", raw["properties"]["doc_type"]["enum"])
+        return frozenset(str(value) for value in enum_values)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise ConfigError(f"cannot load doc_type enum from schema {_SCHEMA_PATH}: {exc}") from exc
+
 
 CANONICAL_ORDER: tuple[str, ...] = (
     "schema_version",
@@ -483,7 +497,7 @@ def infer_doc_type(entries: list[Entry], path: Path | None) -> None:
             # like `doc_type: 'reference'  # note` reads as invalid and is wrongly
             # overwritten by the path rule (codex P2; SA-001 says keep a valid value).
             current = _split_value_comment(rest)[0].strip().strip("'\"")
-            if current in VALID_DOC_TYPES:
+            if current in _valid_doc_types():
                 return  # valid (even with an inline comment) -> never override
             entry.lines = [*entry.lines[:lead], f"doc_type: {_emit_single_quoted(inferred)}{eol}"]
             return
@@ -742,9 +756,16 @@ def main(
             print(f"{path}: cannot read: {exc}", file=sys.stderr)
             unparseable = True
             continue
-        new, changed, warnings = format_text(
-            text, path=path, scaffold=write, bump_updated=args.bump_updated
-        )
+        try:
+            new, changed, warnings = format_text(
+                text,
+                path=path,
+                scaffold=write,
+                bump_updated=args.bump_updated,
+            )
+        except ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
         for w in warnings:
             print(f"{path}: {w}", file=sys.stderr)
             # A duplicate-key block is refused (not rewritten) AND must fail the gate (CR-002).

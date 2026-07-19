@@ -1550,6 +1550,20 @@ def test_non_mapping_block_message_names_the_real_problem(
     assert "not a YAML mapping" in errors[0]
 
 
+def test_empty_closed_block_message_names_the_real_problem(
+    tmp_path: Path,
+    validator: Draft202012Validator,
+) -> None:
+    text = "---\n---\n# body\n"
+    assert parse_frontmatter(text) is None
+
+    errors = _check(tmp_path, validator, text)
+
+    assert len(errors) == 1
+    assert "frontmatter block is empty (not a YAML mapping)" in errors[0]
+    assert "not terminated" not in errors[0]
+
+
 def test_unterminated_block_message_names_the_real_problem(
     tmp_path: Path, validator: Draft202012Validator
 ) -> None:

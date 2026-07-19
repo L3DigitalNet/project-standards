@@ -310,6 +310,8 @@ def _no_frontmatter_reason(text: str) -> str:
     """
     if _FRONTMATTER_RE.match(text):
         return "frontmatter block is not a YAML mapping"
+    if re.match(r"\A---[ \t]*\r?\n---[ \t]*(?:\r?\n|$)", text):
+        return "frontmatter block is empty (not a YAML mapping)"
     # This probe is _FRONTMATTER_RE's opening fence with no closing fence; the two
     # must stay in sync or an unterminated block gets misreported as absent.
     if re.match(r"\A---[ \t]*\r?\n", text):

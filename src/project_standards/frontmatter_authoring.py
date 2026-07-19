@@ -18,7 +18,10 @@ from project_standards.control_plane.snapshot import (
     RepositorySnapshot,
     SnapshotEntry,
 )
-from project_standards.format_frontmatter import VALID_DOC_TYPES, format_text
+from project_standards.format_frontmatter import (
+    _valid_doc_types,  # pyright: ignore[reportPrivateUsage]
+    format_text,
+)
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
@@ -166,7 +169,7 @@ def _plan_frontmatter(
     version: PackageVersion,
     format_documents: bool,
     repair_ids: bool,
-    valid_doc_types: frozenset[str] = VALID_DOC_TYPES,
+    valid_doc_types: frozenset[str],
     token_factory: Callable[[], str] | None,
     today: str | None = None,
     bump_updated: bool = False,
@@ -198,7 +201,7 @@ def plan_frontmatter_fix_entries(
         version=version,
         format_documents=True,
         repair_ids=True,
-        valid_doc_types=VALID_DOC_TYPES,
+        valid_doc_types=_valid_doc_types(),
         token_factory=token_factory,
         today=today,
     )
@@ -218,7 +221,7 @@ def plan_frontmatter_format_entries(
         version=version,
         format_documents=True,
         repair_ids=False,
-        valid_doc_types=VALID_DOC_TYPES,
+        valid_doc_types=_valid_doc_types(),
         token_factory=token_factory,
         today=today,
         bump_updated=bump_updated,
@@ -259,7 +262,7 @@ def plan_frontmatter_format(
         version=version,
         format_documents=True,
         repair_ids=False,
-        valid_doc_types=VALID_DOC_TYPES,
+        valid_doc_types=_valid_doc_types(),
         token_factory=token_factory,
         today=today,
         bump_updated=bump_updated,
@@ -282,7 +285,7 @@ def plan_frontmatter_fix(
         version=version,
         format_documents=True,
         repair_ids=True,
-        valid_doc_types=VALID_DOC_TYPES,
+        valid_doc_types=_valid_doc_types(),
         token_factory=token_factory,
         today=today,
         bump_updated=bump_updated,

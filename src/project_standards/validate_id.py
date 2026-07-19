@@ -484,7 +484,12 @@ def fix_file(
     valid_doc_types: frozenset[str] | None = None,
     existing_ids: set[str] | None = None,
 ) -> FixResult:
-    """Plan and atomically publish one safe id repair for *path*."""
+    """Plan and atomically publish one safe id repair for legacy library callers.
+
+    This compatibility path writes directly and bypasses control-plane locking
+    and precondition checks. Unified command execution must use the authoring
+    planner and platform executor instead.
+    """
     try:
         raw = path.read_bytes()
     except OSError as exc:
