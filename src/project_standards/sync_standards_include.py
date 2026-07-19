@@ -30,6 +30,9 @@ from pathlib import Path
 from typing import Any, cast
 
 from project_standards._version import package_version
+from project_standards.jsonc import (
+    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
+)
 
 # The folder-colorizer color that marks managed-docs paths in the user's VS Code
 # setup. Cross-file contract: must equal _COLOR in sync_vscode_colors.py — the two
@@ -52,10 +55,10 @@ def _repo_root() -> Path:
 def read_path_colors(settings_path: Path) -> list[dict[str, str]]:
     """Return all folder-color.pathColors entries from *settings_path*."""
     original = settings_path.read_text(encoding="utf-8")
-    # VS Code settings are JSONC; strip whole-line // comments or json.loads fails.
-    # (sync_vscode_colors.rewrite_settings preserves the header comments on write.)
-    clean = re.sub(r"(?m)^\s*//[^\n]*\n?", "", original)
-    data = cast(dict[str, Any], json.loads(clean))
+    try:
+        data = cast(dict[str, Any], json.loads(_sanitize_jsonc(original)))
+    except json.JSONDecodeError as exc:
+        sys.exit(f"error: cannot parse {settings_path}: {exc}")
     raw = data.get("folder-color.pathColors", [])
     return cast(list[dict[str, str]], raw if isinstance(raw, list) else [])
 

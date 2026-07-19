@@ -25,6 +25,9 @@ from typing import Any, cast
 import yaml
 
 from project_standards._version import package_version
+from project_standards.jsonc import (
+    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
+)
 
 # The folder-colorizer color that marks managed-docs paths in the user's VS Code
 # setup. Cross-file contract: must equal _COLOR in sync_standards_include.py — the
@@ -89,8 +92,10 @@ def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> 
         else:
             break
 
-    clean = re.sub(r"(?m)^\s*//[^\n]*\n?", "", original)
-    data = cast(dict[str, Any], json.loads(clean))
+    try:
+        data = cast(dict[str, Any], json.loads(_sanitize_jsonc(original)))
+    except json.JSONDecodeError as exc:
+        sys.exit(f"error: cannot parse {settings_path}: {exc}")
     data["folder-color.pathColors"] = path_colors
 
     serialized = json.dumps(data, indent="\t")

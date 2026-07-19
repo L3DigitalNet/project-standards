@@ -89,6 +89,32 @@ def test_strips_jsonc_comments_before_parsing(tmp_path: Path) -> None:
     assert read_path_colors(p) == []
 
 
+def test_read_path_colors__jsonc_extensions__accepts_inline_comments_and_trailing_commas(
+    tmp_path: Path,
+) -> None:
+    p = tmp_path / "settings.json"
+    p.write_text(
+        """{
+\t"literal": "https://example.test/* literal */,}", // inline comment
+\t/* block comment */
+\t"folder-color.pathColors": [
+\t\t{"filePath": "repo/x.md", "color": "foldercolorizer.color_d7af00"},
+\t],
+}
+"""
+    )
+
+    assert read_path_colors(p) == [{"filePath": "repo/x.md", "color": _COLOR}]
+
+
+def test_read_path_colors__malformed_jsonc__exits_with_controlled_error(tmp_path: Path) -> None:
+    p = tmp_path / "settings.json"
+    p.write_text('{"folder-color.pathColors": [} /* malformed */')
+
+    with pytest.raises(SystemExit, match=r"^error: cannot parse .*settings\.json:"):
+        read_path_colors(p)
+
+
 # ---------------------------------------------------------------------------
 # update_include_list
 # ---------------------------------------------------------------------------

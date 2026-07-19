@@ -126,6 +126,37 @@ def test_preserves_jsonc_header_comments(tmp_path: Path) -> None:
     assert "// This is a header comment" in result
 
 
+def test_rewrite_settings__jsonc_extensions__accepts_inline_comments_and_trailing_commas(
+    tmp_path: Path,
+) -> None:
+    settings = _make_settings(
+        tmp_path,
+        """{
+\t// preserved header
+\t"literal": "https://example.test/* literal */,}", // inline comment
+\t"nested": {
+\t\t"enabled": true, /* block comment */
+\t},
+}
+""",
+    )
+    entries = [{"filePath": "repo/CHANGELOG.md", "color": _COLOR}]
+
+    rewrite_settings(settings, entries)
+
+    data = json.loads(settings.read_text().replace("\t// preserved header\n", ""))
+    assert data["literal"] == "https://example.test/* literal */,}"
+    assert data["nested"] == {"enabled": True}
+    assert data["folder-color.pathColors"] == entries
+
+
+def test_rewrite_settings__malformed_jsonc__exits_with_controlled_error(tmp_path: Path) -> None:
+    settings = _make_settings(tmp_path, '{"nested": [} /* malformed */')
+
+    with pytest.raises(SystemExit, match=r"^error: cannot parse .*settings\.json:"):
+        rewrite_settings(settings, [])
+
+
 def test_output_ends_with_newline(tmp_path: Path) -> None:
     settings = _make_settings(tmp_path, '{\n\t"x": 1\n}\n')
     rewrite_settings(settings, [])
