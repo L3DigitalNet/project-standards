@@ -54,9 +54,11 @@ def test_repository_graph_workflow_contract() -> None:
         step for step in job["steps"] if step.get("name") == "Check released V2 payloads"
     )
     assert release_gate["if"] == "steps.v2-baseline.outputs.ref != ''"
+    assert release_gate["env"] == {
+        "BASELINE_REF": "${{ steps.v2-baseline.outputs.ref }}",
+    }
     assert release_gate["run"] == (
-        "uv run project-standards packages check-release --root . "
-        '--baseline "${{ steps.v2-baseline.outputs.ref }}"'
+        'uv run project-standards packages check-release --root . --baseline "$BASELINE_REF"'
     )
 
     actual = _uses_steps(workflow)

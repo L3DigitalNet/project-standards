@@ -73,4 +73,6 @@ jobs:
 
       - name: Check released V2 payloads
         if: steps.v2-baseline.outputs.ref != ''
-        run: uv run project-standards packages check-release --root . --baseline "${{ steps.v2-baseline.outputs.ref }}"
+        env:
+          BASELINE_REF: ${{ steps.v2-baseline.outputs.ref }}
+        run: uv run project-standards packages check-release --root . --baseline "$BASELINE_REF"
