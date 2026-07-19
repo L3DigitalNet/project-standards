@@ -21,6 +21,12 @@ class ControlPlaneConfigurationError(ControlPlaneError):
     """Report invalid desired configuration at a control-plane boundary."""
 
 
+class _MajorAuthorizationError(  # pyright: ignore[reportUnusedClass]  # cross-module classifier
+    ControlPlaneError
+):
+    """Report a package-major transition missing its exact authorization."""
+
+
 class ActionKind(StrEnum):
     """Repository mutation or preservation decisions emitted by planning."""
 

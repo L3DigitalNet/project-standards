@@ -10,6 +10,7 @@ from project_standards.cli import main as project_standards_main
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import run, run_init, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, ApplyResult
 from project_standards.control_plane.locking import LockMode, control_plane_lock
@@ -737,8 +738,12 @@ def test_reconcile_candidate_requires_matching_allow_major(
     set_standard_selection(repo, "alpha", enabled=True, version="3.0")
 
     assert run(["--repo", str(repo), "--json"], distribution=distribution) == 1
-    denied = capsys.readouterr().out
-    assert "CP-RESOLVE-MAJOR-AUTH" in denied
+    denied = json.loads(capsys.readouterr().out)
+    assert denied["mode"] == "plan"
+    finding = denied["findings"][0]
+    assert finding["code"] == "CP-RESOLVE-MAJOR-AUTH"
+    assert "line" not in finding
+    assert "locus" not in finding
 
     assert (
         run(
@@ -749,6 +754,48 @@ def test_reconcile_candidate_requires_matching_allow_major(
     )
     allowed = capsys.readouterr().out
     assert '"applicable": true' in allowed
+
+
+def test_reconcile_authorization__apply_json__reports_apply_mode(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    from project_standards.control_plane.config_edit import set_standard_selection
+
+    set_standard_selection(repo, "alpha", enabled=True, version="3.0")
+
+    assert run(["--repo", str(repo), "--apply", "--json"], distribution=distribution) == 1
+    refused = json.loads(capsys.readouterr().out)
+    assert refused["mode"] == "apply"
+    assert refused["findings"][0]["code"] == "CP-RESOLVE-MAJOR-AUTH"
+
+
+def test_reconcile_authorization__unrelated_same_word_error__keeps_control_state_classification(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+
+    def fail_planner(*_args: object, **_kwargs: object) -> None:
+        raise ControlPlaneError("authorization metadata is malformed")
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.build_planner_request",
+        fail_planner,
+    )
+
+    assert run(["--repo", str(repo), "--json"], distribution=distribution) == 2
+    failure = json.loads(capsys.readouterr().out)
+    assert failure["code"] == "CP-CONTROL-STATE"
+    assert failure["error"] == "authorization metadata is malformed"
 
 
 def test_reconcile_missing_lock_requires_repair_and_apply(

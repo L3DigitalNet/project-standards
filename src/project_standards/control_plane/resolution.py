@@ -12,6 +12,7 @@ from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import (
     ControlPlaneConfigurationError,
     ControlPlaneError,
+    _MajorAuthorizationError,  # pyright: ignore[reportPrivateUsage]  # package-internal classification
 )
 from project_standards.control_plane.models import (
     AcceptedTrack,
@@ -400,7 +401,7 @@ def _require_transition(
     if catalog_promoted_prior_default:
         return
     if target_major not in authorization_targets:
-        raise ControlPlaneError(
+        raise _MajorAuthorizationError(
             f"package-major transition requires matching authorization: {standard_id}@{target_major}"
         )
     if (
@@ -545,7 +546,7 @@ def _resolve_disabled_transition(
         raise ControlPlaneError("accepted-major exit requires an exact target version")
     selected = desired.version
     if selected.major not in exit_targets:
-        raise ControlPlaneError(
+        raise _MajorAuthorizationError(
             f"package-major transition requires matching authorization: {standard_id}@{selected.major}"
         )
     entry = standard.versions.get(selected.value)

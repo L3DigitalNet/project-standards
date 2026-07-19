@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn, cast
 
@@ -14,6 +13,7 @@ from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlFinding,
     ControlPlaneError,
+    _MajorAuthorizationError,  # pyright: ignore[reportPrivateUsage]  # package-internal classification
     findings_to_jsonable,
 )
 from project_standards.control_plane.distribution import (
@@ -611,6 +611,7 @@ def run(
     repo = cast("Path", args.repo).resolve()
     json_mode = cast("bool", args.json)
     allowed_majors = frozenset(cast("list[MajorAuthorization]", args.allow_major))
+    mode = "apply" if cast("bool", args.apply) else "check" if cast("bool", args.check) else "plan"
     try:
         selected_distribution = distribution or InstalledDistribution.current()
         state = detect_control_plane_state(
@@ -660,7 +661,6 @@ def run(
                 ApplyRequest(planner=planner, expected_plan=plan),
                 json_mode=json_mode,
             )
-        mode = "check" if cast("bool", args.check) else "plan"
         return _emit_plan(
             plan,
             planner.resolution.previous_lock,
@@ -669,37 +669,35 @@ def run(
         )
     except ControlPlaneBusyError as exc:
         return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
-        # Resolution refusals are actionable reconciliation findings, while state,
-        # package, and filesystem boundary failures are invocation/config errors.
+    except _MajorAuthorizationError as exc:
         message = str(exc)
-        if "authorization" in message:
-            finding = ControlFinding(
-                code="CP-RESOLVE-MAJOR-AUTH",
-                severity="error",
-                standard_id="project-standards",
-                version="",
-                path=".standards/config.toml",
-                identity="$resolution",
-                message=message,
-                hint="supply a matching --allow-major STANDARD_ID@MAJOR authorization",
-            )
-            if json_mode:
-                print(
-                    json.dumps(
-                        {
-                            "ok": False,
-                            "mode": "check" if cast("bool", args.check) else "plan",
-                            "drift": True,
-                            "findings": [asdict(finding)],
-                        },
-                        indent=2,
-                    )
+        finding = ControlFinding(
+            code="CP-RESOLVE-MAJOR-AUTH",
+            severity="error",
+            standard_id="project-standards",
+            version="",
+            path=".standards/config.toml",
+            identity="$resolution",
+            message=message,
+            hint="supply a matching --allow-major STANDARD_ID@MAJOR authorization",
+        )
+        if json_mode:
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "mode": mode,
+                        "drift": True,
+                        "findings": findings_to_jsonable((finding,)),
+                    },
+                    indent=2,
                 )
-            else:
-                print(f"{finding.code}: {finding.message}", file=sys.stderr)
-            return 1
-        return _emit_error(json_mode, "CP-CONTROL-STATE", message, exit_code=2)
+            )
+        else:
+            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+        return 1
+    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+        return _emit_error(json_mode, "CP-CONTROL-STATE", str(exc), exit_code=2)
 
 
 def validate_repository(

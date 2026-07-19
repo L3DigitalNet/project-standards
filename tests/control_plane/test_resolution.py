@@ -274,8 +274,20 @@ def test_matching_authorization_selects_newest_candidate_in_named_major(
 def test_exact_candidate_requires_matching_package_and_target_major(
     allowed: list[MajorAuthorization],
 ) -> None:
-    with pytest.raises(ControlPlaneError, match="authorization"):
+    with pytest.raises(ControlPlaneError, match="authorization") as exc_info:
         resolve_packages(_request(desired=_desired("2.0"), allowed=allowed))
+
+    assert type(exc_info.value) is not ControlPlaneError
+
+
+def test_enabled_transition__missing_matching_authorization__raises_typed_refusal() -> None:
+    with pytest.raises(ControlPlaneError, match="matching authorization") as exc_info:
+        resolve_packages(_request(desired=_desired("2.0")))
+
+    assert type(exc_info.value) is not ControlPlaneError
+    assert str(exc_info.value) == (
+        "package-major transition requires matching authorization: demo@2"
+    )
 
 
 def test_exact_candidate_authorization_does_not_weaken_the_pin() -> None:
@@ -283,6 +295,22 @@ def test_exact_candidate_authorization_does_not_weaken_the_pin() -> None:
 
     assert result.packages[0].applied.resolved.value == "2.0"
     assert result.packages[0].applied.selection is SelectionKind.EXACT
+
+
+def test_disabled_transition__missing_matching_authorization__raises_typed_refusal() -> None:
+    with pytest.raises(ControlPlaneError, match="matching authorization") as exc_info:
+        resolve_packages(
+            _request(
+                desired=_desired("1.2", enabled=False),
+                lock=_lock(accepted_major=2),
+                allowed=[_allow(3)],
+            )
+        )
+
+    assert type(exc_info.value) is not ControlPlaneError
+    assert str(exc_info.value) == (
+        "package-major transition requires matching authorization: demo@1"
+    )
 
 
 def test_disabled_package_retains_accepted_track_without_resolution() -> None:
@@ -426,13 +454,15 @@ def test_exact_target_exit_removes_track_after_declared_rollback() -> None:
 
 
 def test_accepted_major_exit_requires_an_exact_target_even_after_disable() -> None:
-    with pytest.raises(ControlPlaneError, match="exact target"):
+    with pytest.raises(ControlPlaneError, match="exact target") as exc_info:
         resolve_packages(
             _request(
                 lock=_lock(accepted_major=2),
                 allowed=[_allow(1)],
             )
         )
+
+    assert type(exc_info.value) is ControlPlaneError
 
 
 def test_accepted_major_exit_requires_a_declared_rollback_path() -> None:

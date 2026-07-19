@@ -49,6 +49,10 @@ class CommandConfigurationError(CommandResolutionError):
     """Report invalid selected-package configuration to public commands."""
 
 
+class _CompanionAbsentError(CommandResolutionError):
+    """Report a package missing from or disabled in unified configuration."""
+
+
 _legacy_warning_emitted = False
 
 
@@ -228,9 +232,9 @@ def _resolve_state(
         )
     desired = state.config.standards.get(standard_id)
     if desired is None:
-        raise CommandResolutionError(f"package is not present in unified config: {standard_id}")
+        raise _CompanionAbsentError(f"package is not present in unified config: {standard_id}")
     if not desired.enabled:
-        raise CommandResolutionError(f"package is disabled in unified config: {standard_id}")
+        raise _CompanionAbsentError(f"package is disabled in unified config: {standard_id}")
     if require_reconciled:
         _validate_applied_state(standard_id, state.config, state.catalog, state.lock)
     planner = build_planner_request(
@@ -319,10 +323,8 @@ def resolve_enabled_companion(
             None,
             require_reconciled=True,
         )
-    except CommandResolutionError as exc:
-        if "not present" in str(exc) or "disabled" in str(exc):
-            return None
-        raise
+    except _CompanionAbsentError:
+        return None
 
 
 @contextmanager
@@ -373,15 +375,12 @@ def resolve_selected_package(
     explicit_legacy: Path | None = None,
 ) -> SelectedCommandPackage | None:
     """Resolve unified command facts, or return the bounded legacy fallback state."""
-    try:
-        installed = distribution or InstalledDistribution.current()
-        state = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
-        return _resolve_state_for_command(
-            state,
-            installed,
-            standard_id,
-            explicit_legacy,
-            require_reconciled=True,
-        )
-    except CommandResolutionError:
-        raise
+    installed = distribution or InstalledDistribution.current()
+    state = detect_control_plane_state(repo, tool_release=installed.tool_release.value)
+    return _resolve_state_for_command(
+        state,
+        installed,
+        standard_id,
+        explicit_legacy,
+        require_reconciled=True,
+    )
