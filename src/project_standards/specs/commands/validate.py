@@ -6,7 +6,11 @@ import re
 
 from project_standards.specs.document import definition_sites
 from project_standards.specs.model import Finding, Registry, SpecDocument
-from project_standards.specs.registry import appendix_letters, numkey
+from project_standards.specs.registry import (
+    _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    appendix_letters,
+    numkey,
+)
 
 # Range dashes: en-dash (\u2013), em-dash (\u2014), and hyphen. Em-dash is
 # common via editor autocorrect; without it a "14 to 16 omitted" range note
@@ -32,13 +36,14 @@ def _f(code: str, message: str, line: int | None = None, locus: str | None = Non
 
 def validate_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     """Return integrity findings; an empty list means the spec passes."""
+    structural_body = _masked_structural_view(doc.body)
     out: list[Finding] = []
     out += _check_frontmatter(doc, reg)
-    out += _check_sections(doc, reg)
-    out += _check_appendices(doc, reg)
-    out += _check_references(doc, reg)
+    out += _check_sections(doc, reg, structural_body)
+    out += _check_appendices(doc, reg, structural_body)
+    out += _check_references(doc, reg, structural_body)
     out += _check_ids(doc, reg)
-    out += _check_tables(doc)
+    out += _check_tables(structural_body)
     return out
 
 
@@ -78,7 +83,7 @@ def _check_frontmatter(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_sections(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def _check_sections(doc: SpecDocument, reg: Registry, structural_body: str) -> list[Finding]:
     out: list[Finding] = []
     for n, ln in doc.sections:
         if n not in reg.canonical_sections:
@@ -89,7 +94,7 @@ def _check_sections(doc: SpecDocument, reg: Registry) -> list[Finding]:
     if order != sorted(order):
         out.append(_f("SV-ORDER", "section headings are not in ascending numeric order"))
     covered: set[int] = set()
-    for line in doc.body.splitlines():
+    for line in structural_body.splitlines():
         if line.lstrip().startswith(">") and "tier" in line and "omitted" in line:
             for a, b in _OMIT.findall(line):
                 covered.update(range(int(a), int(b) + 1))
@@ -104,9 +109,9 @@ def _check_sections(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_appendices(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def _check_appendices(doc: SpecDocument, reg: Registry, structural_body: str) -> list[Finding]:
     out: list[Finding] = []
-    apps = appendix_letters(doc.body)
+    apps = appendix_letters(structural_body)
     if apps != sorted(apps):
         out.append(_f("SV-APX-ORDER", f"appendix letters not ascending: {apps}"))
     for required in ("A", "B", "D"):
@@ -123,16 +128,16 @@ def _check_appendices(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_references(doc: SpecDocument, reg: Registry) -> list[Finding]:
+def _check_references(doc: SpecDocument, reg: Registry, structural_body: str) -> list[Finding]:
     out: list[Finding] = []
-    for m in _SECTION_REF.finditer(doc.body):
+    for m in _SECTION_REF.finditer(structural_body):
         ref = m.group(1)
         if ref not in reg.canonical_sections and ref.split(".")[0] not in reg.canonical_sections:
-            ln = doc.body[: m.start()].count("\n") + 1
+            ln = structural_body[: m.start()].count("\n") + 1
             out.append(_f("SV-XREF", f"§{ref} not in canonical registry", line=ln, locus=f"§{ref}"))
-    for m in _ANCHOR.finditer(doc.body):
+    for m in _ANCHOR.finditer(structural_body):
         if m.group(2) not in doc.slugs:
-            ln = doc.body[: m.start()].count("\n") + 1
+            ln = structural_body[: m.start()].count("\n") + 1
             out.append(_f("SV-ANCHOR", f"dead anchor #{m.group(2)}", line=ln, locus=m.group(2)))
     return out
 
@@ -182,9 +187,9 @@ def _check_ids(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_tables(doc: SpecDocument) -> list[Finding]:
+def _check_tables(structural_body: str) -> list[Finding]:
     out: list[Finding] = []
-    lines = doc.body.splitlines()
+    lines = structural_body.splitlines()
     i = 0
     while i < len(lines):
         if (

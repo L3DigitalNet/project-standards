@@ -68,6 +68,55 @@ def _body(text: str) -> str:
     return "---\nspec_id: SPEC-0001\n---\n" + text
 
 
+def test_fenced_ids_headings_and_declarations_do_not_become_structure() -> None:
+    doc = parse_document(
+        "t.md",
+        _body(
+            "## 1. Purpose\n\n"
+            "Real FR-001.\n\n"
+            "```markdown\n"
+            "## 99. Example\n\n"
+            "RQ-123\n\n"
+            "## Appendix A: Example ID Conventions\n\n"
+            "| Prefix | Meaning | Defined In |\n"
+            "| --- | --- | --- |\n"
+            "| `RQ-` | Example | §99 |\n"
+            "```\n\n"
+            "## Appendix A: ID Conventions\n\n"
+            "| Prefix | Meaning | Defined In |\n"
+            "| --- | --- | --- |\n"
+            "| `FR-` | Functional | §1 |\n"
+        ),
+    )
+
+    assert doc.sections == [("1", 1)]
+    assert "99-example" not in doc.slugs
+    assert "RQ" not in doc.used_ids
+    assert doc.declared_prefixes == {"FR": "§1"}
+
+
+def test_fenced_definition_rows_do_not_create_definition_sites() -> None:
+    doc = parse_document(
+        "t.md",
+        _body(
+            "## 7. Requirements\n\n"
+            "### 7.1 Functional Requirements\n\n"
+            "| ID | Text |\n"
+            "| --- | --- |\n"
+            "| `FR-001` | Real requirement |\n\n"
+            "```markdown\n"
+            "| `FR-001` | Example row |\n"
+            "```\n\n"
+            "## Appendix A: ID Conventions\n\n"
+            "| Prefix | Meaning | Defined In |\n"
+            "| --- | --- | --- |\n"
+            "| `FR-` | Functional | §7.1 |\n"
+        ),
+    )
+
+    assert [full_id for full_id, _line in definition_sites(doc)["FR"]] == ["FR-001"]
+
+
 def test_skip_set_zero_config():
     doc = parse_document(
         "t.md",

@@ -13,14 +13,15 @@ import re
 from project_standards.specs.commands.new import (
     _rewrite_frontmatter,  # pyright: ignore[reportPrivateUsage]
 )
-from project_standards.specs.registry import gh_slug, split_front_matter
+from project_standards.specs.registry import (
+    _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    gh_slug,
+    split_front_matter,
+)
 
 _TIER_WORD = {"light": "Light", "standard": "Standard", "full": "Full"}
-# Line-anchored (^ + MULTILINE) with horizontal-only whitespace [ \t] so a substitution
-# can only land on a real H1 heading line, never an H1-shaped example quoted inside a
-# spliced source body (this module copies author source verbatim, and a spec-about-specs
-# may contain such an example). count=1 in _rewrite_h1_suffix then takes the first such
-# line, which is always the document's real H1.
+# Line-anchored (^ + MULTILINE) with horizontal-only whitespace [ \t]. H1 scans run on the
+# fence-masked structural view, then use the preserved offsets to inspect or splice source.
 _H1_SUFFIX = re.compile(
     r"^(#[ \t]+`[^`]*`[ \t]+—[ \t]+Specification[ \t]+\()(Light|Standard|Full)(\))",
     re.MULTILINE,
@@ -33,7 +34,10 @@ def _set_profile(text: str, tier: str) -> str:  # pyright: ignore[reportUnusedFu
 
 def _rewrite_h1_suffix(text: str, tier: str) -> str:  # pyright: ignore[reportUnusedFunction]
     word = _TIER_WORD[tier]
-    return _H1_SUFFIX.sub(lambda m: m.group(1) + word + m.group(3), text, count=1)
+    match = _H1_SUFFIX.search(_masked_structural_view(text))
+    if match is None:
+        return text
+    return text[: match.start(2)] + word + text[match.end(2) :]
 
 
 # Captures the leading numeral of a heading, dotted-decimal-aware: "7. Requirements" (top
@@ -45,14 +49,6 @@ def _rewrite_h1_suffix(text: str, tier: str) -> str:  # pyright: ignore[reportUn
 # being required for the subsection form, which has no such dot before the space.
 _NUM = re.compile(r"^(\d+(?:\.\d+)*)\.?(?=[ \t])")
 _APX = re.compile(r"^Appendix ([A-Z]):")
-# CommonMark fenced-code delimiters, mirroring validate_frontmatter._CODE_FENCE_RE /
-# _CODE_FENCE_CLOSE_RE exactly (DRY across the package): a fence OPENS with up to 3 leading
-# spaces + a run of >=3 of one char (`` ` `` or ``~``), optionally followed by an info string;
-# it CLOSES only on the SAME marker char, length >= the opener, up to 3 spaces, and NOTHING
-# but spaces/tabs after — so `` ```aaa `` inside a `` ``` `` fence is content, not a closer,
-# and a 4-space-indented `` ``` `` is indented code, not a fence.
-_FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-_FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 # Any GitHub anchor pointing at an Appendix D heading, whatever the tier's heading text.
 # The slug body is [-\w]+ to mirror gh_slug's output charset (word chars + hyphens); the
 # match stops at the first non-slug char, so a Markdown link's closing `)` is left intact.
@@ -69,21 +65,12 @@ def _block_key(heading_text: str) -> str:
 
 def _heading_starts(text: str, prefix: str) -> list[tuple[int, str]]:
     """(byte offset, heading text) for each line starting with `prefix` (e.g. ``"## "``),
-    skipping lines inside fenced code so example headings in a spec's own code samples are
-    never mistaken for section boundaries (Codex CR-003). Fence tracking mirrors
-    validate_frontmatter's ``missing_adr_sections`` loop. ``"## "`` does not match ``"### "``
-    (third char differs), so each level is isolated."""
+    using the shared fence-masked structural view so examples cannot become boundaries.
+    ``"## "`` does not match ``"### "`` (third char differs), so each level is isolated."""
     out: list[tuple[int, str]] = []
-    fence: str | None = None  # the opening run (e.g. "```" or "~~~~"), or None outside a fence
     off = 0
-    for line in text.splitlines(keepends=True):
-        if fence is not None:
-            close = _FENCE_CLOSE.match(line)
-            if close and close.group(1)[0] == fence[0] and len(close.group(1)) >= len(fence):
-                fence = None
-        elif opener := _FENCE_OPEN.match(line):
-            fence = opener.group(1)
-        elif line.startswith(prefix):
+    for line in _masked_structural_view(text).splitlines(keepends=True):
+        if line.startswith(prefix):
             out.append((off, line[len(prefix) :].rstrip("\n")))
         off += len(line)
     return out
@@ -238,7 +225,8 @@ def upgrade_text(source_text: str, target_template_text: str, *, target_tier: st
     # untouched; and for a same-tier reshape target slug == source slug, making the rewrite an
     # identity no-op anyway.
     if (tgt_slug := _target_apx_d_slug(tgt_body)) is not None:
-        merged_body = _APX_D_ANCHOR.sub(f"#{tgt_slug}", merged_body)
+        for match in reversed(tuple(_APX_D_ANCHOR.finditer(_masked_structural_view(merged_body)))):
+            merged_body = merged_body[: match.start()] + f"#{tgt_slug}" + merged_body[match.end() :]
     text = f"---\n{src_fm}\n---\n{merged_body}"  # source frontmatter preserved verbatim
     text = _set_profile(text, target_tier)
     return _rewrite_h1_suffix(text, target_tier)
@@ -246,7 +234,7 @@ def upgrade_text(source_text: str, target_template_text: str, *, target_tier: st
 
 def _h1_tier(text: str) -> str | None:
     """The tier word in a canonical H1 (`# `…` — Specification (Tier)`), or None."""
-    m = _H1_SUFFIX.search(text)
+    m = _H1_SUFFIX.search(_masked_structural_view(text))
     return m.group(2) if m else None
 
 

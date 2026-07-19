@@ -19,6 +19,7 @@ from project_standards.specs.registry import (
     BUILTIN_REFERENCE_PREFIXES,
     ID_TOKEN,
     NOT_AN_ID,
+    _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
     declared_prefixes,
     gh_slug,
     headings,
@@ -83,22 +84,23 @@ def parse_document(
         fm, body = split_front_matter(text)
     except ValueError as exc:
         raise SpecParseError(f"{path}: malformed frontmatter fence: {exc}") from exc
-    hs = headings(body)
+    structural_body = _masked_structural_view(body)
+    hs = headings(structural_body)
     scalars = _scalar_frontmatter(fm)
     nl_offsets = [i for i, ch in enumerate(body) if ch == "\n"]
     used: dict[str, list[tuple[str, int]]] = {}
-    for m in ID_TOKEN.finditer(body):
+    for m in ID_TOKEN.finditer(structural_body):
         pfx = m.group(1)
         if pfx in NOT_AN_ID or pfx in BUILTIN_REFERENCE_PREFIXES or pfx in reference_prefixes:
             continue
         # Version/SPDX shape: digits immediately followed by ".<digit>" (MPL-2.0, FR-1.2).
         # A real id at a sentence end (FR-007.) is "."+space, never "."+digit, so it survives.
-        tail = body[m.end() : m.end() + 2]
+        tail = structural_body[m.end() : m.end() + 2]
         if len(tail) == 2 and tail[0] == "." and tail[1].isdigit():
             continue
         line = bisect.bisect_left(nl_offsets, m.start()) + 1
         used.setdefault(pfx, []).append((f"{pfx}-{m.group(2)}", line))
-    declared = declared_prefixes(body)
+    declared = declared_prefixes(structural_body)
     return SpecDocument(
         path=path,
         profile=scalars.get("profile"),
@@ -130,9 +132,11 @@ def _defined_in_slice(doc: SpecDocument, definedin: str) -> tuple[str, int] | No
         num = m.group(1)
         start = next((ln for n, ln in doc.sections if n == num), None)
         sec = section_slice(doc, num)
-        return (sec, start) if sec is not None and start is not None else None
+        return (
+            (_masked_structural_view(sec), start) if sec is not None and start is not None else None
+        )
     name = definedin.strip().lower()
-    lines = doc.body.splitlines(keepends=True)
+    lines = _masked_structural_view(doc.body).splitlines(keepends=True)
     for i, line in enumerate(lines):
         if (hm := re.match(r"^(#+)\s+(.*)$", line)) and name in hm.group(2).strip().lower():
             level = len(hm.group(1))

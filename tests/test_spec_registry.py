@@ -24,3 +24,39 @@ def test_appendix_c_is_full_only() -> None:
     assert "C" in reg.full_only_appendices
     assert reg.frontmatter_keys[0] == "spec_id"
     assert reg.sentinel == "SPEC-____"
+
+
+def test_fence_mask_preserves_offsets_lines_and_outside_text() -> None:
+    from project_standards.specs.registry import (
+        _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    text = "before\n```markdown\n## 99. Example\nRQ-123 and <placeholder>\n```\nafter\n"
+
+    masked = _masked_structural_view(text)
+
+    assert len(masked) == len(text)
+    assert [i for i, char in enumerate(masked) if char == "\n"] == [
+        i for i, char in enumerate(text) if char == "\n"
+    ]
+    assert masked.startswith("before\n")
+    assert masked.endswith("after\n")
+    assert all(not line.strip() for line in masked.splitlines()[1:5])
+
+
+def test_fence_mask_crlf_and_cr_closers_restore_later_structure() -> None:
+    from project_standards.specs.registry import (
+        _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    for newline in ("\r\n", "\r"):
+        text = newline.join(("```markdown", "## 99. Example", "```", "## 1. Visible", ""))
+
+        masked = _masked_structural_view(text)
+
+        assert len(masked) == len(text)
+        assert [(i, char) for i, char in enumerate(masked) if char in "\r\n"] == [
+            (i, char) for i, char in enumerate(text) if char in "\r\n"
+        ]
+        assert "## 99. Example" not in masked
+        assert f"## 1. Visible{newline}" in masked

@@ -6,6 +6,9 @@ import re
 
 from project_standards.specs.document import section_slice
 from project_standards.specs.model import Finding, Registry, SpecDocument
+from project_standards.specs.registry import (
+    _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
+)
 
 _ANGLE = re.compile(r"<[^>\n]+>")
 _GUIDANCE = "> **Template instructions"
@@ -18,7 +21,8 @@ def _w(code: str, message: str, line: int | None = None, locus: str | None = Non
 def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     """Return advisory findings; callers decide whether warnings are strict."""
     out: list[Finding] = []
-    for i, line in enumerate(doc.body.splitlines(), start=1):
+    structural_body = _masked_structural_view(doc.body)
+    for i, line in enumerate(structural_body.splitlines(), start=1):
         if _ANGLE.search(line):
             out.append(_w("SL-PLACEHOLDER", "unfilled <angle-bracket> placeholder", line=i))
         if line.lstrip().startswith(_GUIDANCE):
@@ -30,9 +34,8 @@ def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
 
 def _must_frs(doc: SpecDocument) -> list[str]:
     """Return FR IDs whose §7.1 Priority column is exactly Must."""
-    rows = [
-        ln for ln in (section_slice(doc, "7.1") or "").splitlines() if ln.lstrip().startswith("|")
-    ]
+    structural_section = _masked_structural_view(section_slice(doc, "7.1") or "")
+    rows = [ln for ln in structural_section.splitlines() if ln.lstrip().startswith("|")]
     if not rows:
         return []
     header = [c.strip().lower() for c in rows[0].strip().strip("|").split("|")]
@@ -50,11 +53,11 @@ def _must_frs(doc: SpecDocument) -> list[str]:
 def _traceability(doc: SpecDocument, reg: Registry) -> list[Finding]:
     has_matrix = "17.3" in reg.tier_sections.get(doc.profile or "", frozenset())
     if has_matrix:
-        matrix = section_slice(doc, "17.3") or ""
+        matrix = _masked_structural_view(section_slice(doc, "17.3") or "")
         missing = [fid for fid in _must_frs(doc) if fid not in matrix]
         return [
             _w("SL-TRACE", f"Must requirement {fid} not mapped in §17.3", locus=fid)
             for fid in dict.fromkeys(missing)
         ]
-    dod = section_slice(doc, "17.1") or ""
+    dod = _masked_structural_view(section_slice(doc, "17.1") or "")
     return [_w("SL-DOD", "unchecked Definition-of-Done item in §17.1")] if "- [ ]" in dod else []

@@ -59,3 +59,49 @@ def test_shipped_dogfood_example_validates_and_lints_clean() -> None:
     reg = load_registry()
     assert validate_document(doc, reg) == []
     assert lint_document(doc, reg) == []
+
+
+def test_fenced_validation_examples_do_not_create_findings() -> None:
+    source = (_FIX / "valid_light.md").read_text(encoding="utf-8")
+    anchor = "## 1. Purpose & Background"
+    assert anchor in source
+    fenced_example = (
+        "\n\n```markdown\n"
+        "§999\n"
+        "[dead](#not-a-real-anchor)\n"
+        "## Appendix C: Full-only Example\n"
+        "| A | B |\n"
+        "| --- | --- |\n"
+        "| malformed |\n"
+        "```"
+    )
+    doc = parse_document("fenced.md", source.replace(anchor, anchor + fenced_example, 1))
+
+    codes = {finding.code for finding in validate_document(doc, load_registry())}
+
+    assert codes.isdisjoint({"SV-XREF", "SV-ANCHOR", "SV-APX-ORDER", "SV-APX-FULLONLY", "SV-TABLE"})
+
+
+def test_fenced_omission_note_does_not_cover_a_real_gap() -> None:
+    doc = parse_document(
+        "fenced-gap.md",
+        "---\n"
+        "spec_id: SPEC-0001\n"
+        "profile: light\n"
+        "status: draft\n"
+        "---\n"
+        "# Demo\n\n"
+        "## 1. Purpose\n\n"
+        "```markdown\n"
+        "> Light tier omitted §2-§6.\n"
+        "```\n\n"
+        "## 7. Requirements\n",
+    )
+
+    gaps = {
+        finding.locus
+        for finding in validate_document(doc, load_registry())
+        if finding.code == "SV-GAP"
+    }
+
+    assert "§2" in gaps

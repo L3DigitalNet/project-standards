@@ -58,6 +58,52 @@ def test_rewrite_h1_suffix_ignores_h1_shaped_line_mid_body() -> None:
     assert "Inline mention: # `X` — Specification (Light) stays verbatim." in out
 
 
+def test_rewrite_h1_suffix_ignores_fenced_h1_example() -> None:
+    text = "```markdown\n# `Example` — Specification (Light)\n```\n"
+
+    assert _rewrite_h1_suffix(text, "standard") == text
+
+
+def test_check_upgradeable_does_not_accept_a_fenced_h1_example() -> None:
+    from project_standards.specs.commands.upgrade import check_upgradeable
+
+    template = (
+        "---\nprofile: light\n---\n"
+        "# `Demo` — Specification (Light)\n\n"
+        "## 1. Purpose\n\n"
+        "Authored.\n\n"
+        "```markdown\n# `Example` — Specification (Light)\n```\n"
+    )
+    source = template.replace("# `Demo` — Specification (Light)", "# Broken", 1)
+
+    assert check_upgradeable(source, template) is not None
+
+
+def test_upgrade_preserves_fenced_appendix_anchor_example() -> None:
+    source = (
+        "---\nprofile: light\n---\n"
+        "# `Demo` — Specification (Light)\n\n"
+        "[Live Appendix D](#appendix-d-upgrading-this-spec)\n\n"
+        "## 1. Purpose\n\n"
+        "```markdown\n"
+        "[Example Appendix D](#appendix-d-upgrading-this-spec)\n"
+        "```\n"
+    )
+    target = (
+        "---\nprofile: standard\n---\n"
+        "# `Demo` — Specification (Standard)\n\n"
+        "## 1. Purpose\n\n"
+        "Stub.\n\n"
+        "## Appendix D: Tailoring\n\n"
+        "Donor.\n"
+    )
+
+    out = upgrade_text(source, target, target_tier="standard")
+
+    assert "[Live Appendix D](#appendix-d-tailoring)" in out
+    assert "[Example Appendix D](#appendix-d-upgrading-this-spec)" in out
+
+
 def test_top_blocks_splits_on_h2_and_keys_by_canonical_identity() -> None:
     body = (
         "# `T` — Specification (Light)\n\npreamble\n\n"

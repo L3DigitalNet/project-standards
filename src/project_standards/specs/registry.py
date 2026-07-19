@@ -19,6 +19,8 @@ SENTINEL = "SPEC-____"
 SPEC_ID_PATTERN = r"^SPEC-[0-9A-Z]{4}$"
 
 ID_TOKEN = re.compile(r"\b([A-Z]{1,4})-([0-9]+)\b")
+_FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 NOT_AN_ID = {
     "HTTP",
     "AES",
@@ -77,10 +79,33 @@ def _fm_keys(fm: str) -> list[str]:
     return [m.group(1) for line in fm.splitlines() if (m := re.match(r"^([A-Za-z_][\w]*):", line))]
 
 
+def _masked_structural_view(text: str) -> str:
+    """Mask fenced code while preserving character and newline offsets."""
+    out: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines(keepends=True):
+        masked = fence is not None
+        if fence is not None:
+            if line.endswith("\r\n"):
+                close_line = line[:-2]
+            elif line.endswith(("\r", "\n")):
+                close_line = line[:-1]
+            else:
+                close_line = line
+            close = _FENCE_CLOSE.match(close_line)
+            if close and close.group(1)[0] == fence[0] and len(close.group(1)) >= len(fence):
+                fence = None
+        elif opener := _FENCE_OPEN.match(line):
+            fence = opener.group(1)
+            masked = True
+        out.append("".join(char if char in "\r\n" else " " for char in line) if masked else line)
+    return "".join(out)
+
+
 def headings(body: str) -> list[tuple[int, str, int]]:
     """Return Markdown heading tuples as (level, title, 1-based body line)."""
     out: list[tuple[int, str, int]] = []
-    for i, line in enumerate(body.splitlines(), 1):
+    for i, line in enumerate(_masked_structural_view(body).splitlines(), 1):
         if m := re.match(r"^(#{2,4})\s+(.*)$", line):
             out.append((len(m.group(1)), m.group(2).rstrip(), i))
     return out
@@ -112,7 +137,7 @@ _APPENDIX_HEADING = "^## Appendix "
 
 def appendix_letters(body: str) -> list[str]:
     """Return every '## Appendix X:' letter found in body, in document order."""
-    return re.findall(rf"{_APPENDIX_HEADING}([A-Z]):", body, re.M)
+    return re.findall(rf"{_APPENDIX_HEADING}([A-Z]):", _masked_structural_view(body), re.M)
 
 
 def appendix_pattern(letter: str) -> str:
@@ -122,7 +147,8 @@ def appendix_pattern(letter: str) -> str:
 
 def declared_prefixes(body: str) -> dict[str, str]:
     """Return Appendix-A prefix declarations from template/spec Markdown."""
-    apx = re.search(r"## Appendix A:.*?(?=\n## |\Z)", body, re.S)
+    structural_body = _masked_structural_view(body)
+    apx = re.search(r"## Appendix A:.*?(?=\n## |\Z)", structural_body, re.S)
     declared: dict[str, str] = {}
     if apx:
         for row in re.finditer(
