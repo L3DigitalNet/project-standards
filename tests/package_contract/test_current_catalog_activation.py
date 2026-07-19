@@ -82,6 +82,19 @@ _PACKAGES = {
         "Standard Bundle Authoring Standard",
         "The contract every standard bundle in this repository must declare.",
         "active",
+        "2.1",
+        "internal",
+        "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b",
+    ),
+}
+
+# Catalog 5 also retains superseded advertised versions: removing an advertised
+# entry requires a catalog-major transition (ADR 0024), so replaced payloads stay
+# listed beside their successors. Only the activation test compares the full
+# catalog entry set; the per-family tests above track current authority only.
+_RETAINED_CATALOG_ENTRIES = {
+    (
+        "standard-bundle-authoring",
         "2.0",
         "internal",
         "sha256:5fec499e321fc4d20ea9ddb50f6dceae1da800dd66d909ebea2dbd23e84597ca",
@@ -155,7 +168,7 @@ def test_repository_root_activates_exact_catalog_and_relative_projections() -> N
         for entry in repository.catalog.packages
     } == {
         (standard_id, values[3], values[4], values[5]) for standard_id, values in _PACKAGES.items()
-    }
+    } | _RETAINED_CATALOG_ENTRIES
     assert not (_ROOT / ".project-standards.yml").exists()
     assert all(
         (_ROOT / ".standards" / name).is_file()

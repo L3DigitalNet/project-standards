@@ -115,11 +115,11 @@ uv run pip-audit
 - Each payload declares its manifest, canonical documentation, resources, providers, schemas, and other package data.
 - Repository policy such as versioning lives in `meta/`, not a package.
 
-Follow the Standard Bundle Authoring 2.0 workflow when adding a family or payload.
+Follow the Standard Bundle Authoring 2.1 workflow when adding a family or payload.
 
 **Why:** keeps each standard browseable and independently adoptable, and makes adding the next one mechanical.
 
-**Sources:** `standards/README.md`; `docs/superpowers/specs/2026-06-06-standards-bundle-restructure-design.md`.
+**Sources:** `standards/README.md`; `docs/specs/archive/2026-06-06-standards-bundle-restructure-design.md`.
 
 **Related:** 1, 5.
 
