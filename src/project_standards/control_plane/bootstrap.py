@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import secrets
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +23,7 @@ from project_standards.control_plane.locking import (
     LockedControlDirectory,
     LockMode,
     control_plane_lock,
+    reserved_temporary_name,
 )
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.paths import CatalogMajor
@@ -87,7 +87,7 @@ def _stage_file(
     content: bytes,
 ) -> str:
     """Durably stage one complete file without publishing its canonical name."""
-    temporary = f".{name}.{secrets.token_hex(8)}.tmp"
+    temporary = reserved_temporary_name()
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
         descriptor = os.open(temporary, flags, 0o600, dir_fd=control.descriptor)

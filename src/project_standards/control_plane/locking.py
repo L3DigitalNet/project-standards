@@ -5,12 +5,26 @@ from __future__ import annotations
 import errno
 import fcntl
 import os
+import re
+import secrets
 import stat
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+
+_RESERVED_TEMPORARY = re.compile(r"^\.project-standards-[0-9a-f]{16}\.tmp$", re.ASCII)
+
+
+def reserved_temporary_name() -> str:
+    """Return a fresh name in the control plane's cleanup-owned namespace."""
+    return f".project-standards-{secrets.token_hex(8)}.tmp"
+
+
+def is_reserved_temporary_name(name: str) -> bool:
+    """Return whether recovery owns this exact bounded temporary name."""
+    return _RESERVED_TEMPORARY.fullmatch(name) is not None
 
 
 class LockMode(StrEnum):

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
-import secrets
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
@@ -42,6 +40,8 @@ from project_standards.control_plane.locking import (
     LockedControlDirectory,
     LockMode,
     control_plane_lock,
+    is_reserved_temporary_name,
+    reserved_temporary_name,
 )
 from project_standards.control_plane.models import CentralLock, LockHeader
 from project_standards.control_plane.planner import (
@@ -60,8 +60,6 @@ from project_standards.package_contract.payload import (
     JsonValue,
     load_option_schema,
 )
-
-_STAGED_TEMPORARY = re.compile(r"^\.project-standards-[0-9a-f]{16}\.tmp$", re.ASCII)
 
 
 class RecoveryKind(StrEnum):
@@ -301,14 +299,13 @@ def _catalog_refresh_recovery(
     # Enumerate through the locked directory descriptor. Path.iterdir() would
     # reopen the pathname and lose the rename-race protection held by recovery.
     names = os.listdir(control.descriptor)  # noqa: PTH208
-    temporaries = tuple(sorted(name for name in names if _STAGED_TEMPORARY.fullmatch(name)))
-    if any(control.file_kind(name) != "regular" for name in temporaries):
-        return _refused(
-            RecoveryKind.CATALOG_REFRESH,
-            "CP-RECOVERY-UNSAFE",
-            "catalog refresh staged evidence is unsafe",
-            "remove unsafe entries and restore authorities from version control",
+    temporaries = tuple(
+        sorted(
+            name
+            for name in names
+            if is_reserved_temporary_name(name) and control.file_kind(name) == "regular"
         )
+    )
     preconditions = _preconditions(
         control,
         (
@@ -424,6 +421,7 @@ def _publish_catalog(
     content = plan.proposed_content
     if content is None:
         return ApplyResult(False, (), False, "CP-RECOVERY-INCOMPLETE")
+    applied: list[str] = []
     try:
         with control_plane_lock(request.repo, LockMode.WRITE) as control:
             if control.file_kind("catalog.toml") != "missing":
@@ -434,7 +432,7 @@ def _publish_catalog(
                     or _digest(control.read_bytes(name)) != expected
                 ):
                     return ApplyResult(False, (), False, "CP-STALE-PLAN")
-            temporary = f".project-standards-{secrets.token_hex(8)}.tmp"
+            temporary = reserved_temporary_name()
             try:
                 descriptor = os.open(
                     temporary,
@@ -459,15 +457,16 @@ def _publish_catalog(
                     src_dir_fd=control.descriptor,
                     dst_dir_fd=control.descriptor,
                 )
+                applied.append(".standards/catalog.toml")
                 os.fsync(control.descriptor)
             finally:
                 with suppress(OSError):
                     os.unlink(temporary, dir_fd=control.descriptor)
-            return ApplyResult(True, (".standards/catalog.toml",), False)
+            return ApplyResult(True, tuple(applied), False)
     except ControlPlaneBusyError:
         return ApplyResult(False, (), False, "CP-BUSY")
     except ValueError, OSError:
-        return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
+        return ApplyResult(False, tuple(applied), False, "CP-RECOVERY-APPLY")
 
 
 def _publish_catalog_refresh_recovery(
@@ -477,6 +476,7 @@ def _publish_catalog_refresh_recovery(
     cleanup = plan.cleanup_targets
     if CATALOG_REFRESH_BACKUP not in cleanup:
         return ApplyResult(False, (), False, "CP-RECOVERY-INCOMPLETE")
+    applied: list[str] = []
     try:
         with control_plane_lock(request.repo, LockMode.WRITE) as control:
             for name, expected in plan.authority_preconditions:
@@ -485,11 +485,10 @@ def _publish_catalog_refresh_recovery(
                     or _digest(control.read_bytes(name)) != expected
                 ):
                     return ApplyResult(False, (), False, "CP-STALE-PLAN")
-            applied: list[str] = []
             temporary: str | None = None
             try:
                 if plan.proposed_content is not None:
-                    temporary = f".project-standards-{secrets.token_hex(8)}.tmp"
+                    temporary = reserved_temporary_name()
                     descriptor = os.open(
                         temporary,
                         os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
@@ -513,9 +512,9 @@ def _publish_catalog_refresh_recovery(
                         src_dir_fd=control.descriptor,
                         dst_dir_fd=control.descriptor,
                     )
+                    applied.append(".standards/catalog.toml")
                     temporary = None
                     os.fsync(control.descriptor)
-                    applied.append(".standards/catalog.toml")
                 for name in cleanup:
                     os.unlink(name, dir_fd=control.descriptor)
                     applied.append(f"remove:.standards/{name}")
@@ -528,7 +527,7 @@ def _publish_catalog_refresh_recovery(
     except ControlPlaneBusyError:
         return ApplyResult(False, (), False, "CP-BUSY")
     except ValueError, OSError:
-        return ApplyResult(False, (), False, "CP-RECOVERY-APPLY")
+        return ApplyResult(False, tuple(applied), False, "CP-RECOVERY-APPLY")
 
 
 def apply_recovery(

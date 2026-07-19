@@ -81,6 +81,46 @@ def test_initialization_creates_exactly_three_neutral_regular_files(tmp_path: Pa
     assert catalog.project_standards.digest == lock.project_standards.catalog_digest
 
 
+def test_initialization_uses_the_reserved_temporary_namespace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.bootstrap as bootstrap
+
+    distribution = _installed_fixture(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    original = bootstrap.os.replace
+    staged: list[str] = []
+
+    def record_replace(
+        source: str,
+        destination: str,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
+        staged.append(source)
+        original(
+            source,
+            destination,
+            src_dir_fd=src_dir_fd,
+            dst_dir_fd=dst_dir_fd,
+        )
+
+    monkeypatch.setattr(bootstrap.os, "replace", record_replace)
+
+    initialize_control_plane(repo, "5", distribution=distribution)
+
+    assert len(staged) == 3
+    assert all(
+        name.startswith(".project-standards-")
+        and name.endswith(".tmp")
+        and len(name) == len(".project-standards-") + 16 + len(".tmp")
+        for name in staged
+    )
+
+
 def test_second_initialization_is_a_byte_and_metadata_noop(tmp_path: Path) -> None:
     distribution = _installed_fixture(tmp_path)
     repo = tmp_path / "consumer"

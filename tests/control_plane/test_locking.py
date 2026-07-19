@@ -10,6 +10,8 @@ from project_standards.control_plane.locking import (
     ControlPlaneBusyError,
     LockMode,
     control_plane_lock,
+    is_reserved_temporary_name,
+    reserved_temporary_name,
 )
 
 _HOLDER = """
@@ -23,6 +25,24 @@ with control_plane_lock(repo, mode):
     print("READY", flush=True)
     sys.stdin.read(1)
 """
+
+
+def test_reserved_temporary_names_have_one_bounded_namespace() -> None:
+    generated = reserved_temporary_name()
+
+    assert len(generated) == len(".project-standards-") + 16 + len(".tmp")
+    assert generated.startswith(".project-standards-")
+    assert generated.endswith(".tmp")
+    assert is_reserved_temporary_name(generated)
+
+    for user_name in (
+        ".config.toml.0123456789abcdef.tmp",
+        ".project-standards-0123456789abcde.tmp",
+        ".project-standards-0123456789abcdef0.tmp",
+        ".project-standards-0123456789abcdeg.tmp",
+        "project-standards-0123456789abcdef.tmp",
+    ):
+        assert not is_reserved_temporary_name(user_name)
 
 
 def _start_holder(repo: Path, mode: LockMode) -> subprocess.Popen[str]:

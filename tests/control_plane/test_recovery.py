@@ -175,6 +175,131 @@ def test_missing_catalog_staging_failure_cleans_temporary_file(
     assert not list(control.glob(".project-standards-*.tmp"))
 
 
+@pytest.mark.parametrize(
+    ("failure_call", "expected_applied"),
+    [
+        pytest.param(1, (), id="before-replacement"),
+        pytest.param(2, (".standards/catalog.toml",), id="after-replacement"),
+    ],
+)
+def test_missing_catalog_failure_reports_the_applied_prefix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_call: int,
+    expected_applied: tuple[str, ...],
+) -> None:
+    repo = tmp_path / "repo"
+    control = _control(repo)
+    distribution = installed_distribution(tmp_path)
+    config = render_empty_config("5")
+    (control / "config.toml").write_bytes(config)
+    (control / "lock.toml").write_bytes(render_lock(_empty_lock(distribution, config)))
+    request = RecoveryRequest(repo, distribution)
+    plan = plan_recovery(request)
+    original_fsync = os.fsync
+    calls = 0
+
+    def fail_at_boundary(descriptor: int) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == failure_call:
+            raise OSError("injected recovery fsync failure")
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(os, "fsync", fail_at_boundary)
+
+    result = apply_recovery(request, plan, apply=True, repair_state=True)
+
+    assert not result.success
+    assert result.error_code == "CP-RECOVERY-APPLY"
+    assert result.applied_action_ids == expected_applied
+    assert (control / "catalog.toml").exists() is bool(expected_applied)
+
+
+def test_catalog_refresh_cleanup_removes_only_reserved_regular_temporaries(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    control = repo / ".standards"
+    backup = control / CATALOG_REFRESH_BACKUP
+    backup.write_bytes((control / "catalog.toml").read_bytes())
+    reserved_regular = control / ".project-standards-0123456789abcdef.tmp"
+    reserved_regular.write_bytes(b"stale")
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"keep")
+    reserved_symlink = control / ".project-standards-fedcba9876543210.tmp"
+    reserved_symlink.symlink_to(outside)
+    reserved_directory = control / ".project-standards-1111111111111111.tmp"
+    reserved_directory.mkdir()
+    user_named = control / ".config.toml.2222222222222222.tmp"
+    user_named.write_bytes(b"keep")
+    request = RecoveryRequest(repo, distribution)
+
+    plan = plan_recovery(request)
+
+    assert plan.applicable
+    assert plan.cleanup_targets == (reserved_regular.name, CATALOG_REFRESH_BACKUP)
+
+    result = apply_recovery(request, plan, apply=True, repair_state=True)
+
+    assert result.success
+    assert not reserved_regular.exists()
+    assert not backup.exists()
+    assert reserved_symlink.is_symlink()
+    assert reserved_directory.is_dir()
+    assert user_named.read_bytes() == b"keep"
+    assert outside.read_bytes() == b"keep"
+
+
+@pytest.mark.parametrize(
+    ("failure_call", "expected_applied"),
+    [
+        pytest.param(1, (), id="before-replacement"),
+        pytest.param(2, (".standards/catalog.toml",), id="after-replacement"),
+    ],
+)
+def test_catalog_refresh_failure_reports_the_applied_prefix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_call: int,
+    expected_applied: tuple[str, ...],
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    control = repo / ".standards"
+    previous = (control / "catalog.toml").read_bytes()
+    (control / CATALOG_REFRESH_BACKUP).write_bytes(previous)
+    newer = InstalledDistribution(distribution.package_root, tool_release="5.0.1")
+    (control / "catalog.toml").write_bytes(render_catalog(newer.consumer_catalog("5")))
+    request = RecoveryRequest(repo, newer)
+    plan = plan_recovery(request)
+    assert plan.applicable and plan.proposed_content == previous
+    original_fsync = os.fsync
+    calls = 0
+
+    def fail_at_boundary(descriptor: int) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == failure_call:
+            raise OSError("injected recovery fsync failure")
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(os, "fsync", fail_at_boundary)
+
+    result = apply_recovery(request, plan, apply=True, repair_state=True)
+
+    assert not result.success
+    assert result.error_code == "CP-RECOVERY-APPLY"
+    assert result.applied_action_ids == expected_applied
+    if expected_applied:
+        assert (control / "catalog.toml").read_bytes() == previous
+
+
 def test_missing_lock_builds_evidence_backed_plan_without_accepted_tracks(
     tmp_path: Path,
 ) -> None:

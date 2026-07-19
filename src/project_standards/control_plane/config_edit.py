@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
@@ -27,6 +26,7 @@ from project_standards.control_plane.locking import (
     LockedControlDirectory,
     LockMode,
     control_plane_lock,
+    reserved_temporary_name,
 )
 from project_standards.control_plane.models import (
     CentralLock,
@@ -117,7 +117,7 @@ def _atomic_replace_config(
     control: LockedControlDirectory,
     content: bytes,
 ) -> None:
-    temporary = f".config.toml.{secrets.token_hex(8)}.tmp"
+    temporary = reserved_temporary_name()
     try:
         current_mode = (
             os.stat(

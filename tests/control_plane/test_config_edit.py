@@ -168,6 +168,41 @@ def test_disable_changes_only_the_boolean_span_and_preserves_selector_options(
     assert config.standards["alpha"].config["include"] == ["docs/**/*.md", "README.md"]
 
 
+def test_config_edit_uses_the_reserved_temporary_namespace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.config_edit as config_edit
+
+    _write_control_plane(tmp_path)
+    original = config_edit.os.replace
+    staged: list[str] = []
+
+    def record_replace(
+        source: str,
+        destination: str,
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
+        staged.append(source)
+        original(
+            source,
+            destination,
+            src_dir_fd=src_dir_fd,
+            dst_dir_fd=dst_dir_fd,
+        )
+
+    monkeypatch.setattr(config_edit.os, "replace", record_replace)
+
+    set_standard_enabled(tmp_path, "alpha", False)
+
+    assert len(staged) == 1
+    assert staged[0].startswith(".project-standards-")
+    assert staged[0].endswith(".tmp")
+    assert len(staged[0]) == len(".project-standards-") + 16 + len(".tmp")
+
+
 def test_version_edit_preserves_existing_quote_style_and_all_other_bytes(
     tmp_path: Path,
 ) -> None:
