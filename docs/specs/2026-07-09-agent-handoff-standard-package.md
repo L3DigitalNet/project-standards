@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-09'
-last_reviewed: '2026-07-18'
+last_reviewed: '2026-07-19'
 supersedes: null
 superseded_by: null
 related:
@@ -38,6 +38,7 @@ related:
 | 0.4 | 2026-07-09 | Codex with owner-directed plan review | Make the installed hook path the repository trust anchor and correct the repository/legacy licensing contract. |
 | 0.5 | 2026-07-09 | Codex with owner direction | Remove a package-specific license for `agent-handoff`; inherit the repository license while preserving notices for MIT-licensed legacy inputs. |
 | 0.6 | 2026-07-18 | Codex with owner direction | Record the approved Catalog 5/V2 supersession, current package `1.1` implementation, approved/change-controlled lifecycle, and remaining legacy-engine retirement gate without rewriting the V1 baseline. |
+| 0.7 | 2026-07-19 | Codex with owner approval | Record the `legacy-report` successful-inventory exit `0` exception while retaining every finding in human and JSON output. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
@@ -276,7 +277,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | IR-005 | Codex hook | Register one trusted project `SessionStart` command hook. | `.codex/config.toml` inline hook table points to `.agents/hooks/agent-handoff/session_start.py` | Official schema fixtures, trust guidance, and real smoke probe pass. |
 | IR-006 | Instruction integration | Own one marked block without owning the file. | HTML-comment start/end markers containing the exact token `agent-handoff` | Duplicate, nested, missing-end, and reordered markers fail closed. |
 | IR-007 | Validation output | Report all conformance findings. | Human text by default; JSON schema with repository, standard version, findings, and summary | Exit `0` clean, `1` findings, `2` usage/config error, `3` prerequisite/internal failure. |
-| IR-008 | Legacy output | Report recognized evidence without mutation. | Human text or JSON findings with `kind`, `path`, `evidence`, `severity`, and `guidance` | Unknown layouts are reported as unclassified evidence, not guessed migrations. |
+| IR-008 | Legacy output | Report recognized evidence without mutation. | Human text or JSON findings with `kind`, `path`, `evidence`, `severity`, and `guidance` | Unknown layouts are reported as unclassified evidence, not guessed migrations. A successfully emitted inventory exits `0` even when it contains findings; every finding remains in the selected output format. This exception does not alter the `validate` or `drift-check` exit contracts. |
 
 ### 7.4 Data Requirements
 

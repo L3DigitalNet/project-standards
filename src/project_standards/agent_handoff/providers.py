@@ -146,7 +146,8 @@ def extract(argv: list[str] | None = None) -> int:
     except RepositoryBoundaryError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    return _emit(report, as_json=parsed.json)
+    _emit(report, as_json=parsed.json)
+    return 0
 
 
 def upgrade(argv: list[str] | None = None) -> int:

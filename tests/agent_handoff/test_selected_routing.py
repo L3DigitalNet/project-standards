@@ -8,6 +8,7 @@ import pytest
 
 import project_standards.agent_handoff.cli as agent_handoff_cli
 from project_standards.agent_handoff.cli import run
+from project_standards.agent_handoff.model import Finding
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.config_edit import set_standard_enabled
@@ -359,3 +360,73 @@ def test_unified_legacy_report_serializes_platform_evidence_through_provider(
     report = json.loads(capsys.readouterr().out)
     assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
     assert report["standard_version"] == "1.1"
+
+
+@pytest.mark.parametrize(
+    ("selected_authority", "as_json"),
+    [
+        pytest.param(True, False, id="selected-human"),
+        pytest.param(True, True, id="selected-json"),
+        pytest.param(False, False, id="fallback-human"),
+        pytest.param(False, True, id="fallback-json"),
+    ],
+)
+def test_legacy_report__emitted_inventory_with_errors__returns_success_and_retains_findings(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    *,
+    selected_authority: bool,
+    as_json: bool,
+) -> None:
+    finding = Finding(
+        code="AH-LEGACY-TEST",
+        severity="error",
+        path="legacy.txt",
+        locus="legacy inventory",
+        message="legacy evidence requires review",
+        guidance="review it",
+    )
+
+    def find_legacy(_root: object) -> tuple[Finding, ...]:
+        return (finding,)
+
+    if selected_authority:
+        repo = _consumer(tmp_path, distribution)
+        monkeypatch.setattr(agent_handoff_cli, "legacy_report", find_legacy)
+    else:
+        repo = tmp_path / "consumer"
+        repo.mkdir()
+
+        def load_finder(_module_name: str, _attribute: str) -> object:
+            return find_legacy
+
+        monkeypatch.setattr(
+            "project_standards.agent_handoff.providers._load_finder",
+            load_finder,
+        )
+
+    args = ["legacy-report", "--repo", str(repo)]
+    if as_json:
+        args.append("--json")
+
+    assert run(args, distribution=distribution) == 0
+    captured = capsys.readouterr()
+    if as_json:
+        assert captured.err == ""
+        report = json.loads(captured.out)
+        assert report["findings"] == [
+            {
+                "code": "AH-LEGACY-TEST",
+                "severity": "error",
+                "path": "legacy.txt",
+                "locus": "legacy inventory",
+                "message": "legacy evidence requires review",
+                "guidance": "review it",
+            }
+        ]
+        assert report["summary"]["errors"] == 1
+    else:
+        assert captured.out == ""
+        assert captured.err == "error: legacy.txt: legacy evidence requires review\n"

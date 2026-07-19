@@ -251,7 +251,8 @@ def _run_read_command(
             # The selected provider owns the serialized evidence bytes.
             sys.stdout.write(result.content.decode("utf-8"))
             return 0
-        return _emit(evidence, as_json=False)
+        _emit(evidence, as_json=False)
+        return 0
     findings = _provider_findings(selected, operation)
     if view == "size":
         findings = tuple(item for item in findings if item.code.startswith("AH-SIZE"))

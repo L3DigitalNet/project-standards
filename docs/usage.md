@@ -6,7 +6,7 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-18'
+updated: '2026-07-19'
 reviewed: '2026-07-18'
 owner: ''
 consumer: 'mix'
@@ -251,6 +251,8 @@ All verbs accept **`--repo <dir>`** (default: current directory). Read-only repo
 | `upgrade` | Preview or apply a provenance-guarded refresh of standard-owned artifacts |
 
 Exit status: `0` clean/success · `1` findings or recoverable apply failure · `2` usage/config error · `3` package/provider prerequisite or internal failure.
+
+`legacy-report` is the report-only exception: a successfully emitted inventory exits `0` even when it contains findings. Human and JSON output retain every finding; `validate` and `drift-check` continue to exit `1` when their findings require failure.
 
 ### `agent-handoff validate`
 
