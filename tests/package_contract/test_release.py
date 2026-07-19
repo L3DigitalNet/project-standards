@@ -122,6 +122,40 @@ def test_new_non_default_candidate_major_is_minor() -> None:
     assert result.classification is ReleaseClassification.MINOR
 
 
+def test_additive_internal_advertisement_is_patch() -> None:
+    # Internal payloads are never consumer-selectable, so advertising a new one
+    # cannot change any consumer's resolution: the consumer-outcome contract
+    # classifies it PATCH (e.g. standard-bundle-authoring 2.0 -> 2.0 + 2.1).
+    previous = _snapshot(5, _entry("2.0", CatalogRole.INTERNAL))
+    current = _snapshot(
+        5,
+        _entry("2.0", CatalogRole.INTERNAL),
+        _entry("2.1", CatalogRole.INTERNAL, _DIGEST_B),
+    )
+
+    result = _classify(previous, current, previous_tool="5.0.1", current_tool="5.0.2")
+
+    assert result.classification is ReleaseClassification.PATCH
+    assert result.findings == ()
+
+
+def test_additive_consumer_advertisement_still_requires_minor() -> None:
+    # The internal carve-out must not leak: an addition that includes any
+    # consumer-visible role keeps the MINOR floor even when an internal entry
+    # rides along in the same diff.
+    previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+    current = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("1.3", CatalogRole.RETAINED, _DIGEST_B),
+        _entry("2.1", CatalogRole.INTERNAL, _DIGEST_B),
+    )
+
+    result = _classify(previous, current)
+
+    assert result.classification is ReleaseClassification.MINOR
+
+
 def test_released_payload_mutation_or_deletion_is_forbidden() -> None:
     previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
     mutated = _snapshot(

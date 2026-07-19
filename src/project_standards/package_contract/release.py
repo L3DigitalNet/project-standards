@@ -217,7 +217,18 @@ def classify_catalog_diff(
             )
 
     if previous_entries != current_entries:
-        required = max(required, ReleaseClassification.MINOR, key=_release_rank)
+        # Versioning is a consumer-outcome contract: internal payloads are never
+        # consumer-selectable, so a purely additive internal advertisement cannot
+        # change any consuming repository's resolution and stays PATCH. Removals,
+        # digest/role changes, and consumer-visible additions keep their levels.
+        added_entries = [
+            entry for key, entry in current_entries.items() if key not in previous_entries
+        ]
+        only_internal_additions = set(previous_entries) <= set(current_entries) and all(
+            entry.role is CatalogRole.INTERNAL for entry in added_entries
+        )
+        if not only_internal_additions:
+            required = max(required, ReleaseClassification.MINOR, key=_release_rank)
     if previous.catalog.catalog_major != current.catalog.catalog_major:
         required = ReleaseClassification.MAJOR
 
