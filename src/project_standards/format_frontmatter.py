@@ -12,12 +12,13 @@ import datetime
 import json
 import re
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
+from yaml.tokens import AliasToken, AnchorToken, Token
 
 from project_standards._version import package_version
 from project_standards.id_format import random_token, slugify
@@ -89,6 +90,13 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
     construct unsafe to reorder/reserialize (anchors, merge keys, a non-key line
     at column 0). Nested mappings and block lists are supported (carried opaquely
     as continuation lines)."""
+    try:
+        raw_tokens = yaml.scan(body)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        for token in cast("Iterable[Token]", raw_tokens):
+            if isinstance(token, AnchorToken | AliasToken):
+                return [], "unsupported YAML anchor or alias"
+    except yaml.YAMLError:
+        pass
     lines = _split_keepends(body)
     entries: list[Entry] = []
     pending: list[str] = []  # leading comment/blank lines for the next key

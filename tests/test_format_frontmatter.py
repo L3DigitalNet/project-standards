@@ -510,6 +510,30 @@ def test_tokenize_unsupported_yaml_constructs() -> None:
         assert reason is not None and "unsupported" in reason, f"bad reason for {bad_val!r}"
 
 
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        pytest.param("project:\n  &team team: platform\n", id="mapping-key"),
+        pytest.param("project:\n  team: &team platform\n", id="mapping-value"),
+        pytest.param("source: [&source guide, *source]\n", id="flow-list"),
+        pytest.param(
+            "source:\n  - &source guide\n  - *source\n",
+            id="block-list",
+        ),
+    ],
+)
+def test_anchor_or_alias_anywhere_in_frontmatter_warns_and_preserves_bytes(
+    fragment: str,
+) -> None:
+    src = _doc(extra=fragment)
+
+    new, changed, warnings = format_text(src, path=Path("docs/example.md"))
+
+    assert new == src
+    assert changed is False
+    assert any("skipped (unsupported frontmatter)" in warning for warning in warnings)
+
+
 def test_tokenize_blank_line_breaks_continuation() -> None:
     # Covers line 119 — blank line inside a nested entry ends continuation
     body = "tags:\n  - 'a'\n\ntitle: 'X'\n"
