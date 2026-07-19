@@ -71,6 +71,17 @@ from project_standards.registry import Registry, RegistryError, load_registry
 _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", re.DOTALL)
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
+DEFAULT_INCLUDE: tuple[str, ...] = ("README.md", "docs/**/*.md")
+DEFAULT_EXCLUDE: tuple[str, ...] = (
+    "**/*.template.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".github/**",
+    "node_modules/**",
+)
 
 
 class FrontmatterParseError(ValueError):
@@ -421,7 +432,8 @@ def collect_paths(
 
     Pattern-dialect warning: include patterns use Path.glob semantics (`*` stops at
     `/`), but exclude patterns use fnmatch semantics where `*` ALSO spans path
-    separators — `docs/*.md` excludes nested files too. This asymmetry is the price
+    separators — `docs/*.md` excludes nested files too. For parity with Path.glob,
+    a leading `**/` also matches at the repository root. This asymmetry is the price
     of version-independent `dir/**` exclusion (see the comment below); write exclude
     patterns accordingly.
     """
@@ -463,7 +475,11 @@ def collect_paths(
 
     def is_excluded(path: Path) -> bool:
         key = _match_key(path)
-        return any(fnmatchcase(key, pattern) for pattern in exclude_patterns)
+        return any(
+            fnmatchcase(key, pattern)
+            or (pattern.startswith("**/") and fnmatchcase(key, pattern.removeprefix("**/")))
+            for pattern in exclude_patterns
+        )
 
     return sorted(p for p in paths if not is_excluded(p))
 
@@ -766,21 +782,12 @@ def config_from_unified_options(
         include=_unified_string_list(
             options.get("include"),
             option="include",
-            default=["README.md", "docs/**/*.md"],
+            default=list(DEFAULT_INCLUDE),
         ),
         exclude=_unified_string_list(
             options.get("exclude"),
             option="exclude",
-            default=[
-                "**/*.template.md",
-                "AGENTS.md",
-                "CLAUDE.md",
-                ".agents/**",
-                ".claude/**",
-                ".codex/**",
-                ".github/**",
-                "node_modules/**",
-            ],
+            default=list(DEFAULT_EXCLUDE),
         ),
         required=required,
         require_adr_sections=False,

@@ -318,10 +318,25 @@ def test_doc_type_filled_from_readme_path_when_missing():
     assert "doc_type: 'index'" in new
 
 
-def test_doc_type_research_under_docs_research_when_invalid():
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param(Path("docs/research/x.md"), id="root"),
+        pytest.param(Path("project/docs/research/x.md"), id="nested"),
+    ],
+)
+def test_doc_type_research_under_docs_research_when_invalid(path: Path) -> None:
     src = _doc().replace("doc_type: 'note'\n", "doc_type: 'bogus'\n")
-    new, _, _ = format_text(src, path=Path("docs/research/x.md"))
+    new, _, _ = format_text(src, path=path)
     assert "doc_type: 'research'" in new
+
+
+def test_doc_type_research_rule_rejects_prefix_lookalike() -> None:
+    src = _doc().replace("doc_type: 'note'\n", "")
+
+    new, _, _ = format_text(src, path=Path("old-docs/research/n.md"))
+
+    assert "doc_type: 'research'" not in new
 
 
 def test_valid_doc_type_never_overridden_by_path():

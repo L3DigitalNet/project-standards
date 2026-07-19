@@ -458,7 +458,7 @@ def is_denylisted(path: Path) -> bool:
 def _infer_doc_type(path: Path) -> str | None:
     """The standard's path rules. None = no rule applies."""
     posix = path.as_posix()
-    if "docs/research/" in posix or posix.startswith("docs/research/"):
+    if posix.startswith("docs/research/") or "/docs/research/" in posix:
         return "research"
     if path.name in ("README.md", "index.md"):
         return "index"

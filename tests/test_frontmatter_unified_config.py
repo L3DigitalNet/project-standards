@@ -62,7 +62,12 @@ def _sha256(content: bytes) -> str:
     return f"sha256:{hashlib.sha256(content).hexdigest()}"
 
 
-def _config_content(*, selector: str, custom_schema: bool) -> bytes:
+def _config_content(
+    *,
+    selector: str,
+    custom_schema: bool,
+    references_enabled: bool = True,
+) -> bytes:
     schema = (
         'schema = "custom"\nschema_path = ".standards/extensions/markdown-frontmatter/schema.json"'
         if custom_schema
@@ -84,7 +89,7 @@ include = ["handbook/**/*.md"]
 exclude = ["handbook/generated/**"]
 
 [standards.markdown-frontmatter.config.references]
-enabled = true
+enabled = {str(references_enabled).lower()}
 '''.encode()
 
 
@@ -94,11 +99,16 @@ def _write_unified_config(
     selector: str = "1.2",
     resolved: str = "1.2",
     custom_schema: bool = True,
+    references_enabled: bool = True,
 ) -> bytes | None:
     distribution = InstalledDistribution.current()
     initialize_control_plane(root, "5", distribution=distribution)
     control = root / ".standards"
-    config_content = _config_content(selector=selector, custom_schema=custom_schema)
+    config_content = _config_content(
+        selector=selector,
+        custom_schema=custom_schema,
+        references_enabled=references_enabled,
+    )
     (control / "config.toml").write_bytes(config_content)
 
     schema_content: bytes | None = None
@@ -118,7 +128,7 @@ def _write_unified_config(
 
 @pytest.mark.parametrize(
     ("selector", "resolved"),
-    [("latest", "1.2"), ("1.2", "1.2")],
+    [("latest", "1.3"), ("1.2", "1.2")],
     ids=["latest-default-refresh", "exact-pin"],
 )
 def test_cli_config_uses_the_committed_applied_package_version(
@@ -385,6 +395,22 @@ def test_frontmatter_cli_suite_uses_unified_config_by_default(
     assert validate_id.main(["--quiet"]) == 0
     assert validate_references.main(["--quiet"]) == 0
     assert format_frontmatter.main(["--quiet"]) == 0
+
+
+def test_unified_validate_references_disabled_custom_schema_is_silent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, references_enabled=False)
+    monkeypatch.chdir(tmp_path)
+    capsys.readouterr()
+
+    assert validate_references.main([]) == 0
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
 
 
 def test_unified_validate_id_fix_applies_selected_provider_plan(
@@ -951,3 +977,40 @@ def test_top_level_validate_supports_adr_without_frontmatter_package(
 
     assert project_standards_main(["validate", "--quiet", str(adr)]) == 1
     assert "ADR is missing required section" in capsys.readouterr().err
+
+
+def test_adr_only_scope_uses_frontmatter_defaults_plus_standards(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from project_standards import frontmatter_commands
+
+    distribution = InstalledDistribution.current()
+    initialize_control_plane(tmp_path, "5", distribution=distribution)
+    set_standard_enabled(tmp_path, "adr", True)
+    assert reconcile(["--repo", str(tmp_path), "--apply"], distribution=distribution) == 0
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(validate_frontmatter, "DEFAULT_INCLUDE", ["selected.md"])
+    monkeypatch.setattr(validate_frontmatter, "DEFAULT_EXCLUDE", ["ignored/**"])
+    ordinary = validate_frontmatter.config_from_unified_options({}, selected_package_version="1.2")
+    assert ordinary.include == ["selected.md"]
+    assert ordinary.exclude == ["ignored/**"]
+    observed: dict[str, list[str]] = {}
+
+    def collect(
+        _explicit: list[Path],
+        _glob_pattern: str | None,
+        include: list[str],
+        exclude: list[str],
+    ) -> list[Path]:
+        observed["include"] = include
+        observed["exclude"] = exclude
+        return []
+
+    monkeypatch.setattr(validate_frontmatter, "collect_paths", collect)
+
+    assert frontmatter_commands.run_validate([], distribution=distribution) == 0
+    assert observed == {
+        "include": ["selected.md"],
+        "exclude": ["ignored/**", ".standards/**"],
+    }

@@ -390,14 +390,15 @@ def run_locked_standalone_validate(
     """Run one legacy-named read command through the selected validate provider."""
     parsed = _parser(surface).parse_args(argv)
     config, paths, effective, snapshots = _selected_context(parsed, selected)
+    if surface == "validate-references":
+        references = effective.get("references")
+        if not isinstance(references, dict) or references.get("enabled") is not True:
+            return 0
     if effective.get("schema") == "custom" and surface in {"validate-id", "validate-references"}:
         label = "id-format" if surface == "validate-id" else "reference"
         print(f"note: custom schema in use; skipping {label} validation", file=sys.stderr)
         return 0
     if surface == "validate-references":
-        references = effective.get("references")
-        if not isinstance(references, dict) or references.get("enabled") is not True:
-            return 0
         paths = validate_frontmatter.collect_paths([], None, config.include, config.exclude)
         effective, snapshots = _provider_inputs(
             selected,
@@ -581,8 +582,8 @@ def run_validate(
                 paths = validate_frontmatter.collect_paths(
                     list(parsed.files),
                     parsed.glob,
-                    ["README.md", "docs/**/*.md"],
-                    ["**/*.template.md", "AGENTS.md", "CLAUDE.md", ".standards/**"],
+                    list(validate_frontmatter.DEFAULT_INCLUDE),
+                    [*validate_frontmatter.DEFAULT_EXCLUDE, ".standards/**"],
                 )
                 if not paths:
                     if not parsed.quiet:
