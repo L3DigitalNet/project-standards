@@ -31,5 +31,6 @@ Superseded specifications and historical design documents for `project-standards
 | 2026-07-10 | [FR-013 Agent-Summary Coverage](2026-07-10-fr-013-agent-summary-coverage-design.md) | implemented (2026-07-10) | Nine compact summaries, 3,000-byte enforcement, generated catalog URIs |
 | 2026-07-10 | [Root-Artifact Ownership and Semantic Composition](2026-07-10-root-artifact-ownership-semantic-composition-design.md) | adopted by ADR 0023 | Consumer-owned shared root containers with typed package-owned semantic units composed by syntax-preserving adapters |
 | 2026-07-12 | [Python Tooling Checker-Table Materialization](2026-07-12-python-tooling-checker-table-materialization-design.md) | implemented (5.0.x) | Canonical checker selection, exact `pyright==1.1.411`, conditional payload rendering, migration/lifecycle contracts |
+| 2026-07-19 | [Project Standards Review Remediation](2026-07-19-project-standards-review-remediation-design.md) | owner-approved; implementation pending | Evidence-based final dispositions and compatibility-first 5.1.0 corrections for F-001 through F-100 |
 
 Research and reference packs live in [`../../research/`](../../research/index.md). Active implementation plans live in [`../../plans/`](../../plans/); completed plans are deleted.
