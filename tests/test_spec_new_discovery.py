@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.specs import cli as spec_cli
 from project_standards.specs import config as cfgmod
 from project_standards.specs.config import (
     ConfigError,
@@ -48,6 +49,24 @@ def test_collects_ids_and_skips_malformed_neighbor(
     )
     cfg = _cfg(tmp_path, "spec:\n  include:\n    - docs/*.md\n")
     assert collect_existing_spec_ids(cfg) == {"SPEC-7F3Q"}
+
+
+def test_existing_id_resolution__legacy_and_selected__matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "one.md").write_text("---\nspec_id: SPEC-7F3Q\n---\n# One\n", encoding="utf-8")
+    config = _cfg(tmp_path, "spec:\n  include: docs/*.md\n")
+    runtime = spec_cli._SpecRuntime(  # pyright: ignore[reportPrivateUsage]
+        repo=tmp_path,
+        effective_config={"include_patterns": ["docs/*.md"]},
+    )
+
+    assert spec_cli._selected_existing_ids(  # pyright: ignore[reportPrivateUsage]
+        runtime
+    ) == collect_existing_spec_ids(config)
 
 
 def test_non_discovery_configerror_propagates(monkeypatch: pytest.MonkeyPatch) -> None:

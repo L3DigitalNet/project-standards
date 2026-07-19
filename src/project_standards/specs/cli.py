@@ -10,7 +10,7 @@ import os
 import random
 import re
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
@@ -55,6 +55,7 @@ from project_standards.specs.commands.validate import validate_document
 from project_standards.specs.config import (
     ConfigError,
     DiscoveryError,
+    SpecConfig,
     collect_existing_spec_ids,
     collect_spec_paths,
     load_spec_config,
@@ -495,9 +496,9 @@ def _emit_new_failure(json_mode: bool, err: NewError) -> int:
     return 2
 
 
-def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
-    """Validate flags, resolve the spec_id (mint or --id); return (opts, template_text).
-    Raises NewError for every exit-2 condition."""
+def _resolve_spec_options(
+    args: argparse.Namespace, existing_ids: Callable[[], set[str]]
+) -> NewOptions:
     for flag, value, is_title in (
         ("title", args.title, True),
         ("owner", args.owner, False),
@@ -509,33 +510,44 @@ def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str]:
             except FieldValueError as exc:
                 raise NewError("bad_field_value", str(exc)) from exc
 
-    try:
-        cfg = load_spec_config(args.config)
-        existing_ids = collect_existing_spec_ids(cfg)
-    except ConfigError as exc:
-        raise NewError("config_error", str(exc)) from exc
-
+    known_ids = existing_ids()
     if args.spec_id is not None:
         if not re.match(SPEC_ID_PATTERN, args.spec_id):
             raise NewError("bad_id", f"--id {args.spec_id!r} does not match {SPEC_ID_PATTERN}")
-        if args.spec_id in existing_ids:
+        if args.spec_id in known_ids:
             raise NewError("id_collision", f"--id {args.spec_id} is already used in this repo")
         spec_id = args.spec_id
     else:
         try:
-            spec_id = mint_spec_id(random.Random(), existing_ids)
+            spec_id = mint_spec_id(random.Random(), known_ids)
         except SpecIdExhausted as exc:
             raise NewError("id_exhausted", str(exc)) from exc
 
-    opts = NewOptions(
+    return NewOptions(
         profile=args.profile,
         spec_id=spec_id,
         title=args.title,
         owner=args.owner,
         implementer=args.implementer,
     )
+
+
+def _resolve_new_options(args: argparse.Namespace) -> tuple[NewOptions, str, SpecConfig]:
+    """Resolve legacy options and return their template and loaded configuration."""
+    cfg: SpecConfig | None = None
+
+    def existing_ids() -> set[str]:
+        nonlocal cfg
+        try:
+            cfg = load_spec_config(args.config)
+            return collect_existing_spec_ids(cfg)
+        except ConfigError as exc:
+            raise NewError("config_error", str(exc)) from exc
+
+    opts = _resolve_spec_options(args, existing_ids)
+    assert cfg is not None
     template_text = (TEMPLATES_DIR / TIER_FILES[args.profile]).read_text(encoding="utf-8")
-    return opts, template_text
+    return opts, template_text, cfg
 
 
 def _selected_existing_ids(runtime: _SpecRuntime) -> set[str]:
@@ -558,35 +570,7 @@ def _selected_existing_ids(runtime: _SpecRuntime) -> set[str]:
 
 
 def _selected_new_options(args: argparse.Namespace, runtime: _SpecRuntime) -> NewOptions:
-    for flag, value, is_title in (
-        ("title", args.title, True),
-        ("owner", args.owner, False),
-        ("implementer", args.implementer, False),
-    ):
-        if value is not None:
-            try:
-                check_field(flag, value, is_title=is_title)
-            except FieldValueError as exc:
-                raise NewError("bad_field_value", str(exc)) from exc
-    existing_ids = _selected_existing_ids(runtime)
-    if args.spec_id is not None:
-        if not re.match(SPEC_ID_PATTERN, args.spec_id):
-            raise NewError("bad_id", f"--id {args.spec_id!r} does not match {SPEC_ID_PATTERN}")
-        if args.spec_id in existing_ids:
-            raise NewError("id_collision", f"--id {args.spec_id} is already used in this repo")
-        spec_id = args.spec_id
-    else:
-        try:
-            spec_id = mint_spec_id(random.Random(), existing_ids)
-        except SpecIdExhausted as exc:
-            raise NewError("id_exhausted", str(exc)) from exc
-    return NewOptions(
-        profile=args.profile,
-        spec_id=spec_id,
-        title=args.title,
-        owner=args.owner,
-        implementer=args.implementer,
-    )
+    return _resolve_spec_options(args, lambda: _selected_existing_ids(runtime))
 
 
 def _parent_chain_has_symlink(target: Path) -> bool:
@@ -797,6 +781,7 @@ def _write_selected_new(
 def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
     ap = _new_argument_parser()
     json_mode = _parser_flag_present(ap, argv, dest="json")
+    legacy_config: SpecConfig | None = None
 
     try:
         try:
@@ -812,7 +797,7 @@ def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
             raise NewError("flag_conflict", "--force has no meaning with --stdout")
 
         if runtime.payload is None:
-            opts, template_text = _resolve_new_options(args)
+            opts, template_text, legacy_config = _resolve_new_options(args)
             text = scaffold(template_text, opts, today=date.today())
         else:
             opts = _selected_new_options(args, runtime)
@@ -851,10 +836,9 @@ def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
         if runtime.payload is None:
             # The selected provider performs the same fail-closed check against its
             # payload templates before returning preview bytes.
+            assert legacy_config is not None
             try:
-                doc = parse_document(
-                    "<new>", text, frozenset(load_spec_config(args.config).reference_prefixes)
-                )
+                doc = parse_document("<new>", text, frozenset(legacy_config.reference_prefixes))
             except SpecParseError as exc:
                 raise NewError(
                     "self_validation_failed", f"generated scaffold did not parse: {exc}"
@@ -885,8 +869,6 @@ def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
                 sys.stdout.write(text)
             return 0
 
-        if runtime.payload is not None:
-            return _write_selected_new(args, opts, runtime)
         return _write_new_file(args, opts, text)  # Task 6
     except NewError as err:
         return _emit_new_failure(json_mode, err)

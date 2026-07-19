@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import ast
 import contextlib
+import inspect
 import io
 import json
 import os
 import shutil
 import socket
 import stat
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -102,6 +105,54 @@ def _enable_selected(repo: Path, distribution: InstalledDistribution) -> None:
     set_standard_enabled(repo, "project-spec", True)
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         assert reconcile(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+
+
+@pytest.mark.parametrize(
+    ("options", "expected_code"),
+    [
+        pytest.param(["--id", "not-a-spec-id"], "bad_id", id="id"),
+        pytest.param(["--title", "bad\nvalue"], "bad_field_value", id="field"),
+    ],
+)
+def test_new_option_resolution__legacy_and_selected__matches(
+    options: list[str],
+    expected_code: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    legacy_repo = tmp_path / "legacy"
+    legacy_repo.mkdir()
+    selected_repo = tmp_path / "selected"
+    selected_repo.mkdir()
+    distribution = _installed_distribution(tmp_path)
+    initialize_control_plane(selected_repo, "5", distribution=distribution)
+    _enable_selected(selected_repo, distribution)
+    argv = ["new", "--profile", "light", "--stdout", "--json", *options]
+
+    monkeypatch.chdir(legacy_repo)
+    assert run(argv) == 2
+    legacy_result = json.loads(capsys.readouterr().out)
+
+    monkeypatch.chdir(selected_repo)
+    assert run(argv, repo=selected_repo, distribution=distribution) == 2
+    selected_result = json.loads(capsys.readouterr().out)
+
+    assert legacy_result["code"] == selected_result["code"] == expected_code
+
+
+def test_run_new__selected_write__has_one_dispatch() -> None:
+    source = textwrap.dedent(inspect.getsource(spec_cli._run_new))  # pyright: ignore[reportPrivateUsage]
+    tree = ast.parse(source)
+    selected_writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_write_selected_new"
+    ]
+
+    assert len(selected_writes) == 1
 
 
 def test_validate_routes_through_enabled_selected_payload(

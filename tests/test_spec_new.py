@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import random
 import re
 from datetime import date
@@ -9,6 +10,7 @@ from datetime import date
 import pytest
 import yaml
 
+from project_standards.specs import cli as spec_cli
 from project_standards.specs.commands.new import (
     FieldValueError,
     NewOptions,
@@ -26,6 +28,28 @@ from project_standards.specs.registry import (
     TIER_FILES,
     load_registry,
 )
+
+
+def test_spec_option_resolution__explicit_fields_and_id__returns_new_options() -> None:
+    args = argparse.Namespace(
+        profile="standard",
+        spec_id="SPEC-7F3Q",
+        title="Checkout Service",
+        owner="Payments team",
+        implementer="coding agent",
+    )
+
+    resolved = spec_cli._resolve_spec_options(  # pyright: ignore[reportPrivateUsage]
+        args, lambda: {"SPEC-AB12"}
+    )
+
+    assert resolved == NewOptions(
+        profile="standard",
+        spec_id="SPEC-7F3Q",
+        title="Checkout Service",
+        owner="Payments team",
+        implementer="coding agent",
+    )
 
 
 @pytest.mark.parametrize(

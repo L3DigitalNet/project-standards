@@ -13,6 +13,7 @@ import pytest
 from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
 from project_standards.specs.commands.new import SpecIdExhausted
+from project_standards.specs.config import SpecConfig
 
 
 def _one_json(captured: str) -> dict[str, object]:
@@ -293,6 +294,41 @@ def test_json_code_config_error(
         ["new", "--profile", "light", "--stdout", "--json", "--config", str(bad)], capsys
     )
     assert (rc, code) == (2, "config_error")
+
+
+def test_new_self_validation__loaded_config__is_reused(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / ".project-standards.yml"
+    config_path.write_text("spec:\n  reference_prefixes: [TKT]\n", encoding="utf-8")
+    real_load = spec_cli.load_spec_config
+    calls = 0
+
+    def count_loads(path: Path) -> SpecConfig:
+        nonlocal calls
+        calls += 1
+        return real_load(path)
+
+    monkeypatch.setattr(spec_cli, "load_spec_config", count_loads)
+
+    assert (
+        run(
+            [
+                "new",
+                "--profile",
+                "light",
+                "--stdout",
+                "--id",
+                "SPEC-7F3Q",
+                "--config",
+                str(config_path),
+            ]
+        )
+        == 0
+    )
+    assert calls == 1
 
 
 def test_json_code_id_collision(
