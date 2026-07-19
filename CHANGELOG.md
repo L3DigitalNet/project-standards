@@ -6,8 +6,8 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-07-19'
+reviewed: '2026-07-19'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -21,7 +21,7 @@ related:
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
   - 'standards/agent-handoff/versions/1.1/README.md'
-  - 'docs/superpowers/research/2026-07-09-agent-handoff-retirement-inventory.md'
+  - 'docs/research/2026-07-09-agent-handoff-retirement-inventory.md'
   - '.standards/config.toml'
 source: []
 confidence: 'high'
@@ -36,6 +36,23 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.0.2] — 2026-07-19
+
+> **Why PATCH:** the only catalog change additively advertises the new **internal** payload `standard-bundle-authoring@2.1`. Internal payloads are never consumer-selectable, so no consuming repository's resolution, immutable released payload, public command, or conforming consumer outcome changes; `packages check-release --baseline v5.0.1` classifies the transition as patch under the internal-additive rule below. Prepared on `testing`; the owner cuts the tags on `main`.
+
+### Added
+
+- **`standard-bundle-authoring@2.1`.** New internal payload correcting the 2.0 README's SPEC-BA02 pointer to the maintained location `docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md`. The released 2.0 payload is byte-identical to its v5.0.1 baseline and remains advertised in Catalog 5; 2.1 is the family's current authority.
+
+### Changed
+
+- **Additive internal catalog advertisements classify as PATCH.** `packages check-release` previously raised any catalog-entry difference to MINOR. Purely additive entries with the `internal` role now stay PATCH, because internal payloads are never consumer-selectable and cannot change a consuming repository's validation outcome — the compatibility this repository versions. Removals, digest or role changes, and any consumer-visible addition keep their existing levels; the change only relaxes classification, so no previously passing release becomes forbidden.
+- **`docs/superpowers/` is retired.** Historical design documents moved to `docs/specs/archive/` (indexed by its README), research and reference packs consolidated into `docs/research/` (indexed by `index.md`), and the active Agent Handoff implementation plan moved to `docs/plans/`. The BA02 compatibility symlink is gone — payload 2.1 carries the corrected link instead.
+
+### Removed
+
+- **Completed ephemeral documents.** The implemented Python Tooling checker-table materialization plan, its four design-review audit documents, and the empty `docs/codex-reviews/` directory. Plans and reviews are ephemeral; specs and ADRs are the durable record.
 
 ## [5.0.1] — 2026-07-18
 

@@ -1,6 +1,8 @@
 # Deployed
 
-**Last updated:** 2026-07-18
+**Last updated:** 2026-07-19
+
+> **Prepared, not published:** release 5.0.2 (additive internal `standard-bundle-authoring@2.1`, PATCH under the internal-additive classification rule) is prepared on `testing`. It appears below only after the owner lands it on `main` and pushes the signed tags.
 
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 

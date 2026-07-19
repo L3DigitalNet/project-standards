@@ -6,8 +6,8 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-18'
-reviewed: '2026-07-18'
+updated: '2026-07-19'
+reviewed: '2026-07-19'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -50,7 +50,7 @@ license: null
   - [Consuming repositories](#consuming-repositories)
   - [Pre-1.0 releases](#pre-10-releases)
 
-> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.0.1 is the current release. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. The moving `v5` tag tracks the newest 5.x release. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
+> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.0.2 is prepared on `testing`; `v5.0.1` remains the newest published tag until the owner cuts the 5.0.2 release on `main`. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. The moving `v5` tag tracks the newest 5.x release. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
 
 **Historical policy:** From 2026-07-07 until the v5.0.0 publication, the repository intentionally accumulated all release-affecting work under one v5 freeze. That freeze ended when release commit `8869a08` and the signed `v5.0.0` and `v5` refs were published.
 
@@ -58,7 +58,7 @@ license: null
 
 This repository ships **several components under one version number**: seven standards — [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), [Markdown Tooling](../standards/markdown-tooling/README.md), [Project Specification](../standards/project-spec/README.md), [CLI Documentation](../standards/cli-documentation/README.md), and [Agent Handoff](../standards/agent-handoff/README.md) — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflows** (`.github/workflows/validate-markdown-frontmatter.yml`, `validate-specs.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific V1 adoption mechanics are migration inputs rather than current authority. Catalog 5 has seven consumer packages, [Python Coding](../standards/python-coding/README.md) as reference-only package `0.5`, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) as internal package `2.0`.
+All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific V1 adoption mechanics are migration inputs rather than current authority. Catalog 5 has seven consumer packages, [Python Coding](../standards/python-coding/README.md) as reference-only package `0.5`, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) as internal package `2.1` (2.0 remains advertised as released history).
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -83,7 +83,7 @@ Within one catalog major, each package declares one non-breaking default for ord
 
 A catalog may also advertise retained versions and opt-in breaking candidates. Entering a non-default package major requires explicit `--allow-major STANDARD_ID@TARGET_MAJOR` authorization and a declared migration path. Successful entry records a durable accepted-major track in `.standards/lock.toml`, separate from enabled-package state, so disable/re-enable and compatible same-major updates preserve the consumer's intent. Exact package selectors remain exact.
 
-A MINOR tool release may advertise an opt-in breaking candidate when the ordinary default and every previously valid selection remain available. Promoting that candidate to the ordinary `latest` default, removing an advertised version, or incompatibly changing a same-catalog-major default requires a MAJOR tool release and catalog-major transition. The consumer therefore opts into changed defaults once by changing catalog major; package-level `latest` then remains non-breaking within that selected catalog line.
+A MINOR tool release may advertise an opt-in breaking candidate when the ordinary default and every previously valid selection remain available. A purely additive advertisement of an `internal` payload is PATCH: internal payloads are never consumer-selectable, so the addition cannot change any consuming repository's resolution. Promoting that candidate to the ordinary `latest` default, removing an advertised version, or incompatibly changing a same-catalog-major default requires a MAJOR tool release and catalog-major transition. The consumer therefore opts into changed defaults once by changing catalog major; package-level `latest` then remains non-breaking within that selected catalog line.
 
 ## Package release and contract versions
 

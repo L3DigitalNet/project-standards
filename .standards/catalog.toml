@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.0.1"
-digest = "sha256:8263337bcbec5c9ea0e2736b2d90fb0018cbc83f74c589cb3477e2a16988d054"
+release = "5.0.2"
+digest = "sha256:7d9ae08d7f54c3ca9a4a70ecd1771e5e4d712d129611d846975d50cb9a6ed968"
 
 [standards.adr]
 status = "active"
@@ -93,10 +93,15 @@ payload_digest = "sha256:bf36d035e20c3533546f4c0aebfad6b737902aa79cb7bad2566b017
 
 [standards.standard-bundle-authoring]
 status = "active"
-available = ["2.0"]
+available = ["2.0", "2.1"]
 candidates = []
 
 [standards.standard-bundle-authoring.versions."2.0"]
 channel = "internal"
 availability = "internal"
 payload_digest = "sha256:5fec499e321fc4d20ea9ddb50f6dceae1da800dd66d909ebea2dbd23e84597ca"
+
+[standards.standard-bundle-authoring.versions."2.1"]
+channel = "internal"
+availability = "internal"
+payload_digest = "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b"

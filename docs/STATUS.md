@@ -4,7 +4,7 @@
 
 - Project Standards 5.0.1 is the current patch release at `0390b9e`; signed `v5.0.1` and moving `v5` refs and GitHub release assets are live.
 - `main` includes the follow-up Node dependency setup fix at `4d81602`.
-- Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.0.
+- Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.5 and internal Standard Bundle Authoring 2.1 (2.0 remains advertised as released history; 2.1 corrects its SPEC-BA02 pointer and is staged for the prepared 5.0.2 PATCH).
 - The repository dogfoods the unified `.standards/` control plane; legacy `.project-standards.yml` authority is absent.
 - The retained repository gate is direct: ordinary tests with coverage, the catalog-derived compatibility matrix on four xdist workers, performance tests, and a coverage report.
 - Release-only replay, retained self-referential evidence, the custom test orchestrator, and their frozen predecessor fixture have been removed as unnecessary release-preparation machinery.
@@ -13,4 +13,5 @@
 - Verification claims are command-based; rerun the retained gate against current HEAD before claiming completion.
 - MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
 - Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
+- Housekeeping 2026-07-19: `docs/superpowers/` retired (designs → `docs/specs/archive/`, research → `docs/research/`, active plan → `docs/plans/`); completed plans, review audits, and `docs/codex-reviews/` deleted.
 - Durable implementation history remains in `docs/handoff/sessions/2026-07.md`.
