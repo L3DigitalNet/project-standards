@@ -44,19 +44,29 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/cli-documentation"
 _PAYLOAD = _ROOT / "standards/cli-documentation/versions/1.1"
+_PAYLOAD_1_2 = _ROOT / "standards/cli-documentation/versions/1.2"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 
 
+def _payload_at(root: Path) -> InstalledPayload:
+    manifest = load_payload_manifest(root / "payload.toml")
+    return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
+
+
 def _payload() -> InstalledPayload:
-    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
-    return InstalledPayload(_PAYLOAD, manifest, validate_payload_integrity(_PAYLOAD, manifest))
+    return _payload_at(_PAYLOAD)
+
+
+def _payload_1_2() -> InstalledPayload:
+    return _payload_at(_PAYLOAD_1_2)
 
 
 def _isolated_repository(tmp_path: Path) -> Path:
     root = copy_minimal_repository(tmp_path)
     family = root / "standards/cli-documentation"
     shutil.copytree(_FAMILY, family)
-    payload = _payload()
+    payload_1_1 = _payload()
+    payload_1_2 = _payload_1_2()
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -69,7 +79,12 @@ status = "active"
 [[versions]]
 version = "1.1"
 payload = "versions/1.1/payload.toml"
-digest = "{payload.integrity.aggregate_digest.value}"
+digest = "{payload_1_1.integrity.aggregate_digest.value}"
+
+[[versions]]
+version = "1.2"
+payload = "versions/1.2/payload.toml"
+digest = "{payload_1_2.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
     )
@@ -80,7 +95,8 @@ def _installed_distribution(tmp_path: Path) -> InstalledDistribution:
     fixture = tmp_path / "distribution"
     fixture.mkdir()
     repository = _isolated_repository(fixture)
-    payload = _payload()
+    payload_1_1 = _payload()
+    payload_1_2 = _payload_1_2()
     (repository / "catalogs/5.toml").write_text(
         f'''schema_version = "1.0"
 catalog_major = 5
@@ -88,7 +104,13 @@ catalog_major = 5
 [[packages]]
 id = "cli-documentation"
 version = "1.1"
-digest = "{payload.integrity.aggregate_digest.value}"
+digest = "{payload_1_1.integrity.aggregate_digest.value}"
+role = "retained"
+
+[[packages]]
+id = "cli-documentation"
+version = "1.2"
+digest = "{payload_1_2.integrity.aggregate_digest.value}"
 role = "default"
 ''',
         encoding="utf-8",
@@ -99,7 +121,7 @@ role = "default"
     assert sync_payload_projection(repository, check=False) == ()
     installed = fixture / "installed/project_standards"
     shutil.copytree(package, installed, symlinks=False)
-    return InstalledDistribution(installed, tool_release="5.0.0")
+    return InstalledDistribution(installed, tool_release="5.1.0")
 
 
 def _invocation(
@@ -266,6 +288,56 @@ def test_cli_documentation_declares_only_create_only_usage_ownership() -> None:
     assert (_PAYLOAD / legacy.path.normalized).read_bytes() == (
         _ROOT / "src/project_standards/bundles/cli-documentation/cli-docs-check.yml"
     ).read_bytes()
+
+
+def test_cli_documentation_1_2_setup_uv_annotation__provider_delta__is_only_comment() -> None:
+    previous = (_PAYLOAD / "providers/cli_documentation.py").read_text(encoding="utf-8")
+    current = (_PAYLOAD_1_2 / "providers/cli_documentation.py").read_text(encoding="utf-8")
+    setup_uv = "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"
+
+    assert previous.count(setup_uv) == 1
+    assert current == previous.replace(setup_uv, f"{setup_uv} # v8.3.2")
+    assert "actions/checkout@v7" in current
+    python_tooling = (
+        _ROOT / "standards/python-tooling/versions/1.1/providers/python_tooling.py"
+    ).read_text(encoding="utf-8")
+    assert "actions/setup-python@v6" in python_tooling
+
+
+def test_cli_documentation_reconstruction__1_1_requested__selects_exact_payload(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    catalog = distribution.consumer_catalog("5")
+    advertised = catalog.standards["cli-documentation"]
+
+    assert [version.value for version in advertised.available] == ["1.1", "1.2"]
+    assert advertised.default == PackageVersion("1.2")
+
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / ".standards/config.toml").write_text(
+        """[project_standards]
+schema_version = "1.0"
+catalog = "5"
+
+[standards.cli-documentation]
+enabled = true
+version = "1.1"
+
+[standards.cli-documentation.config]
+contract_version = "1.0"
+""",
+        encoding="utf-8",
+    )
+
+    plan = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+
+    assert plan.applicable, plan.findings
+    selected = plan.next_lock.standards["cli-documentation"]
+    assert selected.resolved == PackageVersion("1.1")
+    assert selected.selection.value == "exact"
 
 
 def test_cli_documentation_renders_python_and_non_python_workflows() -> None:

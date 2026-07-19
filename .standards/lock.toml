@@ -2,7 +2,7 @@
 schema_version = "1.1"
 catalog = "5"
 release = "5.1.0"
-catalog_digest = "sha256:c5753007896b4b3bcb6f080b07e5082a72c84a3991cb1d0cd358325ca443d1ae"
+catalog_digest = "sha256:14ab855b67e244dd9594f1ab25d0431d28e96c7db18ff34ce18913b47f603855"
 config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]
@@ -21,9 +21,9 @@ effective_config_digest = "sha256:7d8ffcf355d1948151d6988e6b8cb809fcbeae2cc28cd3
 
 [standards.cli-documentation]
 requested = "latest"
-resolved = "1.1"
+resolved = "1.2"
 selection = "stable"
-payload_digest = "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42d43442445"
+payload_digest = "sha256:b37b84fdd2d89b5e2749b7909e7bb09ae5501b789b3814f8d460ffecafa842b1"
 effective_config_digest = "sha256:92b7155254cec67d813bfa3b5cb8fea92a56682e02d2a0b4a8cc93430147671b"
 
 [standards.markdown-frontmatter]
@@ -1119,8 +1119,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:5e34d50b0f692d653185dda554711c6bc7cb56c001037935e3a3e3ce24f603f5"
-content_digest = "sha256:5e34d50b0f692d653185dda554711c6bc7cb56c001037935e3a3e3ce24f603f5"
+semantic_digest = "sha256:7ef7935600e01d0a95b946c127bed59fd0d0eb2a65fe42262a3a0d29a5b013d7"
+content_digest = "sha256:7ef7935600e01d0a95b946c127bed59fd0d0eb2a65fe42262a3a0d29a5b013d7"
 created_container = false
 
 [[artifacts]]
@@ -1140,11 +1140,11 @@ path = "docs/usage.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["cli-documentation"]
-versions = { cli-documentation = "1.1" }
+versions = { cli-documentation = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:5e31cb8c612a171ed3907f54492dbc9b26a6c69c8f275aed02394dfbacd3dfd0"
-content_digest = "sha256:5e31cb8c612a171ed3907f54492dbc9b26a6c69c8f275aed02394dfbacd3dfd0"
+semantic_digest = "sha256:d2851ab94e16454351955ff0f30d7cf2f17d93c6aab57d198caac10c39596021"
+content_digest = "sha256:d2851ab94e16454351955ff0f30d7cf2f17d93c6aab57d198caac10c39596021"
 created_container = false
 
 [[artifacts]]

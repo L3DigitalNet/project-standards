@@ -11,7 +11,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`adr`](adr/README.md) | active | 1.1 | default | consumer | 12 | 2 | 1 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.2 | default | consumer | 29 | 8 | 18 |
-| [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
+| [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 1 |
+| [`cli-documentation`](cli-documentation/README.md) | active | 1.2 | default | consumer | 13 | 3 | 1 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | default | consumer | 29 | 5 | 9 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
@@ -31,6 +32,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.1` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.2` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `cli-documentation@1.1` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
+| `cli-documentation@1.2` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.2` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.3` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-tooling@1.2` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
@@ -144,6 +146,19 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.1` | `provider-content` | `provider-resource` | `standards://cli-documentation/1.1/provider-content` | `schemas/content.schema.json` |
 | `cli-documentation@1.1` | `provider-findings` | `provider-resource` | `standards://cli-documentation/1.1/provider-findings` | `schemas/findings.schema.json` |
 | `cli-documentation@1.1` | `provider-migration-report` | `provider-resource` | `standards://cli-documentation/1.1/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `cli-documentation@1.2` | `readme` | `canonical-standard` | `standards://cli-documentation/1.2/readme` | `README.md` |
+| `cli-documentation@1.2` | `adopt` | `adoption-guide` | `standards://cli-documentation/1.2/adopt` | `adopt.md` |
+| `cli-documentation@1.2` | `agent-summary` | `agent-summary` | `standards://cli-documentation/1.2/agent-summary` | `agent-summary.md` |
+| `cli-documentation@1.2` | `config-schema` | `config-schema` | `standards://cli-documentation/1.2/config-schema` | `config.schema.json` |
+| `cli-documentation@1.2` | `usage-example` | `example` | `standards://cli-documentation/1.2/usage-example` | `examples/usage.example.md` |
+| `cli-documentation@1.2` | `research-notes` | `research-note` | `standards://cli-documentation/1.2/research-notes` | `resources/research-notes.md` |
+| `cli-documentation@1.2` | `readme-template` | `template` | `standards://cli-documentation/1.2/readme-template` | `templates/readme-single-file.md` |
+| `cli-documentation@1.2` | `provider-code` | `provider-resource` | `standards://cli-documentation/1.2/provider-code` | `providers/cli_documentation.py` |
+| `cli-documentation@1.2` | `legacy-workflow` | `provider-resource` | `standards://cli-documentation/1.2/legacy-workflow` | `resources/legacy-cli-docs-check.yml` |
+| `cli-documentation@1.2` | `provider-input` | `provider-resource` | `standards://cli-documentation/1.2/provider-input` | `schemas/provider-input.schema.json` |
+| `cli-documentation@1.2` | `provider-content` | `provider-resource` | `standards://cli-documentation/1.2/provider-content` | `schemas/content.schema.json` |
+| `cli-documentation@1.2` | `provider-findings` | `provider-resource` | `standards://cli-documentation/1.2/provider-findings` | `schemas/findings.schema.json` |
+| `cli-documentation@1.2` | `provider-migration-report` | `provider-resource` | `standards://cli-documentation/1.2/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `markdown-frontmatter@1.2` | `readme` | `canonical-standard` | `standards://markdown-frontmatter/1.2/readme` | `README.md` |
 | `markdown-frontmatter@1.2` | `agent-summary` | `agent-summary` | `standards://markdown-frontmatter/1.2/agent-summary` | `agent-summary.md` |
 | `markdown-frontmatter@1.2` | `config-schema` | `config-schema` | `standards://markdown-frontmatter/1.2/config-schema` | `config.schema.json` |
@@ -343,6 +358,9 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `cli-documentation@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
 | `cli-documentation@1.1` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `cli-documentation@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `cli-documentation@1.2` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
+| `cli-documentation@1.2` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `cli-documentation@1.2` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `markdown-frontmatter@1.2` | `render-workflow-job` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
 | `markdown-frontmatter@1.2` | `validate-frontmatter` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `markdown-frontmatter@1.2` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
@@ -424,6 +442,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.2` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `agent-handoff@1.2` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `cli-documentation@1.1` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
+| `cli-documentation@1.2` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `agent-summary-package` | `.standards/packages/markdown-frontmatter/agent-summary.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill` | `.agents/skills/markdown-frontmatter/SKILL.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill-openai` | `.agents/skills/markdown-frontmatter/agents/openai.yaml` | `managed` | whole-file |

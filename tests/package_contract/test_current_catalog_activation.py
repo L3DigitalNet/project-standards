@@ -34,9 +34,9 @@ _PACKAGES = {
         "CLI Documentation Standard",
         "Profile-based user-facing CLI help, usage-reference, man-page, and drift-check documentation.",
         "active",
-        "1.1",
+        "1.2",
         "default",
-        "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42d43442445",
+        "sha256:b37b84fdd2d89b5e2749b7909e7bb09ae5501b789b3814f8d460ffecafa842b1",
     ),
     "markdown-frontmatter": (
         "Markdown Frontmatter Standard",
@@ -93,6 +93,12 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "cli-documentation",
+        "1.1",
+        "retained",
+        "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42d43442445",
+    ),
     (
         "agent-handoff",
         "1.1",

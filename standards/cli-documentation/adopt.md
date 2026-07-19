@@ -1,13 +1,13 @@
 # Adopt the CLI Documentation Standard
 
-The current consumer package is [`cli-documentation@1.1`](versions/1.1/adopt.md). Use it for a create-only CLI usage reference and, when selected, a consumer-owned CI workflow verified against provider-rendered bytes.
+The current consumer package is [`cli-documentation@1.2`](versions/1.2/adopt.md). Use it for a create-only CLI usage reference and, when selected, a consumer-owned CI workflow verified against provider-rendered bytes.
 
 ## Configure and reconcile
 
-Enable the package, then choose `profile`, `command_name`, and the closed `ci` options under `[standards.cli-documentation.config]`. Package version `1.1` and `contract_version = "1.0"` are independent selectors.
+Enable the package, then choose `profile`, `command_name`, and the closed `ci` options under `[standards.cli-documentation.config]`. Package version `1.2` and `contract_version = "1.0"` are independent selectors.
 
 ```bash
-project-standards standards enable cli-documentation --version 1.1
+project-standards standards enable cli-documentation --version 1.2
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,4 +31,4 @@ project-standards reconcile --check
 project-standards validate
 ```
 
-A missing referenced workflow, unsafe command basename, output mismatch, or provider mutation is a refusal. Restore the reviewed consumer file and retry; never grant the provider a destination path. See the [version-specific guide](versions/1.1/adopt.md) for exact profiles, options, output publication, verification, and authoring review.
+A missing referenced workflow, unsafe command basename, output mismatch, or provider mutation is a refusal. Restore the reviewed consumer file and retry; never grant the provider a destination path. See the [version-specific guide](versions/1.2/adopt.md) for exact profiles, options, output publication, verification, and authoring review.

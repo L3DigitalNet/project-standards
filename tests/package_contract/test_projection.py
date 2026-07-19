@@ -18,6 +18,8 @@ from project_standards.package_contract.projection import (
 )
 from tests.package_contract.helpers import copy_minimal_repository
 
+_ROOT = Path(__file__).resolve().parents[2]
+
 
 def _prepare_repository(tmp_path: Path) -> Path:
     root = copy_minimal_repository(tmp_path)
@@ -84,6 +86,29 @@ def test_projection_plan_and_apply_create_only_relative_file_symlinks(
                 root / "standards/demo/versions/1.2" / link.relative_to(projection / "demo/1.2")
             ).read_bytes()
         )
+
+
+def test_cli_documentation_1_2_projection__canonical_sources__match_symlinks() -> None:
+    source = _ROOT / "standards/cli-documentation/versions/1.2"
+    projection = _ROOT / "src/project_standards/payloads/cli-documentation/1.2"
+
+    assert source.is_dir()
+    assert projection.is_dir()
+    source_files = {
+        path.relative_to(source).as_posix(): path.read_bytes()
+        for path in source.rglob("*")
+        if path.is_file()
+    }
+    projected_links = {
+        path.relative_to(projection).as_posix(): path
+        for path in projection.rglob("*")
+        if path.is_symlink()
+    }
+    assert source_files
+    assert projected_links.keys() == source_files.keys()
+    for relative, link in projected_links.items():
+        assert not link.readlink().is_absolute()
+        assert link.resolve(strict=True).read_bytes() == source_files[relative]
 
 
 def test_projection_plan__noncanonical_05_catalog__does_not_project(

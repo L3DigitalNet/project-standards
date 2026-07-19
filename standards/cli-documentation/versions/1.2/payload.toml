@@ -1,0 +1,184 @@
+schema_version = "1.0"
+
+[payload]
+standard = "cli-documentation"
+version = "1.2"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["cli.docs.usage", "cli.docs.workflow-render", "cli.docs.workflow-verify"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:1d6661ac790bb8e7c1de343f89b54563f524d86ac60dad4e397c347307997859"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:8ecc9372288ee482e38a4b92c773ba7e44253511cacdb60613146065bc4855da"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:43e22575de8caf87bbf368761fcc6dbc9c213b9ad1794a853e9e479e479d5599"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:1ec02f70ca071091cf299380e187ae2d43e973b14d248f552d2d1846700abc5e"
+
+[[resources]]
+id = "usage-example"
+role = "example"
+path = "examples/usage.example.md"
+media_type = "text/markdown"
+digest = "sha256:ae141fe15735b9946cecc7ba37ae5dc6bfdbae305935761a701fd27cb1aaf8db"
+
+[[resources]]
+id = "research-notes"
+role = "research-note"
+path = "resources/research-notes.md"
+media_type = "text/markdown"
+digest = "sha256:fc7e863c38604394efe343a684763bc0494332242f9a03b59543cdd34baef172"
+
+[[resources]]
+id = "readme-template"
+role = "template"
+path = "templates/readme-single-file.md"
+media_type = "text/markdown"
+digest = "sha256:3bbb6a6d962dcc9f4d814c728527cf02805766aa2ce891514ffc69e7fdee9445"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/cli_documentation.py"
+media_type = "text/x-python"
+digest = "sha256:266e45aa60720ac92ddbc6d0acd0cf994764ee85b31031613383a8f262735c92"
+
+[[resources]]
+id = "legacy-workflow"
+role = "provider-resource"
+path = "resources/legacy-cli-docs-check.yml"
+media_type = "text/yaml"
+digest = "sha256:3059b84e8730775e021b3e9ce14e819ef4bd0084fbd5ac996d811ede99e5baf8"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:573ea4deaf4e72f38b7ea55f4cc3fc24207f59b6d69af169c92cf12fd85484ec"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:760d819048c1f2a153e72227c940f36eed96deb5e2336e802f34caa37ccf14b3"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:20bc383c2fc8955462e9e28e5a41be6eeeb7acea7c4e1e3dac789fcd3c451eff"
+
+[[artifacts]]
+id = "usage-document"
+target = "docs/usage.md"
+source = "templates/usage-doc.md"
+digest = "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5"
+policy = "create-only"
+
+[[extensions]]
+id = "workflow"
+option = "workflow_path"
+media_type = "text/yaml"
+path_policy = "repository-relative"
+
+[[providers]]
+id = "render-workflow"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = []
+
+[[providers]]
+id = "verify-workflow"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["legacy-workflow"]
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-cli-documentation"
+
+[[migrations]]
+id = "legacy-v4-to-1-2"
+from = "legacy:v4-cli-documentation"
+to = "package:1.2"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = ["artifact:usage-document", "config:*"]
+signatures = ["legacy-usage", "legacy-workflow"]
+
+[[legacy_signatures]]
+id = "legacy-usage"
+kind = "whole-file"
+targets = ["docs/usage.md"]
+known_content_digests = [
+  "sha256:3bf66fecb665eb9106df25e46718e3607d292d2c15d29790c04b409613eada62",
+  "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5",
+  "sha256:e539c180e454db923e8b9361edb6c10cdcc835edfa9a9a805f93b12ff3633b6b",
+]
+
+[[legacy_signatures]]
+id = "legacy-workflow"
+kind = "whole-file"
+targets = [".github/workflows/cli-docs-check.yml"]
+known_content_digests = ["sha256:3059b84e8730775e021b3e9ce14e819ef4bd0084fbd5ac996d811ede99e5baf8"]

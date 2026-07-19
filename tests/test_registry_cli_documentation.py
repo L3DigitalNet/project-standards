@@ -75,9 +75,9 @@ def test_non_string_version_exits_2(
     assert _run_with_config(tmp_path, bad) == 2
 
 
-def test_dogfood_config_selects_cli_documentation_v1_1() -> None:
+def test_dogfood_config_selects_cli_documentation_v1_2() -> None:
     config = tomllib.loads(Path(".standards/config.toml").read_text(encoding="utf-8"))
     lock = tomllib.loads(Path(".standards/lock.toml").read_text(encoding="utf-8"))
 
     assert config["standards"]["cli-documentation"]["config"]["contract_version"] == "1.0"
-    assert lock["standards"]["cli-documentation"]["resolved"] == "1.1"
+    assert lock["standards"]["cli-documentation"]["resolved"] == "1.2"
