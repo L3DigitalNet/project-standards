@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -152,17 +153,33 @@ def test_state_truncates_on_utf8_boundary(installed_hook: tuple[ModuleType, Path
 
 def test_context_limits_commits_and_status_lines(installed_hook: tuple[ModuleType, Path]) -> None:
     module, root = installed_hook
-    subprocess.run(["git", "init", "-q", str(root)], check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+    git_environment = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+    }
+    subprocess.run(["git", "init", "-q", str(root)], check=True, env=git_environment)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=root,
+        check=True,
+        env=git_environment,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=root,
+        check=True,
+        env=git_environment,
+    )
     for index in range(7):
         path = root / f"commit-{index}.txt"
         path.write_text(str(index), encoding="utf-8")
-        subprocess.run(["git", "add", path.name], cwd=root, check=True)
+        subprocess.run(["git", "add", path.name], cwd=root, check=True, env=git_environment)
         subprocess.run(
             ["git", "commit", "--no-verify", "-q", "-m", f"commit-{index}"],
             cwd=root,
             check=True,
+            env=git_environment,
         )
     for index in range(12):
         (root / f"untracked-{index}.txt").write_text("x", encoding="utf-8")

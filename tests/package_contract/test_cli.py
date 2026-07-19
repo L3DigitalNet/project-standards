@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from collections.abc import Iterable
@@ -323,8 +324,13 @@ def test_sync_payload_projection_write_check_and_stale_exit(
 
 
 def _create_released_fixture(repository: Path) -> None:
-    subprocess.run(["git", "init", "-q", repository], check=True)
-    subprocess.run(["git", "-C", repository, "add", "."], check=True)
+    git_environment = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+    }
+    subprocess.run(["git", "init", "-q", repository], check=True, env=git_environment)
+    subprocess.run(["git", "-C", repository, "add", "."], check=True, env=git_environment)
     subprocess.run(
         [
             "git",
@@ -341,10 +347,12 @@ def _create_released_fixture(repository: Path) -> None:
             "baseline",
         ],
         check=True,
+        env=git_environment,
     )
     subprocess.run(
         ["git", "-C", repository, "-c", "tag.gpgSign=false", "tag", "v5.2.0"],
         check=True,
+        env=git_environment,
     )
 
 

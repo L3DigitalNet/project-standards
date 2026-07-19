@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -300,8 +301,13 @@ def test_git_baseline_loader_resolves_a_tag_and_ignores_worktree_drift(
 ) -> None:
     repository = tmp_path / "repository"
     shutil.copytree(_FIXTURE, repository)
-    subprocess.run(["git", "init", "-q", repository], check=True)
-    subprocess.run(["git", "-C", repository, "add", "."], check=True)
+    git_environment = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+    }
+    subprocess.run(["git", "init", "-q", repository], check=True, env=git_environment)
+    subprocess.run(["git", "-C", repository, "add", "."], check=True, env=git_environment)
     subprocess.run(
         [
             "git",
@@ -318,10 +324,12 @@ def test_git_baseline_loader_resolves_a_tag_and_ignores_worktree_drift(
             "baseline",
         ],
         check=True,
+        env=git_environment,
     )
     subprocess.run(
         ["git", "-C", repository, "-c", "tag.gpgSign=false", "tag", "v5.0.0"],
         check=True,
+        env=git_environment,
     )
     (repository / "standards/demo/versions/1.2/README.md").write_text("drifted\n", encoding="utf-8")
 
