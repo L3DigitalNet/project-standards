@@ -42,9 +42,9 @@ _PACKAGES = {
         "Markdown Frontmatter Standard",
         "Canonical metadata, ID, and reference validation for managed Markdown documents.",
         "active",
-        "1.2",
+        "1.3",
         "default",
-        "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c",
+        "sha256:4dafc36403191b7f88999d3ff50e79e02faf572498e7e4a18b69e6a24d9b993d",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -58,9 +58,9 @@ _PACKAGES = {
         "Project Specification Standard",
         "Tiered, stable-ID, CLI-validated project specification format and tooling.",
         "active",
-        "1.1",
+        "1.2",
         "default",
-        "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e",
+        "sha256:21e4c5a34ed7636160437a6c136201e3e09c6afc47c8126f0baebb9aa913d6c8",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -93,6 +93,18 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "markdown-frontmatter",
+        "1.2",
+        "retained",
+        "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c",
+    ),
+    (
+        "project-spec",
+        "1.1",
+        "retained",
+        "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e",
+    ),
     (
         "cli-documentation",
         "1.1",
