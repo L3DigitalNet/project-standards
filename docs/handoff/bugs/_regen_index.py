@@ -7,6 +7,14 @@ from pathlib import Path
 BUGS = Path(__file__).parent
 
 
+def parse_scalar(value: str) -> str:
+    """Return a plain value from the bug records' one-line scalar subset."""
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
 def parse_frontmatter(text: str) -> dict[str, str]:
     match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
     if not match:
@@ -16,12 +24,12 @@ def parse_frontmatter(text: str) -> dict[str, str]:
         if ":" not in line:
             continue
         key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip().strip('"')
+        fields[key.strip()] = parse_scalar(value)
     return fields
 
 
 def main() -> None:
-    rows = []
+    rows: list[tuple[str, str, str, str, str]] = []
     for path in sorted(BUGS.glob("[0-9][0-9][0-9]-*.md")):
         fields = parse_frontmatter(path.read_text(encoding="utf-8"))
         rows.append(
