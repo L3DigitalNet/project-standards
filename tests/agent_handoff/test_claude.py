@@ -56,6 +56,21 @@ def test_merge_claude_creates_missing_settings() -> None:
     assert "python" not in cast(str, handler["command"])
 
 
+@pytest.mark.parametrize(
+    "existing",
+    [
+        pytest.param({"hooks": None}, id="null-hooks"),
+        pytest.param({"hooks": {"SessionStart": None}}, id="null-session-start"),
+    ],
+)
+def test_merge_claude_accepts_null_hook_containers(
+    existing: dict[str, object],
+) -> None:
+    merged = merge_claude_settings(existing)
+
+    assert merged == {"hooks": {"SessionStart": [_managed_group()]}}
+
+
 def test_merge_claude_is_idempotent_for_exact_managed_handler() -> None:
     existing: dict[str, object] = {"hooks": {"SessionStart": [_managed_group()]}}
 

@@ -98,10 +98,12 @@ def merge_claude_settings(settings: dict[str, object]) -> dict[str, object]:
     if _inspect_groups(groups) == 1:
         return merged
 
-    hooks_value = merged.setdefault("hooks", {})
-    hooks = cast(dict[str, object], hooks_value)
-    session_start_value = hooks.setdefault("SessionStart", [])
-    session_start = cast(list[object], session_start_value)
+    if merged.get("hooks") is None:
+        merged["hooks"] = {}
+    hooks = cast(dict[str, object], merged["hooks"])
+    if hooks.get("SessionStart") is None:
+        hooks["SessionStart"] = []
+    session_start = cast(list[object], hooks["SessionStart"])
     session_start.append(copy.deepcopy(_MANAGED_GROUP))
     return merged
 
