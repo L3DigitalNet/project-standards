@@ -23,6 +23,7 @@ from yaml.nodes import MappingNode
 from yaml.tokens import AliasToken, AnchorToken
 
 from project_standards.control_plane.codec import (
+    parse_config,
     parse_lock,
     render_catalog,
     render_lock,
@@ -1079,7 +1080,7 @@ def _claim_findings(
 def _toml_key(value: str) -> str:
     if _BARE_TOML_KEY.fullmatch(value) is not None:
         return value
-    return json.dumps(value, ensure_ascii=False)
+    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
 
 
 def _toml_value(value: JsonValue) -> str:
@@ -1090,7 +1091,7 @@ def _toml_value(value: JsonValue) -> str:
     if isinstance(value, int | float):
         return repr(value)
     if isinstance(value, str):
-        return json.dumps(value, ensure_ascii=False)
+        return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
     if isinstance(value, list):
         return "[" + ", ".join(_toml_value(item) for item in value) + "]"
     return (
@@ -1507,6 +1508,12 @@ def _plan_legacy_migration(
         }
     )
     config_content = _render_config(desired)
+    try:
+        parse_config(config_content)
+    except ControlPlaneError as exc:
+        raise ControlPlaneError(
+            "migrated desired config could not be rendered canonically"
+        ) from exc
     previous_lock = _empty_lock(distribution, catalog, desired).model_copy(
         update={"artifacts": list(_adopted_legacy_units(ordered_reports, observed, payloads))}
     )

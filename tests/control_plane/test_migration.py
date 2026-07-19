@@ -1832,6 +1832,30 @@ def test_migrated_config_quotes_every_non_ascii_or_empty_toml_key() -> None:
     assert '"ümlaut" = "unicode"'.encode() in content
 
 
+def test_migrated_config_escapes_u007f_and_round_trips() -> None:
+    import project_standards.control_plane.migration as migration_module
+
+    desired = DesiredConfig.model_validate(
+        {
+            "project_standards": {"schema_version": "1.0", "catalog": "5"},
+            "standards": {
+                "demo": {
+                    "enabled": True,
+                    "version": "latest",
+                    "config": {"key\x7f": "value\x7f"},
+                }
+            },
+        }
+    )
+
+    content = migration_module._render_config(  # pyright: ignore[reportPrivateUsage]
+        desired
+    )
+
+    assert content.count(b"\\u007F") == 2
+    assert parse_config(content) == desired
+
+
 @pytest.mark.parametrize("linked", [".project-standards.yml", "legacy-alpha.md"])
 def test_legacy_migration_rejects_legacy_symlinks(tmp_path: Path, linked: str) -> None:
     distribution = installed_distribution(tmp_path)
