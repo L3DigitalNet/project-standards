@@ -515,22 +515,54 @@ def _typed_result(
                 raise ControlPlaneError("findings provider returned an invalid finding")
             table = cast(dict[str, JsonValue], raw)
             try:
-                findings.append(
-                    ControlFinding(
-                        code=cast(str, table["code"]),
-                        severity=cast("Literal['error', 'warning']", table["severity"]),
-                        standard_id=invocation.standard_id,
-                        version=invocation.version.value,
-                        path=cast(str, table["path"]),
-                        identity=cast(str, table["identity"]),
-                        message=cast(str, table["message"]),
-                        hint=cast(str, table["hint"]),
-                        line=cast(int | None, table.get("line")),
-                        locus=cast(str | None, table.get("locus")),
-                    )
-                )
+                code = table["code"]
+                severity = table["severity"]
+                path = table["path"]
+                identity = table["identity"]
+                message = table["message"]
+                hint = table["hint"]
             except KeyError as exc:
                 raise ControlPlaneError("findings provider omitted a required field") from exc
+            if not isinstance(code, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            if severity == "error":
+                typed_severity: Literal["error", "warning"] = "error"
+            elif severity == "warning":
+                typed_severity = "warning"
+            else:
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            if not isinstance(path, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            if not isinstance(identity, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            if not isinstance(message, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            if not isinstance(hint, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            raw_line = table.get("line")
+            if raw_line is None:
+                line = None
+            elif isinstance(raw_line, int) and not isinstance(raw_line, bool):
+                line = raw_line
+            else:
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            locus = table.get("locus")
+            if locus is not None and not isinstance(locus, str):
+                raise ControlPlaneError("findings provider returned an invalid finding")
+            findings.append(
+                ControlFinding(
+                    code=code,
+                    severity=typed_severity,
+                    standard_id=invocation.standard_id,
+                    version=invocation.version.value,
+                    path=path,
+                    identity=identity,
+                    message=message,
+                    hint=hint,
+                    line=line,
+                    locus=locus,
+                )
+            )
         return ProviderResult(
             effect,
             findings=tuple(findings),

@@ -258,7 +258,12 @@ def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
     }
 
 
-def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
+def _provider_code(
+    effect: ProviderEffect,
+    behavior: str,
+    marker: str,
+    invalid_finding: tuple[str, object] | None = None,
+) -> str:
     if behavior == "write":
         body = (
             "Path('README.md').write_text('bad', encoding='utf-8')\n    return {'content': 'bad'}"
@@ -312,11 +317,18 @@ def _provider_code(effect: ProviderEffect, behavior: str, marker: str) -> str:
         )
         imports = "import sys\n"
     elif effect is ProviderEffect.FINDINGS:
-        body = (
-            "return {'findings': [{'code': 'DEMO', 'severity': 'warning', "
-            "'path': 'README.md', 'identity': 'demo', 'message': 'review', "
-            "'hint': 'inspect'}]}"
-        )
+        finding: dict[str, object] = {
+            "code": "DEMO",
+            "severity": "warning",
+            "path": "README.md",
+            "identity": "demo",
+            "message": "review",
+            "hint": "inspect",
+        }
+        if invalid_finding is not None:
+            field, value = invalid_finding
+            finding[field] = value
+        body = "return " + repr({"findings": [finding]})
         imports = ""
     elif effect is ProviderEffect.MUTATION_PLAN and behavior != "success":
         replacement = b"updated\n"
@@ -383,12 +395,26 @@ def _write_provider_payload(
     effect: ProviderEffect = ProviderEffect.CONTENT,
     behavior: str = "success",
     extensions: tuple[ExtensionDeclaration, ...] = (),
+    invalid_finding: tuple[str, object] | None = None,
 ) -> InstalledPayload:
     root.mkdir(parents=True)
     input_schema = control_plane_schema_documents()["provider-input.schema.json"]
     output_schema = _provider_schema(effect)
     if behavior == "remote-schema":
         output_schema = {"$ref": "https://example.invalid/provider-output.json"}
+    elif invalid_finding is not None:
+        output_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "findings": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                }
+            },
+            "required": ["findings"],
+        }
     files: dict[str, bytes] = {
         "README.md": b"# Demo\n",
         "agent-summary.md": b"summary\n",
@@ -401,7 +427,12 @@ def _write_provider_payload(
                 "properties": {},
             }
         ).encode(),
-        "providers/run.py": _provider_code(effect, behavior, version).encode(),
+        "providers/run.py": _provider_code(
+            effect,
+            behavior,
+            version,
+            invalid_finding,
+        ).encode(),
         "schemas/input.json": json.dumps(input_schema).encode(),
         "schemas/output.json": json.dumps(output_schema).encode(),
         "resources/data.txt": b"declared-data",
@@ -687,6 +718,38 @@ def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
     assert plan.mutation_plan.version.value == "2.0"
     assert migration.migration_report is not None
     assert migration.migration_report.package.version.value == "2.0"
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        pytest.param("severity", "info", id="severity-info"),
+        pytest.param("code", 7, id="integer-code"),
+        pytest.param("path", 7, id="integer-path"),
+        pytest.param("identity", 7, id="integer-identity"),
+        pytest.param("line", "7", id="invalid-line"),
+        pytest.param("locus", 7, id="invalid-locus"),
+    ],
+)
+def test_provider_rejects_invalid_finding_fields(
+    tmp_path: Path,
+    field: str,
+    invalid_value: object,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(
+        tmp_path / "findings",
+        operation=ProviderOperation.VALIDATE,
+        effect=ProviderEffect.FINDINGS,
+        invalid_finding=(field, invalid_value),
+    )
+
+    with pytest.raises(
+        ControlPlaneError,
+        match="findings provider returned an invalid finding",
+    ):
+        invoke_provider(_invocation(repo, payload))
 
 
 def test_fix_mutation_plan_is_bound_to_immutable_document_snapshot(tmp_path: Path) -> None:
