@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.control_plane.adapters.toml import TomlAdapter
+from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import ActionKind, ControlAction
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.models import CentralLock
@@ -22,6 +23,7 @@ from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
 )
+from project_standards.package_contract.paths import PackageVersion, Sha256Digest
 from project_standards.package_contract.payload import JsonValue, ProviderEffect
 from tests.control_plane.planner_helpers import (
     ContributionFixture,
@@ -285,6 +287,164 @@ def test_preexisting_create_only_file_is_preserved_without_a_lock(tmp_path: Path
     assert plan.findings == ()
     assert _action(plan, "usage.md").kind is ActionKind.PRESERVE
     assert plan.proposed_content("usage.md") == edited
+
+
+def test_deleted_create_only_unit_moves_to_absence_and_is_not_resurrected(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    target = repo / "settings.json"
+    consumer_content = b'{"consumer": true}\n'
+    target.write_bytes(consumer_content)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "tool-setting",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/tool/enabled",
+                "content": b'{"tool": {"enabled": true}}\n',
+                "policy": "create-only",
+            }
+        ],
+    )
+    installed = plan_reconciliation(_request(repo, (payload,)))
+    target.write_bytes(installed.proposed_content("settings.json"))
+    target.write_bytes(consumer_content)
+
+    deleted = plan_reconciliation(_request(repo, (payload,), lock=installed.next_lock))
+
+    assert deleted.applicable
+    assert _action(deleted, "settings.json").kind is ActionKind.PRESERVE
+    assert deleted.next_lock.project_standards.schema_version == "1.1"
+    assert deleted.next_lock.artifacts == []
+    assert len(deleted.next_lock.create_only_absences) == 1
+    absence = deleted.next_lock.create_only_absences[0]
+    assert absence.natural_key == ("settings.json", "json", "key:/tool/enabled")
+    assert absence.owners == ("demo",)
+    assert absence.versions == {"demo": PackageVersion("1.0")}
+
+    settled = plan_reconciliation(_request(repo, (payload,), lock=deleted.next_lock))
+
+    assert settled.applicable
+    assert _action(settled, "settings.json").kind is ActionKind.PRESERVE
+    assert settled.next_lock.artifacts == []
+    assert settled.next_lock.create_only_absences == [absence]
+    assert settled.proposed_content("settings.json") == consumer_content
+
+
+def test_legacy_lock_infers_absence_only_for_matching_version_and_config(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b"{}\n")
+    contribution: ContributionFixture = {
+        "id": "shared-setting",
+        "target": "settings.json",
+        "adapter": "json",
+        "scope": "key:/tool/enabled",
+        "content": b'{"tool": {"enabled": true}}\n',
+        "policy": "create-only",
+        "shared_identity": "tool-enabled",
+    }
+    alpha = write_payload(
+        tmp_path / "alpha",
+        "alpha",
+        version="1.1",
+        contributions=[contribution],
+    )
+    beta = write_payload(
+        tmp_path / "beta",
+        "beta",
+        version="1.1",
+        contributions=[contribution],
+    )
+    seeded = plan_reconciliation(_request(repo, (alpha, beta))).next_lock
+    legacy_header = seeded.project_standards.model_copy(update={"schema_version": "1.0"})
+    damaged = seeded.model_copy(
+        update={
+            "project_standards": legacy_header,
+            "artifacts": [],
+            "create_only_absences": [],
+        }
+    )
+    legacy_content = render_lock(damaged).replace(
+        b'schema_version = "1.1"',
+        b'schema_version = "1.0"',
+        1,
+    )
+    legacy = parse_lock(legacy_content)
+
+    matching = plan_reconciliation(_request(repo, (alpha, beta), lock=legacy))
+
+    assert matching.applicable
+    assert _action(matching, "settings.json").kind is ActionKind.PRESERVE
+    assert matching.next_lock.artifacts == []
+    assert matching.next_lock.create_only_absences[0].owners == ("alpha", "beta")
+
+    alpha_only_request = _request(repo, (alpha, beta), lock=matching.next_lock)
+    alpha_only_desired = alpha_only_request.resolution.desired.model_copy(
+        update={
+            "standards": {
+                **alpha_only_request.resolution.desired.standards,
+                "beta": alpha_only_request.resolution.desired.standards["beta"].model_copy(
+                    update={"enabled": False}
+                ),
+            }
+        }
+    )
+    alpha_only = plan_reconciliation(
+        replace(
+            alpha_only_request,
+            resolution=replace(
+                alpha_only_request.resolution,
+                desired=alpha_only_desired,
+            ),
+        )
+    )
+    refreshed = alpha_only.next_lock.create_only_absences[0]
+    assert refreshed.owners == ("alpha",)
+    assert refreshed.versions == {"alpha": PackageVersion("1.1")}
+
+    current_header = legacy.project_standards.model_copy(update={"release": "5.1.0"})
+    current_lock = legacy.model_copy(update={"project_standards": current_header})
+    current_request = _request(repo, (alpha, beta), lock=current_lock)
+    current_catalog_header = current_request.resolution.catalog.project_standards.model_copy(
+        update={"release": "5.1.0"}
+    )
+    current_catalog = current_request.resolution.catalog.model_copy(
+        update={"project_standards": current_catalog_header}
+    )
+    current = plan_reconciliation(
+        replace(
+            current_request,
+            resolution=replace(current_request.resolution, catalog=current_catalog),
+        )
+    )
+    assert _action(current, "settings.json").kind is ActionKind.UPDATE
+    assert current.next_lock.create_only_absences == []
+
+    beta_applied = legacy.standards["beta"]
+    drifted_records = (
+        beta_applied.model_copy(update={"resolved": PackageVersion("1.0")}),
+        beta_applied.model_copy(
+            update={"effective_config_digest": Sha256Digest(f"sha256:{'f' * 64}")}
+        ),
+    )
+    for drifted_beta in drifted_records:
+        drifted = legacy.model_copy(
+            update={"standards": {**legacy.standards, "beta": drifted_beta}}
+        )
+
+        plan = plan_reconciliation(_request(repo, (alpha, beta), lock=drifted))
+
+        assert plan.applicable
+        assert _action(plan, "settings.json").kind is ActionKind.UPDATE
+        assert plan.next_lock.create_only_absences == []
 
 
 @pytest.mark.parametrize("created", [True, False])

@@ -108,7 +108,7 @@ def test_success_stages_replaces_verifies_and_writes_lock_last(
         assert (repo / "alpha.txt").read_bytes() == b"alpha\n"
         assert (repo / "nested/beta.txt").read_bytes() == b"beta\n"
         assert parse_lock((repo / ".standards/lock.toml").read_bytes()) == (
-            planner.resolution.previous_lock
+            parse_lock(render_lock(planner.resolution.previous_lock))
         )
         return ProviderResult(ProviderEffect.FINDINGS, findings=())
 
@@ -129,6 +129,44 @@ def test_success_stages_replaces_verifies_and_writes_lock_last(
     assert replacements[-1][1] == "lock.toml"
     assert all(source.startswith(".project-standards-") for source, _target in replacements)
     assert not list(repo.rglob(".project-standards-*.tmp"))
+
+
+@pytest.mark.parametrize("replace_before_lock", [False, True])
+def test_apply_accepts_canonical_1_0_lock_and_rechecks_its_exact_bytes(
+    tmp_path: Path,
+    replace_before_lock: bool,
+) -> None:
+    repo, planner, _initial_plan = _fixture(tmp_path)
+    lock_path = repo / ".standards/lock.toml"
+    legacy_content = lock_path.read_bytes().replace(
+        b'schema_version = "1.1"',
+        b'schema_version = "1.0"',
+        1,
+    )
+    lock_path.write_bytes(legacy_content)
+    legacy = parse_lock(legacy_content)
+    planner = replace(
+        planner,
+        resolution=replace(planner.resolution, previous_lock=legacy),
+    )
+    plan = plan_reconciliation(planner)
+
+    def replace_semantically_equivalent_lock(phase: str, identity: str) -> None:
+        if replace_before_lock and phase == "lock" and identity == ".standards/lock.toml":
+            lock_path.write_bytes(render_lock(legacy))
+
+    result = _apply(planner, plan, fault_hook=replace_semantically_equivalent_lock)
+
+    assert not list(repo.rglob(".project-standards-*.tmp"))
+    if replace_before_lock:
+        assert not result.success
+        assert result.error_code == "CP-PRECONDITION"
+        return
+    assert result.success
+    assert result.lock_written
+    written = lock_path.read_bytes()
+    assert written.startswith(b'[project_standards]\nschema_version = "1.1"\n')
+    assert parse_lock(written) == plan.next_lock
 
 
 @pytest.mark.parametrize("mask", [0o022, 0o027])

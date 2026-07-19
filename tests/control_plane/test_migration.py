@@ -960,6 +960,8 @@ def test_legacy_migration_preview_is_complete_and_performs_no_writes(
     assert plan.reports[0].package.recognized_settings == ("/alpha/enabled",)
     assert parse_config(plan.config_content) == plan.desired_config
     assert parse_catalog(plan.catalog_content) == plan.catalog
+    assert plan.reconciliation.next_lock.project_standards.schema_version == "1.1"
+    assert plan.lock_content.startswith(b'[project_standards]\nschema_version = "1.1"\n')
     assert parse_lock(plan.lock_content) == plan.reconciliation.next_lock
     assert [action.target for action in plan.legacy_removals] == [".project-standards.yml"]
     assert any(action.target == ".standards/alpha/config.toml" for action in plan.actions)

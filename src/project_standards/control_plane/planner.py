@@ -46,6 +46,7 @@ from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.models import (
     AcceptedTrack,
     CentralLock,
+    CreateOnlyAbsence,
     LockedInput,
     LockedUnit,
     LockHeader,
@@ -270,6 +271,9 @@ class _DesiredGroup:
     mode: str | None
     provenance: UnitProvenance
     unit: AdapterUnit
+
+
+type _OwnedNaturalKey = tuple[str, str, str]
 
 
 def _transition_json(transition: AcceptedTrackTransition) -> dict[str, JsonValue]:
@@ -857,14 +861,66 @@ def _unit_plan(
     )
 
 
+def _group_natural_key(group: _DesiredGroup) -> _OwnedNaturalKey:
+    return (group.target.original, group.adapter.value, group.scope)
+
+
+def _matches_affected_legacy_state(
+    group: _DesiredGroup,
+    resolution: ResolutionResult,
+    previous_lock: CentralLock,
+) -> bool:
+    """Limit damaged-lock inference to unchanged selections written by 5.0.x."""
+    release = previous_lock.project_standards.release.split(".")
+    if release[:2] != ["5", "0"]:
+        return False
+    current = {package.standard_id: package.applied for package in resolution.packages}
+    for owner, version in group.versions:
+        prior = previous_lock.standards.get(owner)
+        applied = current.get(owner)
+        if (
+            prior is None
+            or applied is None
+            or prior.resolved.value != version
+            or prior.effective_config_digest != applied.effective_config_digest
+        ):
+            return False
+    return True
+
+
+def _retained_create_only_absence_keys(
+    groups: tuple[_DesiredGroup, ...],
+    resolution: ResolutionResult,
+    previous_lock: CentralLock,
+) -> frozenset[_OwnedNaturalKey]:
+    artifacts = {artifact.natural_key: artifact for artifact in previous_lock.artifacts}
+    absences = {absence.natural_key for absence in previous_lock.create_only_absences}
+    retained: set[_OwnedNaturalKey] = set()
+    for group in groups:
+        if group.policy is not ArtifactPolicy.CREATE_ONLY:
+            continue
+        key = _group_natural_key(group)
+        prior = artifacts.get(key)
+        if key in absences or (prior is not None and prior.policy is ArtifactPolicy.CREATE_ONLY):
+            retained.add(key)
+            continue
+        if prior is None and _matches_affected_legacy_state(group, resolution, previous_lock):
+            retained.add(key)
+    return frozenset(retained)
+
+
 def _classify_desired(
     group: _DesiredGroup,
     current: AdapterUnit | None,
     previous: LockedUnit | None,
     entry: SnapshotEntry,
+    *,
+    preserve_absence: bool,
 ) -> tuple[PlannedUnit | None, ControlFinding | None]:
     if previous is None:
         if current is None:
+            if preserve_absence:
+                return _unit_plan(ActionKind.PRESERVE, group, current), None
             return _unit_plan(ActionKind.CREATE, group, current), None
         if current.semantic_digest == group.unit.semantic_digest:
             return _unit_plan(ActionKind.ADOPT, group, current), None
@@ -1090,6 +1146,7 @@ def _render_targets(
     previous_lock: CentralLock,
     registry: AdapterRegistry,
     blocked_targets: frozenset[str],
+    retained_absence_keys: frozenset[_OwnedNaturalKey],
 ) -> tuple[
     tuple[ControlAction, ...],
     tuple[PlannedUnit, ...],
@@ -1159,6 +1216,7 @@ def _render_targets(
                 current_units.get(group.scope),
                 previous_map.get((group.adapter, group.scope)),
                 entry,
+                preserve_absence=_group_natural_key(group) in retained_absence_keys,
             )
             if finding is not None:
                 target_findings.append(finding)
@@ -1241,13 +1299,15 @@ def _locked_after(
     snapshot: RepositorySnapshot,
     previous_lock: CentralLock,
     registry: AdapterRegistry,
-) -> tuple[LockedUnit, ...]:
+    retained_absence_keys: frozenset[_OwnedNaturalKey],
+) -> tuple[tuple[LockedUnit, ...], tuple[CreateOnlyAbsence, ...]]:
     target_map = {item.target: item for item in targets}
     grouped: dict[str, list[_DesiredGroup]] = defaultdict(list)
     for group in groups:
         grouped[group.target.original].append(group)
     previous = {item.natural_key: item for item in previous_lock.artifacts}
     locked: list[LockedUnit] = []
+    absences: list[CreateOnlyAbsence] = []
     for target, target_groups in grouped.items():
         planned = target_map.get(target)
         if planned is None:
@@ -1263,9 +1323,25 @@ def _locked_after(
         entry = snapshot.entry(SafeRelativePath.parse(target))
         for group in target_groups:
             unit = units.get(group.scope)
+            key = _group_natural_key(group)
+            if key in retained_absence_keys and (entry.kind is EntryKind.MISSING or unit is None):
+                absences.append(
+                    CreateOnlyAbsence(
+                        path=group.target,
+                        adapter=group.adapter,
+                        scope=group.scope,
+                        owners=group.owners,
+                        shared_identity=group.shared_identity,
+                        versions={
+                            owner: PackageVersion(version) for owner, version in group.versions
+                        },
+                        provenance=group.provenance,
+                    )
+                )
+                continue
             if unit is None:
                 continue
-            prior = previous.get((group.target.original, group.adapter.value, group.scope))
+            prior = previous.get(key)
             locked.append(
                 LockedUnit(
                     path=group.target,
@@ -1285,7 +1361,10 @@ def _locked_after(
                     ),
                 )
             )
-    return tuple(sorted(locked, key=lambda item: item.natural_key))
+    return (
+        tuple(sorted(locked, key=lambda item: item.natural_key)),
+        tuple(sorted(absences, key=lambda item: item.natural_key)),
+    )
 
 
 def _accepted_tracks(
@@ -1373,7 +1452,7 @@ def _namespace_findings(
 ) -> tuple[ControlFinding, ...]:
     declared: set[str] = {
         unit.path.original
-        for unit in previous_lock.artifacts
+        for unit in (*previous_lock.artifacts, *previous_lock.create_only_absences)
         if _package_namespace(unit.path.original) is not None
     }
     for _package, payload in selected:
@@ -1489,13 +1568,14 @@ def _next_lock(
     request: PlannerRequest,
     resolution: ResolutionResult,
     artifacts: tuple[LockedUnit, ...],
+    create_only_absences: tuple[CreateOnlyAbsence, ...],
     referenced_inputs: tuple[LockedInput, ...],
 ) -> CentralLock:
     desired_value = cast(JsonValue, request.resolution.desired.model_dump(mode="json"))
     catalog = request.resolution.catalog.project_standards
     return CentralLock(
         project_standards=LockHeader(
-            schema_version="1.0",
+            schema_version="1.1",
             catalog=catalog.catalog,
             release=catalog.release,
             catalog_digest=catalog.digest,
@@ -1507,6 +1587,7 @@ def _next_lock(
             resolution.track_transitions,
         ),
         artifacts=list(artifacts),
+        create_only_absences=list(create_only_absences),
         referenced_inputs=list(referenced_inputs),
     )
 
@@ -1629,6 +1710,11 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         )
         desired = ()
     groups, group_findings = _group_desired(desired)
+    retained_absence_keys = _retained_create_only_absence_keys(
+        groups,
+        resolution,
+        request.resolution.previous_lock,
+    )
     findings.extend(group_findings)
     findings.extend(_historical_overlap_findings(request.resolution.previous_lock, groups))
     findings.extend(_namespace_findings(request.repo, selected, request.resolution.previous_lock))
@@ -1638,6 +1724,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         previous_lock=request.resolution.previous_lock,
         registry=registry,
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
+        retained_absence_keys=retained_absence_keys,
     )
     findings.extend(target_findings)
     if request.catalog_refresh is not None and request.catalog_refresh.changed:
@@ -1661,17 +1748,19 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         ordered_findings,
     )
     if applicable:
-        artifacts = _locked_after(
+        artifacts, create_only_absences = _locked_after(
             groups=groups,
             targets=targets,
             snapshot=snapshot,
             previous_lock=request.resolution.previous_lock,
             registry=registry,
+            retained_absence_keys=retained_absence_keys,
         )
         next_lock = _next_lock(
             request,
             resolution,
             artifacts,
+            create_only_absences,
             referenced_inputs,
         )
     else:

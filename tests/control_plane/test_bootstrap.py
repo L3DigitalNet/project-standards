@@ -67,12 +67,16 @@ def test_initialization_creates_exactly_three_neutral_regular_files(tmp_path: Pa
     )
     config = parse_config((repo / ".standards/config.toml").read_bytes())
     catalog = parse_catalog((repo / ".standards/catalog.toml").read_bytes())
-    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    lock_content = (repo / ".standards/lock.toml").read_bytes()
+    lock = parse_lock(lock_content)
     assert config.standards == {}
     assert lock.standards == {}
     assert lock.accepted_tracks == {}
     assert lock.artifacts == []
+    assert lock.create_only_absences == []
     assert lock.referenced_inputs == []
+    assert lock.project_standards.schema_version == "1.1"
+    assert lock_content.startswith(b'[project_standards]\nschema_version = "1.1"\n')
     assert catalog.project_standards.release == "5.0.0"
     assert catalog.project_standards.digest == lock.project_standards.catalog_digest
 

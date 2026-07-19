@@ -83,8 +83,13 @@ def test_shared_lock_requires_and_round_trips_stable_identity() -> None:
 
     row["shared_identity"] = "indent-size"
     lock = previous_lock(row)
+    normalized = lock.model_copy(
+        update={
+            "project_standards": lock.project_standards.model_copy(update={"schema_version": "1.1"})
+        }
+    )
 
-    assert parse_lock(render_lock(lock)) == lock
+    assert parse_lock(render_lock(lock)) == normalized
     assert b'shared_identity = "indent-size"' in render_lock(lock)
 
 
@@ -402,6 +407,70 @@ def test_conditional_units_disable_and_reenable_retained_selection(tmp_path: Pat
         )
     )
     _assert_no_mutating_actions(converged)
+
+
+def test_create_only_absence_returns_live_on_recreation_and_drops_on_disable(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    target = repo / "settings.json"
+    target.write_bytes(b"{}\n")
+    contribution: ContributionFixture = {
+        "id": "tool-setting",
+        "target": "settings.json",
+        "adapter": "json",
+        "scope": "key:/tool/enabled",
+        "content": b'{"tool": {"enabled": true}}\n',
+        "policy": "create-only",
+    }
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[contribution],
+    )
+    installed = plan_reconciliation(
+        PlannerRequest(repo, resolution_request((payload,)), (payload,))
+    )
+    _materialize(repo, installed)
+    target.write_bytes(b"{}\n")
+    absent_request = resolution_request((payload,), previous_lock=installed.next_lock)
+    absent = plan_reconciliation(PlannerRequest(repo, absent_request, (payload,)))
+    assert len(absent.next_lock.create_only_absences) == 1
+
+    upgraded = write_payload(
+        tmp_path / "upgraded",
+        "demo",
+        version="1.1",
+        contributions=[contribution],
+    )
+    refreshed_request = resolution_request((upgraded,), previous_lock=absent.next_lock)
+    refreshed = plan_reconciliation(PlannerRequest(repo, refreshed_request, (upgraded,)))
+    assert refreshed.next_lock.create_only_absences[0].versions["demo"].value == "1.1"
+
+    target.write_bytes(b'{"tool": {"enabled": true}}\n')
+    recreated_request = resolution_request((upgraded,), previous_lock=refreshed.next_lock)
+    recreated = plan_reconciliation(PlannerRequest(repo, recreated_request, (upgraded,)))
+
+    assert recreated.applicable
+    assert recreated.actions[0].kind is ActionKind.ADOPT
+    assert len(recreated.next_lock.artifacts) == 1
+    assert recreated.next_lock.create_only_absences == []
+
+    target.write_bytes(b"{}\n")
+    absent_again_request = resolution_request((upgraded,), previous_lock=recreated.next_lock)
+    absent_again = plan_reconciliation(PlannerRequest(repo, absent_again_request, (upgraded,)))
+    assert len(absent_again.next_lock.create_only_absences) == 1
+    disabled_request = _enable_only(
+        resolution_request((upgraded,), previous_lock=absent_again.next_lock)
+    )
+    disabled = plan_reconciliation(PlannerRequest(repo, disabled_request, (upgraded,)))
+
+    assert disabled.applicable
+    assert disabled.next_lock.standards == {}
+    assert disabled.next_lock.artifacts == []
+    assert disabled.next_lock.create_only_absences == []
+    assert target.read_bytes() == b"{}\n"
 
 
 def test_shared_owner_removal_then_last_reference_removal(tmp_path: Path) -> None:

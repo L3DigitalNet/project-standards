@@ -209,7 +209,7 @@ def _lock_recovery(
             raise ControlPlaneError("catalog does not match installed distribution")
         empty_lock = CentralLock(
             project_standards=LockHeader(
-                schema_version="1.0",
+                schema_version="1.1",
                 catalog=catalog.project_standards.catalog,
                 release=catalog.project_standards.release,
                 catalog_digest=catalog.project_standards.digest,

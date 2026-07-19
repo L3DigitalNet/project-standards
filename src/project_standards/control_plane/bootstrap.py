@@ -66,7 +66,7 @@ def _expected_bytes(
     lock = CentralLock.model_validate(
         {
             "project_standards": {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "catalog": major.value,
                 "release": distribution.tool_release.value,
                 "catalog_digest": catalog.project_standards.digest.value,

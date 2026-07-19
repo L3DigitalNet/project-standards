@@ -148,6 +148,9 @@ def test_missing_lock_builds_evidence_backed_plan_without_accepted_tracks(
     assert plan.reconciliation is not None
     assert plan.reconciliation.next_lock.accepted_tracks == {}
     assert plan.reconciliation.next_lock.standards == {}
+    assert plan.reconciliation.next_lock.project_standards.schema_version == "1.1"
+    assert plan.proposed_content is not None
+    assert plan.proposed_content.startswith(b'[project_standards]\nschema_version = "1.1"\n')
     assert not (control / "lock.toml").exists()
 
     denied = apply_recovery(request, plan, apply=False, repair_state=True)

@@ -22,7 +22,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
-from project_standards.control_plane.codec import render_lock
+from project_standards.control_plane.codec import parse_lock, render_lock
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -689,13 +689,23 @@ def _apply_locked(
     root, root_descriptor = _open_repository(request.planner.repo)
     try:
         expected_lock = render_lock(request.planner.resolution.previous_lock)
+        expected_state = parse_lock(expected_lock)
         lock_kind = control.file_kind("lock.toml")
         if request.missing_lock_repair:
             if lock_kind != "missing":
                 return ApplyResult(False, (), False, "CP-STALE-PLAN")
             live_lock: bytes | None = None
         else:
-            if lock_kind != "regular" or control.read_bytes("lock.toml") != expected_lock:
+            if lock_kind != "regular":
+                return ApplyResult(False, (), False, "CP-STALE-PLAN")
+            # A 1.0 lock can decode to the normalized 1.1 model. Retain its raw
+            # bytes so the final precondition still detects concurrent rewrites.
+            expected_lock = control.read_bytes("lock.toml")
+            try:
+                live_state = parse_lock(expected_lock)
+            except ControlPlaneError:
+                return ApplyResult(False, (), False, "CP-STALE-PLAN")
+            if live_state != expected_state:
                 return ApplyResult(False, (), False, "CP-STALE-PLAN")
             live_lock = expected_lock
         for name, expected_digest in request.authority_preconditions:
