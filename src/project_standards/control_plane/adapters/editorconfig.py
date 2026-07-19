@@ -64,7 +64,11 @@ def _decode(content: bytes) -> str:
 
 
 def _line_end_without_newline(line: str) -> int:
-    return len(line.rstrip("\r\n"))
+    if line.endswith("\r\n"):
+        return len(line) - 2
+    if line.endswith("\n"):
+        return len(line) - 1
+    return len(line)
 
 
 def _parse(content: bytes) -> EditorConfigDocument:
@@ -73,7 +77,14 @@ def _parse(content: bytes) -> EditorConfigDocument:
     properties: list[EditorConfigProperty] = []
     section = "$global"
     offset = 0
-    for line in text.splitlines(keepends=True):
+    segments = text.split("\n")
+    for index, segment in enumerate(segments):
+        if index == len(segments) - 1:
+            if not segment:
+                break
+            line = segment
+        else:
+            line = f"{segment}\n"
         code_end = _line_end_without_newline(line)
         code = line[:code_end]
         stripped = code.strip()

@@ -4,11 +4,32 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.control_plane.adapters import editorconfig as editorconfig_adapter
 from project_standards.control_plane.adapters.base import UnitChange
 from project_standards.control_plane.adapters.editorconfig import EditorConfigAdapter
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 
 _FIXTURES = Path(__file__).parent / "fixtures/editorconfig"
+
+_NON_NEWLINE_SPLITLINES_BOUNDARIES = (
+    pytest.param("\r", id="carriage-return"),
+    pytest.param("\v", id="vertical-tab"),
+    pytest.param("\f", id="form-feed"),
+    pytest.param("\x1c", id="file-separator"),
+    pytest.param("\x1d", id="group-separator"),
+    pytest.param("\x1e", id="record-separator"),
+    pytest.param("\x85", id="next-line"),
+    pytest.param("\u2028", id="line-separator"),
+    pytest.param("\u2029", id="paragraph-separator"),
+)
+_REAL_NEWLINES = (
+    pytest.param("\n", id="lf"),
+    pytest.param("\r\n", id="crlf"),
+)
+_CR_SUFFIX_CASES = (
+    pytest.param("root = value\r", "root = value\r", id="bare-cr-at-eof"),
+    pytest.param("root = value\r\r\n", "root = value\r", id="content-cr-before-crlf"),
+)
 
 
 def _fixture(name: str) -> bytes:
@@ -33,6 +54,74 @@ def test_editorconfig_inspects_normalized_global_and_section_properties() -> Non
     assert units["property:$global#root"].raw == b"true"
     assert units["property:*.{py,pyi}#indent_size"].value == "4"
     assert units["property:*.md#trim_trailing_whitespace"].value == "false"
+
+
+@pytest.mark.parametrize("separator", _NON_NEWLINE_SPLITLINES_BOUNDARIES)
+def test_editorconfig_inspect__non_newline_splitlines_boundary__preserves_value_span(
+    separator: str,
+) -> None:
+    scope = "property:$global#root"
+    value = f"left{separator}right"
+    content = f"root = {value}\nnext = untouched\n".encode()
+    adapter = EditorConfigAdapter()
+
+    state = adapter.inspect(content, (scope,))
+
+    assert state.units[0].raw == value.encode()
+    assert adapter.render(state, (UnitChange(ActionKind.NOOP, scope),)) == content
+    assert (
+        adapter.render(
+            state,
+            (UnitChange(ActionKind.UPDATE, scope, content=b"changed", value="changed"),),
+        )
+        == b"root = changed\nnext = untouched\n"
+    )
+
+
+@pytest.mark.parametrize("newline", _REAL_NEWLINES)
+def test_editorconfig_inspect__lf_or_crlf__preserves_value_spans_and_round_trip(
+    newline: str,
+) -> None:
+    scopes = ("property:$global#root", "property:$global#next")
+    content = f"root = left{newline}next = right{newline}".encode()
+    adapter = EditorConfigAdapter()
+
+    state = adapter.inspect(content, scopes)
+
+    units = {unit.scope: unit for unit in state.units}
+    assert units["property:$global#root"].raw == b"left"
+    assert units["property:$global#next"].raw == b"right"
+    assert (
+        adapter.render(
+            state,
+            tuple(UnitChange(ActionKind.NOOP, scope) for scope in scopes),
+        )
+        == content
+    )
+
+
+@pytest.mark.parametrize(("physical", "expected_code"), _CR_SUFFIX_CASES)
+def test_editorconfig_parse__cr_suffix__preserves_content_span_and_round_trip(
+    physical: str,
+    expected_code: str,
+) -> None:
+    code_end = editorconfig_adapter._line_end_without_newline(  # pyright: ignore[reportPrivateUsage]  # parser span regression
+        physical
+    )
+    document = editorconfig_adapter._parse(  # pyright: ignore[reportPrivateUsage]  # parser span regression
+        physical.encode()
+    )
+
+    assert physical[:code_end] == expected_code
+    assert len(document.properties) == 1
+    assert (document.properties[0].line_start, document.properties[0].source_end) == (
+        0,
+        len(physical),
+    )
+    content = physical.encode()
+    adapter = EditorConfigAdapter()
+    state = adapter.inspect(content, ("property:$global#root",))
+    assert adapter.render(state, (UnitChange(ActionKind.NOOP, "property:$global#root"),)) == content
 
 
 def test_editorconfig_update_splices_only_value_and_is_idempotent() -> None:

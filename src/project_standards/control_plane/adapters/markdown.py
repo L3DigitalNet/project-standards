@@ -58,12 +58,27 @@ def _decode(content: bytes) -> str:
         raise ControlPlaneError("Markdown content is not valid UTF-8") from exc
 
 
+def _line_end_without_newline(line: str) -> int:
+    if line.endswith("\r\n"):
+        return len(line) - 2
+    if line.endswith("\n"):
+        return len(line) - 1
+    return len(line)
+
+
 def _lines(text: str) -> tuple[MarkdownLine, ...]:
     result: list[MarkdownLine] = []
     offset = 0
     fence: str | None = None
-    for physical in text.splitlines(keepends=True):
-        code = physical.rstrip("\r\n")
+    segments = text.split("\n")
+    for index, segment in enumerate(segments):
+        if index == len(segments) - 1:
+            if not segment:
+                break
+            physical = segment
+        else:
+            physical = f"{segment}\n"
+        code = physical[: _line_end_without_newline(physical)]
         match = _FENCE.match(code)
         top_level = fence is None
         if match is not None:
@@ -76,8 +91,6 @@ def _lines(text: str) -> tuple[MarkdownLine, ...]:
                 fence = None
         result.append(MarkdownLine(code, offset, offset + len(physical), top_level))
         offset += len(physical)
-    if offset < len(text):
-        result.append(MarkdownLine(text[offset:], offset, len(text), fence is None))
     return tuple(result)
 
 

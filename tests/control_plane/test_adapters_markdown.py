@@ -5,11 +5,32 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.control_plane.adapters import markdown as markdown_adapter
 from project_standards.control_plane.adapters.base import AdapterUnit, UnitChange
 from project_standards.control_plane.adapters.markdown import MarkdownBlockAdapter
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 
 _FIXTURES = Path(__file__).parent / "fixtures/markdown"
+
+_NON_NEWLINE_SPLITLINES_BOUNDARIES = (
+    pytest.param("\r", id="carriage-return"),
+    pytest.param("\v", id="vertical-tab"),
+    pytest.param("\f", id="form-feed"),
+    pytest.param("\x1c", id="file-separator"),
+    pytest.param("\x1d", id="group-separator"),
+    pytest.param("\x1e", id="record-separator"),
+    pytest.param("\x85", id="next-line"),
+    pytest.param("\u2028", id="line-separator"),
+    pytest.param("\u2029", id="paragraph-separator"),
+)
+_REAL_NEWLINES = (
+    pytest.param("\n", id="lf"),
+    pytest.param("\r\n", id="crlf"),
+)
+_CR_SUFFIX_CASES = (
+    pytest.param("content\r", "content\r", id="bare-cr-at-eof"),
+    pytest.param("content\r\r\n", "content\r", id="content-cr-before-crlf"),
+)
 
 
 def _fixture(name: str) -> bytes:
@@ -37,6 +58,73 @@ def test_markdown_inspects_multiple_blocks_without_interpreting_fenced_markers()
     assert b'key  :  "value"' in handoff.raw
     assert handoff.value == handoff.raw.replace(b"\r\n", b"\n")
     assert units["block:python-tooling"].raw == b"Run `uv run ruff check .`.\n"
+
+
+@pytest.mark.parametrize("separator", _NON_NEWLINE_SPLITLINES_BOUNDARIES)
+def test_markdown_inspect__non_newline_splitlines_boundary__preserves_block_span(
+    separator: str,
+) -> None:
+    scope = "block:demo"
+    body = f"prefix{separator}<!-- END project-standards:demo -->\nsuffix\n"
+    content = (
+        "# Consumer\n\n"
+        "<!-- prettier-ignore-start -->\n\n"
+        "<!-- BEGIN project-standards:demo -->\n"
+        f"{body}"
+        "<!-- END project-standards:demo -->\n\n"
+        "<!-- prettier-ignore-end -->\n"
+    ).encode()
+    adapter = MarkdownBlockAdapter()
+
+    state = adapter.inspect(content, (scope,))
+
+    assert state.units[0].raw == body.encode()
+    assert adapter.render(state, (UnitChange(ActionKind.NOOP, scope),)) == content
+    replacement = b"replacement\n"
+    assert adapter.render(
+        state,
+        (UnitChange(ActionKind.UPDATE, scope, content=replacement, value=replacement),),
+    ) == content.replace(body.encode(), replacement, 1)
+
+
+@pytest.mark.parametrize("newline", _REAL_NEWLINES)
+def test_markdown_inspect__lf_or_crlf__preserves_block_span_and_round_trip(
+    newline: str,
+) -> None:
+    scope = "block:demo"
+    body = f"first{newline}second{newline}"
+    content = (
+        f"# Consumer{newline}{newline}"
+        f"<!-- prettier-ignore-start -->{newline}{newline}"
+        f"<!-- BEGIN project-standards:demo -->{newline}"
+        f"{body}"
+        f"<!-- END project-standards:demo -->{newline}{newline}"
+        f"<!-- prettier-ignore-end -->{newline}"
+    ).encode()
+    adapter = MarkdownBlockAdapter()
+
+    state = adapter.inspect(content, (scope,))
+
+    assert state.units[0].raw == body.encode()
+    assert state.units[0].value == body.replace("\r\n", "\n").encode()
+    assert adapter.render(state, (UnitChange(ActionKind.NOOP, scope),)) == content
+
+
+@pytest.mark.parametrize(("physical", "expected_text"), _CR_SUFFIX_CASES)
+def test_markdown_lines__cr_suffix__preserves_content_span_and_round_trip(
+    physical: str,
+    expected_text: str,
+) -> None:
+    lines = markdown_adapter._lines(  # pyright: ignore[reportPrivateUsage]  # parser span regression
+        physical
+    )
+
+    assert len(lines) == 1
+    assert lines[0].text == expected_text
+    assert (lines[0].start, lines[0].end) == (0, len(physical))
+    content = physical.encode()
+    adapter = MarkdownBlockAdapter()
+    assert adapter.render(adapter.inspect(content, ()), ()) == content
 
 
 def test_markdown_update_changes_only_block_content_and_is_idempotent() -> None:
