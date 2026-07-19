@@ -35,6 +35,12 @@ role = "default"
 id = "project-spec"
 version = "1.1"
 digest = "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e"
+role = "retained"
+
+[[packages]]
+id = "project-spec"
+version = "1.2"
+digest = "sha256:21e4c5a34ed7636160437a6c136201e3e09c6afc47c8126f0baebb9aa913d6c8"
 role = "default"
 
 [[packages]]

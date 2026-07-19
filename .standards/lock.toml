@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.0.2"
-catalog_digest = "sha256:7d9ae08d7f54c3ca9a4a70ecd1771e5e4d712d129611d846975d50cb9a6ed968"
+release = "5.1.0"
+catalog_digest = "sha256:0249a481d446a7809f84e669a8f112d5abe9a381230ebe47b3799aff0fa15af4"
 config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]
@@ -42,9 +42,9 @@ effective_config_digest = "sha256:4cb90672e48876a0430bd2236456fcdabd09b02077aba9
 
 [standards.project-spec]
 requested = "latest"
-resolved = "1.1"
+resolved = "1.2"
 selection = "stable"
-payload_digest = "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e"
+payload_digest = "sha256:21e4c5a34ed7636160437a6c136201e3e09c6afc47c8126f0baebb9aa913d6c8"
 effective_config_digest = "sha256:7c75b683595bb47ac5595f1510cde8f20749e003b43156be7a4aac8b5ad3c79d"
 
 [standards.python-tooling]
@@ -392,11 +392,11 @@ path = ".github/workflows/validate-specs.yml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["project-spec"]
-versions = { project-spec = "1.1" }
+versions = { project-spec = "1.2" }
 provenance = "provider"
 policy = "managed"
-semantic_digest = "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
-content_digest = "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
+semantic_digest = "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
+content_digest = "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
 created_container = false
 
 [[artifacts]]

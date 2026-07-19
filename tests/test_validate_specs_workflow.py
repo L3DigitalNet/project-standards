@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 _WF = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "validate-specs.yml"
 _SELF_HOST_WF = (
     Path(__file__).resolve().parent.parent
-    / "standards/project-spec/versions/1.1/resources/self-host-validate-specs.yml"
+    / "standards/project-spec/versions/1.2/resources/self-host-validate-specs.yml"
 )
 
 
@@ -73,7 +76,18 @@ def test_self_repo_steps_do_not_install_published_tag() -> None:
             assert "PROJECT_STANDARDS_REF" not in script
 
 
-def test_consumer_install_treats_the_requested_ref_as_data() -> None:
+@pytest.mark.parametrize(
+    "requested_ref",
+    [
+        pytest.param("v5.1.0", id="tag"),
+        pytest.param("0123456789abcdef0123456789abcdef01234567", id="sha"),
+        pytest.param("refs/heads/review-remediation-5.1", id="ref"),
+    ],
+)
+def test_consumer_install_treats_the_requested_ref_as_data(
+    tmp_path: Path,
+    requested_ref: str,
+) -> None:
     data = yaml.safe_load(_WF.read_text(encoding="utf-8"))
     step = next(
         item
@@ -81,16 +95,32 @@ def test_consumer_install_treats_the_requested_ref_as_data() -> None:
         if item.get("name") == "Install (consuming repo)"
     )
 
-    assert step["env"] == {
-        "PROJECT_STANDARDS_REF": (
-            "${{ github.event_name == 'workflow_call' && inputs.standards-ref || 'v5' }}"
-        )
-    }
+    assert step["env"] == {"PROJECT_STANDARDS_REF": "${{ inputs.standards-ref || 'v5' }}"}
     assert "${{ inputs.standards-ref }}" not in step["run"]
     assert step["run"] == (
         'uv tool install "git+https://github.com/'
         'L3DigitalNet/project-standards@${PROJECT_STANDARDS_REF}"'
     )
+
+    fake_uv = tmp_path / "uv"
+    fake_uv.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8")
+    fake_uv.chmod(0o755)
+    completed = subprocess.run(
+        ["bash", "-eu", "-c", step["run"]],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={
+            **os.environ,
+            "PATH": f"{tmp_path}:{os.environ['PATH']}",
+            "PROJECT_STANDARDS_REF": requested_ref,
+        },
+    )
+    assert completed.stdout.splitlines() == [
+        "tool",
+        "install",
+        f"git+https://github.com/L3DigitalNet/project-standards@{requested_ref}",
+    ]
 
 
 def test_direct_events_use_published_ref_and_run_strict_lint() -> None:
@@ -99,16 +129,26 @@ def test_direct_events_use_published_ref_and_run_strict_lint() -> None:
         steps = data["jobs"]["validate-specs"]["steps"]
         install = next(item for item in steps if item.get("name") == "Install (consuming repo)")
         lint_steps = [item for item in steps if "strict" in str(item.get("name", "")).lower()]
+        validation_steps = [
+            item for item in steps if str(item.get("name", "")).startswith("Validate specs")
+        ]
 
-        assert install["env"] == {
-            "PROJECT_STANDARDS_REF": (
-                "${{ github.event_name == 'workflow_call' && inputs.standards-ref || 'v5' }}"
-            )
-        }
+        assert install["env"] == {"PROJECT_STANDARDS_REF": "${{ inputs.standards-ref || 'v5' }}"}
         assert len(lint_steps) == 2
+        assert {step["if"] for step in lint_steps} == {
+            "github.repository == 'L3DigitalNet/project-standards' && "
+            "format('{0}', inputs.strict-lint) != 'false'",
+            "github.repository != 'L3DigitalNet/project-standards' && "
+            "format('{0}', inputs.strict-lint) != 'false'",
+        }
+        assert {step["if"] for step in validation_steps} == {
+            "github.repository == 'L3DigitalNet/project-standards'",
+            "github.repository != 'L3DigitalNet/project-standards'",
+        }
         assert all(
-            "github.event_name != 'workflow_call' || inputs.strict-lint" in str(step["if"])
-            for step in lint_steps
+            "inputs.strict-lint" not in str(step.get("if", ""))
+            for step in steps
+            if step not in lint_steps
         )
 
 

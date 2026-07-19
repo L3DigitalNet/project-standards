@@ -42,7 +42,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
-_PAYLOAD = _FAMILY / "versions/1.1"
+_PAYLOAD = _FAMILY / "versions/1.2"
 _MARKDOWN_FAMILY = _ROOT / "standards/markdown-tooling"
 _MARKDOWN_PAYLOAD = _MARKDOWN_FAMILY / "versions/1.2"
 _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
@@ -58,8 +58,11 @@ _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST = (
 _PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:2ea6576b06bd68517d7ce7acc5687cf51f594e83b890855ac8a03582f3f884fc"
 )
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+_V1_1_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
+)
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
 )
 
 
@@ -88,15 +91,15 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.1"
-payload = "versions/1.1/payload.toml"
+version = "1.2"
+payload = "versions/1.2/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
     )
     catalog_entries = f'''[[packages]]
 id = "project-spec"
-version = "1.1"
+version = "1.2"
 digest = "{payload.integrity.aggregate_digest.value}"
 role = "default"
 '''
@@ -296,6 +299,7 @@ def test_project_spec_declares_historical_caller_and_current_workflow_history() 
         _PREVIOUS_SELF_HOST_WORKFLOW_DIGEST,
         _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST,
         _PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST,
+        _V1_1_SELF_HOST_WORKFLOW_DIGEST,
     }
     assert (
         f"sha256:{hashlib.sha256((_ROOT / '.github/workflows/validate-specs.yml').read_bytes()).hexdigest()}"
@@ -322,7 +326,7 @@ def test_project_spec_v2_docs_describe_only_the_v5_control_plane() -> None:
         assert stale not in combined
     for expected in (
         ".standards/config.toml",
-        "project-standards standards enable project-spec --version 1.1",
+        "project-standards standards enable project-spec --version 1.2",
         "project-standards reconcile --apply",
         "include_patterns",
         "reference_prefixes",
@@ -834,31 +838,31 @@ spec:
 def test_project_spec_provider_uses_resources_from_the_selected_payload_version(
     tmp_path: Path,
 ) -> None:
-    newer_root = tmp_path / "project-spec/versions/1.2"
+    newer_root = tmp_path / "project-spec/versions/1.3"
     shutil.copytree(_PAYLOAD, newer_root)
     template = newer_root / "templates/spec-light-template.md"
-    marker = "\n<!-- payload-version-1.2 -->\n"
+    marker = "\n<!-- payload-version-1.3 -->\n"
     template.write_text(template.read_text(encoding="utf-8") + marker, encoding="utf-8")
     template_digest = hashlib.sha256(template.read_bytes()).hexdigest()
     input_schema = newer_root / "schemas/provider-input.schema.json"
     input_schema.write_text(
         input_schema.read_text(encoding="utf-8").replace(
-            '"version": { "const": "1.1" }',
             '"version": { "const": "1.2" }',
+            '"version": { "const": "1.3" }',
         ),
         encoding="utf-8",
     )
     input_digest = hashlib.sha256(input_schema.read_bytes()).hexdigest()
     manifest_path = newer_root / "payload.toml"
     manifest_text = manifest_path.read_text(encoding="utf-8")
-    manifest_text = manifest_text.replace('version = "1.1"', 'version = "1.2"', 1)
-    manifest_text = manifest_text.replace('to = "package:1.1"', 'to = "package:1.2"')
+    manifest_text = manifest_text.replace('version = "1.2"', 'version = "1.3"', 1)
+    manifest_text = manifest_text.replace('to = "package:1.2"', 'to = "package:1.3"')
     manifest_text = manifest_text.replace(
         "sha256:3692873eec9a6f98fc1b64bbb0b0d3ecf807d365a8102305aa5b195c859d8571",
         f"sha256:{template_digest}",
     )
     manifest_text = manifest_text.replace(
-        "sha256:c1634043b608303d2a6d2f1284854d9b0a236c78be4e8f9944e67db25a6b58cb",
+        "sha256:476a2c9b7a2192667013c28fa7d79fd090958a1284286bb53db4f980d7cf804c",
         f"sha256:{input_digest}",
     )
     manifest_path.write_text(manifest_text, encoding="utf-8")
@@ -918,8 +922,8 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.1"
-payload = "versions/1.1/payload.toml"
+version = "1.2"
+payload = "versions/1.2/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -951,7 +955,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/project-spec/1.1/"
+    prefix = "project_standards/payloads/project-spec/1.2/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)

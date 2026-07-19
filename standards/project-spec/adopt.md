@@ -1,11 +1,11 @@
 # Adopt the Project Specification Standard
 
-The current consumer package is [`project-spec@1.1`](versions/1.1/adopt.md). Use it for Light, Standard, and Full project specifications with stable sections, typed identifiers, deterministic validation/linting, and provider-backed scaffold and upgrade operations.
+The current consumer package is [`project-spec@1.2`](versions/1.2/adopt.md). Use it for Light, Standard, and Full project specifications with stable sections, typed identifiers, deterministic validation/linting, and provider-backed scaffold and upgrade operations.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable project-spec --version 1.1
+project-standards standards enable project-spec --version 1.2
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,4 +31,4 @@ project-standards spec lint --strict
 project-standards reconcile --check
 ```
 
-An empty corpus, invalid profile, unsafe authoring path, schema overlap, or managed-workflow drift fails closed. Use `--stdout` to review scaffolds/upgrades without writing. See the [version-specific guide](versions/1.1/adopt.md) for exact options, commands, outputs, migration, disable semantics, and troubleshooting.
+An empty corpus, invalid profile, unsafe authoring path, schema overlap, or managed-workflow drift fails closed. Use `--stdout` to review scaffolds/upgrades without writing. See the [version-specific guide](versions/1.2/adopt.md) for exact options, commands, outputs, migration, disable semantics, and troubleshooting.

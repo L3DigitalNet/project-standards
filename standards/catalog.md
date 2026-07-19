@@ -13,7 +13,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 29 | 5 | 8 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
-| [`project-spec`](project-spec/README.md) | active | 1.1 | default | consumer | 23 | 9 | 1 |
+| [`project-spec`](project-spec/README.md) | active | 1.1 | retained | consumer | 23 | 9 | 1 |
+| [`project-spec`](project-spec/README.md) | active | 1.2 | default | consumer | 23 | 9 | 1 |
 | [`python-coding`](python-coding/README.md) | draft | 0.5 | reference-only | reference-only | 3 | 1 | 0 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | default | consumer | 13 | 3 | 52 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
@@ -29,6 +30,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-tooling@1.2` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `project-spec@1.1` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
+| `project-spec@1.2` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `python-coding@0.5` | `python.agent-guidance`, `python.coding.guidance`, `python.testing.guidance` | — |
 | `python-tooling@1.1` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
 | `standard-bundle-authoring@2.0` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
@@ -43,6 +45,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.2` | companion | `markdown-tooling` |
 | `markdown-tooling@1.2` | companion | `markdown-frontmatter` |
 | `project-spec@1.1` | companion | `markdown-frontmatter` |
+| `project-spec@1.2` | companion | `markdown-frontmatter` |
 | `python-coding@0.5` | companion | `python-tooling` |
 | `python-tooling@1.1` | companion | `python-coding` |
 
@@ -173,6 +176,29 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.1` | `schema-light` | `document-schema` | `standards://project-spec/1.1/schema-light` | `schemas/spec-light.schema.json` |
 | `project-spec@1.1` | `schema-standard` | `document-schema` | `standards://project-spec/1.1/schema-standard` | `schemas/spec-standard.schema.json` |
 | `project-spec@1.1` | `schema-full` | `document-schema` | `standards://project-spec/1.1/schema-full` | `schemas/spec-full.schema.json` |
+| `project-spec@1.2` | `readme` | `canonical-standard` | `standards://project-spec/1.2/readme` | `README.md` |
+| `project-spec@1.2` | `adopt` | `adoption-guide` | `standards://project-spec/1.2/adopt` | `adopt.md` |
+| `project-spec@1.2` | `agent-summary` | `agent-summary` | `standards://project-spec/1.2/agent-summary` | `agent-summary.md` |
+| `project-spec@1.2` | `config-schema` | `config-schema` | `standards://project-spec/1.2/config-schema` | `config.schema.json` |
+| `project-spec@1.2` | `example` | `example` | `standards://project-spec/1.2/example` | `examples/spec.example.md` |
+| `project-spec@1.2` | `tooling-notes` | `tooling-note` | `standards://project-spec/1.2/tooling-notes` | `resources/tooling-notes.md` |
+| `project-spec@1.2` | `template-light` | `template` | `standards://project-spec/1.2/template-light` | `templates/spec-light-template.md` |
+| `project-spec@1.2` | `template-standard` | `template` | `standards://project-spec/1.2/template-standard` | `templates/spec-standard-template.md` |
+| `project-spec@1.2` | `template-full` | `template` | `standards://project-spec/1.2/template-full` | `templates/spec-full-template.md` |
+| `project-spec@1.2` | `workflow-source` | `provider-resource` | `standards://project-spec/1.2/workflow-source` | `resources/validate-specs.yml` |
+| `project-spec@1.2` | `legacy-workflow` | `legacy-reference` | `standards://project-spec/1.2/legacy-workflow` | `resources/legacy-validate-specs.yml` |
+| `project-spec@1.2` | `self-host-workflow` | `provider-resource` | `standards://project-spec/1.2/self-host-workflow` | `resources/self-host-validate-specs.yml` |
+| `project-spec@1.2` | `provider-code` | `provider-resource` | `standards://project-spec/1.2/provider-code` | `providers/project_spec.py` |
+| `project-spec@1.2` | `provider-input` | `provider-resource` | `standards://project-spec/1.2/provider-input` | `schemas/provider-input.schema.json` |
+| `project-spec@1.2` | `provider-findings` | `provider-resource` | `standards://project-spec/1.2/provider-findings` | `schemas/findings.schema.json` |
+| `project-spec@1.2` | `provider-content` | `provider-resource` | `standards://project-spec/1.2/provider-content` | `schemas/content.schema.json` |
+| `project-spec@1.2` | `provider-extract` | `provider-resource` | `standards://project-spec/1.2/provider-extract` | `schemas/extract.schema.json` |
+| `project-spec@1.2` | `provider-id-next` | `provider-resource` | `standards://project-spec/1.2/provider-id-next` | `schemas/id-next.schema.json` |
+| `project-spec@1.2` | `provider-mutation-plan` | `provider-resource` | `standards://project-spec/1.2/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `project-spec@1.2` | `provider-migration-report` | `provider-resource` | `standards://project-spec/1.2/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `project-spec@1.2` | `schema-light` | `document-schema` | `standards://project-spec/1.2/schema-light` | `schemas/spec-light.schema.json` |
+| `project-spec@1.2` | `schema-standard` | `document-schema` | `standards://project-spec/1.2/schema-standard` | `schemas/spec-standard.schema.json` |
+| `project-spec@1.2` | `schema-full` | `document-schema` | `standards://project-spec/1.2/schema-full` | `schemas/spec-full.schema.json` |
 | `python-coding@0.5` | `readme` | `canonical-standard` | `standards://python-coding/0.5/readme` | `README.md` |
 | `python-coding@0.5` | `agent-summary` | `agent-summary` | `standards://python-coding/0.5/agent-summary` | `agent-summary.md` |
 | `python-coding@0.5` | `config-schema` | `config-schema` | `standards://python-coding/0.5/config-schema` | `config.schema.json` |
@@ -251,6 +277,15 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `project-spec@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
 | `project-spec@1.1` | `render-preview` | `render` | `plan` | `content` | `payload:provider-code#run_render_preview` |
 | `project-spec@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `project-spec@1.2` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `project-spec@1.2` | `lint` | `lint` | `validate` | `findings` | `payload:provider-code#run_lint` |
+| `project-spec@1.2` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
+| `project-spec@1.2` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
+| `project-spec@1.2` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
+| `project-spec@1.2` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `project-spec@1.2` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
+| `project-spec@1.2` | `render-preview` | `render` | `plan` | `content` | `payload:provider-code#run_render_preview` |
+| `project-spec@1.2` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `python-coding@0.5` | `semantic-review` | `semantic-review` | `validate` | `findings` | — |
 | `python-tooling@1.1` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
 | `python-tooling@1.1` | `verify-toolchain` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
@@ -314,6 +349,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.2` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `markdown-tooling@1.2` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `project-spec@1.1` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
+| `project-spec@1.2` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `python-tooling@1.1` | contribution | `python-version` | `.python-version` | `managed` | `whole-file` / `$file` |
 | `python-tooling@1.1` | contribution | `check-workflow` | `.github/workflows/check.yml` | `managed` | `whole-file` / `$file` |
 | `python-tooling@1.1` | contribution | `check-script` | `scripts/check.py` | `managed` | `whole-file` / `$file` |
