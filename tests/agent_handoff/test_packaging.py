@@ -15,7 +15,7 @@ from project_standards.cli import main
 _REPO = Path(__file__).parents[2]
 _SOURCE = _REPO / "standards/agent-handoff"
 _BUNDLE = _REPO / "src/project_standards/bundles/agent-handoff"
-_V2_MANAGED = _SOURCE / "versions/1.1/provider-resources/managed"
+_V2_MANAGED = _SOURCE / "versions/1.2/provider-resources/managed"
 
 
 def _source_files() -> tuple[Path, ...]:
@@ -121,7 +121,7 @@ def test_repository_dogfoods_agent_handoff_v5() -> None:
             "harnesses": ["claude-code", "codex"],
         },
     }
-    assert lock["standards"]["agent-handoff"]["resolved"] == "1.1"
+    assert lock["standards"]["agent-handoff"]["resolved"] == "1.2"
     assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
     assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
         _V2_MANAGED / "hook.py"
