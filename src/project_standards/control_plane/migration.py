@@ -1305,6 +1305,40 @@ def _dedupe_findings(findings: list[ControlFinding]) -> tuple[ControlFinding, ..
     return tuple(sort_findings(unique.values()))
 
 
+def _bounded_orphan_findings(
+    reports: tuple[MigrationReport, ...],
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+    replacement_targets: frozenset[str],
+) -> list[ControlFinding]:
+    findings: list[ControlFinding] = []
+    for report in reports:
+        payload = payloads[(report.package.standard_id, report.package.version.value)]
+        signatures = {signature.id: signature for signature in payload.manifest.legacy_signatures}
+        for claim in report.claims:
+            signature = signatures.get(claim.signature_id)
+            if (
+                claim.disposition is not LegacyDisposition.REMOVE
+                or signature is None
+                or signature.kind is not LegacySignatureKind.BOUNDED_BLOCK
+                or claim.target.original in replacement_targets
+            ):
+                continue
+            # Without a replacement target, the removal fallback would delete
+            # consumer bytes outside the recognized block along with the block.
+            findings.append(
+                _finding(
+                    "CP-MIGRATION-BOUNDED-ORPHAN",
+                    path=claim.target.original,
+                    identity=claim.signature_id,
+                    standard_id=report.package.standard_id,
+                    version=report.package.version.value,
+                    message="bounded legacy content has no safe replacement target",
+                    hint="add a replacement that preserves content outside the managed block",
+                )
+            )
+    return findings
+
+
 def _removal_actions(
     reports: tuple[MigrationReport, ...],
     replacement_targets: frozenset[str] = frozenset(),
@@ -1540,11 +1574,13 @@ def _plan_legacy_migration(
         )
     )
     findings.extend(reconciliation.findings)
+    replacement_targets = frozenset(target.target for target in reconciliation.targets)
+    if reconciliation.applicable and not any(finding.severity == "error" for finding in findings):
+        findings.extend(_bounded_orphan_findings(ordered_reports, payloads, replacement_targets))
     ordered_findings = _dedupe_findings(findings)
     applicable = reconciliation.applicable and not any(
         finding.severity == "error" for finding in ordered_findings
     )
-    replacement_targets = frozenset(target.target for target in reconciliation.targets)
     removals = _removal_actions(ordered_reports, replacement_targets) if applicable else ()
     legacy_preconditions = tuple(
         (path, _digest(content)) for path, content in sorted(legacy_files.items())

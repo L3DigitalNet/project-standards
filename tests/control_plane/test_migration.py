@@ -1026,6 +1026,101 @@ def test_apply_legacy_migration_refuses_a_stale_preview_without_writing(
     assert (repo / ".project-standards.yml").exists()
 
 
+def test_bounded_block_without_replacement_target_never_removes_whole_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.providers as provider_module
+
+    base = installed_distribution(tmp_path)
+    installed = base.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse("legacy-bounded.md")
+    begin = "<!-- BEGIN legacy alpha -->"
+    end = "<!-- END legacy alpha -->"
+    body = b"managed body\n"
+    body_digest = Sha256Digest(f"sha256:{hashlib.sha256(body).hexdigest()}")
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-alpha",
+            "kind": "bounded-block",
+            "format": "markdown",
+            "targets": [target.original],
+            "begin": begin,
+            "end": end,
+            "known_content_digests": [body_digest.value],
+        }
+    )
+    changed_alpha = InstalledPayload(
+        alpha.root,
+        alpha.manifest.model_copy(update={"legacy_signatures": (signature,)}),
+        alpha.integrity,
+    )
+    changed = InstalledCatalog(
+        installed.source,
+        installed.families,
+        tuple(changed_alpha if payload is alpha else payload for payload in installed.payloads),
+    )
+    distribution = cast(
+        InstalledDistribution,
+        _FixtureDistribution(changed, base.consumer_catalog("5")),
+    )
+    original_invoke = provider_module.invoke_provider
+
+    def bounded_remove(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.operation is not ProviderOperation.MIGRATE:
+            return original_invoke(invocation)
+        return ProviderResult(
+            effect=ProviderEffect.MIGRATION_REPORT,
+            migration_report=MigrationReport(
+                schema_version="1.0",
+                package=MigratedPackage.model_validate(
+                    {
+                        "standard_id": "alpha",
+                        "version": "2.0",
+                        "selector": "latest",
+                        "config": {"extension_path": "config/alpha-options.toml"},
+                        "recognized_settings": ["/alpha/enabled"],
+                    }
+                ),
+                claims=(
+                    LegacyClaim.model_validate(
+                        {
+                            "signature_id": signature.id,
+                            "target": target.original,
+                            "observed_digest": body_digest.value,
+                            "ownership": "managed",
+                            "disposition": "remove",
+                        }
+                    ),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(provider_module, "invoke_provider", bounded_remove)
+    repo = _legacy_repo(tmp_path)
+    legacy_path = repo / target.original
+    surrounding = b"consumer before\nconsumer after\n"
+    original = (
+        b"consumer before\n" + begin.encode() + b"\n" + body + end.encode() + b"\nconsumer after\n"
+    )
+    legacy_path.write_bytes(original)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.planner.retired_content == ((target, surrounding),)
+    assert legacy_path.read_bytes() == original
+    assert "CP-MIGRATION-BOUNDED-ORPHAN" in _finding_codes(plan)
+    assert not plan.applicable
+    assert not any(
+        action.kind is ActionKind.REMOVE
+        and action.target == target.original
+        and action.adapter == "whole-file"
+        and action.scope == "$file"
+        for action in plan.actions
+    )
+
+
 def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_update(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
