@@ -8,3 +8,5 @@ name: Validate project standards
   push:
     branches:
       - main
+permissions:
+  contents: read

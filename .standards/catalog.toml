@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.1.0"
-digest = "sha256:d232a831df1880e796ae7d407ef28368b4d9c97aca504030846f3f647d38e6d6"
+digest = "sha256:c5753007896b4b3bcb6f080b07e5082a72c84a3991cb1d0cd358325ca443d1ae"
 
 [standards.adr]
 status = "active"
@@ -44,14 +44,19 @@ payload_digest = "sha256:a6aa0b4a9e0f2247a0795dac3073a55e72d9047581493e1326eeb42
 
 [standards.markdown-frontmatter]
 status = "active"
-available = ["1.2"]
-default = "1.2"
+available = ["1.2", "1.3"]
+default = "1.3"
 candidates = []
 
 [standards.markdown-frontmatter.versions."1.2"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:e1e2ac7d41fb2b7be8772717292d5d8afadcbe878a70d562e82d7f4c1bdd606c"
+
+[standards.markdown-frontmatter.versions."1.3"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:4dafc36403191b7f88999d3ff50e79e02faf572498e7e4a18b69e6a24d9b993d"
 
 [standards.markdown-tooling]
 status = "active"

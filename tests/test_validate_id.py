@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.validate_id as validate_id_module
 from project_standards.validate_id import (
     _replace_frontmatter_id,  # pyright: ignore[reportPrivateUsage]
     check_file,
@@ -26,6 +27,15 @@ from project_standards.validate_id import (
     slugify,
     validate_id,
 )
+
+
+def test_adr_id_re_public_alias_retains_private_payload_api() -> None:
+    public_alias = getattr(validate_id_module, "ADR_ID_RE", None)
+    private_alias = getattr(validate_id_module, "_ADR_ID_RE", None)
+
+    assert public_alias is not None
+    assert public_alias is private_alias
+
 
 # ---------------------------------------------------------------------------
 # Helpers

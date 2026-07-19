@@ -137,6 +137,10 @@ _KEBAB_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # in this one regex.
 _ADR_ID_RE = re.compile(r"^adr-[0-9]{4,}-[a-z0-9]+(-[a-z0-9]+)+$")
 
+# Immutable payload 1.2 imports the private name, while later payloads use this
+# stable public contract. Both names must continue to resolve to the same regex.
+ADR_ID_RE = _ADR_ID_RE
+
 
 def _validate_adr_id(doc_id: str) -> list[str]:
     """Return violation messages for an ADR id; empty list means valid.

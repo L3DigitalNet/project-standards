@@ -66,13 +66,52 @@ _LEGACY_WORKFLOW = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/validate-markdown-frontmatter.yml"
 )
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
-_PAYLOAD = _FAMILY / "versions/1.2"
+_PAYLOAD = _FAMILY / "versions/1.3"
 _MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _ZERO_DIGEST = f"sha256:{'0' * 64}"
 _HISTORICAL_WORKFLOW_DIGEST = (
     "sha256:82a9ef1cb1e4f48eddc4a6cc43f317ba93aebe6d485fed6d8736e8e9e0aa279e"
 )
 _CURRENT_WORKFLOW_DIGEST = "sha256:09eb0cc6d6fe20a12b7c7cc5022f9a902ed29d0cdf35ef42c8685c5c93cea036"
+
+
+def test_frontmatter_1_3_payload_api_uses_public_validator_names() -> None:
+    provider = _PAYLOAD / "providers/frontmatter.py"
+
+    assert provider.is_file()
+    source = provider.read_text(encoding="utf-8")
+    assert "ADR_ID_RE" in source
+    assert "reference_values" in source
+    assert "_ADR_ID_RE" not in source
+    assert "_ref_values" not in source
+    assert "reportPrivateUsage" not in source
+
+
+def test_frontmatter_1_3_managed_caller_permissions_are_read_only() -> None:
+    manifest_path = _PAYLOAD / "payload.toml"
+
+    assert manifest_path.is_file()
+    manifest = load_payload_manifest(manifest_path)
+    permission = next(
+        contribution
+        for contribution in manifest.contributions
+        if contribution.id == "workflow-permissions"
+    )
+    assert permission.scope == "key:/permissions"
+    assert permission.policy.value == "managed"
+    assert permission.source is not None
+    permission_source = yaml.safe_load((_PAYLOAD / permission.source.original).read_text())
+    expected = {"permissions": {"contents": "read"}}
+    assert permission_source == expected
+
+    caller = yaml.safe_load(
+        (_PAYLOAD / "validate-markdown-frontmatter.caller.yml").read_text(encoding="utf-8")
+    )
+    assert caller["permissions"] == expected["permissions"]
+    live = yaml.safe_load(
+        (_ROOT / ".github/workflows/validate-standards.yml").read_text(encoding="utf-8")
+    )
+    assert live["permissions"] == expected["permissions"]
 
 
 def _snapshot_document(path: str, content: bytes) -> JsonObject:
@@ -146,8 +185,8 @@ def _isolated_repository(tmp_path: Path) -> Path:
     clone_demo_family(root, "markdown-tooling")
     family = root / "standards/markdown-frontmatter"
     shutil.copytree(_FAMILY, family)
-    manifest = load_payload_manifest(family / "versions/1.2/payload.toml")
-    integrity = validate_payload_integrity(family / "versions/1.2", manifest)
+    manifest = load_payload_manifest(family / "versions/1.3/payload.toml")
+    integrity = validate_payload_integrity(family / "versions/1.3", manifest)
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -158,8 +197,8 @@ summary = "Canonical metadata, IDs, references, and formatting for managed Markd
 status = "active"
 
 [[versions]]
-version = "1.2"
-payload = "versions/1.2/payload.toml"
+version = "1.3"
+payload = "versions/1.3/payload.toml"
 digest = "{integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -188,7 +227,7 @@ catalog_major = 5
 
 [[packages]]
 id = "markdown-frontmatter"
-version = "1.2"
+version = "1.3"
 digest = "{integrity.aggregate_digest.value}"
 role = "default"
 ''',
@@ -216,7 +255,7 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
     payload = family.payloads[0]
     schema = load_option_schema(_PAYLOAD, payload.manifest)
 
-    assert payload.manifest.payload.version.value == "1.2"
+    assert payload.manifest.payload.version.value == "1.3"
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
         "schema": "markdown-frontmatter",
@@ -259,7 +298,7 @@ def test_package_selector_and_contract_selector_are_independent() -> None:
             "standards": {
                 "markdown-frontmatter": {
                     "enabled": True,
-                    "version": "1.2",
+                    "version": "1.3",
                     "config": {"contract_version": "1.1"},
                 }
             },
@@ -268,7 +307,7 @@ def test_package_selector_and_contract_selector_are_independent() -> None:
 
     package = desired.standards["markdown-frontmatter"]
     assert not isinstance(package.version, str)
-    assert package.version.value == "1.2"
+    assert package.version.value == "1.3"
     assert package.config["contract_version"] == "1.1"
 
 
@@ -429,6 +468,7 @@ def test_frontmatter_declares_version_selected_validate_inspect_and_fix_provider
         "artifact:skill-openai",
         "config:*",
         "contribution:workflow-frontmatter-job",
+        "contribution:workflow-permissions",
     ]
 
 
@@ -1209,7 +1249,7 @@ def test_frontmatter_source_markdown_links_are_relocatable() -> None:
 def test_frontmatter_versioning_distinguishes_package_contract_and_tool_release() -> None:
     readme = (_PAYLOAD / "README.md").read_text(encoding="utf-8")
 
-    assert "Package payload `1.2`" in readme
+    assert "Package payload `1.3`" in readme
     assert "Document contract `1.1`" in readme
     assert "Tool/catalog release `5.x`" in readme
     assert "Two version numbers are in play" not in readme
@@ -1280,7 +1320,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/markdown-frontmatter/1.2/"
+    prefix = "project_standards/payloads/markdown-frontmatter/1.3/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)

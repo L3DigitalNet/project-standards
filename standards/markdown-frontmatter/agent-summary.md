@@ -1,6 +1,6 @@
 # Markdown Frontmatter family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`markdown-frontmatter@1.2`](versions/1.2/agent-summary.md). Its [versioned standard](versions/1.2/README.md) wins over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`markdown-frontmatter@1.3`](versions/1.3/agent-summary.md). Its [versioned standard](versions/1.3/README.md) wins over this mutable navigation summary.
 
 - Apply metadata rules only to paths selected by the package options in `.standards/config.toml`.
 - Keep the independent package version and document `contract_version` distinct.
@@ -9,4 +9,4 @@ Current authority is the Catalog 5 consumer payload [`markdown-frontmatter@1.2`]
 - Use the package's selected validation and fix providers; custom schemas remain consumer-owned inputs and intentionally skip bundled authoring transforms.
 - Treat Markdown Tooling and ADR as companions, not implicit dependencies.
 
-Enable `markdown-frontmatter@1.2`, preview with `project-standards reconcile`, and apply only after reviewing the plan. See the [current adoption guide](adopt.md) for the complete procedure.
+Enable `markdown-frontmatter@1.3`, preview with `project-standards reconcile`, and apply only after reviewing the plan. See the [current adoption guide](adopt.md) for the complete procedure.

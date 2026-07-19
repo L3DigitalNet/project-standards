@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.validate_references as validate_references_module
 from project_standards.validate_references import (
     build_index,
     check_adr_sequence,
@@ -12,6 +13,14 @@ from project_standards.validate_references import (
     check_reciprocity,
     check_references,
 )
+
+
+def test_reference_values_public_alias_retains_private_payload_api() -> None:
+    public_alias = getattr(validate_references_module, "reference_values", None)
+    private_alias = getattr(validate_references_module, "_ref_values", None)
+
+    assert public_alias is not None
+    assert public_alias is private_alias
 
 
 def _write(p: Path, **fm: str) -> None:

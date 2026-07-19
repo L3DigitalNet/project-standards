@@ -1,0 +1,1 @@
+../../../../../../standards/markdown-frontmatter/versions/1.3/templates/note.md

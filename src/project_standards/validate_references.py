@@ -151,6 +151,11 @@ def _ref_values(meta: dict[str, Any]) -> list[str]:
     return values
 
 
+# Immutable payload 1.2 imports the private name, while later payloads use this
+# stable public contract. Both names must continue to resolve to the same function.
+reference_values = _ref_values
+
+
 def _resolves(ref: str, index: Index, repo_root: Path) -> bool:
     if ref in index.by_id:  # exact id match
         return True
