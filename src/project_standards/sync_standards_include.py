@@ -91,13 +91,22 @@ def update_include_list(standards_path: Path, new_patterns: list[str]) -> None:
     """
     content = standards_path.read_text(encoding="utf-8")
     new_items = "".join(f'      - "{p}"\n' for p in new_patterns)
-    # Match the include: header and all immediately-following 6-space-indented lines.
-    updated = re.sub(
-        r"(    include:\n)((?:      [^\n]*\n)*)",
-        f"    include:\n{new_items}",
+    updated, replacements = re.subn(
+        (
+            r"(?m)(^markdown:\n"
+            r"(?:^[ \t]*(?:#[^\n]*)?\n|"
+            r"^  (?!frontmatter:|[ \t]*(?:#|$))[^\n]*\n)*"
+            r"^  frontmatter:\n"
+            r"(?:^[ \t]*(?:#[^\n]*)?\n|"
+            r"^    (?!include:|[ \t]*(?:#|$))[^\n]*\n)*"
+            r"^    include:\n)"
+            r"(?:^      [^\n]*\n)*"
+        ),
+        lambda match: match.group(1) + new_items,
         content,
+        count=1,
     )
-    if updated == content and not re.search(r"    include:\n", content):
+    if replacements == 0:
         sys.exit(
             f"error: could not locate 'include:' block in {standards_path}"
             " — only block-style YAML is supported"

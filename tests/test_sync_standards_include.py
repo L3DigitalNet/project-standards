@@ -149,6 +149,77 @@ def test_preserves_exclude_block(tmp_path: Path) -> None:
     assert '      - "README.md"\n' in cfg.read_text()
 
 
+def test_update_include_list_scoped_frontmatter_preserves_backslash(
+    tmp_path: Path,
+) -> None:
+    content = (
+        "tool:\n"
+        "  options:\n"
+        "    include:\n"
+        '      - "tool-unchanged"\n'
+        "markdown:\n"
+        "  frontmatter:\n"
+        "    include:\n"
+        '      - "old-frontmatter"\n'
+        "    exclude:\n"
+        '      - "README.md"\n'
+        "other:\n"
+        "  nested:\n"
+        "    include:\n"
+        '      - "other-unchanged"\n'
+    )
+    expected = content.replace(
+        '    include:\n      - "old-frontmatter"\n',
+        '    include:\n      - "docs\\x.md"\n',
+        1,
+    )
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(content)
+
+    update_include_list(cfg, [r"docs\x.md"])
+
+    assert cfg.read_text() == expected
+
+
+def test_update_include_list_traverses_blank_lines_comments_and_nested_siblings(
+    tmp_path: Path,
+) -> None:
+    content = (
+        "tool:\n"
+        "  include:\n"
+        '    - "tool-unchanged"\n'
+        "markdown:\n"
+        "\n"
+        "# markdown comment\n"
+        "  rendering:\n"
+        "    include:\n"
+        '      - "rendering-unchanged"\n'
+        "  frontmatter:\n"
+        "\n"
+        "# frontmatter comment\n"
+        "    required: true\n"
+        "    nested:\n"
+        "      include:\n"
+        '        - "nested-unchanged"\n'
+        "    include:\n"
+        '      - "old-frontmatter"\n'
+        "other:\n"
+        "  include:\n"
+        '    - "other-unchanged"\n'
+    )
+    expected = content.replace(
+        '    include:\n      - "old-frontmatter"\n',
+        '    include:\n      - "CHANGELOG.md"\n',
+        1,
+    )
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(content)
+
+    update_include_list(cfg, ["CHANGELOG.md"])
+
+    assert cfg.read_text() == expected
+
+
 def test_empties_include_list(tmp_path: Path) -> None:
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text(_YAML_TEMPLATE)
