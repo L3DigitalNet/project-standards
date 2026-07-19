@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NoReturn
 
+import pytest
+
+import project_standards.control_plane.state as state_module
 from project_standards.control_plane.codec import (
     bind_catalog_digest,
     render_catalog,
@@ -83,6 +87,35 @@ def test_detects_uninitialized_and_legacy_only_repositories(tmp_path: Path) -> N
     (tmp_path / ".project-standards.yml").write_text("version: 1\n", encoding="utf-8")
     state = detect_control_plane_state(tmp_path, tool_release="5.0.0")
     assert state.kind is StateKind.LEGACY_ONLY
+
+
+@pytest.mark.parametrize(
+    ("legacy", "expected"),
+    [
+        pytest.param(False, StateKind.UNINITIALIZED, id="uninitialized"),
+        pytest.param(True, StateKind.LEGACY_ONLY, id="legacy-only"),
+    ],
+)
+def test_detect_control_plane_state__deletion_before_lock__classifies_remaining_authority(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    legacy: bool,
+    expected: StateKind,
+) -> None:
+    control = tmp_path / ".standards"
+    control.mkdir()
+    if legacy:
+        (tmp_path / ".project-standards.yml").write_text("version: 1\n", encoding="utf-8")
+
+    def delete_control_directory(_repo: Path, _mode: object) -> NoReturn:
+        control.rmdir()
+        raise ValueError("control-plane directory does not exist")
+
+    monkeypatch.setattr(state_module, "control_plane_lock", delete_control_directory)
+
+    state = detect_control_plane_state(tmp_path, tool_release="5.0.0")
+
+    assert state.kind is expected
 
 
 def test_detects_incomplete_dual_and_malformed_authority(tmp_path: Path) -> None:

@@ -1070,7 +1070,12 @@ def _target_action(
             kind = ActionKind.NOOP
     else:
         kind = ActionKind.UPDATE
-    after = None if kind is ActionKind.REMOVE else content_digest(rendered).value
+    after = (
+        None
+        if kind is ActionKind.REMOVE
+        or (kind is ActionKind.NOOP and entry.kind is EntryKind.MISSING)
+        else content_digest(rendered).value
+    )
     return ControlAction(
         kind=kind,
         target=entry.path.original,
@@ -1267,7 +1272,9 @@ def _render_targets(
         )
         actions.append(action)
         unit_plans.extend(target_units)
-        mode = desired[0].mode if adapter_kind is AdapterKind.WHOLE_FILE and desired else entry.mode
+        mode = entry.mode
+        if adapter_kind is AdapterKind.WHOLE_FILE and desired and desired[0].mode is not None:
+            mode = desired[0].mode
         targets.append(PlannedTarget(target, rendered, mode))
     ordered_units = tuple(
         sorted(

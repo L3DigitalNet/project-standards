@@ -217,6 +217,35 @@ def test_reconciliation_default_mode_is_independent_of_process_umask(
     assert stat.S_IMODE((repo / "nested/beta.txt").stat().st_mode) == 0o644
 
 
+def test_apply_create__missing_target_with_undeclared_mode__uses_default_mode(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "tool",
+                "target": "tool.sh",
+                "content": b"#!/bin/sh\n",
+                "mode": None,
+            }
+        ],
+    )
+    resolution = resolution_request((payload,))
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    plan = plan_reconciliation(planner)
+
+    result = _apply(planner, plan)
+
+    assert result.success
+    assert stat.S_IMODE((repo / "tool.sh").stat().st_mode) == 0o644
+
+
 def test_verification_receives_lock_declared_referenced_inputs(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     control = repo / ".standards"

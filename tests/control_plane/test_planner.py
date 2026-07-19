@@ -205,6 +205,48 @@ def test_whole_file_mode_only_change_is_an_update(tmp_path: Path) -> None:
     assert plan.targets[0].mode == "0755"
 
 
+def test_whole_file_update__undeclared_mode__preserves_observed_mode(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    path = repo / "tool.sh"
+    installed = b"#!/bin/sh\necho old\n"
+    desired = b"#!/bin/sh\necho new\n"
+    path.write_bytes(installed)
+    path.chmod(0o755)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "tool",
+                "target": "tool.sh",
+                "content": desired,
+                "mode": None,
+            }
+        ],
+    )
+    lock = previous_lock(
+        {
+            **locked_unit(
+                path="tool.sh",
+                adapter="whole-file",
+                scope="$file",
+                owners=["demo"],
+                semantic_digest=digest(installed),
+                content_digest=digest(installed),
+            ),
+            "mode": None,
+        }
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
+
+    assert plan.applicable
+    assert _action(plan, "tool.sh").kind is ActionKind.UPDATE
+    target = next(item for item in plan.targets if item.target == "tool.sh")
+    assert target.mode == "0755"
+
+
 @pytest.mark.parametrize("enabled", [True, False])
 def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
     tmp_path: Path,
@@ -490,7 +532,7 @@ def test_disabled_package_removes_created_and_preserves_adopted_file(
     assert _action(plan, "tool.txt").kind is expected
 
 
-def test_disabled_package_with_already_missing_file_only_updates_lock(
+def test_disabled_package_with_already_missing_target_only_updates_lock(
     tmp_path: Path,
 ) -> None:
     repo = tmp_path / "repo"
@@ -525,7 +567,9 @@ def test_disabled_package_with_already_missing_file_only_updates_lock(
     )
 
     assert plan.applicable
-    assert _action(plan, "tool.txt").kind is ActionKind.NOOP
+    action = _action(plan, "tool.txt")
+    assert action.kind is ActionKind.NOOP
+    assert action.after_digest is None
     assert plan.next_lock.artifacts == []
 
 

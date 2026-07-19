@@ -261,6 +261,8 @@ def detect_control_plane_state(repo: Path, *, tool_release: str) -> ControlPlane
                 with control_plane_lock(normalized, LockMode.READ) as locked:
                     return _load_initialized_state(normalized, tool, locked)
             except ValueError:
+                if not control.exists() and not control.is_symlink():
+                    continue
                 return _state(
                     StateKind.MALFORMED,
                     normalized,
