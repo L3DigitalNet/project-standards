@@ -10,7 +10,7 @@ The goal is to close every review finding with an evidence-backed final disposit
 
 ## Approved approach
 
-Use one compatibility-first correction train grouped by subsystem. Shared helpers are allowed only when two or more accepted findings require the same behavior. Each implementation task starts and ends with a finding-to-diff scope check and follows RED-GREEN-REFACTOR.
+Use one compatibility-first correction train grouped by subsystem. Shared helpers are allowed only when the accepted ledger requires identical behavior at two or more explicitly named correction sites, whether within one finding or across findings. Each helper is limited to those sites; adjacent cleanup, generalized capabilities, and new public surfaces are out of scope. Each implementation task starts and ends with a finding-to-diff scope check and follows RED-GREEN-REFACTOR.
 
 The rejected alternatives are:
 
@@ -66,7 +66,7 @@ The following 55 findings are accepted with the review's essential remedy and bo
 | --- | --- |
 | F-003 | Add a versioned `create_only_absences` lock partition instead of retaining a stale `LockedUnit`. |
 | F-004, F-057 | Emit stable `CP-BUSY`, exit 1, and matching JSON across initialized command surfaces. Do not broadly reclassify render failures. |
-| F-006 | Keep Python 3.14 PEP 758 syntax. State that consumer `python3` must resolve to 3.14 or newer in current Agent Handoff and authoring contracts. |
+| F-006 | Keep Python 3.14 PEP 758 syntax. Agent Handoff 1.2 `README.md` and `adopt.md`, the maintained Agent Handoff specification, and the authoring contract state that the shebang-resolved consumer `python3` must be 3.14 or newer. |
 | F-010 | Remove unenforced shape knobs from the mutable model and Agent Handoff 1.2 rather than adding stricter validation. |
 | F-011 | Treat a successfully emitted legacy inventory as report success: return 0 in human and JSON modes on selected and fallback paths, while retaining findings in the content. |
 | F-019 | Use a lexical, string-aware JSONC sanitizer; do not use a trailing-comma regex that can alter strings. |
@@ -98,10 +98,10 @@ The following 55 findings are accepted with the review's essential remedy and bo
 | F-086 | Keep major tags for GitHub-owned actions. Add only the missing `# v8.3.2` comment to the already-SHA-pinned CLI Documentation `setup-uv` line. |
 | F-090 | Share option/ID resolution and reuse the already-loaded legacy configuration during self-validation. |
 | F-094 | Collect H1-H6 only for anchor slugs, retain H2-H4 section parsing, and reuse F-009 fence masking. |
-| F-096 | Document that declared artifact mode is the consumer contract and source-tree executable bits are not; do not mutate released file modes. |
+| F-096 | Document that declared artifact mode is the consumer contract and source-tree executable bits are not. Keep released modes unchanged; Agent Handoff 1.2 stores its hook source as payload data mode `100644` while retaining managed artifact `mode = "0755"`. |
 | F-097 | Add the 42 missing `-> None` annotations and remove the filename comment. Do not add `from __future__ import annotations` under Python 3.14. |
 | F-098 | Anchor the genuine repository fixtures in all 12 listed modules, not the review title's ten, while preserving deliberately relative generated-code paths. |
-| F-100 | Pass the exact prebuilt candidate wheel into compatibility CI and publish that managed workflow through Python Tooling 1.2. |
+| F-100 | Export the exact wheel already built by this repository's consumer-owned `.github/workflows/check.yml` through `PROJECT_STANDARDS_COMPATIBILITY_WHEEL` before its compatibility phase. This is repo-local CI only and does not cut a Python Tooling payload. |
 
 ### Final no-change dispositions
 
@@ -109,9 +109,9 @@ These findings are closed, not deferred, and create no future TODO item:
 
 | Finding | Final disposition |
 | --- | --- |
-| F-020 | Confirmed inconsistency, but aligning check/write changes a currently successful default outcome and requires a major release. Documentation cannot contradict the current parity contract. No 5.1 change. |
+| F-020 | Confirmed contract defect. Aligning `--check` with `--write` changes a currently successful check to failure and requires a major release. The offered `scaffold=False` comment/test alternative preserves the defect while declaring behavior contrary to the maintained parity contract and paired hooks. No code, comment, test, or documentation change in 5.1. |
 | F-077 | Rejected. Exit 1 is the explicit per-tool contract for both sync tools; exit 2 would be a policy change. |
-| F-087 | Rejected. The underscore name is cosmetic and cannot change declared provider resources; immutable payload churn would be unrelated cleanup. |
+| F-087 | Rejected. Provider entrypoints are invoked positionally, and payload metadata—not Python parameter names—declares resources. The underscore names have no runtime, schema, resource, or output effect; renaming them would be cosmetic cleanup even inside otherwise-required payload cuts. |
 | F-095 | Rejected. The provider output schema already makes `found=true` with missing Markdown unreachable at the authoritative boundary. |
 
 ## Architecture and data flow
@@ -130,7 +130,9 @@ review finding
 
 F-003 cannot reuse a prior `LockedUnit`: its required semantic and content hashes would claim absent bytes still exist. Schema 1.1 adds `create_only_absences`, whose records contain only path, adapter, normalized scope, owners, shared identity, package versions, and provenance. Absence and live-artifact natural keys are unique across both partitions.
 
-The reader accepts schema 1.0 and treats the new partition as empty. Bootstrap and successful mutation write canonical 1.1. The planner moves a selected create-only unit from `artifacts` to `create_only_absences` when the consumer removes it, refreshes owner/version facts from the current selection, and never resurrects it on later reconciliations. If the consumer recreates the unit it can return to the live partition. Disabling the package relinquishes the absence record.
+The lock schema version is recorded as `[project_standards].schema_version = "1.1"` in `.standards/lock.toml`; config and catalog schemas remain at 1.0. The Project Standards 5.1 reader accepts lock schemas 1.0 and 1.1 and treats the new partition as empty when reading 1.0. Bootstrap and successful mutation write canonical 1.1. Project Standards 5.0.x rejects a 1.1 lock, so downgrade after a 1.1 write is outside the supported contract and requires restoring the pre-upgrade lock from version control.
+
+The planner moves a selected create-only unit from `artifacts` to `create_only_absences` when the consumer removes it, refreshes owner/version facts from the current selection, and never resurrects it on later reconciliations. If the consumer recreates the unit it can return to the live partition. Disabling the package relinquishes the absence record.
 
 For a 5.0.x lock already affected by F-003, infer absence only when the lock's applied package version and effective configuration digest still match the current resolution and the create-only unit is missing. A changed package or configuration is not guessed into a tombstone.
 
@@ -138,10 +140,10 @@ For a 5.0.x lock already affected by F-003, infer absence only when the lock's a
 
 Shared code is limited to repeated defects already in the ledger:
 
-- a string-aware JSONC sanitizer for F-019 and mutable runtime inspection;
+- one internal mutable-runtime, string-aware JSONC sanitizer for the F-019 sync-tool parse paths and the F-024 runtime mirror at `src/project_standards/agent_handoff/validation.py`; Agent Handoff 1.2 implements equivalent semantics with its own local lexer and imports neither this helper nor `control_plane.adapters.jsonc`;
 - one fence-masked structural view for F-009, F-027, and F-094 while preserving original text for output and byte budgets;
 - typed error classes for F-004, F-050, F-057, F-059, and F-084;
-- one control-plane byte-digest function for F-047;
+- one internal `control_plane.codec.content_digest` for F-047, limited to the six typed duplicate wrappers in `planner.py`, `snapshot.py`, `adapters/whole_file.py`, `migration.py`, `providers.py`, and `adapters/markdown.py`;
 - canonical catalog discovery and one loaded package repository for F-079 and F-085; and
 - descriptor-relative no-follow/no-clobber filesystem helpers for F-040, F-055, and F-088 where their existing writers share the same invariant.
 
@@ -151,20 +153,22 @@ No helper becomes public unless a released payload already requires a stable imp
 
 Released payload directories remain byte- and mode-immutable. Catalog 5 keeps every old version advertised and advances only compatible ordinary defaults.
 
-| New payload | Findings that require it |
+| New payload | Review corrections carried by it |
 | --- | --- |
-| `agent-handoff@1.2` | F-006, F-007, F-010, F-024, F-027, plus synchronized runtime prerequisites |
+| `agent-handoff@1.2` | F-006 Python 3.14+ prerequisite text in `README.md` and `adopt.md`; F-007; F-010; F-024's self-contained JSONC lexer; F-027 |
 | `project-spec@1.2` | F-002 reusable-workflow input handling |
 | `markdown-frontmatter@1.3` | F-025 public imports and F-034 managed caller permissions |
-| `python-tooling@1.2` | F-100 exact candidate-wheel compatibility workflow |
 | `cli-documentation@1.2` | accepted F-086 setup-uv version comment |
-| `standard-bundle-authoring@2.2` | F-006 Python floor and F-096 executable-mode contract |
+| `standard-bundle-authoring@2.2` | F-006 Python floor and F-096 executable-mode contract; after this cut, F-069 synchronizes `AGENTS.md` and `standards/README.md` to name 2.2 |
+
+No Python Tooling payload is cut because F-100 changes only this repository's consumer-owned CI.
 
 No Markdown Tooling payload is cut because the rejected action-pinning proposal is the only review item that would require one.
 
 ## Compatibility and error behavior
 
 - Python 3.14 or newer is the consumer floor. Current PEP 758 exception syntax remains canonical, and tests do not add future-annotation semantics.
+- F-002 restores the documented `standards-ref` and `strict-lint` inputs. `strict-lint: false` can only relax failures; an explicit `standards-ref` intentionally selects different validator bytes and may therefore change results. Tests cover exact tag or SHA selection and false boolean handling.
 - Valid, previously-passing consumer documents and workflows must not newly fail. Corrections that reject malformed provider output, invalid manifests, unsafe concurrent publication, or repository-authoring errors do not tighten a valid consumer document contract.
 - `legacy-report` exit 0 means the inventory was emitted, not that migration is complete. The report retains error findings; only clean validation establishes migration.
 - Anchor-bearing frontmatter is preserved with a warning and success rather than rewritten unsafely or newly failed.
@@ -197,7 +201,7 @@ Release classification must be `minor`, and the prepared tool version is 5.1.0. 
 
 - Every F-001 through F-100 appears in exactly one direct, adjusted, or final no-change disposition.
 - No released payload bytes or modes changed in place.
-- The six new payloads reconstruct exactly, their digests and projections match, and old exact selectors remain available.
+- The five new payloads reconstruct exactly, their digests and projections match, and old exact selectors remain available.
 - Consumer-lock 1.0 reads successfully and the first successful write produces canonical 1.1 without resurrecting deleted create-only content.
 - All accepted focused regressions and the complete retained gate pass from the candidate wheel.
 - The final diff contains only review corrections, required generated consequences, and synchronized contract/release documentation.

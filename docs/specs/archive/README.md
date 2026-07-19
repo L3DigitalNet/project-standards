@@ -1,6 +1,6 @@
 # Specification and Design Archive
 
-Superseded specifications and historical design documents for `project-standards`. Maintained Project Specification Standard documents live in [`../`](../README.md). Design documents here are informal historical records — they are not project-spec-conformant and are outside the `spec validate` scope by design.
+Superseded specifications and informal design records for `project-standards`, including owner-approved designs awaiting implementation. Maintained Project Specification Standard documents live in [`../`](../README.md). Design documents here are not project-spec-conformant and are outside the `spec validate` scope by design.
 
 ## Superseded specifications
 
@@ -8,7 +8,7 @@ Superseded specifications and historical design documents for `project-standards
 | --- | --- | --- | --- |
 | 2026-07-07 | [SPEC-BA01 — Standard Bundle Authoring](2026-07-07-standard-bundle-authoring-standard.md) | superseded by SPEC-BA02 | Versioned requirements and implementation history for the V1 authoring contract |
 
-## Historical design documents
+## Design documents
 
 | Date | Design | Outcome | What it covers |
 | --- | --- | --- | --- |
