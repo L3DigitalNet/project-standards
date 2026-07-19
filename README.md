@@ -42,7 +42,7 @@ project-standards/
 │   ├── cli-documentation/     #   family index + immutable 1.1 payload
 │   ├── agent-handoff/         #   family index + immutable 1.1 payload
 │   ├── python-coding/         #   reference-only family + immutable 0.5 payload
-│   └── standard-bundle-authoring/ # internal family + immutable 2.0 payload
+│   └── standard-bundle-authoring/ # internal family + immutable 2.0/2.1 payloads
 ├── meta/                      # repository policy, including release/versioning
 ├── src/project_standards/     # CLI/control plane + installed package projections
 ├── tests/                     # implementation, package, compatibility, and coherence tests
@@ -123,9 +123,9 @@ Code-shape and agent-behavior rules for Python — the reference companion to Py
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.0`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.1`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/versions/2.0/README.md`](standards/standard-bundle-authoring/versions/2.0/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.1/README.md`](standards/standard-bundle-authoring/versions/2.1/README.md)
 
 ## Consuming the standards
 
@@ -169,6 +169,20 @@ Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an imm
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 
+### Pre-commit hooks
+
+[`.pre-commit-hooks.yaml`](.pre-commit-hooks.yaml) exposes the standalone frontmatter tools as [pre-commit](https://pre-commit.com) hooks: `format-frontmatter-fix` / `format-frontmatter-check`, `validate-id-fix` / `validate-id-check`, `validate-frontmatter`, and `validate-references`. The per-file hooks receive only staged Markdown; `validate-references` sets `pass_filenames: false` because cross-file reference checking needs the whole repository.
+
+```yaml
+repos:
+  - repo: https://github.com/L3DigitalNet/project-standards
+    rev: v5.0.1 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    hooks:
+      - id: format-frontmatter-check
+      - id: validate-id-check
+      - id: validate-frontmatter
+```
+
 ## Versioning
 
 Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but the contract is the **consuming repo's validation outcome** — a release's level reflects the worst-case impact of any change across the standard, schema, validator, and workflow.
@@ -180,7 +194,7 @@ See [`meta/versioning.md`](meta/versioning.md) for the full classification table
 
 ## Developing this repository
 
-Working on the standards or the validator itself:
+Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself:
 
 ```bash
 uv sync --dev                                                # set up the environment
