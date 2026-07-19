@@ -1,8 +1,8 @@
 name: Coherence
 
 # Behavioral proof that the shipped .markdownlint.json and .prettierrc.json are
-# co-satisfiable (markdownlint accepts Prettier's output). Needs Node (the
-# hermetic declaration/pin checks ride the normal `check` job instead).
+# co-satisfiable (markdownlint accepts Prettier's output). This separately named
+# job intentionally repeats the coherence coverage that `check` runs after npm ci.
 on:
   pull_request:
   push:

@@ -28,7 +28,7 @@ This document defines how `project-standards` is tested. It is the human-facing 
 | Goal | What it means in practice |
 | --- | --- |
 | **Protect the contract** | The schema and the shipped examples (`standards/*/examples/`) must always validate. A change that breaks them must break a test first. |
-| **Fast & hermetic** | No network, no global state, no real home directory. Everything runs against `tmp_path`. A full run (excluding packaging) is sub-second. |
+| **Isolated by default** | Tests avoid global state and real home directories by using `tmp_path`. The ordinary suite runs in minutes. Packaging, wheel, and compatibility tests shell out, and installed-wrapper qualification may need package-index access to install dependencies. |
 | **Deterministic** | Same input → same result on every supported Python (3.14+). Version-dependent behaviour (e.g. `glob` `**` semantics) is pinned by regression tests. |
 | **Behaviour over implementation** | Prefer asserting observable outputs (return values, exit codes, error strings) so refactors don't churn the suite. Reach into private helpers only when a unit is too awkward to reach through the public surface. |
 
@@ -84,11 +84,15 @@ Templates are intentionally **excluded** from dogfood validation — they carry 
 
 ### 5. Packaging — the shipped wheel
 
-`test_adopt_packaging.py` builds the wheel with `uv build` and inspects the zip to confirm that `bundles/` and all `adopt.toml` manifests are present. This is the only test that shells out — it is **slow** (several seconds). Filter it out during tight iteration:
+`test_adopt_packaging.py` builds the wheel with `uv build` and inspects the zip to confirm that `bundles/` and all `adopt.toml` manifests are present. Subprocess-heavy coverage also includes installed-wrapper qualification, the `package_compatibility/` wheel fixture, control-plane end-to-end and locking tests, coherence's Node tools, and git-backed release-baseline tests. `test_installed_wrappers.py` may need package-index access to install the wheel's dependencies.
+
+To skip tests whose names include `packaging` during a focused iteration:
 
 ```bash
 uv run pytest -k "not packaging"
 ```
+
+This name filter does not skip every wheel build or subprocess test; select the exact module or test when the focused change does not need those surfaces.
 
 Run it before releasing and after any change to `pyproject.toml`, `MANIFEST.in`, or `bundles/`.
 
@@ -102,7 +106,23 @@ When a bug is fixed, add a test that fails on the old behaviour and cite the cau
 tests/
   __init__.py
   README.md                         ← this file
-  conftest.py                       ← shared fixtures/helpers (add when a 2nd module needs them)
+  wheel_helpers.py                  ← shared wheel build/install helpers
+  standards_graph_helpers.py        ← shared graph repository fixtures
+
+  agent_handoff/                    ← Agent Handoff engine and selected-provider tests
+
+  control_plane/                    ← control-plane tests split by subsystem
+    helpers.py                      ← shared repository/distribution builders
+    planner_helpers.py              ← shared planner fixtures
+
+  package_contract/                 ← package model, graph, projection, and release tests
+    helpers.py                      ← shared package repository builders
+
+  package_compatibility/            ← cross-payload matrix and performance tests
+    conftest.py                     ← compatibility-specific pytest fixtures
+    matrix.py                       ← compatibility case inventory
+
+  coherence/                        ← Prettier/markdownlint declaration and behavior tests
 
   # Frontmatter + id validators
   test_validate_frontmatter.py      ← src/project_standards/validate_frontmatter.py
@@ -124,7 +144,7 @@ tests/
 
 **Adopt tests are split by concern, not by source module.** The adopt subpackage (`adopt/engine.py`, `adopt/manifest.py`, `adopt/errors.py`) has orthogonal concerns that would be awkward to mix in one file: functional logic, manifest parsing, path-security invariants, dogfood assertions, and a slow packaging build. Each concern gets its own module. This is the documented exception to the one-file-per-source-module rule.
 
-For all other tools: mirror `src/project_standards/`. A tool at `src/project_standards/foo.py` is tested by `tests/test_foo.py`. This convention is wired into `pyproject.toml` (`testpaths = ["tests"]`, basedpyright `include = ["src", "tests"]`). Do **not** co-locate tests under `src/project_standards/`.
+Top-level tools mirror `src/project_standards/`: a tool at `src/project_standards/foo.py` is tested by `tests/test_foo.py`. Larger subpackages use the matching test directory and split orthogonal concerns into focused modules. This convention is wired into `pyproject.toml` (`testpaths = ["tests"]`, basedpyright `include = ["src", "tests"]`). Do **not** co-locate tests under `src/project_standards/`.
 
 **Test names describe the behaviour and the expectation:** `test_invalid_doc_type_fails`, `test_missing_frontmatter_returns_2`, `test_validate_dest_rejects_traversal`. The name should read as a sentence about what the code does.
 
@@ -132,7 +152,7 @@ For all other tools: mirror `src/project_standards/`. A tool at `src/project_sta
 
 ## Fixtures & helpers
 
-Reusable building blocks live at module scope (graduate them to `conftest.py` once a second test module needs them). The validator suite establishes the patterns to copy:
+Reusable building blocks start at module scope. When multiple modules need one, move it to a focused importable helper such as `wheel_helpers.py`, `standards_graph_helpers.py`, `control_plane/helpers.py`, `control_plane/planner_helpers.py`, or `package_contract/helpers.py`. `package_compatibility/conftest.py` is reserved for compatibility-specific pytest fixtures. The validator suite establishes the patterns to copy:
 
 | Helper | Purpose |
 | --- | --- |
@@ -173,7 +193,7 @@ uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv
 uv run pytest -k frontmatter          # filter by name
 uv run pytest tests/test_adopt_cli.py::test_adopt_creates_files -v
 uv run pytest --co -q                  # list collected tests without running
-uv run pytest -k "not packaging"       # skip the slow wheel-build test
+uv run pytest -k "not packaging"       # skip tests whose names include packaging
 ```
 
 > Note: tests are **strictly typed**. basedpyright runs in `strict` mode over `tests/`, so annotate every fixture and test signature (`-> None`, typed params). This is intentional — the tests are first-class code, not throwaway scripts.
@@ -185,19 +205,21 @@ When you add `src/project_standards/<newtool>.py`:
 1. Create `tests/test_<newtool>.py`.
 2. Cover the layers that apply: unit (pure helpers), security invariants (if the tool handles paths), integration (`main()` exit codes if it has a CLI), and contract/dogfood (if it reads or emits a shipped artifact).
 3. If the tool has a CLI, document its exit-code contract in a table in the test module docstring.
-4. If shared fixtures emerge (a second tool needs the same helper), move them to `conftest.py` rather than copy-pasting.
+4. If shared helpers emerge, move them to a focused importable helper module rather than copy-pasting. Use `conftest.py` only when pytest fixture discovery or lifecycle is required.
 5. Keep the gate green: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`.
 
 When you add a new **subpackage** with orthogonal concerns (like `adopt/`), split tests by concern rather than by source module. Each concern file should have a single, auditable focus — a reviewer looking for path-safety tests should find them all in one place.
 
 ## CI relationship
 
-Repository CI runs four enforcement workflows against this repo's own code and content, with deliberately separate jobs:
+Repository CI uses deliberately separate enforcement workflows against this repo's own code and content:
 
 - **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification sequence on push and PR, on Python 3.14: `ruff format --check`, `ruff check`, `basedpyright`, then builds and extracts the candidate wheel, runs the ordinary suite under coverage with the extracted wheel first on `PYTHONPATH`, the xdist compatibility matrix, the serial performance gates, `coverage report`, and `pip-audit`. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
-- **The coherence gate** ([.github/workflows/coherence.yml](../.github/workflows/coherence.yml)) is the behavioral proof that the shipped `.markdownlint.json` and `.prettierrc.json` are co-satisfiable — markdownlint accepts Prettier's output over the corpus in `tests/coherence/corpus/`. It is the one job that needs Node (`npm ci` installs the pinned Prettier), which is why running `tests/coherence` locally requires `npm ci` first; the hermetic declaration/pin checks ride the developer gate instead.
+- **The coherence gate** ([.github/workflows/coherence.yml](../.github/workflows/coherence.yml)) intentionally repeats the behavioral coherence coverage in the developer gate so the repository retains a separately named coherence status. It proves that the shipped `.markdownlint.json` and `.prettierrc.json` are co-satisfiable — markdownlint accepts Prettier's output over the corpus in `tests/coherence/corpus/`. Both this job and the developer gate install the pinned Node dependencies with `npm ci`, so running `tests/coherence` locally requires `npm ci` first.
 - **The standards-graph gate** ([.github/workflows/validate-standards-graph.yml](../.github/workflows/validate-standards-graph.yml)) enforces the package contract: `standards validate-packages`, `standards validate-graph --require-all-manifests`, `standards generate-package-schemas --check`, `standards sync-payload-projection --check`, `standards render-catalog --check`, then resolves the newest released V2 baseline tag and runs `packages check-release` so a push can never publish a forbidden transition.
 - **The dogfood caller** ([.github/workflows/validate-standards.yml](../.github/workflows/validate-standards.yml)) invokes the reusable frontmatter workflow against this repository's own Markdown — proving the consumer entry point works here before any downstream repo pins it.
+
+Pushes to `testing` intentionally run only the standards-graph gate. The other hosted gates run for pull requests and pushes to `main`; their absence on `testing` is repository policy, not trigger drift.
 
 The _reusable_ workflows are the consumer-facing product, and they deliberately do **not** run pytest: downstream repos call them via `workflow_call` and should never inherit this repo's test toolchain.
 
