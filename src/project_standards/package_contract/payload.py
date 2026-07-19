@@ -27,6 +27,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import CoreSchema, core_schema
+from referencing.exceptions import Unresolvable
 
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId, StrictModel
@@ -50,6 +51,8 @@ class _SchemaValidationError(Protocol):
 
 class _SchemaValidator(Protocol):
     def iter_errors(self, instance: JsonValue) -> Iterator[_SchemaValidationError]: ...
+
+    def evolve(self, **changes: object) -> _SchemaValidator: ...
 
 
 ResourceId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")]
@@ -1033,16 +1036,25 @@ def _apply_defaults(schema: Mapping[str, JsonValue], configured: JsonObject) -> 
     return effective
 
 
-def _validate_declared_defaults(schema: Mapping[str, JsonValue]) -> None:
+def _validate_declared_defaults(
+    schema: Mapping[str, JsonValue],
+    root_validator: _SchemaValidator,
+) -> None:
     for child in _object_properties(schema).values():
         if not isinstance(child, dict):
             continue
         if "default" in child:
-            validator = cast("_SchemaValidator", Draft202012Validator(child))
-            if next(validator.iter_errors(child["default"]), None) is not None:
+            try:
+                validator = root_validator.evolve(schema=child)
+                invalid = next(validator.iter_errors(child["default"]), None)
+            except Unresolvable as exc:
+                raise PackageContractError(
+                    "option schema default cannot be validated against a $ref property"
+                ) from exc
+            if invalid is not None:
                 raise PackageContractError("option schema contains an invalid default")
         if child.get("type") == "object":
-            _validate_declared_defaults(child)
+            _validate_declared_defaults(child, root_validator)
 
 
 def _validate_extension_options(
@@ -1112,10 +1124,15 @@ class PackageOptionSchema:
         configured_object = _json_object(dict(configured))
         effective = _apply_defaults(self.document, configured_object)
         validator = cast("_SchemaValidator", Draft202012Validator(self.document))
-        errors = sorted(
-            validator.iter_errors(effective),
-            key=lambda error: tuple(str(part) for part in error.path),
-        )
+        try:
+            errors = sorted(
+                validator.iter_errors(effective),
+                key=lambda error: tuple(str(part) for part in error.path),
+            )
+        except Unresolvable as exc:
+            raise PackageContractError(
+                "package options schema contains an unresolvable reference"
+            ) from exc
         if errors:
             location = _schema_error_location(errors[0].path)
             raise PackageContractError(f"package options violate schema at {location}")
@@ -1151,7 +1168,8 @@ def load_option_schema(
         Draft202012Validator.check_schema(document)
     except JsonSchemaError as exc:
         raise PackageContractError("option schema is not a valid Draft 2020-12 schema") from exc
-    _validate_declared_defaults(document)
+    root_validator = cast("_SchemaValidator", Draft202012Validator(document))
+    _validate_declared_defaults(document, root_validator)
     _validate_extension_options(document, manifest.extensions)
     _validate_predicate_options(document, manifest)
 

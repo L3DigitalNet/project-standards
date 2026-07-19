@@ -529,6 +529,81 @@ def test_option_schema_rejects_a_default_that_violates_its_property_schema(
         load_option_schema(payload_dir, PayloadManifest.model_validate(_payload_data()))
 
 
+def test_option_schema_default_resolves_local_root_ref(tmp_path: Path) -> None:
+    document = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {"mode": {"type": "string", "enum": ["safe"]}},
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "mode": {"$ref": "#/$defs/mode", "default": "safe"},
+        },
+    }
+    payload_dir = tmp_path / "payload"
+    payload_dir.mkdir()
+    (payload_dir / "config.schema.json").write_text(json.dumps(document), encoding="utf-8")
+
+    schema = load_option_schema(
+        payload_dir,
+        PayloadManifest.model_validate(_payload_data()),
+    )
+
+    assert schema.resolve_options({}) == {"mode": "safe"}
+
+
+def test_option_schema_missing_ref_is_controlled_for_defaults_and_options(
+    tmp_path: Path,
+) -> None:
+    base = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": False,
+    }
+    default_dir = tmp_path / "default"
+    default_dir.mkdir()
+    default_document = {
+        **base,
+        "properties": {
+            "mode": {"$ref": "#/$defs/missing", "default": "safe"},
+        },
+    }
+    (default_dir / "config.schema.json").write_text(
+        json.dumps(default_document),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PackageContractError,
+        match=r"option schema default cannot be validated against a \$ref property",
+    ):
+        load_option_schema(
+            default_dir,
+            PayloadManifest.model_validate(_payload_data()),
+        )
+
+    options_dir = tmp_path / "options"
+    options_dir.mkdir()
+    options_document = {
+        **base,
+        "properties": {"mode": {"$ref": "#/$defs/missing"}},
+        "required": ["mode"],
+    }
+    (options_dir / "config.schema.json").write_text(
+        json.dumps(options_document),
+        encoding="utf-8",
+    )
+    schema = load_option_schema(
+        options_dir,
+        PayloadManifest.model_validate(_payload_data()),
+    )
+
+    with pytest.raises(
+        PackageContractError,
+        match="package options schema contains an unresolvable reference",
+    ):
+        schema.resolve_options({"mode": "safe"})
+
+
 _ENGINE_SCHEMA: dict[str, object] = {
     "engine": {
         "type": "object",
