@@ -139,6 +139,34 @@ def test_additive_internal_advertisement_is_patch() -> None:
     assert result.findings == ()
 
 
+def test_versioning_document_matches_internal_advertisement_classification() -> None:
+    previous = _snapshot(5, _entry("2.0", CatalogRole.INTERNAL))
+    current = _snapshot(
+        5,
+        _entry("2.0", CatalogRole.INTERNAL),
+        _entry("2.1", CatalogRole.INTERNAL, _DIGEST_B),
+    )
+    classification = _classify(previous, current).classification
+    versioning = (Path(__file__).resolve().parents[2] / "meta/versioning.md").read_text(
+        encoding="utf-8"
+    )
+    catalog_row = next(
+        line
+        for line in versioning.splitlines()
+        if line.startswith("| **Catalog / package payload set**")
+    )
+    cells = [cell.strip() for cell in catalog_row.strip("|").split("|")]
+    column_by_classification = {
+        ReleaseClassification.MAJOR: 1,
+        ReleaseClassification.MINOR: 2,
+        ReleaseClassification.PATCH: 3,
+    }
+
+    assert cells[column_by_classification[classification]] == (
+        "A purely additive advertisement of an internal-role payload (never consumer-selectable)"
+    )
+
+
 def test_additive_consumer_advertisement_still_requires_minor() -> None:
     # The internal carve-out must not leak: an addition that includes any
     # consumer-visible role keeps the MINOR floor even when an internal entry
