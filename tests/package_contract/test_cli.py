@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,9 @@ import pytest
 from project_standards.cli import main
 from project_standards.package_contract import cli as package_cli
 from project_standards.package_contract.cli import run_packages, run_standards
+from project_standards.package_contract.repository import (
+    PackageRepository,
+)
 from tests.package_contract.helpers import copy_minimal_repository
 
 _FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/package_contract/valid/minimal"
@@ -24,6 +28,76 @@ def test_validate_packages_human_and_json_success(
     assert run_standards(["validate-packages", "--root", str(_FIXTURE), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload == {"ok": True, "findings": []}
+
+
+def test_validate_packages__noncanonical_05_catalog__is_ignored(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    (root / "catalogs/5.toml").rename(root / "catalogs/05.toml")
+
+    assert run_standards(["validate-packages", "--root", str(root), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"ok": True, "findings": []}
+
+
+def test_validate_packages__dangling_catalogs_symlink__is_rejected(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    shutil.rmtree(root / "catalogs")
+    (root / "catalogs").symlink_to(root / "missing-catalogs", target_is_directory=True)
+
+    assert run_standards(["validate-packages", "--root", str(root), "--json"]) == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["code"] == "package_load_error"
+    assert "catalog source path must be a regular directory" in payload["error"]
+
+
+def test_validated_repositories__two_canonical_majors__load_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = copy_minimal_repository(tmp_path)
+    catalog = (root / "catalogs/5.toml").read_text(encoding="utf-8")
+    (root / "catalogs/6.toml").write_text(
+        catalog.replace("catalog_major = 5", "catalog_major = 6", 1),
+        encoding="utf-8",
+    )
+    original_build = package_cli.build_package_repository
+    loaded: list[PackageRepository] = []
+
+    def counted_build(
+        repository_root: Path,
+        *,
+        catalog_major: int | None = None,
+        family_allowlist: Iterable[str] | None = None,
+    ) -> PackageRepository:
+        repository = original_build(
+            repository_root,
+            catalog_major=catalog_major,
+            family_allowlist=family_allowlist,
+        )
+        loaded.append(repository)
+        return repository
+
+    monkeypatch.setattr(package_cli, "build_package_repository", counted_build)
+
+    repositories, findings = package_cli._validated_repositories(  # pyright: ignore[reportPrivateUsage]
+        root
+    )
+
+    assert len(loaded) == 1
+    base = loaded[0]
+    assert base.catalog is None
+    assert findings == ()
+    assert [
+        repository.catalog.catalog_major if repository.catalog is not None else None
+        for repository in repositories
+    ] == [5, 6]
+    assert all(repository is not base for repository in repositories)
+    assert all(repository.families is base.families for repository in repositories)
 
 
 def test_validate_packages_returns_sorted_findings_and_exit1(

@@ -6,12 +6,16 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards._version import package_version
 from project_standards.package_contract.catalog import (
+    _discover_catalog_sources,  # pyright: ignore[reportPrivateUsage]  # package-internal discovery
+    load_catalog_source,
     render_consumer_catalog,
+    validate_catalog_source,
     write_consumer_catalog,
 )
 from project_standards.package_contract.diagnostics import (
@@ -81,39 +85,48 @@ def _safe_root(path: Path) -> Path:
         raise PackageContractError("package repository root could not be resolved") from exc
 
 
-def _catalog_majors(root: Path) -> list[int]:
-    catalogs = root / "catalogs"
-    try:
-        if catalogs.is_symlink():
-            raise PackageContractError("catalog source directory cannot be a symlink")
-        if not catalogs.exists():
-            return []
-        if not catalogs.is_dir():
-            raise PackageContractError("catalog source path must be a directory")
-        majors: list[int] = []
-        for path in catalogs.iterdir():
-            if path.is_symlink() or not path.is_file() or path.suffix != ".toml":
-                continue
-            try:
-                major = int(path.stem)
-            except ValueError:
-                continue
-            if major >= 1:
-                majors.append(major)
-        return sorted(set(majors))
-    except OSError as exc:
-        raise PackageContractError("catalog sources could not be discovered") from exc
-
-
 def _validated_repositories(
     root: Path,
 ) -> tuple[list[PackageRepository], tuple[PackageFinding, ...]]:
-    majors = _catalog_majors(root)
-    repositories = (
-        [build_package_repository(root, catalog_major=major) for major in majors]
-        if majors
-        else [build_package_repository(root)]
-    )
+    """Validate canonical catalogs against one immutable package snapshot."""
+    sources = _discover_catalog_sources(root)
+    base = build_package_repository(root)
+    repositories: list[PackageRepository] = []
+    families = base.family_map
+    payloads = base.payload_map
+    for major, path in sources:
+        try:
+            catalog = validate_catalog_source(
+                load_catalog_source(path),
+                families,
+                payloads,
+            )
+            findings = base.findings
+        except PackageContractError as exc:
+            catalog = None
+            findings = tuple(
+                sort_findings(
+                    (
+                        *base.findings,
+                        PackageFinding(
+                            code="PC-CATALOG-INVALID",
+                            severity="error",
+                            standard_id="project-standards",
+                            version="",
+                            path=f"catalogs/{major}.toml",
+                            identity="catalog",
+                            message=str(exc),
+                            hint=(
+                                "repair the declared V2 package source and rerun "
+                                "repository validation"
+                            ),
+                        ),
+                    )
+                )
+            )
+        repositories.append(replace(base, catalog=catalog, findings=findings))
+    if not repositories:
+        repositories.append(base)
     findings = {
         finding for repository in repositories for finding in validate_package_graph(repository)
     }

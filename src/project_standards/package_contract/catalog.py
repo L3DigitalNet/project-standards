@@ -67,6 +67,35 @@ class CatalogSource(StrictModel):
         return self
 
 
+def _discover_catalog_sources(  # pyright: ignore[reportUnusedFunction]
+    root: Path,
+) -> tuple[tuple[int, Path], ...]:
+    """Return canonical catalog-major paths in deterministic numeric order."""
+    catalogs = root / "catalogs"
+    try:
+        if catalogs.is_symlink():
+            raise PackageContractError("catalog source path must be a regular directory")
+        if not catalogs.exists():
+            return ()
+        if not catalogs.is_dir():
+            raise PackageContractError("catalog source path must be a regular directory")
+        sources: list[tuple[int, Path]] = []
+        for path in catalogs.iterdir():
+            if path.suffix != ".toml":
+                continue
+            if path.is_symlink() or not path.is_file():
+                raise PackageContractError("catalog source must be a regular file")
+            try:
+                major = int(path.stem)
+            except ValueError:
+                continue
+            if major >= 1 and str(major) == path.stem:
+                sources.append((major, path))
+        return tuple(sorted(sources, key=lambda item: item[0]))
+    except OSError as exc:
+        raise PackageContractError("catalog sources could not be discovered") from exc
+
+
 def _validation_summary(exc: ValidationError) -> str:
     summaries: list[str] = []
     for error in exc.errors(

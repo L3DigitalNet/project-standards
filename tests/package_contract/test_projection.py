@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tarfile
 import tomllib
@@ -83,6 +84,30 @@ def test_projection_plan_and_apply_create_only_relative_file_symlinks(
                 root / "standards/demo/versions/1.2" / link.relative_to(projection / "demo/1.2")
             ).read_bytes()
         )
+
+
+def test_projection_plan__noncanonical_05_catalog__does_not_project(
+    tmp_path: Path,
+) -> None:
+    root = _prepare_repository(tmp_path)
+    (root / "catalogs/5.toml").rename(root / "catalogs/05.toml")
+
+    plan = plan_payload_projection(root)
+
+    assert all(link.kind != "catalog" for link in plan.links)
+
+
+def test_projection_plan__dangling_catalogs_symlink__is_rejected(
+    tmp_path: Path,
+) -> None:
+    root = _prepare_repository(tmp_path)
+    shutil.rmtree(root / "catalogs")
+    (root / "catalogs").symlink_to(root / "missing-catalogs", target_is_directory=True)
+
+    with pytest.raises(
+        PackageContractError, match="catalog source path must be a regular directory"
+    ):
+        plan_payload_projection(root)
 
 
 @pytest.mark.parametrize(

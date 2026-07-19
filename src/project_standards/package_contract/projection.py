@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from project_standards.package_contract.catalog import (
+    _discover_catalog_sources,  # pyright: ignore[reportPrivateUsage]  # package-internal discovery
+)
 from project_standards.package_contract.diagnostics import (
     PackageContractError,
     PackageFinding,
@@ -69,30 +72,6 @@ def _projection_roots(root: Path) -> tuple[Path, Path, Path]:
     return payloads, catalogs, families
 
 
-def _catalog_sources(root: Path) -> tuple[Path, ...]:
-    catalogs = root / "catalogs"
-    try:
-        if not catalogs.exists():
-            return ()
-        if catalogs.is_symlink() or not catalogs.is_dir():
-            raise PackageContractError("catalog source path must be a regular directory")
-        sources: list[Path] = []
-        for path in catalogs.iterdir():
-            if path.suffix != ".toml":
-                continue
-            if path.is_symlink() or not path.is_file():
-                raise PackageContractError("catalog source must be a regular file")
-            try:
-                major = int(path.stem)
-            except ValueError:
-                continue
-            if major >= 1 and str(major) == path.stem:
-                sources.append(path)
-        return tuple(sorted(sources, key=lambda path: path.name.encode("utf-8")))
-    except OSError as exc:
-        raise PackageContractError("catalog sources could not be inspected") from exc
-
-
 def plan_payload_projection(root: Path) -> ProjectionPlan:
     """Plan exact relative file links without modifying source or projection trees."""
     normalized_root = _safe_root(root)
@@ -147,7 +126,7 @@ def plan_payload_projection(root: Path) -> ProjectionPlan:
                         kind="family",
                     )
                 )
-    for source in _catalog_sources(normalized_root):
+    for _, source in _discover_catalog_sources(normalized_root):
         destination = catalog_projection / source.name
         links.append(
             ProjectionLink(
