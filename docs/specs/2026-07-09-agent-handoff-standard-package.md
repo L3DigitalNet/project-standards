@@ -39,10 +39,11 @@ related:
 | 0.5 | 2026-07-09 | Codex with owner direction | Remove a package-specific license for `agent-handoff`; inherit the repository license while preserving notices for MIT-licensed legacy inputs. |
 | 0.6 | 2026-07-18 | Codex with owner direction | Record the approved Catalog 5/V2 supersession, current package `1.1` implementation, approved/change-controlled lifecycle, and remaining legacy-engine retirement gate without rewriting the V1 baseline. |
 | 0.7 | 2026-07-19 | Codex with owner approval | Record the `legacy-report` successful-inventory exit `0` exception while retaining every finding in human and JSON output. |
+| 0.8 | 2026-07-19 | Codex with owner approval | Record corrected package `1.2`, the shebang-resolved Python 3.14 floor, and the declared installed-artifact mode contract. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
-**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The accepted successor implementation is the `agent-handoff` `1.1` payload selected in `.standards/config.toml` and recorded in the central lock. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Technical implementation is complete under that successor contract; Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
+**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The accepted successor implementation is the `agent-handoff` `1.2` payload selected in `.standards/config.toml` and recorded in the central lock. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Technical implementation is complete under that successor contract; Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
 
 ---
 
@@ -156,7 +157,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
 | A-001 | Consumers can invoke a released `project-standards` CLI through `uvx`, an installed tool, or equivalent packaging. | Adoption and validation need another supported package runner, but still must not require a source checkout. |
-| A-002 | Supported consumer environments provide a `python3` runtime compatible with the standalone hook. | The hook needs another dependency-free runtime or a harness-native implementation. |
+| A-002 | Supported consumer environments resolve the hook shebang's `python3` to Python 3.14 or newer. | The hook needs another dependency-free runtime or a harness-native implementation. |
 | A-003 | Claude Code and Codex continue to support trusted project-local SessionStart command hooks. | The affected profile must be revised or temporarily marked unsupported in a package release. |
 | A-004 | Git is available in repositories that want branch, commit, and working-tree context. | The hook degrades to document-only context and reports Git context as unavailable. |
 | A-005 | Consumer agents can make semantic decisions while following a migration guide. | Legacy migration becomes manual owner work; automatic transformation remains unsafe. |
@@ -260,7 +261,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | NFR-002 | Idempotency | Repeating a successful adoption or repair with the same inputs shall produce no further diff. | All fresh and existing-config fixtures are clean on the second run. | Must |
 | NFR-003 | Context efficiency | `state.md` input shall not exceed 2 KiB and total injected context shall not exceed 4 KiB, counted as UTF-8 bytes with truncation on a valid boundary. | Boundary tests cover ASCII, multibyte Unicode, exact caps, and over-cap inputs. | Must |
 | NFR-004 | Startup performance | The hook shall finish within 2 seconds at the 95th percentile across 100 local fixture runs on the repository's supported Linux test environment. | Benchmark test records p95 below 2 seconds with network disabled. | Should |
-| NFR-005 | Portability | The hook shall use only the Python standard library and shall not import `project_standards`. | An isolated hook test succeeds with only a compatible `python3`, Git, and fixture repository. | Must |
+| NFR-005 | Portability | The hook shall use only the Python standard library, shall not import `project_standards`, and shall retain Python 3.14 as its minimum runtime. | An isolated hook test succeeds with only a shebang-resolved Python 3.14 or newer `python3`, Git, and fixture repository. | Must |
 | NFR-006 | Diagnostics | Human errors shall name the path, violated rule, and safe next action; JSON findings shall have stable codes and loci. | Error-contract tests cover every expected failure class. | Must |
 | NFR-007 | Maintainability | New Python code shall satisfy the repository's Ruff, BasedPyright, pytest, coverage, and audit gates. | The complete repository verification gate passes with coverage not reduced below the enforced threshold. | Must |
 | NFR-008 | Determinism | Identical repository content and command arguments shall produce identical plans, findings, and generated artifacts. | Snapshot and repeated-run tests match byte-for-byte except explicitly documented timestamps. | Must |
@@ -285,7 +286,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | --- | --- | --- | --- | --- |
 | DR-001 | Standard manifest | Describe identity, version, `adoption = "cli"`, `[config].namespaces = ["agent_handoff"]`, resources, capabilities, authorities, relationships, artifacts, and providers. Declare only the existing generic provider operations `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`. | Must pass standard-manifest and graph validation; CLI diagnostic views map to these providers and do not expand `ProviderOperation`. | `standards/agent-handoff/standard.toml` |
 | DR-002 | Default policy | Define required files, shape profiles, hard byte caps, working targets, and blocked content patterns. | TOML parses dependency-free; docs and tooling derive the same values. | `standards/agent-handoff/resources/policy.toml` |
-| DR-003 | Artifact manifest | Describe all materialized files, destinations, modes, provenance, and `install_policy = "managed" \| "create-only"`. | The schema defaults to `managed` for existing manifests. Knowledge templates declare `create-only` and cannot be overwritten even by force or upgrade; hook and skill artifacts declare `managed` and refresh only through the owned upgrade path after drift/precondition checks. No unsafe destination, collision, undeclared mirror, or global skill/hook path is allowed. | Packaged `adopt.toml` |
+| DR-003 | Artifact manifest | Describe all materialized files, destinations, modes, provenance, and `install_policy = "managed" \| "create-only"`. | The schema defaults to `managed` for existing manifests. Knowledge templates declare `create-only` and cannot be overwritten even by force or upgrade; hook and skill artifacts declare `managed` and refresh only through the owned upgrade path after drift/precondition checks. Declared artifact mode is the consumer contract: Agent Handoff 1.2 stores hook source as payload data mode `100644` and installs it at declared mode `0755`. No unsafe destination, collision, undeclared mirror, or global skill/hook path is allowed. | Packaged `adopt.toml` |
 | DR-004 | Consumer configuration | Record version, startup mode, and selected harnesses. | Version is quoted and supported; automatic mode has a unique non-empty known list; manual mode has an empty list. | Consumer `.project-standards.yml` |
 | DR-005 | Consumer knowledge | Store current and durable project facts by lifetime. | Required paths and document profiles pass; credentials contain references only. | Consumer repository |
 | DR-006 | Standard-owned copies | Carry hook, skill, policy, and integration content matching the package version. | Drift and provenance checks identify exact expected source and local changes. | Standard package; installed copies in consumer repo |
@@ -675,7 +676,7 @@ The completed items below are accepted through the Catalog 5 successor recorded 
 - [x] Multiple historical legacy-layout fixtures are detected without mutation.
 - [x] Package provenance and parity tests cover every reusable artifact.
 - [x] The release acceptance toolchain and coherence gate passed.
-- [x] This repository dogfoods the accepted `agent-handoff` `1.1` Catalog 5 successor.
+- [x] This repository dogfoods the accepted `agent-handoff` `1.2` Catalog 5 successor.
 - [ ] Every remaining known consumer completes migration and passes current Agent Handoff validation.
 - [x] The owner approved the package release.
 - [ ] The owner approves legacy-engine deletion after every Task 18 retirement gate passes.
@@ -726,8 +727,8 @@ The supported harness profiles are:
 
 | Profile | Project Integration | Runtime Requirement |
 | --- | --- | --- |
-| `claude-code` | `.claude/settings.json` `SessionStart` command hook | Trusted project hook support and compatible Python |
-| `codex` | `.codex/config.toml` inline `SessionStart` hook | Trusted project layer, hook approval, enabled hooks, and compatible Python |
+| `claude-code` | `.claude/settings.json` `SessionStart` command hook | Trusted project hook support and shebang-resolved Python 3.14 or newer |
+| `codex` | `.codex/config.toml` inline `SessionStart` hook | Trusted project layer, hook approval, enabled hooks, and shebang-resolved Python 3.14 or newer |
 
 The release process re-verifies both profiles against current authoritative documentation and schemas.
 

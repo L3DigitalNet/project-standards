@@ -26,9 +26,9 @@ _PACKAGES = {
         "Agent Handoff Standard",
         "Repository-local, lifetime-routed project knowledge and bounded agent session continuity.",
         "active",
-        "1.1",
+        "1.2",
         "default",
-        "sha256:e5e300e761c3b95bb36a95d0e001c2fa428c21843e15cdbf66202327fdb6ded1",
+        "sha256:197d9c6877781abf1a9f0a3d3f37092413600ebaff604371ae10c7405925cf5b",
     ),
     "cli-documentation": (
         "CLI Documentation Standard",
@@ -93,6 +93,12 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "agent-handoff",
+        "1.1",
+        "retained",
+        "sha256:e5e300e761c3b95bb36a95d0e001c2fa428c21843e15cdbf66202327fdb6ded1",
+    ),
     (
         "standard-bundle-authoring",
         "2.0",

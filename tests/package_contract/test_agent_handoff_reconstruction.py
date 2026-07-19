@@ -4,7 +4,9 @@ import base64
 import hashlib
 import json
 import shutil
+import stat
 import subprocess
+import tomllib
 import zipfile
 from pathlib import Path
 from typing import cast
@@ -46,17 +48,29 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
 _PAYLOAD = _FAMILY / "versions/1.1"
+_PAYLOAD_1_2 = _FAMILY / "versions/1.2"
+
+
+def _payload_at(root: Path) -> InstalledPayload:
+    manifest = load_payload_manifest(root / "payload.toml")
+    return InstalledPayload(root, manifest, validate_payload_integrity(root, manifest))
 
 
 def _payload() -> InstalledPayload:
-    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
-    return InstalledPayload(_PAYLOAD, manifest, validate_payload_integrity(_PAYLOAD, manifest))
+    return _payload_at(_PAYLOAD)
+
+
+def _payload_1_2() -> InstalledPayload:
+    return _payload_at(_PAYLOAD_1_2)
+
+
+def _options_for(payload: InstalledPayload, **overrides: object) -> JsonObject:
+    schema = load_option_schema(payload.root, payload.manifest)
+    return schema.resolve_options(cast("JsonObject", overrides))
 
 
 def _options(**overrides: object) -> JsonObject:
-    payload = _payload()
-    schema = load_option_schema(_PAYLOAD, payload.manifest)
-    return schema.resolve_options(cast("JsonObject", overrides))
+    return _options_for(_payload(), **overrides)
 
 
 def _render(
@@ -64,14 +78,16 @@ def _render(
     adapter: AdapterKind,
     scope: str,
     config: JsonObject,
+    *,
+    payload: InstalledPayload | None = None,
 ) -> str:
-    payload = _payload()
+    selected = payload or _payload()
     result = invoke_provider(
         ProviderInvocation(
-            repo=_PAYLOAD,
-            payload=payload,
+            repo=selected.root,
+            payload=selected,
             standard_id="agent-handoff",
-            version=payload.manifest.payload.version,
+            version=selected.manifest.payload.version,
             provider_id="render-semantic",
             operation=ProviderOperation.RENDER,
             effective_config=config,
@@ -123,15 +139,18 @@ def _content_snapshot(content: bytes, *, mode: str | None = None) -> JsonObject:
     }
 
 
-def _valid_handoff_snapshots(config: JsonObject) -> JsonObject:
+def _valid_handoff_snapshots(
+    config: JsonObject, *, payload: InstalledPayload | None = None
+) -> JsonObject:
     snapshots: JsonObject = {}
-    manifest = _payload().manifest
+    selected = payload or _payload()
+    manifest = selected.manifest
     managed_units: list[JsonValue] = []
     for artifact in manifest.artifacts:
         if not artifact.materializes(config):
             continue
         snapshots[artifact.target.original] = _content_snapshot(
-            (_PAYLOAD / artifact.source.normalized).read_bytes(),
+            (selected.root / artifact.source.normalized).read_bytes(),
             mode=artifact.mode,
         )
     snapshots["docs/handoff/sessions"] = {"kind": "directory"}
@@ -144,6 +163,7 @@ def _valid_handoff_snapshots(config: JsonObject) -> JsonObject:
             contribution.adapter,
             contribution.scope,
             config,
+            payload=selected,
         ).encode()
         snapshots[contribution.target.original] = _content_snapshot(rendered)
         managed_units.append(
@@ -228,6 +248,41 @@ def test_agent_handoff_options_are_closed_and_profiles_are_consistent() -> None:
     for options in invalid:
         with pytest.raises(PackageContractError, match="package options violate schema"):
             schema.resolve_options(options)
+
+
+def test_agent_handoff_1_2_requires_shebang_python_3_14() -> None:
+    hook = (_PAYLOAD_1_2 / "hooks/session-start/session_start.py").read_text(encoding="utf-8")
+    readme = (_PAYLOAD_1_2 / "README.md").read_text(encoding="utf-8")
+    adoption = (_PAYLOAD_1_2 / "adopt.md").read_text(encoding="utf-8")
+
+    assert hook.startswith("#!/usr/bin/env python3\n")
+    for document in (readme, adoption):
+        assert "shebang-resolved" in document
+        assert "python3" in document
+        assert "3.14" in document
+
+
+def test_agent_handoff_1_2_declares_source_and_install_modes() -> None:
+    payload = _payload_1_2()
+    hook_source = _PAYLOAD_1_2 / "hooks/session-start/session_start.py"
+    hook_artifact = next(item for item in payload.manifest.artifacts if item.id == "hook")
+
+    assert stat.S_IMODE(hook_source.stat().st_mode) == 0o644
+    assert hook_artifact.mode == "0755"
+
+
+def test_agent_handoff_1_2_policy_omits_unenforced_shape_options() -> None:
+    policy = tomllib.loads((_PAYLOAD_1_2 / "resources/policy.toml").read_text(encoding="utf-8"))
+
+    assert {
+        "max_heading_depth",
+        "prefer_bullets",
+        "require_overflow_pointer",
+    }.isdisjoint(policy["shape"]["defaults"])
+    assert {
+        "require_pointer_for_details_over_chars",
+        "append_only",
+    }.isdisjoint(key for rules in policy["shape"]["documents"].values() for key in rules)
 
 
 def test_agent_handoff_manifest_separates_consumer_knowledge_and_managed_state() -> None:
@@ -563,6 +618,120 @@ def test_agent_handoff_validate_enforces_layout_shape_credentials_and_integratio
     assert {(finding.code, finding.severity) for finding in legacy_oversized.findings} >= {
         ("AH-SIZE-CAP", "error")
     }
+
+
+def test_agent_handoff_1_2_local_jsonc_lexer_preserves_string_literals(
+    tmp_path: Path,
+) -> None:
+    payload = _payload_1_2()
+    config = _options_for(payload)
+    snapshots = _valid_handoff_snapshots(config, payload=payload)
+    rendered = json.loads(
+        _render(
+            ".claude/settings.json",
+            AdapterKind.JSONC,
+            "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact",
+            config,
+            payload=payload,
+        )
+    )
+    snapshots[".claude/settings.json"] = _content_snapshot(
+        (
+            "{\n"
+            "  // real line comment\n"
+            '  "url": "https://example.test/a//b", // real inline comment\n'
+            "  /* real block comment */\n"
+            '  "comment-literal": "/* literal */ // literal",\n'
+            '  "comma-literal": ",} and ,]",\n'
+            '  "items": ["value",],\n'
+            f'  "hooks": {json.dumps(rendered["hooks"])},\n'
+            "}\n"
+        ).encode()
+    )
+
+    result = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        config,
+        tmp_path,
+        snapshots,
+        payload=payload,
+    )
+    provider_source = (_PAYLOAD_1_2 / "providers/agent_handoff.py").read_text(encoding="utf-8")
+
+    assert not any(finding.code == "AH-CLAUDE-CONFIG-INVALID" for finding in result.findings)
+    assert "project_standards.jsonc" not in provider_source
+    assert "control_plane.adapters.jsonc" not in provider_source
+
+
+def test_agent_handoff_1_2_local_jsonc_lexer_rejects_malformed_input(
+    tmp_path: Path,
+) -> None:
+    payload = _payload_1_2()
+    config = _options_for(payload)
+    snapshots = _valid_handoff_snapshots(config, payload=payload)
+    snapshots[".claude/settings.json"] = _content_snapshot(b'{"hooks": {} /* unterminated')
+
+    result = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        config,
+        tmp_path,
+        snapshots,
+        payload=payload,
+    )
+
+    assert [
+        finding.code for finding in result.findings if finding.code == "AH-CLAUDE-CONFIG-INVALID"
+    ] == ["AH-CLAUDE-CONFIG-INVALID"]
+
+
+def test_agent_handoff_shape_checks_ignore_fenced_structural_lines(
+    tmp_path: Path,
+) -> None:
+    payload = _payload_1_2()
+    config = _options_for(payload)
+    snapshots = _valid_handoff_snapshots(config, payload=payload)
+    snapshots["docs/handoff/state.md"] = _content_snapshot(
+        (
+            "# Session State\n\n"
+            "## Current focus\n\n- Ready.\n\n"
+            "## Active incidents\n\n- None.\n\n"
+            "```markdown\n"
+            "## Fenced extra\n"
+            f"- {'x' * 200}\n"
+            "- two\n- three\n- four\n- five\n"
+            "```\n"
+        ).encode()
+    )
+    snapshots["docs/handoff/deployed.md"] = _content_snapshot(
+        b"# Deployment\n\n```markdown\n| Component | State |\n| --- | --- |\n| api | up |\n```\n"
+    )
+    snapshots["docs/handoff/conventions.md"] = _content_snapshot(
+        (
+            "# Conventions\n\n## Quick Reference\n\n- Rule 1.\n\n"
+            "```markdown\n"
+            f"| 1 | {'x' * 200} |\n"
+            "```\n"
+        ).encode()
+    )
+    snapshots["docs/handoff/sessions/2026-07.md"] = _content_snapshot(
+        (f"# Session log\n\n```markdown\n| {'headline ' * 30}| {'x' * 240} |\n```\n").encode()
+    )
+
+    result = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        config,
+        tmp_path,
+        snapshots,
+        payload=payload,
+    )
+    shape_messages = {
+        (finding.path, finding.message) for finding in result.findings if finding.code == "AH-SHAPE"
+    }
+
+    assert shape_messages == {("docs/handoff/deployed.md", "document requires tables or bullets")}
 
 
 @pytest.mark.parametrize(

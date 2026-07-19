@@ -9,7 +9,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | Standard | Status | Package | Role | Availability | Resources | Providers | Outputs |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: |
 | [`adr`](adr/README.md) | active | 1.1 | default | consumer | 12 | 2 | 1 |
-| [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | default | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | retained | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.2 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | default | consumer | 13 | 3 | 1 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | default | consumer | 29 | 5 | 8 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | default | consumer | 17 | 6 | 25 |
@@ -26,6 +27,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | --- | --- | --- |
 | `adr@1.1` | `adr.validation` | `project-standards.reconcile` |
 | `agent-handoff@1.1` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
+| `agent-handoff@1.2` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `cli-documentation@1.1` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.2` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-tooling@1.2` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
@@ -94,6 +96,35 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.1` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.1/provider-findings` | `schemas/findings.schema.json` |
 | `agent-handoff@1.1` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.1/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
 | `agent-handoff@1.1` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.1/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `agent-handoff@1.2` | `readme` | `canonical-standard` | `standards://agent-handoff/1.2/readme` | `README.md` |
+| `agent-handoff@1.2` | `adopt` | `adoption-guide` | `standards://agent-handoff/1.2/adopt` | `adopt.md` |
+| `agent-handoff@1.2` | `agent-summary` | `agent-summary` | `standards://agent-handoff/1.2/agent-summary` | `agent-summary.md` |
+| `agent-handoff@1.2` | `config-schema` | `config-schema` | `standards://agent-handoff/1.2/config-schema` | `config.schema.json` |
+| `agent-handoff@1.2` | `legacy-guidance` | `standard-reference` | `standards://agent-handoff/1.2/legacy-guidance` | `resources/legacy-migration.md` |
+| `agent-handoff@1.2` | `legacy-instructions-source` | `legacy-reference` | `standards://agent-handoff/1.2/legacy-instructions-source` | `resources/integration/agent-instructions.md` |
+| `agent-handoff@1.2` | `legacy-claude-source` | `legacy-reference` | `standards://agent-handoff/1.2/legacy-claude-source` | `resources/integration/claude-session-start.json` |
+| `agent-handoff@1.2` | `legacy-codex-source` | `legacy-reference` | `standards://agent-handoff/1.2/legacy-codex-source` | `resources/integration/codex-session-start.toml` |
+| `agent-handoff@1.2` | `legacy-config-source` | `legacy-reference` | `standards://agent-handoff/1.2/legacy-config-source` | `resources/integration/project-config.yml` |
+| `agent-handoff@1.2` | `hook` | `provider-resource` | `standards://agent-handoff/1.2/hook` | `provider-resources/managed/hook.py` |
+| `agent-handoff@1.2` | `skill` | `provider-resource` | `standards://agent-handoff/1.2/skill` | `provider-resources/managed/skill.md` |
+| `agent-handoff@1.2` | `skill-openai` | `provider-resource` | `standards://agent-handoff/1.2/skill-openai` | `provider-resources/managed/openai.yaml` |
+| `agent-handoff@1.2` | `policy` | `provider-resource` | `standards://agent-handoff/1.2/policy` | `provider-resources/managed/policy.toml` |
+| `agent-handoff@1.2` | `template-status` | `template` | `standards://agent-handoff/1.2/template-status` | `provider-resources/templates/STATUS.md` |
+| `agent-handoff@1.2` | `template-todo` | `template` | `standards://agent-handoff/1.2/template-todo` | `provider-resources/templates/TODO.md` |
+| `agent-handoff@1.2` | `template-architecture` | `template` | `standards://agent-handoff/1.2/template-architecture` | `provider-resources/templates/architecture.md` |
+| `agent-handoff@1.2` | `template-bugs-keep` | `template` | `standards://agent-handoff/1.2/template-bugs-keep` | `provider-resources/templates/bugs.gitkeep` |
+| `agent-handoff@1.2` | `template-conventions` | `template` | `standards://agent-handoff/1.2/template-conventions` | `provider-resources/templates/conventions.md` |
+| `agent-handoff@1.2` | `template-credentials` | `template` | `standards://agent-handoff/1.2/template-credentials` | `provider-resources/templates/credentials.md` |
+| `agent-handoff@1.2` | `template-deployed` | `template` | `standards://agent-handoff/1.2/template-deployed` | `provider-resources/templates/deployed.md` |
+| `agent-handoff@1.2` | `template-sessions-keep` | `template` | `standards://agent-handoff/1.2/template-sessions-keep` | `provider-resources/templates/sessions.gitkeep` |
+| `agent-handoff@1.2` | `template-specs-plans` | `template` | `standards://agent-handoff/1.2/template-specs-plans` | `provider-resources/templates/specs-plans.md` |
+| `agent-handoff@1.2` | `template-state` | `template` | `standards://agent-handoff/1.2/template-state` | `provider-resources/templates/state.md` |
+| `agent-handoff@1.2` | `provider-code` | `provider-resource` | `standards://agent-handoff/1.2/provider-code` | `providers/agent_handoff.py` |
+| `agent-handoff@1.2` | `provider-input` | `provider-resource` | `standards://agent-handoff/1.2/provider-input` | `schemas/provider-input.schema.json` |
+| `agent-handoff@1.2` | `provider-content` | `provider-resource` | `standards://agent-handoff/1.2/provider-content` | `schemas/content.schema.json` |
+| `agent-handoff@1.2` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.2/provider-findings` | `schemas/findings.schema.json` |
+| `agent-handoff@1.2` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.2/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `agent-handoff@1.2` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.2/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `cli-documentation@1.1` | `readme` | `canonical-standard` | `standards://cli-documentation/1.1/readme` | `README.md` |
 | `cli-documentation@1.1` | `adopt` | `adoption-guide` | `standards://cli-documentation/1.1/adopt` | `adopt.md` |
 | `cli-documentation@1.1` | `agent-summary` | `agent-summary` | `standards://cli-documentation/1.1/agent-summary` | `agent-summary.md` |
@@ -254,6 +285,14 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.1` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
 | `agent-handoff@1.1` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
 | `agent-handoff@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `agent-handoff@1.2` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `agent-handoff@1.2` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `agent-handoff@1.2` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `agent-handoff@1.2` | `drift-check` | `drift-check` | `validate` | `findings` | `payload:provider-code#run_drift_check` |
+| `agent-handoff@1.2` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
+| `agent-handoff@1.2` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
+| `agent-handoff@1.2` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `agent-handoff@1.2` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `cli-documentation@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
 | `cli-documentation@1.1` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `cli-documentation@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
@@ -314,6 +353,24 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.1` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
 | `agent-handoff@1.1` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `agent-handoff@1.1` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.2` | artifact | `status` | `docs/STATUS.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `todo` | `docs/TODO.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `architecture` | `docs/handoff/architecture.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `bugs-keep` | `docs/handoff/bugs/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `conventions` | `docs/handoff/conventions.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `credentials` | `docs/handoff/credentials.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `deployed` | `docs/handoff/deployed.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `sessions-keep` | `docs/handoff/sessions/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `specs-plans` | `docs/handoff/specs-plans.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `state` | `docs/handoff/state.md` | `create-only` | whole-file |
+| `agent-handoff@1.2` | artifact | `hook` | `.agents/hooks/agent-handoff/session_start.py` | `managed` | whole-file |
+| `agent-handoff@1.2` | artifact | `skill` | `.agents/skills/agent-handoff/SKILL.md` | `managed` | whole-file |
+| `agent-handoff@1.2` | artifact | `skill-openai` | `.agents/skills/agent-handoff/agents/openai.yaml` | `managed` | whole-file |
+| `agent-handoff@1.2` | artifact | `policy` | `.standards/packages/agent-handoff/policy.toml` | `managed` | whole-file |
+| `agent-handoff@1.2` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.2` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.2` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.2` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `cli-documentation@1.1` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `agent-summary-package` | `.standards/packages/markdown-frontmatter/agent-summary.md` | `managed` | whole-file |
 | `markdown-frontmatter@1.2` | artifact | `skill` | `.agents/skills/markdown-frontmatter/SKILL.md` | `managed` | whole-file |

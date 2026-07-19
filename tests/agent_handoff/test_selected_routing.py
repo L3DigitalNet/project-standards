@@ -64,7 +64,7 @@ def test_unified_validate_uses_selected_provider(
 
     assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["standard_version"] == "1.1"
+    assert report["standard_version"] == "1.2"
     assert report["findings"] == []
 
 
@@ -328,6 +328,36 @@ def test_unified_validate_restores_missing_link_findings(
     assert any(item["code"] == "AH-REFERENCE-MISSING" for item in report["findings"])
 
 
+def test_agent_handoff_1_2_selected_provider_normalizes_link_targets(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    target = repo / "docs/handoff/reference with spaces.md"
+    target.write_text("# Reference\n", encoding="utf-8")
+    architecture = repo / "docs/handoff/architecture.md"
+    architecture.write_text(
+        architecture.read_text(encoding="utf-8")
+        + '\n[Angle path](<reference with spaces.md> "Reference")\n'
+        + "[Empty target]()\n"
+        + "[Whitespace target]( )\n"
+        + "[Angle empty target](<>)\n",
+        encoding="utf-8",
+    )
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+    references = [item for item in report["findings"] if item["code"] == "AH-REFERENCE-MISSING"]
+
+    assert report["standard_version"] == "1.2"
+    assert [(item["path"], item["locus"]) for item in references] == [
+        ("docs/handoff/architecture.md", "Markdown link: "),
+        ("docs/handoff/architecture.md", "Markdown link: "),
+        ("docs/handoff/architecture.md", "Markdown link: "),
+    ]
+
+
 def test_unified_validate_does_not_follow_a_symlinked_link_target(
     tmp_path: Path,
     distribution: InstalledDistribution,
@@ -359,7 +389,7 @@ def test_unified_legacy_report_serializes_platform_evidence_through_provider(
     assert run(["legacy-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
-    assert report["standard_version"] == "1.1"
+    assert report["standard_version"] == "1.2"
 
 
 @pytest.mark.parametrize(
