@@ -72,3 +72,9 @@ id = "standard-bundle-authoring"
 version = "2.1"
 digest = "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b"
 role = "internal"
+
+[[packages]]
+id = "standard-bundle-authoring"
+version = "2.2"
+digest = "sha256:538d8afa6760bddd3f4be13b7b001257f028f94df4385a42e3aba5a19559bc83"
+role = "internal"

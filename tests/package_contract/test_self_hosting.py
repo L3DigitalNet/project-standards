@@ -46,6 +46,8 @@ from project_standards.package_contract.release import (
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/standard-bundle-authoring"
 _PAYLOAD = _FAMILY / "versions/2.0"
+_PAYLOAD_2_2 = _FAMILY / "versions/2.2"
+_SPEC = _ROOT / "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
 _TEMPLATE_NAMES = {
     "catalog.toml",
     "config.schema.json",
@@ -57,6 +59,33 @@ _TEMPLATE_NAMES = {
     "provider.toml",
     "standard.toml",
 }
+
+
+def test_standard_bundle_authoring_2_2_requires_python_3_14() -> None:
+    assert _PAYLOAD_2_2.is_dir()
+    documents = (
+        (_PAYLOAD_2_2 / "README.md").read_text(encoding="utf-8"),
+        (_PAYLOAD_2_2 / "agent-summary.md").read_text(encoding="utf-8"),
+        _SPEC.read_text(encoding="utf-8"),
+    )
+
+    for document in documents:
+        assert "consumer-side Python" in document
+        assert "Python 3.14" in document
+
+
+def test_standard_bundle_authoring_2_2_declares_artifact_mode_contract() -> None:
+    assert _PAYLOAD_2_2.is_dir()
+    documents = (
+        (_PAYLOAD_2_2 / "README.md").read_text(encoding="utf-8"),
+        (_PAYLOAD_2_2 / "agent-summary.md").read_text(encoding="utf-8"),
+        _SPEC.read_text(encoding="utf-8"),
+    )
+
+    for document in documents:
+        assert "declared artifact mode" in document
+        assert "consumer contract" in document
+        assert "source-tree executable bits" in document
 
 
 def _isolated_repository(tmp_path: Path) -> Path:

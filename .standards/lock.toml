@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.1.0"
-catalog_digest = "sha256:8d79e1d01050cf7c70ae182dfcea38166c06718a083f1ac8f2f63a468aefdfa9"
+catalog_digest = "sha256:d232a831df1880e796ae7d407ef28368b4d9c97aca504030846f3f647d38e6d6"
 config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]

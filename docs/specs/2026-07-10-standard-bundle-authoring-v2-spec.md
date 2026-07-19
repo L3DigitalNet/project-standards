@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-10'
-last_reviewed: '2026-07-18'
+last_reviewed: '2026-07-19'
 supersedes: SPEC-BA01
 superseded_by: null
 related:
@@ -54,6 +54,7 @@ related:
 | 0.11 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex and combined contract audit | Make ownership relinquishment target-verifiable through a static single-target signature pointer binding, preserve unknown-and-unclaimed fail-closed behavior and known-claim compatibility, and reconcile the amended migration traceability. |
 | 0.12 | 2026-07-13 | Codex implementation reconciliation with independent adversarial review | Record passing source/wheel, migration, stale-plan, no-write/no-lock, and managed-transition evidence for FR-037. No requirement or package-authoring scope changed. |
 | 0.13 | 2026-07-18 | Codex with owner-directed drift remediation | Clarify that the ordered author workflow in the published V2 README is FR-028's template checklist, with no separate checklist artifact or immutable payload edit; record V1 as already-replaced history. |
+| 0.14 | 2026-07-19 | Codex with owner-approved review remediation | Require Python 3.14 or newer for consumer-side payload Python and clarify that declared artifact modes, not source-tree executable bits, define materialized consumer modes. Record Standard Bundle Authoring 2.2 as the current internal contract. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval. Implementation deviations belong in the [Deviations Log](#deviations-log). This specification supersedes SPEC-BA01 as the authoring design contract; the V1 package has been replaced and remains only as historical migration evidence.
 
@@ -81,7 +82,7 @@ The resulting authoring surface is deliberately declarative. Adding a package or
 - Repository-level `catalogs/{catalog-major}.toml` channel declarations.
 - Payload integrity, publication immutability, authoring workflow, graph/catalog validation, and conformance evidence.
 - Reconstruction and compatibility requirements for every current package.
-- The V2 Standard Bundle Authoring package's own `2.0` payload and author templates.
+- The V2 Standard Bundle Authoring package's current `2.2` payload and author templates, with released `2.0` and `2.1` payloads retained unchanged.
 
 ### 2.2 Out of Scope (Non-Goals — never)
 
@@ -147,6 +148,7 @@ Package authors describe desired semantics rather than imperative installation s
 | C-005 | Every advertised payload and operation works with network access disabled. | SPEC-CP01 FR-016 and FR-028. |
 | C-006 | Referenced extensions remain consumer-owned and cannot overlap managed inputs or outputs. | SPEC-CP01 FR-036. |
 | C-007 | Existing package behavior is preserved or changed through an approved and tested V5 migration. | SPEC-CP01 NFR-007. |
+| C-008 | Every payload's consumer-side Python requires Python 3.14 or newer; the authoring contract has no lower-runtime compatibility lane. | Owner-approved 5.1 review-remediation contract. |
 
 ---
 
@@ -207,7 +209,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-007 | Every payload shall publish a Draft 2020-12 JSON Schema for its package options, with `additionalProperties: false`; options shall resolve only under `standards.STANDARD_ID.config`. | Package settings need one version-aware and collision-free authority. | Schema/default tests reject unknown options and any package claim over another namespace or control-plane meta key. | Must |
 | FR-008 | Every configurable option shall be required or carry a deterministic default; a schema/behavior selector such as `contract_version` shall be an ordinary package option distinct from package version. | Effective config must be complete and package/contract versions must remain separate. | Default extraction and migration fixtures prove deterministic effective config and independent selectors. | Must |
 | FR-009 | Every payload resource shall declare a stable resource ID, role, safe payload-relative path, media type, and SHA-256 digest. | Documentation and future MCP consumers need version-correct content-addressed resources. | Resource fixtures reject invalid IDs, unsafe paths, missing files, media mismatches, and digest drift. | Must |
-| FR-010 | Each whole artifact shall declare stable ID, source path/digest, repository-relative target, `managed` or `create-only` policy, exclusive ownership, and optional POSIX mode. | Exclusive files retain safe update/removal behavior without semantic overreach. | Artifact fixtures cover create, equal-adopt, update, drift, create-only preservation, removal, mode, and collision. | Must |
+| FR-010 | Each whole artifact shall declare stable ID, source path/digest, repository-relative target, `managed` or `create-only` policy, exclusive ownership, and optional POSIX mode. A declared artifact mode is the consumer contract; source-tree executable bits are not the consumer contract. | Exclusive files retain safe update/removal behavior without semantic overreach or treating package-source metadata as installed state. | Artifact fixtures cover create, equal-adopt, update, drift, create-only preservation, removal, declared-mode materialization independent of source-tree mode, and collision. | Must |
 | FR-011 | Each semantic contribution shall declare stable ID, target, adapter, normalized scope selector, ownership policy, and exactly one static source or render provider. | Shared containers require smallest-unit ownership and preflight completeness. | Contribution schema and adapter fixtures reject missing, ambiguous, parent/child-overlapping, or multiply sourced units. | Must |
 | FR-012 | A contribution shared by independent packages shall declare a stable shared identity and normalize to the same adapter, scope, value, and digest in every referencing payload. | Shared values need reference counting without package precedence. | Graph fixtures accept identical references and reject shared-ID value, digest, adapter, or scope disagreement. | Must |
 | FR-013 | V1 adapters and selectors shall cover whole files, TOML keys/tables, JSON/JSONC keys and stable set entries, YAML mappings and stable keyed entries, EditorConfig section/property pairs, and delimiter-bounded Markdown blocks. | Current packages need typed ownership for every shared surface. | Adapter schema fixtures and the root-artifact surface matrix cover every current destination. | Must |
@@ -228,7 +230,7 @@ Package authors describe desired semantics rather than imperative installation s
 | FR-028 | The standard shall define an author workflow that creates the payload, validates schemas/content, computes digests, indexes it, proves conformance, assigns a catalog role, and only then publishes it. | Publication ordering prevents incomplete catalog entries. | The ordered author workflow in the V2 README is the required template checklist; it enumerates the workflow, and CI enforces its prepublication gates. A separate checklist file is not required. | Must |
 | FR-029 | Every current package shall be reconstructed as V2 payload data and pass fresh, migrated, individual, pairwise, and all-package compatibility tests before being advertised as V5-compatible. | V5 must not strand or silently weaken current standards. | A compatibility matrix records all current packages, payloads, surfaces, migrations, and passing evidence. | Must |
 | FR-030 | Legacy `standard.toml`, `adopt.toml`, `registry.json`, YAML fragments, `_shared` files, package-specific locks, and deployed Markdown/TOML/YAML managed-block marker formats shall be migration inputs only after V2 activation, not parallel V2 authorities. | Split authoring and consumer authority would make reconciliation non-deterministic, while deployed bounded blocks need an explicit ownership transition. | Dependency/runtime searches find no V2 reads except explicit migration adapters; Agent Handoff fixtures recognize its exact legacy instruction, Codex-hook, and project-config markers without treating them as canonical V2 delimiters. | Must |
-| FR-031 | The Standard Bundle Authoring package shall dogfood this contract as internal package version `2.0`, ship family/payload/catalog templates, and replace its V1 README only after SPEC-BA02 approval. | The meta-standard must demonstrate its own contract without prematurely retiring BA01. | Self-hosting schema/graph/catalog tests pass; BA01 remains historical and is marked superseded only on approval. | Must |
+| FR-031 | The Standard Bundle Authoring package shall dogfood this contract as an internal package, ship family/payload/catalog templates, and replace its V1 README only after SPEC-BA02 approval. | The meta-standard must demonstrate its own contract without prematurely retiring BA01. | Version 2.2 self-hosting schema/graph/catalog tests pass; released versions 2.0 and 2.1 remain unchanged, and BA01 remains historical and marked superseded. | Must |
 | FR-032 | Family, payload, option, and catalog schemas shall be generated from strict typed models and checked into the distribution with drift tests. | Prose alone cannot enforce the exact V2 contract. | Schema snapshots use Draft 2020-12, reject unknown fields, and match generated output byte-for-byte. | Must |
 | FR-033 | Shared control-plane and graph code shall dispatch by declared adapter/provider/schema data and contain no ordinary package-ID branches. | New standards must remain data additions rather than platform rewrites. | Architecture tests and review reject package-ID conditionals outside explicit legacy migrations and package-owned provider code. | Must |
 | FR-034 | The build shall package each indexed payload under `project_standards/payloads/{standard-id}/{version}/` with a byte-identical relative tree; repository payload directories remain the sole authoring authority. | Runtime discovery needs one exact installed path without creating a second editable payload source. | Source-to-wheel parity tests cover every file/digest and reject missing, extra, transformed, or separately maintained runtime copies. | Must |
@@ -487,6 +489,8 @@ digest = "sha256:..."
 policy = "managed" # managed | create-only
 mode = "0644"      # optional
 ```
+
+When `mode` is present, reconciliation materializes that declared artifact mode in the consumer repository. Source-tree executable bits may differ and do not define the consumer result.
 
 Semantic contributions declare the smallest adapter-owned unit:
 
@@ -933,7 +937,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-007 | Package option-schema namespace and closed-object tests | Passing |
 | FR-008 | Effective-default and internal-contract selector tests | Passing |
 | FR-009 | Resource identity/path/media/digest tests | Passing |
-| FR-010 | Whole-artifact lifecycle and collision tests | Passing |
+| FR-010 | Whole-artifact lifecycle, declared-mode materialization, and collision tests | Passing |
 | FR-011 | Semantic-contribution source/scope validation tests | Passing |
 | FR-012 | Shared-identity equality and disagreement tests | Passing |
 | FR-013 | Adapter-selector schema, current-surface coverage, real pair/full-set composition, and preservation suites | Passing — `1b257c7`, `06a33c1` |
@@ -954,7 +958,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 | FR-028 | V2 README author-workflow checklist, package validation/schema/projection commands, release evidence, and CI gate documentation | Passing — Task 18 documentation/spec/generated-drift gates and release-cut proof; checklist interpretation clarified in rev 0.13 |
 | FR-029 | Seven individual, 21 pairwise, full-set, fresh/migrated, source/wheel compatibility rows | Passing — `06a33c1` |
 | FR-030 | Classified tracked/installed legacy dependency inventory, all-namespace migration, exact marker/artifact fixtures | Passing — `06a33c1`, `a891973` |
-| FR-031 | Standard Bundle Authoring `2.0` self-hosting, schema, graph, catalog, and template tests | Passing — `1b257c7` |
+| FR-031 | Standard Bundle Authoring `2.2` self-hosting, schema, graph, catalog, and template tests | Passing — 5.1 review-remediation payload cut |
 | FR-032 | Typed-model generated-schema drift tests | Passing |
 | FR-033 | No-package-ID-branch architecture tests plus current-package compatibility review | Passing — `06a33c1` |
 | FR-034 | Source/direct-wheel/sdist-wheel payload tree, symlink dereference, and digest parity | Passing — foundation projection suite, `06a33c1` |
@@ -992,7 +996,7 @@ No regulated or personal data is introduced. Every payload resource and provider
 
 | Item | Value |
 | --- | --- |
-| Runtime | Python 3.14+ inside the `project-standards` CLI/distribution |
+| Runtime | Python 3.14+ inside the `project-standards` CLI/distribution and for consumer-side payload Python |
 | OS / Platform | Repository-local operation on supported Linux development/CI environments |
 | Datastore | Git-tracked TOML, JSON Schema, Markdown, package resources, and generated catalogs |
 | External services | None required for authoring validation or payload operation |
@@ -1132,7 +1136,7 @@ No implementation deviations are recorded. The initial design is represented dir
 ### Standards
 
 - [Standard Bundle Authoring V1 (SPEC-BA01)](archive/2026-07-07-standard-bundle-authoring-standard.md) — superseded historical design and migration evidence.
-- [Standard Bundle Authoring 2.0](../../standards/standard-bundle-authoring/versions/2.0/README.md) — current implemented authoring contract.
+- [Standard Bundle Authoring 2.2](../../standards/standard-bundle-authoring/versions/2.2/README.md) — current implemented authoring contract.
 - [Project Specification Standard 1.1](../../standards/project-spec/versions/1.1/README.md) — specification structure and validation.
 - [Repository Versioning Standard](../../meta/versioning.md) — tool/catalog/package version rules.
 

@@ -82,9 +82,9 @@ _PACKAGES = {
         "Standard Bundle Authoring Standard",
         "The contract every standard bundle in this repository must declare.",
         "active",
-        "2.1",
+        "2.2",
         "internal",
-        "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b",
+        "sha256:538d8afa6760bddd3f4be13b7b001257f028f94df4385a42e3aba5a19559bc83",
     ),
 }
 
@@ -104,6 +104,12 @@ _RETAINED_CATALOG_ENTRIES = {
         "2.0",
         "internal",
         "sha256:5fec499e321fc4d20ea9ddb50f6dceae1da800dd66d909ebea2dbd23e84597ca",
+    ),
+    (
+        "standard-bundle-authoring",
+        "2.1",
+        "internal",
+        "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b",
     ),
 }
 
@@ -185,6 +191,27 @@ def test_repository_root_activates_exact_catalog_and_relative_projections() -> N
         assert link.destination.is_symlink()
         assert not link.destination.readlink().is_absolute()
         assert link.destination.resolve(strict=True).read_bytes() == link.source.read_bytes()
+
+
+def test_standard_bundle_authoring_2_2_is_internal_and_advertised() -> None:
+    repository = build_package_repository(_ROOT, catalog_major=5)
+    family = next(
+        item
+        for item in repository.families
+        if item.manifest.standard.id == "standard-bundle-authoring"
+    )
+
+    assert "2.2" in {entry.version.value for entry in family.manifest.versions}
+    payload = next(item for item in family.payloads if item.manifest.payload.version.value == "2.2")
+    assert payload.manifest.payload.availability.value == "internal"
+    assert repository.catalog is not None
+    assert (
+        "standard-bundle-authoring",
+        "2.2",
+        "internal",
+    ) in {
+        (entry.id, entry.version.value, entry.role.value) for entry in repository.catalog.packages
+    }
 
 
 def test_catalog_agent_summaries_link_to_their_canonical_standard() -> None:

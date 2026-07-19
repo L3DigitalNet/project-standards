@@ -20,6 +20,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | default | consumer | 13 | 3 | 52 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.1 | internal | internal | 12 | 0 | 0 |
+| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.2 | internal | internal | 12 | 0 | 0 |
 
 ## Capabilities
 
@@ -37,6 +38,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.1` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
 | `standard-bundle-authoring@2.0` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 | `standard-bundle-authoring@2.1` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
+| `standard-bundle-authoring@2.2` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 
 ## Relationship catalog
 
@@ -270,6 +272,18 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `standard-bundle-authoring@2.1` | `extension-template` | `extension-template` | `standards://standard-bundle-authoring/2.1/extension-template` | `templates/extension.toml` |
 | `standard-bundle-authoring@2.1` | `migration-template` | `migration-template` | `standards://standard-bundle-authoring/2.1/migration-template` | `templates/migration.toml` |
 | `standard-bundle-authoring@2.1` | `legacy-signature-template` | `legacy-signature-template` | `standards://standard-bundle-authoring/2.1/legacy-signature-template` | `templates/legacy-signature.toml` |
+| `standard-bundle-authoring@2.2` | `readme` | `canonical-standard` | `standards://standard-bundle-authoring/2.2/readme` | `README.md` |
+| `standard-bundle-authoring@2.2` | `agent-summary` | `agent-summary` | `standards://standard-bundle-authoring/2.2/agent-summary` | `agent-summary.md` |
+| `standard-bundle-authoring@2.2` | `config-schema` | `config-schema` | `standards://standard-bundle-authoring/2.2/config-schema` | `config.schema.json` |
+| `standard-bundle-authoring@2.2` | `family-template` | `family-template` | `standards://standard-bundle-authoring/2.2/family-template` | `templates/standard.toml` |
+| `standard-bundle-authoring@2.2` | `payload-template` | `payload-template` | `standards://standard-bundle-authoring/2.2/payload-template` | `templates/payload.toml` |
+| `standard-bundle-authoring@2.2` | `option-schema-template` | `option-schema-template` | `standards://standard-bundle-authoring/2.2/option-schema-template` | `templates/config.schema.json` |
+| `standard-bundle-authoring@2.2` | `catalog-template` | `catalog-template` | `standards://standard-bundle-authoring/2.2/catalog-template` | `templates/catalog.toml` |
+| `standard-bundle-authoring@2.2` | `provider-template` | `provider-template` | `standards://standard-bundle-authoring/2.2/provider-template` | `templates/provider.toml` |
+| `standard-bundle-authoring@2.2` | `contribution-template` | `contribution-template` | `standards://standard-bundle-authoring/2.2/contribution-template` | `templates/contribution.toml` |
+| `standard-bundle-authoring@2.2` | `extension-template` | `extension-template` | `standards://standard-bundle-authoring/2.2/extension-template` | `templates/extension.toml` |
+| `standard-bundle-authoring@2.2` | `migration-template` | `migration-template` | `standards://standard-bundle-authoring/2.2/migration-template` | `templates/migration.toml` |
+| `standard-bundle-authoring@2.2` | `legacy-signature-template` | `legacy-signature-template` | `standards://standard-bundle-authoring/2.2/legacy-signature-template` | `templates/legacy-signature.toml` |
 
 ## Providers
 

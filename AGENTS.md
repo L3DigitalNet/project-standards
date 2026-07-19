@@ -6,7 +6,7 @@
 
 ## Repo Purpose
 
-This repo is the source of truth for reusable project standards. Catalog 5 has seven consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring 2.0**. `.standards/config.toml` selects immutable packages; reconciliation composes them under one lock. See [README.md](README.md).
+This repo is the source of truth for reusable project standards. Catalog 5 has seven consumer packages plus reference-only **Python Coding** and internal **Standard Bundle Authoring 2.2**. `.standards/config.toml` selects immutable packages; reconciliation composes them under one lock. See [README.md](README.md).
 
 ## Structure
 
