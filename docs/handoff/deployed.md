@@ -2,8 +2,6 @@
 
 **Last updated:** 2026-07-19
 
-> **Prepared, not published:** release 5.0.2 (additive internal `standard-bundle-authoring@2.1`, PATCH under the internal-additive classification rule) is prepared on `testing`. It appears below only after the owner lands it on `main` and pushes the signed tags.
-
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 
 | Ref | What it is | Status |
@@ -22,5 +20,6 @@ This repo is consumed as a versioned standard: downstream repos pin a `standards
 | `v4.3.0` | CLI Documentation Standard (6th standard: `standards/cli-documentation/` bundle, adopt artifacts `docs/usage.md` scaffold + `cli-docs-check.yml` template + config fragment, `cli_documentation` contract `1.0` in `registry.json`), `--version` on all seven console scripts, `--help` fixed on the two sync commands, dogfood `docs/usage.md` + inventory-parity/installed-wrapper tests. Additive — **MINOR**; `@v4` inherits. Release commit `74db623`; GitHub release live. | published on `main` |
 | `v4` (moving) | tracks the newest 4.x release (`v4.3.0`) | published on `main` |
 | `v5.0.0` | Unified `.standards/` control plane, catalog 5 packages, migration and composition engine, source/wheel compatibility matrix, and updated reusable workflows. **BREAKING**; see [`UPGRADING.md`](../../UPGRADING.md). Release commit `8869a08`; signed tag and GitHub release assets live. | published on `main` |
-| `v5.0.1` | Drift-audit corrections for bounded provider integrity, Agent Handoff error classification, package-contract enforcement, source/wheel parity, and current Catalog 5 documentation. **PATCH** — no immutable payload, catalog selection, public command, accepted input, or conforming consumer outcome changed. Release commit `0390b9e`; signed tag and GitHub release assets live. | published on `main` (Latest) |
-| `v5` (moving) | tracks the newest 5.x release (`v5.0.1`) | published on `main` |
+| `v5.0.1` | Drift-audit corrections for bounded provider integrity, Agent Handoff error classification, package-contract enforcement, source/wheel parity, and current Catalog 5 documentation. **PATCH** — no immutable payload, catalog selection, public command, accepted input, or conforming consumer outcome changed. Release commit `0390b9e`; signed tag and GitHub release assets live. | published on `main` |
+| `v5.0.2` | Additive internal `standard-bundle-authoring@2.1` payload correcting the 2.0 SPEC-BA02 pointer, plus the internal-additive PATCH classification rule. Release commit `c731955`; signed tag and GitHub release assets live. | published on `main` (Latest) |
+| `v5` (moving) | tracks the newest 5.x release (`v5.0.2`) | published on `main` |
