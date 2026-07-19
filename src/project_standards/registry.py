@@ -119,7 +119,12 @@ def _require_str_map(obj: Any, where: str) -> dict[str, str]:
 def _require_str_list(obj: Any, where: str) -> list[str]:
     if not isinstance(obj, list):
         raise RegistryError(f"registry {where} is not a list")
-    return [str(v) for v in cast("list[Any]", obj)]
+    out: list[str] = []
+    for index, value in enumerate(cast("list[Any]", obj)):
+        if not isinstance(value, str):
+            raise RegistryError(f"registry {where}[{index}] is not a string")
+        out.append(value)
+    return out
 
 
 def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
@@ -138,7 +143,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     mt = data.get("markdown_tooling")
     cd = data.get("cli_documentation")
     ps = data.get("project_spec")
-    ah = data.get("agent_handoff", {"default": "1.0", "versions": ["1.0"]})
+    ah = data.get("agent_handoff")
     if (
         not isinstance(fm, dict)
         or not isinstance(adr, dict)
@@ -150,7 +155,7 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     ):
         raise RegistryError(
             f"registry {path} missing frontmatter/adr/python_tooling/"
-            "markdown_tooling/cli_documentation/project_spec objects"
+            "markdown_tooling/cli_documentation/project_spec/agent_handoff objects"
         )
     fm_d = cast("dict[str, Any]", fm)
     adr_d = cast("dict[str, Any]", adr)
@@ -188,9 +193,9 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
         if not isinstance(value, dict):
             raise RegistryError(f"registry adr.versions.{key} is not an object")
         supports = cast("dict[str, Any]", value).get("supports_frontmatter")
-        if not isinstance(supports, list):
-            raise RegistryError(f"registry adr.versions.{key}.supports_frontmatter is not a list")
-        adr_supports[str(key)] = [str(v) for v in cast("list[Any]", supports)]
+        adr_supports[str(key)] = _require_str_list(
+            supports, f"adr.versions.{key}.supports_frontmatter"
+        )
 
     pt_versions = _require_str_list(pt_d.get("versions"), "python_tooling.versions")
     mt_versions = _require_str_list(mt_d.get("versions"), "markdown_tooling.versions")

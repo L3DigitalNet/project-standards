@@ -71,16 +71,15 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
     """Flatten requested standards into one deduplicated, source-resolved action list.
 
     Unknown id or two *owned* artifacts targeting one dest -> UsageError (exit 2).
-    A *shared* source referenced by multiple standards collapses to one action.
+    Compatible references to a *shared* source collapse to one action.
     """
     known = set(available_standards(bundles_dir))
     unknown = [s for s in standard_ids if s not in known]
     if unknown:
         raise UsageError(f"unknown standard(s): {', '.join(sorted(unknown))}")
 
-    # Collision is purely about the destination: two artifacts (of ANY kind) that
-    # would write the same dest from DIFFERENT sources is an authoring bug. The same
-    # source (a shared file referenced by two standards) dedupes to one action.
+    # One destination cannot have conflicting source or rendering contracts. Only
+    # compatible references to the same shared source dedupe to one action.
     write_actions: dict[str, Action] = {}  # dest -> Action (file / workflow-caller)
     fragment_actions: list[Action] = []  # fragments are reported; multiple per target allowed
     for sid in standard_ids:
@@ -107,6 +106,11 @@ def build_plan(standard_ids: list[str], *, bundles_dir: Path = BUNDLES_DIR) -> l
                     raise UsageError(
                         f"destination collision at {art.dest!r}: "
                         f"{existing.standards[0]} and {sid} supply different sources"
+                    )
+                if existing.kind != art.kind:
+                    raise UsageError(
+                        f"destination collision at {art.dest!r}: "
+                        f"{existing.standards[0]} and {sid} use different kinds"
                     )
                 if existing.mode != art.mode:
                     raise UsageError(

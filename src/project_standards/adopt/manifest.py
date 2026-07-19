@@ -87,7 +87,7 @@ def _parse_mode(raw_mode: object, path: Path, artifact_index: int) -> int | None
                 f"got {raw_mode!r}"
             )
         return int(raw_mode, 8)
-    if isinstance(raw_mode, int) and 0 <= raw_mode <= 0o777:
+    if isinstance(raw_mode, int) and not isinstance(raw_mode, bool) and 0 <= raw_mode <= 0o777:
         return raw_mode
     raise ManifestError(
         f"manifest {path} artifact {artifact_index} field 'mode' must be an octal "

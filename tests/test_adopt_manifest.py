@@ -50,6 +50,19 @@ def test_load_manifest_parses_octal_artifact_mode(tmp_path: Path) -> None:
     assert load_manifest("x", bundles_dir=tmp_path).artifacts[0].mode == 0o755
 
 
+@pytest.mark.parametrize("raw_mode", ["true", "false"])
+def test_load_manifest__boolean_mode__raises_manifest_error(tmp_path: Path, raw_mode: str) -> None:
+    _manifest(
+        tmp_path,
+        '[standard]\nid = "x"\n\n[[artifact]]\nkind = "file"\n'
+        'source = "s"\ndest = "d"\nprovenance = "package-owned"\n'
+        f"mode = {raw_mode}\n",
+    )
+
+    with pytest.raises(ManifestError, match="must be an octal string or TOML integer"):
+        load_manifest("x", bundles_dir=tmp_path)
+
+
 def test_install_policy_defaults_managed(tmp_path: Path) -> None:
     _manifest(
         tmp_path,

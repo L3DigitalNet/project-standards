@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import yaml
@@ -413,13 +413,19 @@ def test_find_bundled_schema_missing_returns_canonical_path() -> None:
 # Unit — registry (bundled contract-version registry; see registry.py)
 # ===========================================================================
 
-from project_standards.registry import RegistryError, load_registry  # noqa: E402
+from project_standards.registry import Registry, RegistryError, load_registry  # noqa: E402
 
 _PROJECT_SPEC_REGISTRY_BLOCK = ', "project_spec": {"default": "1.0", "versions": ["1.0"]}'
+_AGENT_HANDOFF_REGISTRY_BLOCK = ', "agent_handoff": {"default": "1.0", "versions": ["1.0"]}'
 
 
-def _with_project_spec_registry_block(payload: str) -> str:
-    return payload[:-1] + _PROJECT_SPEC_REGISTRY_BLOCK + "}"
+def _with_required_registry_blocks(payload: str) -> str:
+    blocks = ""
+    if '"project_spec"' not in payload:
+        blocks += _PROJECT_SPEC_REGISTRY_BLOCK
+    if '"agent_handoff"' not in payload:
+        blocks += _AGENT_HANDOFF_REGISTRY_BLOCK
+    return payload[:-1] + blocks + "}"
 
 
 def test_load_registry_real_file() -> None:
@@ -457,6 +463,84 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
     bad.write_text("[]", encoding="utf-8")
     with pytest.raises(RegistryError, match="not a JSON object"):
         load_registry(bad)
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        "python_tooling",
+        "markdown_tooling",
+        "cli_documentation",
+        "project_spec",
+        "agent_handoff",
+    ],
+)
+def test_load_registry__numeric_version_member__raises_registry_error(
+    tmp_path: Path, section: str
+) -> None:
+    payload: dict[str, Any] = json.loads(
+        (SCHEMA_PATH.parent / "registry.json").read_text(encoding="utf-8")
+    )
+    section_payload = payload[section]
+    assert isinstance(section_payload, dict)
+    section_payload["versions"] = [1.0]
+    bad = tmp_path / "registry.json"
+    bad.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RegistryError, match=rf"{section}\.versions\[0\] is not a string"):
+        load_registry(bad)
+
+
+def test_load_registry__numeric_supported_frontmatter__raises_registry_error(
+    tmp_path: Path,
+) -> None:
+    payload: dict[str, Any] = json.loads(
+        (SCHEMA_PATH.parent / "registry.json").read_text(encoding="utf-8")
+    )
+    adr = cast("dict[str, Any]", payload["adr"])
+    versions = cast("dict[str, Any]", adr["versions"])
+    version = cast("dict[str, Any]", versions["1.0"])
+    version["supports_frontmatter"] = [1.1]
+    bad = tmp_path / "registry.json"
+    bad.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(
+        RegistryError,
+        match=r"adr\.versions\.1\.0\.supports_frontmatter\[0\] is not a string",
+    ):
+        load_registry(bad)
+
+
+def test_load_registry__missing_agent_handoff__raises_registry_error(tmp_path: Path) -> None:
+    payload: dict[str, Any] = json.loads(
+        (SCHEMA_PATH.parent / "registry.json").read_text(encoding="utf-8")
+    )
+    del payload["agent_handoff"]
+    bad = tmp_path / "registry.json"
+    bad.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RegistryError, match="agent_handoff"):
+        load_registry(bad)
+
+
+def test_registry__direct_constructor__retains_agent_handoff_defaults() -> None:
+    registry = Registry(
+        frontmatter_default="1.1",
+        frontmatter_versions={"1.1": "markdown-frontmatter"},
+        adr_default="1.0",
+        adr_supports={"1.0": ["1.1"]},
+        python_tooling_default="1.0",
+        python_tooling_versions=["1.0"],
+        markdown_tooling_default="1.0",
+        markdown_tooling_versions=["1.0"],
+        cli_documentation_default="1.0",
+        cli_documentation_versions=["1.0"],
+        project_spec_default="1.0",
+        project_spec_versions=["1.0"],
+    )
+
+    assert registry.agent_handoff_default == "1.0"
+    assert registry.agent_handoff_versions == ["1.0"]
 
 
 @pytest.mark.parametrize(
@@ -510,8 +594,8 @@ def test_load_registry_non_object_raises(tmp_path: Path) -> None:
 )
 def test_load_registry_malformed_raises(tmp_path: Path, payload: str, match: str) -> None:
     bad = tmp_path / "registry.json"
-    if "project_spec" not in payload and not match.startswith("missing "):
-        payload = _with_project_spec_registry_block(payload)
+    if not match.startswith("missing "):
+        payload = _with_required_registry_blocks(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)
@@ -1723,8 +1807,7 @@ def test_load_registry_cross_field_violations_raise(
     # Defaults must be members of their versions, and ADR supports-lists must name
     # bundled frontmatter versions — crisp load-time errors, not late confusion (F39).
     bad = tmp_path / "registry.json"
-    if "project_spec" not in payload:
-        payload = _with_project_spec_registry_block(payload)
+    payload = _with_required_registry_blocks(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)
@@ -1797,8 +1880,7 @@ def test_tags_reject_edge_and_double_hyphens(
 )
 def test_load_registry_default_not_bundled_raises(tmp_path: Path, payload: str, match: str) -> None:
     bad = tmp_path / "registry.json"
-    if "project_spec" not in payload:
-        payload = _with_project_spec_registry_block(payload)
+    payload = _with_required_registry_blocks(payload)
     bad.write_text(payload, encoding="utf-8")
     with pytest.raises(RegistryError, match=match):
         load_registry(bad)

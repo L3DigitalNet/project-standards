@@ -57,8 +57,7 @@ def test_build_plan_unknown_standard_raises_usageerror() -> None:
 
 
 def test_build_plan_collision_across_kinds(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Two artifacts of DIFFERENT kinds targeting one dest from different sources -> UsageError
-    # (regression guard: must not KeyError).
+    # Identical source and destination still collide when rendering semantics differ by kind.
     import project_standards.adopt.engine as eng
     from project_standards.adopt.manifest import Artifact, Manifest
 
@@ -76,7 +75,7 @@ def test_build_plan_collision_across_kinds(monkeypatch: pytest.MonkeyPatch) -> N
             Artifact(
                 kind="workflow-caller",
                 owner=True,
-                source="lint-markdown.caller.yml",
+                source="markdownlint.json",
                 shared=None,
                 dest="collide",
                 target=None,
@@ -92,7 +91,7 @@ def test_build_plan_collision_across_kinds(monkeypatch: pytest.MonkeyPatch) -> N
 
     monkeypatch.setattr(eng, "available_standards", fake_available)
     monkeypatch.setattr(eng, "load_manifest", fake_load)
-    with pytest.raises(UsageError):
+    with pytest.raises(UsageError, match="different kinds"):
         build_plan(["markdown-tooling"])
 
 
