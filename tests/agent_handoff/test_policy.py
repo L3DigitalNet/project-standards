@@ -16,11 +16,30 @@ from project_standards.agent_handoff.policy import (
 POLICY_PATH = (
     Path(__file__).parents[2] / "src/project_standards/bundles/agent-handoff/resources/policy.toml"
 )
+MUTABLE_POLICY_PATH = Path(__file__).parents[2] / "standards/agent-handoff/resources/policy.toml"
 
 
 @pytest.fixture(scope="module")
 def policy() -> HandoffPolicy:
     return load_policy(POLICY_PATH)
+
+
+def test_policy_contract_omits_unenforced_shape_options(policy: HandoffPolicy) -> None:
+    definitions = type(policy).model_json_schema()["$defs"]
+
+    assert {
+        "max_heading_depth",
+        "prefer_bullets",
+        "require_overflow_pointer",
+    }.isdisjoint(definitions["ShapeDefaults"]["properties"])
+    assert {
+        "require_pointer_for_details_over_chars",
+        "append_only",
+    }.isdisjoint(definitions["DocumentPolicy"]["properties"])
+
+
+def test_mutable_policy_resource_matches_bundle() -> None:
+    assert MUTABLE_POLICY_PATH.read_bytes() == POLICY_PATH.read_bytes()
 
 
 def test_bug_profile_targets_numbered_records_only(policy: HandoffPolicy) -> None:

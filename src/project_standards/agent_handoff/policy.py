@@ -43,9 +43,6 @@ class BudgetPolicy(_PolicyModel):
 class ShapeDefaults(_PolicyModel):
     max_paragraph_chars: int = Field(gt=0)
     max_bullet_chars: int = Field(gt=0)
-    max_heading_depth: int = Field(gt=0)
-    prefer_bullets: bool
-    require_overflow_pointer: bool
 
 
 class BlockedPhrases(_PolicyModel):
@@ -63,11 +60,9 @@ class DocumentPolicy(_PolicyModel):
     max_bullet_chars: int | None = Field(default=None, gt=0)
     target_lines: int | None = Field(default=None, gt=0)
     max_paragraph_chars: int | None = Field(default=None, gt=0)
-    require_pointer_for_details_over_chars: int | None = Field(default=None, gt=0)
     require_quick_reference: bool = False
     max_rule_summary_chars: int | None = Field(default=None, gt=0)
     max_entry_chars: int | None = Field(default=None, gt=0)
-    append_only: bool = False
     row_max_chars: int | None = Field(default=None, gt=0)
     headline_max_words: int | None = Field(default=None, gt=0)
     forbid_paragraphs: bool = False

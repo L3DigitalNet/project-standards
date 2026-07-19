@@ -38,9 +38,6 @@ virtual = true
 [shape.defaults]
 max_paragraph_chars = 360
 max_bullet_chars = 180
-max_heading_depth = 3
-prefer_bullets = true
-require_overflow_pointer = true
 
 [shape.blocked_phrases]
 phrases = [
@@ -95,7 +92,6 @@ severity = "advisory"
 profile = "structural-reference"
 target_lines = 200
 max_paragraph_chars = 420
-require_pointer_for_details_over_chars = 700
 required = true
 severity = "advisory"
 
@@ -109,7 +105,6 @@ severity = "advisory"
 
 [shape.documents."docs/handoff/sessions/*.md"]
 profile = "session-log"
-append_only = true
 row_max_chars = 220
 headline_max_words = 20
 required = false
