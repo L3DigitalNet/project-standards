@@ -167,8 +167,12 @@ class RepositoryRoot:
 
                 try:
                     with os.fdopen(descriptor, "wb") as stream:
+                        if metadata is not None:
+                            os.fchmod(stream.fileno(), stat_module.S_IMODE(metadata.st_mode))
                         stream.write(data)
                         stream.flush()
+                        if metadata is not None:
+                            os.fchmod(stream.fileno(), stat_module.S_IMODE(metadata.st_mode))
                         os.fsync(stream.fileno())
                     os.replace(
                         temporary_name,

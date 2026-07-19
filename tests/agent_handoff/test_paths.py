@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import stat
 import subprocess
 from contextlib import suppress
 from os import PathLike
@@ -78,6 +79,39 @@ def test_contained_helpers_access_only_repository_paths(
     assert root.read_bytes("docs/state.md") == b"state\n"
     assert root.stat("docs/state.md").st_size == 6
     assert observed
+
+
+@pytest.mark.parametrize(
+    "expected_mode",
+    [
+        pytest.param(0o600, id="ordinary-mode"),
+        pytest.param(0o4755, id="setuid-mode"),
+        pytest.param(0o2755, id="setgid-mode"),
+    ],
+)
+def test_write_bytes__existing_file__preserves_mode(tmp_path: Path, expected_mode: int) -> None:
+    root = RepositoryRoot(tmp_path)
+    target = root.consumer_path("state.md")
+    target.write_bytes(b"before\n")
+    target.chmod(expected_mode)
+    assert stat.S_IMODE(target.stat().st_mode) == expected_mode
+
+    root.write_bytes("state.md", b"after\n")
+
+    assert target.read_bytes() == b"after\n"
+    assert stat.S_IMODE(target.stat().st_mode) == expected_mode
+
+
+def test_write_bytes__new_file__respects_umask_mode(tmp_path: Path) -> None:
+    target = tmp_path / "state.md"
+
+    previous_umask = os.umask(0o077)
+    try:
+        RepositoryRoot(tmp_path).write_bytes("state.md", b"state\n")
+    finally:
+        os.umask(previous_umask)
+
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
 
 
 def test_read_wraps_unreadable_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
