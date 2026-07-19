@@ -17,8 +17,13 @@ from pathlib import Path
 import pytest
 
 from project_standards import validate_frontmatter
-from project_standards.cli import main, v5_catalog_has_all_adoptable_defaults
+from project_standards.cli import (
+    _try_v5_adopt,  # pyright: ignore[reportPrivateUsage]
+    main,
+    v5_catalog_has_all_adoptable_defaults,
+)
 from project_standards.control_plane.codec import parse_catalog
+from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.package_contract.catalog import render_consumer_catalog
 from project_standards.package_contract.repository import build_package_repository
 
@@ -81,6 +86,15 @@ def test_v5_adopt_activates_only_for_the_complete_default_set() -> None:
     )
 
     assert v5_catalog_has_all_adoptable_defaults(catalog)
+    complete_with_extra = catalog.model_copy(
+        update={
+            "standards": {
+                **catalog.standards,
+                "future-standard": catalog.standards["agent-handoff"],
+            }
+        }
+    )
+    assert v5_catalog_has_all_adoptable_defaults(complete_with_extra)
     incomplete = catalog.model_copy(
         update={
             "standards": {
@@ -92,6 +106,29 @@ def test_v5_adopt_activates_only_for_the_complete_default_set() -> None:
         }
     )
     assert not v5_catalog_has_all_adoptable_defaults(incomplete)
+
+
+def test_v5_adopt_distribution_oserror_warns_and_preserves_legacy_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail_current() -> InstalledDistribution:
+        raise OSError("distribution unavailable")
+
+    monkeypatch.setattr(InstalledDistribution, "current", fail_current)
+
+    result = _try_v5_adopt(
+        ["markdown-tooling"],
+        tmp_path,
+        force=False,
+        dry_run=False,
+    )
+
+    assert result is None
+    assert capsys.readouterr().err == (
+        "warning: installed V2 distribution could not be read: distribution unavailable\n"
+    )
 
 
 def test_list_json_schema(capsys: pytest.CaptureFixture[str]) -> None:

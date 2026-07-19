@@ -85,7 +85,7 @@ def v5_catalog_has_all_adoptable_defaults(catalog: ConsumerCatalog) -> bool:
         for standard_id, standard in catalog.standards.items()
         if standard.default is not None
     }
-    return defaults == set(_ADOPTABLE_STANDARD_IDS)
+    return defaults.issuperset(_ADOPTABLE_STANDARD_IDS)
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,7 +234,10 @@ def _try_v5_adopt(
     try:
         distribution = InstalledDistribution.current()
         major = str(distribution.tool_release.major)
-    except PackageContractError, OSError, ValueError:
+    except PackageContractError, ValueError:
+        return None
+    except OSError as exc:
+        print(f"warning: installed V2 distribution could not be read: {exc}", file=sys.stderr)
         return None
     projection = distribution.package_root / f"catalogs/{major}.toml"
     try:
