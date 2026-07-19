@@ -83,6 +83,20 @@ def test_argparse_failures_are_json_and_never_systemexit(
     assert payload["ok"] is False and payload["code"] == "usage"
 
 
+def test_new_abbreviated_json_keeps_usage_envelope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    rc = run(["new", "--stdout", "--js"])
+
+    payload = _one_json(capsys.readouterr().out)
+    assert rc == 2
+    assert payload["ok"] is False and payload["code"] == "usage"
+
+
 def test_bad_id_and_bad_field_exit_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

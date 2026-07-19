@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from project_standards.cli import main
+from project_standards.control_plane.locking import LockMode
+from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
@@ -57,6 +59,36 @@ def test_bare_spec_is_exit2_but_help_is_exit0(capsys: pytest.CaptureFixture[str]
     assert main(["spec", "--help"]) == 0
     assert main(["spec", "bogus"]) == 2
     assert "usage:" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("verb", "argv"),
+    [
+        pytest.param("new", ["--stdout"], id="new-missing-profile"),
+        pytest.param(
+            "new",
+            ["--profile", "light", "--stdout", "--unknown"],
+            id="new-unknown-option",
+        ),
+        pytest.param("upgrade", ["source.md", "--to"], id="upgrade-missing-value"),
+        pytest.param(
+            "upgrade",
+            ["source.md", "--to", "full", "--unknown"],
+            id="upgrade-unknown-option",
+        ),
+    ],
+)
+def test_operation_lock_mode_fails_safe_on_uncertain_arguments(
+    verb: str,
+    argv: list[str],
+) -> None:
+    assert (
+        spec_cli._operation_lock_mode(  # pyright: ignore[reportPrivateUsage]
+            verb,
+            argv,
+        )
+        is LockMode.WRITE
+    )
 
 
 def test_non_utf8_spec_exits_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

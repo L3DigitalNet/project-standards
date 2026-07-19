@@ -420,6 +420,56 @@ class _NewArgParser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         raise _ArgparseError(message)
 
+    def recognizes_flag(self, argument: str, *, dest: str) -> bool:
+        """Return whether one option token resolves to a flag on this parser."""
+        parsed = self._parse_optional(argument)
+        if parsed is None or len(parsed) != 1:
+            return False
+        action, _option_string, _separator, explicit_argument = parsed[0]
+        return action is not None and action.dest == dest and explicit_argument is None
+
+
+def _new_argument_parser(*, add_help: bool = True) -> _NewArgParser:
+    parser = _NewArgParser(prog="project-standards spec new", add_help=add_help)
+    parser.add_argument("path", nargs="?", type=Path)
+    parser.add_argument("--profile", required=True, choices=("light", "standard", "full"))
+    parser.add_argument("--id", dest="spec_id")
+    parser.add_argument("--title")
+    parser.add_argument("--owner")
+    parser.add_argument("--implementer")
+    parser.add_argument("--stdout", action="store_true")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+    return parser
+
+
+def _upgrade_argument_parser(*, add_help: bool = True) -> _NewArgParser:
+    parser = _NewArgParser(prog="project-standards spec upgrade", add_help=add_help)
+    parser.add_argument("src", type=Path)
+    parser.add_argument("--to", required=True, choices=("standard", "full"))
+    parser.add_argument("--stdout", action="store_true")
+    parser.add_argument("--output", "-o", type=Path)
+    parser.add_argument("--in-place", "-i", action="store_true", dest="in_place")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--config", type=Path, default=None)
+    return parser
+
+
+def _parser_flag_present(parser: _NewArgParser, argv: list[str], *, dest: str) -> bool:
+    for argument in argv:
+        if argument == "--":
+            break
+        if not argument.startswith("-"):
+            continue
+        try:
+            if parser.recognizes_flag(argument, dest=dest):
+                return True
+        except _ArgparseError:
+            continue
+    return False
+
 
 class NewError(Exception):
     """A `spec new` refusal/usage/validation failure. Carries the frozen JSON `code`."""
@@ -727,18 +777,8 @@ def _write_selected_new(
 
 
 def _run_new(argv: list[str], runtime: _SpecRuntime) -> int:
-    json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
-    ap = _NewArgParser(prog="project-standards spec new")
-    ap.add_argument("path", nargs="?", type=Path)
-    ap.add_argument("--profile", required=True, choices=("light", "standard", "full"))
-    ap.add_argument("--id", dest="spec_id")
-    ap.add_argument("--title")
-    ap.add_argument("--owner")
-    ap.add_argument("--implementer")
-    ap.add_argument("--stdout", action="store_true")
-    ap.add_argument("--force", action="store_true")
-    ap.add_argument("--json", action="store_true")
-    ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
+    ap = _new_argument_parser()
+    json_mode = _parser_flag_present(ap, argv, dest="json")
 
     try:
         try:
@@ -1026,16 +1066,8 @@ def _deliver_selected_upgrade(
 
 
 def _run_upgrade(argv: list[str], runtime: _SpecRuntime) -> int:
-    json_mode = "--json" in argv  # known even if parsing fails, so usage errors stay JSON (I7)
-    ap = _NewArgParser(prog="project-standards spec upgrade")
-    ap.add_argument("src", type=Path)
-    ap.add_argument("--to", required=True, choices=("standard", "full"))
-    ap.add_argument("--stdout", action="store_true")
-    ap.add_argument("--output", "-o", type=Path)
-    ap.add_argument("--in-place", "-i", action="store_true", dest="in_place")
-    ap.add_argument("--force", action="store_true")
-    ap.add_argument("--json", action="store_true")
-    ap.add_argument("--config", type=Path, default=None)
+    ap = _upgrade_argument_parser()
+    json_mode = _parser_flag_present(ap, argv, dest="json")
     try:
         try:
             args = ap.parse_args(argv)
@@ -1213,16 +1245,19 @@ def _explicit_config(argv: list[str]) -> Path | None:
 def _operation_lock_mode(verb: str, argv: list[str]) -> LockMode:
     """Select exclusivity from the command's actual write authorization."""
     if verb == "new":
-        return LockMode.READ if "--stdout" in argv else LockMode.WRITE
-    if verb == "upgrade":
-        writes = any(
-            argument in {"--in-place", "-i", "--output", "-o"}
-            or argument.startswith("--output=")
-            or (argument.startswith("-o") and len(argument) > 2)
-            for argument in argv
-        )
-        return LockMode.WRITE if writes else LockMode.READ
-    return LockMode.READ
+        parser = _new_argument_parser(add_help=False)
+    elif verb == "upgrade":
+        parser = _upgrade_argument_parser(add_help=False)
+    else:
+        return LockMode.READ
+
+    try:
+        args = parser.parse_args(argv)
+    except _ArgparseError, SystemExit:
+        return LockMode.WRITE
+    if verb == "new":
+        return LockMode.READ if args.stdout else LockMode.WRITE
+    return LockMode.WRITE if args.in_place or args.output is not None else LockMode.READ
 
 
 def run(

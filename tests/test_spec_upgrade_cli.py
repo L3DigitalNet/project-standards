@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.control_plane.locking import LockMode
 from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
 
@@ -26,6 +27,33 @@ def _run(argv: list[str]) -> int:
 
 def test_missing_to_flag_is_usage_error(capsys: pytest.CaptureFixture[str]) -> None:
     rc = _run([str(_FIX / "upgrade_light.md"), "--json"])
+    assert rc == 2
+    assert json.loads(capsys.readouterr().out)["code"] == "usage"
+
+
+@pytest.mark.parametrize(
+    "delivery",
+    [
+        pytest.param(["--in-pl"], id="abbreviated-in-place"),
+        pytest.param(["--outp", "out.md"], id="abbreviated-output"),
+        pytest.param(["-io", "out.md"], id="clustered-short-options"),
+    ],
+)
+def test_upgrade_lock_mode_uses_parser_accepted_spellings(delivery: list[str]) -> None:
+    assert (
+        spec_cli._operation_lock_mode(  # pyright: ignore[reportPrivateUsage]
+            "upgrade",
+            ["source.md", "--to", "full", *delivery],
+        )
+        is LockMode.WRITE
+    )
+
+
+def test_upgrade_abbreviated_json_keeps_usage_envelope(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = _run(["--js"])
+
     assert rc == 2
     assert json.loads(capsys.readouterr().out)["code"] == "usage"
 

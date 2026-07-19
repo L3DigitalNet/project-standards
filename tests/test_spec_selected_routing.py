@@ -34,7 +34,7 @@ _PAYLOAD = _FAMILY / "versions/1.1"
 @pytest.mark.parametrize(
     ("verb", "argv", "expected"),
     [
-        ("new", ["--stdout"], LockMode.READ),
+        ("new", ["--profile", "light", "--stdout"], LockMode.READ),
         ("new", ["spec.md"], LockMode.WRITE),
         ("upgrade", ["spec.md", "--to", "standard"], LockMode.READ),
         ("upgrade", ["spec.md", "--to", "standard", "-i"], LockMode.WRITE),
