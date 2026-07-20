@@ -1,20 +1,45 @@
-# Working prompt: adopt or update Project Standards
+---
+schema_version: '1.1'
+id: 'prompt-3nw7vm-project-standards-adoption-update'
+title: 'Adopt or update Project Standards with an agent'
+description: 'Copy/paste agent prompt for a safe, verified Project Standards adoption or update.'
+doc_type: 'prompt'
+status: 'active'
+created: '2026-07-20'
+updated: '2026-07-20'
+reviewed: '2026-07-20'
+owner: 'Chris Purcell / L3DigitalNet'
+consumer: 'agent'
+tags:
+  - 'standard'
+aliases: []
+related:
+  - 'README.md'
+  - 'UPGRADING.md'
+  - 'docs/usage.md'
+source: []
+confidence: 'high'
+visibility: 'public'
+license: null
+---
 
-This is a temporary draft for the `testing` branch. Update the release number and authority links before promoting it into consumer-facing release documentation.
+# Adopt or update Project Standards with an agent
+
+Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. The prompt requires a preview before every apply, preservation of consumer intent, exact-release verification, and sanitized upstream issue reports for adoption or upgrade irregularities.
 
 ## Copy/paste prompt
 
 ````text
-Adopt or update this repository to Project Standards 5.1.0. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
+Adopt or update this repository to Project Standards 5.1.1. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
 
 Use these exact-release sources as authority:
 
-- Consumer setup: https://github.com/L3DigitalNet/project-standards/blob/v5.1.0/README.md#consuming-the-standards
-- V4-to-V5 migration: https://github.com/L3DigitalNet/project-standards/blob/v5.1.0/UPGRADING.md
-- Package catalog and adoption guides: https://github.com/L3DigitalNet/project-standards/tree/v5.1.0/standards
-- CLI reference: https://github.com/L3DigitalNet/project-standards/blob/v5.1.0/docs/usage.md
+- Consumer setup: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/README.md#consuming-the-standards
+- V4-to-V5 migration: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/UPGRADING.md
+- Package catalog and adoption guides: https://github.com/L3DigitalNet/project-standards/tree/v5.1.1/standards
+- CLI reference: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/docs/usage.md
 
-Treat the exact `v5.1.0` documentation and the installed `project-standards 5.1.0` behavior as authoritative. Do not follow `main`, mutable family pages from another ref, older release instructions, or remembered commands when they conflict with these sources.
+Treat the exact `v5.1.1` documentation and the installed `project-standards 5.1.1` behavior as authoritative. Do not follow `main`, mutable family pages from another ref, older release instructions, or remembered commands when they conflict with these sources.
 
 ## Safety and orientation
 
@@ -28,11 +53,11 @@ Treat the exact `v5.1.0` documentation and the installed `project-standards 5.1.
 5. Use Python 3.14 or newer. Install the exact release and verify it before changing the repository:
 
    ```bash
-   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.1.0"
+   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.1.1"
    project-standards --version
    ```
 
-   Continue only if the version command reports `project-standards 5.1.0`.
+   Continue only if the version command reports `project-standards 5.1.1`.
 
 6. Work on a branch with a clean baseline whenever possible. Do not discard, overwrite, normalize, commit, push, or open a pull request for unrelated work. Do not use `--force` to bypass ownership or provenance protections.
 
@@ -47,7 +72,7 @@ Treat the exact `v5.1.0` documentation and the installed `project-standards 5.1.
    ```
 
 2. Enable each evidence-backed consumer package at the version specified by its exact-release adoption guide. Configure its closed options from repository intent; do not invent values.
-3. Read every selected package's `versions/<major.minor>/adopt.md` from tag `v5.1.0`.
+3. Read every selected package's `versions/<major.minor>/adopt.md` from tag `v5.1.1`.
 4. Run `project-standards reconcile` first as a read-only preview. Review every planned write, removal, ownership claim, finding, and verification action.
 5. Resolve all unexpected or ambiguous preview findings before running `project-standards reconcile --apply`.
 

@@ -196,6 +196,27 @@ def test_partial_legacy_migration__present_empty_namespace__adopts_defaults(
     _assert_distribution_parity(source, wheel)
 
 
+def test_partial_legacy_migration__unknown_only_namespace__remains_unclaimed(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+) -> None:
+    repo = tmp_path / "unknown-only-legacy"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\npython_tooling:\n  typo: true\n",
+        encoding="utf-8",
+    )
+
+    plan = plan_legacy_migration(repo, source_payload_distribution, "5")
+
+    assert not plan.applicable
+    assert any(
+        finding.code == "CP-MIGRATION-UNCLAIMED-SETTING"
+        and finding.identity == "/python_tooling/typo"
+        for finding in plan.findings
+    )
+
+
 @pytest.mark.parametrize("standard_id", _DEFAULTS)
 def test_each_package_converges_alone_from_source_and_wheel(
     tmp_path: Path,

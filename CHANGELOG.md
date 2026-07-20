@@ -37,6 +37,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.1.1] — 2026-07-20
+
+> **Why PATCH:** this release corrects Catalog 4 migration planning for repositories that adopted only a subset of the seven Catalog 5 defaults. It preserves every previously passing consumer outcome and changes no immutable package payload, catalog selection, accepted configuration, or default. `packages check-release --baseline v5.1.0` classifies the release as patch. Prepared for publication on `main`.
+
+### Added
+
+- **Copy/paste agent adoption and update guidance.** The promoted prompt routes fresh adoption, V5 updates, and V4 migration; requires preview-before-apply, preservation and fixed-point verification, and sanitized upstream issue reports for adoption or upgrade irregularities.
+
+### Fixed
+
+- **Partial V4 adoption migrates only the packages physically present in legacy configuration.** Missing namespaces no longer crash unrelated default providers or enroll packages merely because a known artifact exists. Explicitly present empty namespaces remain adopted and migrate with package defaults; malformed selected namespaces still fail closed.
+- **Provider failures identify their trusted coordinate.** Content-safe errors now include the standard, payload version, provider id, and exception type without exposing raw provider exception text or consumer content.
+
 ## [5.1.0] — 2026-07-20
 
 > **Why MINOR:** all seven Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `adr@1.2`, `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, `markdown-tooling@1.3`, `project-spec@1.2`, and `python-tooling@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. Reference-only `python-coding@0.6` and internal `standard-bundle-authoring@2.2` are not consumer defaults and do not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is published from release commit `b69600d`.

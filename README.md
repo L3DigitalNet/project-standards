@@ -4,6 +4,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 
 - **Looking for what's standardised here?** See [Standards](#standards).
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
+- **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md).
 - **Using the CLI?** See the complete [`project-standards` usage reference](docs/usage.md).
 
 ## Table of Contents
@@ -130,14 +131,14 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.1.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.1.1 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.1.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.1.1"
 project-standards --version
 ```
 
-The version command must report `project-standards 5.1.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.1.1`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -148,7 +149,7 @@ project-standards reconcile --apply
 
 Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs together. The package selector chooses an immutable payload; package options such as `contract_version` remain independent. Each versioned adoption guide defines the package-specific options, outputs, migration, verification, and troubleshooting.
 
-> **Adopting with an agent?** Hand it the relevant `adopt.md` and let it follow the procedure end to end.
+> **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md). It routes fresh adoption, V5 updates, and V4 migration; requires preview-before-apply and preservation checks; and requires sanitized upstream issue reports for irregularities.
 
 ### Current consumer packages
 
@@ -173,7 +174,7 @@ The migration removes `.project-standards.yml` only after unified validation and
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.1.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.1.1`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 #### Reusable workflow inputs
 
@@ -222,7 +223,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.1.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.1.1 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check

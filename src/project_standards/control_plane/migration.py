@@ -102,6 +102,7 @@ type LegacyOwnership = Literal[
 
 _BARE_TOML_KEY = re.compile(r"^[A-Za-z0-9_-]+$", re.ASCII)
 _MISSING = object()
+_UNKNOWN_V4_PACKAGE = object()
 
 # Catalog 4's configuration contract is frozen. Keeping its package ownership
 # paths here lets migration distinguish an absent package from one adopted with
@@ -117,20 +118,20 @@ _V4_PACKAGE_NAMESPACES: dict[str, tuple[str, ...]] = {
 }
 
 
-def _v4_namespace_present(legacy: Mapping[str, object], standard_id: str) -> bool | None:
-    """Return physical namespace presence, or None for an unknown V4 package."""
+def _v4_namespace_value(legacy: Mapping[str, object], standard_id: str) -> object:
+    """Return the physical namespace value or an internal absence sentinel."""
     path = _V4_PACKAGE_NAMESPACES.get(standard_id)
     if path is None:
-        return None
+        return _UNKNOWN_V4_PACKAGE
     current: object = legacy
     for key in path:
         if not isinstance(current, Mapping):
-            return True
+            return current
         table = cast("Mapping[object, object]", current)
         if key not in table:
-            return False
+            return _MISSING
         current = table[key]
-    return True
+    return current
 
 
 class LegacyDisposition(StrEnum):
@@ -1450,8 +1451,8 @@ def _plan_legacy_migration(
         migrations = _legacy_migrations(payload)
         if not migrations:
             continue
-        namespace_present = _v4_namespace_present(legacy, entry.id)
-        if namespace_present is False:
+        namespace_value = _v4_namespace_value(legacy, entry.id)
+        if namespace_value is _MISSING:
             continue
         signature_ids = frozenset(
             signature for _provider, signatures in migrations for signature in signatures
@@ -1484,7 +1485,11 @@ def _plan_legacy_migration(
                 raise ControlPlaneError("migrate provider did not return a migration report")
             provider_reports.append(result.migration_report)
         report = _merge_reports(provider_reports)
-        if namespace_present is True and not report.package.recognized_settings:
+        if (
+            isinstance(namespace_value, Mapping)
+            and not namespace_value
+            and not report.package.recognized_settings
+        ):
             namespace = _V4_PACKAGE_NAMESPACES[entry.id]
             pointer = "/" + "/".join(_escape_pointer(part) for part in namespace)
             report = report.model_copy(
@@ -1494,7 +1499,7 @@ def _plan_legacy_migration(
             )
         # Older or out-of-tree V4 package migrations lack a frozen namespace
         # mapping, so retain their prior recognized-setting adoption signal.
-        if namespace_present is None and not report.package.recognized_settings:
+        if namespace_value is _UNKNOWN_V4_PACKAGE and not report.package.recognized_settings:
             continue
         observed.update(package_observed)
         findings.extend(package_findings)

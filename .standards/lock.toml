@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.1"
 catalog = "5"
-release = "5.1.0"
-catalog_digest = "sha256:b6a87ee5dfbfe6c2e384b32c80ebd9fcbfeec41a14875372636cf53a1da6171f"
+release = "5.1.1"
+catalog_digest = "sha256:c3ae2c8990582d8d4d61946a6cfe49e5fb45b70dc420960ee239bc62a558b8dc"
 config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]
@@ -1011,8 +1011,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:f0f5804d7530260cdff0fa0fb4d2d5c9eb2634b1c8ba1029dab5ef4fb99aad9a"
-content_digest = "sha256:f0f5804d7530260cdff0fa0fb4d2d5c9eb2634b1c8ba1029dab5ef4fb99aad9a"
+semantic_digest = "sha256:e653dea2e5c5509f85fe78d23153a45b3dc78bd0de587c9e11911c80add20fa1"
+content_digest = "sha256:e653dea2e5c5509f85fe78d23153a45b3dc78bd0de587c9e11911c80add20fa1"
 created_container = false
 
 [[artifacts]]
@@ -1131,8 +1131,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:563fe12cfe41ca8b9f7fe5181687eb1b957620bdd48fdf4540e68437f61b9448"
-content_digest = "sha256:563fe12cfe41ca8b9f7fe5181687eb1b957620bdd48fdf4540e68437f61b9448"
+semantic_digest = "sha256:f95f6d261ac1d20873576ccf97504f7fd7010d4967299599a350040d9ba2abca"
+content_digest = "sha256:f95f6d261ac1d20873576ccf97504f7fd7010d4967299599a350040d9ba2abca"
 created_container = false
 
 [[artifacts]]
