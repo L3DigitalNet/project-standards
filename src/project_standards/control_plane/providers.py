@@ -294,61 +294,12 @@ class _SchemaValidator(Protocol):
     def iter_errors(self, instance: JsonValue) -> Iterator[object]: ...
 
 
-class _LegacyConfigView(Mapping[str, object]):
-    """Expose absent legacy mapping keys as one immutable empty mapping."""
-
-    def __init__(self, values: Mapping[str, object]) -> None:
-        self._values = MappingProxyType(dict(values))
-
-    def __getitem__(self, key: str) -> object:
-        return self._values.get(key, _EMPTY_LEGACY_CONFIG)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._values)
-
-    def __len__(self) -> int:
-        return len(self._values)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._values
-
-
-_EMPTY_LEGACY_CONFIG = _LegacyConfigView({})
-
-
-def _deep_freeze(value: JsonValue, *, tolerate_missing_mappings: bool = False) -> object:
+def _deep_freeze(value: JsonValue) -> object:
     if isinstance(value, dict):
-        frozen = {
-            key: _deep_freeze(child, tolerate_missing_mappings=tolerate_missing_mappings)
-            for key, child in value.items()
-        }
-        return _LegacyConfigView(frozen) if tolerate_missing_mappings else MappingProxyType(frozen)
+        return MappingProxyType({key: _deep_freeze(child) for key, child in value.items()})
     if isinstance(value, list):
-        return tuple(
-            _deep_freeze(child, tolerate_missing_mappings=tolerate_missing_mappings)
-            for child in value
-        )
+        return tuple(_deep_freeze(child) for child in value)
     return value
-
-
-def _freeze_provider_input(value: JsonValue, operation: ProviderOperation) -> object:
-    """Freeze provider input while tolerating absent legacy mapping namespaces."""
-    if operation is not ProviderOperation.MIGRATE or not isinstance(value, dict):
-        return _deep_freeze(value)
-    snapshots = value.get("snapshots")
-    if not isinstance(snapshots, dict) or not isinstance(snapshots.get("legacy_config"), dict):
-        return _deep_freeze(value)
-    frozen = {key: _deep_freeze(child) for key, child in value.items() if key != "snapshots"}
-    frozen["snapshots"] = MappingProxyType(
-        {
-            key: _deep_freeze(
-                child,
-                tolerate_missing_mappings=key == "legacy_config",
-            )
-            for key, child in snapshots.items()
-        }
-    )
-    return MappingProxyType(frozen)
 
 
 def _json_document(content: bytes, *, kind: str) -> JsonObject:
@@ -820,7 +771,7 @@ def invoke_provider(invocation: ProviderInvocation) -> ProviderResult:
     provider_input = _provider_input(effective_invocation, provider_resource_bytes)
     input_value = cast(JsonValue, provider_input.model_dump(mode="json"))
     _validate_json_schema(input_schema, input_value, kind="input")
-    frozen_input = _freeze_provider_input(input_value, invocation.operation)
+    frozen_input = _deep_freeze(input_value)
     frozen_resources = MappingProxyType(provider_resource_bytes)
 
     code_resource = resources[cast(str, provider.entrypoint_resource)]

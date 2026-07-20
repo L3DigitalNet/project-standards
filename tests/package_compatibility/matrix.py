@@ -90,7 +90,11 @@ class ConsumerSentinel:
     kind: str
 
 
-def partial_legacy_config(standard_ids: tuple[str, ...]) -> str:
+def partial_legacy_config(
+    standard_ids: tuple[str, ...],
+    *,
+    empty_namespaces: bool = False,
+) -> str:
     """Render the V4 config containing exactly the selected package namespaces."""
     loaded = cast(object, yaml.safe_load(_ALL_NAMESPACES.read_text(encoding="utf-8")))
     assert isinstance(loaded, dict)
@@ -107,7 +111,7 @@ def partial_legacy_config(standard_ids: tuple[str, ...]) -> str:
             destination_child = destination.setdefault(key, {})
             assert isinstance(destination_child, dict)
             destination = cast("dict[str, object]", destination_child)
-        destination[path[-1]] = source[path[-1]]
+        destination[path[-1]] = {} if empty_namespaces else source[path[-1]]
     return yaml.safe_dump(partial, sort_keys=False)
 
 
@@ -576,6 +580,8 @@ def exercise_partial_migrated_lifecycle(
     repo: Path,
     distribution: InstalledDistribution,
     standard_ids: tuple[str, ...],
+    *,
+    empty_namespaces: bool = False,
 ) -> LifecycleResult:
     """Migrate only selected V4 namespaces and prove their complete lifecycle."""
     repo.mkdir(parents=True)
@@ -588,7 +594,7 @@ def exercise_partial_migrated_lifecycle(
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(_ARTIFACT_STATES / relative, target)
     (repo / ".project-standards.yml").write_text(
-        partial_legacy_config(standard_ids),
+        partial_legacy_config(standard_ids, empty_namespaces=empty_namespaces),
         encoding="utf-8",
     )
     sentinels = _migration_consumer_sentinels(repo)

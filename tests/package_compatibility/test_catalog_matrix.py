@@ -174,6 +174,29 @@ def test_legacy_migration__unadopted_known_artifact__does_not_enroll_package(
 
 
 @pytest.mark.parametrize("standard_id", _DEFAULTS)
+def test_partial_legacy_migration__present_empty_namespace__adopts_defaults(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+    wheel_payload_distribution: InstalledDistribution,
+    standard_id: str,
+) -> None:
+    source = exercise_partial_migrated_lifecycle(
+        tmp_path / f"source-empty-{standard_id}",
+        source_payload_distribution,
+        (standard_id,),
+        empty_namespaces=True,
+    )
+    wheel = exercise_partial_migrated_lifecycle(
+        tmp_path / f"wheel-empty-{standard_id}",
+        wheel_payload_distribution,
+        (standard_id,),
+        empty_namespaces=True,
+    )
+
+    _assert_distribution_parity(source, wheel)
+
+
+@pytest.mark.parametrize("standard_id", _DEFAULTS)
 def test_each_package_converges_alone_from_source_and_wheel(
     tmp_path: Path,
     source_payload_distribution: InstalledDistribution,
