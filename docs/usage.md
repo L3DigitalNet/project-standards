@@ -618,9 +618,13 @@ The table gives the repository-wide convention; per-command deviations are noted
 
 ## ENVIRONMENT
 
-- `NO_COLOR` — When set (to any value), disables ANSI color in `--help` output, honored through Python 3.14 `argparse`. The tool reads no color state of its own beyond this.
-- `FORCE_COLOR` — Forces colored `--help` output where a terminal is not detected (also via `argparse`).
+- `NO_COLOR` — When set to a non-empty value, disables ANSI color in `--help` output.
+- `FORCE_COLOR` — Forces colored `--help` output where a terminal is not detected.
+- `PYTHON_COLORS` — Python-specific override: `1` enables and `0` disables help color; it takes precedence over `NO_COLOR` and `FORCE_COLOR`.
+- `TERM=dumb` — Disables help color unless overridden by `FORCE_COLOR` or `PYTHON_COLORS=1`.
 - `COLUMNS` — Sets the width `argparse` wraps `--help` to. Setting `NO_COLOR=1 COLUMNS=100` produces stable, comparable help text (the normalization the CI help-snapshot checks rely on).
+
+Color precedence is `PYTHON_COLORS` > `NO_COLOR` > `FORCE_COLOR` > `TERM`. These variables are interpreted by Python 3.14 `argparse`; Project Standards adds no separate color configuration.
 
 No command reads an application-specific environment variable for configuration: all behavior is driven by arguments and the config file. `sync-vscode-colors` and `sync-standards-include` (below) shell out to `git` and therefore observe the ambient `git` environment.
 
@@ -821,7 +825,7 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## NOTES
 
-- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `init`, `reconcile`, `render`, `agent-handoff`, `validate`, `fix`, `spec`, `standards`, and `packages` are early-dispatched before the top-level parser is built; specialized Agent Handoff adoption is also dispatched early. A trailing `--version` is therefore handled or rejected by the selected command rather than treated as the top-level version flag. For example, `validate --version` forwards the flag to the validators and exits 0, while `render --version`, generic `adopt --version`, `spec --version`, and `standards --version` are usage errors and exit 2. Put `--version` first.
+- **`--version` placement.** `--version` is a top-level flag only in first position (`project-standards --version`). `init`, `reconcile`, `render`, `agent-handoff`, `validate`, `fix`, `spec`, `standards`, and `packages` are early-dispatched before the top-level parser is built; specialized Agent Handoff adoption is also dispatched early. A trailing `--version` is therefore handled or rejected by the selected command rather than treated as the top-level version flag. For example, `validate --version` and `fix --version` are usage errors and exit 2; the standalone validator and formatter scripts accept their own `--version` flags. `render --version`, generic `adopt --version`, `spec --version`, and `standards --version` are also usage errors and exit 2. Put `--version` first.
 - **`validate-references` scope.** The cross-file pass is repo-wide by design; scoping it to a subset would let a duplicate id or broken reference in an unselected document slip through. `<file>` / `--glob` are therefore forwarded but ignored by this stage even though `validate-frontmatter` and `validate-id` honor them.
 - **Custom schemas disable id and format work.** When a custom (non-bundled) schema is selected, `validate-id`, `format-frontmatter`, `fix`, and `validate-references` skip their bundled-convention checks and exit 0 with a note — a custom-schema repository owns those conventions itself.
 - **`sync-*` argv contract.** The two sync commands parse positionals directly with no option library, so they accept only `--help`/`-h` and `--version` as flags (intercepted before any positional is read); every other leading token is read as the first positional (a file path).

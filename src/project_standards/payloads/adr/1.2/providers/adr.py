@@ -1,0 +1,1 @@
+../../../../../../standards/adr/versions/1.2/providers/adr.py

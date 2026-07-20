@@ -229,14 +229,14 @@ digest = "sha256:f19943b7f68c02bedd25214d7184b2e5a8909b9d8a9aef236794b2b389e9952
 id = "agent-summary-package"
 target = ".standards/packages/markdown-frontmatter/agent-summary.md"
 source = "artifacts/agent-summary.md"
-digest = "sha256:138e206e882782a26ff04f3235b85090f9fb0fbd72e56b03df922741d8095cdf"
+digest = "sha256:2e908394c8dd369c668a479085712f4ee22647f6eb1d88cb1d007d6c112e8aa9"
 policy = "managed"
 
 [[artifacts]]
 id = "skill"
 target = ".agents/skills/markdown-frontmatter/SKILL.md"
 source = "skills/markdown-frontmatter/SKILL.md"
-digest = "sha256:a7a70081a9e3de212651e4fa8b53505761a8f7ba601549c1e06a2d343d7cb682"
+digest = "sha256:9362204ed9225f34afe2a38609b1556ca9350ccf23783fb4177759e6baa77b76"
 policy = "managed"
 
 [[artifacts]]

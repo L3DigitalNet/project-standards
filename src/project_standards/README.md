@@ -344,7 +344,7 @@ Commands resolve unified authority from the repository root and reject an explic
 
 ## Adding a standard package
 
-Follow the active internal [Standard Bundle Authoring 2.0 workflow](../../standards/standard-bundle-authoring/versions/2.0/README.md#author-workflow). In summary:
+Follow the active internal [Standard Bundle Authoring 2.2 workflow](../../standards/standard-bundle-authoring/versions/2.2/README.md#author-workflow). In summary:
 
 1. Create or update the mutable `standards/<id>/standard.toml` family index and author the complete new payload under `standards/<id>/versions/<major.minor>/` from the versioned templates.
 2. Declare the closed package options, canonical standard, agent summary, every resource and output, providers, relationships, migrations, and legacy signatures in the payload. Do not add undeclared regular files.

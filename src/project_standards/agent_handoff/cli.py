@@ -55,6 +55,11 @@ _COMMANDS: dict[str, tuple[LegacyProviderOperation, tuple[str, ...]]] = {
     "upgrade": (LegacyProviderOperation.UPGRADE, ()),
 }
 
+_FIXED_VIEWS = {
+    "size-report": "size",
+    "shape-check": "shape",
+}
+
 _READ_PATHS = (
     ".agents/hooks/agent-handoff/session_start.py",
     ".agents/skills/agent-handoff/SKILL.md",
@@ -137,11 +142,17 @@ def _repository_argument(argv: list[str]) -> Path:
     return selected
 
 
-def _parse_v2(command: str, operation: V2ProviderOperation, argv: list[str]) -> _V2Args:
+def _parse_v2(
+    command: str,
+    operation: V2ProviderOperation,
+    argv: list[str],
+    *,
+    fixed_view: str | None = None,
+) -> _V2Args:
     parser = _Parser(prog=f"project-standards agent-handoff {command}")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
-    if operation is V2ProviderOperation.VALIDATE:
+    if command == "validate":
         parser.add_argument("--view", choices=("full", "size", "shape"), default="full")
     if operation is V2ProviderOperation.UPGRADE:
         parser.add_argument("--dry-run", action="store_true")
@@ -150,7 +161,7 @@ def _parse_v2(command: str, operation: V2ProviderOperation, argv: list[str]) -> 
         parsed.repo,
         parsed.json,
         bool(getattr(parsed, "dry_run", False)),
-        cast(str, getattr(parsed, "view", "full")),
+        fixed_view or cast(str, getattr(parsed, "view", "full")),
     )
 
 
@@ -376,8 +387,10 @@ def _run_selected(
     command: str,
     operation: V2ProviderOperation,
     argv: list[str],
+    *,
+    fixed_view: str | None = None,
 ) -> int:
-    args = _parse_v2(command, operation, argv)
+    args = _parse_v2(command, operation, argv, fixed_view=fixed_view)
     if operation is V2ProviderOperation.UPGRADE:
         return _run_upgrade(selected, args)
     return _run_read_command(selected, operation, args.view, args)
@@ -404,8 +417,19 @@ def run(
         print(f"error: unknown agent-handoff command: {command}", file=sys.stderr)
         return 2
     operation, prefix = mapped
-    provider_args = [*prefix, *args[1:]]
+    command_args = args[1:]
+    fixed_view = _FIXED_VIEWS.get(command)
     try:
+        if fixed_view is not None:
+            # Parse aliases before authority selection so selected and legacy routes
+            # expose the same fixed-view command line and help surface.
+            _parse_v2(
+                command,
+                V2ProviderOperation.VALIDATE,
+                command_args,
+                fixed_view=fixed_view,
+            )
+        provider_args = [*prefix, *command_args]
         repo = _repository_argument(provider_args)
         dry_run = operation is LegacyProviderOperation.UPGRADE and "--dry-run" in provider_args
         mode = (
@@ -425,7 +449,8 @@ def run(
                 selected,
                 command,
                 V2ProviderOperation(operation.value),
-                provider_args,
+                command_args,
+                fixed_view=fixed_view,
             )
     except (_ArgumentError, CommandConfigurationError, RepositoryBoundaryError) as exc:
         print(f"error: {exc}", file=sys.stderr)

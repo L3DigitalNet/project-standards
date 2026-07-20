@@ -28,6 +28,8 @@ Review [adopt.md](adopt.md) before applying. Project Specification uses its own 
 
 The immutable 1.1 README contains wording written before Catalog 5 and Project Standards v5.0.0 were published. Treat any statement that this payload is not released as release-time history. Catalog 5 now selects `project-spec@1.2`; the immutable 1.1 payload bytes remain unchanged.
 
+The immutable 1.1 adoption guide counts five closed options; its example and schema define six.
+
 ## Legacy boundary
 
 The `spec` block in `.project-standards.yml`, V1 workflow adoption, and unversioned copy-adopt resources are migration evidence only. Under unified authority, bare `project-standards spec` commands resolve `project-spec@1.2` through `.standards/`; an explicit `--config` is legacy/debug input and cannot override that authority.

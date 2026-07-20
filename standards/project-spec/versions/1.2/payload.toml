@@ -29,7 +29,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:a6de28916ce4e785405ce56e9572985fbd86f0f5d556aa6ae3b78e873cb7bb2f"
+digest = "sha256:d2887fc609d2b4a7c84d5d977bf5784a5a0c34362a091e8445ea477e33932cd1"
 
 [[resources]]
 id = "agent-summary"

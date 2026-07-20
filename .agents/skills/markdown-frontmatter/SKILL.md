@@ -83,7 +83,7 @@ These fields accept only these values (the schema is the source of truth):
 
 ## The `id` field — standard-enforced format
 
-> **This is a standard rule, not a local addition.** `markdown-frontmatter@1.2` enforces the id format below via `validate-id` (run by `project-standards validate` and the V5 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
+> **This is a standard rule, not a local addition.** `markdown-frontmatter@1.3` enforces the id format below via `validate-id` (run by `project-standards validate` and the V5 CI workflow). An id whose leading segment is not a valid `doc_type` **fails validation** with `prefix '<x>' is not a valid doc_type`. Earlier repo-name-prefixed ids no longer pass.
 
 ```text
 {doc_type}-{base36-6}-{document-name}
@@ -172,5 +172,5 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 - [Standard README](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/README.md) — overview and adoption surface.
 - [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
 - [Field Values](https://github.com/L3DigitalNet/project-standards/blob/main/standards/markdown-frontmatter/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
-- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
-- `standards/markdown-frontmatter/versions/1.2/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.
+- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.3/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
+- `standards/markdown-frontmatter/versions/1.3/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.

@@ -13,7 +13,7 @@ project-standards reconcile
 project-standards reconcile --apply
 ```
 
-The package has five closed options in `.standards/config.toml`:
+The package has six closed options in `.standards/config.toml`:
 
 ```toml
 [standards.project-spec]
@@ -71,7 +71,7 @@ Validation findings exit `1`. Usage, selected-package, configuration, containmen
 
 ## Migration and disable behavior
 
-Automatic migration maps the legacy specification settings semantically into the five closed package options and recognizes only the exact released validation caller bytes. Settings owned by other selected packages are migrated by those packages; modified or unclaimed state blocks apply without changing the repository.
+Automatic migration maps the legacy specification settings semantically into the six closed package options and recognizes only the exact released validation caller bytes. Settings owned by other selected packages are migrated by those packages; modified or unclaimed state blocks apply without changing the repository.
 
 Preview and apply a repository migration through the generic boundary:
 

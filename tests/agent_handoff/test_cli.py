@@ -26,11 +26,17 @@ def test_top_level_help_advertises_agent_handoff(
     assert "agent-handoff" in capsys.readouterr().out
 
 
-def test_agent_handoff_adopt_help_uses_nonmutating_argparse_help() -> None:
-    with pytest.raises(SystemExit) as exc_info:
-        main(["adopt", "agent-handoff", "--help"])
+def test_agent_handoff_adopt_help_uses_specialized_nonmutating_parser(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["adopt", "agent-handoff", "--dest", str(tmp_path), "--help"]) == 0
 
-    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert "--manual" in output
+    assert "--harness {claude-code,codex}" in output
+    assert "--json" in output
+    assert not any(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize(
@@ -170,6 +176,55 @@ def test_agent_handoff_command_maps_to_generic_operation(
 
     assert main(["agent-handoff", command, "--repo", str(tmp_path)]) == 0
     assert seen == [(operation, [*prefix, "--repo", str(tmp_path)])]
+
+
+@pytest.mark.parametrize("command", ["size-report", "shape-check"])
+def test_agent_handoff_policy_view_alias_help_omits_view_override(
+    command: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["agent-handoff", command, "--help"])
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert f"usage: project-standards agent-handoff {command}" in output
+    assert "--view" not in output
+
+
+@pytest.mark.parametrize(
+    ("command", "view_argument"),
+    [("size-report", "shape"), ("shape-check", "size")],
+)
+def test_agent_handoff_policy_view_alias_rejects_view_override_before_fallback(
+    command: str,
+    view_argument: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail_legacy(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("legacy provider ran after an invalid alias invocation")
+
+    monkeypatch.setattr(
+        "project_standards.agent_handoff.cli.run_packaged_providers",
+        fail_legacy,
+    )
+
+    assert (
+        main(
+            [
+                "agent-handoff",
+                command,
+                "--repo",
+                str(tmp_path),
+                "--view",
+                view_argument,
+            ]
+        )
+        == 2
+    )
+    assert "unrecognized arguments: --view" in capsys.readouterr().err
 
 
 def test_agent_handoff_provider_error_preserves_exit_code(

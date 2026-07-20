@@ -1,0 +1,11 @@
+name: Format
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  format:
+    uses: L3DigitalNet/project-standards/.github/workflows/format.yml@v4

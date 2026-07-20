@@ -50,7 +50,7 @@ id = "usage-example"
 role = "example"
 path = "examples/usage.example.md"
 media_type = "text/markdown"
-digest = "sha256:ae141fe15735b9946cecc7ba37ae5dc6bfdbae305935761a701fd27cb1aaf8db"
+digest = "sha256:0290c15656f1923429ee0f2764e013a2ed732e8a18e848489b065ac8f05ff71b"
 
 [[resources]]
 id = "research-notes"

@@ -28,6 +28,10 @@ Review [adopt.md](adopt.md) before applying, especially the preview and no-clobb
 
 The immutable 1.1 README contains wording written before Catalog 5 and Project Standards v5.0.0 were published. Treat any statement that this payload is not released as release-time history. Catalog 5 now selects `cli-documentation@1.2`; the immutable 1.1 payload bytes remain unchanged.
 
+## Released-version errata
+
+The immutable 1.1 usage example names the removed `reconcile --recover` option; use `reconcile --repair-state` with an explicit `--apply` when applying sanctioned incomplete-state recovery.
+
 ## Legacy boundary
 
 Copy-adopt workflows, `project-standards adopt cli-documentation`, and `.project-standards.yml` fragments are migration evidence only. They do not define current Catalog 5 behavior.

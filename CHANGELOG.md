@@ -39,11 +39,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [5.1.0] — 2026-07-20
 
-> **Why MINOR:** four Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, and `project-spec@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. The new internal `standard-bundle-authoring@2.2` payload is not consumer-selectable and does not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is prepared and verified, unpublished.
+> **Why MINOR:** all seven Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `adr@1.2`, `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, `markdown-tooling@1.3`, `project-spec@1.2`, and `python-tooling@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. Reference-only `python-coding@0.6` and internal `standard-bundle-authoring@2.2` are not consumer defaults and do not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is prepared and verified, unpublished.
 
 ### Added
 
-- **Five immutable correction payloads.** Agent Handoff 1.2 carries the accepted runtime, documentation, Python-floor, and artifact-shape corrections; Project Specification 1.2 restores its reusable-workflow inputs; Markdown Frontmatter 1.3 exposes the stable validator aliases and caller permissions; CLI Documentation 1.2 annotates the existing setup-uv pin; and internal Standard Bundle Authoring 2.2 records the Python 3.14 and executable-mode contracts. All prior payloads remain byte- and mode-identical.
+- **Nine immutable correction payloads.** ADR 1.2, Markdown Tooling 1.3, Python Coding 0.6, and Python Tooling 1.2 correct released documentation without mutating their predecessors. Agent Handoff 1.2 carries the accepted runtime, documentation, Python-floor, and artifact-shape corrections; Project Specification 1.2 restores its reusable-workflow inputs; Markdown Frontmatter 1.3 exposes the stable validator aliases and caller permissions; CLI Documentation 1.2 annotates the existing setup-uv pin; and internal Standard Bundle Authoring 2.2 records the Python 3.14 and executable-mode contracts. All prior payloads remain byte- and mode-identical.
 
 ### Changed
 
@@ -53,7 +53,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Fixed
 
-- **5.1.0 consumer documentation and policy-view help are synchronized.** Root installation, migration, catalog, package-default, and immutable-pin guidance now matches Catalog 5.1.0 and its Python 3.14 floor. The Agent Handoff usage reference documents `validate --view`, and `size-report --help` / `shape-check --help` retain the invoked alias in their usage line.
+- **5.1.0 consumer documentation and CLI help are synchronized.** Root installation, migration, catalog, reusable-workflow inputs, package defaults, adoption guidance, immutable-pin examples, and terminal-color behavior now match Catalog 5.1.0 and its Python 3.14 floor. Agent Handoff policy-view aliases retain their invoked names, hide and reject `--view` overrides, and specialized adoption help exposes `--manual`, `--harness`, and `--json` without entering the generic adoption path.
 - **All 96 accepted or adjusted implementation-review findings.** Corrections cover bounded control-plane safety, atomic filesystem operations, typed error boundaries, package and catalog validation, frontmatter and Project Specification parsing, Agent Handoff behavior, maintained documentation, and test hermeticity. The remaining four findings have final no-change dispositions because their proposed edits were invalid, incompatible, or cosmetic; none is deferred or queued.
 - **Repository tests are independent of ambient state.** Verified fixtures resolve from the repository rather than the caller's working directory, and Git-spawning tests ignore hostile user signing configuration without changing repository signing policy.
 

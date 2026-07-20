@@ -83,7 +83,32 @@ def test_unified_policy_view_help__requested_alias__uses_alias_name(
         run([command, "--repo", str(repo), "--help"], distribution=distribution)
 
     assert exc_info.value.code == 0
-    assert f"usage: project-standards agent-handoff {command}" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert f"usage: project-standards agent-handoff {command}" in output
+    assert "--view" not in output
+
+
+@pytest.mark.parametrize(
+    ("command", "view_argument"),
+    [("size-report", "shape"), ("shape-check", "size")],
+)
+def test_unified_policy_view_alias_rejects_view_override(
+    command: str,
+    view_argument: str,
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+
+    assert (
+        run(
+            [command, "--repo", str(repo), "--view", view_argument],
+            distribution=distribution,
+        )
+        == 2
+    )
+    assert "unrecognized arguments: --view" in capsys.readouterr().err
 
 
 def test_unified_validate_reports_selected_payload_drift_without_writing(
@@ -208,6 +233,22 @@ def test_unified_size_report_preserves_numeric_budget_message(
     finding = next(item for item in report["findings"] if item["code"] == "AH-SIZE-CAP")
     assert finding["message"] == "document exceeds 2048 byte hard cap by 952 bytes"
     assert finding["locus"] == "byte budget"
+    assert all(item["code"].startswith("AH-SIZE") for item in report["findings"])
+
+
+def test_unified_shape_check_emits_only_shape_findings(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / "docs/handoff/state.md").write_bytes(b"x" * 3000)
+
+    assert run(["shape-check", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    report = json.loads(capsys.readouterr().out)
+
+    assert report["findings"]
+    assert all(item["code"].startswith("AH-SHAPE") for item in report["findings"])
 
 
 @pytest.mark.parametrize(

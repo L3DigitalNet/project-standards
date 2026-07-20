@@ -1,13 +1,13 @@
 # Python Tooling SSOT Standard
 
-This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.1`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.2`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Python Tooling 1.1 standard](versions/1.1/README.md) — normative toolchain, configuration, ownership, and verification contract
-- [Python Tooling 1.1 adoption guide](versions/1.1/adopt.md) — complete options, outputs, migration, and recovery
+- [Python Tooling 1.2 standard](versions/1.2/README.md) — normative toolchain, configuration, ownership, and verification contract
+- [Python Tooling 1.2 adoption guide](versions/1.2/adopt.md) — complete options, outputs, migration, and recovery
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Python Tooling 1.1 agent summary](versions/1.1/agent-summary.md) — compact authority rules
+- [Python Tooling 1.2 agent summary](versions/1.2/agent-summary.md) — compact authority rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
@@ -17,7 +17,7 @@ Use Python Tooling for the uv/uv_build `src/` baseline, Ruff formatting and lint
 ## Adopt
 
 ```bash
-project-standards standards enable python-tooling --version 1.1
+project-standards standards enable python-tooling --version 1.2
 project-standards reconcile
 project-standards reconcile --apply
 uv lock
@@ -28,7 +28,7 @@ Review [adopt.md](adopt.md) before applying. Commit unified config, catalog, loc
 
 ## Release-status correction
 
-The immutable 1.1 README contains wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat its statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.1`; the immutable payload bytes remain unchanged.
+The immutable 1.1 README contains wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat its statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.2`; the immutable 1.1 payload bytes remain unchanged.
 
 ## Legacy boundary
 

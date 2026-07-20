@@ -1,8 +1,8 @@
 # Markdown Frontmatter Standard: Agent Summary
 
-The canonical [Markdown Frontmatter 1.2 standard](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.2/README.md) is authoritative and wins if this summary conflicts with it.
+The canonical [Markdown Frontmatter 1.3 standard](https://github.com/L3DigitalNet/project-standards/blob/v5/standards/markdown-frontmatter/versions/1.3/README.md) is authoritative and wins if this summary conflicts with it.
 
-Lifecycle: active. Package: `markdown-frontmatter@1.2`.
+Lifecycle: active. Package: `markdown-frontmatter@1.3`.
 
 ## Use this summary when
 
@@ -33,4 +33,4 @@ This standard governs metadata, not Markdown body formatting. Markdown Tooling i
 
 ## Canonical resources
 
-Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5/standards/markdown-frontmatter/versions/1.2) for complete requirements.
+Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5/standards/markdown-frontmatter/versions/1.3) for complete requirements.

@@ -35,6 +35,19 @@ def _run_new_doc_id(*args: str) -> subprocess.CompletedProcess[str]:
 
 def test_skill_points_at_current_standard_pages() -> None:
     text = (_SKILL / "SKILL.md").read_text(encoding="utf-8")
+    versioned_skill = (
+        _REPO
+        / "standards"
+        / "markdown-frontmatter"
+        / "versions"
+        / "1.3"
+        / "skills"
+        / "markdown-frontmatter"
+        / "SKILL.md"
+    )
+    assert (_SKILL / "SKILL.md").read_bytes() == versioned_skill.read_bytes()
+    assert "markdown-frontmatter@1.3" in text
+    assert "versions/1.3" in text
     assert "schema_version: '1.1'" in text
     assert "structure.md" in text
     assert "field-values.md" in text

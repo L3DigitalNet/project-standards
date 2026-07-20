@@ -155,9 +155,9 @@ Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.tom
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
 | Markdown Frontmatter | `1.3` | [`standards/markdown-frontmatter/versions/1.3/adopt.md`](standards/markdown-frontmatter/versions/1.3/adopt.md) |
-| ADR | `1.1` | [`standards/adr/versions/1.1/adopt.md`](standards/adr/versions/1.1/adopt.md) |
-| Python Tooling | `1.1` | [`standards/python-tooling/versions/1.1/adopt.md`](standards/python-tooling/versions/1.1/adopt.md) |
-| Markdown Tooling | `1.2` | [`standards/markdown-tooling/versions/1.2/adopt.md`](standards/markdown-tooling/versions/1.2/adopt.md) |
+| ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
+| Python Tooling | `1.2` | [`standards/python-tooling/versions/1.2/adopt.md`](standards/python-tooling/versions/1.2/adopt.md) |
+| Markdown Tooling | `1.3` | [`standards/markdown-tooling/versions/1.3/adopt.md`](standards/markdown-tooling/versions/1.3/adopt.md) |
 | Project Specification | `1.2` | [`standards/project-spec/versions/1.2/adopt.md`](standards/project-spec/versions/1.2/adopt.md) |
 | CLI Documentation | `1.2` | [`standards/cli-documentation/versions/1.2/adopt.md`](standards/cli-documentation/versions/1.2/adopt.md) |
 | Agent Handoff | `1.2` | [`standards/agent-handoff/versions/1.2/adopt.md`](standards/agent-handoff/versions/1.2/adopt.md) |
@@ -174,6 +174,44 @@ The migration removes `.project-standards.yml` only after unified validation and
 ### Pin to a release tag, not `main`
 
 Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.1.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+
+#### Reusable workflow inputs
+
+| Workflow | Input | Type | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `lint-markdown.yml` | `markdownlint` | boolean | `true` | Set `false` to skip the job. |
+| `lint-markdown.yml` | `globs` | string | `**/*.md` | Newline-delimited Markdown globs. |
+| `lint-markdown.yml` | `config` | string | empty | An empty value auto-discovers the caller's `.markdownlint.json`. |
+| `format.yml` | `prettier` | boolean | `true` | Set `false` to skip the job. |
+| `format.yml` | `globs` | string | `.` | Newline-delimited paths or globs. |
+| `format.yml` | `exclusions` | string | empty | Newline-delimited Prettier ignore patterns. |
+| `validate-markdown-frontmatter.yml` | `standards-ref` | string | `v5` | Git ref to install from this repository. |
+| `validate-specs.yml` | `standards-ref` | string | `v5` | Git ref to install from this repository. |
+| `validate-specs.yml` | `strict-lint` | boolean | `true` | Set `false` to skip strict specification linting. |
+
+For either validation workflow, set `standards-ref` to the same ref used after `@` in `jobs.<job>.uses`; a full-version or SHA pin must be repeated exactly.
+
+```yaml
+jobs:
+  lint-markdown:
+    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v5
+    with:
+      config: .markdownlint.json
+  format:
+    uses: L3DigitalNet/project-standards/.github/workflows/format.yml@v5
+    with:
+      exclusions: |
+        generated/**
+  validate-frontmatter:
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5
+    with:
+      standards-ref: v5
+  validate-specs:
+    uses: L3DigitalNet/project-standards/.github/workflows/validate-specs.yml@v5
+    with:
+      standards-ref: v5
+      strict-lint: true
+```
 
 For private standards repos called by private consumers, enable cross-repository access under this repo's **Actions** settings.
 

@@ -10,3 +10,8 @@ status = "draft"
 version = "0.5"
 payload = "versions/0.5/payload.toml"
 digest = "sha256:c027af45f85e84717e7ce9909adcd71363745e688538bd88a303dd813a351d80"
+
+[[versions]]
+version = "0.6"
+payload = "versions/0.6/payload.toml"
+digest = "sha256:a4c4d6f0d61f81beeabefe48a8ef29f9789b55d7159ab01bb64b1da8417db14d"

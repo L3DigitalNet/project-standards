@@ -362,6 +362,14 @@ def main(argv: list[str] | None = None) -> int:
 
         return _agent_handoff_run(args_list[1:])
 
+    specialized_adopt_help = args_list[:2] == ["adopt", "agent-handoff"] and any(
+        argument in {"--help", "-h"} for argument in args_list[2:]
+    )
+    if specialized_adopt_help:
+        from project_standards.agent_handoff.cli import run_adopt as _agent_handoff_adopt
+
+        return _agent_handoff_adopt(args_list[1:])
+
     adopt_help = args_list[:1] == ["adopt"] and any(
         argument in {"--help", "-h"} for argument in args_list[1:]
     )

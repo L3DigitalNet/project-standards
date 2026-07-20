@@ -23,10 +23,10 @@ This byte-locked dogfood artifact remains the generic consumer gate. Repository 
 `scripts/check.py` is the **dogfooded copy** of the Python Tooling bundle artifact:
 
 ```text
-standards/python-tooling/versions/1.1/resources/check.py  ←→  scripts/check.py
+standards/python-tooling/versions/1.2/resources/check.py  ←→  scripts/check.py
 ```
 
-`test_adopt_dogfood.py` asserts byte-identity between the two. If you edit either file, update the other to match — the test will catch any divergence in CI.
+`test_adopt_dogfood.py` asserts that the root artifact matches the current V2 reconciliation output. If you edit either file, update the package manifest and generated integrity metadata together — the test will catch any divergence in CI.
 
 ## `build-validate-id-pyz.sh` — standalone validator bundle
 

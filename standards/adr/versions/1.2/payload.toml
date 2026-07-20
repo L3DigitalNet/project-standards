@@ -1,0 +1,150 @@
+schema_version = "1.0"
+
+[payload]
+standard = "adr"
+version = "1.2"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["adr.validation"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:fded83e4725b687ea9442f3aebfbc00249a1de06937e8f1e26ea78f6e67662a2"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:4e4814357f75528f3b53e70e6822e4458999f21503960eb0bbea1cbc45747bc4"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:794fe1904f6943219de99d3f4057e7076fcca2229bba3677ebed30db91a7ba32"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:c286d1a8bf998722eb54c828265e9c07209576acfc02dfe7aa39455c32dada18"
+
+[[resources]]
+id = "example"
+role = "example"
+path = "examples/adr.example.md"
+media_type = "text/markdown"
+digest = "sha256:723c19756e784f5feab55d796488738e0ce2c75366623628c716857c34a5baa2"
+
+[[resources]]
+id = "template-bare-minimal"
+role = "template"
+path = "templates/adr-bare-minimal.md"
+media_type = "text/markdown"
+digest = "sha256:83c1cbb95ff44f9ce2729a1fbc211ca7eee11df562841c8ff225e53728ab4230"
+
+[[resources]]
+id = "template-bare"
+role = "template"
+path = "templates/adr-bare.md"
+media_type = "text/markdown"
+digest = "sha256:813e2f02d5bb716c54bd8cb17d77ed195176fb40257589d8bf89f434122f12b2"
+
+[[resources]]
+id = "template-minimal"
+role = "template"
+path = "templates/adr-minimal.md"
+media_type = "text/markdown"
+digest = "sha256:95725e741eda867f5efb4372314d2178181f5fe41ccd253f641b62faabd325a0"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/adr.py"
+media_type = "text/x-python"
+digest = "sha256:162d3f796ea9ff975574a5a4af88e7282103775752921b35b27ccf05e72504e7"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:2b8f1bd163fb984e87e5d447b34d4ef4adab5649deacf49f3fc08ed69ea29bcd"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:ee15ffe775c7f2c8a65230d6c7be61644085531ae7a822d4ef528192b7eccac3"
+
+[[artifacts]]
+id = "adr-template"
+target = "docs/adr/adr.template.md"
+source = "templates/adr.md"
+digest = "sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"
+policy = "create-only"
+
+[[providers]]
+id = "validate-adr"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-adr"
+
+[[migrations]]
+id = "legacy-v4-to-1-2"
+from = "legacy:v4-adr"
+to = "package:1.2"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = ["artifact:adr-template", "config:*"]
+signatures = ["legacy-adr-template"]
+
+[[legacy_signatures]]
+id = "legacy-adr-template"
+kind = "whole-file"
+targets = ["docs/adr/adr.template.md"]
+known_content_digests = ["sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"]

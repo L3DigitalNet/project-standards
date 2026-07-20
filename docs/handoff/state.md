@@ -3,7 +3,7 @@
 ## Current focus
 
 - Project Standards 5.1.0 is prepared and verified, unpublished; 5.0.2 from `c731955` remains the latest published release with signed `v5.0.2`, moving `v5`, and GitHub assets live.
-- All 100 implementation-review findings have final dispositions: 96 accepted or adjusted corrections are implemented, four findings are closed with no change, and no work is deferred. Every consumer surface requires Python 3.14 or newer.
+- All 100 implementation-review findings and all 14 consumer-documentation drift findings have final dispositions. The 96 accepted or adjusted implementation corrections, every documentation correction, and both audit-discovered CLI fixes are implemented; four implementation findings are closed with no change, and no work is deferred. Every consumer surface requires Python 3.14 or newer.
 - Keep the direct retained gates green. Do not add features, unrelated cleanup, or release-proof infrastructure to this correction train.
 
 ## Active incidents

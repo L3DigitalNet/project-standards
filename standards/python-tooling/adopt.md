@@ -1,18 +1,18 @@
 # Adopt the Python Tooling Standard
 
-The current consumer package is [`python-tooling@1.1`](versions/1.1/adopt.md). Use it for the uv/uv_build `src/` baseline, Ruff, BasedPyright strict mode, pytest/coverage, pip-audit, CI, VS Code, and bounded agent instructions.
+The current consumer package is [`python-tooling@1.2`](versions/1.2/adopt.md). Use it for the uv/uv_build `src/` baseline, Ruff, BasedPyright strict mode, pytest/coverage, pip-audit, CI, VS Code, and bounded agent instructions.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable python-tooling --version 1.1
+project-standards standards enable python-tooling --version 1.2
 project-standards reconcile
 project-standards reconcile --apply
 uv lock
 python scripts/check.py
 ```
 
-Options under `[standards.python-tooling.config]` select the independent contract, Python/build/layout choices, additional development dependencies, Ruff exclusions, type checker, pytest markers and coverage exclusions, audit exceptions, CI, VS Code, and instruction behavior. Reconciliation composes only declared package-owned tables/properties/blocks and preserves unrelated project configuration.
+Options under `[standards.python-tooling.config]` select the independent contract, Python/build/layout choices, additional development dependencies, Ruff exclusions, type checker, pytest markers, coverage exclusions, `coverage.parallel`, `coverage.patch`, `workflow_ownership`, audit exceptions, CI, VS Code, and instruction behavior. Reconciliation composes only declared package-owned tables/properties/blocks and preserves unrelated project configuration.
 
 Commit `.standards/config.toml`, `.standards/lock.toml`, `uv.lock`, and reconciled outputs together. The package owns the development dependency group, so `uv lock` is an explicit post-apply step.
 
@@ -37,4 +37,4 @@ uv run coverage report
 uv run pip-audit
 ```
 
-Unsupported option combinations, conflicting TOML ownership, unsafe paths, or managed-unit drift fail closed. See the [version-specific guide](versions/1.1/adopt.md) for the complete option example, outputs, migration, disable semantics, and recovery guidance.
+Unsupported option combinations, conflicting TOML ownership, unsafe paths, or managed-unit drift fail closed. See the [version-specific guide](versions/1.2/adopt.md) for the complete option example, outputs, migration, disable semantics, and recovery guidance.

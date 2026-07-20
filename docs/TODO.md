@@ -36,7 +36,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Complete the approved future-artifact cleanup.
 
-- [ ] Decide whether Python Coding 0.5 remains reference-only or proceeds toward release.
+- [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
 ### Future programs
 

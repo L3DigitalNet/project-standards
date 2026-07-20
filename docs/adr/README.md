@@ -6,8 +6,8 @@ description: 'Index of the project-standards Architecture Decision Records, incl
 doc_type: 'index'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-19'
-reviewed: '2026-07-18'
+updated: '2026-07-20'
+reviewed: '2026-07-20'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -17,7 +17,7 @@ tags:
 aliases: []
 related:
   - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
-  - 'standards/adr/versions/1.1/README.md'
+  - 'standards/adr/versions/1.2/README.md'
   - 'standards/standard-bundle-authoring/versions/2.0/README.md'
   - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
   - '.standards/config.toml'
@@ -29,7 +29,7 @@ related:
 
 # Architecture Decision Records
 
-Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.1 standard](../../standards/adr/versions/1.1/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
+Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.2 standard](../../standards/adr/versions/1.2/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
 
 ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. The MCP-server decisions (SPEC-MS01 §8.3) remain deferred to a later release.
 
