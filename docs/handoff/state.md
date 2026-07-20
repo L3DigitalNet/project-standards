@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- Project Standards 5.2.0 is published from `4d2cc41`; signed `v5.2.0`, moving `v5`, and byte-verified GitHub wheel/sdist assets are live after all nine `main` workflow runs passed. Issues #9, #10, #11 (and an unfiled check-workflow digest gap) are corrected and closed with resolution comments.
-- The 5.2.0 correction accepts the `"v3"` platform wire tag, carries the released digest lineage in Python Tooling 1.3 and Markdown Tooling 1.4, and adds the bounded-takeover contract (`unknown_content_disposition = "preserve"`, warning `CP-MIGRATION-BOUNDED-TAKEOVER`); Standard Bundle Authoring 2.3 documents it. Migration tests pin the released v3/v4 artifact bytes under `tests/fixtures/legacy_releases/` because the current-tree v1 bundles were revised after those releases.
-- Keep the direct retained gates green. Future work requires explicit selection from `docs/TODO.md`.
+- The 5.3.0 candidate is prepared and **held, not released** (owner directive 2026-07-20). `e69831f` corrects issues #12/#13 with consumer-owned relinquishment payloads (Python Tooling 1.4 `script_ownership`, Markdown Tooling 1.5 `lint_workflow_ownership`/`format_workflow_ownership`, CLI Documentation 1.3 `workflow_ownership`); `df761f5` records the adoption-mechanics audit.
+- A Codex session implements the audit fixes and rolls them into 5.3.0. Input: `docs/reviews/2026-07-20-adoption-mechanics-audit.md` — 3 verified blockers (B1 unguarded `ControlPlaneConfigurationError` in `plan_reconciliation` discards migration findings on legacy `markdown_tooling` contract 1.0; B2 `CP-MALFORMED-CONTAINER` prose-token collision; B3 minified JSON-family outputs fail the managed Prettier gate) plus 8 confirmed majors. Do not tag, publish, or push to `main` until the owner authorizes.
+- `testing` is 2 commits ahead of `origin/testing` (unpushed). Family `adopt.md` banners, the README package table, and the UPGRADING.md 5.2.0 pin deliberately lag until the release commit per `meta/versioning.md` step 0.
 
 ## Active incidents
 

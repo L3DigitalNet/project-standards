@@ -30,6 +30,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
+### Release 5.3.0 (held)
+
+- [ ] Roll the adoption-audit fixes into the 5.3.0 release after the Codex fix session lands. Input: `docs/reviews/2026-07-20-adoption-mechanics-audit.md` (blockers B1–B3, majors M1–M8, docs residue). Owner directive 2026-07-20: do not tag or publish 5.3.0 until those fixes are rolled in.
+
 ### Maintenance
 
 - [ ] Finish Agent Handoff consumer retirement.
