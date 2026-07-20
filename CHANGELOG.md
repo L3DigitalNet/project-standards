@@ -14,13 +14,13 @@ tags:
   - 'changelog'
 aliases: []
 related:
-  - 'standards/markdown-frontmatter/versions/1.2/README.md'
-  - 'standards/markdown-frontmatter/versions/1.2/structure.md'
-  - 'standards/markdown-frontmatter/versions/1.2/field-values.md'
+  - 'standards/markdown-frontmatter/versions/1.3/README.md'
+  - 'standards/markdown-frontmatter/versions/1.3/structure.md'
+  - 'standards/markdown-frontmatter/versions/1.3/field-values.md'
   - 'docs/adr/adr-0014-markdown-frontmatter-field-value-policy.md'
   - 'docs/adr/adr-0015-exclude-standards-from-local-frontmatter-scope.md'
   - 'docs/adr/adr-0016-package-markdown-frontmatter-skill-with-standard.md'
-  - 'standards/agent-handoff/versions/1.1/README.md'
+  - 'standards/agent-handoff/versions/1.2/README.md'
   - 'docs/research/2026-07-09-agent-handoff-retirement-inventory.md'
   - '.standards/config.toml'
 source: []
@@ -47,12 +47,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Changed
 
-- **Python 3.14 or newer is the explicit consumer floor.** The tool metadata and every affected consumer-facing payload, script, workflow, and adoption surface consistently require the shebang-resolved `python3` to be 3.14 or newer.
+- **Python 3.14 or newer is the explicit consumer floor.** Tool metadata, affected runtime payloads, reusable workflows, and top-level installation and migration guidance consistently require Python 3.14 or newer.
 - **Consumer locks write schema 1.1.** Successful writes preserve create-only absences without claiming deleted bytes still exist; schema 1.0 remains readable, while the first successful mutation canonicalizes the lock to 1.1.
 - **Compatibility CI reuses the exact candidate wheel.** The repository workflow exports the single wheel it already built and drives all compatibility workers from that artifact instead of allowing a second build.
 
 ### Fixed
 
+- **5.1.0 consumer documentation and policy-view help are synchronized.** Root installation, migration, catalog, package-default, and immutable-pin guidance now matches Catalog 5.1.0 and its Python 3.14 floor. The Agent Handoff usage reference documents `validate --view`, and `size-report --help` / `shape-check --help` retain the invoked alias in their usage line.
 - **All 96 accepted or adjusted implementation-review findings.** Corrections cover bounded control-plane safety, atomic filesystem operations, typed error boundaries, package and catalog validation, frontmatter and Project Specification parsing, Agent Handoff behavior, maintained documentation, and test hermeticity. The remaining four findings have final no-change dispositions because their proposed edits were invalid, incompatible, or cosmetic; none is deferred or queued.
 - **Repository tests are independent of ambient state.** Verified fixtures resolve from the repository rather than the caller's working directory, and Git-spawning tests ignore hostile user signing configuration without changing repository signing policy.
 

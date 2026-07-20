@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for migrating a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-12'
+updated: '2026-07-20'
 tags:
   - 'migration'
   - 'upgrade'
@@ -29,7 +29,16 @@ The v5 tool keeps a warned read-only fallback for a repository that still has on
 ## Before you start
 
 - Upgrade on a branch with a clean, reviewed working tree.
-- Install or invoke the exact v5 release you intend to pin.
+- Use Python 3.14 or newer.
+- Install or invoke the exact v5 release you intend to pin. For 5.1.0:
+
+  ```bash
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.1.0"
+  project-standards --version
+  ```
+
+  Confirm that the command reports `project-standards 5.1.0` before continuing.
+
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
 
@@ -103,7 +112,7 @@ An explicit `--config .project-standards.yml` is now a legacy/debug-only path an
 
 ## 5. Re-pin workflows and the tool
 
-After v5.0.0 is published, pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.0.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
+Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.1.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
 
 Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
 

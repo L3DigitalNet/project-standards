@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-19'
-reviewed: '2026-07-18'
+updated: '2026-07-20'
+reviewed: '2026-07-20'
 owner: ''
 consumer: 'mix'
 tags:
@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'project-standards-usage'
 related:
-  - 'standards/cli-documentation/versions/1.1/README.md'
+  - 'standards/cli-documentation/versions/1.2/README.md'
 source: []
 confidence: 'high'
 visibility: 'public'
@@ -233,13 +233,13 @@ Exit status: `0` success · `2` registry/bundle drift.
 
 ### `agent-handoff`
 
-Command group for validating and maintaining an Agent Handoff repository. Unified authority routes the selected Agent Handoff 1.1 package; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
+Command group for validating and maintaining an Agent Handoff repository. Unified authority routes the selected Agent Handoff 1.2 package; when unified state is absent, the command emits the V5 migration warning and uses the packaged V1 provider fallback. Running the group with no verb or with `--help` prints the group help and exits 0; an unknown verb exits 2.
 
 ```text
 project-standards agent-handoff {validate | drift-check | size-report | shape-check | legacy-report | upgrade} [--repo <dir>] [--json]
 ```
 
-All verbs accept **`--repo <dir>`** (default: current directory). Read-only reports accept **`--json`**. `upgrade` additionally accepts **`--dry-run`**.
+All verbs accept **`--repo <dir>`** (default: current directory). Read-only reports accept **`--json`**. `validate` additionally accepts **`--view {full,size,shape}`** (default: `full`); `size-report` and `shape-check` are convenience entry points for its `size` and `shape` views. `upgrade` additionally accepts **`--dry-run`**.
 
 | Verb | Purpose |
 | --- | --- |
@@ -259,7 +259,7 @@ Exit status: `0` clean/success · `1` findings or recoverable apply failure · `
 Under unified authority, validate the complete selected Agent Handoff repository contract without writing files. Legacy-only repositories use the warned V1 provider fallback.
 
 ```text
-project-standards agent-handoff validate [--repo <dir>] [--json]
+project-standards agent-handoff validate [--repo <dir>] [--json] [--view {full,size,shape}]
 ```
 
 ### `agent-handoff drift-check`
@@ -660,7 +660,7 @@ uv run project-standards init --catalog 5 --migrate
 ### Enable two packages and preview reconciliation
 
 ```bash
-project-standards standards enable markdown-frontmatter --version 1.2
+project-standards standards enable markdown-frontmatter --version 1.3
 project-standards standards enable python-tooling --version 1.1
 project-standards reconcile
 ```
@@ -828,5 +828,5 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## SEE ALSO
 
-- [`standards/cli-documentation/versions/1.1/README.md`](../standards/cli-documentation/versions/1.1/README.md) — the standard this document conforms to.
+- [`standards/cli-documentation/versions/1.2/README.md`](../standards/cli-documentation/versions/1.2/README.md) — the standard this document conforms to.
 - [`src/project_standards/README.md`](../src/project_standards/README.md) — the package's implementation and developer reference.

@@ -43,7 +43,7 @@ The installed `project-standards` entry point exposes these top-level command su
 | `project-standards fix [FLAGS] [FILE …]` | `cli.py`, `frontmatter_commands.py` | Apply the selected Frontmatter fix plan, then revalidate |
 | `project-standards spec {validate\|lint\|extract\|next\|new\|upgrade} …` | `specs/cli.py` | Nested command group over project specs — see [project-standards spec (nested command group)](#project-standards-spec-nested-command-group) |
 | `project-standards packages check-release …` | `package_contract/cli.py` | Compare current packages with an immutable released baseline |
-| `project-standards agent-handoff {validate\|drift-check\|size-report\|shape-check\|legacy-report\|upgrade} …` | `agent_handoff/cli.py` | Validate and maintain selected Agent Handoff 1.1 state, or use the warned V1 fallback when unified state is absent |
+| `project-standards agent-handoff {validate\|drift-check\|size-report\|shape-check\|legacy-report\|upgrade} …` | `agent_handoff/cli.py` | Validate and maintain selected Agent Handoff 1.2 state, or use the warned V1 fallback when unified state is absent |
 | `project-standards adopt …`, `project-standards list …` | `cli.py`, `adopt/` | Warned V1 compatibility surfaces retained for migration only |
 
 Seven console scripts are registered by `pyproject.toml`:
@@ -255,12 +255,12 @@ Each verb is implemented in `src/project_standards/specs/cli.py`; `spec new` and
 
 ### project-standards agent-handoff (nested command group)
 
-Under unified authority, `project-standards agent-handoff` routes manifest-declared providers for the selected Agent Handoff 1.1 payload. When unified state is absent, it emits the migration warning and routes the packaged V1 provider fallback. `validate` accumulates full conformance findings; `drift-check` limits findings to standard-owned artifacts, integrations, and provenance; `size-report` and `shape-check` expose policy views; `legacy-report` detects repo-local historical evidence without mutation; and `upgrade` refreshes only clean managed content.
+Under unified authority, `project-standards agent-handoff` routes manifest-declared providers for the selected Agent Handoff 1.2 payload. When unified state is absent, it emits the migration warning and routes the packaged V1 provider fallback. `validate` accumulates full conformance findings; `drift-check` limits findings to standard-owned artifacts, integrations, and provenance; `size-report` and `shape-check` expose policy views; `legacy-report` detects repo-local historical evidence without mutation; and `upgrade` refreshes only clean managed content.
 
 Current adoption uses the unified control plane:
 
 ```bash
-project-standards standards enable agent-handoff --version 1.1
+project-standards standards enable agent-handoff --version 1.2
 project-standards reconcile
 project-standards reconcile --apply
 project-standards agent-handoff validate --repo . --json

@@ -70,6 +70,22 @@ def test_unified_validate_uses_selected_provider(
     assert report["findings"] == []
 
 
+@pytest.mark.parametrize("command", ["size-report", "shape-check"])
+def test_unified_policy_view_help__requested_alias__uses_alias_name(
+    command: str,
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run([command, "--repo", str(repo), "--help"], distribution=distribution)
+
+    assert exc_info.value.code == 0
+    assert f"usage: project-standards agent-handoff {command}" in capsys.readouterr().out
+
+
 def test_unified_validate_reports_selected_payload_drift_without_writing(
     tmp_path: Path,
     distribution: InstalledDistribution,

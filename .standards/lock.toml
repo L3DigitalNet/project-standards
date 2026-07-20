@@ -1143,8 +1143,8 @@ owners = ["cli-documentation"]
 versions = { cli-documentation = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:d2851ab94e16454351955ff0f30d7cf2f17d93c6aab57d198caac10c39596021"
-content_digest = "sha256:d2851ab94e16454351955ff0f30d7cf2f17d93c6aab57d198caac10c39596021"
+semantic_digest = "sha256:5769fab2299ea9043c53dc0b11d5b34b94c06f926c054ffb3d3abf13dd3191d4"
+content_digest = "sha256:5769fab2299ea9043c53dc0b11d5b34b94c06f926c054ffb3d3abf13dd3191d4"
 created_container = false
 
 [[artifacts]]

@@ -137,8 +137,8 @@ def _repository_argument(argv: list[str]) -> Path:
     return selected
 
 
-def _parse_v2(operation: V2ProviderOperation, argv: list[str]) -> _V2Args:
-    parser = _Parser(prog=f"project-standards agent-handoff {operation.value}")
+def _parse_v2(command: str, operation: V2ProviderOperation, argv: list[str]) -> _V2Args:
+    parser = _Parser(prog=f"project-standards agent-handoff {command}")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
     if operation is V2ProviderOperation.VALIDATE:
@@ -373,10 +373,11 @@ def _run_upgrade(selected: SelectedCommandPackage, args: _V2Args) -> int:
 
 def _run_selected(
     selected: SelectedCommandPackage,
+    command: str,
     operation: V2ProviderOperation,
     argv: list[str],
 ) -> int:
-    args = _parse_v2(operation, argv)
+    args = _parse_v2(command, operation, argv)
     if operation is V2ProviderOperation.UPGRADE:
         return _run_upgrade(selected, args)
     return _run_read_command(selected, operation, args.view, args)
@@ -420,7 +421,12 @@ def run(
         ) as selected:
             if selected is None:
                 return _run_provider(operation, provider_args)
-            return _run_selected(selected, V2ProviderOperation(operation.value), provider_args)
+            return _run_selected(
+                selected,
+                command,
+                V2ProviderOperation(operation.value),
+                provider_args,
+            )
     except (_ArgumentError, CommandConfigurationError, RepositoryBoundaryError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

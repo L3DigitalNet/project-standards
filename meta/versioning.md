@@ -6,8 +6,8 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-19'
-reviewed: '2026-07-19'
+updated: '2026-07-20'
+reviewed: '2026-07-20'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -58,7 +58,7 @@ license: null
 
 This repository ships **several components under one version number**: seven standards — [Markdown Frontmatter](../standards/markdown-frontmatter/README.md), [ADR](../standards/adr/README.md), [Python Tooling SSOT](../standards/python-tooling/README.md), [Markdown Tooling](../standards/markdown-tooling/README.md), [Project Specification](../standards/project-spec/README.md), [CLI Documentation](../standards/cli-documentation/README.md), and [Agent Handoff](../standards/agent-handoff/README.md) — plus the **JSON schema** (`src/project_standards/schemas/`), the **validator CLI** (`src/project_standards/`, distributed as the `project-standards` package), and the **reusable workflows** (`.github/workflows/validate-markdown-frontmatter.yml`, `validate-specs.yml`). Consuming repositories pin a single git tag and receive all of them together.
 
-All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific V1 adoption mechanics are migration inputs rather than current authority. Catalog 5 has seven consumer packages, [Python Coding](../standards/python-coding/README.md) as reference-only package `0.5`, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) as internal package `2.1` (2.0 remains advertised as released history).
+All standards ship in one `project-standards` distribution. Under the V5 control-plane contract, a consumer first initializes a neutral `.standards/` catalog, config, and lock scaffold, then selects individual packages through `.standards/config.toml`; initialization enables none. Package-specific V1 adoption mechanics are migration inputs rather than current authority. Catalog 5 has seven consumer packages, [Python Coding](../standards/python-coding/README.md) as reference-only package `0.5`, and [Standard Bundle Authoring](../standards/standard-bundle-authoring/README.md) as internal package `2.2` (2.0 and 2.1 remain advertised as released history).
 
 This document defines what a release number promises, how to classify a change, and the operational requirements for cutting a release. It governs this repository's own releases; it is not the metadata standard for documents (see [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md)).
 
@@ -102,7 +102,7 @@ The following current markers are contract-plane inputs retained during V5 migra
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md).
 - The **Python Tooling contract version** is the closed `contract_version` option inside the selected Python Tooling payload. It preserves supported toolchain-policy semantics independently from package release `1.1`.
 - The **Markdown Tooling contract version** is the closed `contract_version` option inside the selected Markdown Tooling payload. The package options and managed lint/format workflows enforce its behavior independently from package release `1.2`.
-- The **Agent Handoff contract version** is the closed `contract_version` option inside the selected Agent Handoff payload. The provider-backed validators and central lock enforce its layout/integration policy independently from package release `1.1`.
+- The **Agent Handoff contract version** is the closed `contract_version` option inside the selected Agent Handoff payload. The provider-backed validators and central lock enforce its layout/integration policy independently from package release `1.2`.
 
 The **ADR standard** carries its own ADR contract version for body rules and Frontmatter compatibility; for document _metadata_ it remains a profile over the Frontmatter schema. Package payload releases and package-owned contract selectors remain distinct as described in [Package release and contract versions](#package-release-and-contract-versions). There are no per-standard git release tags: all immutable package payloads ship inside the one repository distribution.
 
