@@ -14,6 +14,6 @@
 - Verification claims are command-based; rerun the retained gate against current HEAD before claiming completion.
 - MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
 - Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
-- The consumer-facing [agent adoption/update prompt](adoption-prompt.md) provides exact-release routing, preview/apply and preservation guidance, verification, and sanitized upstream irregularity reporting.
+- The consumer-facing [agent adoption/update prompt](adoption-prompt.md) resolves GitHub's latest official release once, pins that immutable tag for the task, and provides preview/apply and preservation guidance, verification, and sanitized upstream irregularity reporting.
 - Housekeeping 2026-07-19: `docs/superpowers/` retired (designs → `docs/specs/archive/`, research → `docs/research/`, active plan → `docs/plans/`); completed plans, review audits, and `docs/codex-reviews/` deleted.
 - Durable implementation history remains in `docs/handoff/sessions/2026-07.md`.

@@ -4,7 +4,7 @@
 
 - Project Standards 5.1.1 is published from `784d7bb`; signed `v5.1.1`, moving `v5`, and byte-verified GitHub wheel/sdist assets are live.
 - All 100 implementation-review findings and all 14 consumer-documentation drift findings have final dispositions. The 96 accepted or adjusted implementation corrections, every documentation correction, and both audit-discovered CLI fixes are implemented; four implementation findings are closed with no change, and no work is deferred. Every consumer surface requires Python 3.14 or newer.
-- The 5.1.1 correction resolved and closed issue #8 for partial Catalog 4 adoption without changing immutable payload or catalog bytes. Its promoted `docs/adoption-prompt.md` requires sanitized upstream irregularity reporting.
+- The 5.1.1 correction resolved and closed issue #8 for partial Catalog 4 adoption without changing immutable payload or catalog bytes. Its promoted `docs/adoption-prompt.md` resolves the latest official release to one immutable tag and requires sanitized upstream irregularity reporting.
 - Keep the direct retained gates green. Future work requires explicit selection from `docs/TODO.md`.
 
 ## Active incidents

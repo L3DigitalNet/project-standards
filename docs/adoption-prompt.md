@@ -25,21 +25,33 @@ license: null
 
 # Adopt or update Project Standards with an agent
 
-Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. The prompt requires a preview before every apply, preservation of consumer intent, exact-release verification, and sanitized upstream issue reports for adoption or upgrade irregularities.
+Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. The prompt requires a preview before every apply, preservation of consumer intent, latest-release discovery with immutable-release verification, and sanitized upstream issue reports for adoption or upgrade irregularities.
 
 ## Copy/paste prompt
 
 ````text
-Adopt or update this repository to Project Standards 5.1.1. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
+Adopt or update this repository to the most recent official Project Standards release. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
 
-Use these exact-release sources as authority:
+Resolve GitHub's latest published, non-prerelease Project Standards release once, before reading release documentation or changing the repository:
 
-- Consumer setup: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/README.md#consuming-the-standards
-- V4-to-V5 migration: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/UPGRADING.md
-- Package catalog and adoption guides: https://github.com/L3DigitalNet/project-standards/tree/v5.1.1/standards
-- CLI reference: https://github.com/L3DigitalNet/project-standards/blob/v5.1.1/docs/usage.md
+```bash
+release_tag="$(gh api repos/L3DigitalNet/project-standards/releases/latest --jq .tag_name)"
+release_version="${release_tag#v}"
+test -n "$release_tag"
+test "$release_version" != "$release_tag"
+printf 'Project Standards release: %s (%s)\n' "$release_tag" "$release_version"
+```
 
-Treat the exact `v5.1.1` documentation and the installed `project-standards 5.1.1` behavior as authoritative. Do not follow `main`, mutable family pages from another ref, older release instructions, or remembered commands when they conflict with these sources.
+Record both values and use them unchanged for the rest of the task, even if a newer release appears while work is in progress. In every command and URL below, replace `<release-tag>` and `<release-version>` with those recorded literal values.
+
+Use these resolved, immutable-release sources as authority:
+
+- Consumer setup: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/README.md#consuming-the-standards`
+- V4-to-V5 migration: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/UPGRADING.md`
+- Package catalog and adoption guides: `https://github.com/L3DigitalNet/project-standards/tree/<release-tag>/standards`
+- CLI reference: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/docs/usage.md`
+
+Treat the documentation at `<release-tag>` and the installed `project-standards <release-version>` behavior as authoritative. Do not follow `main`, mutable family pages from another ref, older release instructions, or remembered commands when they conflict with these sources.
 
 ## Safety and orientation
 
@@ -53,11 +65,13 @@ Treat the exact `v5.1.1` documentation and the installed `project-standards 5.1.
 5. Use Python 3.14 or newer. Install the exact release and verify it before changing the repository:
 
    ```bash
-   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.1.1"
-   project-standards --version
+   release_tag="<release-tag>"
+   release_version="<release-version>"
+   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@${release_tag}"
+   test "$(project-standards --version)" = "project-standards ${release_version}"
    ```
 
-   Continue only if the version command reports `project-standards 5.1.1`.
+   Replace both placeholders with the values recorded above before running the block. Continue only if the version check succeeds.
 
 6. Work on a branch with a clean baseline whenever possible. Do not discard, overwrite, normalize, commit, push, or open a pull request for unrelated work. Do not use `--force` to bypass ownership or provenance protections.
 
@@ -72,7 +86,7 @@ Treat the exact `v5.1.1` documentation and the installed `project-standards 5.1.
    ```
 
 2. Enable each evidence-backed consumer package at the version specified by its exact-release adoption guide. Configure its closed options from repository intent; do not invent values.
-3. Read every selected package's `versions/<major.minor>/adopt.md` from tag `v5.1.1`.
+3. Read every selected package's `versions/<major.minor>/adopt.md` from `<release-tag>`.
 4. Run `project-standards reconcile` first as a read-only preview. Review every planned write, removal, ownership claim, finding, and verification action.
 5. Resolve all unexpected or ambiguous preview findings before running `project-standards reconcile --apply`.
 
