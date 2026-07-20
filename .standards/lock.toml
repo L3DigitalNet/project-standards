@@ -1071,8 +1071,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:78c5f5ea89e9c3cf0a54a33802945c4e068940fb40ba679ff8ea0dc8b08361eb"
-content_digest = "sha256:78c5f5ea89e9c3cf0a54a33802945c4e068940fb40ba679ff8ea0dc8b08361eb"
+semantic_digest = "sha256:623e17e93a9a05f3f20aec0cda2e14264973b67653dbd08bd859d94630877494"
+content_digest = "sha256:623e17e93a9a05f3f20aec0cda2e14264973b67653dbd08bd859d94630877494"
 created_container = false
 
 [[artifacts]]

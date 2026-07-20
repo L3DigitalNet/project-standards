@@ -18,6 +18,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 10 | V2 family indexes are canonical | Discovering current packages or inspecting V1 migration input |
 | 11 | Installed V2 payloads use a symlink-only source projection | Adding or packaging canonical versioned payloads |
 | 12 | Managed Markdown ranges use paired Prettier guards | Composing formatter-stable package blocks in consumer Markdown |
+| 13 | Keep documentation-only closeout proportional | Closing a documentation-only session |
 
 ## 1. Dogfood the standards
 
@@ -222,3 +223,24 @@ Use the existing bare `<!-- prettier-ignore -->` convention only for one followi
 **Sources:** Prettier range-ignore documentation; SPEC-CP01 Task 13 verification fixture.
 
 **Related:** 3, 7, 9.
+
+## 13. Keep documentation-only closeout proportional
+
+**Applies when:** the diff contains only documentation, handoff records, and directly regenerated lock or provenance metadata. Any implementation, test, workflow, package, schema, dependency, or build change excludes this fast path.
+
+**Rule:** validate only the changed surfaces:
+
+- format and lint the changed documents where covered;
+- validate managed Markdown and run applicable handoff checks;
+- check eager-document shape or size and reconcile changed provenance;
+- `git diff --check`, a clean post-commit worktree, and local/remote branch parity after push.
+
+Do not run or wait for implementation and release gates or hosted `Check` solely for this closeout. An automatically triggered full workflow is not a blocker; inspect it only when branch policy requires it or it reports a relevant failure.
+
+Use the affected focused or full gate when documentation changes a byte-locked scaffold, executable interface, or package contract.
+
+**Why:** validation should be proportional to the changed surface.
+
+**Sources:** 2026-07-20 session closeout correction.
+
+**Related:** 1, 3, 7, 9.
