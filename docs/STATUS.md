@@ -13,5 +13,6 @@
 - Verification claims are command-based; rerun the retained gate against current HEAD before claiming completion.
 - MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
 - Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
+- A metadata-free agent adoption/update prompt is staged at `docs/working-adoption-prompt.md`; `docs/TODO.md` owns its next-release promotion.
 - Housekeeping 2026-07-19: `docs/superpowers/` retired (designs → `docs/specs/archive/`, research → `docs/research/`, active plan → `docs/plans/`); completed plans, review audits, and `docs/codex-reviews/` deleted.
 - Durable implementation history remains in `docs/handoff/sessions/2026-07.md`.

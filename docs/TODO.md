@@ -16,6 +16,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## User tasks
 
+- [ ] Promote `docs/working-adoption-prompt.md` as copy/paste guidance in the next release.
+  - Refresh release links, preview/apply steps, verification, and preservation guidance.
+  - Require sanitized upstream issues for adoption or upgrade irregularities.
+
 - [ ] Define the repository policy and tooling for durable document references.
 
   Decide when identifiers such as `SPEC-MT01` must link to their canonical documents. Define checks for inconsistent or missing links, maintenance of `related:` frontmatter, graph generation, and safe reconciliation of detected drift.
