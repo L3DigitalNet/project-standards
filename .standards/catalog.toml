@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.1.1"
-digest = "sha256:c3ae2c8990582d8d4d61946a6cfe49e5fb45b70dc420960ee239bc62a558b8dc"
+release = "5.2.0"
+digest = "sha256:a1621b32dc3ed517d605a48e96914a5515de096a0678b4dbcbb9808289f5a3cf"
 
 [standards.adr]
 status = "active"
@@ -70,8 +70,8 @@ payload_digest = "sha256:97327fffde61fd981c08949292c504a930f4fe6786af455cb1f6c7d
 
 [standards.markdown-tooling]
 status = "active"
-available = ["1.2", "1.3"]
-default = "1.3"
+available = ["1.2", "1.3", "1.4"]
+default = "1.4"
 candidates = []
 
 [standards.markdown-tooling.versions."1.2"]
@@ -80,9 +80,14 @@ availability = "consumer"
 payload_digest = "sha256:0d4f89403c4b4c4a2d1dc9c579deddf717f5e01d1c424cac4a103ecb03be12ae"
 
 [standards.markdown-tooling.versions."1.3"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:e6bf4dafb75f1c87a5ce763a3f52c98749fdff4902cd1e1beb13eebaff12deca"
+
+[standards.markdown-tooling.versions."1.4"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:31a4bfd502cf332a68a20b3682b83ec8a797d58c4b7f565cbfe6043cf787c8b5"
 
 [standards.project-spec]
 status = "active"
@@ -117,8 +122,8 @@ payload_digest = "sha256:a4c4d6f0d61f81beeabefe48a8ef29f9789b55d7159ab01bb64b1da
 
 [standards.python-tooling]
 status = "active"
-available = ["1.1", "1.2"]
-default = "1.2"
+available = ["1.1", "1.2", "1.3"]
+default = "1.3"
 candidates = []
 
 [standards.python-tooling.versions."1.1"]
@@ -127,13 +132,18 @@ availability = "consumer"
 payload_digest = "sha256:bf36d035e20c3533546f4c0aebfad6b737902aa79cb7bad2566b017925ac910e"
 
 [standards.python-tooling.versions."1.2"]
-channel = "stable"
+channel = "retained"
 availability = "consumer"
 payload_digest = "sha256:04264e67678708fd5f1f44a7145f3a1e23acfb14b72a6cba1dad61ca5a6ace84"
 
+[standards.python-tooling.versions."1.3"]
+channel = "stable"
+availability = "consumer"
+payload_digest = "sha256:3da255cdc757f55aaa4983a5e7c24593be5bf2fcc1406f5f817265602186769b"
+
 [standards.standard-bundle-authoring]
 status = "active"
-available = ["2.0", "2.1", "2.2"]
+available = ["2.0", "2.1", "2.2", "2.3"]
 candidates = []
 
 [standards.standard-bundle-authoring.versions."2.0"]
@@ -150,3 +160,8 @@ payload_digest = "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b092054384
 channel = "internal"
 availability = "internal"
 payload_digest = "sha256:538d8afa6760bddd3f4be13b7b001257f028f94df4385a42e3aba5a19559bc83"
+
+[standards.standard-bundle-authoring.versions."2.3"]
+channel = "internal"
+availability = "internal"
+payload_digest = "sha256:dbe940f518534224ccf58956a3ce02660f99be20cf161241308444eddccee7d5"

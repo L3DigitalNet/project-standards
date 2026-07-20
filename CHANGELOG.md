@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-07-20
+
 ### Fixed
 
 - The V4→V5 migration platform gate accepts the `"v3"` tag every released v3/v4 CLI actually wrote to `standards_version`, alongside `"v4"`; an unrecognized tag now produces a single `CP-MIGRATION-PLATFORM-VERSION` finding instead of also double-firing `CP-MIGRATION-UNCLAIMED-SETTING` (issue #9).

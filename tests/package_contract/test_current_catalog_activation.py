@@ -50,9 +50,9 @@ _PACKAGES = {
         "Markdown Tooling Standard",
         "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and adjacent structured text.",
         "active",
-        "1.3",
+        "1.4",
         "default",
-        "sha256:e6bf4dafb75f1c87a5ce763a3f52c98749fdff4902cd1e1beb13eebaff12deca",
+        "sha256:31a4bfd502cf332a68a20b3682b83ec8a797d58c4b7f565cbfe6043cf787c8b5",
     ),
     "project-spec": (
         "Project Specification Standard",
@@ -74,17 +74,17 @@ _PACKAGES = {
         "Python Tooling SSOT Standard",
         "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects.",
         "active",
-        "1.2",
+        "1.3",
         "default",
-        "sha256:04264e67678708fd5f1f44a7145f3a1e23acfb14b72a6cba1dad61ca5a6ace84",
+        "sha256:3da255cdc757f55aaa4983a5e7c24593be5bf2fcc1406f5f817265602186769b",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
         "The contract every standard bundle in this repository must declare.",
         "active",
-        "2.2",
+        "2.3",
         "internal",
-        "sha256:538d8afa6760bddd3f4be13b7b001257f028f94df4385a42e3aba5a19559bc83",
+        "sha256:dbe940f518534224ccf58956a3ce02660f99be20cf161241308444eddccee7d5",
     ),
 }
 
@@ -152,6 +152,24 @@ _RETAINED_CATALOG_ENTRIES = {
         "2.1",
         "internal",
         "sha256:480d81333159337279a493896478298ba3d46c72ca4e6b09205438435017705b",
+    ),
+    (
+        "markdown-tooling",
+        "1.3",
+        "retained",
+        "sha256:e6bf4dafb75f1c87a5ce763a3f52c98749fdff4902cd1e1beb13eebaff12deca",
+    ),
+    (
+        "python-tooling",
+        "1.2",
+        "retained",
+        "sha256:04264e67678708fd5f1f44a7145f3a1e23acfb14b72a6cba1dad61ca5a6ace84",
+    ),
+    (
+        "standard-bundle-authoring",
+        "2.2",
+        "internal",
+        "sha256:538d8afa6760bddd3f4be13b7b001257f028f94df4385a42e3aba5a19559bc83",
     ),
 }
 
