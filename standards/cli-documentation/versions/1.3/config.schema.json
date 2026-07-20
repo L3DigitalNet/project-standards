@@ -1,0 +1,92 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"contract_version": { "type": "string", "const": "1.0", "default": "1.0" },
+		"profile": {
+			"type": "string",
+			"enum": ["script", "packaged", "packaged-deep"],
+			"default": "script"
+		},
+		"workflow_ownership": {
+			"type": "string",
+			"enum": ["referenced", "consumer-owned"],
+			"default": "referenced"
+		},
+		"command_name": {
+			"anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }],
+			"default": null
+		},
+		"workflow_path": { "type": ["string", "null"], "minLength": 1, "default": null },
+		"ci": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"enabled": { "type": "boolean", "default": false },
+				"runner": {
+					"anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }],
+					"default": null
+				},
+				"language": { "enum": ["python", "generic", null], "default": null },
+				"setup": { "enum": ["uv", "none", null], "default": null }
+			},
+			"default": { "enabled": false },
+			"allOf": [
+				{
+					"if": {
+						"properties": { "enabled": { "const": true } },
+						"required": ["enabled"]
+					},
+					"then": {
+						"properties": {
+							"runner": { "type": "string", "minLength": 1 },
+							"language": { "enum": ["python", "generic"] },
+							"setup": { "enum": ["uv", "none"] }
+						}
+					},
+					"else": {
+						"properties": {
+							"runner": { "const": null },
+							"language": { "const": null },
+							"setup": { "const": null }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "language": { "const": "generic" } },
+						"required": ["language"]
+					},
+					"then": { "properties": { "setup": { "const": "none" } } }
+				},
+				{
+					"if": {
+						"properties": { "language": { "const": "python" } },
+						"required": ["language"]
+					},
+					"then": { "properties": { "setup": { "const": "uv" } } }
+				}
+			]
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": { "profile": { "enum": ["packaged", "packaged-deep"] } },
+				"required": ["profile"]
+			},
+			"then": { "properties": { "command_name": { "type": "string", "minLength": 1 } } }
+		},
+		{
+			"if": {
+				"properties": { "ci": { "properties": { "enabled": { "const": true } } } },
+				"required": ["ci"]
+			},
+			"then": {
+				"properties": { "workflow_path": { "type": "string", "minLength": 1 } }
+			},
+			"else": { "properties": { "workflow_path": { "const": null } } }
+		}
+	]
+}

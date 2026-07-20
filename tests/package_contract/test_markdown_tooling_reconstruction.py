@@ -1063,6 +1063,77 @@ def test_markdown_tooling_consumer_editorconfig_sections_survive_takeover(
     assert "[*.rs]" in preserved
 
 
+def test_markdown_tooling_customized_callers_relinquish_with_workflow_ownership(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.5")
+    repo = _released_v4_markdown_repo(tmp_path)
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\n'
+        "markdown_tooling:\n"
+        '  version: "1.1"\n'
+        '  lint_workflow_ownership: "consumer-owned"\n'
+        '  format_workflow_ownership: "consumer-owned"\n',
+        encoding="utf-8",
+    )
+    lint_caller = repo / ".github/workflows/lint-markdown.yml"
+    format_caller = repo / ".github/workflows/format.yml"
+    customized_lint = lint_caller.read_bytes() + b"# consumer-tuned caller\n"
+    customized_format = format_caller.read_bytes() + b"# consumer-tuned caller\n"
+    lint_caller.write_bytes(customized_lint)
+    format_caller.write_bytes(customized_format)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    claims = {
+        claim.target.original: claim
+        for claim in plan.reports[0].claims
+        if claim.target.original.startswith(".github/workflows/")
+    }
+    assert claims[".github/workflows/lint-markdown.yml"].intent_pointer == (
+        "/markdown_tooling/lint_workflow_ownership"
+    )
+    assert claims[".github/workflows/format.yml"].intent_pointer == (
+        "/markdown_tooling/format_workflow_ownership"
+    )
+    assert "workflow_mode" not in plan.reports[0].package.config
+    assert apply_legacy_migration(plan).success
+    assert lint_caller.read_bytes() == customized_lint
+    assert format_caller.read_bytes() == customized_format
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
+    assert lint_caller.read_bytes() == customized_lint
+    assert format_caller.read_bytes() == customized_format
+
+
+def test_markdown_tooling_customized_callers_block_without_relinquishment(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.5")
+    repo = _released_v4_markdown_repo(tmp_path)
+    for name in ("lint-markdown.yml", "format.yml"):
+        caller = repo / ".github/workflows" / name
+        caller.write_bytes(caller.read_bytes() + b"# consumer-tuned caller\n")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    blocked = {
+        finding.path
+        for finding in plan.findings
+        if finding.code in {"CP-MIGRATION-LEGACY-DIGEST", "MT-LEGACY-MODIFIED"}
+    }
+    assert blocked >= {
+        ".github/workflows/lint-markdown.yml",
+        ".github/workflows/format.yml",
+    }
+
+
 def test_markdown_tooling_instruction_block_is_prettier_stable(tmp_path: Path) -> None:
     binary = _ROOT / "node_modules/.bin/prettier"
     if not binary.is_file():

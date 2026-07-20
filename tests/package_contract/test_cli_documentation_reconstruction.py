@@ -832,6 +832,153 @@ cli_documentation:
     assert drift_result.error_code == "CP-VERIFY"
 
 
+def _installed_distribution_1_3(tmp_path: Path) -> InstalledDistribution:
+    """Distribution advertising 1.3 as default with 1.1/1.2 retained."""
+    fixture = tmp_path / "distribution"
+    fixture.mkdir()
+    repository = copy_minimal_repository(fixture)
+    family = repository / "standards/cli-documentation"
+    shutil.copytree(_FAMILY, family)
+    versions = [
+        ("1.1", _payload(), "retained"),
+        ("1.2", _payload_1_2(), "retained"),
+        ("1.3", _payload_at(_ROOT / "standards/cli-documentation/versions/1.3"), "default"),
+    ]
+    version_entries = "".join(
+        f'''
+[[versions]]
+version = "{version}"
+payload = "versions/{version}/payload.toml"
+digest = "{payload.integrity.aggregate_digest.value}"
+'''
+        for version, payload, _ in versions
+    )
+    (family / "standard.toml").write_text(
+        f"""schema_version = "2.0"
+
+[standard]
+id = "cli-documentation"
+name = "CLI Documentation Standard"
+summary = "Profile-based usage references and optional workflow verification."
+status = "active"
+{version_entries}""",
+        encoding="utf-8",
+    )
+    package_entries = "".join(
+        f'''
+[[packages]]
+id = "cli-documentation"
+version = "{version}"
+digest = "{payload.integrity.aggregate_digest.value}"
+role = "{role}"
+'''
+        for version, payload, role in versions
+    )
+    (repository / "catalogs/5.toml").write_text(
+        f"""schema_version = "1.0"
+catalog_major = 5
+{package_entries}""",
+        encoding="utf-8",
+    )
+    package = repository / "src/project_standards"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    assert sync_payload_projection(repository, check=False) == ()
+    installed = fixture / "installed/project_standards"
+    shutil.copytree(package, installed, symlinks=False)
+    return InstalledDistribution(installed, tool_release="5.1.0")
+
+
+def _legacy_cli_docs_repo(tmp_path: Path, *, extra_config: str = "") -> Path:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        f'standards_version: v4\ncli_documentation:\n  version: "1.0"\n{extra_config}',
+        encoding="utf-8",
+    )
+    usage = repo / "docs/usage.md"
+    usage.parent.mkdir(parents=True)
+    shutil.copy2(_ROOT / "src/project_standards/bundles/cli-documentation/usage-doc.md", usage)
+    workflow = repo / ".github/workflows/cli-docs-check.yml"
+    workflow.parent.mkdir(parents=True)
+    shutil.copy2(
+        _ROOT / "src/project_standards/bundles/cli-documentation/cli-docs-check.yml",
+        workflow,
+    )
+    return repo
+
+
+def test_cli_documentation_customized_workflow_relinquishes_with_consumer_owned(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution_1_3(tmp_path)
+    repo = _legacy_cli_docs_repo(tmp_path, extra_config='  workflow_ownership: "consumer-owned"\n')
+    workflow = repo / ".github/workflows/cli-docs-check.yml"
+    customized = workflow.read_bytes() + b"# consumer hardening note\n"
+    workflow.write_bytes(customized)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    claim = next(
+        item
+        for item in plan.reports[0].claims
+        if item.target.original == ".github/workflows/cli-docs-check.yml"
+    )
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer == "/cli_documentation/workflow_ownership"
+    assert plan.reconciliation.next_lock.referenced_inputs == []
+    assert apply_legacy_migration(plan).success
+    assert workflow.read_bytes() == customized
+
+    second_request = build_planner_request(repo, distribution, frozenset())
+    second = plan_reconciliation(second_request)
+    assert second.applicable, second.findings
+    assert apply_reconciliation(ApplyRequest(second_request, second)).success
+    assert workflow.read_bytes() == customized
+
+
+def test_cli_documentation_pristine_workflow_relinquishes_without_owner_evidence(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution_1_3(tmp_path)
+    repo = _legacy_cli_docs_repo(tmp_path, extra_config='  workflow_ownership: "consumer-owned"\n')
+    workflow = repo / ".github/workflows/cli-docs-check.yml"
+    pristine = workflow.read_bytes()
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    claim = next(
+        item
+        for item in plan.reports[0].claims
+        if item.target.original == ".github/workflows/cli-docs-check.yml"
+    )
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer is None
+    assert plan.reconciliation.next_lock.referenced_inputs == []
+    assert apply_legacy_migration(plan).success
+    assert workflow.read_bytes() == pristine
+
+
+def test_cli_documentation_customized_workflow_blocks_without_relinquishment(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution_1_3(tmp_path)
+    repo = _legacy_cli_docs_repo(tmp_path)
+    workflow = repo / ".github/workflows/cli-docs-check.yml"
+    workflow.write_bytes(workflow.read_bytes() + b"# consumer hardening note\n")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert any(
+        finding.code == "CP-MIGRATION-LEGACY-DIGEST"
+        and finding.path == ".github/workflows/cli-docs-check.yml"
+        for finding in plan.findings
+    )
+
+
 def test_cli_documentation_selected_provider_rejects_wrong_payload_version() -> None:
     invocation = _invocation(
         "render-workflow",

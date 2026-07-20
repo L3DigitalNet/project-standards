@@ -1638,6 +1638,80 @@ def test_python_tooling_consumer_content_survives_bounded_takeover(tmp_path: Pat
     assert "[*.rs]" in editorconfig.read_text(encoding="utf-8")
 
 
+def test_python_tooling_customized_check_script_relinquishes_with_script_ownership(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    repo = _released_v4_repo(tmp_path)
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\n'
+        "python_tooling:\n"
+        '  version: "1.0"\n'
+        '  script_ownership: "consumer-owned"\n',
+        encoding="utf-8",
+    )
+    script = repo / "scripts/check.py"
+    customized = script.read_bytes() + b"\n# repo-specific audit stage\n"
+    script.write_bytes(customized)
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    claim = next(
+        item for item in migration.reports[0].claims if item.target.original == "scripts/check.py"
+    )
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer == "/python_tooling/script_ownership"
+    assert apply_legacy_migration(migration).success
+    assert script.read_bytes() == customized
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    _assert_no_mutating_actions(second)
+    assert script.read_bytes() == customized
+
+
+def test_python_tooling_pristine_check_script_relinquishes_without_owner_evidence(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    repo = _released_v4_repo(tmp_path)
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\n'
+        "python_tooling:\n"
+        '  version: "1.0"\n'
+        '  script_ownership: "consumer-owned"\n',
+        encoding="utf-8",
+    )
+    pristine = (repo / "scripts/check.py").read_bytes()
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    claim = next(
+        item for item in migration.reports[0].claims if item.target.original == "scripts/check.py"
+    )
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer is None
+    assert apply_legacy_migration(migration).success
+    assert (repo / "scripts/check.py").read_bytes() == pristine
+
+
+def test_python_tooling_customized_check_script_blocks_without_relinquishment(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    repo = _released_v4_repo(tmp_path)
+    script = repo / "scripts/check.py"
+    script.write_bytes(script.read_bytes() + b"\n# repo-specific audit stage\n")
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert not migration.applicable
+    assert {
+        finding.code for finding in migration.findings if finding.path == "scripts/check.py"
+    } >= {"CP-MIGRATION-LEGACY-DIGEST", "PT-LEGACY-MODIFIED"}
+
+
 def test_python_tooling_modified_legacy_file_blocks_migration_without_writes(
     tmp_path: Path,
 ) -> None:

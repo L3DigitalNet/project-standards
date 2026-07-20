@@ -37,6 +37,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-07-20
+
+### Added
+
+- Python Tooling 1.4 adds the `script_ownership` option: `"consumer-owned"` relinquishes `scripts/check.py` to the consumer, so a customized enforcement script migrates preserved instead of blocking with `CP-MIGRATION-LEGACY-DIGEST` / `PT-LEGACY-MODIFIED` (issue #12).
+- Markdown Tooling 1.5 adds the per-caller `lint_workflow_ownership` and `format_workflow_ownership` options: `"consumer-owned"` relinquishes `.github/workflows/lint-markdown.yml` or `.github/workflows/format.yml`, so a customized caller migrates preserved and stays outside reconciliation, verification, and lock state (issue #12).
+- CLI Documentation 1.3 adds the `workflow_ownership` option: `"consumer-owned"` relinquishes a customized `.github/workflows/cli-docs-check.yml` — migration preserves the file, leaves CI disabled, and records no referenced input; the default `"referenced"` keeps the recognized workflow locked as a verified referenced input (issue #13).
+- `UPGRADING.md` documents the complete per-target ownership-option map for carrying customized CI files through V4→V5 migration.
+
 ## [5.2.0] — 2026-07-20
 
 ### Fixed

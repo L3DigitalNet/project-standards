@@ -35,6 +35,12 @@ role = "retained"
 id = "cli-documentation"
 version = "1.2"
 digest = "sha256:edde1a4011314a9b05f372731a8d50e3b5a0663d39369089256d442430e4943c"
+role = "retained"
+
+[[packages]]
+id = "cli-documentation"
+version = "1.3"
+digest = "sha256:4902c68e931a0db308ed1b1ee1703b9003cf76a951453e22f8aae3e0091b04df"
 role = "default"
 
 [[packages]]
@@ -65,6 +71,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.4"
 digest = "sha256:31a4bfd502cf332a68a20b3682b83ec8a797d58c4b7f565cbfe6043cf787c8b5"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.5"
+digest = "sha256:dafda9c86933bfb41b013dccec35411944f99d3214ba55c31b76a730fa3f3616"
 role = "default"
 
 [[packages]]
@@ -107,6 +119,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.3"
 digest = "sha256:3da255cdc757f55aaa4983a5e7c24593be5bf2fcc1406f5f817265602186769b"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.4"
+digest = "sha256:a4799567568025c10e7b16a52e48f782ec6d13469a1f9e26f985fe2ed65cae79"
 role = "default"
 
 [[packages]]

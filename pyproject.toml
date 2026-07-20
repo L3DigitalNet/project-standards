@@ -1,6 +1,6 @@
 [project]
 name = "project-standards"
-version = "5.2.0"
+version = "5.3.0"
 description = "Reusable project standards, templates, schemas, and validation tools."
 license = "Apache-2.0"
 license-files = ["LICENSE"]

@@ -16,9 +16,9 @@ def test_markdown_tooling_default_is_1_1_and_1_0_still_known() -> None:
     assert set(mt["versions"]) == {"1.0", "1.1"}
 
 
-def test_dogfood_config_selects_markdown_tooling_v1_4() -> None:
+def test_dogfood_config_selects_markdown_tooling_v1_5() -> None:
     config = tomllib.loads((_REPO / ".standards/config.toml").read_text(encoding="utf-8"))
     lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
 
     assert config["standards"]["markdown-tooling"]["config"]["contract_version"] == "1.1"
-    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.4"
+    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.5"
