@@ -39,7 +39,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [5.1.1] — 2026-07-20
 
-> **Why PATCH:** this release corrects Catalog 4 migration planning for repositories that adopted only a subset of the seven Catalog 5 defaults. It preserves every previously passing consumer outcome and changes no immutable package payload, catalog selection, accepted configuration, or default. `packages check-release --baseline v5.1.0` classifies the release as patch. Prepared for publication on `main`.
+> **Why PATCH:** this release corrects Catalog 4 migration planning for repositories that adopted only a subset of the seven Catalog 5 defaults. It preserves every previously passing consumer outcome and changes no immutable package payload, catalog selection, accepted configuration, or default. `packages check-release --baseline v5.1.0` classifies the release as patch. Project Standards 5.1.1 is published from release commit `784d7bb`.
 
 ### Added
 

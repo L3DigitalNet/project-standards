@@ -2,7 +2,7 @@
 
 ## Current snapshot
 
-- Project Standards 5.1.0 remains the current published release at `b69600d`; signed `v5.1.0`, the moving `v5` ref, and byte-verified GitHub release assets are live. Project Standards 5.1.1 is prepared and verified for publication.
+- Project Standards 5.1.1 is the current published release at `784d7bb`; signed `v5.1.1`, the moving `v5` ref, and byte-verified GitHub release assets are live.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.6. The current defaults are ADR 1.2, Agent Handoff 1.2, CLI Documentation 1.2, Markdown Frontmatter 1.3, Markdown Tooling 1.3, Project Specification 1.2, and Python Tooling 1.2; internal Standard Bundle Authoring 2.2 is advertised but not consumer-selectable. Every superseded payload remains advertised.
 - All 100 implementation-review findings have final dispositions: 96 accepted or adjusted corrections are implemented, four findings are closed with no change, and none is deferred or queued. All 14 consumer-documentation drift findings and both audit-discovered CLI defects are also corrected. Every consumer surface requires Python 3.14 or newer.
 - The repository dogfoods the unified `.standards/` control plane; legacy `.project-standards.yml` authority is absent.
