@@ -1011,8 +1011,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:62e2fe4a3bf15e203b88ebf4bca78b7cb9cf0d9cd9a4cd9cd244c560e6ed1c13"
-content_digest = "sha256:62e2fe4a3bf15e203b88ebf4bca78b7cb9cf0d9cd9a4cd9cd244c560e6ed1c13"
+semantic_digest = "sha256:f0f5804d7530260cdff0fa0fb4d2d5c9eb2634b1c8ba1029dab5ef4fb99aad9a"
+content_digest = "sha256:f0f5804d7530260cdff0fa0fb4d2d5c9eb2634b1c8ba1029dab5ef4fb99aad9a"
 created_container = false
 
 [[artifacts]]
@@ -1071,8 +1071,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:7628a82ce02d9358ad8ec08a036f0a63dc0856552feaa8ac946cc512acd000ab"
-content_digest = "sha256:7628a82ce02d9358ad8ec08a036f0a63dc0856552feaa8ac946cc512acd000ab"
+semantic_digest = "sha256:78c5f5ea89e9c3cf0a54a33802945c4e068940fb40ba679ff8ea0dc8b08361eb"
+content_digest = "sha256:78c5f5ea89e9c3cf0a54a33802945c4e068940fb40ba679ff8ea0dc8b08361eb"
 created_container = false
 
 [[artifacts]]
@@ -1095,8 +1095,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:dfb0f557c9b1f0f87e77aef8383aefdbc1a82ada8f04fc668ba028d58b869968"
-content_digest = "sha256:dfb0f557c9b1f0f87e77aef8383aefdbc1a82ada8f04fc668ba028d58b869968"
+semantic_digest = "sha256:02336a1a493d9bb3c413d005909dcf7c8391530a0c5ca98422c889038223ff90"
+content_digest = "sha256:02336a1a493d9bb3c413d005909dcf7c8391530a0c5ca98422c889038223ff90"
 created_container = false
 
 [[artifacts]]
@@ -1119,8 +1119,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:ddb599120534baf204eaa010584beb9e5033b809dd3b932cb93b10722950d4a6"
-content_digest = "sha256:ddb599120534baf204eaa010584beb9e5033b809dd3b932cb93b10722950d4a6"
+semantic_digest = "sha256:bc9bd77c76a636b627df3b51e1921ea3f47527abe133b551eb347a2725bb9405"
+content_digest = "sha256:bc9bd77c76a636b627df3b51e1921ea3f47527abe133b551eb347a2725bb9405"
 created_container = false
 
 [[artifacts]]
@@ -1131,8 +1131,8 @@ owners = ["agent-handoff"]
 versions = { agent-handoff = "1.2" }
 provenance = "source"
 policy = "create-only"
-semantic_digest = "sha256:28c4d96076049eefaa4ffb6fe92d4e40463ffabe4433e342a5b33803e443f2a6"
-content_digest = "sha256:28c4d96076049eefaa4ffb6fe92d4e40463ffabe4433e342a5b33803e443f2a6"
+semantic_digest = "sha256:563fe12cfe41ca8b9f7fe5181687eb1b957620bdd48fdf4540e68437f61b9448"
+content_digest = "sha256:563fe12cfe41ca8b9f7fe5181687eb1b957620bdd48fdf4540e68437f61b9448"
 created_container = false
 
 [[artifacts]]

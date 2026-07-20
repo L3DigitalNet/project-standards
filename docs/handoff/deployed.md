@@ -1,6 +1,6 @@
 # Deployed
 
-**Last updated:** 2026-07-19
+**Last updated:** 2026-07-20
 
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 
@@ -21,5 +21,6 @@ This repo is consumed as a versioned standard: downstream repos pin a `standards
 | `v4` (moving) | tracks the newest 4.x release (`v4.3.0`) | published on `main` |
 | `v5.0.0` | Unified `.standards/` control plane, catalog 5 packages, migration and composition engine, source/wheel compatibility matrix, and updated reusable workflows. **BREAKING**; see [`UPGRADING.md`](../../UPGRADING.md). Release commit `8869a08`; signed tag and GitHub release assets live. | published on `main` |
 | `v5.0.1` | Drift-audit corrections for bounded provider integrity, Agent Handoff error classification, package-contract enforcement, source/wheel parity, and current Catalog 5 documentation. **PATCH** — no immutable payload, catalog selection, public command, accepted input, or conforming consumer outcome changed. Release commit `0390b9e`; signed tag and GitHub release assets live. | published on `main` |
-| `v5.0.2` | Additive internal `standard-bundle-authoring@2.1` payload correcting the 2.0 SPEC-BA02 pointer, plus the internal-additive PATCH classification rule. Release commit `c731955`; signed tag and GitHub release assets live. | published on `main` (Latest) |
-| `v5` (moving) | tracks the newest 5.x release (`v5.0.2`) | published on `main` |
+| `v5.0.2` | Additive internal `standard-bundle-authoring@2.1` payload correcting the 2.0 SPEC-BA02 pointer, plus the internal-additive PATCH classification rule. Release commit `c731955`; signed tag and GitHub release assets live. | published on `main` |
+| `v5.1.0` | Backward-compatible Catalog 5 default advances across all seven consumer packages, Python 3.14 floor alignment, consumer lock schema 1.1 writes, synchronized CLI/consumer documentation, and the complete accepted implementation-review correction train. **MINOR**; every superseded payload remains advertised. Release commit `b69600d`; signed tag and byte-verified wheel/sdist assets live. | published on `main` (Latest) |
+| `v5` (moving) | tracks the newest 5.x release (`v5.1.0`) | published on `main` |

@@ -39,7 +39,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [5.1.0] — 2026-07-20
 
-> **Why MINOR:** all seven Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `adr@1.2`, `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, `markdown-tooling@1.3`, `project-spec@1.2`, and `python-tooling@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. Reference-only `python-coding@0.6` and internal `standard-bundle-authoring@2.2` are not consumer defaults and do not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is prepared and verified, unpublished.
+> **Why MINOR:** all seven Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `adr@1.2`, `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, `markdown-tooling@1.3`, `project-spec@1.2`, and `python-tooling@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. Reference-only `python-coding@0.6` and internal `standard-bundle-authoring@2.2` are not consumer defaults and do not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is published from release commit `b69600d`.
 
 ### Added
 
