@@ -1,0 +1,13 @@
+# Copy to standards/<id>/standard.toml and replace every example value.
+schema_version = "2.0"
+
+[standard]
+id = "example-standard"
+name = "Example Standard"
+summary = "One sentence describing the stable package family."
+status = "draft" # draft | review | active | deprecated | archived | superseded
+
+[[versions]]
+version = "1.0"
+payload = "versions/1.0/payload.toml"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"

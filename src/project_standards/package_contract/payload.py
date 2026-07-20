@@ -609,6 +609,10 @@ class LegacySignatureDeclaration(StrictModel):
     end: str | None = None
     known_content_digests: list[Sha256Digest] = Field(min_length=1)
     consumer_owned_intent_pointer: str | None = None
+    # "preserve" authorizes migration to keep unrecognized bytes at the target when
+    # the package manages the file through bounded units only — steady-state
+    # reconciliation then takes over the managed units inside the preserved file.
+    unknown_content_disposition: Literal["preserve"] | None = None
 
     @field_validator("consumer_owned_intent_pointer")
     @classmethod
@@ -631,6 +635,13 @@ class LegacySignatureDeclaration(StrictModel):
             "known_content_digests",
             sorted(self.known_content_digests, key=lambda digest: digest.value),
         )
+        if (
+            self.unknown_content_disposition is not None
+            and self.consumer_owned_intent_pointer is not None
+        ):
+            raise ValueError(
+                "unknown-content preservation and consumer-owned intent are mutually exclusive"
+            )
         if self.kind is LegacySignatureKind.WHOLE_FILE:
             if any(value is not None for value in (self.format, self.begin, self.end)):
                 raise ValueError("whole-file legacy signature cannot declare block fields")
@@ -639,6 +650,8 @@ class LegacySignatureDeclaration(StrictModel):
             return self
         if self.consumer_owned_intent_pointer is not None:
             raise ValueError("consumer-owned intent requires one whole-file legacy target")
+        if self.unknown_content_disposition is not None:
+            raise ValueError("unknown-content preservation requires a whole-file legacy signature")
         if self.format is None or self.begin is None or self.end is None:
             raise ValueError("bounded-block legacy signature requires format and delimiters")
         if (

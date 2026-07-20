@@ -517,6 +517,162 @@ def _owner_resolution_repo(tmp_path: Path, owner_value: object = "consumer-owned
 
 _MISSING_OWNER_VALUE = object()
 
+_TAKEOVER_BYTES = b"# consumer-authored editorconfig\nroot = true\n"
+_TAKEOVER_DIGEST = Sha256Digest(f"sha256:{hashlib.sha256(_TAKEOVER_BYTES).hexdigest()}")
+
+
+def _bounded_takeover_distribution(
+    base: InstalledDistribution,
+    *,
+    target: str = ".editorconfig",
+    whole_file_contribution: bool = False,
+) -> InstalledDistribution:
+    installed = base.load_catalog("5")
+    catalog = base.consumer_catalog("5", installed=installed)
+    alpha = installed.payload_map[("alpha", "2.0")]
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-alpha",
+            "kind": "whole-file",
+            "targets": [target],
+            "known_content_digests": [_digest("f")],
+            "unknown_content_disposition": "preserve",
+        }
+    )
+    contributions = list(alpha.manifest.contributions)
+    if whole_file_contribution:
+        contributions.append(
+            ContributionDeclaration.model_validate(
+                {
+                    "id": "consumer-whole-file",
+                    "target": target,
+                    "adapter": "whole-file",
+                    "scope": "$file",
+                    "policy": "managed",
+                    "provider": "render-alpha",
+                }
+            )
+        )
+    manifest = alpha.manifest.model_copy(
+        update={
+            "contributions": contributions,
+            "legacy_signatures": [signature],
+        }
+    )
+    changed_alpha = InstalledPayload(alpha.root, manifest, alpha.integrity)
+    changed = InstalledCatalog(
+        installed.source,
+        installed.families,
+        tuple(changed_alpha if payload is alpha else payload for payload in installed.payloads),
+    )
+    return cast(
+        InstalledDistribution,
+        _FixtureDistribution(changed, catalog),
+    )
+
+
+def _bounded_takeover_repo(tmp_path: Path, target: str = ".editorconfig") -> Path:
+    repo = _legacy_repo(tmp_path)
+    modified = repo / target
+    modified.parent.mkdir(parents=True, exist_ok=True)
+    modified.write_bytes(_TAKEOVER_BYTES)
+    return repo
+
+
+def _install_bounded_takeover_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    target: str = ".editorconfig",
+) -> None:
+    import project_standards.control_plane.providers as provider_module
+
+    original = provider_module.invoke_provider
+
+    def bounded_takeover(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.operation is not ProviderOperation.MIGRATE:
+            return original(invocation)
+        report = MigrationReport(
+            schema_version="1.0",
+            package=MigratedPackage.model_validate(
+                {
+                    "standard_id": "alpha",
+                    "version": "2.0",
+                    "selector": "latest",
+                    "config": {"extension_path": "config/alpha-options.toml"},
+                    "recognized_settings": ["/alpha/enabled"],
+                }
+            ),
+            claims=(
+                LegacyClaim.model_validate(
+                    {
+                        "signature_id": "legacy-alpha",
+                        "target": target,
+                        "observed_digest": _TAKEOVER_DIGEST.value,
+                        "ownership": "shared",
+                        "disposition": "preserve",
+                    }
+                ),
+            ),
+        )
+        return ProviderResult(
+            effect=ProviderEffect.MIGRATION_REPORT,
+            migration_report=report,
+        )
+
+    monkeypatch.setattr(provider_module, "invoke_provider", bounded_takeover)
+
+
+def test_unknown_content_preserve_clears_bounded_target_with_a_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = installed_distribution(tmp_path)
+    distribution = _bounded_takeover_distribution(base)
+    repo = _bounded_takeover_repo(tmp_path)
+    _install_bounded_takeover_provider(monkeypatch)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert "CP-MIGRATION-LEGACY-DIGEST" not in _finding_codes(plan)
+    takeover = [
+        finding for finding in plan.findings if finding.code == "CP-MIGRATION-BOUNDED-TAKEOVER"
+    ]
+    assert [finding.severity for finding in takeover] == ["warning"]
+    assert takeover[0].path == ".editorconfig"
+    assert all(action.target != ".editorconfig" for action in plan.legacy_removals)
+
+
+def test_unknown_content_preserve_requires_a_materializing_bounded_unit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = installed_distribution(tmp_path)
+    distribution = _bounded_takeover_distribution(base, target="orphan.md")
+    repo = _bounded_takeover_repo(tmp_path, target="orphan.md")
+    _install_bounded_takeover_provider(monkeypatch, target="orphan.md")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert "CP-MIGRATION-LEGACY-DIGEST" in _finding_codes(plan)
+    assert "CP-MIGRATION-BOUNDED-TAKEOVER" not in _finding_codes(plan)
+
+
+def test_unknown_content_preserve_rejects_whole_file_management_at_the_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = installed_distribution(tmp_path)
+    distribution = _bounded_takeover_distribution(base, whole_file_contribution=True)
+    repo = _bounded_takeover_repo(tmp_path)
+    _install_bounded_takeover_provider(monkeypatch)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert "CP-MIGRATION-BOUNDED-TAKEOVER" not in _finding_codes(plan)
+
 
 def _install_owner_resolution_provider(
     monkeypatch: pytest.MonkeyPatch,
@@ -1697,6 +1853,37 @@ def test_unknown_key_inside_a_known_namespace_remains_unclaimed(tmp_path: Path) 
     assert not plan.applicable
     assert any(
         finding.code == "CP-MIGRATION-UNCLAIMED-SETTING" and finding.identity == "/alpha/extra"
+        for finding in plan.findings
+    )
+
+
+def test_platform_gate_accepts_the_v3_wire_tag_written_by_supported_legacy_clis(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path, 'standards_version: "v3"\nalpha:\n  enabled: true\n')
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert "CP-MIGRATION-PLATFORM-VERSION" not in _finding_codes(plan)
+    assert "CP-MIGRATION-UNCLAIMED-SETTING" not in _finding_codes(plan)
+
+
+def test_platform_gate_rejects_an_unknown_tag_with_one_platform_finding(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path, 'standards_version: "v4.3.0"\nalpha:\n  enabled: true\n')
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    codes = [finding.code for finding in plan.findings]
+    assert codes.count("CP-MIGRATION-PLATFORM-VERSION") == 1
+    assert not any(
+        finding.code == "CP-MIGRATION-UNCLAIMED-SETTING"
+        and finding.identity == "/standards_version"
         for finding in plan.findings
     )
 

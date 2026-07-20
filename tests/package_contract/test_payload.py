@@ -201,6 +201,38 @@ def test_owner_resolution_declaration_rejects_ambiguous_shapes(
         LegacySignatureDeclaration.model_validate(values)
 
 
+def test_unknown_content_disposition_preserve_is_accepted_on_whole_file() -> None:
+    signature = LegacySignatureDeclaration.model_validate(
+        _whole_file_signature(unknown_content_disposition="preserve")
+    )
+
+    assert signature.unknown_content_disposition == "preserve"
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {
+            "kind": "bounded-block",
+            "format": "yaml",
+            "begin": "# begin",
+            "end": "# end",
+        },
+        {"consumer_owned_intent_pointer": "/python_tooling/workflow_ownership"},
+        {"unknown_content_disposition": "remove"},
+        {"unknown_content_disposition": "adopt"},
+    ],
+)
+def test_unknown_content_disposition_rejects_ambiguous_shapes(
+    update: dict[str, object],
+) -> None:
+    values = _whole_file_signature(unknown_content_disposition="preserve")
+    values.update(update)
+
+    with pytest.raises(ValidationError):
+        LegacySignatureDeclaration.model_validate(values)
+
+
 def test_payload_rejects_reused_owner_resolution_pointer() -> None:
     data = _payload_data()
     data["legacy_signatures"] = [

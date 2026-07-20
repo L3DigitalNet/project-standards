@@ -1,0 +1,71 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"$defs": {
+		"jsonValue": {
+			"anyOf": [
+				{ "type": ["boolean", "integer", "number", "string", "null"] },
+				{ "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				{ "type": "object", "additionalProperties": { "$ref": "#/$defs/jsonValue" } }
+			]
+		},
+		"claim": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"signature_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+				"target": { "type": "string" },
+				"observed_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+				"ownership": {
+					"enum": ["managed", "create-only", "shared", "consumer-owned", "package-lock"]
+				},
+				"disposition": { "enum": ["adopt", "preserve", "remove", "import-lock"] }
+			},
+			"required": [
+				"signature_id",
+				"target",
+				"observed_digest",
+				"ownership",
+				"disposition"
+			]
+		},
+		"finding": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"code": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$" },
+				"severity": { "enum": ["error", "warning"] },
+				"path": { "type": "string" },
+				"identity": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+			},
+			"required": ["code", "severity", "path", "identity"]
+		}
+	},
+	"properties": {
+		"schema_version": { "const": "1.0" },
+		"package": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"standard_id": { "const": "markdown-tooling" },
+				"version": { "const": "1.4" },
+				"selector": {
+					"anyOf": [
+						{ "const": "latest" },
+						{ "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }
+					]
+				},
+				"config": {
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+				},
+				"recognized_settings": { "type": "array", "items": { "type": "string" } }
+			},
+			"required": ["standard_id", "version", "selector"]
+		},
+		"claims": { "type": "array", "items": { "$ref": "#/$defs/claim" } },
+		"findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+	},
+	"required": ["schema_version", "package"]
+}

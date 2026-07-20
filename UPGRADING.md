@@ -56,12 +56,23 @@ project-standards init --catalog 5 --migrate --json >migration-plan.json
 Preview is read-only. Review every selected package, migrated option, recognized artifact, ownership transfer, planned output, finding, and legacy retirement action. Resolve before apply:
 
 - unknown or unsupported legacy versions;
-- modified managed files or marker blocks;
+- modified managed files that no preservation path covers;
 - duplicate or overlapping ownership claims;
 - unsafe paths, symlinks, or unclassified legacy artifacts;
 - missing repository intent that a closed package option must preserve.
 
 Rerun preview after each correction. Do not edit the repository between the accepted preview and apply.
+
+### Resolve common preview findings
+
+| Finding | Meaning | Resolution |
+| --- | --- | --- |
+| `CP-MIGRATION-PLATFORM-VERSION` | `standards_version` is not a recognized platform tag. | Supported values are `"v3"` and `"v4"`; they name the same legacy wire format, and every released v3/v4 CLI wrote `"v3"`. Any other value must be corrected to one of the two before preview. |
+| `CP-MIGRATION-UNCLAIMED-SETTING` | A legacy setting is not represented by any selected package. | Remove the unknown key from `.project-standards.yml`, or select the package that migrates it. |
+| `CP-MIGRATION-LEGACY-DIGEST`, `PT-LEGACY-MODIFIED`, `MT-LEGACY-MODIFIED` | A recognized file's bytes match no shipped package history. | For instruction and shared configuration targets (`CLAUDE.md`, `AGENTS.md`, `.editorconfig`, `.vscode/*`) this resolves automatically: the file is preserved and the preview reports `CP-MIGRATION-BOUNDED-TAKEOVER` instead. For `.github/workflows/check.yml`, either restore the released bytes or declare `workflow_ownership: "consumer-owned"` under `python_tooling:` in `.project-standards.yml`. For any other recognized file, restore the released bytes (adopt again with the old CLI, or check the file out from history) and rerun preview. |
+| `CP-MIGRATION-BOUNDED-TAKEOVER` (warning) | Consumer-modified content at a bounded-managed target is preserved; the package takes over only its managed block or properties inside the file. | No action required to apply. After apply, review the preserved file and delete any superseded copy-adopt boilerplate the old release left behind. |
+| `CP-MIGRATION-OWNER-RESOLUTION` | A consumer-owned preservation claim is incomplete. | Ensure the legacy configuration supplies the literal `consumer-owned` value through the documented option (for example `python_tooling.workflow_ownership`) and rerun preview. |
+| `CP-CONSUMER-CONFLICT` | A pre-existing file value conflicts with a package-owned unit and no lock history explains it. | Align the conflicting value with the package value (or remove it) so the unit can be adopted, then rerun preview. |
 
 ## 2. Apply the reviewed migration
 

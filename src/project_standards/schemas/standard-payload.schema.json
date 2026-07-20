@@ -285,6 +285,19 @@
           "minItems": 1,
           "title": "Targets",
           "type": "array"
+        },
+        "unknown_content_disposition": {
+          "anyOf": [
+            {
+              "const": "preserve",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unknown Content Disposition"
         }
       },
       "required": [

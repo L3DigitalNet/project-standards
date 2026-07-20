@@ -37,6 +37,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Fixed
+
+- The V4→V5 migration platform gate accepts the `"v3"` tag every released v3/v4 CLI actually wrote to `standards_version`, alongside `"v4"`; an unrecognized tag now produces a single `CP-MIGRATION-PLATFORM-VERSION` finding instead of also double-firing `CP-MIGRATION-UNCLAIMED-SETTING` (issue #9).
+- Python Tooling 1.3 and Markdown Tooling 1.4 add the released v4-era `.editorconfig` digest, the released v4-era `check.yml` digest, and the released v3-era `check.py` digest to their legacy signatures, so pristine v3/v4 adoptions are recognized during migration (issue #10 and the previously unfiled check-workflow gap).
+- The `build-validate-id-pyz.sh` zipapp build resolves PyYAML through `uv run --with` instead of the removed `uv pip install --target` interface.
+
+### Added
+
+- Legacy whole-file signatures may declare `unknown_content_disposition = "preserve"` (bounded takeover): migration preserves consumer-modified content at targets the package manages only through bounded units, reports a `CP-MIGRATION-BOUNDED-TAKEOVER` warning, and steady-state reconciliation takes over just the managed units inside the preserved file. Python Tooling 1.3 applies it to `CLAUDE.md`, `AGENTS.md`, `.editorconfig`, and `.vscode/*`; Markdown Tooling 1.4 applies it to `.editorconfig` and `.vscode/extensions.json` (issue #11).
+- Standard Bundle Authoring 2.3 documents digest lineage and the bounded-takeover signature field.
+- `UPGRADING.md` documents every common migration preview finding and its resolution procedure.
+
 ## [5.1.1] — 2026-07-20
 
 > **Why PATCH:** this release corrects Catalog 4 migration planning for repositories that adopted only a subset of the seven Catalog 5 defaults. It preserves every previously passing consumer outcome and changes no immutable package payload, catalog selection, accepted configuration, or default. `packages check-release --baseline v5.1.0` classifies the release as patch. Project Standards 5.1.1 is published from release commit `784d7bb`.

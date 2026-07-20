@@ -101,6 +101,10 @@ type LegacyOwnership = Literal[
 ]
 
 _BARE_TOML_KEY = re.compile(r"^[A-Za-z0-9_-]+$", re.ASCII)
+
+# Every supported legacy CLI (v3.0.0 through v4.3.0) wrote the "v3" wire tag; the
+# v3 and v4 config shapes are identical, so both tags name the same legacy format.
+_SUPPORTED_PLATFORM_TAGS = frozenset({"v3", "v4"})
 _MISSING = object()
 _UNKNOWN_V4_PACKAGE = object()
 
@@ -579,10 +583,11 @@ def _finding(
     version: str = "",
     message: str,
     hint: str,
+    severity: Literal["error", "warning"] = "error",
 ) -> ControlFinding:
     return ControlFinding(
         code=code,
-        severity="error",
+        severity=severity,
         standard_id=standard_id,
         version=version,
         path=path,
@@ -916,19 +921,18 @@ def _coverage_findings(
                     )
                 )
     platform = legacy.get("standards_version")
-    if platform != "v4":
+    if platform not in _SUPPORTED_PLATFORM_TAGS:
         findings.append(
             _finding(
                 "CP-MIGRATION-PLATFORM-VERSION",
                 path=".project-standards.yml",
                 identity="/standards_version",
                 message="legacy platform version is not recognized",
-                hint="use a supported v4 legacy configuration",
+                hint='set standards_version to the supported "v3" or "v4" platform tag',
             )
         )
     recognized = [pointer for pointer, _standard_id, _version in claims]
-    if platform == "v4":
-        recognized.append("/standards_version")
+    recognized.append("/standards_version")
     for leaf in _leaf_pointers(cast(JsonValue, legacy)):
         if not any(_pointer_covers(pointer, leaf) for pointer in recognized):
             findings.append(
@@ -1060,9 +1064,58 @@ def _claim_findings(
                     unit.path == claim.target for unit in reconciliation.next_lock.artifacts
                 )
             )
+            # Bounded takeover: the package keeps managing only bounded units inside
+            # the target, so unrecognized surrounding bytes are consumer content the
+            # migration may preserve — steady-state reconciliation adopts the units.
+            # A materializing whole-file declaration voids that reasoning entirely.
+            bounded_units_materialize = resolved_package is not None and any(
+                declaration.target == claim.target
+                and declaration.adapter is not AdapterKind.WHOLE_FILE
+                and declaration.materializes(resolved_package.effective_config)
+                for declaration in payload.manifest.contributions
+            )
+            whole_file_materializes = resolved_package is not None and (
+                any(
+                    declaration.target == claim.target
+                    and declaration.materializes(resolved_package.effective_config)
+                    for declaration in payload.manifest.artifacts
+                )
+                or any(
+                    declaration.target == claim.target
+                    and declaration.adapter is AdapterKind.WHOLE_FILE
+                    and declaration.materializes(resolved_package.effective_config)
+                    for declaration in payload.manifest.contributions
+                )
+            )
+            valid_bounded_takeover = (
+                signature is not None
+                and signature.kind is LegacySignatureKind.WHOLE_FILE
+                and signature.unknown_content_disposition == "preserve"
+                and claim.disposition is LegacyDisposition.PRESERVE
+                and claim.intent_pointer is None
+                and item is not None
+                and item.digest == claim.observed_digest
+                and bounded_units_materialize
+                and not whole_file_materializes
+            )
             if valid_relinquishment:
                 assert item is not None
                 cleared_unknown.add(item.key)
+            elif valid_bounded_takeover:
+                assert item is not None
+                cleared_unknown.add(item.key)
+                findings.append(
+                    _finding(
+                        "CP-MIGRATION-BOUNDED-TAKEOVER",
+                        path=claim.target.original,
+                        identity=claim.signature_id,
+                        standard_id=report.package.standard_id,
+                        version=report.package.version.value,
+                        message="unrecognized legacy content is preserved for bounded management",
+                        hint="review the preserved file and remove superseded legacy content",
+                        severity="warning",
+                    )
+                )
             elif claim.intent_pointer is not None or (
                 signature is not None and signature.consumer_owned_intent_pointer is not None
             ):

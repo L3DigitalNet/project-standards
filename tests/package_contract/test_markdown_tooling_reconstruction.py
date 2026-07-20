@@ -81,12 +81,14 @@ def _invocation(
     )
 
 
-def _installed_distribution(tmp_path: Path) -> InstalledDistribution:
+def _installed_distribution(tmp_path: Path, *, version: str = "1.2") -> InstalledDistribution:
     fixture = tmp_path / "distribution"
     repository = copy_minimal_repository(fixture)
     family = repository / "standards/markdown-tooling"
     shutil.copytree(_PAYLOAD.parent.parent, family)
-    payload = _payload()
+    payload_root = _PAYLOAD.parent / version
+    manifest = load_payload_manifest(payload_root / "payload.toml")
+    integrity = validate_payload_integrity(payload_root, manifest)
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -97,9 +99,9 @@ summary = "Prettier and markdownlint with semantic editor configuration."
 status = "active"
 
 [[versions]]
-version = "1.2"
-payload = "versions/1.2/payload.toml"
-digest = "{payload.integrity.aggregate_digest.value}"
+version = "{version}"
+payload = "versions/{version}/payload.toml"
+digest = "{integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
     )
@@ -109,8 +111,8 @@ catalog_major = 5
 
 [[packages]]
 id = "markdown-tooling"
-version = "1.2"
-digest = "{payload.integrity.aggregate_digest.value}"
+version = "{version}"
+digest = "{integrity.aggregate_digest.value}"
 role = "default"
 ''',
         encoding="utf-8",
@@ -991,6 +993,74 @@ def test_markdown_tooling_real_v4_migration_applies_and_converges(tmp_path: Path
         action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
         for action in second.actions
     )
+
+
+def _released_v4_markdown_repo(tmp_path: Path) -> Path:
+    """Rebuild a consumer exactly as the released v4.3.0 markdown-tooling adopt left it.
+
+    The payload's legacy resources hold the revised post-release editorconfig, so
+    the released bytes come from the pinned fixture instead.
+    """
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\nmarkdown_tooling:\n  version: "1.1"\n',
+        encoding="utf-8",
+    )
+    sources = {
+        ".markdownlint.json": _PAYLOAD / "artifacts/markdownlint.json",
+        ".prettierrc.json": _PAYLOAD / "artifacts/prettierrc.json",
+        ".editorconfig": _ROOT / "tests/fixtures/legacy_releases/v4.3.0/editorconfig",
+        ".vscode/extensions.json": _PAYLOAD / "resources/legacy-vscode-extensions.json",
+        ".github/workflows/lint-markdown.yml": (
+            _PAYLOAD / "resources/legacy-lint-markdown.caller.yml"
+        ),
+        ".github/workflows/format.yml": _PAYLOAD / "resources/legacy-format.caller.yml",
+    }
+    for target, source in sources.items():
+        destination = repo / target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    return repo
+
+
+def test_markdown_tooling_released_v4_editorconfig_migrates_and_applies(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    repo = _released_v4_markdown_repo(tmp_path)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    result = apply_legacy_migration(plan)
+    assert result.success, result
+    assert not (repo / ".project-standards.yml").exists()
+    assert b"[*.md]" in (repo / ".editorconfig").read_bytes()
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
+
+
+def test_markdown_tooling_consumer_editorconfig_sections_survive_takeover(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    repo = _released_v4_markdown_repo(tmp_path)
+    editorconfig = repo / ".editorconfig"
+    editorconfig.write_bytes(editorconfig.read_bytes() + b"\n[*.rs]\nindent_size = 4\n")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert any(
+        finding.code == "CP-MIGRATION-BOUNDED-TAKEOVER" and finding.path == ".editorconfig"
+        for finding in plan.findings
+    )
+    assert apply_legacy_migration(plan).success
+    preserved = editorconfig.read_text(encoding="utf-8")
+    assert "[*.rs]" in preserved
 
 
 def test_markdown_tooling_instruction_block_is_prettier_stable(tmp_path: Path) -> None:

@@ -192,10 +192,11 @@ def _installed_distribution(
     tmp_path: Path,
     *,
     include_markdown: bool = False,
+    version: str = "1.1",
 ) -> InstalledDistribution:
     fixture = tmp_path / "distribution"
     repository = copy_minimal_repository(fixture)
-    families = [("python-tooling", _PAYLOAD, "1.1")]
+    families = [("python-tooling", _FAMILY / f"versions/{version}", version)]
     if include_markdown:
         families.append(
             (
@@ -1567,6 +1568,74 @@ def test_python_tooling_consumer_owned_migration_matches_extracted_wheel(
     )
 
     assert installed_report == source_report
+
+
+_RELEASED = _ROOT / "tests/fixtures/legacy_releases"
+
+
+def _released_v4_repo(tmp_path: Path) -> Path:
+    """Rebuild a consumer exactly as the released v4.3.0 CLI left it.
+
+    The current-tree v1 bundles were revised after the v4 releases, so tests
+    that copy them cannot see the bytes real consumers hold; these fixtures pin
+    the released artifact bytes, including the "v3" platform tag v4 wrote.
+    """
+    repo = _legacy_python_tooling_repo(tmp_path)
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\npython_tooling:\n  version: "1.0"\n',
+        encoding="utf-8",
+    )
+    shutil.copy2(_RELEASED / "v4.3.0/editorconfig", repo / ".editorconfig")
+    shutil.copy2(_RELEASED / "v4.3.0/check.yml", repo / ".github/workflows/check.yml")
+    return repo
+
+
+def test_python_tooling_released_v4_bytes_migrate_and_apply(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.3")
+    repo = _released_v4_repo(tmp_path)
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    assert apply_legacy_migration(migration).success
+    assert not (repo / ".project-standards.yml").exists()
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    _assert_no_mutating_actions(second)
+
+
+def test_python_tooling_released_v3_check_script_is_recognized(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.3")
+    repo = _released_v4_repo(tmp_path)
+    shutil.copy2(_RELEASED / "v3.0.0/check.py", repo / "scripts/check.py")
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+
+
+def test_python_tooling_consumer_content_survives_bounded_takeover(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.3")
+    repo = _released_v4_repo(tmp_path)
+    claude = repo / "CLAUDE.md"
+    claude.write_bytes(claude.read_bytes() + b"\n## Consumer notes\n\nKeep me.\n")
+    editorconfig = repo / ".editorconfig"
+    editorconfig.write_bytes(editorconfig.read_bytes() + b"\n[*.rs]\nindent_size = 4\n")
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    takeover = {
+        finding.path
+        for finding in migration.findings
+        if finding.code == "CP-MIGRATION-BOUNDED-TAKEOVER"
+    }
+    assert takeover == {"CLAUDE.md", ".editorconfig"}
+    assert apply_legacy_migration(migration).success
+    merged = claude.read_text(encoding="utf-8")
+    assert "Keep me." in merged
+    assert "BEGIN project-standards:python-tooling" in merged
+    assert "[*.rs]" in editorconfig.read_text(encoding="utf-8")
 
 
 def test_python_tooling_modified_legacy_file_blocks_migration_without_writes(

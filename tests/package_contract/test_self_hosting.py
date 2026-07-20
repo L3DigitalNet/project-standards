@@ -240,6 +240,20 @@ def test_authoring_surfaces_bound_consumer_owned_preservation() -> None:
     assert 'supply literal "consumer-owned" through that pointer' in template
 
 
+def test_authoring_surfaces_bounded_takeover_preservation() -> None:
+    payload = _FAMILY / "versions/2.3"
+    guide = (payload / "README.md").read_text(encoding="utf-8")
+    template = (payload / "templates/legacy-signature.toml").read_text(encoding="utf-8")
+
+    assert "every byte-version each supported release actually shipped" in guide
+    assert '`unknown_content_disposition = "preserve"`' in guide
+    assert "mutually exclusive with `consumer_owned_intent_pointer`" in guide
+    assert "`CP-MIGRATION-BOUNDED-TAKEOVER` warning" in guide
+    assert "no whole-file declaration materializes" in guide
+    assert '# unknown_content_disposition = "preserve"' in template
+    assert "Mutually exclusive with consumer_owned_intent_pointer" in template
+
+
 def test_authoring_workflow_validates_indexes_catalogs_and_projects(tmp_path: Path) -> None:
     assert _PAYLOAD.is_dir()
     root = _isolated_repository(tmp_path)

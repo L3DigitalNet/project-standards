@@ -52,17 +52,24 @@ trap 'rm -rf "$STAGING"' EXIT
 echo "→ staging in $STAGING"
 
 # ── 1. PyYAML (pure Python) ────────────────────────────────────────────────
-uv pip install --quiet --target "$STAGING" PyYAML
+# uv removed the legacy `uv pip install --target` interface; resolve PyYAML into
+# an ephemeral uv environment and copy the yaml package out of it.  Copying only
+# the `yaml/` directory drops the top-level `_yaml` C extension, so PyYAML uses
+# its pure Python implementation — zipimport only handles pure Python modules.
+uv run --quiet --no-project --with PyYAML python3 - "$STAGING" <<'EOF'
+import pathlib
+import shutil
+import sys
 
-# Strip compiled extensions — zipimport only handles pure Python modules.
-# PyYAML falls back to its pure Python implementation automatically when the
-# C extension (_yaml) is absent.
+import yaml
+
+package = pathlib.Path(yaml.__file__).parent
+shutil.copytree(package, pathlib.Path(sys.argv[1]) / "yaml")
+EOF
+
+# Strip compiled extensions bundled inside the package directory itself.
 find "$STAGING" -name "*.so" -delete
 find "$STAGING" -name "*.pyd" -delete
-
-# Strip dist metadata (not needed at runtime).
-find "$STAGING" -maxdepth 1 \( -name "*.dist-info" -o -name "*.data" \) \
-    -type d -exec rm -rf {} + 2>/dev/null || true
 
 # ── 2. Minimal jsonschema stub ─────────────────────────────────────────────
 # validate_frontmatter.py declares `from jsonschema import Draft202012Validator`
