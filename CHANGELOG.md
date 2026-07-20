@@ -6,8 +6,8 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-19'
-reviewed: '2026-07-19'
+updated: '2026-07-20'
+reviewed: '2026-07-20'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -36,6 +36,25 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.1.0] — 2026-07-20
+
+> **Why MINOR:** four Catalog 5 consumer defaults advance to backward-compatible immutable payload versions: `agent-handoff@1.2`, `cli-documentation@1.2`, `markdown-frontmatter@1.3`, and `project-spec@1.2`. A same-major repin can therefore receive corrected managed bytes, while every superseded version remains advertised and exactly selectable. The new internal `standard-bundle-authoring@2.2` payload is not consumer-selectable and does not raise the classification. `packages check-release --baseline v5.0.2` classifies the complete correction train as minor. Project Standards 5.1.0 is prepared and verified, unpublished.
+
+### Added
+
+- **Five immutable correction payloads.** Agent Handoff 1.2 carries the accepted runtime, documentation, Python-floor, and artifact-shape corrections; Project Specification 1.2 restores its reusable-workflow inputs; Markdown Frontmatter 1.3 exposes the stable validator aliases and caller permissions; CLI Documentation 1.2 annotates the existing setup-uv pin; and internal Standard Bundle Authoring 2.2 records the Python 3.14 and executable-mode contracts. All prior payloads remain byte- and mode-identical.
+
+### Changed
+
+- **Python 3.14 or newer is the explicit consumer floor.** The tool metadata and every affected consumer-facing payload, script, workflow, and adoption surface consistently require the shebang-resolved `python3` to be 3.14 or newer.
+- **Consumer locks write schema 1.1.** Successful writes preserve create-only absences without claiming deleted bytes still exist; schema 1.0 remains readable, while the first successful mutation canonicalizes the lock to 1.1.
+- **Compatibility CI reuses the exact candidate wheel.** The repository workflow exports the single wheel it already built and drives all compatibility workers from that artifact instead of allowing a second build.
+
+### Fixed
+
+- **All 96 accepted or adjusted implementation-review findings.** Corrections cover bounded control-plane safety, atomic filesystem operations, typed error boundaries, package and catalog validation, frontmatter and Project Specification parsing, Agent Handoff behavior, maintained documentation, and test hermeticity. The remaining four findings have final no-change dispositions because their proposed edits were invalid, incompatible, or cosmetic; none is deferred or queued.
+- **Repository tests are independent of ambient state.** Verified fixtures resolve from the repository rather than the caller's working directory, and Git-spawning tests ignore hostile user signing configuration without changing repository signing policy.
 
 ## [5.0.2] — 2026-07-19
 
