@@ -1430,8 +1430,6 @@ def _plan_legacy_migration(
             signature_ids,
             legacy_files,
         )
-        observed.update(package_observed)
-        findings.extend(package_findings)
         provider_reports: list[MigrationReport] = []
         snapshot: JsonObject = {
             "legacy_config": legacy,
@@ -1454,6 +1452,12 @@ def _plan_legacy_migration(
                 raise ControlPlaneError("migrate provider did not return a migration report")
             provider_reports.append(result.migration_report)
         report = _merge_reports(provider_reports)
+        # Exact files can coincide with an unadopted package. Only recognized V4
+        # configuration proves package adoption and may publish its observations.
+        if not report.package.recognized_settings:
+            continue
+        observed.update(package_observed)
+        findings.extend(package_findings)
         try:
             load_option_schema(payload.root, payload.manifest).resolve_options(
                 report.package.config

@@ -11,6 +11,7 @@ import pytest
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.migration import plan_legacy_migration
 from project_standards.control_plane.planner import plan_reconciliation
@@ -24,12 +25,17 @@ from tests.package_compatibility.matrix import (
     catalog_default_ids,
     exercise_fresh_lifecycle,
     exercise_migrated_lifecycle,
+    exercise_partial_migrated_lifecycle,
+    partial_legacy_config,
 )
 
 pytestmark = pytest.mark.compatibility
 
 _DEFAULTS = catalog_default_ids()
 _PAIRS = tuple(combinations(_DEFAULTS, 2))
+_PARTIAL_MIGRATION_ROWS = tuple((standard_id,) for standard_id in _DEFAULTS) + tuple(
+    tuple(candidate for candidate in _DEFAULTS if candidate != omitted) for omitted in _DEFAULTS
+)
 _MANDATORY_GROUPS = (
     ("python-tooling", "agent-handoff", "markdown-tooling"),
     ("adr", "markdown-frontmatter"),
@@ -105,6 +111,66 @@ def test_consumer_default_matrix_is_derived_from_catalog_5() -> None:
     assert tuple(sorted(_DEFAULTS)) == _DEFAULTS
     assert {item for pair in _PAIRS for item in pair} == set(_DEFAULTS)
     assert set(_DEFAULTS) == _consumer_family_ids()
+
+
+@pytest.mark.parametrize(
+    "standard_ids",
+    _PARTIAL_MIGRATION_ROWS,
+    ids=lambda row: "+".join(row),
+)
+def test_legacy_migration__partial_namespaces__enables_only_selected_packages(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+    wheel_payload_distribution: InstalledDistribution,
+    standard_ids: tuple[str, ...],
+) -> None:
+    source = exercise_partial_migrated_lifecycle(
+        tmp_path / "source",
+        source_payload_distribution,
+        standard_ids,
+    )
+    wheel = exercise_partial_migrated_lifecycle(
+        tmp_path / "wheel",
+        wheel_payload_distribution,
+        standard_ids,
+    )
+
+    _assert_distribution_parity(source, wheel)
+
+
+def test_legacy_migration__present_non_mapping_namespace__fails_closed(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+) -> None:
+    repo = tmp_path / "malformed-legacy"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nmarkdown:\n  adr: []\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ControlPlaneError, match="provider failed with ValueError"):
+        plan_legacy_migration(repo, source_payload_distribution, "5")
+
+
+def test_legacy_migration__unadopted_known_artifact__does_not_enroll_package(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+) -> None:
+    repo = tmp_path / "unadopted-artifact"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        partial_legacy_config(("python-tooling",)),
+        encoding="utf-8",
+    )
+    template = repo / "docs/adr/adr.template.md"
+    template.parent.mkdir(parents=True)
+    shutil.copyfile(_ROOT / "standards/adr/versions/1.2/templates/adr.md", template)
+
+    plan = plan_legacy_migration(repo, source_payload_distribution, "5")
+
+    assert tuple(report.package.standard_id for report in plan.reports) == ("python-tooling",)
+    assert "adr" not in plan.desired_config.standards
 
 
 @pytest.mark.parametrize("standard_id", _DEFAULTS)

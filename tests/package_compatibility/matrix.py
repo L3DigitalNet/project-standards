@@ -52,6 +52,15 @@ _ALL_NAMESPACES = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml"
 )
 _ARTIFACT_STATES = _ROOT / "tests/fixtures/package_compatibility/legacy/artifact-states"
+_LEGACY_CONFIG_PATHS = {
+    "adr": ("markdown", "adr"),
+    "agent-handoff": ("agent_handoff",),
+    "cli-documentation": ("cli_documentation",),
+    "markdown-frontmatter": ("markdown", "frontmatter"),
+    "markdown-tooling": ("markdown_tooling",),
+    "project-spec": ("spec",),
+    "python-tooling": ("python_tooling",),
+}
 _ADAPTERS = {
     AdapterKind.WHOLE_FILE: WholeFileAdapter(),
     AdapterKind.TOML: TomlAdapter(),
@@ -79,6 +88,27 @@ class ConsumerSentinel:
     fragments: tuple[bytes, ...]
     original: bytes
     kind: str
+
+
+def partial_legacy_config(standard_ids: tuple[str, ...]) -> str:
+    """Render the V4 config containing exactly the selected package namespaces."""
+    loaded = cast(object, yaml.safe_load(_ALL_NAMESPACES.read_text(encoding="utf-8")))
+    assert isinstance(loaded, dict)
+    complete = cast("dict[str, object]", loaded)
+    partial: dict[str, object] = {"standards_version": complete["standards_version"]}
+    for standard_id in standard_ids:
+        path = _LEGACY_CONFIG_PATHS[standard_id]
+        source = complete
+        destination = partial
+        for key in path[:-1]:
+            source_child = source[key]
+            assert isinstance(source_child, dict)
+            source = cast("dict[str, object]", source_child)
+            destination_child = destination.setdefault(key, {})
+            assert isinstance(destination_child, dict)
+            destination = cast("dict[str, object]", destination_child)
+        destination[path[-1]] = source[path[-1]]
+    return yaml.safe_dump(partial, sort_keys=False)
 
 
 def _write_consumer_seed(repo: Path) -> tuple[ConsumerSentinel, ...]:
@@ -539,4 +569,37 @@ def exercise_migrated_lifecycle(
     selected = set(standard_ids)
     for standard_id in catalog_default_ids():
         set_standard_enabled(repo, standard_id, standard_id in selected)
+    return _exercise_enabled_lifecycle(repo, distribution, standard_ids, sentinels)
+
+
+def exercise_partial_migrated_lifecycle(
+    repo: Path,
+    distribution: InstalledDistribution,
+    standard_ids: tuple[str, ...],
+) -> LifecycleResult:
+    """Migrate only selected V4 namespaces and prove their complete lifecycle."""
+    repo.mkdir(parents=True)
+    for relative in (
+        "docs/STATUS.md",
+        ".markdownlint-cli2.jsonc",
+        "config/custom-rules.toml",
+    ):
+        target = repo / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(_ARTIFACT_STATES / relative, target)
+    (repo / ".project-standards.yml").write_text(
+        partial_legacy_config(standard_ids),
+        encoding="utf-8",
+    )
+    sentinels = _migration_consumer_sentinels(repo)
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert tuple(report.package.standard_id for report in migration.reports) == standard_ids
+    assert tuple(migration.desired_config.standards) == standard_ids
+    assert migration.applicable, migration.findings
+    result = apply_legacy_migration(migration)
+    assert result.success, result
+    assert not (repo / ".project-standards.yml").exists()
+    _assert_consumer_sentinels(repo, sentinels)
     return _exercise_enabled_lifecycle(repo, distribution, standard_ids, sentinels)

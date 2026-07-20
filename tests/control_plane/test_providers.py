@@ -913,7 +913,9 @@ def test_provider_exception_and_denied_network_are_content_safe(
     with pytest.raises(ControlPlaneError) as exc_info:
         invoke_provider(_invocation(repo, payload))
 
-    assert "private provider detail" not in str(exc_info.value)
+    message = str(exc_info.value)
+    assert "demo@1.2/test-provider" in message
+    assert "private provider detail" not in message
 
 
 def test_observed_live_write_is_integrity_incident_and_prior_lock_is_untouched(
