@@ -37,6 +37,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.3.1] — 2026-07-21
+
+> **Why PATCH:** this release consolidates duplicated internal implementation without changing any accepted input, validation outcome, public default, package or catalog selection, schema, workflow, or immutable payload. `packages check-release --baseline v5.3.0` classifies the release as patch.
+
+### Changed
+
+- **Twenty-four verified implementation consolidations.** Shared package/schema serialization, control-plane resolution and diagnostics, standalone CLI setup, sync-tool routing, Agent Handoff rendering, structured-text adapters, and Project Specification configuration now use focused common helpers instead of parallel copies. Every reviewed divergent implementation remains separate where its evaluation order, output, or failure contract differs.
+- **Direct characterization of the shared contracts.** Tests pin lock modes and callback lifetime, exact JSON and human output, invalid UTF-8 diagnostics, schema and catalog summaries, distribution projection selection, atomic-write cleanup, sync-tool path resolution, and selected `spec new --json` behavior. Package, catalog, schema, workflow, and immutable payload bytes are unchanged.
+
 ## [5.3.0] — 2026-07-21
 
 ### Added
