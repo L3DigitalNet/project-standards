@@ -11,6 +11,7 @@ Configure these fields under the `markdown-tooling` package selection:
 - `lint` and `format`: enable markdownlint structure checks and Prettier physical-format checks independently.
 - `ci.lint_caller` and `ci.format_caller`: add automatic push and pull-request triggers to the corresponding managed caller. A disabled caller remains installed with only `workflow_dispatch`, so toggling enforcement does not churn ownership.
 - `lint_workflow_ownership` and `format_workflow_ownership`: `managed` (the default) lets the package render, verify, and lock the corresponding caller workflow; `consumer-owned` leaves that path outside reconciliation, verification, and lock state so a customized caller stays with the consumer.
+- `markdownlint_config_ownership`: `managed` (the default) lets the package own `.markdownlint.json`; `consumer-owned` preserves a customized legacy config and keeps that path outside reconciliation, verification, and lock state.
 - `markdown_globs`: Markdown included by the lint caller and described in the bounded agent guidance.
 - `config_globs`: JSON, JSONC, and YAML scope passed with `markdown_globs` to the managed formatter caller and described in bounded agent guidance.
 - `exclusions`: typed `{glob, applies_to, reason}` records. `applies_to` is `lint`, `format`, or `both`; every exception is reviewable instead of being an untyped ignore string.
@@ -51,6 +52,8 @@ Generic plan, apply, update, and disable behavior is delegated to the unified co
 
 ## Verify and troubleshoot
 
+The `npx --no-install` checks require the repository-local Node dependencies to be present, normally from `npm ci`. The flag refuses network installation; if the executable is missing, install the lockfile-defined dependencies before retrying.
+
 ```bash
 project-standards reconcile --check
 npx --no-install markdownlint-cli2 '**/*.md'
@@ -62,4 +65,4 @@ npx --no-install prettier --check .
 | A disabled tool still has its CI caller enabled | Disable the matching caller option or enable the tool. |
 | Shared container contribution conflicts | Preserve unrelated content and reconcile only the declared property, recommendation, or managed block. |
 | Managed config or workflow drift | Restore the locked bytes or change package options and reconcile deliberately. |
-| V4 artifact is modified | A modified `.editorconfig` or `.vscode/extensions.json` is preserved automatically with a `CP-MIGRATION-BOUNDED-TAKEOVER` warning; a modified caller workflow is preserved by declaring `lint_workflow_ownership` or `format_workflow_ownership` as `"consumer-owned"` in the legacy configuration before migrating; a modified config blocks until its known content is restored. |
+| V4 artifact is modified | A modified `.editorconfig` or `.vscode/extensions.json` is preserved automatically with a `CP-MIGRATION-BOUNDED-TAKEOVER` warning; a modified caller workflow is preserved by declaring `lint_workflow_ownership` or `format_workflow_ownership` as `"consumer-owned"` in the legacy configuration before migrating; a modified `.markdownlint.json` is preserved with `markdownlint_config_ownership = "consumer-owned"`; other modified exclusive configs block until their known content is restored. |

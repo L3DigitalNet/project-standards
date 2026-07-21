@@ -22,28 +22,28 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:894e094e8f6bcbf55c3ff8700208378597cebb96e29d2cbf6a204b1a09ffa74a"
+digest = "sha256:bc800a47be8945f880032e14fcf60e974e82a84ec16d50931bf8e30850a0c0c1"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:430a9b0191a49b36a123dd47b47817cab4d8e738d042e2fa32ad6076f17edafc"
+digest = "sha256:199ef5a36225ac6fcb91472a8c60937945cf247c090797e9d6f915cdbd3b6a26"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:e1a6b9878cd8f987049530cb9f2c0b46b0147cdd271e788563e174f3a618ce1b"
+digest = "sha256:07b64152d16a2fa523bad55254c8183fc9fe01de9e465e5eb20c0a6715fe9c1f"
 
 [[resources]]
 id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:a78ccbfb9b404c2713f512df2dd7c623de221e4d24fd52d1874b2cc703d53fd2"
+digest = "sha256:2824c6ca15126977c2077e865e05db233a0085ba5b874f0b3866f00fa133d54c"
 
 [[resources]]
 id = "usage-example"
@@ -71,7 +71,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/cli_documentation.py"
 media_type = "text/x-python"
-digest = "sha256:6e5ff9461ad5564263b85fd5b0ea242cb891bca807faabbbfc58ea9d3471fe22"
+digest = "sha256:c39f38f08093c13a2e91cb09eb6832fce7c8a7b661532ddf578d40d15b7f2215"
 
 [[resources]]
 id = "legacy-workflow"
@@ -112,8 +112,9 @@ digest = "sha256:440e119e578c1df5487e56c2970d044dae25aca25d2bd851cab614e7cbbb778
 id = "usage-document"
 target = "docs/usage.md"
 source = "templates/usage-doc.md"
-digest = "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5"
+digest = "sha256:502f364f929bbe4e5bfbab73d232d664e1c1f8af47480bc93f402f3c34e6c8bf"
 policy = "create-only"
+when_any = [{ option = "usage_ownership", equals = "managed" }]
 
 [[extensions]]
 id = "workflow"
@@ -176,6 +177,7 @@ known_content_digests = [
   "sha256:3cb47f0d614d85bdcced1270663838876b137aa12135091f9d9449b45c4f0af5",
   "sha256:e539c180e454db923e8b9361edb6c10cdcc835edfa9a9a805f93b12ff3633b6b",
 ]
+consumer_owned_intent_pointer = "/cli_documentation/usage_ownership"
 
 [[legacy_signatures]]
 id = "legacy-workflow"

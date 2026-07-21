@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.3/provider-resources/templates/specs-plans.md

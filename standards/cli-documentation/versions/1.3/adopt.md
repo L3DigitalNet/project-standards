@@ -16,6 +16,7 @@ version = "1.3"
 [standards.cli-documentation.config]
 contract_version = "1.0"
 profile = "script"
+usage_ownership = "managed"
 command_name = null
 workflow_path = null
 ci = { enabled = false }
@@ -27,6 +28,7 @@ For an installed Python command with CI generation, use:
 [standards.cli-documentation.config]
 contract_version = "1.0"
 profile = "packaged"
+usage_ownership = "managed"
 command_name = "toolname"
 workflow_path = ".github/workflows/cli-docs-check.yml"
 ci = { enabled = true, runner = "ubuntu-latest", language = "python", setup = "uv" }
@@ -38,7 +40,7 @@ The rendered workflow takes its executable name from the reviewed, consumer-owne
 
 ## Preserve consumer documentation
 
-Reconciliation creates `docs/usage.md` from the package template only when the path is absent. Edit it to match the executable CLI. Subsequent reconciliation preserves those bytes.
+With `usage_ownership = "managed"`, reconciliation creates `docs/usage.md` from the package template only when the path is absent. Edit it to match the executable CLI. Subsequent reconciliation preserves those bytes. During V4 migration, select `usage_ownership = "consumer-owned"` to preserve a customized legacy usage reference and leave the path outside reconciliation and lock state.
 
 The workflow renderer returns content but does not claim a GitHub workflow path. After saving the enabled package configuration above, bootstrap the consumer-owned workflow before reconciliation resolves referenced inputs:
 
@@ -71,7 +73,7 @@ project-standards reconcile --check
 project-standards validate
 ```
 
-Legacy `cli_documentation.version` maps to `contract_version`. Exact legacy usage and workflow files are recognized and preserved; edited usage documents remain unclaimed consumer-owned evidence for review. No V2 output prints or installs a `.project-standards.yml` fragment.
+Legacy `cli_documentation.version` maps to `contract_version`. Exact legacy usage and workflow files are recognized and preserved. An edited usage document blocks automatic transfer unless the legacy configuration explicitly selects `usage_ownership: "consumer-owned"`; that choice preserves the file without claiming it. No V2 output prints or installs a `.project-standards.yml` fragment.
 
 ## Author and review
 

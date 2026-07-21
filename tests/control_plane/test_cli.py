@@ -10,7 +10,7 @@ from project_standards.cli import main as project_standards_main
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import run, run_init, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, ApplyResult
 from project_standards.control_plane.locking import LockMode, control_plane_lock
@@ -324,6 +324,14 @@ def test_init_json_reports_created_and_idempotent(
     )
     assert '"created": false' in capsys.readouterr().out
 
+    set_standard_enabled(tmp_path, "alpha", True)
+    assert (
+        project_standards_main(["init", "--catalog", "5", "--repo", str(tmp_path), "--json"]) == 2
+    )
+    initialized = json.loads(capsys.readouterr().out)
+    assert initialized["code"] == "CP-INIT-STATE"
+    assert "already initialized" in initialized["error"]
+
     assert project_standards_main(["init", "--catalog", "05", "--json"]) == 2
     invalid = capsys.readouterr()
     assert invalid.err == ""
@@ -404,6 +412,62 @@ def test_init_migration_preview_apply_and_repeat_apply_json_contract(
     repeated = capsys.readouterr()
     assert repeated.err == ""
     assert '"mode": "migration-noop"' in repeated.out
+
+
+def test_init_migration_blocked_apply_explicitly_refuses_without_writes(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    _use_distribution(monkeypatch, distribution)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    extension = repo / "config/alpha-options.toml"
+    extension.parent.mkdir()
+    extension.write_text("consumer = true\n", encoding="utf-8")
+    (repo / "legacy-alpha.md").write_bytes((_FULL_ALPHA / "legacy.md").read_bytes())
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nalpha:\n  enabled: true\n",
+        encoding="utf-8",
+    )
+    before = {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    }
+    arguments = [
+        "init",
+        "--catalog",
+        "5",
+        "--migrate",
+        "--apply",
+        "--repo",
+        str(repo),
+    ]
+
+    assert project_standards_main([*arguments, "--json"]) == 1
+    refused = json.loads(capsys.readouterr().out)
+    assert refused["apply_refused"] is True
+    assert refused["writes_performed"] is False
+    assert refused["plan"]["findings"][0]["code"] == "CP-MIGRATION-STATE"
+    assert {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    } == before
+
+    assert project_standards_main(arguments) == 1
+    human = capsys.readouterr()
+    assert "CP-MIGRATION-STATE" in human.err
+    assert "apply refused" in human.err
+    assert "no repository writes were performed" in human.err
+    assert {
+        path.relative_to(repo).as_posix(): path.read_bytes()
+        for path in repo.rglob("*")
+        if path.is_file()
+    } == before
 
 
 def test_init_migration_state_and_nonapplicable_exit_codes(
@@ -842,8 +906,24 @@ def test_reconcile_human_plan_apply_and_authorization_paths(
 
     assert run(["--repo", str(repo)], distribution=distribution) == 0
     assert "reconciled" in capsys.readouterr().out
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+    noop = capsys.readouterr().out
+    assert "no mutations applied" in noop
+    assert "lock updated" not in noop
     assert run(["--repo", str(repo), "--repair-state"], distribution=distribution) == 2
     assert "not in a sanctioned" in capsys.readouterr().err
+
+    def successful_apply(_request: ApplyRequest) -> ApplyResult:
+        return ApplyResult(True, ("first", "second"), True)
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.apply_reconciliation",
+        successful_apply,
+    )
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+    applied = capsys.readouterr().out
+    assert "Applied 2 repository mutation(s)" in applied
+    assert "2 action(s)" not in applied
 
     def fail_apply(_request: ApplyRequest) -> ApplyResult:
         return ApplyResult(False, (), False, "CP-INJECTED")
@@ -855,6 +935,18 @@ def test_reconcile_human_plan_apply_and_authorization_paths(
     assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 1
     assert "CP-INJECTED" in capsys.readouterr().err
 
+    def stale_apply(_request: ApplyRequest) -> ApplyResult:
+        return ApplyResult(False, (), False, "CP-STALE-PLAN")
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.apply_reconciliation",
+        stale_apply,
+    )
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 1
+    stale = capsys.readouterr().err
+    assert "CP-STALE-PLAN" in stale
+    assert "rerun reconcile" in stale
+
     (repo / ".standards/config.toml").write_text(
         '[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n\n'
         '[standards.alpha]\nenabled = true\nversion = "3.0"\n',
@@ -862,6 +954,141 @@ def test_reconcile_human_plan_apply_and_authorization_paths(
     )
     assert run(["--repo", str(repo)], distribution=distribution) == 1
     assert "CP-RESOLVE-MAJOR-AUTH" in capsys.readouterr().err
+
+
+def test_human_finding_renderer__real_and_sentinel_identities__remain_actionable() -> None:
+    from project_standards.control_plane.cli import (
+        _format_human_finding,  # pyright: ignore[reportPrivateUsage]  # focused rendering boundary
+    )
+
+    real = ControlFinding(
+        code="CP-EXAMPLE",
+        severity="error",
+        standard_id="alpha",
+        version="1.0",
+        path="settings.json",
+        identity="key:/tool/enabled",
+        message="configured value conflicts",
+        hint="align or remove the consumer value",
+    )
+    sentinel = ControlFinding(
+        code="CP-EXAMPLE",
+        severity="warning",
+        standard_id="alpha",
+        version="1.0",
+        path="script.py",
+        identity="$file",
+        message="whole file differs",
+        hint="review the file",
+    )
+
+    assert _format_human_finding(real) == (
+        "ERROR CP-EXAMPLE settings.json [key:/tool/enabled]: configured value conflicts\n"
+        "  hint: align or remove the consumer value"
+    )
+    rendered_sentinel = _format_human_finding(sentinel)
+    assert rendered_sentinel == (
+        "WARNING CP-EXAMPLE script.py: whole file differs\n  hint: review the file"
+    )
+    assert "$file" not in rendered_sentinel
+
+
+def test_reconcile_human_check__edited_create_only_target__is_reconciled(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.control_plane.cli import (
+        _emit_plan,  # pyright: ignore[reportPrivateUsage]  # focused check boundary
+    )
+    from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
+    from tests.control_plane.planner_helpers import (
+        resolution_request,
+        write_payload,
+    )
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    installed = b"installed\n"
+    edited = b"consumer edit\n"
+    path = repo / "usage.md"
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "usage",
+                "target": "usage.md",
+                "content": installed,
+                "policy": "create-only",
+            }
+        ],
+    )
+    initial_request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request((payload,)),
+        payloads=(payload,),
+    )
+    initial = plan_reconciliation(initial_request)
+    path.write_bytes(initial.proposed_content("usage.md"))
+    path.write_bytes(edited)
+    prior = initial.next_lock
+    request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request((payload,), previous_lock=prior),
+        payloads=(payload,),
+    )
+    plan = plan_reconciliation(request)
+
+    assert _emit_plan(plan, prior, mode="check", json_mode=False) == 0
+    captured = capsys.readouterr()
+    assert "preserve usage.md" in captured.out
+    assert "OK standards control plane is reconciled" in captured.out
+    assert "CP-DRIFT" not in captured.err
+
+
+def test_reconcile_human_check__genuine_lock_metadata_drift__remains_actionable(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.control_plane.cli import (
+        _emit_plan,  # pyright: ignore[reportPrivateUsage]  # focused check boundary
+    )
+    from project_standards.control_plane.planner import PlannerRequest, plan_reconciliation
+    from tests.control_plane.planner_helpers import previous_lock, resolution_request, write_payload
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(tmp_path / "payload", "demo")
+    stale = previous_lock()
+    request = PlannerRequest(
+        repo=repo,
+        resolution=resolution_request((payload,), previous_lock=stale),
+        payloads=(payload,),
+    )
+    plan = plan_reconciliation(request)
+
+    assert plan.applicable
+    assert plan.actions == ()
+    assert plan.next_lock != stale
+    assert _emit_plan(plan, stale, mode="check", json_mode=False) == 1
+    captured = capsys.readouterr()
+    assert "WARNING CP-DRIFT .standards/lock.toml" in captured.err
+    assert "run reconcile --apply" in captured.err
+
+
+def test_stale_migration_message_does_not_assume_an_intervening_change() -> None:
+    from project_standards.control_plane.cli import (
+        _apply_failure_message,  # pyright: ignore[reportPrivateUsage]  # focused failure-message boundary
+    )
+
+    message = _apply_failure_message(
+        "CP-STALE-PLAN",
+        operation="migration",
+        preview_command="init --catalog 5 --migrate",
+    )
+
+    assert "no longer matches the current repository state" in message
+    assert "changed after planning" not in message
 
 
 def test_reconcile_human_recovery_preview_success_and_refusal(

@@ -19,7 +19,7 @@ _BEGIN = re.compile(r"^<!-- BEGIN project-standards:([^ ]+) -->$")
 _END = re.compile(r"^<!-- END project-standards:([^ ]+) -->$")
 _PRETTIER_START = "<!-- prettier-ignore-start -->"
 _PRETTIER_END = "<!-- prettier-ignore-end -->"
-_MARKER_TEXT = ("project-standards:", "prettier-ignore-start", "prettier-ignore-end")
+_MANAGED_MARKER_TEXT = "project-standards:"
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +105,14 @@ def _marker_id(pattern: re.Pattern[str], line: MarkdownLine) -> str | None:
     return match.group(1) if match is not None else None
 
 
+def _contains_marker_syntax(line: MarkdownLine) -> bool:
+    return (
+        ("<!--" in line.text and _MANAGED_MARKER_TEXT in line.text)
+        or _PRETTIER_START in line.text
+        or _PRETTIER_END in line.text
+    )
+
+
 def _validated_id(value: str) -> str:
     try:
         normalized = normalize_scope(AdapterKind.MARKDOWN_BLOCK, f"block:{value}")
@@ -128,7 +136,7 @@ def _parse(content: bytes) -> MarkdownDocument:
             index += 1
             continue
         if (
-            any(marker in line.text for marker in _MARKER_TEXT)
+            _contains_marker_syntax(line)
             and line.text
             not in {
                 _PRETTIER_START,
@@ -236,7 +244,7 @@ def _desired(content: bytes) -> tuple[str, bytes]:
     text = _decode(content)
     lines = _lines(text)
     for line in lines:
-        if line.top_level and any(marker in line.text for marker in _MARKER_TEXT):
+        if line.top_level and _contains_marker_syntax(line):
             raise ControlPlaneError("Markdown block fragment cannot contain a managed marker")
     normalized = _normalized(text)
     if not normalized.endswith(b"\n"):

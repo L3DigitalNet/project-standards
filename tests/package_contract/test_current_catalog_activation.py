@@ -26,9 +26,9 @@ _PACKAGES = {
         "Agent Handoff Standard",
         "Repository-local, lifetime-routed project knowledge and bounded agent session continuity.",
         "active",
-        "1.2",
+        "1.3",
         "default",
-        "sha256:197d9c6877781abf1a9f0a3d3f37092413600ebaff604371ae10c7405925cf5b",
+        "sha256:3e6e53f9ba889b7f68624c1c3861c5e26ac889a6025c4fb7b819b49e140d1f78",
     ),
     "cli-documentation": (
         "CLI Documentation Standard",
@@ -36,15 +36,15 @@ _PACKAGES = {
         "active",
         "1.3",
         "default",
-        "sha256:4902c68e931a0db308ed1b1ee1703b9003cf76a951453e22f8aae3e0091b04df",
+        "sha256:2c15f700fd343327b675295579220572fea9f2735386da5aa266d38839a7f9c4",
     ),
     "markdown-frontmatter": (
         "Markdown Frontmatter Standard",
         "Canonical metadata, ID, and reference validation for managed Markdown documents.",
         "active",
-        "1.3",
+        "1.4",
         "default",
-        "sha256:97327fffde61fd981c08949292c504a930f4fe6786af455cb1f6c7d204dc7c43",
+        "sha256:a981a54cb6c6a36e2bfb73eca61c9b84100da67b072cd07c7c4ffea4b0593647",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
@@ -52,15 +52,15 @@ _PACKAGES = {
         "active",
         "1.5",
         "default",
-        "sha256:dafda9c86933bfb41b013dccec35411944f99d3214ba55c31b76a730fa3f3616",
+        "sha256:4d58ce5992693761a7a0cccecaf7470160154a45c2eeabeb3d77d746c6f0e074",
     ),
     "project-spec": (
         "Project Specification Standard",
         "Tiered, stable-ID, CLI-validated project specification format and tooling.",
         "active",
-        "1.2",
+        "1.3",
         "default",
-        "sha256:d5474ab7035937ac96d0551ecf9c076a71752e9e18dcfe14789d960933418c47",
+        "sha256:56de712072c586549c68cdadfe4598b63d9d7d3ea7cb4f7727fd48c6ef4084a6",
     ),
     "python-coding": (
         "Python Coding Standard",
@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.4",
         "default",
-        "sha256:a4799567568025c10e7b16a52e48f782ec6d13469a1f9e26f985fe2ed65cae79",
+        "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -142,6 +142,12 @@ _RETAINED_CATALOG_ENTRIES = {
         "sha256:e5e300e761c3b95bb36a95d0e001c2fa428c21843e15cdbf66202327fdb6ded1",
     ),
     (
+        "agent-handoff",
+        "1.2",
+        "retained",
+        "sha256:197d9c6877781abf1a9f0a3d3f37092413600ebaff604371ae10c7405925cf5b",
+    ),
+    (
         "standard-bundle-authoring",
         "2.0",
         "internal",
@@ -158,6 +164,12 @@ _RETAINED_CATALOG_ENTRIES = {
         "1.3",
         "retained",
         "sha256:e6bf4dafb75f1c87a5ce763a3f52c98749fdff4902cd1e1beb13eebaff12deca",
+    ),
+    (
+        "markdown-frontmatter",
+        "1.3",
+        "retained",
+        "sha256:97327fffde61fd981c08949292c504a930f4fe6786af455cb1f6c7d204dc7c43",
     ),
     (
         "python-tooling",
@@ -182,6 +194,12 @@ _RETAINED_CATALOG_ENTRIES = {
         "1.2",
         "retained",
         "sha256:edde1a4011314a9b05f372731a8d50e3b5a0663d39369089256d442430e4943c",
+    ),
+    (
+        "project-spec",
+        "1.2",
+        "retained",
+        "sha256:d5474ab7035937ac96d0551ecf9c076a71752e9e18dcfe14789d960933418c47",
     ),
     (
         "standard-bundle-authoring",

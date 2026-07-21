@@ -22,6 +22,15 @@ from pydantic import ConfigDict, Field, ValidationError, field_validator, model_
 from yaml.nodes import MappingNode
 from yaml.tokens import AliasToken, AnchorToken
 
+from project_standards.control_plane.adapters import (
+    EditorConfigAdapter,
+    JsonAdapter,
+    JsoncAdapter,
+    MarkdownBlockAdapter,
+    TomlAdapter,
+    YamlAdapter,
+)
+from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
 from project_standards.control_plane.codec import (
     content_digest,
     parse_config,
@@ -82,6 +91,7 @@ from project_standards.package_contract.payload import (
     MigrationMode,
     ProviderOperation,
     load_option_schema,
+    normalize_scope,
 )
 
 if TYPE_CHECKING:
@@ -107,6 +117,15 @@ _BARE_TOML_KEY = re.compile(r"^[A-Za-z0-9_-]+$", re.ASCII)
 _SUPPORTED_PLATFORM_TAGS = frozenset({"v3", "v4"})
 _MISSING = object()
 _UNKNOWN_V4_PACKAGE = object()
+_SANCTIONED_MIGRATION_CONTROL_PREFIXES = frozenset(
+    {
+        frozenset(),
+        frozenset({".migration-lock.toml"}),
+        frozenset({".migration-lock.toml", "config.toml"}),
+        frozenset({".migration-lock.toml", "config.toml", "catalog.toml"}),
+        frozenset({"config.toml", "catalog.toml", "lock.toml"}),
+    }
+)
 
 # Catalog 4's configuration contract is frozen. Keeping its package ownership
 # paths here lets migration distinguish an absent package from one adopted with
@@ -184,6 +203,20 @@ class MigratedPackage(StrictModel):
         return self
 
 
+class HistoricalUnit(StrictModel):
+    """Declare one managed semantic unit present only in exact package history."""
+
+    adapter: AdapterKind
+    scope: str
+
+    @model_validator(mode="after")
+    def _canonical_semantic_scope(self) -> HistoricalUnit:
+        if self.adapter is AdapterKind.WHOLE_FILE:
+            raise ValueError("historical semantic units cannot claim a whole file")
+        object.__setattr__(self, "scope", normalize_scope(self.adapter, self.scope))
+        return self
+
+
 class LegacyClaim(StrictModel):
     """Identify recognized package history or one target-bound consumer-owned preservation claim without retaining source bytes."""
 
@@ -193,6 +226,7 @@ class LegacyClaim(StrictModel):
     ownership: LegacyOwnership
     disposition: LegacyDisposition
     intent_pointer: str | None = None
+    historical_units: tuple[HistoricalUnit, ...] = ()
 
     @field_validator("intent_pointer")
     @classmethod
@@ -216,6 +250,18 @@ class LegacyClaim(StrictModel):
         }
         if self.disposition not in allowed[self.ownership]:
             raise ValueError("legacy claim disposition is not valid for its ownership class")
+        if self.historical_units and (
+            self.ownership != "managed" or self.disposition is not LegacyDisposition.ADOPT
+        ):
+            raise ValueError("historical units require a managed adopt claim")
+        identities = [(item.adapter.value, item.scope) for item in self.historical_units]
+        if len(identities) != len(set(identities)):
+            raise ValueError("legacy claim contains a duplicate historical unit")
+        object.__setattr__(
+            self,
+            "historical_units",
+            tuple(sorted(self.historical_units, key=lambda item: (item.adapter.value, item.scope))),
+        )
         return self
 
 
@@ -236,6 +282,7 @@ def _claim_sort_key(claim: LegacyClaim) -> tuple[str, ...]:
         claim.ownership,
         claim.disposition.value,
         claim.intent_pointer or "",
+        *(f"{item.adapter.value}:{item.scope}" for item in claim.historical_units),
     )
 
 
@@ -280,6 +327,10 @@ def _claim_to_jsonable(claim: LegacyClaim) -> dict[str, object]:
     }
     if claim.intent_pointer is not None:
         result["intent_pointer"] = claim.intent_pointer
+    if claim.historical_units:
+        result["historical_units"] = [
+            {"adapter": item.adapter.value, "scope": item.scope} for item in claim.historical_units
+        ]
     return result
 
 
@@ -331,6 +382,8 @@ def render_migration_report(report: MigrationReport) -> str:
             line += (
                 "; consumer-owned preservation requested; not semantically validated by the package"
             )
+        for historical in claim.historical_units:
+            line += f"; historical {historical.adapter.value} {historical.scope}"
         lines.append(line)
     lines.extend(
         f"finding {finding.severity} {finding.code} {finding.path.original} {finding.identity}"
@@ -415,6 +468,7 @@ class LegacyMigrationPlan:
     reconciliation: ReconciliationPlan
     reconciliation_fingerprint: str
     content_fingerprint: str
+    control_actions: tuple[ControlAction, ...]
     legacy_removals: tuple[ControlAction, ...]
     legacy_preconditions: tuple[tuple[str, Sha256Digest], ...]
     config_content: bytes = field(repr=False)
@@ -424,7 +478,11 @@ class LegacyMigrationPlan:
     @property
     def actions(self) -> tuple[ControlAction, ...]:
         """Return artifact and legacy-authority actions in stable public order."""
-        return tuple(sort_actions((*self.reconciliation.actions, *self.legacy_removals)))
+        return tuple(
+            sort_actions(
+                (*self.reconciliation.actions, *self.control_actions, *self.legacy_removals)
+            )
+        )
 
     def to_jsonable(self) -> dict[str, JsonValue]:
         """Return deterministic public evidence without legacy or proposed content bytes."""
@@ -1017,6 +1075,40 @@ def _claim_findings(
                             hint="rerun preview after restoring recognized legacy content",
                         )
                     )
+                elif claim.historical_units:
+                    if signature is None or signature.kind is not LegacySignatureKind.WHOLE_FILE:
+                        findings.append(
+                            _finding(
+                                "CP-MIGRATION-HISTORICAL-UNIT",
+                                path=claim.target.original,
+                                identity=claim.signature_id,
+                                standard_id=report.package.standard_id,
+                                version=report.package.version.value,
+                                message=(
+                                    "historical semantic units require an exact whole-file signature"
+                                ),
+                                hint="bind the historical units to known whole-file package history",
+                            )
+                        )
+                    else:
+                        for historical in claim.historical_units:
+                            if _observed_historical_unit(item, historical) is not None:
+                                continue
+                            findings.append(
+                                _finding(
+                                    "CP-MIGRATION-HISTORICAL-UNIT",
+                                    path=claim.target.original,
+                                    identity=historical.scope,
+                                    standard_id=report.package.standard_id,
+                                    version=report.package.version.value,
+                                    message=(
+                                        "declared historical semantic unit is absent or malformed"
+                                    ),
+                                    hint=(
+                                        "correct the adapter and scope declared by the migration provider"
+                                    ),
+                                )
+                            )
                 if claim.intent_pointer is not None:
                     findings.append(
                         _finding(
@@ -1265,6 +1357,35 @@ def _empty_lock(
     )
 
 
+def _historical_adapter(kind: AdapterKind) -> DocumentAdapter:
+    adapters: dict[AdapterKind, DocumentAdapter] = {
+        AdapterKind.TOML: TomlAdapter(),
+        AdapterKind.JSON: JsonAdapter(),
+        AdapterKind.JSONC: JsoncAdapter(),
+        AdapterKind.YAML: YamlAdapter(),
+        AdapterKind.EDITORCONFIG: EditorConfigAdapter(),
+        AdapterKind.MARKDOWN_BLOCK: MarkdownBlockAdapter(),
+    }
+    adapter = adapters.get(kind)
+    if adapter is None:
+        raise ControlPlaneError("historical unit uses an unsupported semantic adapter")
+    return adapter
+
+
+def _observed_historical_unit(
+    observed: _ObservedSignature,
+    historical: HistoricalUnit,
+) -> AdapterUnit | None:
+    try:
+        state = _historical_adapter(historical.adapter).inspect(
+            observed.content,
+            (historical.scope,),
+        )
+    except ControlPlaneError:
+        return None
+    return next((item for item in state.units if item.scope == historical.scope), None)
+
+
 def _adopted_legacy_units(
     reports: tuple[MigrationReport, ...],
     observed: Mapping[tuple[str, str, str], _ObservedSignature],
@@ -1277,7 +1398,7 @@ def _adopted_legacy_units(
         payload = payloads[(package.standard_id, package.version.value)]
         signatures = {item.id: item for item in payload.manifest.legacy_signatures}
         artifacts = {item.target: item for item in payload.manifest.artifacts}
-        contributions = {
+        whole_file_contributions = {
             item.target: item
             for item in payload.manifest.contributions
             if item.adapter is AdapterKind.WHOLE_FILE and item.scope == "$file"
@@ -1331,7 +1452,35 @@ def _adopted_legacy_units(
                 continue
             signature = signatures.get(claim.signature_id)
             artifact = artifacts.get(claim.target)
-            contribution = contributions.get(claim.target)
+            contribution = whole_file_contributions.get(claim.target)
+            safe_historical_claim = (
+                observed_item is not None
+                and observed_item.known
+                and observed_item.digest == claim.observed_digest
+                and signature is not None
+                and signature.kind is LegacySignatureKind.WHOLE_FILE
+            )
+            if safe_historical_claim:
+                assert observed_item is not None
+                for historical in claim.historical_units:
+                    unit = _observed_historical_unit(observed_item, historical)
+                    if unit is None:
+                        continue
+                    units.append(
+                        LockedUnit(
+                            path=claim.target,
+                            adapter=historical.adapter,
+                            scope=historical.scope,
+                            owners=(package.standard_id,),
+                            versions={package.standard_id: package.version},
+                            provenance=UnitProvenance.PROVIDER,
+                            policy=ArtifactPolicy.MANAGED,
+                            semantic_digest=unit.semantic_digest,
+                            content_digest=content_digest(unit.raw),
+                            mode=None,
+                            created_container=False,
+                        )
+                    )
             policy = (
                 artifact.policy
                 if artifact is not None
@@ -1427,6 +1576,7 @@ def _bounded_orphan_findings(
 def _removal_actions(
     reports: tuple[MigrationReport, ...],
     replacement_targets: frozenset[str] = frozenset(),
+    bounded_targets: frozenset[str] = frozenset(),
 ) -> tuple[ControlAction, ...]:
     actions = [
         ControlAction(
@@ -1445,7 +1595,7 @@ def _removal_actions(
                 LegacyDisposition.IMPORT_LOCK,
             }:
                 continue
-            if claim.target.original in replacement_targets:
+            if claim.target.original in replacement_targets | bounded_targets:
                 continue
             actions.append(
                 ControlAction(
@@ -1458,6 +1608,131 @@ def _removal_actions(
                     before_digest=claim.observed_digest.value,
                 )
             )
+    return tuple(sort_actions(actions))
+
+
+def _dual_authority_findings(
+    repo: Path,
+    *,
+    config_content: bytes,
+    catalog_content: bytes,
+    lock_content: bytes,
+) -> tuple[ControlFinding, ...]:
+    """Accept only exact control files that a migration apply can publish."""
+    control = repo / ".standards"
+    expected = {
+        "config.toml": config_content,
+        "catalog.toml": catalog_content,
+        "lock.toml": lock_content,
+        ".migration-lock.toml": lock_content,
+    }
+    present: set[str] = set()
+    for name, content in expected.items():
+        path = control / name
+        if not path.exists() and not path.is_symlink():
+            continue
+        present.add(name)
+        try:
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or _read_regular_file(
+                    path,
+                    kind="migration recovery control file",
+                )
+                != content
+            ):
+                raise ControlPlaneError("control file differs")
+        except ControlPlaneError, OSError:
+            return (
+                _finding(
+                    "CP-MIGRATION-STATE",
+                    path=f".standards/{name}",
+                    identity="$migration",
+                    message="dual authority is not an exact interrupted-migration prefix",
+                    hint="remove the divergent unified state or restore the reviewed migration prefix",
+                ),
+            )
+    if {"lock.toml", ".migration-lock.toml"} <= present:
+        return (
+            _finding(
+                "CP-MIGRATION-STATE",
+                path=".standards",
+                identity="$migration",
+                message="dual authority contains duplicate migration lock state",
+                hint="restore exactly one reviewed migration lock state before recovery",
+            ),
+        )
+    if frozenset(present) not in _SANCTIONED_MIGRATION_CONTROL_PREFIXES:
+        return (
+            _finding(
+                "CP-MIGRATION-STATE",
+                path=".standards",
+                identity="$migration",
+                message="dual authority is not a sanctioned migration publication prefix",
+                hint="restore an exact interrupted-migration prefix before recovery",
+            ),
+        )
+    return ()
+
+
+def _control_file_actions(
+    repo: Path,
+    *,
+    config_content: bytes,
+    catalog_content: bytes,
+    lock_content: bytes,
+) -> tuple[ControlAction, ...]:
+    planned = (
+        (
+            ".standards/config.toml",
+            config_content,
+            "create unified desired configuration",
+            "unified desired configuration",
+        ),
+        (
+            ".standards/catalog.toml",
+            catalog_content,
+            "publish installed catalog snapshot",
+            "installed catalog snapshot",
+        ),
+        (
+            ".standards/lock.toml",
+            lock_content,
+            "publish unified central lock",
+            "unified central lock",
+        ),
+    )
+    actions: list[ControlAction] = []
+    for target, desired, create_summary, subject in planned:
+        path = repo / target
+        before: Sha256Digest | None = None
+        current: bytes | None = None
+        if path.exists() and not path.is_symlink() and path.is_file():
+            current = _read_regular_file(path, kind="migration control file")
+            before = content_digest(current)
+        kind = (
+            ActionKind.CREATE
+            if current is None
+            else (ActionKind.NOOP if current == desired else ActionKind.UPDATE)
+        )
+        summary = {
+            ActionKind.CREATE: create_summary,
+            ActionKind.NOOP: f"{subject} already matches migration proposal",
+            ActionKind.UPDATE: f"{subject} differs from migration proposal",
+        }[kind]
+        actions.append(
+            ControlAction(
+                kind=kind,
+                target=target,
+                adapter="whole-file",
+                scope="$file",
+                standard_id="project-standards",
+                summary=summary,
+                before_digest=before.value if before is not None else None,
+                after_digest=content_digest(desired).value,
+            )
+        )
     return tuple(sort_actions(actions))
 
 
@@ -1495,6 +1770,7 @@ def _plan_legacy_migration(
     observed: dict[tuple[str, str, str], _ObservedSignature] = {}
     legacy_files = {".project-standards.yml": legacy_content}
     findings: list[ControlFinding] = []
+    invalid_package_ids: set[str] = set()
     defaults = sorted(
         (entry for entry in installed.source.packages if entry.role is CatalogRole.DEFAULT),
         key=lambda entry: (entry.id, entry.version.sort_key),
@@ -1561,6 +1837,7 @@ def _plan_legacy_migration(
                 report.package.config
             )
         except PackageContractError:
+            invalid_package_ids.add(entry.id)
             findings.append(
                 _finding(
                     "CP-MIGRATION-CONFIG",
@@ -1610,6 +1887,22 @@ def _plan_legacy_migration(
             },
         }
     )
+    # Invalid provider options cannot enter steady-state resolution: that would
+    # raise before the migration report can return its accumulated findings.
+    # Disable only those packages in the diagnostic reconciliation view; the
+    # original desired config remains in the inapplicable migration plan.
+    planning_desired = desired.model_copy(
+        update={
+            "standards": {
+                standard_id: (
+                    package.model_copy(update={"enabled": False})
+                    if standard_id in invalid_package_ids
+                    else package
+                )
+                for standard_id, package in desired.standards.items()
+            }
+        }
+    )
     config_content = _render_config(desired)
     try:
         parse_config(config_content)
@@ -1617,11 +1910,16 @@ def _plan_legacy_migration(
         raise ControlPlaneError(
             "migrated desired config could not be rendered canonically"
         ) from exc
-    previous_lock = _empty_lock(distribution, catalog, desired).model_copy(
-        update={"artifacts": list(_adopted_legacy_units(ordered_reports, observed, payloads))}
+    valid_reports = tuple(
+        report
+        for report in ordered_reports
+        if report.package.standard_id not in invalid_package_ids
+    )
+    previous_lock = _empty_lock(distribution, catalog, planning_desired).model_copy(
+        update={"artifacts": list(_adopted_legacy_units(valid_reports, observed, payloads))}
     )
     resolution = ResolutionRequest(
-        desired=desired,
+        desired=planning_desired,
         catalog=catalog,
         previous_lock=previous_lock,
         allowed_majors=frozenset(),
@@ -1687,16 +1985,37 @@ def _plan_legacy_migration(
     replacement_targets = frozenset(target.target for target in reconciliation.targets)
     if reconciliation.applicable and not any(finding.severity == "error" for finding in findings):
         findings.extend(_bounded_orphan_findings(ordered_reports, payloads, replacement_targets))
-    ordered_findings = _dedupe_findings(findings)
-    applicable = reconciliation.applicable and not any(
-        finding.severity == "error" for finding in ordered_findings
-    )
-    removals = _removal_actions(ordered_reports, replacement_targets) if applicable else ()
     legacy_preconditions = tuple(
         (path, content_digest(content)) for path, content in sorted(legacy_files.items())
     )
     catalog_content = render_catalog(catalog)
     lock_content = render_lock(reconciliation.next_lock)
+    control_actions = _control_file_actions(
+        normalized,
+        config_content=config_content,
+        catalog_content=catalog_content,
+        lock_content=lock_content,
+    )
+    if state.kind is StateKind.DUAL_AUTHORITY:
+        findings.extend(
+            _dual_authority_findings(
+                normalized,
+                config_content=config_content,
+                catalog_content=catalog_content,
+                lock_content=lock_content,
+            )
+        )
+    ordered_findings = _dedupe_findings(findings)
+    applicable = reconciliation.applicable and not any(
+        finding.severity == "error" for finding in ordered_findings
+    )
+    # A blocked preview still describes the complete conditional transaction.
+    # The executor rejects non-applicable plans before any action is performed.
+    removals = _removal_actions(
+        ordered_reports,
+        replacement_targets,
+        frozenset(path.original for path, _content in retired_content),
+    )
     return LegacyMigrationPlan(
         repo=normalized,
         applicable=applicable,
@@ -1716,6 +2035,7 @@ def _plan_legacy_migration(
             catalog_content,
             lock_content,
         ),
+        control_actions=control_actions,
         legacy_removals=removals,
         legacy_preconditions=legacy_preconditions,
         config_content=config_content,

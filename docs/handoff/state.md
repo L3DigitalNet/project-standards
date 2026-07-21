@@ -2,9 +2,10 @@
 
 ## Current focus
 
-- The 5.3.0 candidate is prepared and **held, not released** (owner directive 2026-07-20). `e69831f` corrects issues #12/#13 with consumer-owned relinquishment payloads (Python Tooling 1.4 `script_ownership`, Markdown Tooling 1.5 `lint_workflow_ownership`/`format_workflow_ownership`, CLI Documentation 1.3 `workflow_ownership`); `df761f5` records the adoption-mechanics audit.
-- A Codex session implements the audit fixes and rolls them into 5.3.0. Input: `docs/reviews/2026-07-20-adoption-mechanics-audit.md` — 3 verified blockers (B1 unguarded `ControlPlaneConfigurationError` in `plan_reconciliation` discards migration findings on legacy `markdown_tooling` contract 1.0; B2 `CP-MALFORMED-CONTAINER` prose-token collision; B3 minified JSON-family outputs fail the managed Prettier gate) plus 8 confirmed majors. Do not tag, publish, or push to `main` until the owner authorizes.
-- `testing` is 2 commits ahead of `origin/testing` (unpushed). Family `adopt.md` banners, the README package table, and the UPGRADING.md 5.2.0 pin deliberately lag until the release commit per `meta/versioning.md` step 0.
+- The 5.3.0 candidate remains **held and unreleased**. This commit closes every adoption-mechanics finding, and the engine/package re-reviews converged. The documentation drift report anchored to `88a6f88` leaves 17 findings and 3 bugs queued before release review.
+- Catalog 5 now selects Agent Handoff 1.3, CLI Documentation 1.3, Markdown Frontmatter 1.4, Markdown Tooling 1.5, Project Specification 1.3, and Python Tooling 1.4 alongside ADR 1.2. Released payload directories are unchanged; successor payloads and the repo's `.standards/` dogfood state carry the corrections.
+- Exact extracted-wheel verification passes every retained implementation, package, performance, coverage, dependency, Markdown, dogfood, and handoff gate; counts are in `docs/STATUS.md`. Handoff validation has advisory historical shape warnings, zero errors, and zero drift.
+- The commit containing this state update leaves `testing` 4 commits ahead of `origin/testing` and unpushed. Global release-only pins, the README package table, and the UPGRADING.md 5.2.0 install example deliberately remain release-commit work under `meta/versioning.md`. Do not tag, publish, push, or update `main` without explicit owner authorization.
 
 ## Active incidents
 

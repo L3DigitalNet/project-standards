@@ -267,6 +267,73 @@ def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> 
     return exit_code
 
 
+def _format_human_finding(finding: ControlFinding) -> str:
+    """Render one actionable finding without exposing internal target sentinels."""
+    path = finding.path or "."
+    identity = "" if finding.identity in {"$file", "$target"} else f" [{finding.identity}]"
+    return (
+        f"{finding.severity.upper()} {finding.code} {path}{identity}: {finding.message}\n"
+        f"  hint: {finding.hint}"
+    )
+
+
+def _emit_human_findings(findings: tuple[ControlFinding, ...]) -> None:
+    rendered: set[str] = set()
+    for finding in findings:
+        text = _format_human_finding(finding)
+        if text in rendered:
+            continue
+        rendered.add(text)
+        print(text, file=sys.stderr)
+
+
+def _lock_only_drift_findings(
+    plan: ReconciliationPlan,
+    previous_lock: CentralLock,
+) -> tuple[ControlFinding, ...]:
+    if not _drift(plan, previous_lock) or any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in plan.actions
+    ):
+        return ()
+    preserved = sorted(
+        {action.target for action in plan.actions if action.kind is ActionKind.PRESERVE}
+    )
+    paths = preserved or [".standards/lock.toml"]
+    return tuple(
+        ControlFinding(
+            code="CP-DRIFT",
+            severity="warning",
+            standard_id="project-standards",
+            version="",
+            path=path,
+            identity="$target",
+            message="reconciliation must refresh lock metadata without changing this preserved target",
+            hint="run reconcile --apply to publish the refreshed lock metadata",
+        )
+        for path in paths
+    )
+
+
+def _apply_failure_message(
+    error_code: str | None,
+    *,
+    operation: str,
+    preview_command: str,
+) -> str:
+    code = error_code or "CP-APPLY-FAILED"
+    if code in {"CP-STALE-PLAN", "CP-PRECONDITION"}:
+        return (
+            f"error: {operation} failed ({code}); the reviewed plan no longer matches "
+            "the current repository state; "
+            f"rerun {preview_command} and retry the apply"
+        )
+    return (
+        f"error: {operation} failed ({code}); resolve the reported state, "
+        f"rerun {preview_command}, and retry the apply"
+    )
+
+
 def _inspect_tool_mismatch(
     state: ControlPlaneState,
     *,
@@ -309,17 +376,25 @@ def _inspect_tool_mismatch(
     return 1
 
 
-def _migration_plan_payload(plan: object, *, mode: str) -> dict[str, object]:
+def _migration_plan_payload(
+    plan: object,
+    *,
+    mode: str,
+    apply_refused: bool = False,
+) -> dict[str, object]:
     from project_standards.control_plane.migration import LegacyMigrationPlan
 
     if not isinstance(plan, LegacyMigrationPlan):
         raise TypeError("migration report requires a legacy migration plan")
-    return {
+    payload: dict[str, object] = {
         "ok": plan.applicable,
         "mode": mode,
         "applicable": plan.applicable,
         "plan": plan.to_jsonable(),
     }
+    if apply_refused:
+        payload.update({"apply_refused": True, "writes_performed": False})
+    return payload
 
 
 def _emit_migration_plan(
@@ -327,18 +402,33 @@ def _emit_migration_plan(
     *,
     mode: str,
     json_mode: bool,
+    apply_refused: bool = False,
 ) -> int:
     from project_standards.control_plane.migration import LegacyMigrationPlan
 
     if not isinstance(plan, LegacyMigrationPlan):
         raise TypeError("migration report requires a legacy migration plan")
     if json_mode:
-        print(json.dumps(_migration_plan_payload(plan, mode=mode), indent=2))
+        print(
+            json.dumps(
+                _migration_plan_payload(
+                    plan,
+                    mode=mode,
+                    apply_refused=apply_refused,
+                ),
+                indent=2,
+            )
+        )
     else:
         for action in plan.actions:
             print(f"{action.kind.value:<8} {action.target}  {action.summary}")
-        for finding in plan.findings:
-            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+        _emit_human_findings(plan.findings)
+        if apply_refused:
+            print(
+                "error: migration apply refused because the plan is not applicable; "
+                "no repository writes were performed",
+                file=sys.stderr,
+            )
     return 1
 
 
@@ -449,8 +539,15 @@ def run_init(
                 state.detail or f"control-plane state is {state.kind.value}",
                 exit_code=2,
             )
-        if not cast("bool", args.apply) or not plan.applicable:
+        if not cast("bool", args.apply):
             return _emit_migration_plan(plan, mode=mode, json_mode=json_mode)
+        if not plan.applicable:
+            return _emit_migration_plan(
+                plan,
+                mode=mode,
+                json_mode=json_mode,
+                apply_refused=True,
+            )
 
         result = apply_legacy_migration(plan)
         if json_mode:
@@ -471,12 +568,21 @@ def run_init(
         elif result.success:
             print("Applied legacy migration; unified lock published before legacy retirement.")
         else:
-            print(f"error: migration failed ({result.error_code})", file=sys.stderr)
+            _emit_human_findings(result.verification_findings)
+            print(
+                _apply_failure_message(
+                    result.error_code,
+                    operation="migration",
+                    preview_command="init --catalog CATALOG --migrate",
+                ),
+                file=sys.stderr,
+            )
         return 0 if result.success else 1
     except ControlPlaneBusyError as exc:
         return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
     except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
-        return _emit_error(json_mode, "CP-MIGRATION-STATE", str(exc), exit_code=2)
+        code = "CP-MIGRATION-STATE" if cast("bool", args.migrate) else "CP-INIT-STATE"
+        return _emit_error(json_mode, code, str(exc), exit_code=2)
 
 
 def _emit_plan(
@@ -502,8 +608,8 @@ def _emit_plan(
     else:
         for action in plan.actions:
             print(f"{action.kind.value:<8} {action.target}  {action.summary}")
-        for finding in plan.findings:
-            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+        _emit_human_findings(plan.findings)
+        _emit_human_findings(_lock_only_drift_findings(plan, previous_lock))
         if not drift and plan.applicable:
             print("OK standards control plane is reconciled")
     return 1 if drift or not plan.applicable else 0
@@ -532,10 +638,22 @@ def _emit_apply(
                 indent=2,
             )
         )
+    elif result.success and result.applied_action_ids:
+        print(f"Applied {len(result.applied_action_ids)} repository mutation(s).")
+    elif result.success and result.lock_written:
+        print("Updated standards lock; no target mutations applied.")
     elif result.success:
-        print(f"Applied {len(result.applied_action_ids)} action(s); lock updated last.")
+        print("OK standards control plane is already reconciled; no mutations applied.")
     else:
-        print(f"error: reconciliation failed ({result.error_code})", file=sys.stderr)
+        _emit_human_findings(result.verification_findings)
+        print(
+            _apply_failure_message(
+                result.error_code,
+                operation="reconciliation",
+                preview_command="reconcile --check",
+            ),
+            file=sys.stderr,
+        )
     return 0 if result.success else 1
 
 
@@ -566,8 +684,7 @@ def _run_recovery(
         elif plan.applicable:
             print(f"Recovery would restore {plan.target} ({plan.kind.value}).")
         else:
-            for finding in plan.findings:
-                print(f"{finding.code}: {finding.message}", file=sys.stderr)
+            _emit_human_findings(plan.findings)
         return 1
     result = apply_recovery(request, plan, apply=True, repair_state=True)
     if json_mode:
@@ -588,7 +705,14 @@ def _run_recovery(
     elif result.success:
         print(f"Recovered {plan.target}.")
     else:
-        print(f"error: recovery failed ({result.error_code})", file=sys.stderr)
+        print(
+            _apply_failure_message(
+                result.error_code,
+                operation="recovery",
+                preview_command="reconcile --repair-state",
+            ),
+            file=sys.stderr,
+        )
     return 0 if result.success else 1
 
 
@@ -694,7 +818,7 @@ def run(
                 )
             )
         else:
-            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+            _emit_human_findings((finding,))
         return 1
     except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
         return _emit_error(json_mode, "CP-CONTROL-STATE", str(exc), exit_code=2)
@@ -730,8 +854,7 @@ def validate_repository(
         planner = build_planner_request(repo.resolve(), selected_distribution, frozenset())
         plan = plan_reconciliation(planner)
         drift = _drift(plan, planner.resolution.previous_lock)
-        for finding in plan.findings:
-            print(f"{finding.code}: {finding.message}", file=sys.stderr)
+        _emit_human_findings(plan.findings)
         if drift:
             print("CP-DRIFT: unified standards state requires reconciliation", file=sys.stderr)
         return 1 if drift or not plan.applicable else 0

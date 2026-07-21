@@ -50,6 +50,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
 _PAYLOAD = _FAMILY / "versions/1.1"
+_CURRENT_PAYLOAD = _FAMILY / "versions/1.4"
 _RELEASE_CURRENT_PRESERVED_CONTAINERS = {
     "legacy-agents": (
         "AGENTS.md",
@@ -111,6 +112,49 @@ def _render(
     assert result.effect is ProviderEffect.CONTENT
     assert result.content is not None
     return result.content.decode()
+
+
+def _render_current(
+    scope: str,
+    adapter: AdapterKind,
+    config: JsonObject,
+    *,
+    target: str = "pyproject.toml",
+) -> str:
+    manifest = load_payload_manifest(_CURRENT_PAYLOAD / "payload.toml")
+    payload = InstalledPayload(
+        _CURRENT_PAYLOAD,
+        manifest,
+        validate_payload_integrity(_CURRENT_PAYLOAD, manifest),
+    )
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=_CURRENT_PAYLOAD,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="render-semantic",
+            operation=ProviderOperation.RENDER,
+            effective_config=config,
+            snapshots={
+                "planned_contribution": {
+                    "id": "test-unit",
+                    "target": target,
+                    "adapter": adapter.value,
+                    "scope": scope,
+                }
+            },
+        )
+    )
+    assert result.effect is ProviderEffect.CONTENT
+    assert result.content is not None
+    return result.content.decode()
+
+
+def _current_options(**overrides: object) -> JsonObject:
+    manifest = load_payload_manifest(_CURRENT_PAYLOAD / "payload.toml")
+    schema = load_option_schema(_CURRENT_PAYLOAD, manifest)
+    return schema.resolve_options(cast("JsonObject", overrides))
 
 
 def _migration_report(
@@ -701,6 +745,42 @@ def test_python_tooling_subprocess_patch_selects_coverage_7_10_floor() -> None:
     assert '"coverage[toml]"' in default_dependencies
     assert '"coverage[toml]>=7.10.0"' not in default_dependencies
     assert '"coverage[toml]>=7.10.0"' in patched_dependencies
+
+
+def test_python_tooling_dependencies__additional_coverage__is_not_duplicated() -> None:
+    rendered = _render_current(
+        "key:/dependency-groups/dev",
+        AdapterKind.TOML,
+        _current_options(additional_dev_dependencies=["coverage[toml]", "hypothesis"]),
+    )
+
+    dependencies = tomllib.loads(rendered)["dependency-groups"]["dev"]
+    assert dependencies.count("coverage[toml]") == 1
+    assert "hypothesis" in dependencies
+
+
+def test_python_tooling_check_task__consumer_owned_script__delegates_to_script() -> None:
+    rendered = _render_current(
+        "keyed-set:/tasks#label=check",
+        AdapterKind.JSONC,
+        _current_options(script_ownership="consumer-owned"),
+        target=".vscode/tasks.json",
+    )
+
+    task = json.loads(rendered)["tasks"][0]
+    assert task["command"] == "uv run python scripts/check.py"
+
+
+def test_python_tooling_instructions__singleton_h1__is_markdownlint_bounded() -> None:
+    rendered = _render_current(
+        "block:python-tooling",
+        AdapterKind.MARKDOWN_BLOCK,
+        _current_options(),
+        target="AGENTS.md",
+    )
+
+    assert "<!-- markdownlint-disable MD025 -->\n# Python tooling" in rendered
+    assert "<!-- markdownlint-enable MD025 -->" in rendered
 
 
 def test_python_tooling_coverage_run_renders_canonical_parallel_patch_order() -> None:

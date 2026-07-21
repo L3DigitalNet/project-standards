@@ -121,7 +121,7 @@ def test_repository_dogfoods_agent_handoff_v5() -> None:
             "harnesses": ["claude-code", "codex"],
         },
     }
-    assert lock["standards"]["agent-handoff"]["resolved"] == "1.2"
+    assert lock["standards"]["agent-handoff"]["resolved"] == "1.3"
     assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
     assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
         _V2_MANAGED / "hook.py"

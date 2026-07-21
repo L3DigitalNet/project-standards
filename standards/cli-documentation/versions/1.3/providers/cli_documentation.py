@@ -93,7 +93,7 @@ def run_render(
 
 
 def _is_migrated_legacy_config(config: Mapping[str, object]) -> bool:
-    return config == {
+    expected: dict[str, object] = {
         "contract_version": "1.0",
         "profile": "packaged",
         "command_name": "toolname",
@@ -106,6 +106,7 @@ def _is_migrated_legacy_config(config: Mapping[str, object]) -> bool:
             "setup": "uv",
         },
     }
+    return all(config.get(key) == value for key, value in expected.items())
 
 
 def run_verify(
@@ -211,6 +212,28 @@ def _unknown_workflow_claim(snapshots: Mapping[str, object]) -> dict[str, object
     }
 
 
+def _unknown_usage_claim(snapshots: Mapping[str, object]) -> dict[str, object] | None:
+    target = "docs/usage.md"
+    raw_signature = snapshots.get("legacy-usage")
+    if not isinstance(raw_signature, Mapping):
+        return None
+    raw_observed = cast("Mapping[str, object]", raw_signature).get(target)
+    if not isinstance(raw_observed, Mapping):
+        return None
+    observed = cast("Mapping[str, object]", raw_observed)
+    digest = observed.get("digest")
+    if observed.get("known") is True or not isinstance(digest, str):
+        return None
+    return {
+        "signature_id": "legacy-usage",
+        "target": target,
+        "observed_digest": digest,
+        "ownership": "consumer-owned",
+        "disposition": "preserve",
+        "intent_pointer": "/cli_documentation/usage_ownership",
+    }
+
+
 def run_migrate(
     request: Mapping[str, object],
     _resources: Mapping[str, bytes],
@@ -228,9 +251,13 @@ def run_migrate(
         config["contract_version"] = cli_documentation["version"]
         recognized.append("/cli_documentation/version")
     consumer_owned_workflow = cli_documentation.get("workflow_ownership") == "consumer-owned"
+    consumer_owned_usage = cli_documentation.get("usage_ownership") == "consumer-owned"
     if "workflow_ownership" in cli_documentation:
         config["workflow_ownership"] = cli_documentation["workflow_ownership"]
         recognized.append("/cli_documentation/workflow_ownership")
+    if "usage_ownership" in cli_documentation:
+        config["usage_ownership"] = cli_documentation["usage_ownership"]
+        recognized.append("/cli_documentation/usage_ownership")
 
     raw_signatures = _table(
         snapshots.get("legacy_signatures"),
@@ -243,7 +270,7 @@ def run_migrate(
                 raw_signatures,
                 "legacy-usage",
                 "docs/usage.md",
-                ownership="create-only",
+                ownership="consumer-owned" if consumer_owned_usage else "create-only",
             ),
             _known_claim(
                 raw_signatures,
@@ -255,6 +282,11 @@ def run_migrate(
         if claim is not None
     ]
     workflow_recognized = any(claim["signature_id"] == "legacy-workflow" for claim in claims)
+    usage_recognized = any(claim["signature_id"] == "legacy-usage" for claim in claims)
+    if consumer_owned_usage and not usage_recognized:
+        unknown_usage = _unknown_usage_claim(raw_signatures)
+        if unknown_usage is not None:
+            claims.append(unknown_usage)
     if consumer_owned_workflow:
         # Relinquished: the consumer keeps the workflow, so migration must not
         # enable CI or lock the file as a referenced input. An unrecognized

@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:56910072679b705fa70f8b120916500a7eff628202dafd1461fe25f3b4ad0f9d"
+digest = "sha256:fc1508988bdf3a0bddc1eb952757718f6ff464e30b67948f6bcb2c51a3b1c408"
 
 [[resources]]
 id = "provider-input"

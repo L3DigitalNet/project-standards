@@ -1,6 +1,6 @@
 # Project Specification family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`project-spec@1.2`](versions/1.2/agent-summary.md). Its [versioned standard](versions/1.2/README.md) wins over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`project-spec@1.3`](versions/1.3/agent-summary.md). Its [versioned standard](versions/1.3/README.md) wins over this mutable navigation summary.
 
 - Choose the smallest adequate Light, Standard, or Full profile. Upgrades add missing canonical structure without renumbering sections or rewriting authored prose.
 - Keep requirements atomic and testable. Declare spec-local IDs in Appendix A and list cited external namespaces in `reference_prefixes`.

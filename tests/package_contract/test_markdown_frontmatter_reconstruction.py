@@ -66,7 +66,7 @@ _LEGACY_WORKFLOW = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/validate-markdown-frontmatter.yml"
 )
 _FAMILY = _ROOT / "standards/markdown-frontmatter"
-_PAYLOAD = _FAMILY / "versions/1.3"
+_PAYLOAD = _FAMILY / "versions/1.4"
 _MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _ZERO_DIGEST = f"sha256:{'0' * 64}"
 _HISTORICAL_WORKFLOW_DIGEST = (
@@ -185,8 +185,8 @@ def _isolated_repository(tmp_path: Path) -> Path:
     clone_demo_family(root, "markdown-tooling")
     family = root / "standards/markdown-frontmatter"
     shutil.copytree(_FAMILY, family)
-    manifest = load_payload_manifest(family / "versions/1.3/payload.toml")
-    integrity = validate_payload_integrity(family / "versions/1.3", manifest)
+    manifest = load_payload_manifest(family / "versions/1.4/payload.toml")
+    integrity = validate_payload_integrity(family / "versions/1.4", manifest)
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -197,8 +197,8 @@ summary = "Canonical metadata, IDs, references, and formatting for managed Markd
 status = "active"
 
 [[versions]]
-version = "1.3"
-payload = "versions/1.3/payload.toml"
+version = "1.4"
+payload = "versions/1.4/payload.toml"
 digest = "{integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -227,7 +227,7 @@ catalog_major = 5
 
 [[packages]]
 id = "markdown-frontmatter"
-version = "1.3"
+version = "1.4"
 digest = "{integrity.aggregate_digest.value}"
 role = "default"
 ''',
@@ -255,7 +255,7 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
     payload = family.payloads[0]
     schema = load_option_schema(_PAYLOAD, payload.manifest)
 
-    assert payload.manifest.payload.version.value == "1.3"
+    assert payload.manifest.payload.version.value == "1.4"
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
         "schema": "markdown-frontmatter",
@@ -271,6 +271,9 @@ def test_frontmatter_options_have_complete_closed_defaults(tmp_path: Path) -> No
             ".claude/**",
             ".codex/**",
             ".github/**",
+            "docs/STATUS.md",
+            "docs/TODO.md",
+            "docs/handoff/**",
             "node_modules/**",
         ],
         "references": {"enabled": False},
@@ -298,7 +301,7 @@ def test_package_selector_and_contract_selector_are_independent() -> None:
             "standards": {
                 "markdown-frontmatter": {
                     "enabled": True,
-                    "version": "1.3",
+                    "version": "1.4",
                     "config": {"contract_version": "1.1"},
                 }
             },
@@ -307,7 +310,7 @@ def test_package_selector_and_contract_selector_are_independent() -> None:
 
     package = desired.standards["markdown-frontmatter"]
     assert not isinstance(package.version, str)
-    assert package.version.value == "1.3"
+    assert package.version.value == "1.4"
     assert package.config["contract_version"] == "1.1"
 
 
@@ -614,7 +617,20 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         "workflow_mode": "self-hosted",
         "required": True,
         "include": ["docs/**/*.md"],
-        "exclude": ["**/*.template.md", "README.md"],
+        "exclude": [
+            "**/*.template.md",
+            "AGENTS.md",
+            "CLAUDE.md",
+            ".agents/**",
+            ".claude/**",
+            ".codex/**",
+            ".github/**",
+            "docs/STATUS.md",
+            "docs/TODO.md",
+            "docs/handoff/**",
+            "node_modules/**",
+            "README.md",
+        ],
         "references": {"enabled": True},
     }
     assert report.package.recognized_settings == (
@@ -630,6 +646,110 @@ def test_frontmatter_legacy_migration_maps_yaml_and_exact_signatures(tmp_path: P
         ("legacy-skill-script", "adopt"),
         ("legacy-workflow", "adopt"),
     }
+
+
+def test_frontmatter_migration__legacy_combined_workflow__adopts_scoped_job(
+    tmp_path: Path,
+) -> None:
+    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
+    payload = InstalledPayload(
+        _PAYLOAD,
+        manifest,
+        validate_payload_integrity(_PAYLOAD, manifest),
+    )
+    fixture = _PAYLOAD / "resources/legacy-validate-standards.yml"
+    digest = f"sha256:{hashlib.sha256(fixture.read_bytes()).hexdigest()}"
+    assert digest == "sha256:931900b2811dd8b369836a5e0f8dcc4b7e3de42a447a78dc5d93164c78d0125f"
+    signature = next(
+        item
+        for item in payload.manifest.legacy_signatures
+        if item.id == "legacy-validate-standards-workflow"
+    )
+    assert signature.targets[0].original == ".github/workflows/validate-standards.yml"
+    assert digest in {item.value for item in signature.known_content_digests}
+    contribution = next(
+        item for item in payload.manifest.contributions if item.id == "workflow-frontmatter-job"
+    )
+    assert contribution.scope == "key:/jobs/frontmatter"
+
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=repo,
+            payload=payload,
+            standard_id="markdown-frontmatter",
+            version=payload.manifest.payload.version,
+            provider_id="migrate-legacy",
+            operation=ProviderOperation.MIGRATE,
+            effective_config={},
+            snapshots={
+                "legacy_config": {"markdown": {"frontmatter": {"version": "1.1"}}},
+                "legacy_signatures": {
+                    "legacy-validate-standards-workflow": {
+                        ".github/workflows/validate-standards.yml": {
+                            "known": True,
+                            "digest": digest,
+                        }
+                    }
+                },
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    claim = result.migration_report.claims[0]
+    assert claim.signature_id == "legacy-validate-standards-workflow"
+    assert claim.ownership == "managed"
+    assert claim.disposition.value == "adopt"
+    assert claim.model_dump(mode="json")["historical_units"] == [
+        {"adapter": "yaml", "scope": "key:/jobs/validate"}
+    ]
+
+
+def test_frontmatter_migration__legacy_combined_job__retires_without_clobbering_container(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_frontmatter_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text(
+        """standards_version: v4
+markdown:
+  frontmatter:
+    version: '1.1'
+    schema: markdown-frontmatter
+    required: true
+    include: ['README.md', 'docs/**/*.md']
+    exclude: ['AGENTS.md', '.agents/**']
+    references:
+      enabled: true
+""",
+        encoding="utf-8",
+    )
+    workflow = repo / ".github/workflows/validate-standards.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_bytes((_PAYLOAD / "resources/legacy-validate-standards.yml").read_bytes())
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    result = apply_legacy_migration(plan)
+    assert result.success, result.verification_findings
+    applied = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+    assert applied["name"] == "Validate project standards"
+    assert applied.get("on", applied.get(True)) == {
+        "pull_request": None,
+        "push": {"branches": ["main"]},
+    }
+    assert "validate" not in applied["jobs"]
+    assert "@v5" in applied["jobs"]["frontmatter"]["uses"]
+
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
 
 
 def test_frontmatter_workflow_signature_history_includes_current_v4_release_root() -> None:
@@ -1249,7 +1369,7 @@ def test_frontmatter_source_markdown_links_are_relocatable() -> None:
 def test_frontmatter_versioning_distinguishes_package_contract_and_tool_release() -> None:
     readme = (_PAYLOAD / "README.md").read_text(encoding="utf-8")
 
-    assert "Package payload `1.3`" in readme
+    assert "Package payload `1.4`" in readme
     assert "Document contract `1.1`" in readme
     assert "Tool/catalog release `5.x`" in readme
     assert "Two version numbers are in play" not in readme
@@ -1320,7 +1440,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/markdown-frontmatter/1.3/"
+    prefix = "project_standards/payloads/markdown-frontmatter/1.4/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)

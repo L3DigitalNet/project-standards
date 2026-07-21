@@ -31,6 +31,7 @@ from project_standards.package_contract.payload import (
 
 _NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 _MISSING = object()
+_PRETTIER_PRINT_WIDTH = 88
 
 type TokenKind = Literal[
     "string",
@@ -116,6 +117,82 @@ class LocatedUnit:
 
 class _DuplicateObjectKey(ValueError):
     pass
+
+
+def _flat_json(value: JsonValue) -> str:
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        members = (
+            f"{json.dumps(key, ensure_ascii=True)}: {_flat_json(item)}"
+            for key, item in value.items()
+        )
+        return f"{{ {', '.join(members)} }}"
+    if isinstance(value, list):
+        return f"[{', '.join(_flat_json(item) for item in value)}]"
+    return json.dumps(value, ensure_ascii=True, allow_nan=False)
+
+
+def _forces_prettier_break(value: JsonValue) -> bool:
+    if isinstance(value, list):
+        homogeneous_table = len(value) > 1 and all(
+            isinstance(item, dict) and len(item) > 1 for item in value
+        )
+        homogeneous_matrix = len(value) > 1 and all(
+            isinstance(item, list) and len(item) > 1 for item in value
+        )
+        return (
+            homogeneous_table
+            or homogeneous_matrix
+            or any(_forces_prettier_break(item) for item in value)
+        )
+    if isinstance(value, dict):
+        return any(_forces_prettier_break(item) for item in value.values())
+    return False
+
+
+def _prettier_json(
+    value: JsonValue,
+    indent: str = "",
+    *,
+    force_break: bool = False,
+    prefix_width: int = 0,
+) -> str:
+    flat = _flat_json(value)
+    if (
+        not force_break
+        and not _forces_prettier_break(value)
+        and len(indent.expandtabs(2)) + prefix_width + len(flat) <= _PRETTIER_PRINT_WIDTH
+    ):
+        return flat
+    child_indent = f"{indent}\t"
+    if isinstance(value, dict):
+        members: list[str] = []
+        for index, (key, item) in enumerate(value.items()):
+            rendered_key = json.dumps(key, ensure_ascii=True)
+            rendered_value = _prettier_json(
+                item,
+                child_indent,
+                force_break=_forces_prettier_break(item),
+                prefix_width=(len(rendered_key) + 2 + (1 if index < len(value) - 1 else 0)),
+            )
+            members.append(f"{child_indent}{rendered_key}: {rendered_value}")
+        return "{\n" + ",\n".join(members) + f"\n{indent}}}"
+    if isinstance(value, list):
+        items = [
+            f"{child_indent}{_prettier_json(item, child_indent, prefix_width=(1 if index < len(value) - 1 else 0))}"
+            for index, item in enumerate(value)
+        ]
+        return "[\n" + ",\n".join(items) + f"\n{indent}]"
+    return flat
+
+
+def format_fresh_json_container(content: bytes, kind: AdapterKind) -> bytes:
+    """Format a newly materialized JSON-family container to repository style."""
+    if kind not in {AdapterKind.JSON, AdapterKind.JSONC}:
+        raise ControlPlaneError("fresh JSON formatting requires a JSON-family adapter")
+    value = _parse(content, kind).root.value
+    return f"{_prettier_json(value)}\n".encode()
 
 
 def _decode(content: bytes, label: str) -> str:

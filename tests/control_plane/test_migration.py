@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import socket
 from dataclasses import replace
 from pathlib import Path
@@ -11,15 +12,21 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import (
     bind_catalog_digest,
+    content_digest,
     parse_catalog,
     parse_config,
     parse_lock,
 )
 from project_standards.control_plane.config_edit import set_standard_enabled
-from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlAction,
+    ControlPlaneError,
+)
 from project_standards.control_plane.distribution import (
     InstalledCatalog,
     InstalledDistribution,
@@ -42,11 +49,16 @@ from project_standards.control_plane.migration import (
     legacy_migration_content_fingerprint,
     migration_report_to_jsonable,
     plan_legacy_migration,
+    plan_legacy_migration_recovery,
     render_migration_report,
 )
 from project_standards.control_plane.models import ConsumerCatalog, DesiredConfig
 from project_standards.control_plane.paths import CatalogMajor
-from project_standards.control_plane.planner import VerificationRequest, plan_reconciliation
+from project_standards.control_plane.planner import (
+    PlannerRequest,
+    VerificationRequest,
+    plan_reconciliation,
+)
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
 from project_standards.control_plane.state import StateKind, detect_control_plane_state
 from project_standards.package_contract.paths import SafeRelativePath, Sha256Digest
@@ -59,6 +71,7 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
 )
 from tests.control_plane.helpers import installed_distribution
+from tests.control_plane.planner_helpers import previous_lock, resolution_request, write_payload
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FULL_ALPHA = _ROOT / "tests/fixtures/package_contract/valid/full/standards/alpha/versions/2.0"
@@ -205,6 +218,37 @@ def test_migration_report_rejects_duplicate_signature_target_claims() -> None:
             package=_package(),
             claims=(_claim(), _claim(disposition="remove")),
         )
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"disposition": "remove"},
+        {"ownership": "shared"},
+        {"historical_units": [{"adapter": "whole-file", "scope": "$file"}]},
+        {
+            "historical_units": [
+                {"adapter": "yaml", "scope": "key:/jobs/validate"},
+                {"adapter": "yaml", "scope": "key:/jobs/validate"},
+            ]
+        },
+    ],
+)
+def test_historical_units_require_unique_semantic_managed_adopt_claims(
+    override: dict[str, object],
+) -> None:
+    values: dict[str, object] = {
+        "signature_id": "legacy-workflow",
+        "target": ".github/workflows/validate.yml",
+        "observed_digest": _digest(),
+        "ownership": "managed",
+        "disposition": "adopt",
+        "historical_units": [{"adapter": "yaml", "scope": "key:/jobs/validate"}],
+    }
+    values.update(override)
+
+    with pytest.raises(ValidationError):
+        LegacyClaim.model_validate(values)
 
 
 @pytest.mark.parametrize(
@@ -1121,10 +1165,65 @@ def test_legacy_migration_preview_is_complete_and_performs_no_writes(
     assert plan.lock_content.startswith(b'[project_standards]\nschema_version = "1.1"\n')
     assert parse_lock(plan.lock_content) == plan.reconciliation.next_lock
     assert [action.target for action in plan.legacy_removals] == [".project-standards.yml"]
+    control_actions = {
+        action.target: action
+        for action in plan.actions
+        if action.target
+        in {
+            ".standards/config.toml",
+            ".standards/catalog.toml",
+            ".standards/lock.toml",
+        }
+    }
+    assert set(control_actions) == {
+        ".standards/config.toml",
+        ".standards/catalog.toml",
+        ".standards/lock.toml",
+    }
+    assert all(action.kind is ActionKind.CREATE for action in control_actions.values())
+    assert control_actions[".standards/config.toml"].summary == (
+        "create unified desired configuration"
+    )
+    assert control_actions[".standards/catalog.toml"].summary == (
+        "publish installed catalog snapshot"
+    )
+    assert control_actions[".standards/lock.toml"].summary == "publish unified central lock"
+    assert all(action.before_digest is None for action in control_actions.values())
+    assert all(action.after_digest is not None for action in control_actions.values())
     assert any(action.target == ".standards/alpha/config.toml" for action in plan.actions)
     assert plan.reconciliation.next_lock.referenced_inputs[0].path.original == (
         "config/alpha-options.toml"
     )
+
+
+def test_migration_preview_human_and_json_list_control_publications(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.control_plane.cli import (
+        _emit_migration_plan,  # pyright: ignore[reportPrivateUsage]  # focused preview boundary
+    )
+
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=False) == 1
+    human = capsys.readouterr().out
+    for target in (
+        ".standards/config.toml",
+        ".standards/catalog.toml",
+        ".standards/lock.toml",
+    ):
+        assert target in human
+    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=True) == 1
+    payload = json.loads(capsys.readouterr().out)
+    targets = {action["target"] for action in payload["plan"]["actions"]}
+    assert {
+        ".standards/config.toml",
+        ".standards/catalog.toml",
+        ".standards/lock.toml",
+    } <= targets
 
 
 def test_apply_legacy_migration_publishes_unified_state_and_retires_legacy(
@@ -1438,6 +1537,247 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
     )
 
 
+def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
+    tmp_path: Path,
+) -> None:
+    from project_standards.control_plane.migration import (
+        _adopted_legacy_units,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
+        _ObservedSignature,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
+    )
+
+    target = SafeRelativePath.parse(".github/workflows/validate-standards.yml")
+    legacy = (
+        b"name: Validate standards\n"
+        b"jobs:\n"
+        b"  validate:\n"
+        b"    uses: example/actions/.github/workflows/frontmatter.yml@v4\n"
+        b"  consumer:\n"
+        b"    runs-on: ubuntu-latest\n"
+        b"    steps: []\n"
+    )
+    desired = (
+        b"jobs:\n  frontmatter:\n    uses: example/actions/.github/workflows/frontmatter.yml@v5\n"
+    )
+    observed_digest = Sha256Digest(f"sha256:{hashlib.sha256(legacy).hexdigest()}")
+    base = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "workflow-frontmatter-job",
+                "target": target.original,
+                "adapter": "yaml",
+                "scope": "key:/jobs/frontmatter",
+                "content": desired,
+            }
+        ],
+    )
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-validate-standards-workflow",
+            "kind": "whole-file",
+            "targets": [target.original],
+            "known_content_digests": [observed_digest.value],
+        }
+    )
+    payload = InstalledPayload(
+        base.root,
+        base.manifest.model_copy(update={"legacy_signatures": [signature]}),
+        base.integrity,
+    )
+    report = MigrationReport(
+        schema_version="1.0",
+        package=MigratedPackage.model_validate(
+            {
+                "standard_id": "demo",
+                "version": "1.0",
+                "selector": "latest",
+                "config": {},
+            }
+        ),
+        claims=(
+            LegacyClaim.model_validate(
+                {
+                    "signature_id": signature.id,
+                    "target": target.original,
+                    "observed_digest": observed_digest.value,
+                    "ownership": "managed",
+                    "disposition": "adopt",
+                    "historical_units": [{"adapter": "yaml", "scope": "key:/jobs/validate"}],
+                }
+            ),
+        ),
+    )
+    observed = _ObservedSignature(
+        "demo",
+        signature.id,
+        target,
+        observed_digest,
+        True,
+        legacy,
+    )
+
+    units = _adopted_legacy_units(
+        (report,),
+        {observed.key: observed},
+        {("demo", "1.0"): payload},
+    )
+
+    assert len(units) == 1
+    assert units[0].adapter.value == "yaml"
+    assert units[0].scope == "key:/jobs/validate"
+    repo = tmp_path / "repo"
+    workflow = repo / target.original
+    workflow.parent.mkdir(parents=True)
+    workflow.write_bytes(legacy)
+    lock = previous_lock(*(unit.model_dump(mode="json") for unit in units))
+    plan = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request((payload,), previous_lock=lock),
+            payloads=(payload,),
+        )
+    )
+    updated = plan.proposed_content(target.original)
+    assert plan.applicable, plan.findings
+    assert next(action for action in plan.actions if action.target == target.original).kind is (
+        ActionKind.UPDATE
+    )
+    assert b"frontmatter.yml@v5" in updated
+    assert b"frontmatter.yml@v4" not in updated
+    assert b"  consumer:\n    runs-on: ubuntu-latest\n    steps: []\n" in updated
+
+
+def test_historical_yaml_unit_retires_during_migration_apply_and_converges(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import project_standards.control_plane.planner as planner_module
+    import project_standards.control_plane.providers as provider_module
+
+    base = installed_distribution(tmp_path)
+    installed = base.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse(".github/workflows/validate-standards.yml")
+    legacy = (
+        b"name: Validate standards\n"
+        b"jobs:\n"
+        b"  validate:\n"
+        b"    uses: example/actions/.github/workflows/frontmatter.yml@v4\n"
+        b"  consumer:\n"
+        b"    runs-on: ubuntu-latest\n"
+        b"    steps: []\n"
+    )
+    desired = (
+        b"jobs:\n  frontmatter:\n    uses: example/actions/.github/workflows/frontmatter.yml@v5\n"
+    )
+    legacy_digest = Sha256Digest(f"sha256:{hashlib.sha256(legacy).hexdigest()}")
+    signature = alpha.manifest.legacy_signatures[0].model_copy(
+        update={"targets": [target], "known_content_digests": [legacy_digest]}
+    )
+    contribution = ContributionDeclaration.model_validate(
+        {
+            "id": "workflow-frontmatter-job",
+            "target": target.original,
+            "adapter": "yaml",
+            "scope": "key:/jobs/frontmatter",
+            "policy": "managed",
+            "provider": "render-historical-workflow",
+        }
+    )
+    render_provider = next(
+        provider
+        for provider in alpha.manifest.providers
+        if provider.operation is ProviderOperation.RENDER
+    ).model_copy(update={"id": "render-historical-workflow"})
+    manifest = alpha.manifest.model_copy(
+        update={
+            "contributions": [*alpha.manifest.contributions, contribution],
+            "legacy_signatures": [signature],
+            "providers": [*alpha.manifest.providers, render_provider],
+        }
+    )
+    changed_alpha = InstalledPayload(alpha.root, manifest, alpha.integrity)
+    changed = InstalledCatalog(
+        installed.source,
+        installed.families,
+        tuple(changed_alpha if payload is alpha else payload for payload in installed.payloads),
+    )
+    distribution = cast(
+        InstalledDistribution,
+        _FixtureDistribution(changed, base.consumer_catalog("5")),
+    )
+    original_provider = provider_module.invoke_provider
+    original_planner = planner_module.invoke_provider
+
+    def migration_provider(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.operation is not ProviderOperation.MIGRATE:
+            return original_provider(invocation)
+        return ProviderResult(
+            effect=ProviderEffect.MIGRATION_REPORT,
+            migration_report=MigrationReport(
+                schema_version="1.0",
+                package=MigratedPackage.model_validate(
+                    {
+                        "standard_id": "alpha",
+                        "version": "2.0",
+                        "selector": "latest",
+                        "config": {"extension_path": "config/alpha-options.toml"},
+                        "recognized_settings": ["/alpha/enabled"],
+                    }
+                ),
+                claims=(
+                    LegacyClaim.model_validate(
+                        {
+                            "signature_id": signature.id,
+                            "target": target.original,
+                            "observed_digest": legacy_digest.value,
+                            "ownership": "managed",
+                            "disposition": "adopt",
+                            "historical_units": [
+                                {"adapter": "yaml", "scope": "key:/jobs/validate"}
+                            ],
+                        }
+                    ),
+                ),
+            ),
+        )
+
+    def render_provider_call(invocation: ProviderInvocation) -> ProviderResult:
+        if invocation.provider_id == "render-historical-workflow":
+            return ProviderResult(ProviderEffect.CONTENT, content=desired)
+        return original_planner(invocation)
+
+    monkeypatch.setattr(provider_module, "invoke_provider", migration_provider)
+    monkeypatch.setattr(planner_module, "invoke_provider", render_provider_call)
+    repo = _legacy_repo(tmp_path)
+    workflow = repo / target.original
+    workflow.parent.mkdir(parents=True)
+    workflow.write_bytes(legacy)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert not any(
+        action.kind is ActionKind.REMOVE
+        and action.target == target.original
+        and action.scope == "$file"
+        for action in plan.actions
+    )
+    result = apply_legacy_migration(plan)
+    assert result.success, result
+    updated = workflow.read_bytes()
+    assert b"frontmatter.yml@v4" not in updated
+    assert b"frontmatter.yml@v5" in updated
+    assert b"  consumer:\n    runs-on: ubuntu-latest\n    steps: []\n" in updated
+    settled = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert settled.applicable, settled.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in settled.actions
+    )
+
+
 @pytest.mark.parametrize(
     ("adapter", "scope", "policy", "disposition", "known", "observed_character"),
     [
@@ -1697,6 +2037,65 @@ def test_apply_legacy_migration_recovery_rejects_unsafe_legacy_replacement(
     assert legacy.is_symlink()
 
 
+def test_recovery_plan_rejects_divergent_dual_authority_without_applying(
+    tmp_path: Path,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    extension = repo / "config/alpha-options.toml"
+    extension.parent.mkdir()
+    extension.write_text("consumer = true\n", encoding="utf-8")
+    (repo / "legacy-alpha.md").write_bytes((_FULL_ALPHA / "legacy.md").read_bytes())
+    (repo / ".project-standards.yml").write_text(
+        "standards_version: v4\nalpha:\n  enabled: true\n",
+        encoding="utf-8",
+    )
+
+    plan = plan_legacy_migration_recovery(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert "CP-MIGRATION-STATE" in _finding_codes(plan)
+    result = apply_legacy_migration(plan)
+    assert not result.success
+    assert result.error_code == "CP-STALE-PLAN"
+
+
+@pytest.mark.parametrize(
+    "present",
+    [
+        ("config.toml",),
+        ("catalog.toml",),
+        ("lock.toml",),
+        ("config.toml", "catalog.toml"),
+        (".migration-lock.toml", "catalog.toml"),
+    ],
+)
+def test_recovery_plan_rejects_impossible_exact_control_prefixes(
+    tmp_path: Path,
+    present: tuple[str, ...],
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    original = plan_legacy_migration(repo, distribution, "5")
+    control = repo / ".standards"
+    control.mkdir()
+    content = {
+        "config.toml": original.config_content,
+        "catalog.toml": original.catalog_content,
+        "lock.toml": original.lock_content,
+        ".migration-lock.toml": original.lock_content,
+    }
+    for name in present:
+        (control / name).write_bytes(content[name])
+
+    recovery = plan_legacy_migration_recovery(repo, distribution, "5")
+
+    assert not recovery.applicable
+    assert "CP-MIGRATION-STATE" in _finding_codes(recovery)
+
+
 def test_legacy_migration_is_deterministic_across_yaml_and_file_order(
     tmp_path: Path,
 ) -> None:
@@ -1838,7 +2237,10 @@ def test_unknown_yaml_remainder_and_modified_signature_block_the_whole_plan(
         "CP-MIGRATION-LEGACY-DIGEST",
         "CP-MIGRATION-UNCLAIMED-SETTING",
     }
-    assert all(action.kind.value != "remove" for action in plan.legacy_removals)
+    assert {
+        action.target for action in plan.legacy_removals if action.kind is ActionKind.REMOVE
+    } == {".project-standards.yml"}
+    assert all("after unified verification" in action.summary for action in plan.legacy_removals)
 
 
 def test_unknown_key_inside_a_known_namespace_remains_unclaimed(tmp_path: Path) -> None:
@@ -1964,8 +2366,16 @@ def test_provider_config_is_validated_against_the_selected_payload_schema(
 
     monkeypatch.setattr(provider_module, "invoke_provider", invalid_config)
 
-    with pytest.raises(ControlPlaneError, match="configured package options are invalid"):
-        plan_legacy_migration(repo, distribution, "5")
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert any(
+        finding.code == "CP-MIGRATION-CONFIG"
+        and finding.standard_id == "alpha"
+        and finding.path == ".project-standards.yml"
+        and finding.hint == "correct the legacy values or the migration provider mapping"
+        for finding in plan.findings
+    )
 
 
 def test_overlapping_provider_discovery_results_block_the_package(
@@ -2125,6 +2535,51 @@ def test_legacy_migration_rejects_symlinked_signature_parent(
 
     with pytest.raises(ControlPlaneError, match="symlink"):
         plan_legacy_migration(repo, distribution, "5")
+
+
+@pytest.mark.parametrize("consumer_file", [False, True])
+def test_legacy_retirement_prunes_only_empty_recognized_directory(
+    tmp_path: Path,
+    consumer_file: bool,
+) -> None:
+    from project_standards.control_plane.executor import (
+        _remove_legacy,  # pyright: ignore[reportPrivateUsage]  # exact retirement boundary
+    )
+
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path)
+    plan = plan_legacy_migration(repo, distribution, "5")
+    legacy = repo / ".agents/agent-handoff/manifest.json"
+    legacy.parent.mkdir(parents=True)
+    content = b'{"schema_version": "1.0"}\n'
+    legacy.write_bytes(content)
+    sibling = legacy.parent / "consumer.txt"
+    if consumer_file:
+        sibling.write_text("keep\n", encoding="utf-8")
+    action = ControlAction(
+        kind=ActionKind.REMOVE,
+        target=".agents/agent-handoff/manifest.json",
+        adapter="whole-file",
+        scope="$file",
+        standard_id="agent-handoff",
+        summary="remove recognized legacy manifest",
+        before_digest=content_digest(content).value,
+    )
+    focused = replace(
+        plan,
+        legacy_removals=(action,),
+        legacy_preconditions=((action.target, content_digest(content)),),
+    )
+    request = ApplyRequest(plan.planner, plan.reconciliation)
+    root_descriptor = os.open(repo, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        _remove_legacy(request, focused, root_descriptor, [])
+    finally:
+        os.close(root_descriptor)
+
+    assert not legacy.exists()
+    assert legacy.parent.exists() is consumer_file
+    assert sibling.exists() is consumer_file
 
 
 def test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states() -> None:

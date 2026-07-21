@@ -405,15 +405,16 @@ def plan_fix_content(
         return raw, FixResult(skip_reason="id field is missing or not a string")
     if not isinstance(doc_type, str) or doc_type not in doc_types:
         return raw, FixResult(skip_reason="doc_type field is missing or not a valid doc_type")
+    # A valid ADR already carries the repository segment that cannot be derived
+    # during repair, so accept it before routing invalid ADRs to manual work.
+    if not validate_id(doc_id, doc_type, doc_types):
+        return raw, FixResult(skip_reason="id is already valid")
     # ADR ids include a repo-name segment that cannot be derived from document fields.
     if doc_type == "adr":
         return raw, FixResult(
             is_adr=True,
             skip_reason="ADR ids require a repo-name segment — fix manually",
         )
-    # Already valid — nothing to fix.
-    if not validate_id(doc_id, doc_type, doc_types):
-        return raw, FixResult(skip_reason="id is already valid")
     if not isinstance(title, str) or not title.strip():
         return raw, FixResult(skip_reason="title is missing or empty — cannot derive a slug")
     slug = slugify(title)

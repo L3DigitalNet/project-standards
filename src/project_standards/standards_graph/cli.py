@@ -140,7 +140,18 @@ def _run_control_inspection(command: str, argv: list[str]) -> int:
             else:
                 for view in views:
                     marker = "enabled" if view["enabled"] else "disabled"
-                    print(f"{view['id']}  {marker}  requested={view['requested'] or '-'}")
+                    role = (
+                        "selectable"
+                        if view["selectable"]
+                        else ",".join(cast("list[str]", view["availability"]))
+                    )
+                    available = ",".join(cast("list[str]", view["available"]))
+                    print(
+                        f"{view['id']}  {marker}  {role}  available={available}  "
+                        f"default={view['default'] or '-'}  "
+                        f"requested={view['requested'] or '-'}  "
+                        f"resolved={view['resolved'] or '-'}"
+                    )
             return 0
 
         standard_id = cast("str", args.standard_id)

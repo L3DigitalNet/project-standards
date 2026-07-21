@@ -144,6 +144,8 @@ class PublicActionSchema(StrictModel):
     summary: str
     before_digest: str | None = None
     after_digest: str | None = None
+    before_mode: PosixMode | None = None
+    after_mode: PosixMode | None = None
 
 
 class ReconciliationPlanSchema(StrictModel):

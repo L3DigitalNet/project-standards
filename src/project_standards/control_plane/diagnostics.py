@@ -66,6 +66,8 @@ class ControlAction:
     summary: str
     before_digest: str | None = None
     after_digest: str | None = None
+    before_mode: str | None = None
+    after_mode: str | None = None
     content: bytes | None = field(default=None, repr=False, compare=False)
 
 
@@ -110,6 +112,8 @@ def action_sort_key(action: ControlAction) -> tuple[str, ...]:
         action.summary,
         action.before_digest or "",
         action.after_digest or "",
+        action.before_mode or "",
+        action.after_mode or "",
     )
 
 
@@ -145,6 +149,8 @@ def actions_to_jsonable(actions: Iterable[ControlAction]) -> list[dict[str, obje
                 "summary": action.summary,
                 "before_digest": action.before_digest,
                 "after_digest": action.after_digest,
+                "before_mode": action.before_mode,
+                "after_mode": action.after_mode,
             }
         )
     return result

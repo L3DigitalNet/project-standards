@@ -1,13 +1,13 @@
 # Project Specification Standard
 
-This is the Catalog 5 family landing page for the active consumer package `project-spec@1.2`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `project-spec@1.3`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Project Specification 1.2 standard](versions/1.2/README.md) — normative profiles, identifiers, traceability, and tooling contract
-- [Project Specification 1.2 adoption guide](versions/1.2/adopt.md) — exact options, outputs, authoring operations, migration, and verification
+- [Project Specification 1.3 standard](versions/1.3/README.md) — normative profiles, identifiers, traceability, and tooling contract
+- [Project Specification 1.3 adoption guide](versions/1.3/adopt.md) — exact options, outputs, authoring operations, migration, and verification
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Project Specification 1.2 agent summary](versions/1.2/agent-summary.md) — compact operating rules
+- [Project Specification 1.3 agent summary](versions/1.3/agent-summary.md) — compact operating rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
@@ -26,10 +26,10 @@ Review [adopt.md](adopt.md) before applying. Project Specification uses its own 
 
 ## Release-status correction
 
-The immutable 1.1 README contains wording written before Catalog 5 and Project Standards v5.0.0 were published. Treat any statement that this payload is not released as release-time history. Catalog 5 now selects `project-spec@1.2`; the immutable 1.1 payload bytes remain unchanged.
+The immutable 1.1 README contains wording written before Catalog 5 and Project Standards v5.0.0 were published. Treat any statement that this payload is not released as release-time history. Catalog 5 now selects `project-spec@1.3`; the immutable 1.1 payload bytes remain unchanged.
 
 The immutable 1.1 adoption guide counts five closed options; its example and schema define six.
 
 ## Legacy boundary
 
-The `spec` block in `.project-standards.yml`, V1 workflow adoption, and unversioned copy-adopt resources are migration evidence only. Under unified authority, bare `project-standards spec` commands resolve `project-spec@1.2` through `.standards/`; an explicit `--config` is legacy/debug input and cannot override that authority.
+The `spec` block in `.project-standards.yml`, V1 workflow adoption, and unversioned copy-adopt resources are migration evidence only. Under unified authority, bare `project-standards spec` commands resolve `project-spec@1.3` through `.standards/`; an explicit `--config` is legacy/debug input and cannot override that authority.

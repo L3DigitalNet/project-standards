@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
 import shutil
 import subprocess
 import zipfile
 from dataclasses import replace
 from pathlib import Path
+from typing import Protocol, cast
 
 import pytest
+import yaml
+from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from project_standards.control_plane.bootstrap import initialize_control_plane
@@ -38,6 +42,7 @@ from project_standards.package_contract.payload import (
     load_payload_manifest,
 )
 from project_standards.package_contract.projection import sync_payload_projection
+from project_standards.validate_id import validate_id
 from tests.control_plane.planner_helpers import resolution_request
 from tests.package_contract.helpers import copy_minimal_repository
 
@@ -45,7 +50,12 @@ _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/cli-documentation"
 _PAYLOAD = _ROOT / "standards/cli-documentation/versions/1.1"
 _PAYLOAD_1_2 = _ROOT / "standards/cli-documentation/versions/1.2"
+_CURRENT_PAYLOAD = _ROOT / "standards/cli-documentation/versions/1.3"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
+
+
+class _SchemaValidator(Protocol):
+    def validate(self, instance: object) -> None: ...
 
 
 def _payload_at(root: Path) -> InstalledPayload:
@@ -59,6 +69,30 @@ def _payload() -> InstalledPayload:
 
 def _payload_1_2() -> InstalledPayload:
     return _payload_at(_PAYLOAD_1_2)
+
+
+def _current_payload() -> InstalledPayload:
+    return _payload_at(_CURRENT_PAYLOAD)
+
+
+def _current_invocation(
+    provider_id: str,
+    operation: ProviderOperation,
+    config: JsonObject,
+    *,
+    snapshots: JsonObject | None = None,
+) -> ProviderInvocation:
+    payload = _current_payload()
+    return ProviderInvocation(
+        repo=_CURRENT_PAYLOAD,
+        payload=payload,
+        standard_id="cli-documentation",
+        version=payload.manifest.payload.version,
+        provider_id=provider_id,
+        operation=operation,
+        effective_config=config,
+        snapshots=snapshots or {},
+    )
 
 
 def _isolated_repository(tmp_path: Path) -> Path:
@@ -887,6 +921,85 @@ catalog_major = 5
     installed = fixture / "installed/project_standards"
     shutil.copytree(package, installed, symlinks=False)
     return InstalledDistribution(installed, tool_release="5.1.0")
+
+
+def test_cli_documentation_usage_template__frontmatter_selected__is_schema_valid() -> None:
+    text = (_CURRENT_PAYLOAD / "templates/usage-doc.md").read_text(encoding="utf-8")
+    assert text.startswith("---\n")
+    metadata_text, _body = text.removeprefix("---\n").split("\n---\n", 1)
+    metadata = yaml.safe_load(metadata_text)
+    schema = json.loads(
+        (
+            _ROOT
+            / "standards/markdown-frontmatter/versions/1.4/schemas/markdown-frontmatter.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    validator = cast("_SchemaValidator", Draft202012Validator(schema))
+    validator.validate(metadata)
+    assert validate_id(metadata["id"], metadata["doc_type"]) == []
+
+
+def test_cli_documentation_migration__consumer_authored_usage__relinquishes() -> None:
+    payload = _current_payload()
+    schema = load_option_schema(_CURRENT_PAYLOAD, payload.manifest)
+    assert schema.resolve_options({})["usage_ownership"] == "managed"
+    usage = next(item for item in payload.manifest.artifacts if item.id == "usage-document")
+    assert [(condition.option, condition.equals) for condition in usage.when_any] == [
+        ("usage_ownership", "managed")
+    ]
+    signature = next(
+        item for item in payload.manifest.legacy_signatures if item.id == "legacy-usage"
+    )
+    assert signature.consumer_owned_intent_pointer == "/cli_documentation/usage_ownership"
+
+    result = invoke_provider(
+        _current_invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {
+                    "cli_documentation": {
+                        "version": "1.0",
+                        "usage_ownership": "consumer-owned",
+                    }
+                },
+                "legacy_signatures": {
+                    "legacy-usage": {
+                        "docs/usage.md": {
+                            "known": False,
+                            "digest": f"sha256:{'b' * 64}",
+                        }
+                    }
+                },
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    claim = result.migration_report.claims[0]
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer == "/cli_documentation/usage_ownership"
+
+
+def test_cli_documentation_migration__known_legacy_workflow__applies_and_verifies(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution_1_3(tmp_path)
+    repo = _legacy_cli_docs_repo(tmp_path)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    result = apply_legacy_migration(plan)
+    assert result.success, result.verification_findings
+    assert not (repo / ".project-standards.yml").exists()
+
+    request = build_planner_request(repo, distribution, frozenset())
+    reconciliation = plan_reconciliation(request)
+    second = apply_reconciliation(ApplyRequest(request, reconciliation))
+    assert second.success, second.verification_findings
 
 
 def _legacy_cli_docs_repo(tmp_path: Path, *, extra_config: str = "") -> Path:

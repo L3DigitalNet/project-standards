@@ -646,6 +646,24 @@ def test_fix_file_already_valid_is_skipped(tmp_path: Path) -> None:
     assert "note-a3f9zk-tailscale-acl-gotcha" in f.read_text()  # unchanged
 
 
+def test_plan_fix_content_accepts_an_already_valid_adr_id() -> None:
+    raw = (
+        _FULL_FM.replace(
+            "id: 'old-kebab-id'",
+            "id: 'adr-0001-project-standards-use-postgres'",
+        )
+        .replace("doc_type: 'note'", "doc_type: 'adr'")
+        .encode()
+    )
+
+    updated, result = plan_fix_content(raw)
+
+    assert updated == raw
+    assert result.new_id is None
+    assert not result.is_adr
+    assert result.skip_reason == "id is already valid"
+
+
 def test_fix_file_adr_returns_none(tmp_path: Path) -> None:
     text = (
         "---\nschema_version: '1.1'\nid: 'bad-adr-id'\ntitle: 'Use Postgres'\n"

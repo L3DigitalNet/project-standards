@@ -143,7 +143,9 @@ def _existing_result(
     except ValueError as exc:
         raise ControlPlaneError("existing control plane is not canonical") from exc
     if actual != wanted:
-        raise ControlPlaneError("existing control plane describes different state")
+        raise ControlPlaneError(
+            "repository is already initialized with different desired or applied state"
+        )
     if not control.is_current():
         raise ControlPlaneError("control-plane directory changed during initialization")
     return InitializationResult(repo=repo, created=False)

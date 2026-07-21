@@ -10,6 +10,7 @@ the next planner can classify and repair the incomplete transition.
 from __future__ import annotations
 
 import base64
+import errno
 import hashlib
 import json
 import os
@@ -70,6 +71,9 @@ type FaultHook = Callable[[str, str], None]
 type VerificationRunner = Callable[[ProviderInvocation], ProviderResult]
 
 _MUTATING_ACTIONS = frozenset({ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE})
+_RECOGNIZED_EMPTY_LEGACY_DIRECTORIES = {
+    ".agents/agent-handoff/manifest.json": PurePosixPath(".agents/agent-handoff"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -881,6 +885,7 @@ def apply_reconciliation(request: ApplyRequest) -> ApplyResult:
 
 def _migration_plan_current(plan: LegacyMigrationPlan) -> bool:
     from project_standards.control_plane.migration import (
+        _dual_authority_findings,  # pyright: ignore[reportPrivateUsage]  # package-internal recovery boundary
         legacy_migration_content_fingerprint,
         plan_legacy_migration,
     )
@@ -930,7 +935,12 @@ def _migration_plan_current(plan: LegacyMigrationPlan) -> bool:
     if installed_lineage != expected_lineage:
         return False
     if (plan.repo / ".standards").exists() or (plan.repo / ".standards").is_symlink():
-        return True
+        return not _dual_authority_findings(
+            plan.repo,
+            config_content=plan.config_content,
+            catalog_content=plan.catalog_content,
+            lock_content=plan.lock_content,
+        )
     try:
         current = plan_legacy_migration(
             plan.repo,
@@ -1073,6 +1083,42 @@ def _remove_legacy(
             os.close(parent)
         applied.append(action.target)
         _fault(request, "removed", action.target)
+    for action in plan.legacy_removals:
+        directory = _RECOGNIZED_EMPTY_LEGACY_DIRECTORIES.get(action.target)
+        if directory is None:
+            continue
+        parent = _open_parent(root_descriptor, directory.parent, [])
+        descriptor: int | None = None
+        try:
+            try:
+                descriptor = os.open(
+                    directory.name,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    dir_fd=parent,
+                )
+            except FileNotFoundError:
+                continue
+            with os.scandir(descriptor) as entries:
+                if next(entries, None) is not None:
+                    continue
+            os.close(descriptor)
+            descriptor = None
+            try:
+                os.rmdir(directory.name, dir_fd=parent)
+            except OSError as exc:
+                if exc.errno in {errno.ENOTEMPTY, errno.EEXIST}:
+                    continue
+                raise
+            os.fsync(parent)
+        except OSError as exc:
+            raise _ApplyFailure(
+                "CP-MIGRATION-REMOVE",
+                "recognized empty legacy directory removal failed",
+            ) from exc
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            os.close(parent)
 
 
 def apply_legacy_migration(

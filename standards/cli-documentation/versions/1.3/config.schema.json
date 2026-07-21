@@ -14,6 +14,11 @@
 			"enum": ["referenced", "consumer-owned"],
 			"default": "referenced"
 		},
+		"usage_ownership": {
+			"type": "string",
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
 		"command_name": {
 			"anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }],
 			"default": null

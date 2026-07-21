@@ -41,16 +41,26 @@ The v5 tool keeps a warned read-only fallback for a repository that still has on
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
+- Inventory the standards the repository actually uses. A copy-adopted package with no legacy configuration namespace cannot be inferred from file presence alone; plan to enable it explicitly after the authority migration.
+- Search consumer-owned automation for legacy dependencies before apply:
+
+  ```bash
+  rg -n '\.project-standards\.yml|project-standards/.+@v[1-4]' .github scripts
+  ```
+
+  Package-known callers are retired by migration. Unrelated consumer-owned workflows are preserved, so update any matches they contain deliberately.
 
 Do not run plain `init` in a legacy repository; it correctly refuses split authority.
 
 ## 1. Preview the complete migration
 
-Run both human and JSON previews against the same repository bytes:
+Run both human and JSON previews against the same repository bytes. Keep the machine-readable report outside the repository so it cannot be mistaken for a migration output or committed accidentally:
 
 ```bash
+report=$(mktemp "${TMPDIR:-/tmp}/project-standards-migration.XXXXXX")
+trap 'rm -f -- "$report"' EXIT
 project-standards init --catalog 5 --migrate
-project-standards init --catalog 5 --migrate --json >migration-plan.json
+project-standards init --catalog 5 --migrate --json >"$report"
 ```
 
 Preview is read-only. Review every selected package, migrated option, recognized artifact, ownership transfer, planned output, finding, and legacy retirement action. Resolve before apply:
@@ -67,12 +77,23 @@ Rerun preview after each correction. Do not edit the repository between the acce
 
 | Finding | Meaning | Resolution |
 | --- | --- | --- |
-| `CP-MIGRATION-PLATFORM-VERSION` | `standards_version` is not a recognized platform tag. | Supported values are `"v3"` and `"v4"`; they name the same legacy wire format, and every released v3/v4 CLI wrote `"v3"`. Any other value must be corrected to one of the two before preview. |
+| `CP-MIGRATION-STATE` | The repository authority cannot be interpreted as one complete legacy migration input. | Read the accompanying detail before changing files. Remove neither authority. Repair the reported missing, partial, or conflicting control state, then rerun preview. If an earlier migration was interrupted, use the recovery procedure below. |
+| `CP-MIGRATION-CONFIG` | A migration provider mapped legacy settings to options the selected package does not accept. | Use the reported package, path, identity, and hint to correct the legacy value or select a compatible package. This finding blocks apply but does not suppress other migration findings. |
+| `CP-MIGRATION-PLATFORM-VERSION` | `standards_version` is absent or is not the recognized platform tag `"v3"` or `"v4"`. | Released repositories may contain a full tool release such as `"v4.3.0"`, or omit the key. Normalize either form to `standards_version: "v4"` before preview. The two accepted tags name the same legacy wire format. |
 | `CP-MIGRATION-UNCLAIMED-SETTING` | A legacy setting is not represented by any selected package. | Remove the unknown key from `.project-standards.yml`, or select the package that migrates it. |
-| `CP-MIGRATION-LEGACY-DIGEST`, `PT-LEGACY-MODIFIED`, `MT-LEGACY-MODIFIED` | A recognized file's bytes match no shipped package history. | For instruction and shared configuration targets (`CLAUDE.md`, `AGENTS.md`, `.editorconfig`, `.vscode/*`) this resolves automatically: the file is preserved and the preview reports `CP-MIGRATION-BOUNDED-TAKEOVER` instead. For a customized CI file, declare the matching ownership option as `"consumer-owned"` in `.project-standards.yml` before previewing: `workflow_ownership` under `python_tooling:` for `.github/workflows/check.yml`, `script_ownership` under `python_tooling:` for `scripts/check.py`, `lint_workflow_ownership` or `format_workflow_ownership` under `markdown_tooling:` for `.github/workflows/lint-markdown.yml` / `format.yml`, and `workflow_ownership` under `cli_documentation:` for `.github/workflows/cli-docs-check.yml`. Migration then preserves the customized file and leaves it consumer-owned. For any other recognized file, restore the released bytes (adopt again with the old CLI, or check the file out from history) and rerun preview. |
+| `CP-MIGRATION-LEGACY-DIGEST`, `PT-LEGACY-MODIFIED`, `MT-LEGACY-MODIFIED` | A recognized file's bytes match no shipped package history. | Instruction blocks and bounded JSON/JSONC/YAML units resolve automatically: consumer content outside the package-owned unit is preserved and the preview reports `CP-MIGRATION-BOUNDED-TAKEOVER`. Property-level conflicts inside `.editorconfig` and other semantic targets still block; use the reported identity to restore or remove only the conflicting property. For a customized whole-file target, declare its documented ownership option as `"consumer-owned"` in `.project-standards.yml` before previewing. Migration then preserves the bytes and leaves the file consumer-owned. Otherwise restore the released bytes (adopt again with the old CLI, or check the file out from history) and rerun preview. |
 | `CP-MIGRATION-BOUNDED-TAKEOVER` (warning) | Consumer-modified content at a bounded-managed target is preserved; the package takes over only its managed block or properties inside the file. | No action required to apply. After apply, review the preserved file and delete any superseded copy-adopt boilerplate the old release left behind. |
 | `CP-MIGRATION-OWNER-RESOLUTION` | A consumer-owned preservation claim is incomplete. | Ensure the legacy configuration supplies the literal `consumer-owned` value through the documented option (for example `python_tooling.workflow_ownership`) and rerun preview. |
-| `CP-CONSUMER-CONFLICT` | A pre-existing file value conflicts with a package-owned unit and no lock history explains it. | Align the conflicting value with the package value (or remove it) so the unit can be adopted, then rerun preview. |
+| `CP-CONSUMER-CONFLICT` | A pre-existing file value conflicts with a package-owned unit and no lock history explains it. | Use the reported path and semantic identity to find the owning option in the selected package's adoption guide. Align the value with that documented package value, or remove the consumer value so the package can create it, then rerun preview. Unrelated sibling values remain consumer-owned. |
+
+Python Tooling owns the selected `[build-system]`, but it does not claim `[tool.uv].package`. A repository that uses the tooling baseline without publishing an installable package can retain the managed backend while declaring:
+
+```toml
+[tool.uv]
+package = false
+```
+
+That consumer-owned setting survives reconciliation and tells uv not to build or install the project during ordinary environment synchronization.
 
 ## 2. Apply the reviewed migration
 
@@ -81,6 +102,22 @@ project-standards init --catalog 5 --migrate --apply
 ```
 
 Apply rechecks the inspected bytes, materializes package outputs, runs unified verification, publishes `.standards/lock.toml`, and only then removes `.project-standards.yml` and recognized package-specific locks. A stale plan, ambiguity, provider refusal, or verification failure preserves recoverable legacy authority and exits non-zero.
+
+When Agent Handoff is selected, run its size and shape reports before apply. Consumer-owned knowledge is preserved, but a pre-existing hard-cap violation in `docs/handoff/state.md` remains a validation error and must be routed to its durable owner rather than copied into the new eager state:
+
+```bash
+project-standards agent-handoff size-report --repo .
+project-standards agent-handoff shape-check --repo .
+```
+
+If apply is interrupted after unified files appear beside the legacy configuration, keep both authorities. Rerun the migration entry point: it recognizes only a sanctioned migration prefix, previews the recovery, and completes it on apply.
+
+```bash
+project-standards init --catalog 5 --migrate
+project-standards init --catalog 5 --migrate --apply
+```
+
+`reconcile --repair-state` is reserved for interrupted same-major catalog refreshes after legacy authority has already been retired.
 
 Review the result:
 
@@ -91,7 +128,16 @@ project-standards standards list
 project-standards reconcile --check
 ```
 
+If migration changed `pyproject.toml`, refresh the consumer dependency lock before the final reconcile check:
+
+```bash
+uv lock
+project-standards reconcile --check
+```
+
 Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and every reconciled output together.
+
+Enable any package identified in the pre-migration inventory that had no legacy configuration namespace, then preview and apply that package separately. Do not infer ownership by deleting or adopting copy-pasted files manually.
 
 ## 3. Review selectors and package options
 
@@ -102,6 +148,29 @@ Each enabled package has two separate version planes:
 
 Changing one does not silently change the other. Use `project-standards standards version` for the payload selector, edit only declared package options in `.standards/config.toml`, and preview with `reconcile` before apply.
 
+During legacy migration, ownership options belong under their package namespace in `.project-standards.yml`. The supported whole-file escapes are:
+
+```yaml
+python_tooling:
+  workflow_ownership: consumer-owned # .github/workflows/check.yml
+  script_ownership: consumer-owned # scripts/check.py
+markdown_tooling:
+  markdownlint_config_ownership: consumer-owned # .markdownlint.json
+  lint_workflow_ownership: consumer-owned # lint-markdown.yml
+  format_workflow_ownership: consumer-owned # format.yml
+cli_documentation:
+  workflow_ownership: consumer-owned # cli-docs-check.yml
+  usage_ownership: consumer-owned # docs/usage.md
+project_spec:
+  workflow_ownership: consumer-owned # validate-specs.yml
+```
+
+These are closed option sets; unrecognized keys produce `CP-MIGRATION-UNCLAIMED-SETTING`. The selected package adoption guides define the same keys for unified `.standards/config.toml` configuration.
+
+A stock workflow from an older package major can differ from the currently recognized migration signature even when nobody customized it. Treat that state explicitly: choose `consumer-owned` if the repository intends to retain the older workflow, or restore the current legacy package bytes before migrating to managed ownership. Do not label or discard the file as accidental drift.
+
+A relinquished target is intentionally absent from the action list because the resulting package has no ownership claim on it. The migrated option and unchanged target bytes are the confirmation: inspect both in the preview/post-apply review and keep the consumer-owned file in the repository's own verification scope.
+
 An exact selector remains pinned. `latest` follows only the compatible default or an explicitly accepted package-major track. Entering or leaving a non-default major requires the matching `--allow-major STANDARD_ID@MAJOR` and a declared migration path.
 
 ## 4. Verify provider-backed commands
@@ -111,13 +180,18 @@ Under unified authority, validators and authoring commands resolve the selected 
 Run the commands for the selected packages, including as applicable:
 
 ```bash
-project-standards validate
 project-standards fix
+project-standards reconcile --apply
+project-standards validate
 project-standards spec validate
 project-standards spec lint --strict
 project-standards agent-handoff validate --repo .
 project-standards agent-handoff drift-check --repo .
 ```
+
+Markdown Tooling's local `npx --no-install` checks require Node plus repository-local `prettier` and `markdownlint-cli2` installations. Install the consumer's declared Node dependencies first (`npm ci` when it has a lockfile); the managed GitHub callers provision their own tooling.
+
+`fix` can change files whose current digests participate in the central lock. Reconcile those reviewed changes before `validate`; otherwise validation correctly reports `CP-DRIFT` against the pre-fix lock.
 
 An explicit `--config .project-standards.yml` is now a legacy/debug-only path and is rejected under unified authority.
 

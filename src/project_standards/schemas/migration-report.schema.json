@@ -1,5 +1,38 @@
 {
   "$defs": {
+    "AdapterKind": {
+      "description": "Semantic container adapters supported by the V1 contribution contract.",
+      "enum": [
+        "whole-file",
+        "toml",
+        "json",
+        "jsonc",
+        "yaml",
+        "editorconfig",
+        "markdown-block"
+      ],
+      "title": "AdapterKind",
+      "type": "string"
+    },
+    "HistoricalUnit": {
+      "additionalProperties": false,
+      "description": "Declare one managed semantic unit present only in exact package history.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "adapter",
+        "scope"
+      ],
+      "title": "HistoricalUnit",
+      "type": "object"
+    },
     "JsonScalar": {
       "anyOf": [
         {
@@ -44,6 +77,14 @@
       "properties": {
         "disposition": {
           "$ref": "#/$defs/LegacyDisposition"
+        },
+        "historical_units": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HistoricalUnit"
+          },
+          "title": "Historical Units",
+          "type": "array"
         },
         "intent_pointer": {
           "anyOf": [

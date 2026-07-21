@@ -42,9 +42,9 @@ from tests.package_contract.helpers import copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
-_PAYLOAD = _FAMILY / "versions/1.2"
+_PAYLOAD = _FAMILY / "versions/1.3"
 _MARKDOWN_FAMILY = _ROOT / "standards/markdown-tooling"
-_MARKDOWN_PAYLOAD = _MARKDOWN_FAMILY / "versions/1.2"
+_MARKDOWN_PAYLOAD = _MARKDOWN_FAMILY / "versions/1.3"
 _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:2e38ae698e0a45f9afdde997ce2fa58c827f4bdb518e108ca9d0a1f22f278cc8"
 )
@@ -91,15 +91,15 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.2"
-payload = "versions/1.2/payload.toml"
+version = "1.3"
+payload = "versions/1.3/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
     )
     catalog_entries = f'''[[packages]]
 id = "project-spec"
-version = "1.2"
+version = "1.3"
 digest = "{payload.integrity.aggregate_digest.value}"
 role = "default"
 '''
@@ -122,8 +122,8 @@ summary = "Prettier and markdownlint with semantic editor configuration."
 status = "active"
 
 [[versions]]
-version = "1.2"
-payload = "versions/1.2/payload.toml"
+version = "1.3"
+payload = "versions/1.3/payload.toml"
 digest = "{markdown.integrity.aggregate_digest.value}"
 ''',
             encoding="utf-8",
@@ -131,7 +131,7 @@ digest = "{markdown.integrity.aggregate_digest.value}"
         catalog_entries += f'''
 [[packages]]
 id = "markdown-tooling"
-version = "1.2"
+version = "1.3"
 digest = "{markdown.integrity.aggregate_digest.value}"
 role = "default"
 '''
@@ -195,6 +195,7 @@ def test_project_spec_options_are_closed_and_explicit() -> None:
     assert schema.resolve_options({}) == {
         "contract_version": "1.1",
         "workflow_mode": "caller",
+        "workflow_ownership": "managed",
         "include_patterns": ["docs/specs/**/*.md"],
         "reference_prefixes": [],
         "default_profile": "standard",
@@ -326,7 +327,7 @@ def test_project_spec_v2_docs_describe_only_the_v5_control_plane() -> None:
         assert stale not in combined
     for expected in (
         ".standards/config.toml",
-        "project-standards standards enable project-spec --version 1.2",
+        "project-standards standards enable project-spec --version 1.3",
         "project-standards reconcile --apply",
         "include_patterns",
         "reference_prefixes",
@@ -663,6 +664,44 @@ def test_project_spec_migration_claims_only_its_semantic_config_block_and_workfl
     ] == [("legacy-workflow", ".github/workflows/validate-specs.yml")]
 
 
+def test_project_spec_migration__customized_workflow__relinquishes() -> None:
+    payload = _payload()
+    schema = load_option_schema(_PAYLOAD, payload.manifest)
+    assert schema.resolve_options({})["workflow_ownership"] == "managed"
+    contribution = payload.manifest.contributions[0]
+    assert [(condition.option, condition.equals) for condition in contribution.when_any] == [
+        ("workflow_ownership", "managed")
+    ]
+    signature = payload.manifest.legacy_signatures[0]
+    assert signature.consumer_owned_intent_pointer == "/spec/workflow_ownership"
+
+    result = _invoke(
+        "migrate-legacy",
+        ProviderOperation.MIGRATE,
+        snapshots={
+            "legacy_config": {
+                "spec": {
+                    "version": "1.0",
+                    "workflow_ownership": "consumer-owned",
+                }
+            },
+            "legacy_signatures": {
+                "legacy-workflow": {
+                    ".github/workflows/validate-specs.yml": {
+                        "known": False,
+                        "digest": f"sha256:{'c' * 64}",
+                    }
+                }
+            },
+        },
+    )
+
+    assert result.migration_report is not None
+    claim = result.migration_report.claims[0]
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer == "/spec/workflow_ownership"
+
+
 def test_project_spec_fresh_apply_second_apply_and_disable_converge(tmp_path: Path) -> None:
     distribution = _installed_distribution(tmp_path)
     repo = tmp_path / "consumer"
@@ -838,31 +877,31 @@ spec:
 def test_project_spec_provider_uses_resources_from_the_selected_payload_version(
     tmp_path: Path,
 ) -> None:
-    newer_root = tmp_path / "project-spec/versions/1.3"
+    newer_root = tmp_path / "project-spec/versions/1.4"
     shutil.copytree(_PAYLOAD, newer_root)
     template = newer_root / "templates/spec-light-template.md"
-    marker = "\n<!-- payload-version-1.3 -->\n"
+    marker = "\n<!-- payload-version-1.4 -->\n"
     template.write_text(template.read_text(encoding="utf-8") + marker, encoding="utf-8")
     template_digest = hashlib.sha256(template.read_bytes()).hexdigest()
     input_schema = newer_root / "schemas/provider-input.schema.json"
     input_schema.write_text(
         input_schema.read_text(encoding="utf-8").replace(
-            '"version": { "const": "1.2" }',
             '"version": { "const": "1.3" }',
+            '"version": { "const": "1.4" }',
         ),
         encoding="utf-8",
     )
     input_digest = hashlib.sha256(input_schema.read_bytes()).hexdigest()
     manifest_path = newer_root / "payload.toml"
     manifest_text = manifest_path.read_text(encoding="utf-8")
-    manifest_text = manifest_text.replace('version = "1.2"', 'version = "1.3"', 1)
-    manifest_text = manifest_text.replace('to = "package:1.2"', 'to = "package:1.3"')
+    manifest_text = manifest_text.replace('version = "1.3"', 'version = "1.4"', 1)
+    manifest_text = manifest_text.replace('to = "package:1.3"', 'to = "package:1.4"')
     manifest_text = manifest_text.replace(
         "sha256:3692873eec9a6f98fc1b64bbb0b0d3ecf807d365a8102305aa5b195c859d8571",
         f"sha256:{template_digest}",
     )
     manifest_text = manifest_text.replace(
-        "sha256:476a2c9b7a2192667013c28fa7d79fd090958a1284286bb53db4f980d7cf804c",
+        "sha256:5753c04ab2bcad1b7569c777f639a809e75f6a8f1d88ccd87be5af4726ca165d",
         f"sha256:{input_digest}",
     )
     manifest_path.write_text(manifest_text, encoding="utf-8")
@@ -922,8 +961,8 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.2"
-payload = "versions/1.2/payload.toml"
+version = "1.3"
+payload = "versions/1.3/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -955,7 +994,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/project-spec/1.2/"
+    prefix = "project_standards/payloads/project-spec/1.3/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)

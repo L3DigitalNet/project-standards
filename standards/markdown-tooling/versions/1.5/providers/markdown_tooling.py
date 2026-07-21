@@ -183,6 +183,7 @@ def _instructions(config: Mapping[str, object]) -> str:
     markdown_globs = _globs(config, "markdown_globs")
     config_globs = _globs(config, "config_globs")
     lines = [
+        "<!-- markdownlint-disable MD025 -->",
         "# Markdown and structured-text tooling",
         "",
         "Prettier owns physical formatting and markdownlint owns Markdown structure. Do not add overlapping tools.",
@@ -200,7 +201,13 @@ def _instructions(config: Mapping[str, object]) -> str:
                 f"- `{exclusion.get('glob')}` ({exclusion.get('applies_to')}): "
                 f"{exclusion.get('reason')}"
             )
-    lines.extend(["", "Run the enabled checks before claiming completion."])
+    lines.extend(
+        [
+            "",
+            "Run the enabled checks before claiming completion.",
+            "<!-- markdownlint-enable MD025 -->",
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -296,6 +303,8 @@ def _verify(
     if config.get(f"{tool}_workflow_ownership") == "consumer-owned":
         workflow_name = "lint-markdown" if tool == "lint" else "format"
         expected.pop(f".github/workflows/{workflow_name}.yml", None)
+    if tool == "lint" and config.get("markdownlint_config_ownership") == "consumer-owned":
+        expected.pop(".markdownlint.json", None)
     findings: list[dict[str, str]] = []
     for path, digest in expected.items():
         observed = snapshots.get(path)
@@ -385,7 +394,9 @@ def run_migrate(
     config: dict[str, object] = {}
     recognized: list[str] = []
     if "version" in namespace:
-        config["contract_version"] = namespace["version"]
+        config["contract_version"] = (
+            "1.1" if namespace["version"] == "1.0" else namespace["version"]
+        )
         recognized.append("/markdown_tooling/version")
     # Relinquishable caller signatures: the pointed-at per-caller ownership
     # setting lets migration preserve an unrecognized consumer customization
@@ -394,6 +405,7 @@ def run_migrate(
     for option, signature_id in (
         ("lint_workflow_ownership", "legacy-lint-caller"),
         ("format_workflow_ownership", "legacy-format-caller"),
+        ("markdownlint_config_ownership", "legacy-markdownlint-config"),
     ):
         if option in namespace:
             config[option] = namespace[option]
@@ -462,7 +474,7 @@ def run_migrate(
             )
     # Relinquished workflows carry no mode evidence: the package stops managing
     # them, so a partially recognized self-hosted pair must not block migration.
-    if not relinquished:
+    if not (_WORKFLOW_SIGNATURE_IDS & relinquished.keys()):
         observed_workflow_cohort = frozenset(workflow_observations)
         if observed_workflow_cohort in _SELF_HOST_WORKFLOW_COHORTS:
             config["workflow_mode"] = "self-hosted"

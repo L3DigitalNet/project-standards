@@ -49,6 +49,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/agent-handoff"
 _PAYLOAD = _FAMILY / "versions/1.1"
 _PAYLOAD_1_2 = _FAMILY / "versions/1.2"
+_PAYLOAD_1_3 = _FAMILY / "versions/1.3"
 
 
 def _payload_at(root: Path) -> InstalledPayload:
@@ -62,6 +63,10 @@ def _payload() -> InstalledPayload:
 
 def _payload_1_2() -> InstalledPayload:
     return _payload_at(_PAYLOAD_1_2)
+
+
+def _payload_1_3() -> InstalledPayload:
+    return _payload_at(_PAYLOAD_1_3)
 
 
 def _options_for(payload: InstalledPayload, **overrides: object) -> JsonObject:
@@ -366,6 +371,20 @@ def test_agent_handoff_profile_renders_bounded_active_integrations() -> None:
     )
     assert "BEGIN project-standards:agent-handoff" in instructions
     assert "BEGIN agent-handoff managed instructions" not in instructions
+
+
+def test_agent_handoff_instructions__singleton_h1__is_markdownlint_bounded() -> None:
+    payload = _payload_1_3()
+    instructions = _render(
+        "AGENTS.md",
+        AdapterKind.MARKDOWN_BLOCK,
+        "block:agent-handoff",
+        _options_for(payload),
+        payload=payload,
+    )
+
+    assert "<!-- markdownlint-disable MD025 -->\n# Agent Handoff" in instructions
+    assert "<!-- markdownlint-enable MD025 -->" in instructions
 
 
 def test_agent_handoff_fresh_reconcile_preserves_knowledge_and_converges(tmp_path: Path) -> None:

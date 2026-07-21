@@ -1,0 +1,1 @@
+../../../../../standards/project-spec/versions/1.3/adopt.md

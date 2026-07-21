@@ -22,28 +22,28 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:89822f546c0d6de0499ce476e2b0f08a4f30d60d1a84f198681ccf2013299b5e"
+digest = "sha256:21cade030405eb8b42110df7e1dca4edbf8eaa48d8fd6705d1da003ab2bd71b9"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:66dfb186c33904e03ba69e590366c788135a132929dced98e053f74e043293c4"
+digest = "sha256:301eb289563a75cabaf2f28c339f8fd8b02fb6adec619f5afae5aa38fa87d09e"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:4308089e323df01e56c1fcc2725c67b83c2c8d7c8daa4c008e84fe69243ceab2"
+digest = "sha256:9f09ffb9b62521aaee79fdc94c79da33a1a58c69c3efa3fc3e6c7cfef7d3fc74"
 
 [[resources]]
 id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:fcce78b1fb1944d96847dca2f58f9778769162c7bcefc70c43d5cf111f868232"
+digest = "sha256:e849af8e21a73256457ed65a0f187df7d5df9eca7dcfd29f9fae56bc86de5976"
 
 [[resources]]
 id = "markdownlint-source"
@@ -106,7 +106,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:66672168232880651548c7131c9d4b8c48609da9856665249b8b73440655d953"
+digest = "sha256:18d22f892d87bd7d1f45c9a86c3dbf93ff9788a9553c410932156bfc1d8b27ca"
 
 [[resources]]
 id = "provider-input"
@@ -142,6 +142,7 @@ target = ".markdownlint.json"
 source = "artifacts/markdownlint.json"
 digest = "sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"
 policy = "managed"
+when_any = [{ option = "markdownlint_config_ownership", equals = "managed" }]
 
 [[artifacts]]
 id = "prettier-config"
@@ -469,6 +470,7 @@ id = "legacy-markdownlint-config"
 kind = "whole-file"
 targets = [".markdownlint.json"]
 known_content_digests = ["sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"]
+consumer_owned_intent_pointer = "/markdown_tooling/markdownlint_config_ownership"
 
 [[legacy_signatures]]
 id = "legacy-prettier-config"

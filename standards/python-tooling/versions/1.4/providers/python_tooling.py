@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shlex
 from collections.abc import Mapping, Sequence
 from typing import cast
@@ -96,8 +97,18 @@ def _dependencies(config: Mapping[str, object]) -> str:
     additional = config.get("additional_dev_dependencies")
     if not isinstance(additional, Sequence) or isinstance(additional, str | bytes):
         raise ValueError("config.additional_dev_dependencies must be an array")
-    values.extend(cast("Sequence[str]", additional))
+    seen = {_dependency_name(value) for value in values}
+    for value in cast("Sequence[str]", additional):
+        name = _dependency_name(value)
+        if name not in seen:
+            values.append(value)
+            seen.add(name)
     return "[dependency-groups]\ndev = " + _toml_array(values)
+
+
+def _dependency_name(requirement: str) -> str:
+    name = re.split(r"[\[<>=!~;@]", requirement, maxsplit=1)[0]
+    return re.sub(r"[-_.]+", "-", name).lower()
 
 
 def _ruff_table(config: Mapping[str, object]) -> str:
@@ -414,8 +425,13 @@ def _setting(scope: str, config: Mapping[str, object]) -> object:
 
 def _task(scope: str, config: Mapping[str, object]) -> dict[str, object]:
     checker, _mode = _checker(config)
+    check_command = (
+        "uv run python scripts/check.py"
+        if config.get("script_ownership") == "consumer-owned"
+        else " && ".join(_command_text(command) for command in _local_commands(config))
+    )
     command_by_label = {
-        "check": " && ".join(_command_text(command) for command in _local_commands(config)),
+        "check": check_command,
         "fix": "uv run ruff format . && uv run ruff check . --fix",
         "test": "uv run pytest",
         "typecheck": f"uv run {checker}",
@@ -457,8 +473,10 @@ def _instructions(config: Mapping[str, object]) -> str:
     return (
         "<!-- prettier-ignore-start -->\n\n"
         "<!-- BEGIN project-standards:python-tooling -->\n"
+        "<!-- markdownlint-disable MD025 -->\n"
         "# Python tooling\n\n"
         f"{body}\n"
+        "<!-- markdownlint-enable MD025 -->\n"
         "<!-- END project-standards:python-tooling -->\n\n"
         "<!-- prettier-ignore-end -->\n"
     )

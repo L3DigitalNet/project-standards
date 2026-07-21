@@ -39,6 +39,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.2"
+_CURRENT_PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.5"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _HISTORICAL_SELF_HOST_FORMAT_DIGEST = (
     "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
@@ -59,6 +60,35 @@ _CURRENT_SELF_HOST_LINT_DIGEST = (
 def _payload() -> InstalledPayload:
     manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
     return InstalledPayload(_PAYLOAD, manifest, validate_payload_integrity(_PAYLOAD, manifest))
+
+
+def _current_payload() -> InstalledPayload:
+    manifest = load_payload_manifest(_CURRENT_PAYLOAD / "payload.toml")
+    return InstalledPayload(
+        _CURRENT_PAYLOAD,
+        manifest,
+        validate_payload_integrity(_CURRENT_PAYLOAD, manifest),
+    )
+
+
+def _current_invocation(
+    provider_id: str,
+    operation: ProviderOperation,
+    config: JsonObject,
+    *,
+    snapshots: JsonObject | None = None,
+) -> ProviderInvocation:
+    payload = _current_payload()
+    return ProviderInvocation(
+        repo=_CURRENT_PAYLOAD,
+        payload=payload,
+        standard_id="markdown-tooling",
+        version=payload.manifest.payload.version,
+        provider_id=provider_id,
+        operation=operation,
+        effective_config=config,
+        snapshots=snapshots or {},
+    )
 
 
 def _invocation(
@@ -1132,6 +1162,160 @@ def test_markdown_tooling_customized_callers_block_without_relinquishment(
         ".github/workflows/lint-markdown.yml",
         ".github/workflows/format.yml",
     }
+
+
+def test_markdown_tooling_migration__legacy_contract_1_0__normalizes_to_1_1() -> None:
+    result = invoke_provider(
+        _current_invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {"markdown_tooling": {"version": "1.0"}},
+                "legacy_signatures": {},
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    assert result.migration_report.package.config["contract_version"] == "1.1"
+
+
+def test_markdown_tooling_instructions__singleton_h1__is_markdownlint_bounded() -> None:
+    payload = _current_payload()
+    schema = load_option_schema(_CURRENT_PAYLOAD, payload.manifest)
+    result = invoke_provider(
+        _current_invocation(
+            "render-semantic",
+            ProviderOperation.RENDER,
+            schema.resolve_options({}),
+            snapshots={
+                "planned_contribution": {
+                    "id": "agents-instructions",
+                    "target": "AGENTS.md",
+                    "adapter": "markdown-block",
+                    "scope": "block:markdown-tooling",
+                }
+            },
+        )
+    )
+
+    assert result.content is not None
+    rendered = result.content.decode()
+    assert "<!-- markdownlint-disable MD025 -->\n# Markdown" in rendered
+    assert "<!-- markdownlint-enable MD025 -->" in rendered
+
+
+def test_markdown_tooling_migration__customized_markdownlint_config__relinquishes() -> None:
+    payload = _current_payload()
+    schema = load_option_schema(_CURRENT_PAYLOAD, payload.manifest)
+    assert schema.resolve_options({})["markdownlint_config_ownership"] == "managed"
+    signature = next(
+        item
+        for item in payload.manifest.legacy_signatures
+        if item.id == "legacy-markdownlint-config"
+    )
+    assert signature.consumer_owned_intent_pointer == (
+        "/markdown_tooling/markdownlint_config_ownership"
+    )
+
+    result = invoke_provider(
+        _current_invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {
+                    "markdown_tooling": {
+                        "version": "1.1",
+                        "markdownlint_config_ownership": "consumer-owned",
+                    }
+                },
+                "legacy_signatures": {
+                    "legacy-markdownlint-config": {
+                        ".markdownlint.json": {
+                            "known": False,
+                            "digest": f"sha256:{'a' * 64}",
+                        }
+                    }
+                },
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    claim = result.migration_report.claims[0]
+    assert claim.ownership == "consumer-owned"
+    assert claim.intent_pointer == "/markdown_tooling/markdownlint_config_ownership"
+
+
+def test_markdown_tooling_migration__config_relinquishment__keeps_workflow_mode_evidence() -> None:
+    result = invoke_provider(
+        _current_invocation(
+            "migrate-legacy",
+            ProviderOperation.MIGRATE,
+            {},
+            snapshots={
+                "legacy_config": {
+                    "markdown_tooling": {
+                        "version": "1.1",
+                        "markdownlint_config_ownership": "consumer-owned",
+                    }
+                },
+                "legacy_signatures": {
+                    "legacy-format-caller": {
+                        ".github/workflows/format.yml": {
+                            "known": True,
+                            "digest": _CURRENT_SELF_HOST_FORMAT_DIGEST,
+                        }
+                    },
+                    "legacy-lint-caller": {
+                        ".github/workflows/lint-markdown.yml": {
+                            "known": True,
+                            "digest": _CURRENT_SELF_HOST_LINT_DIGEST,
+                        }
+                    },
+                    "legacy-markdownlint-config": {
+                        ".markdownlint.json": {
+                            "known": False,
+                            "digest": f"sha256:{'d' * 64}",
+                        }
+                    },
+                },
+            },
+        )
+    )
+
+    assert result.migration_report is not None
+    assert result.migration_report.package.config["workflow_mode"] == "self-hosted"
+
+
+def test_markdown_tooling_migration__consumer_owned_markdownlint__applies_and_verifies(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.5")
+    repo = _released_v4_markdown_repo(tmp_path)
+    legacy = repo / ".project-standards.yml"
+    legacy.write_text(
+        legacy.read_text(encoding="utf-8") + '  markdownlint_config_ownership: "consumer-owned"\n',
+        encoding="utf-8",
+    )
+    markdownlint = repo / ".markdownlint.json"
+    customized = markdownlint.read_bytes() + b"\n"
+    markdownlint.write_bytes(customized)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    result = apply_legacy_migration(plan)
+    assert result.success, result.verification_findings
+    assert markdownlint.read_bytes() == customized
+
+    request = build_planner_request(repo, distribution, frozenset())
+    reconciliation = plan_reconciliation(request)
+    second = apply_reconciliation(ApplyRequest(request, reconciliation))
+    assert second.success, second.verification_findings
+    assert markdownlint.read_bytes() == customized
 
 
 def test_markdown_tooling_instruction_block_is_prettier_stable(tmp_path: Path) -> None:

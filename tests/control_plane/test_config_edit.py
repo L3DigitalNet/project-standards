@@ -285,6 +285,12 @@ def test_standards_list_and_show_include_catalog_desired_and_applied_state(
     assert listed["standards"][0]["resolved"] is None
     assert listed["standards"][1]["selectable"] is False
 
+    assert run(["list", "--repo", str(tmp_path)]) == 0
+    human = capsys.readouterr().out
+    assert "alpha  enabled  selectable  available=1.0,2.0  default=1.0" in human
+    assert "internal-notes  disabled  internal  available=1.0  default=-" in human
+    assert "reference-guide  disabled  reference-only  available=1.0  default=-" in human
+
     assert run(["show", "alpha", "--repo", str(tmp_path), "--json"]) == 0
     shown = json.loads(capsys.readouterr().out)
     assert shown["standard"]["available"] == ["1.0", "2.0"]

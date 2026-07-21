@@ -1,14 +1,14 @@
 # Markdown Frontmatter Standard
 
-This is the Catalog 5 family landing page for the active consumer package `markdown-frontmatter@1.3`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `markdown-frontmatter@1.4`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Markdown Frontmatter 1.3 standard](versions/1.3/README.md) — normative metadata, ID, and validation contract
-- [Markdown Frontmatter 1.3 adoption guide](versions/1.3/adopt.md) — exact options, outputs, migration, and verification
+- [Markdown Frontmatter 1.4 standard](versions/1.4/README.md) — normative metadata, ID, and validation contract
+- [Markdown Frontmatter 1.4 adoption guide](versions/1.4/adopt.md) — exact options, outputs, migration, and verification
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Markdown Frontmatter 1.3 agent summary](versions/1.3/agent-summary.md) — compact authoring and validation rules
-- [Structure requirements](versions/1.3/structure.md) and [field-value policy](versions/1.3/field-values.md) — detailed document contract
+- [Markdown Frontmatter 1.4 agent summary](versions/1.4/agent-summary.md) — compact authoring and validation rules
+- [Structure requirements](versions/1.4/structure.md) and [field-value policy](versions/1.4/field-values.md) — detailed document contract
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
@@ -30,4 +30,4 @@ Review [adopt.md](adopt.md) before applying. Configure the managed corpus, exclu
 
 ## Legacy boundary
 
-Unversioned root references, templates, examples, V1 copy-adopt artifacts, and `.project-standards.yml` configuration are migration or compatibility evidence only. They do not define current Catalog 5 behavior. Use the exact `versions/1.3/` payload for normative requirements and reusable resources.
+Unversioned root references, templates, examples, V1 copy-adopt artifacts, and `.project-standards.yml` configuration are migration or compatibility evidence only. They do not define current Catalog 5 behavior. Use the exact `versions/1.4/` payload for normative requirements and reusable resources.

@@ -6,11 +6,69 @@ from pathlib import Path
 import pytest
 
 from project_standards.control_plane.adapters.base import AdapterUnit, UnitChange
-from project_standards.control_plane.adapters.jsonc import JsonAdapter, JsoncAdapter
+from project_standards.control_plane.adapters.jsonc import (
+    JsonAdapter,
+    JsoncAdapter,
+    format_fresh_json_container,
+)
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
-from project_standards.package_contract.payload import JsonObject
+from project_standards.package_contract.payload import AdapterKind, JsonObject
 
 _FIXTURES = Path(__file__).parent / "fixtures/jsonc"
+
+
+@pytest.mark.parametrize("kind", [AdapterKind.JSON, AdapterKind.JSONC])
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        (
+            b'{"items":[{"a":1,"b":2},{"c":3,"d":4}]}',
+            (b'{\n\t"items": [\n\t\t{ "a": 1, "b": 2 },\n\t\t{ "c": 3, "d": 4 }\n\t]\n}\n'),
+        ),
+        (
+            (
+                b'{"gZPXmJB":{"iThSQEcirppz":'
+                b'"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"},'
+                b'"tail":[1,2,3]}'
+            ),
+            (
+                b'{\n\t"gZPXmJB": { "iThSQEcirppz": '
+                b'"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },\n'
+                b'\t"tail": [1, 2, 3]\n}\n'
+            ),
+        ),
+        (
+            b'[[true,{"k0_98":true}],true]',
+            b'[[true, { "k0_98": true }], true]\n',
+        ),
+        (
+            b'{"a":[{"x":1}]}',
+            b'{ "a": [{ "x": 1 }] }\n',
+        ),
+        (
+            b"[[1,2],[3,4]]",
+            b"[\n\t[1, 2],\n\t[3, 4]\n]\n",
+        ),
+        (
+            b'{"a":[{},{}]}',
+            b'{ "a": [{}, {}] }\n',
+        ),
+        (
+            b'[42,{}, {},"xxxxxxxxxxxxxx"]',
+            b'[42, {}, {}, "xxxxxxxxxxxxxx"]\n',
+        ),
+        (
+            ('{"a":"' + "界" * 75 + '"}').encode(),
+            b'{\n\t"a": "' + b"\\u754c" * 75 + b'"\n}\n',
+        ),
+    ],
+)
+def test_fresh_json_formatter_matches_prettier_nested_groups(
+    kind: AdapterKind,
+    content: bytes,
+    expected: bytes,
+) -> None:
+    assert format_fresh_json_container(content, kind) == expected
 
 
 def _fixture(name: str) -> bytes:

@@ -110,6 +110,8 @@ Options:
 
 Safety: `fix` writes to disk (frontmatter reformatting and id rewrites are in-place, atomic, mode-preserving). It skips entirely, with a note on standard error and exit 0, when a custom schema is in use (via `--schema <path>` or a selected package/legacy config schema path) — custom-schema repos own their own id and format conventions.
 
+In a unified repository, review the fix and run `project-standards reconcile --apply` before the final `validate`. A fix can change a file whose digest is recorded in the central lock; validating against the old lock correctly reports `CP-DRIFT`.
+
 Exit status: `0` success (or skipped under a custom schema) · `1` findings remain after the fix · `2` operator error (missing/broken config).
 
 ### `init`
@@ -129,6 +131,8 @@ Options:
 - **`--json`** — In plain-init mode, emit the created/idempotent state and exact three-file inventory. In migration mode, emit the complete package reports, findings, reconciliation plan, and apply result without proposed file content.
 
 Always run migration preview first, resolve every unknown version, modified signature, overlapping claim, or unclassified artifact, and rerun the preview against unchanged bytes before apply. Error findings block apply; `CP-MIGRATION-BOUNDED-TAKEOVER` is a warning that records preserved consumer-modified content at a bounded-managed target and does not block. [UPGRADING.md](../UPGRADING.md#resolve-common-preview-findings) documents each preview finding and its resolution. Apply stages the unified files and package outputs, verifies the complete state, publishes the central lock, and only then retires `.project-standards.yml` and recognized package locks. A stale preview or failed verification preserves recoverable legacy authority.
+
+Migration preview always exits 1 because it is an actionable, unapplied plan. Supplying `--apply` to a blocked plan emits the same plan and findings without writing; it is not a partial apply. Human findings include their severity, path, semantic identity, and remediation hint. JSON preview is the stable machine-readable form. Neither form publishes proposed file content; inspect the reviewed post-apply diff before committing.
 
 The command is idempotent only when all three existing files describe the same neutral state or the requested migration is already complete. Plain init refuses legacy YAML, partial state, symlinks, or different content. During v5, legacy-only validation remains a warned read-only compatibility path; v6 removes that fallback, so migration is the required upgrade boundary.
 
@@ -154,6 +158,8 @@ Options:
 - **`--json`** — Emit stable plan, action, finding, recovery, or apply fields without proposed file content.
 
 The default mode displays the plan. Exit 1 means drift, a conflict, an authorization refusal, or a recoverable apply failure. Exit 2 means the command or control authority is invalid.
+
+Plan verbs are `create`, `adopt`, `update`, `remove`, `preserve`, and `no-op`. `preserve` means the observed consumer bytes remain unchanged. An edit to an already-created create-only scaffold is consumer state and does not churn its locked installation evidence. A genuine lock-metadata-only change still exits 1 even when no target mutation is listed; human output identifies the lock path and the required reconcile apply. A clean `validate` is silent, while a clean `reconcile` prints its explicit reconciled-state confirmation.
 
 Exit status: `0` reconciled or apply succeeded · `1` drift/findings/apply failure · `2` invocation, authority, package, or filesystem boundary error.
 
@@ -320,6 +326,8 @@ List the complete committed catalog with desired and applied summaries.
 project-standards standards list [--repo <dir>] [--json]
 ```
 
+Text output includes selection availability, advertised versions, the default, desired selector, and applied version. Use `standards show <standard>` for its configuration-path facts, or `standards list --json` for the complete machine-readable inventory.
+
 ### `standards show`
 
 Show catalog, desired, applied, and configuration-path facts for one standard.
@@ -335,6 +343,8 @@ Enable a consumer-selectable standard and optionally set its desired selector. T
 ```text
 project-standards standards enable <standard> [--version <latest|major.minor>] [--repo <dir>] [--json]
 ```
+
+When `--version` is omitted, the desired selector is `latest`; resolution then uses the catalog's compatible default package-major track.
 
 ### `standards disable`
 
@@ -653,6 +663,8 @@ uv run project-standards validate README.md docs/adr.md --no-require-frontmatter
 
 ```bash
 uv run project-standards fix
+uv run project-standards reconcile --apply
+uv run project-standards validate
 ```
 
 ### Preview a V4 migration without writing anything

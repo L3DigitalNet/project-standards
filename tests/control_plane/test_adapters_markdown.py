@@ -268,6 +268,40 @@ def test_markdown_rejects_inline_or_ambiguous_marker_layouts(content: bytes) -> 
         MarkdownBlockAdapter().inspect(content, ("block:x",))
 
 
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"# Existing heading (project-standards: python-tooling)\n",
+        b"Literal project-standards: prose remains consumer-owned.\n",
+    ],
+)
+def test_markdown_inspect__ordinary_marker_text__preserves_consumer_prose(
+    content: bytes,
+) -> None:
+    state = MarkdownBlockAdapter().inspect(content, ("block:x",))
+
+    assert state.content == content
+    assert state.units == ()
+
+
+def test_markdown_render__ordinary_marker_text__accepts_managed_body() -> None:
+    adapter = MarkdownBlockAdapter()
+    state = adapter.inspect(b"Consumer prose.\n", ("block:x",))
+
+    rendered = adapter.render(
+        state,
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                "block:x",
+                content=b"Use the project-standards: command namespace.\n",
+            ),
+        ),
+    )
+
+    assert b"Use the project-standards: command namespace.\n" in rendered
+
+
 def test_markdown_rejects_duplicate_block_ids() -> None:
     envelope = (
         b"<!-- prettier-ignore-start -->\n\n"

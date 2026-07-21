@@ -403,6 +403,19 @@
           "default": null,
           "title": "After Digest"
         },
+        "after_mode": {
+          "anyOf": [
+            {
+              "pattern": "^0[0-7]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Mode"
+        },
         "before_digest": {
           "anyOf": [
             {
@@ -414,6 +427,19 @@
           ],
           "default": null,
           "title": "Before Digest"
+        },
+        "before_mode": {
+          "anyOf": [
+            {
+              "pattern": "^0[0-7]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before Mode"
         },
         "kind": {
           "$ref": "#/$defs/ActionKind"

@@ -323,12 +323,34 @@ def _tree_snapshot(repo: Path) -> dict[str, tuple[str, bytes | str, int]]:
 
 
 def _consumer_snapshot(repo: Path) -> dict[str, tuple[str, bytes | str, int]]:
-    """Snapshot outputs whose bytes must survive disable and re-enable."""
+    """Snapshot outputs that must survive disable and re-enable."""
     return {
         path: value
         for path, value in _tree_snapshot(repo).items()
         if path != ".standards/lock.toml"
     }
+
+
+def _lifecycle_comparable(
+    path: str,
+    value: tuple[str, bytes | str, int],
+) -> tuple[str, bytes | str, int]:
+    kind, content, mode = value
+    if kind != "regular" or not isinstance(content, bytes):
+        return value
+    if not path.endswith((".json", ".jsonc")):
+        return value
+    # Migration preserves existing JSON-family lexical bytes while the target
+    # remains adopted. After a complete disable removes a fully managed file,
+    # no lexical source remains; re-enablement guarantees equivalent JSON and
+    # formatter-compatible fresh bytes rather than reconstructing old layout.
+    canonical = json.dumps(
+        _jsonc_value(content),
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+    return (kind, canonical, mode)
 
 
 def _apply(repo: Path, distribution: InstalledDistribution) -> ReconciliationPlan:
@@ -500,12 +522,12 @@ def _exercise_enabled_lifecycle(
     _assert_consumer_sentinels(repo, sentinels)
     consumer_paths = {sentinel.path for sentinel in sentinels}
     expected = {
-        path: value
+        path: _lifecycle_comparable(path, value)
         for path, value in applied.items()
         if path != ".standards/lock.toml" and path not in consumer_paths
     }
     actual = {
-        path: value
+        path: _lifecycle_comparable(path, value)
         for path, value in _consumer_snapshot(repo).items()
         if path not in consumer_paths
     }

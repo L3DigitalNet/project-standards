@@ -89,36 +89,78 @@ Real released consumers blocked, or every adopter's CI broken, with no documente
 
 ## Implications for the 5.3.0 release
 
-The relinquishment fix is sound, but three verified blockers remain at `e69831f`: B1 stops five real consumers before preview (and its unguarded exception path suppresses all other diagnostics), B2 stops any consumer whose agent files mention `project-standards:` in prose, and B3 puts every new adopter's CI red on first push. M5/M6 continue the issue #12/#13 pattern for `.markdownlint.json`, the project-spec workflow, and the usage doc. Decision required before release: expand 5.3.0 scope to cover the blockers (B1 is an engine guard + provider mapping fix; B3 is a provider serialization fix), or ship as-is and file them. The docs residue belongs in 5.3.0 release prep either way.
+At `e69831f`, the relinquishment fix was sound but the three verified blockers remained: B1 stopped five real consumers before preview (and its unguarded exception path suppressed all other diagnostics), B2 stopped consumers whose agent files mentioned `project-standards:` in prose, and B3 put new adopters' CI red on first push. M5/M6 continued the issue #12/#13 pattern for `.markdownlint.json`, the project-spec workflow, and the usage doc. The owner held the release and selected the expanded 5.3.0 remediation recorded below.
 
-## Appendix: unverified singleton findings
+## Remediation outcome
 
-Unique findings reported by one or two scenarios that were not individually re-verified. Treat severities as reported, not confirmed.
+The held 5.3.0 candidate now addresses every audit finding. Released 5.2 payload directories remain byte-identical; compatible successor payloads carry consumer-visible package changes. The engine and package changes each received an independent no-findings re-review after corrections. The repository's Catalog 5 dogfood state was regenerated from the released 5.2 baseline into the amended 5.3.0 candidate.
 
-| Finding | Severity | Scenario(s) |
-| --- | --- | --- |
-| Converged fresh adoption immediately fails `validate`: agent-handoff's own generated scaffolds lack required frontmatter (M2-adjacent, different package) | major | fresh-l3digital |
-| Documented resolution for the pyproject dev dependency-group conflict does not clear it (note: the Sonnet pyproject verifier resolved a dev-group conflict successfully in another repo, so this may be reporter error) | major | fresh-network-infra-schema |
-| Migration leaves a consumer-authored workflow that reads `.project-standards.yml` untouched — orphaned automation beyond the managed caller (M1-adjacent) | major | agent-configs |
-| V4 copy-adopted ADR standard silently drops out of governance during migration | docs | docmend |
-| Where package options (for example the `*_ownership` keys) go in the legacy YAML during migration is undocumented, as is the accepted key set | docs | agent-configs, control-center |
-| Stock-but-older-major released CI bytes (v2-era callers, `@v3` pins) hit the legacy-digest block with guidance written only for "customized" files | docs | agent-handoff-v3, control-center |
-| UPGRADING.md claims `.editorconfig` customizations "resolve automatically", but property-level conflicts still hard-block | docs | agent-pseudocode-cli-owned |
-| Relinquished consumer-owned files are silently absent from the migration plan instead of being explicitly confirmed as preserved | docs | agent-pseudocode-cli-owned |
-| UPGRADING.md omits the `uv.lock` refresh required after migration rewrites the dev dependency group | docs | agent-configs, docmend |
-| UPGRADING step-4 `agent-handoff validate` fails on pre-existing consumer content (byte caps), the error buried under ~300 warnings; migrated AGENTS.md itself exceeds the 4096-byte cap; elsewhere hard-cap violations warn but exit 0 | docs | homelab, doc-proc-scripts, claude-code-plugins, docmend, fresh-l3digital |
-| Recovery from a half-applied migration works but is entirely undocumented | docs | network-infrastructure |
-| markdown-tooling verify commands assume `markdownlint-cli2`/`prettier` are installed; no doc says how | docs | fresh-network-infra-schema |
-| `standards enable` defaulting to latest, the reconcile preview exit-1 contract, and the plan verb `preserve` are undocumented | docs | fresh-l3digital, fresh-claudecodestatusline |
-| No content diff for composed targets before apply; preview shows only digests and unit counts | minor | agent-configs, fresh-network-infra-schema |
-| Bare `CP-STALE-PLAN` (divergent pre-existing `.standards/` beside legacy YAML) is undocumented; the dual-authority state reports an unrelated package-options error | minor | cc-usage-monitor, claude-code-plugins |
-| Plan metadata oddities: boilerplate per-action summaries; `.standards/{config,catalog,lock}.toml` creation never listed; no-op actions report `before_digest != after_digest`; `before_digest` does not match observed pre-migration bytes | minor | cc-usage-monitor, markdown-keeper, website-aboutme |
-| `fix` and `validate` disagree: `fix` demands manual ADR-id repairs that `validate` accepts, and prints "skipped" then "formatted" for the same file | minor | agent-pseudocode, network-infrastructure, fresh-claudecodestatusline |
-| Migration creates `scripts/check.py` in a repo that never had one and whose consumer-owned CI never calls it | minor | agent-handoff-v3 |
-| Managed VS Code "check" task is rewritten to inline commands even with `script_ownership = consumer-owned` | minor | agent-configs |
-| ADR template created at fixed `docs/adr/` path, ignoring the repo's `docs/decisions/` layout | minor | control-center |
-| `python_version` option couples the interpreter pin and lint/type targets in one knob | minor | control-center |
-| Duplicate `CP-MIGRATION-BOUNDED-TAKEOVER` warning emitted twice for `.editorconfig` in one plan | minor | control-center-relinquish |
-| `standards list` text output shows no versions, defaults, or selectability; reference-only families indistinguishable from consumer-selectable ones | minor | fresh-claudecodestatusline |
-| `init --catalog 5` on an already-adopted repo gives a terse error with no diagnosis | minor | fresh-claudecodestatusline |
-| Apply reports fewer actions than the preview plan listed (adopts not counted) | minor | fresh-claudecodestatusline |
+Final local verification used one freshly built and extracted 5.3.0 wheel: 3,030 ordinary tests, all 80 catalog-derived compatibility rows, 5 performance tests, 90% branch coverage, strict Ruff/BasedPyright checks, all package graph/schema/projection/catalog gates, 8 coherence tests, and `pip-audit` pass.
+
+### Verified blockers and majors
+
+| Finding | Disposition |
+| --- | --- |
+| B1 | Fixed. Migration normalizes the released Markdown Tooling 1.0 legacy contract to 1.1. Invalid provider configuration produces an inapplicable `CP-MIGRATION-CONFIG` plan while retaining all accumulated findings instead of escaping through a second resolution pass. |
+| B2 | Fixed. Markdown marker recognition is bounded to actual managed-marker syntax; ordinary `project-standards:` prose no longer produces `CP-MALFORMED-CONTAINER`. |
+| B3 | Fixed. Fresh JSON/JSONC targets use deterministic formatter-compatible rendering. Existing consumer lexical bytes remain untouched outside managed changes. A deterministic 10,000-value oracle reached a Prettier 3.8.3 fixed point with zero mismatches. |
+| M1 | Fixed conservatively. Migration packages may declare exact known historical YAML units. The Project Specification migration retires only the released legacy job signature, preserves unrelated jobs, and blocks unknown or modified candidates. |
+| M2 | Fixed. CLI Documentation 1.3 now emits a schema-valid typed usage-document ID and exposes `usage_ownership`; Markdown Frontmatter 1.4 excludes declared package templates, harness instructions, workflows, and handoff state/TODO from consumer frontmatter enforcement. |
+| M3 | Fixed. Create-only byte drift produces a path-bearing diagnostic while genuine lock-only drift remains distinguishable. No-op and lock-only apply summaries now describe what happened. |
+| M4 | Fixed. Agent Handoff 1.3, Markdown Tooling 1.5, and Python Tooling 1.4 wrap their bounded H1 blocks with local MD025 directives. The reconciled root instruction files use the same managed bytes. |
+| M5 | Fixed. Markdown Tooling 1.5 adds `markdownlint_config_ownership`; consumer-owned lint configuration is preserved and excluded from package verification without suppressing self-hosted workflow inference. |
+| M6 | Fixed. Project Specification 1.3 adds `workflow_ownership`, and CLI Documentation 1.3 adds `usage_ownership`; both relinquish only the selected target while preserving consumer bytes. |
+| M7 | Fixed in the runbook. The documented sequence now runs `reconcile --apply` after authoring fixes and refreshes `uv.lock` when dependency-group changes require it. |
+| M8 | Fixed. Human findings include severity, concrete path, identity, and hint; internal `$file`/`$target` scopes are hidden; duplicate human warnings are collapsed while JSON retains source provenance. |
+
+### Corrected, by-design, and minor findings
+
+| Finding group | Final disposition |
+| --- | --- |
+| Platform-version history | Documentation corrected to describe absent keys and full released tags and to give the exact normalization. |
+| Non-package Python consumers | `[tool.uv] package = false` is now documented as the supported escape while the bounded package-owned tables retain align-or-remove semantics. |
+| Typed frontmatter IDs | By design. The existing fix path remains authoritative and is now placed in the complete post-migration sequence. |
+| Release banners and version pins | By design. They remain release-commit changes under `meta/versioning.md`, not candidate-remediation changes. |
+| Zero matched specification files | By design. `spec validate` and `spec lint` retain their non-vacuous exit contract. |
+| Refused migration apply | Fixed. Human and JSON output explicitly identify the refusal and report that no writes occurred. |
+| Missing conflict values and option location | Fixed. The migration table and package-option map document the relevant values, ownership keys, and placement. |
+| Hidden retirement actions | Fixed. Blocked previews retain safe conditional legacy-retirement actions with complete control-file metadata and comparable content digests. Apply still refuses every write while blocked. |
+| Temporary report file | Fixed. The runbook writes the report to a temporary path and includes cleanup. |
+| Successful validation silence | Documented as success behavior. |
+| Misleading no-op apply message | Fixed with distinct no-op, lock-only, and mutation summaries. |
+| Duplicate coverage dependency | Fixed by deterministic dependency de-duplication. |
+| Alphabetical generated-workflow keys | By design. Deterministic semantic YAML is the contract; key order is not. |
+| Empty legacy Agent Handoff directory | Fixed. The directory is pruned only after known manifest retirement and only when empty. |
+| Undeclared template exclusion | Fixed. The default and migration exclusions are declared in the package schema and adoption documentation. |
+
+## Appendix: singleton finding dispositions
+
+The original singleton inventory was independently checked during remediation. Every item is either fixed, documented, or closed as an explicit contract choice.
+
+| Finding | Final disposition |
+| --- | --- |
+| Agent Handoff scaffolds fail frontmatter validation | Fixed by Agent Handoff 1.3 plus the declared Frontmatter 1.4 exclusions. |
+| Dev dependency-group remedy fails | Not reproduced. The align-or-remove route is covered by real provider and reconciliation tests; `uv lock` is now explicit. |
+| Arbitrary consumer workflow still reads legacy config | Documented inventory responsibility; the exact known managed workflow unit is safely retired by M1. |
+| Copy-adopted ADR drops from governance | Fixed in documentation: ADR validation is an explicit package-enable choice. |
+| Package-option placement and key set absent | Fixed in the migration option map. |
+| Older-major stock CI described as customized | Fixed: guidance now distinguishes released historical bytes, consumer customization, and ownership relinquishment. |
+| `.editorconfig` said to resolve automatically | Fixed: documentation now describes property-level conflicts and align-or-remove behavior. |
+| Relinquished files absent from preview | Fixed: preserve actions and human summaries explicitly identify retained consumer-owned files. |
+| Missing `uv.lock` refresh | Fixed in the runbook. |
+| Agent Handoff caps and warning volume | Fixed in documentation: hard-cap semantics, pre-existing-content handling, and targeted commands are explicit. |
+| Half-applied recovery undocumented | Fixed. `init --migrate` is the migration recovery route; `reconcile --repair-state` remains limited to incomplete unified-control state. |
+| Local Markdown tool prerequisites absent | Fixed. Node/npm installation and local `npx` requirements are explicit. |
+| Enable default, preview exit, and `preserve` verb absent | Fixed in `docs/usage.md` and `UPGRADING.md`. |
+| No raw content diff in preview | By design for bounded output and secret safety; comparable before/after digests, modes, identities, and summaries are provided. |
+| Stale dual-authority plan and misleading error | Fixed. Only exact known control-file prefixes qualify as interrupted migration, and stale plan metadata is rejected at apply time. |
+| Plan metadata and control-file actions inaccurate | Fixed. Control actions, content digests, modes, summaries, and counts reflect the actual before/after state. |
+| ADR fix disagrees with validate | Fixed. Valid ADR IDs are accepted before the invalid-ADR manual branch, and output no longer reports contradictory actions. |
+| Unused generated `scripts/check.py` | By design. It is the package's local gate artifact and has independent ownership from consumer CI. |
+| VS Code check ignores script ownership | Fixed. The managed task delegates to the consumer-owned script. |
+| ADR scaffold path fixed at `docs/adr/` | By design and explicitly documented by the ADR package. |
+| `python_version` controls interpreter and tool targets | By design: one baseline prevents internally inconsistent generated tooling. |
+| Duplicate bounded-takeover warning | Fixed in human output; JSON retains distinct provenance records. |
+| `standards list` lacks selection facts | Fixed. Text output shows enablement, availability/selectability, default, requested, and resolved versions. |
+| Re-running `init` lacks diagnosis | Fixed with `CP-INIT-STATE` and actionable routing. |
+| Apply action count differs from preview | Fixed. Summaries count adopted, updated, removed, preserved, and lock publication consistently. |

@@ -13,6 +13,10 @@
 			"enum": ["managed", "consumer-owned"],
 			"default": "managed"
 		},
+		"markdownlint_config_ownership": {
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
 		"lint": { "type": "boolean", "default": true },
 		"format": { "type": "boolean", "default": true },
 		"ci": {

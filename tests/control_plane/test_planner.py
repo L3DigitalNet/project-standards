@@ -122,19 +122,84 @@ def test_planner_composes_complete_virtual_tree_and_next_lock(tmp_path: Path) ->
     assert (repo / "tools/alpha.py").exists() is False
 
 
+@pytest.mark.parametrize("adapter", ["json", "jsonc"])
+def test_fresh_json_family_target_is_prettier_clean(
+    tmp_path: Path,
+    adapter: str,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "demo",
+        "demo",
+        contributions=[
+            {
+                "id": "tasks",
+                "target": ".vscode/tasks.json",
+                "adapter": adapter,
+                "scope": "key:/tasks",
+                "content": (
+                    b'{"tasks":[{"label":"Project standards: check","type":"shell",'
+                    b'"command":"uv run project-standards reconcile --check",'
+                    b'"problemMatcher":[]}]}'
+                ),
+            }
+        ],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+
+    assert plan.applicable
+    assert plan.proposed_content(".vscode/tasks.json") == (
+        b'{\n\t"tasks": [\n\t\t{\n\t\t\t"label": "Project standards: check",\n'
+        b'\t\t\t"type": "shell",\n\t\t\t"command": '
+        b'"uv run project-standards reconcile --check",\n'
+        b'\t\t\t"problemMatcher": []\n\t\t}\n\t]\n}\n'
+    )
+
+
+def test_true_noop_action_uses_comparable_content_digests(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "demo",
+        "demo",
+        contributions=[
+            {
+                "id": "setting",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/tool/enabled",
+                "content": b'{"tool": {"enabled": true}}\n',
+            }
+        ],
+    )
+    initial = plan_reconciliation(_request(repo, (payload,)))
+    content = initial.proposed_content("settings.json")
+    (repo / "settings.json").write_bytes(content)
+
+    settled = plan_reconciliation(_request(repo, (payload,), lock=initial.next_lock))
+
+    action = _action(settled, "settings.json")
+    assert action.kind is ActionKind.NOOP
+    assert action.before_digest == digest(content)
+    assert action.after_digest == digest(content)
+
+
 @pytest.mark.parametrize(
-    ("case", "expected"),
+    ("case", "expected", "expected_summary"),
     [
-        ("adopt", ActionKind.ADOPT),
-        ("update", ActionKind.UPDATE),
-        ("repair", ActionKind.CREATE),
-        ("no-op", ActionKind.NOOP),
+        ("adopt", ActionKind.ADOPT, "adopt matching managed units"),
+        ("update", ActionKind.UPDATE, "update managed units in target"),
+        ("repair", ActionKind.CREATE, "create composed target"),
+        ("no-op", ActionKind.NOOP, "target already matches managed units"),
     ],
 )
 def test_whole_file_lifecycle_classification(
     tmp_path: Path,
     case: str,
     expected: ActionKind,
+    expected_summary: str,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -166,7 +231,9 @@ def test_whole_file_lifecycle_classification(
     plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
 
     assert plan.applicable
-    assert _action(plan, "tool.txt").kind is expected
+    action = _action(plan, "tool.txt")
+    assert action.kind is expected
+    assert expected_summary in action.summary
 
 
 def test_whole_file_mode_only_change_is_an_update(tmp_path: Path) -> None:
@@ -201,7 +268,10 @@ def test_whole_file_mode_only_change_is_an_update(tmp_path: Path) -> None:
     plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
 
     assert plan.applicable
-    assert _action(plan, "tool.sh").kind is ActionKind.UPDATE
+    action = _action(plan, "tool.sh")
+    assert action.kind is ActionKind.UPDATE
+    assert action.before_mode == "0644"
+    assert action.after_mode == "0755"
     assert plan.targets[0].mode == "0755"
 
 
@@ -257,8 +327,6 @@ def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
     installed = b"installed\n"
     edited = b"consumer edit\n"
     path = repo / "usage.md"
-    path.write_bytes(edited)
-    path.chmod(0o644)
     payload = write_payload(
         tmp_path / "payload",
         "demo",
@@ -271,17 +339,10 @@ def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
             }
         ],
     )
-    locked = locked_unit(
-        path="usage.md",
-        adapter="whole-file",
-        scope="$file",
-        owners=["demo"],
-        semantic_digest=digest(installed),
-        content_digest=digest(installed),
-        created_container=True,
-    )
-    locked["policy"] = "create-only"
-    lock = previous_lock(locked)
+    initial = plan_reconciliation(_request(repo, (payload,)))
+    path.write_bytes(initial.proposed_content("usage.md"))
+    path.write_bytes(edited)
+    lock = initial.next_lock
     resolution = resolution_request((payload,), previous_lock=lock)
     if not enabled:
         desired = resolution.desired.model_copy(
@@ -303,6 +364,8 @@ def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
     assert plan.findings == ()
     assert _action(plan, "usage.md").kind is ActionKind.PRESERVE
     assert plan.proposed_content("usage.md") == edited
+    if enabled:
+        assert plan.next_lock == lock
 
 
 def test_preexisting_create_only_file_is_preserved_without_a_lock(tmp_path: Path) -> None:
@@ -529,7 +592,12 @@ def test_disabled_package_removes_created_and_preserves_adopted_file(
     plan = plan_reconciliation(request)
 
     expected = ActionKind.REMOVE if created else ActionKind.PRESERVE
-    assert _action(plan, "tool.txt").kind is expected
+    action = _action(plan, "tool.txt")
+    assert action.kind is expected
+    expected_summary = (
+        "remove managed target" if created else "preserve consumer bytes outside managed changes"
+    )
+    assert expected_summary in action.summary
 
 
 def test_disabled_package_with_already_missing_target_only_updates_lock(
@@ -689,7 +757,7 @@ def test_provider_output_extension_input_and_package_local_output_are_planned(
     )
 
     assert plan.applicable
-    assert plan.proposed_content("settings.json") == b'{"generated": 7}\n'
+    assert plan.proposed_content("settings.json") == b'{ "generated": 7 }\n'
     assert plan.proposed_content(".standards/packages/demo/state.txt") == b"state\n"
     assert len(plan.next_lock.referenced_inputs) == 1
     assert plan.next_lock.referenced_inputs[0].digest.value == digest(extension.read_bytes())
@@ -936,4 +1004,4 @@ def test_canonical_order_controls_placement_never_value_selection(tmp_path: Path
         )
         assert tuple((item.target, item.content) for item in plan.targets) == baseline_bytes
 
-    assert baseline.proposed_content("settings.json") == b'{"alpha": 1, "zeta": 2}\n'
+    assert baseline.proposed_content("settings.json") == b'{ "alpha": 1, "zeta": 2 }\n'

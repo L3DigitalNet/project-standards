@@ -1,0 +1,550 @@
+schema_version = "1.0"
+
+[payload]
+standard = "agent-handoff"
+version = "1.3"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = [
+  "agent-handoff.drift-check",
+  "agent-handoff.extract",
+  "agent-handoff.scaffold",
+  "agent-handoff.session-context",
+  "agent-handoff.upgrade",
+  "agent-handoff.validate",
+]
+consumes_platform = ["project-standards.authoring", "project-standards.reconcile"]
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:265b9156f4193584ca481d27de36a2967fc5c77d671f0e91e628d0a5f012f5f9"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:5d8ab47c8368df27d285ea172ec1818baa71e4f120c7ac39d4f62d892616dc7a"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:98df5346f92d7756f4d08058775a25008bdb0ff06ad604635332933158dc6723"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:19a4c4f83d7dd8f72a648f53539e3f16929aa5ff24af48ba601fb33925574fec"
+
+[[resources]]
+id = "legacy-guidance"
+role = "standard-reference"
+path = "resources/legacy-migration.md"
+media_type = "text/markdown"
+digest = "sha256:1f0845b67c52f17f7004435351e5e19e3cb4e7c91ea6b3607e1bd55ed0786773"
+
+[[resources]]
+id = "legacy-instructions-source"
+role = "legacy-reference"
+path = "resources/integration/agent-instructions.md"
+media_type = "text/markdown"
+digest = "sha256:e05e5ca8e6b12c946a7c09108ca5a554e0055b1d466d94eba7c08fc5e6017cbf"
+
+[[resources]]
+id = "legacy-claude-source"
+role = "legacy-reference"
+path = "resources/integration/claude-session-start.json"
+media_type = "application/json"
+digest = "sha256:401eca3e1e0ab74f6b6c7db55a1177c819f68cde4c365bd5fd57ff207279ef03"
+
+[[resources]]
+id = "legacy-codex-source"
+role = "legacy-reference"
+path = "resources/integration/codex-session-start.toml"
+media_type = "application/toml"
+digest = "sha256:f955891c08bd8924f978e9494d2616f00874291da01c22ddad2b97bce4d18ada"
+
+[[resources]]
+id = "legacy-config-source"
+role = "legacy-reference"
+path = "resources/integration/project-config.yml"
+media_type = "application/yaml"
+digest = "sha256:5877cc343ba653cd52d36de2b5213b55d2774c177afdcf886177c965482dd0df"
+
+[[resources]]
+id = "hook"
+role = "provider-resource"
+path = "provider-resources/managed/hook.py"
+media_type = "text/x-python"
+digest = "sha256:db2aad1965561c9d491eff3dc99520768bc4b3f89c2ee7e15ac922381bf15780"
+
+[[resources]]
+id = "skill"
+role = "provider-resource"
+path = "provider-resources/managed/skill.md"
+media_type = "text/markdown"
+digest = "sha256:946542a565303426fd4b28d1b138fadde942bd43c00e26bf06f77f9f1a553896"
+
+[[resources]]
+id = "skill-openai"
+role = "provider-resource"
+path = "provider-resources/managed/openai.yaml"
+media_type = "application/yaml"
+digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
+
+[[resources]]
+id = "policy"
+role = "provider-resource"
+path = "provider-resources/managed/policy.toml"
+media_type = "application/toml"
+digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
+
+[[resources]]
+id = "template-status"
+role = "template"
+path = "provider-resources/templates/STATUS.md"
+media_type = "text/markdown"
+digest = "sha256:c8d09bffbe11fc4fb7fe8ab436d1dddfb7833e841c66f61a736801bb34006c43"
+
+[[resources]]
+id = "template-todo"
+role = "template"
+path = "provider-resources/templates/TODO.md"
+media_type = "text/markdown"
+digest = "sha256:1cbe5a4895c15c42f7a4099530c9e3e7b1cd68fd1ce7b6b53f3d0756c41b32b2"
+
+[[resources]]
+id = "template-architecture"
+role = "template"
+path = "provider-resources/templates/architecture.md"
+media_type = "text/markdown"
+digest = "sha256:fd220a05318e64291f586c751f72ec88009f3f41588765c6e62bd04ca442ec44"
+
+[[resources]]
+id = "template-bugs-keep"
+role = "template"
+path = "provider-resources/templates/bugs.gitkeep"
+media_type = "text/plain"
+digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+
+[[resources]]
+id = "template-conventions"
+role = "template"
+path = "provider-resources/templates/conventions.md"
+media_type = "text/markdown"
+digest = "sha256:7422c934d55aef47ab16c07fae4970a138b3536e6eaced8e2de7c80c2d37ca5e"
+
+[[resources]]
+id = "template-credentials"
+role = "template"
+path = "provider-resources/templates/credentials.md"
+media_type = "text/markdown"
+digest = "sha256:309b0ce0ee61d8dbf9df30b7cb0f1690ca560c3015cc1827b50a497b10596cbe"
+
+[[resources]]
+id = "template-deployed"
+role = "template"
+path = "provider-resources/templates/deployed.md"
+media_type = "text/markdown"
+digest = "sha256:ed162b739e68d633f4f866619eccf369bc89e1ed702762d5a850814049254730"
+
+[[resources]]
+id = "template-sessions-keep"
+role = "template"
+path = "provider-resources/templates/sessions.gitkeep"
+media_type = "text/plain"
+digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+
+[[resources]]
+id = "template-specs-plans"
+role = "template"
+path = "provider-resources/templates/specs-plans.md"
+media_type = "text/markdown"
+digest = "sha256:3deae94b64e50060346f27a46b4e1141d3a72337433f7a9afdcf6744326e7fda"
+
+[[resources]]
+id = "template-state"
+role = "template"
+path = "provider-resources/templates/state.md"
+media_type = "text/markdown"
+digest = "sha256:b7b6297cb69f1620b39366f27185a539e6902a4124102a132a9ffe7aa32bb780"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/agent_handoff.py"
+media_type = "text/x-python"
+digest = "sha256:d0dc5cf9315b11cc22c34bcb2ed157f1bdc15f21f9966feb07d2dccaf91a2fd0"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:45b57ee04d83be7b6cd369b9414b570ba4b927d0f84c5f4ab8a315134555ca9f"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b283a32e612daa98b218bab151ecb1c91ac32b2558038e491f95dae4f8042206"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:caa57b52481e734fed06c9e07de74dfbfd2c954ceaa63233e129d479f74d8fa5"
+
+[[resources]]
+id = "provider-mutation-plan"
+role = "provider-resource"
+path = "schemas/mutation-plan.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:8c4fa5da614ef247d9f21d58f2a4bc533ed7b8205cb8221f1559c9893fdd57fd"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:39d997193b74c3d5d6085fbbefcc989e474164541c92034971e207bea4bbb1ed"
+
+[[artifacts]]
+id = "status"
+target = "docs/STATUS.md"
+source = "templates/STATUS.md"
+digest = "sha256:c8d09bffbe11fc4fb7fe8ab436d1dddfb7833e841c66f61a736801bb34006c43"
+policy = "create-only"
+
+[[artifacts]]
+id = "todo"
+target = "docs/TODO.md"
+source = "templates/TODO.md"
+digest = "sha256:1cbe5a4895c15c42f7a4099530c9e3e7b1cd68fd1ce7b6b53f3d0756c41b32b2"
+policy = "create-only"
+
+[[artifacts]]
+id = "architecture"
+target = "docs/handoff/architecture.md"
+source = "templates/handoff/architecture.md"
+digest = "sha256:fd220a05318e64291f586c751f72ec88009f3f41588765c6e62bd04ca442ec44"
+policy = "create-only"
+
+[[artifacts]]
+id = "bugs-keep"
+target = "docs/handoff/bugs/.gitkeep"
+source = "templates/handoff/bugs/.gitkeep"
+digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+policy = "create-only"
+
+[[artifacts]]
+id = "conventions"
+target = "docs/handoff/conventions.md"
+source = "templates/handoff/conventions.md"
+digest = "sha256:7422c934d55aef47ab16c07fae4970a138b3536e6eaced8e2de7c80c2d37ca5e"
+policy = "create-only"
+
+[[artifacts]]
+id = "credentials"
+target = "docs/handoff/credentials.md"
+source = "templates/handoff/credentials.md"
+digest = "sha256:309b0ce0ee61d8dbf9df30b7cb0f1690ca560c3015cc1827b50a497b10596cbe"
+policy = "create-only"
+
+[[artifacts]]
+id = "deployed"
+target = "docs/handoff/deployed.md"
+source = "templates/handoff/deployed.md"
+digest = "sha256:ed162b739e68d633f4f866619eccf369bc89e1ed702762d5a850814049254730"
+policy = "create-only"
+
+[[artifacts]]
+id = "sessions-keep"
+target = "docs/handoff/sessions/.gitkeep"
+source = "templates/handoff/sessions/.gitkeep"
+digest = "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+policy = "create-only"
+
+[[artifacts]]
+id = "specs-plans"
+target = "docs/handoff/specs-plans.md"
+source = "templates/handoff/specs-plans.md"
+digest = "sha256:3deae94b64e50060346f27a46b4e1141d3a72337433f7a9afdcf6744326e7fda"
+policy = "create-only"
+
+[[artifacts]]
+id = "state"
+target = "docs/handoff/state.md"
+source = "templates/handoff/state.md"
+digest = "sha256:b7b6297cb69f1620b39366f27185a539e6902a4124102a132a9ffe7aa32bb780"
+policy = "create-only"
+
+[[artifacts]]
+id = "hook"
+target = ".agents/hooks/agent-handoff/session_start.py"
+source = "hooks/session-start/session_start.py"
+digest = "sha256:db2aad1965561c9d491eff3dc99520768bc4b3f89c2ee7e15ac922381bf15780"
+policy = "managed"
+mode = "0755"
+when_any = [{ option = "startup", equals = "automatic" }]
+
+[[artifacts]]
+id = "skill"
+target = ".agents/skills/agent-handoff/SKILL.md"
+source = "skills/agent-handoff/SKILL.md"
+digest = "sha256:946542a565303426fd4b28d1b138fadde942bd43c00e26bf06f77f9f1a553896"
+policy = "managed"
+
+[[artifacts]]
+id = "skill-openai"
+target = ".agents/skills/agent-handoff/agents/openai.yaml"
+source = "skills/agent-handoff/agents/openai.yaml"
+digest = "sha256:1b78fb94b81aad4df0bbf149a6d4c47b887fbe31e19818723bde5579ec33413c"
+policy = "managed"
+
+[[artifacts]]
+id = "policy"
+target = ".standards/packages/agent-handoff/policy.toml"
+source = "resources/policy.toml"
+digest = "sha256:ca67fa9232375073d9dec834af6053057f31069ca83054e61948d2738a6e3e92"
+policy = "managed"
+
+[[contributions]]
+id = "agents-instructions"
+target = "AGENTS.md"
+adapter = "markdown-block"
+scope = "block:agent-handoff"
+policy = "managed"
+provider = "render-semantic"
+when_any = [
+  { option = "startup", equals = "manual" },
+  { option = "harnesses", contains = "codex" },
+]
+
+[[contributions]]
+id = "claude-instructions"
+target = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:agent-handoff"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "harnesses", contains = "claude-code" }]
+
+[[contributions]]
+id = "claude-session-start"
+target = ".claude/settings.json"
+adapter = "jsonc"
+scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "harnesses", contains = "claude-code" }]
+
+[[contributions]]
+id = "codex-session-start"
+target = ".codex/config.toml"
+adapter = "toml"
+scope = "keyed-set:/hooks/SessionStart#matcher=startup|resume|clear|compact"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "harnesses", contains = "codex" }]
+
+[[providers]]
+id = "render-semantic"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_semantic"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = []
+
+[[providers]]
+id = "validate"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["hook", "policy", "skill", "skill-openai"]
+
+[[providers]]
+id = "verify"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["hook", "policy", "skill", "skill-openai"]
+
+[[providers]]
+id = "drift-check"
+operation = "drift-check"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_drift_check"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["hook", "policy", "skill", "skill-openai"]
+
+[[providers]]
+id = "extract"
+operation = "extract"
+kind = "python"
+phase = "inspect"
+effect = "content"
+entrypoint = "payload:provider-code#run_extract"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = []
+
+[[providers]]
+id = "scaffold"
+operation = "scaffold"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_scaffold"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = [
+  "template-architecture",
+  "template-bugs-keep",
+  "template-conventions",
+  "template-credentials",
+  "template-deployed",
+  "template-sessions-keep",
+  "template-specs-plans",
+  "template-state",
+  "template-status",
+  "template-todo",
+]
+
+[[providers]]
+id = "upgrade"
+operation = "upgrade"
+kind = "python"
+phase = "authoring"
+effect = "mutation-plan"
+entrypoint = "payload:provider-code#run_upgrade"
+input_schema = "provider-input"
+output_schema = "provider-mutation-plan"
+resources = ["hook", "skill", "skill-openai"]
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-agent-handoff"
+
+[[migrations]]
+id = "legacy-v4-to-1-2"
+from = "legacy:v4-agent-handoff"
+to = "package:1.3"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "artifact:architecture",
+  "artifact:bugs-keep",
+  "artifact:conventions",
+  "artifact:credentials",
+  "artifact:deployed",
+  "artifact:hook",
+  "artifact:policy",
+  "artifact:sessions-keep",
+  "artifact:skill",
+  "artifact:skill-openai",
+  "artifact:specs-plans",
+  "artifact:state",
+  "artifact:status",
+  "artifact:todo",
+  "config:*",
+  "contribution:agents-instructions",
+  "contribution:claude-instructions",
+  "contribution:claude-session-start",
+  "contribution:codex-session-start",
+]
+signatures = [
+  "legacy-codex-hook",
+  "legacy-instructions",
+  "legacy-package-lock",
+  "legacy-project-config",
+]
+
+[[legacy_signatures]]
+id = "legacy-instructions"
+kind = "bounded-block"
+format = "markdown"
+targets = ["AGENTS.md", "CLAUDE.md"]
+begin = "<!-- BEGIN agent-handoff managed instructions -->"
+end = "<!-- END agent-handoff managed instructions -->"
+known_content_digests = [
+  "sha256:697c62d5be9c07c4406101051d1aafd933df4b4e8011002f8d5e8de656c947ee",
+  "sha256:8598a7759d6b9c95704ee73d03de1cfff44bedf898615d320563a493a7850da8",
+]
+
+[[legacy_signatures]]
+id = "legacy-codex-hook"
+kind = "bounded-block"
+format = "toml"
+targets = [".codex/config.toml"]
+begin = "# BEGIN agent-handoff managed codex hook"
+end = "# END agent-handoff managed codex hook"
+known_content_digests = ["sha256:5bbb4848ed60e24a978b4e4a5623e00db276d20d2f200abfa5ed72492680fb8e"]
+
+[[legacy_signatures]]
+id = "legacy-project-config"
+kind = "bounded-block"
+format = "yaml"
+targets = [".project-standards.yml"]
+begin = "# BEGIN agent-handoff managed config"
+end = "# END agent-handoff managed config"
+known_content_digests = [
+  "sha256:1e23766230993c78ffb51d05ccade6292b6687f3b16b82b92ec5a9919ed0596e",
+  "sha256:3ac59127bca763c52f69bcced13b931fb8645c5750688f6161f277ee6392618f",
+  "sha256:76e336572e00bacac96bc694285c389c442a23e3e94aab6b986c0917e7544c11",
+  "sha256:c175f7d83ba2f3bf83f2e54038bac409a939ef1eb4a33588daf71895107e7449",
+]
+
+[[legacy_signatures]]
+id = "legacy-package-lock"
+kind = "whole-file"
+targets = [".agents/agent-handoff/manifest.json"]
+known_content_digests = [
+  "sha256:b0e3db69ac1acbbc0ed39669f6f7a5b3bb044c5a51229eb8fea8320153e39559",
+  "sha256:b7330de4186a1616fb6e528702cceeac2ce18805642cdaece82ffcf2226e92e1",
+  "sha256:bef73fff73f2f51134bbd6a9e1065c0ea65719b67840f716df97202c64ffd11d",
+  "sha256:ffd53c214b260fb55c9d0ac1b4dc40f6b2238dc40de37bae4427b5f2962634d4",
+]

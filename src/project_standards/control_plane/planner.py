@@ -28,7 +28,10 @@ from project_standards.control_plane.adapters import (
     YamlAdapter,
 )
 from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
-from project_standards.control_plane.adapters.jsonc import container_value_without_comments
+from project_standards.control_plane.adapters.jsonc import (
+    container_value_without_comments,
+    format_fresh_json_container,
+)
 from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
 from project_standards.control_plane.codec import content_digest, render_catalog, semantic_digest
 from project_standards.control_plane.diagnostics import (
@@ -1050,6 +1053,7 @@ def _target_action(
     adapter: AdapterKind,
     rendered: bytes,
     units: tuple[PlannedUnit, ...],
+    mode: str | None,
     remove_container: bool = False,
 ) -> ControlAction:
     if entry.kind is EntryKind.MISSING:
@@ -1076,15 +1080,30 @@ def _target_action(
         or (kind is ActionKind.NOOP and entry.kind is EntryKind.MISSING)
         else content_digest(rendered).value
     )
+    summaries = {
+        ActionKind.CREATE: "create composed target",
+        ActionKind.ADOPT: "adopt matching managed units",
+        ActionKind.UPDATE: "update managed units in target",
+        ActionKind.PRESERVE: "preserve consumer bytes outside managed changes",
+        ActionKind.REMOVE: "remove managed target",
+        ActionKind.NOOP: "target already matches managed units",
+    }
     return ControlAction(
         kind=kind,
         target=entry.path.original,
         adapter=adapter.value,
         scope="$target",
         standard_id="project-standards",
-        summary=f"{kind.value} reconciled target from {len(units)} semantic unit(s)",
-        before_digest=entry.precondition_digest.value,
+        summary=f"{summaries[kind]} ({len(units)} semantic unit(s))",
+        before_digest=(entry.content_digest.value if entry.content_digest is not None else None),
         after_digest=after,
+        before_mode=(entry.mode if entry.kind is EntryKind.REGULAR else None),
+        after_mode=(
+            None
+            if kind is ActionKind.REMOVE
+            or (kind is ActionKind.NOOP and entry.kind is EntryKind.MISSING)
+            else mode
+        ),
         content=rendered,
     )
 
@@ -1249,6 +1268,11 @@ def _render_targets(
             for unit in sorted(target_units, key=lambda item: item.scope.encode("utf-8"))
         )
         rendered = adapter.render(adapter.inspect(current_content, scopes), changes)
+        if entry.kind is EntryKind.MISSING and adapter_kind in {
+            AdapterKind.JSON,
+            AdapterKind.JSONC,
+        }:
+            rendered = format_fresh_json_container(rendered, adapter_kind)
         # `created_container` alone is insufficient: consumers may have added
         # unrelated units after adoption. Prune only the exact empty scaffold
         # left by removing every managed unit, and preserve any comment or value.
@@ -1263,18 +1287,19 @@ def _render_targets(
         )
         if remove_container:
             rendered = b""
+        mode = entry.mode
+        if adapter_kind is AdapterKind.WHOLE_FILE and desired and desired[0].mode is not None:
+            mode = desired[0].mode
         action = _target_action(
             entry=entry,
             adapter=adapter_kind,
             rendered=rendered,
             units=tuple(target_units),
+            mode=mode,
             remove_container=remove_container,
         )
         actions.append(action)
         unit_plans.extend(target_units)
-        mode = entry.mode
-        if adapter_kind is AdapterKind.WHOLE_FILE and desired and desired[0].mode is not None:
-            mode = desired[0].mode
         targets.append(PlannedTarget(target, rendered, mode))
     ordered_units = tuple(
         sorted(
@@ -1344,6 +1369,21 @@ def _locked_after(
             if unit is None:
                 continue
             prior = previous.get(key)
+            if group.policy is ArtifactPolicy.CREATE_ONLY and prior is not None:
+                locked.append(
+                    prior.model_copy(
+                        update={
+                            "owners": group.owners,
+                            "shared_identity": group.shared_identity,
+                            "versions": {
+                                owner: PackageVersion(version) for owner, version in group.versions
+                            },
+                            "provenance": group.provenance,
+                            "policy": group.policy,
+                        }
+                    )
+                )
+                continue
             locked.append(
                 LockedUnit(
                     path=group.target,

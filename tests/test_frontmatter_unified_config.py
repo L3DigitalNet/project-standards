@@ -129,7 +129,7 @@ def _write_unified_config(
 
 @pytest.mark.parametrize(
     ("selector", "resolved"),
-    [("latest", "1.3"), ("1.2", "1.2")],
+    [("latest", "1.4"), ("1.2", "1.2")],
     ids=["latest-default-refresh", "exact-pin"],
 )
 def test_cli_config_uses_the_committed_applied_package_version(

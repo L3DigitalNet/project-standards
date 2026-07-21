@@ -277,6 +277,7 @@ def standard_views(repo: Path) -> list[dict[str, object]]:
         selectable = any(
             entry.availability.value == "consumer" for entry in standard.versions.values()
         )
+        availability = sorted({entry.availability.value for entry in standard.versions.values()})
         requested: str | None = None
         if desired is not None:
             requested = (
@@ -288,6 +289,7 @@ def standard_views(repo: Path) -> list[dict[str, object]]:
                 "id": standard_id,
                 "status": standard.status.value,
                 "selectable": selectable,
+                "availability": availability,
                 "available": [version.value for version in standard.available],
                 "default": standard.default.value if standard.default is not None else None,
                 "candidates": [version.value for version in standard.candidates],

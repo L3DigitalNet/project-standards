@@ -487,6 +487,8 @@ def test_diagnostics_sort_stably_and_never_emit_internal_content() -> None:
             summary="update z",
             before_digest=_DIGEST_A,
             after_digest=_DIGEST_B,
+            before_mode="0644",
+            after_mode="0755",
             content=b"private-content",
         ),
         ControlAction(
@@ -530,6 +532,8 @@ def test_diagnostics_sort_stably_and_never_emit_internal_content() -> None:
     assert [item["standard_id"] for item in finding_json] == ["alpha", "zeta"]
     assert all("content" not in item for item in action_json)
     assert "private-content" not in repr(action_json)
+    assert action_json[1]["before_mode"] == "0644"
+    assert action_json[1]["after_mode"] == "0755"
 
 
 def test_public_models_accept_the_exact_documented_shapes() -> None:

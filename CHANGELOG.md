@@ -44,7 +44,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Python Tooling 1.4 adds the `script_ownership` option: `"consumer-owned"` relinquishes `scripts/check.py` to the consumer, so a customized enforcement script migrates preserved instead of blocking with `CP-MIGRATION-LEGACY-DIGEST` / `PT-LEGACY-MODIFIED` (issue #12).
 - Markdown Tooling 1.5 adds the per-caller `lint_workflow_ownership` and `format_workflow_ownership` options: `"consumer-owned"` relinquishes `.github/workflows/lint-markdown.yml` or `.github/workflows/format.yml`, so a customized caller migrates preserved and stays outside reconciliation, verification, and lock state (issue #12).
 - CLI Documentation 1.3 adds the `workflow_ownership` option: `"consumer-owned"` relinquishes a customized `.github/workflows/cli-docs-check.yml` — migration preserves the file, leaves CI disabled, and records no referenced input; the default `"referenced"` keeps the recognized workflow locked as a verified referenced input (issue #13).
-- `UPGRADING.md` documents the complete per-target ownership-option map for carrying customized CI files through V4→V5 migration.
+- CLI Documentation 1.3, Markdown Tooling 1.5, and Project Specification 1.3 add ownership options for customized `docs/usage.md`, `.markdownlint.json`, and `.github/workflows/validate-specs.yml` respectively. Agent Handoff 1.3 and Markdown Frontmatter 1.4 correct fresh-adoption composition without mutating the payloads released in 5.2.0.
+- `UPGRADING.md` documents the complete per-target ownership-option map, legacy-automation inventory, interrupted-migration recovery, lock refresh, dependency-lock refresh, and package re-enablement procedure.
+
+### Fixed
+
+- V4 migration normalizes Markdown Tooling contract 1.0 to the supported 1.1 contract and retains actionable package-configuration findings instead of aborting during diagnostic reconciliation.
+- Markdown managed-block detection ignores ordinary prose containing `project-standards`, and fresh JSON/JSONC containers are rendered in the repository's Prettier-compatible physical form.
+- Migration retires the known V4 `validate-standards` job surgically while preserving unrelated workflow jobs; customized markdownlint, usage-document, and specification-workflow targets have explicit consumer-owned escapes.
+- Create-only scaffolds remain consumer-owned after creation without causing lock-refresh drift, while genuine lock-only drift is identified. Fresh CLI usage and Agent Handoff outputs no longer fail the selected Frontmatter and Markdown Tooling checks.
+- Human control-plane findings include severity, path, semantic identity, and remediation hints without leaking internal placeholders or duplicate lines. Apply output distinguishes target mutations, lock-only publication, and true no-op runs.
+- Migration preview and recovery now report accurate control-file actions and comparable content digests, reject divergent dual authority before apply, and retain actionable stale-plan diagnostics.
+- Valid ADR IDs are accepted by `fix`; the standards inventory text view exposes availability, versions, defaults, desired selectors, and applied versions; managed VS Code checks respect consumer-owned Python scripts; duplicate coverage dependencies and empty retired Agent Handoff directories are removed.
 
 ## [5.2.0] — 2026-07-20
 

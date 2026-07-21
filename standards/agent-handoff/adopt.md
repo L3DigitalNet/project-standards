@@ -1,13 +1,13 @@
 # Adopt the Agent Handoff Standard
 
-The current consumer package is [`agent-handoff@1.2`](versions/1.2/adopt.md). Use it for repository-local project knowledge, manual or automatic session startup, bounded harness integrations, and centrally locked standard-owned runtime artifacts. Consumer-authored `docs/**` knowledge remains create-only.
+The current consumer package is [`agent-handoff@1.3`](versions/1.3/adopt.md). Use it for repository-local project knowledge, manual or automatic session startup, bounded harness integrations, and centrally locked standard-owned runtime artifacts. Consumer-authored `docs/**` knowledge remains create-only.
 
 ## Configure and reconcile
 
 Enable the package, then set `contract_version`, `startup`, and `harnesses` under `[standards.agent-handoff.config]`. Manual startup requires an empty harness list; automatic startup accepts `claude-code`, `codex`, or both.
 
 ```bash
-project-standards standards enable agent-handoff --version 1.2
+project-standards standards enable agent-handoff --version 1.3
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -32,4 +32,4 @@ project-standards agent-handoff size-report --repo .
 project-standards agent-handoff shape-check --repo .
 ```
 
-Unsafe paths, duplicate hooks, malformed markers, provenance drift, and size-cap violations fail closed. Restore or reconcile standard-owned bytes; route oversized consumer knowledge by lifetime. See the [version-specific guide](versions/1.2/adopt.md) for exact options, outputs, provider-backed scaffold/upgrade behavior, harness trust, disable semantics, and troubleshooting.
+Unsafe paths, duplicate hooks, malformed markers, provenance drift, and size-cap violations fail closed. Restore or reconcile standard-owned bytes; route oversized consumer knowledge by lifetime. See the [version-specific guide](versions/1.3/adopt.md) for exact options, outputs, provider-backed scaffold/upgrade behavior, harness trust, disable semantics, and troubleshooting.

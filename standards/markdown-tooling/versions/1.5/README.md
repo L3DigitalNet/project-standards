@@ -68,6 +68,7 @@ The closed package schema provides these options:
 | `workflow_mode` | `caller` | Uses published `@v5` reusable workflows; set `self-hosted` to install immutable in-repository workflow endpoints. |
 | `lint_workflow_ownership` | `managed` | `consumer-owned` leaves `.github/workflows/lint-markdown.yml` outside package actions, verification, and lock state. |
 | `format_workflow_ownership` | `managed` | `consumer-owned` leaves `.github/workflows/format.yml` outside package actions, verification, and lock state. |
+| `markdownlint_config_ownership` | `managed` | `consumer-owned` leaves `.markdownlint.json` outside package actions, verification, and lock state. |
 | `lint` | `true` | Enables the managed markdownlint config and enforcement |
 | `format` | `true` | Enables the managed Prettier config and enforcement |
 | `ci.lint_caller` | `true` | Adds pull-request and `main` push triggers to the lint caller |
@@ -146,7 +147,7 @@ On update or disable, reconciliation uses the central lock plus current inspecti
 
 Automatic V4 migration recognizes `markdown_tooling.version` and exact released bytes for legacy configs, callers, EditorConfig, and VS Code recommendations. Exact whole files can transfer to managed ownership. Shared containers are never replaced wholesale: recognized units are adopted semantically, consumer siblings are preserved, and modified legacy content is reported for review.
 
-The shared `.editorconfig` and `.vscode/extensions.json` signatures declare `unknown_content_disposition = "preserve"`: consumer-modified content at those paths is preserved instead of blocking, the preview reports a `CP-MIGRATION-BOUNDED-TAKEOVER` warning per file, and reconciliation manages only the bounded package-owned units inside the preserved file. A modified config or caller workflow remains blocking until its known content is restored.
+The shared `.editorconfig` and `.vscode/extensions.json` signatures declare `unknown_content_disposition = "preserve"`: consumer-modified content at those paths is preserved instead of blocking, the preview reports a `CP-MIGRATION-BOUNDED-TAKEOVER` warning per file, and reconciliation manages only the bounded package-owned units inside the preserved file. A modified caller workflow can be preserved with its corresponding ownership option. A modified `.markdownlint.json` can be preserved with `markdownlint_config_ownership = "consumer-owned"`; other modified exclusive configs remain blocking until their known content is restored.
 
 Migration never writes from a provider, accesses the network, or emits an active legacy `.project-standards.yml` fragment. After successful apply, the ordinary central lock becomes the sole ownership record. Historical copy-adopt wording may be useful when explaining old inputs, but it is not an instruction for V2 consumers.
 

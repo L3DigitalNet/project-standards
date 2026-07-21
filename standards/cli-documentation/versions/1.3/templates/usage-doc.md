@@ -1,3 +1,18 @@
+---
+schema_version: '1.1'
+id: 'reference-000001-cli-usage'
+title: 'toolname CLI Usage'
+description: 'Consumer-owned usage reference scaffold for the toolname command.'
+doc_type: 'reference'
+status: 'draft'
+created: '2026-07-20'
+updated: '2026-07-20'
+tags:
+  - 'cli'
+aliases: []
+related: []
+---
+
 # toolname
 
 ## NAME
