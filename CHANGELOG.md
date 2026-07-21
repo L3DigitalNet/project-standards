@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-07-21
+
 ### Added
 
 - Python Tooling 1.4 adds the `script_ownership` option: `"consumer-owned"` relinquishes `scripts/check.py` to the consumer, so a customized enforcement script migrates preserved instead of blocking with `CP-MIGRATION-LEGACY-DIGEST` / `PT-LEGACY-MODIFIED` (issue #12).
