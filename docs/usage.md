@@ -6,8 +6,8 @@ description: 'Canonical man-style usage reference for the project-standards comm
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-20'
-reviewed: '2026-07-20'
+updated: '2026-07-21'
+reviewed: '2026-07-21'
 owner: ''
 consumer: 'mix'
 tags:
@@ -17,7 +17,7 @@ tags:
 aliases:
   - 'project-standards-usage'
 related:
-  - 'standards/cli-documentation/versions/1.2/README.md'
+  - 'standards/cli-documentation/versions/1.3/README.md'
 source: []
 confidence: 'high'
 visibility: 'public'
@@ -53,7 +53,7 @@ project-standards {--help | --version}
 
 `project-standards` is the unified command-line surface for this repository's tooling. It exposes 31 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
-Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
+Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. After `project-standards fix`, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
 Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 31 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
@@ -110,7 +110,7 @@ Options:
 
 Safety: `fix` writes to disk (frontmatter reformatting and id rewrites are in-place, atomic, mode-preserving). It skips entirely, with a note on standard error and exit 0, when a custom schema is in use (via `--schema <path>` or a selected package/legacy config schema path) — custom-schema repos own their own id and format conventions.
 
-In a unified repository, review the fix and run `project-standards reconcile --apply` before the final `validate`. A fix can change a file whose digest is recorded in the central lock; validating against the old lock correctly reports `CP-DRIFT`.
+In a unified repository, review the fix, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. A fix can change a file whose digest is recorded in the central lock; validating against the old lock correctly reports `CP-DRIFT`.
 
 Exit status: `0` success (or skipped under a custom schema) · `1` findings remain after the fix · `2` operator error (missing/broken config).
 
@@ -130,7 +130,7 @@ Options:
 - **`--repo <dir>`** — Repository to initialize. Default: current directory.
 - **`--json`** — In plain-init mode, emit the created/idempotent state and exact three-file inventory. In migration mode, emit the complete package reports, findings, reconciliation plan, and apply result without proposed file content.
 
-Always run migration preview first, resolve every unknown version, modified signature, overlapping claim, or unclassified artifact, and rerun the preview against unchanged bytes before apply. Error findings block apply; `CP-MIGRATION-BOUNDED-TAKEOVER` is a warning that records preserved consumer-modified content at a bounded-managed target and does not block. [UPGRADING.md](../UPGRADING.md#resolve-common-preview-findings) documents each preview finding and its resolution. Apply stages the unified files and package outputs, verifies the complete state, publishes the central lock, and only then retires `.project-standards.yml` and recognized package locks. A stale preview or failed verification preserves recoverable legacy authority.
+Always run migration preview first, resolve every unknown version, modified signature, overlapping claim, or unclassified artifact, and rerun the preview against unchanged bytes before apply. Error findings block apply; `CP-MIGRATION-BOUNDED-TAKEOVER` is a warning that records preserved consumer-modified content at a bounded-managed target and does not block. [UPGRADING.md](../UPGRADING.md#resolve-common-preview-findings) documents common preview findings and their resolutions; for any other code, follow the emitted path, identity, and hint. Apply stages the unified files and package outputs, verifies the complete state, publishes the central lock, and only then retires `.project-standards.yml` and recognized package locks. A stale preview or failed verification preserves recoverable legacy authority.
 
 Migration preview always exits 1 because it is an actionable, unapplied plan. Supplying `--apply` to a blocked plan emits the same plan and findings without writing; it is not a partial apply. Human findings include their severity, path, semantic identity, and remediation hint. JSON preview is the stable machine-readable form. Neither form publishes proposed file content; inspect the reviewed post-apply diff before committing.
 
@@ -434,7 +434,7 @@ Exit status: `0` written or fresh · `1` package findings or stale output · `2`
 
 ### `standards generate-package-schemas`
 
-Generate the three package-contract and six control-plane JSON Schemas from their strict typed models.
+Generate the three package-contract and seven control-plane JSON Schemas from their strict typed models.
 
 ```text
 project-standards standards generate-package-schemas [--root <path>] [--check] [--json]
@@ -443,10 +443,10 @@ project-standards standards generate-package-schemas [--root <path>] [--check] [
 Options:
 
 - **`--root <path>`** — Repository root. Default: the current directory.
-- **`--check`** — Compare all nine checked-in schemas without writing them.
+- **`--check`** — Compare all ten checked-in schemas without writing them.
 - **`--json`** — Emit a machine-readable result.
 
-Exit status: `0` written or fresh · `1` any of the nine generated schemas is stale · `2` invalid invocation or unsafe output boundary.
+Exit status: `0` written or fresh · `1` any of the ten generated schemas is stale · `2` invalid invocation or unsafe output boundary.
 
 ### `standards sync-payload-projection`
 
@@ -663,6 +663,7 @@ uv run project-standards validate README.md docs/adr.md --no-require-frontmatter
 
 ```bash
 uv run project-standards fix
+uv run project-standards reconcile --check
 uv run project-standards reconcile --apply
 uv run project-standards validate
 ```
@@ -844,5 +845,5 @@ Exit status: `0` references valid, disabled, or skipped under a custom schema ·
 
 ## SEE ALSO
 
-- [`standards/cli-documentation/versions/1.2/README.md`](../standards/cli-documentation/versions/1.2/README.md) — the standard this document conforms to.
+- [`standards/cli-documentation/versions/1.3/README.md`](../standards/cli-documentation/versions/1.3/README.md) — the standard this document conforms to.
 - [`src/project_standards/README.md`](../src/project_standards/README.md) — the package's implementation and developer reference.

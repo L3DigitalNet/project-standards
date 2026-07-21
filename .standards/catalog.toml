@@ -2,7 +2,7 @@
 schema_version = "1.0"
 catalog = "5"
 release = "5.3.0"
-digest = "sha256:e043451de5d1ad78c9a121f408bcde19ae0a50245c340f79b5f0dfd51fb10331"
+digest = "sha256:c8f438e35ec1625c686be2b742ed0dcaf0c84df0a5925731a088bd5b44f75563"
 
 [standards.adr]
 status = "active"
@@ -107,7 +107,7 @@ payload_digest = "sha256:31a4bfd502cf332a68a20b3682b83ec8a797d58c4b7f565cbfe6043
 [standards.markdown-tooling.versions."1.5"]
 channel = "stable"
 availability = "consumer"
-payload_digest = "sha256:4d58ce5992693761a7a0cccecaf7470160154a45c2eeabeb3d77d746c6f0e074"
+payload_digest = "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091"
 
 [standards.project-spec]
 status = "active"

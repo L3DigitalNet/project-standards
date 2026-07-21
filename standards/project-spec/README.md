@@ -24,11 +24,13 @@ project-standards reconcile --apply
 
 Review [adopt.md](adopt.md) before applying. Project Specification uses its own document schema and remains independent of Markdown Frontmatter.
 
-## Release-status correction
+## Released-version errata
 
 The immutable 1.1 README contains wording written before Catalog 5 and Project Standards v5.0.0 were published. Treat any statement that this payload is not released as release-time history. Catalog 5 now selects `project-spec@1.3`; the immutable 1.1 payload bytes remain unchanged.
 
 The immutable 1.1 adoption guide counts five closed options; its example and schema define six.
+
+The immutable 1.2 README's `Last source check: TBD` header is stale; its source register records the completed check on 2026-07-04.
 
 ## Legacy boundary
 

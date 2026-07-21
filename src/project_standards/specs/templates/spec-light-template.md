@@ -20,7 +20,7 @@ related:
 
 > **Template instructions (delete before publishing):**
 >
-> This is the **Light** spec template — for scripts, small tools, and single-session agent tasks. Two sibling templates exist for larger work: `spec-standard-template.md` (typical features and services) and `spec-full-template.md` (multi-service systems, durable data, external integrations). If this project outgrows Light, copy your content into the next template up (see [Appendix D](#appendix-d-upgrading-this-spec)).
+> This is the **Light** spec template — for scripts, small tools, and single-session agent tasks. Two sibling templates exist for larger work: `spec-standard-template.md` (typical features and services) and `spec-full-template.md` (multi-service systems, durable data, external integrations). If this project outgrows Light, preview the guarded upgrade with `project-standards spec upgrade <src> --to standard --stdout`; after review, write it with `--output <path>` or `--in-place`. If the command refuses the source, copy into the next template manually only as a fallback, then run `project-standards spec validate` and `project-standards spec lint` (see [Appendix D](#appendix-d-upgrading-this-spec)).
 >
 > **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Light spec omits the Standard/Full-only sections, so section **and appendix** numbers have intentional gaps — e.g. this template jumps §2 → §7 and A → B → D. That is expected, not missing content; it means a section keeps the same number no matter which profile a spec uses, and upgrading a tier only _adds_ sections.
 >

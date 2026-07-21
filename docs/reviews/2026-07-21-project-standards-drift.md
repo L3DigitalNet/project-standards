@@ -310,3 +310,29 @@ Recorded 2026-07-21 after a verification session against `testing` HEAD. The 17 
 | B-001 | Fixed. `spec validate` now implements the documented conditional-omission contract: the gap recognizer accepts a blockquote that names the deleted section and carries an omission marker (`omitted`, `omission`, `does not apply`, or `not applicable`), instead of requiring tier-note wording. A marker is still required so template preambles that name section numbers cannot cover real gaps, and the `SV-GAP` message now states the accepted annotation shape. Covered by the `valid_standard_conditional_omission.md` fixture and marker/guard tests in `tests/test_spec_validate.py`. |
 | B-002 | Verified already fixed at the reviewed commit's successor `778c29a`. The `standards list` text view prints availability, advertised versions, the default, the desired selector, and the applied version, matching the revised `docs/usage.md` reference; `tests/control_plane/test_config_edit.py` asserts the enriched line format. |
 | B-003 | Verified already fixed at `778c29a`. The CLI Documentation 1.3 usage-document template now carries schema-valid frontmatter, and a fresh Catalog 5 consumer enabling CLI Documentation and Markdown Frontmatter defaults reconciles and immediately validates cleanly (re-probed against the rebuilt candidate wheel). `tests/package_contract/test_cli_documentation_reconstruction.py` validates the template against the Markdown Frontmatter 1.4 schema. |
+
+## Documentation remediation outcome
+
+Recorded 2026-07-21 against the current `testing` working tree. All 17 documentation findings are remediated without tagging, publishing, pushing, or updating `main`. The unpublished Markdown Tooling 1.5 adoption-guide correction includes its refreshed resource, aggregate payload, family, catalog, dogfood lock, and activation-test digests; released payload bytes remain unchanged.
+
+Verification uses the exact rebuilt 5.3.0 candidate wheel: 3,036 ordinary tests, 80 catalog-derived compatibility rows, 5 performance tests, 90% branch coverage, strict Ruff/BasedPyright checks, package graph/schema/projection/catalog gates, coherence tests, and `pip-audit` all pass.
+
+| Finding | Outcome |
+| --- | --- |
+| D-001 | Published-install and immutable-pin examples now name live release 5.2.0; 5.3.0 is explicitly an unreleased candidate, its changelog entries are under `[Unreleased]`, and release policy names the 5.2.0 commit and moving tag. |
+| D-002 | Root and standards indexes plus usage, script, and implementation pointers now route to the Catalog 5 package versions named by the finding. |
+| D-003 | The mutable CLI Documentation guide selects 1.3 and documents referenced versus consumer-owned workflow migration. |
+| D-004 | The mutable Markdown Tooling guide selects 1.5 and documents per-caller ownership. |
+| D-005 | The mutable Python Tooling guide selects 1.4 and documents workflow/script ownership and their distinct migration decisions. |
+| D-006 | The Markdown Tooling family README now distinguishes managed caller drift from explicit consumer-owned relinquishment. |
+| D-007 | The Python Tooling family README now distinguishes managed script drift from explicit consumer-owned relinquishment. |
+| D-008 | Python Tooling's release-status erratum now covers immutable READMEs 1.1 through 1.4. |
+| D-009 | Markdown Tooling verification is conditional on selected tools, globs, and typed exclusions, identifies local dependency requirements, and treats the reconciled workflow as canonical CI verification. |
+| D-010 | The upgrade guide now distinguishes read-only legacy authority from writes performed by explicitly mutating compatibility commands. |
+| D-011 | Usage promises common finding coverage plus emitted hints, and the upgrade table includes the seven previously omitted migration finding classes. |
+| D-012 | The documented post-`fix` sequence now previews and reviews digest-only reconciliation before apply and final validation. |
+| D-013 | The Standard Bundle Authoring family erratum lists all five package, graph, schema, projection, and catalog gates before release checking. |
+| D-014 | The usage reference now reports three package-contract plus seven control-plane schemas, ten total. |
+| D-015 | Housekeeping frontmatter now relates to `.standards/config.toml`. |
+| D-016 | The Project Specification family erratum records the immutable 1.2 source check completed on 2026-07-04. |
+| D-017 | All three mutable spec templates lead with guarded `spec upgrade` preview/write commands and retain manual copying only as a validated fallback. |

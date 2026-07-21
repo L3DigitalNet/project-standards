@@ -32,8 +32,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Resolve all 17 documentation findings and 3 implementation bugs in `docs/reviews/2026-07-21-project-standards-drift.md` before 5.3.0 release review.
-
 - [ ] Finish Agent Handoff consumer retirement.
 
 - [ ] Complete the approved future-artifact cleanup.

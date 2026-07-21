@@ -75,9 +75,9 @@ The standard defines **eleven required fields** plus a recommended optional set.
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/versions/1.1/README.md`](standards/adr/versions/1.1/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](standards/adr/versions/1.1/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.1/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.1/adopt.md).
+- **Standard:** [`standards/adr/versions/1.2/README.md`](standards/adr/versions/1.2/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](standards/adr/versions/1.2/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.2/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.2/adopt.md).
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
@@ -85,15 +85,15 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
-- **Standard:** [`standards/python-tooling/versions/1.1/README.md`](standards/python-tooling/versions/1.1/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.1/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.4/README.md`](standards/python-tooling/versions/1.4/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.4/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.2/README.md`](standards/markdown-tooling/versions/1.2/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.2/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.5/README.md`](standards/markdown-tooling/versions/1.5/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.5/adopt.md)
 
 ### Project Specification Standard
 
@@ -106,8 +106,8 @@ Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed I
 
 User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
-- **Standard:** [`standards/cli-documentation/versions/1.2/README.md`](standards/cli-documentation/versions/1.2/README.md)
-- **Templates:** [`templates/`](standards/cli-documentation/versions/1.2/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.2/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.2/adopt.md)
+- **Standard:** [`standards/cli-documentation/versions/1.3/README.md`](standards/cli-documentation/versions/1.3/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/versions/1.3/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.3/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.3/adopt.md)
 
 ### Agent Handoff Standard
 
@@ -119,26 +119,26 @@ Repository-local project knowledge and bounded session continuity for coding age
 
 ### Python Coding Standard (draft)
 
-Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.5`:** reference-only and not consumer-selectable.
+Code-shape and agent-behavior rules for Python — the reference companion to Python Tooling. **In-development package `0.6`:** reference-only and not consumer-selectable.
 
-- **Standard:** [`standards/python-coding/versions/0.5/README.md`](standards/python-coding/versions/0.5/README.md)
+- **Standard:** [`standards/python-coding/versions/0.6/README.md`](standards/python-coding/versions/0.6/README.md)
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.2`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.3`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/versions/2.2/README.md`](standards/standard-bundle-authoring/versions/2.2/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.3/README.md`](standards/standard-bundle-authoring/versions/2.3/README.md)
 
 ## Consuming the standards
 
-Project Standards 5.3.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.3.0 is an unreleased candidate. The current published release, Project Standards 5.2.0, requires Python 3.14 or newer. Install that exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.3.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.2.0"
 project-standards --version
 ```
 
-The version command must report `project-standards 5.3.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.2.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -174,7 +174,7 @@ The migration removes `.project-standards.yml` only after unified validation and
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.3.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.2.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 #### Reusable workflow inputs
 
@@ -223,7 +223,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.3.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.2.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check

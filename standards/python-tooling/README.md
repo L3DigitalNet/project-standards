@@ -26,9 +26,11 @@ python scripts/check.py
 
 Review [adopt.md](adopt.md) before applying. Commit unified config, catalog, lock, dependency lock, and reconciled outputs together.
 
-## Release-status correction
+## Released-version errata
 
-The immutable 1.1 README contains wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat its statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.4`; the immutable 1.1 payload bytes remain unchanged.
+The immutable 1.1, 1.2, 1.3, and 1.4 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.4`; the immutable payload bytes remain unchanged.
+
+In the immutable 1.4 README, the statement that a modified `scripts/check.py` remains blocking applies only while `script_ownership = "managed"`. Setting `script_ownership = "consumer-owned"` preserves the customized script and leaves it outside reconciliation, verification, and lock state. `.python-version` and modified managed outputs retain the stated blocking behavior.
 
 ## Legacy boundary
 

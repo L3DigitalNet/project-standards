@@ -930,4 +930,4 @@ Rules of thumb:
 - Makes automated decisions users must trust → C.4's provenance list is required.
 - Implemented by a coding agent → Appendix B is required regardless of profile (it is the cheapest section and the highest-leverage one).
 
-Each template is self-contained: if you started in a smaller one and outgrew it, copy your filled-in sections into the larger template and update `profile:` in the frontmatter.
+Each template is self-contained. If you started in a smaller one and outgrew it, preview the guarded upgrade with `project-standards spec upgrade <src> --to <profile> --stdout`, where `<profile>` is `standard` or `full`; after review, write it with `--output <path>` or `--in-place`. If the command refuses the source, copy the filled-in sections into the larger template manually only as a fallback, update `profile:` in the frontmatter, and run `project-standards spec validate` and `project-standards spec lint`.

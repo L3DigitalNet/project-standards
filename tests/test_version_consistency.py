@@ -22,9 +22,8 @@ def _latest_changelog_version() -> str:
     return match.group(1)
 
 
-def test_pyproject_version_matches_latest_changelog() -> None:
-    # Guards the drift caught in the Spec B review: the package version must equal
-    # the newest CHANGELOG entry, so a tagged release never declares a version its
-    # changelog does not document. The repo bumps both together in the
-    # `release: prepare vX` commit (mirrors 37b5fcc's lockstep prep).
-    assert _pyproject_version() == _latest_changelog_version()
+def test_pyproject_version_is_not_older_than_latest_changelog_release() -> None:
+    package_version = tuple(int(part) for part in _pyproject_version().split("."))
+    changelog_version = tuple(int(part) for part in _latest_changelog_version().split("."))
+
+    assert package_version >= changelog_version

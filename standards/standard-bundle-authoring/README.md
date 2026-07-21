@@ -16,6 +16,18 @@ Use version 2.3 when authoring or reviewing package families, immutable payloads
 
 The package is `internal`: it declares no consumer outputs or executable providers and has no adoption guide. Follow the [versioned author workflow](versions/2.3/README.md#author-workflow) and start from the [versioned templates](versions/2.3/templates/).
 
+## Released-version errata
+
+The immutable 2.3 README's author-workflow command block omits two repository gates. Run the complete current package, graph, schema, projection, and catalog set before the release check:
+
+```bash
+uv run project-standards standards validate-packages --root .
+uv run project-standards standards validate-graph --root . --require-all-manifests
+uv run project-standards standards generate-package-schemas --root . --check
+uv run project-standards standards sync-payload-projection --root . --check
+uv run project-standards standards render-catalog --root . --check
+```
+
 ## Legacy boundary
 
 Singleton V1 manifests, root copy templates, and pre-cutover reconstruction notes are historical migration evidence only. The root `standard.toml` is now the V2 family index, Catalog 5 advertises versions 2.0, 2.1, 2.2, and 2.3 with the `internal` role, and released payload bytes are immutable. Version 2.1 corrected 2.0's immutable SPEC-BA02 pointer; version 2.2 adds the Python 3.14 and artifact-mode contracts without editing either released payload.

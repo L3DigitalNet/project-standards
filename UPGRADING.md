@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for migrating a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-20'
+updated: '2026-07-21'
 tags:
   - 'migration'
   - 'upgrade'
@@ -24,7 +24,7 @@ related:
 
 `project-standards` 5.0.0 replaces the legacy `.project-standards.yml` and package-specific provenance model with one committed `.standards/` catalog, desired config, and central lock. This is an explicit repository migration, not a pin-only upgrade.
 
-The v5 tool keeps a warned read-only fallback for a repository that still has only `.project-standards.yml`. It never merges YAML and TOML authority. V6 removes that fallback, so every V4 consumer must complete this migration before moving beyond v5.
+The v5 tool keeps a warned fallback for a repository that still has only `.project-standards.yml`. The YAML is a read-only authority input: v5 never rewrites it or merges YAML and TOML authority, but explicitly mutating compatibility commands such as `fix` retain their documented repository writes. V6 removes that fallback, so every V4 consumer must complete this migration before moving beyond v5.
 
 ## Before you start
 
@@ -78,7 +78,13 @@ Rerun preview after each correction. Do not edit the repository between the acce
 | Finding | Meaning | Resolution |
 | --- | --- | --- |
 | `CP-MIGRATION-STATE` | The repository authority cannot be interpreted as one complete legacy migration input. | Read the accompanying detail before changing files. Remove neither authority. Repair the reported missing, partial, or conflicting control state, then rerun preview. If an earlier migration was interrupted, use the recovery procedure below. |
-| `CP-MIGRATION-CONFIG` | A migration provider mapped legacy settings to options the selected package does not accept. | Use the reported package, path, identity, and hint to correct the legacy value or select a compatible package. This finding blocks apply but does not suppress other migration findings. |
+| `CP-MIGRATION-CONFIG` | A migration provider mapped legacy settings to options the selected package does not accept. | Correct the legacy values or the migration provider mapping. This finding blocks apply but does not suppress other migration findings. |
+| `CP-MIGRATION-LEGACY-BLOCK` | A bounded legacy block has partial, duplicated, or reversed markers. | Restore a known managed block or remove the partial markers, then rerun preview. |
+| `CP-MIGRATION-SETTING-MISSING` | A migration provider claimed a legacy setting that is not present. | Update the provider declaration or the legacy configuration. |
+| `CP-MIGRATION-SETTING-OVERLAP` | Migration providers claimed overlapping legacy settings. | Use the reported package identities to make their setting claims disjoint. |
+| `CP-MIGRATION-CLAIM-OVERLAP` | Several packages claimed the same legacy object. | Use the reported package identities to make their package claims disjoint. |
+| `CP-MIGRATION-UNCLAIMED-ARTIFACT` | Recognized legacy content has no ownership disposition. | Make the selected migration provider claim or preserve the artifact. |
+| `CP-MIGRATION-BOUNDED-ORPHAN` | A bounded legacy block has no safe replacement target. | Add a replacement that preserves content outside the managed block. |
 | `CP-MIGRATION-PLATFORM-VERSION` | `standards_version` is absent or is not the recognized platform tag `"v3"` or `"v4"`. | Released repositories may contain a full tool release such as `"v4.3.0"`, or omit the key. Normalize either form to `standards_version: "v4"` before preview. The two accepted tags name the same legacy wire format. |
 | `CP-MIGRATION-UNCLAIMED-SETTING` | A legacy setting is not represented by any selected package. | Remove the unknown key from `.project-standards.yml`, or select the package that migrates it. |
 | `CP-MIGRATION-LEGACY-DIGEST`, `PT-LEGACY-MODIFIED`, `MT-LEGACY-MODIFIED` | A recognized file's bytes match no shipped package history. | Instruction blocks and bounded JSON/JSONC/YAML units resolve automatically: consumer content outside the package-owned unit is preserved and the preview reports `CP-MIGRATION-BOUNDED-TAKEOVER`. Property-level conflicts inside `.editorconfig` and other semantic targets still block; use the reported identity to restore or remove only the conflicting property. For a customized whole-file target, declare its documented ownership option as `"consumer-owned"` in `.project-standards.yml` before previewing. Migration then preserves the bytes and leaves the file consumer-owned. Otherwise restore the released bytes (adopt again with the old CLI, or check the file out from history) and rerun preview. |

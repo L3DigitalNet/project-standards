@@ -6,8 +6,8 @@ description: 'Recurring procedure for reviewing repository hygiene, metadata, in
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-11'
-reviewed: '2026-07-11'
+updated: '2026-07-21'
+reviewed: '2026-07-21'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -15,7 +15,7 @@ tags:
   - 'standards-platform'
 aliases: []
 related:
-  - '.project-standards.yml'
+  - '.standards/config.toml'
   - 'docs/TODO.md'
   - 'docs/STATUS.md'
 source: []

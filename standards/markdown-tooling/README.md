@@ -24,6 +24,10 @@ project-standards reconcile --apply
 
 Review [adopt.md](adopt.md) before applying. Lint and format checks, workflow mode, triggers, globs, and typed exclusions are package options in `.standards/config.toml`.
 
+## Released-version errata
+
+In the immutable 1.5 README, “a modified … caller workflow remains blocking” applies only while its matching ownership option remains `managed`. Setting `lint_workflow_ownership` or `format_workflow_ownership` to `"consumer-owned"` preserves that customized caller and leaves it outside reconciliation, verification, and lock state. Modified managed config still blocks.
+
 ## Legacy boundary
 
 Root copy-adopt configs, reusable-workflow pins from earlier majors, `project-standards adopt markdown-tooling`, and `.project-standards.yml` fragments are migration evidence only. They do not define current Catalog 5 behavior.

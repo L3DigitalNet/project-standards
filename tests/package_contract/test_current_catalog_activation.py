@@ -52,7 +52,7 @@ _PACKAGES = {
         "active",
         "1.5",
         "default",
-        "sha256:4d58ce5992693761a7a0cccecaf7470160154a45c2eeabeb3d77d746c6f0e074",
+        "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091",
     ),
     "project-spec": (
         "Project Specification Standard",

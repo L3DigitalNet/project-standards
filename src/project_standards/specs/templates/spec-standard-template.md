@@ -20,7 +20,7 @@ related:
 
 > **Template instructions (delete before publishing):**
 >
-> This is the **Standard** spec template — for typical features and services. Two sibling templates exist: `spec-light-template.md` (scripts, small tools, single-session agent tasks) and `spec-full-template.md` (multi-service systems, durable data, external integrations, or multiple stakeholders). If the project needs Full-tier sections, copy your content into that template (see [Appendix D](#appendix-d-tailoring)).
+> This is the **Standard** spec template — for typical features and services. Two sibling templates exist: `spec-light-template.md` (scripts, small tools, single-session agent tasks) and `spec-full-template.md` (multi-service systems, durable data, external integrations, or multiple stakeholders). If the project needs Full-tier sections, preview the guarded upgrade with `project-standards spec upgrade <src> --to full --stdout`; after review, write it with `--output <path>` or `--in-place`. If the command refuses the source, copy into the Full template manually only as a fallback, then run `project-standards spec validate` and `project-standards spec lint` (see [Appendix D](#appendix-d-tailoring)).
 >
 > **Numbering is stable across all three profiles** (it matches `spec-full-template.md`). A Standard spec omits the Full-only sections, so section **and appendix** numbers have intentional gaps — §5, §8.4, §8.6, §14–§16, §18.4, §20, and Appendix C are absent by design. That is expected, not missing content; a section keeps the same number no matter which profile a spec uses, and upgrading to Full only _adds_ sections.
 >

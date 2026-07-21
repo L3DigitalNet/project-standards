@@ -2,7 +2,7 @@
 schema_version = "1.1"
 catalog = "5"
 release = "5.3.0"
-catalog_digest = "sha256:e043451de5d1ad78c9a121f408bcde19ae0a50245c340f79b5f0dfd51fb10331"
+catalog_digest = "sha256:c8f438e35ec1625c686be2b742ed0dcaf0c84df0a5925731a088bd5b44f75563"
 config_digest = "sha256:f2abe310611f1bf5516654f8a5c2611b2c146c56adbceb4a2f581d0eadea2ee6"
 
 [standards.adr]
@@ -37,7 +37,7 @@ effective_config_digest = "sha256:d8f6e1bc80ebdb6ea9efb146d28de93711782c59982930
 requested = "latest"
 resolved = "1.5"
 selection = "stable"
-payload_digest = "sha256:4d58ce5992693761a7a0cccecaf7470160154a45c2eeabeb3d77d746c6f0e074"
+payload_digest = "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091"
 effective_config_digest = "sha256:2d7c6e7383dc652b22291e5e15243741790be2bbf124aa8f535851e1c62b582b"
 
 [standards.project-spec]
