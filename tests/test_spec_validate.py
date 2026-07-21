@@ -18,9 +18,52 @@ def _codes(name: str) -> set[str]:
     return {f.code for f in validate_document(doc, load_registry())}
 
 
-@pytest.mark.parametrize("name", ["valid_light.md", "valid_standard.md"])
+@pytest.mark.parametrize(
+    "name",
+    ["valid_light.md", "valid_standard.md", "valid_standard_conditional_omission.md"],
+)
 def test_valid_specs_pass(name: str) -> None:
     assert _codes(name) == set()
+
+
+# The exceptions process (README §7 case 1) promises that deleting a conditional
+# section with a one-line annotated reason is tooling-safe, without prescribing
+# tier-note wording. Each accepted marker keeps that promise.
+@pytest.mark.parametrize(
+    "note",
+    [
+        "> §2 (Scope) does not apply: single-purpose script with no boundary to draw.\n",
+        "> §2 (Scope) is not applicable to this project.\n",
+        "> §2 omitted: nothing beyond the one-line purpose.\n",
+        "> §2 omission is deliberate — Not Applicable to a one-file tool.\n",
+    ],
+)
+def test_conditional_deletion_reason_covers_gap(note: str) -> None:
+    doc = parse_document(
+        "conditional.md",
+        "---\nspec_id: SPEC-0001\nprofile: light\nstatus: draft\n---\n"
+        "# Demo\n\n## 1. Purpose\n\n" + note + "\n## 7. Requirements\n",
+    )
+
+    gaps = {f.locus for f in validate_document(doc, load_registry()) if f.code == "SV-GAP"}
+
+    assert "§2" not in gaps
+
+
+def test_blockquote_reason_without_omission_marker_does_not_cover_gap() -> None:
+    # Guard: template preambles legitimately name section numbers in blockquotes
+    # ("§5, §8.4 … are absent by design"); only marker-bearing reasons may cover.
+    doc = parse_document(
+        "unmarked.md",
+        "---\nspec_id: SPEC-0001\nprofile: light\nstatus: draft\n---\n"
+        "# Demo\n\n## 1. Purpose\n\n"
+        "> §2 is skipped because this tool is tiny.\n\n"
+        "## 7. Requirements\n",
+    )
+
+    gaps = {f.locus for f in validate_document(doc, load_registry()) if f.code == "SV-GAP"}
+
+    assert "§2" in gaps
 
 
 @pytest.mark.parametrize(

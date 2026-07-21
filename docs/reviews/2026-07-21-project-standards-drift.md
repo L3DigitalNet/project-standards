@@ -300,3 +300,13 @@ Drift types are:
 ## Open Questions
 
 None.
+
+## Bug remediation outcome
+
+Recorded 2026-07-21 after a verification session against `testing` HEAD. The 17 documentation findings (D-001 through D-017) remain queued; this section closes only the three implementation bugs.
+
+| Bug | Outcome |
+| --- | --- |
+| B-001 | Fixed. `spec validate` now implements the documented conditional-omission contract: the gap recognizer accepts a blockquote that names the deleted section and carries an omission marker (`omitted`, `omission`, `does not apply`, or `not applicable`), instead of requiring tier-note wording. A marker is still required so template preambles that name section numbers cannot cover real gaps, and the `SV-GAP` message now states the accepted annotation shape. Covered by the `valid_standard_conditional_omission.md` fixture and marker/guard tests in `tests/test_spec_validate.py`. |
+| B-002 | Verified already fixed at the reviewed commit's successor `778c29a`. The `standards list` text view prints availability, advertised versions, the default, the desired selector, and the applied version, matching the revised `docs/usage.md` reference; `tests/control_plane/test_config_edit.py` asserts the enriched line format. |
+| B-003 | Verified already fixed at `778c29a`. The CLI Documentation 1.3 usage-document template now carries schema-valid frontmatter, and a fresh Catalog 5 consumer enabling CLI Documentation and Markdown Frontmatter defaults reconciles and immediately validates cleanly (re-probed against the rebuilt candidate wheel). `tests/package_contract/test_cli_documentation_reconstruction.py` validates the template against the Markdown Frontmatter 1.4 schema. |

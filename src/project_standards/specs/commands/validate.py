@@ -17,6 +17,14 @@ from project_standards.specs.registry import (
 # leaves the interior sections looking like un-annotated gaps (SV-GAP).
 _OMIT = re.compile(r"§(\d+)\s*[\u2013\u2014-]\s*§?(\d+)")
 _OMIT_SINGLE = re.compile(r"§(\d+)")
+# A blockquote covers a section gap only when it both names the section and
+# carries one of these markers. Tier notes say "intentionally omitted"; the
+# exceptions process (case-1 tailoring) also lets an author delete a conditional
+# section outright with a one-line reason, whose natural wordings are the other
+# markers. A marker is required — template preambles name section numbers in
+# blockquotes ("§5, §8.4 … are absent by design"), so accepting any §-bearing
+# blockquote would let retained boilerplate cover every real gap.
+_OMIT_MARKERS = ("omitted", "omission", "does not apply", "not applicable")
 _SECTION_REF = re.compile(r"§\s?([0-9]+(?:\.[0-9]+)*)")
 _ANCHOR = re.compile(r"\[([^\]]+)\]\(#([^)]+)\)")
 # Inline code spans hide their contents from GFM table parsing, so pipes
@@ -95,7 +103,8 @@ def _check_sections(doc: SpecDocument, reg: Registry, structural_body: str) -> l
         out.append(_f("SV-ORDER", "section headings are not in ascending numeric order"))
     covered: set[int] = set()
     for line in structural_body.splitlines():
-        if line.lstrip().startswith(">") and "tier" in line and "omitted" in line:
+        lowered = line.lower()
+        if line.lstrip().startswith(">") and any(m in lowered for m in _OMIT_MARKERS):
             for a, b in _OMIT.findall(line):
                 covered.update(range(int(a), int(b) + 1))
             covered.update(int(x) for x in _OMIT_SINGLE.findall(line))
@@ -104,7 +113,13 @@ def _check_sections(doc: SpecDocument, reg: Registry, structural_body: str) -> l
     for n in sorted(canon_top - present_top):
         if n not in covered:
             out.append(
-                _f("SV-GAP", f"gap at §{n} is not annotated with an omission note", locus=f"§{n}")
+                _f(
+                    "SV-GAP",
+                    f"gap at §{n} is not annotated with an omission note "
+                    f"(a blockquote naming §{n} that says omitted, omission, "
+                    f"does not apply, or not applicable)",
+                    locus=f"§{n}",
+                )
             )
     return out
 

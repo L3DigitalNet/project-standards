@@ -56,6 +56,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Human control-plane findings include severity, path, semantic identity, and remediation hints without leaking internal placeholders or duplicate lines. Apply output distinguishes target mutations, lock-only publication, and true no-op runs.
 - Migration preview and recovery now report accurate control-file actions and comparable content digests, reject divergent dual authority before apply, and retain actionable stale-plan diagnostics.
 - Valid ADR IDs are accepted by `fix`; the standards inventory text view exposes availability, versions, defaults, desired selectors, and applied versions; managed VS Code checks respect consumer-owned Python scripts; duplicate coverage dependencies and empty retired Agent Handoff directories are removed.
+- `spec validate` honors the documented conditional-section tailoring contract: a top-level section deleted with a one-line blockquote reason that names the section and says omitted, omission, does not apply, or not applicable no longer produces a false `SV-GAP`; unannotated gaps and reason-free blockquotes still fail.
 
 ## [5.2.0] — 2026-07-20
 
