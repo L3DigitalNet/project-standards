@@ -47,6 +47,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ### Fixed
 
+- The dev-only Markdown gate upgrades `markdownlint-cli2` from 0.23.0 to 0.23.1 and `js-yaml` from 5.2.0 to 5.2.1, clearing the moderate `!!omap` quadratic-complexity denial-of-service advisory (`GHSA-724g-mxrg-4qvm`). The reusable `markdownlint-cli2-action@v24` moving tag resolves to action 24.1.0 with the same patched tool versions.
 - V4 migration normalizes Markdown Tooling contract 1.0 to the supported 1.1 contract and retains actionable package-configuration findings instead of aborting during diagnostic reconciliation.
 - Markdown managed-block detection ignores ordinary prose containing `project-standards`, and fresh JSON/JSONC containers are rendered in the repository's Prettier-compatible physical form.
 - Migration retires the known V4 `validate-standards` job surgically while preserving unrelated workflow jobs; customized markdownlint, usage-document, and specification-workflow targets have explicit consumer-owned escapes.
