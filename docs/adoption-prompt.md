@@ -6,8 +6,8 @@ description: 'Copy/paste agent prompt for a safe, verified Project Standards ado
 doc_type: 'prompt'
 status: 'active'
 created: '2026-07-20'
-updated: '2026-07-20'
-reviewed: '2026-07-20'
+updated: '2026-07-21'
+reviewed: '2026-07-21'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -25,7 +25,7 @@ license: null
 
 # Adopt or update Project Standards with an agent
 
-Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. The prompt requires a preview before every apply, preservation of consumer intent, latest-release discovery with immutable-release verification, and sanitized upstream issue reports for adoption or upgrade irregularities.
+Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. The prompt requires a preview before every apply, preservation of consumer intent, latest-release discovery with immutable-release verification, and sanitized upstream issue reports for defects, blockers, and friction-reducing improvements.
 
 ## Copy/paste prompt
 
@@ -118,7 +118,9 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
 
 ## Report adoption and upgrade irregularities upstream
 
-Treat any unexpected behavior or unnecessary friction as an upstream adoption/upgrade irregularity. Examples include contradictory or incomplete documentation, an undocumented prerequisite, unclear package selection or option semantics, surprising diffs, unsafe-looking ownership or removal plans, preservation conflicts, non-idempotent reconciliation, command/help mismatches, validation failures, traceback or internal errors, and steps that require an undocumented workaround.
+Open or update an upstream issue for every concrete observation whose resolution could make adoption or updating faster, clearer, safer, or less error-prone. Issue eligibility does not depend on blocking progress, causing a command failure, or lacking a workaround. Examples include contradictory, incomplete, or hard-to-discover documentation; an undocumented prerequisite; unclear package selection, option semantics, command output, or help; unnecessary manual or repeated steps; avoidable retries; surprising diffs; unsafe-looking ownership or removal plans; preservation conflicts; non-idempotent reconciliation; weak diagnostics; validation failures; traceback or internal errors; and steps that require an undocumented workaround.
+
+Use consumer impact and reproducibility to prioritize the report, not to decide whether to report it. A safe workaround or the ability to complete the adoption or update does not waive issue reporting.
 
 Report upstream at https://github.com/L3DigitalNet/project-standards/issues. The repository has GitHub Issues enabled.
 
@@ -133,7 +135,8 @@ Do not silently work around, normalize, or hide an irregularity. For each distin
    - expected behavior and actual behavior;
    - complete relevant output or traceback;
    - minimal reproduction steps;
-   - relevant `git status`, focused diff, and documentation links; and
+   - relevant `git status`, focused diff, and documentation links;
+   - consumer consequence, including extra time, steps, confusion, or risk; and
    - whether the irregularity blocks progress or has a safe temporary workaround.
 2. Remove secrets, credentials, private repository names or URLs, proprietary source, personal data, and unrelated consumer content from all evidence.
 3. Search the upstream issue tracker before filing:
@@ -158,7 +161,7 @@ Do not silently work around, normalize, or hide an irregularity. For each distin
    ```
 
    Use `[upgrade]` instead of `[adoption]` for an existing-consumer update or migration. Include the captured evidence, consumer consequence, and any safe workaround. Cross-link related issues rather than combining unrelated failures.
-5. Opening these upstream issues is explicitly part of this task. If GitHub authentication, network access, or issue permissions prevent it, prepare the complete sanitized issue title and body, report the single missing prerequisite, and do not claim the reporting step complete unless the user explicitly waives it.
+5. Opening or updating these upstream issues, including reports for non-blocking friction, is explicitly part of this task. If GitHub authentication, network access, or issue permissions prevent it, prepare the complete sanitized issue title and body, report the single missing prerequisite, and do not claim the reporting step complete unless the user explicitly waives it.
 6. After reporting, continue only if the next action is safe, documented, preserves consumer intent, and will not destroy useful failure evidence. Otherwise stop and present the issue URL and blocker to the user.
 
 ## Verify the result
@@ -185,7 +188,7 @@ Report:
 - files created, changed, preserved, or intentionally removed;
 - preview and apply commands run;
 - verification commands and exact outcomes;
-- every upstream issue URL opened or updated;
+- every upstream issue URL opened or updated, including reports for friction that did not block progress;
 - any workaround, remaining uncertainty, or blocked step; and
 - whether the working tree is ready for human review.
 

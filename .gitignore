@@ -32,3 +32,6 @@ node_modules/
 # Prettier only reads the root ignore files — declaring the dir here keeps the
 # repo-wide `prettier --check .` gate green on these local-only transcripts.
 .superpowers/
+
+# Analysis working space (code-simplification runs)
+.scratch/
