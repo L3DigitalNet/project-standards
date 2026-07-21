@@ -29,7 +29,7 @@ Copy the prompt below into a coding agent session rooted in the repository to ad
 
 ## Copy/paste prompt
 
-````text
+````markdown
 Adopt or update this repository to the most recent official Project Standards release. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
 
 Resolve GitHub's latest published, non-prerelease Project Standards release once, before reading release documentation or changing the repository:
@@ -161,6 +161,7 @@ Do not silently work around, normalize, or hide an irregularity. For each distin
    ```
 
    Use `[upgrade]` instead of `[adoption]` for an existing-consumer update or migration. Include the captured evidence, consumer consequence, and any safe workaround. Cross-link related issues rather than combining unrelated failures.
+
 5. Opening or updating these upstream issues, including reports for non-blocking friction, is explicitly part of this task. If GitHub authentication, network access, or issue permissions prevent it, prepare the complete sanitized issue title and body, report the single missing prerequisite, and do not claim the reporting step complete unless the user explicitly waives it.
 6. After reporting, continue only if the next action is safe, documented, preserves consumer intent, and will not destroy useful failure evidence. Otherwise stop and present the issue URL and blocker to the user.
 
