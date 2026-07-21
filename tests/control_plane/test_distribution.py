@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 
 from project_standards.control_plane.codec import render_catalog
-from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.distribution import (
+    InstalledDistribution,
+    declared_transitions,
+    resolution_payloads,
+)
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.catalog import render_consumer_catalog
 from project_standards.package_contract.projection import sync_payload_projection
@@ -58,6 +62,27 @@ def test_loads_one_installed_catalog_and_verifies_every_payload(tmp_path: Path) 
         for entry in catalog.source.packages
         for payload in [catalog.payload_map[(entry.id, entry.version.value)]]
     )
+
+
+def test_resolution_projection_helpers__installed_catalog__preserve_payload_facts(
+    tmp_path: Path,
+) -> None:
+    catalog = InstalledDistribution(
+        _installed_fixture(tmp_path),
+        tool_release="5.1.0",
+    ).load_catalog("5")
+
+    payloads = resolution_payloads(catalog)
+    transitions = declared_transitions(catalog)
+
+    assert [(item.standard_id, item.version.value) for item in payloads] == [
+        (payload.manifest.payload.standard, payload.manifest.payload.version.value)
+        for payload in catalog.payloads
+    ]
+    assert {(item.standard_id, item.source.value, item.target.value) for item in transitions} == {
+        ("alpha", "1.0", "2.0"),
+        ("alpha", "2.0", "3.0"),
+    }
 
 
 def test_installed_facts_render_the_source_catalog_golden_byte_for_byte(

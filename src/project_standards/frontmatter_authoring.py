@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +24,7 @@ from project_standards.format_frontmatter import (
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
-    Sha256Digest,
+    digest_of,
 )
 from project_standards.package_contract.payload import AdapterKind
 from project_standards.validate_frontmatter import FrontmatterParseError, parse_frontmatter
@@ -41,10 +40,6 @@ class FrontmatterAuthoringPlan:
     fixed_ids: tuple[tuple[str, str], ...]
     warnings: tuple[tuple[str, str], ...]
     refused_paths: tuple[str, ...]
-
-
-def _digest(content: bytes) -> str:
-    return f"sha256:{hashlib.sha256(content).hexdigest()}"
 
 
 def _targets(repo: Path, paths: tuple[Path, ...]) -> tuple[SafeRelativePath, ...]:
@@ -143,7 +138,7 @@ def _plan_entries(
                     else "format frontmatter"
                 ),
                 precondition_digest=entry.precondition_digest,
-                content_digest=Sha256Digest(_digest(replacement)),
+                content_digest=digest_of(replacement),
                 content_base64=base64.b64encode(replacement).decode("ascii"),
                 mode=entry.mode,
             )

@@ -8,8 +8,7 @@ from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import ValidationError
-
+from project_standards.package_contract.diagnostics import validation_summary as validation_summary
 from project_standards.package_contract.paths import PackageVersion
 
 
@@ -154,16 +153,3 @@ def actions_to_jsonable(actions: Iterable[ControlAction]) -> list[dict[str, obje
             }
         )
     return result
-
-
-def validation_summary(exc: ValidationError) -> str:
-    """Summarize structural failures without echoing untrusted input values."""
-    summaries: list[str] = []
-    for error in exc.errors(
-        include_url=False,
-        include_context=False,
-        include_input=False,
-    ):
-        location = ".".join(str(part) for part in error["loc"])
-        summaries.append(f"{location or '<root>'}: {error['msg']}")
-    return "; ".join(summaries)

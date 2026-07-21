@@ -16,7 +16,10 @@ from pydantic import (
     model_validator,
 )
 
-from project_standards.package_contract.diagnostics import PackageContractError
+from project_standards.package_contract.diagnostics import (
+    PackageContractError,
+    validation_summary,
+)
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
@@ -87,19 +90,6 @@ class FamilyManifest(StrictModel):
         return self
 
 
-def _validation_summary(exc: ValidationError) -> str:
-    """Return structural diagnostics without echoing untrusted input values."""
-    summaries: list[str] = []
-    for error in exc.errors(
-        include_url=False,
-        include_context=False,
-        include_input=False,
-    ):
-        location = ".".join(str(part) for part in error["loc"])
-        summaries.append(f"{location or '<root>'}: {error['msg']}")
-    return "; ".join(summaries)
-
-
 def load_family_manifest(path: Path) -> FamilyManifest:
     """Load one V2 family index and wrap every boundary failure.
 
@@ -119,7 +109,7 @@ def load_family_manifest(path: Path) -> FamilyManifest:
     try:
         manifest = FamilyManifest.model_validate(raw)
     except ValidationError as exc:
-        summary = _validation_summary(exc)
+        summary = validation_summary(exc)
         raise PackageContractError(
             f"family index {path} violates the V2 contract: {summary}"
         ) from exc

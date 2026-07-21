@@ -9,6 +9,7 @@ import pytest
 
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.catalog import (
+    ROLE_COMPATIBILITY,
     CatalogPackageEntry,
     CatalogRole,
     CatalogSource,
@@ -238,6 +239,9 @@ def test_non_consumer_availability_requires_the_matching_catalog_role(
     valid_role: CatalogRole,
     invalid_role: CatalogRole,
 ) -> None:
+    assert valid_role in ROLE_COMPATIBILITY[availability]
+    assert invalid_role not in ROLE_COMPATIBILITY[availability]
+
     families, payloads = _with_versions(["1.2"], [availability])
 
     validate_catalog_source(_catalog(_entry("1.2", valid_role)), families, payloads)

@@ -27,8 +27,9 @@ from project_standards.control_plane.codec import (
 )
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import (
-    InstalledCatalog,
     InstalledDistribution,
+    declared_transitions,
+    resolution_payloads,
 )
 from project_standards.control_plane.executor import (
     ApplyRequest,
@@ -50,16 +51,11 @@ from project_standards.control_plane.planner import (
     plan_reconciliation,
 )
 from project_standards.control_plane.resolution import (
-    DeclaredTransition,
     MajorAuthorization,
-    ResolutionPayload,
     ResolutionRequest,
 )
 from project_standards.package_contract.diagnostics import PackageContractError
-from project_standards.package_contract.payload import (
-    JsonValue,
-    load_option_schema,
-)
+from project_standards.package_contract.payload import JsonValue
 
 
 class RecoveryKind(StrEnum):
@@ -117,6 +113,38 @@ def _digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def _replace_catalog_atomically(
+    control: LockedControlDirectory,
+    temporary: str,
+    content: bytes,
+    *,
+    zero_write_message: str,
+) -> None:
+    descriptor = os.open(
+        temporary,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+        0o600,
+        dir_fd=control.descriptor,
+    )
+    try:
+        os.fchmod(descriptor, 0o644)
+        remaining = memoryview(content)
+        while remaining:
+            written = os.write(descriptor, remaining)
+            if written == 0:
+                raise OSError(zero_write_message)
+            remaining = remaining[written:]
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    os.replace(
+        temporary,
+        "catalog.toml",
+        src_dir_fd=control.descriptor,
+        dst_dir_fd=control.descriptor,
+    )
+
+
 def _preconditions(
     control: LockedControlDirectory,
     names: tuple[str, ...],
@@ -163,35 +191,6 @@ def _catalog_recovery(
     )
 
 
-def _resolution_payloads(installed: InstalledCatalog) -> tuple[ResolutionPayload, ...]:
-    return tuple(
-        ResolutionPayload(
-            standard_id=payload.manifest.payload.standard,
-            version=payload.manifest.payload.version,
-            payload_digest=payload.integrity.aggregate_digest,
-            option_schema=load_option_schema(payload.root, payload.manifest),
-        )
-        for payload in installed.payloads
-    )
-
-
-def _transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
-    transitions: set[DeclaredTransition] = set()
-    for payload in installed.payloads:
-        for migration in payload.manifest.migrations:
-            source = migration.from_endpoint.package_version
-            target = migration.to_endpoint.package_version
-            if source is not None and target is not None:
-                transitions.add(
-                    DeclaredTransition(
-                        payload.manifest.payload.standard,
-                        source,
-                        target,
-                    )
-                )
-    return frozenset(transitions)
-
-
 def _lock_recovery(
     request: RecoveryRequest,
     control: LockedControlDirectory,
@@ -220,8 +219,8 @@ def _lock_recovery(
             catalog=catalog,
             previous_lock=empty_lock,
             allowed_majors=request.allowed_majors,
-            payloads=_resolution_payloads(installed),
-            transition_paths=_transitions(installed),
+            payloads=resolution_payloads(installed),
+            transition_paths=declared_transitions(installed),
         )
         planner = PlannerRequest(request.repo, resolution, installed.payloads)
         reconciliation = plan_reconciliation(planner)
@@ -434,28 +433,11 @@ def _publish_catalog(
                     return ApplyResult(False, (), False, "CP-STALE-PLAN")
             temporary = reserved_temporary_name()
             try:
-                descriptor = os.open(
+                _replace_catalog_atomically(
+                    control,
                     temporary,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
-                    0o600,
-                    dir_fd=control.descriptor,
-                )
-                try:
-                    os.fchmod(descriptor, 0o644)
-                    remaining = memoryview(content)
-                    while remaining:
-                        written = os.write(descriptor, remaining)
-                        if written == 0:
-                            raise OSError("zero-byte catalog write")
-                        remaining = remaining[written:]
-                    os.fsync(descriptor)
-                finally:
-                    os.close(descriptor)
-                os.replace(
-                    temporary,
-                    "catalog.toml",
-                    src_dir_fd=control.descriptor,
-                    dst_dir_fd=control.descriptor,
+                    content,
+                    zero_write_message="zero-byte catalog write",
                 )
                 applied.append(".standards/catalog.toml")
                 os.fsync(control.descriptor)
@@ -489,28 +471,11 @@ def _publish_catalog_refresh_recovery(
             try:
                 if plan.proposed_content is not None:
                     temporary = reserved_temporary_name()
-                    descriptor = os.open(
+                    _replace_catalog_atomically(
+                        control,
                         temporary,
-                        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
-                        0o600,
-                        dir_fd=control.descriptor,
-                    )
-                    try:
-                        os.fchmod(descriptor, 0o644)
-                        remaining = memoryview(plan.proposed_content)
-                        while remaining:
-                            written = os.write(descriptor, remaining)
-                            if written == 0:
-                                raise OSError("zero-byte catalog recovery write")
-                            remaining = remaining[written:]
-                        os.fsync(descriptor)
-                    finally:
-                        os.close(descriptor)
-                    os.replace(
-                        temporary,
-                        "catalog.toml",
-                        src_dir_fd=control.descriptor,
-                        dst_dir_fd=control.descriptor,
+                        plan.proposed_content,
+                        zero_write_message="zero-byte catalog recovery write",
                     )
                     applied.append(".standards/catalog.toml")
                     temporary = None

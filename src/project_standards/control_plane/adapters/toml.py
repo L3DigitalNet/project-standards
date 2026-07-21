@@ -14,6 +14,9 @@ from project_standards.control_plane.adapters.base import (
     AdapterState,
     AdapterUnit,
     UnitChange,
+    apply_edits,
+    decode_json_pointer,
+    decode_utf8,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -256,13 +259,6 @@ def scan_toml_statements(text: str) -> tuple[TomlStatement, ...]:
     return tuple(statements)
 
 
-def _decode(content: bytes) -> str:
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError("TOML content is not valid UTF-8") from exc
-
-
 def _parse(text: str) -> dict[str, object]:
     try:
         return tomllib.loads(text)
@@ -285,10 +281,6 @@ def _json_value(value: object) -> JsonValue:
     raise ControlPlaneError("selected TOML value is not JSON-compatible")
 
 
-def _pointer(value: str) -> tuple[str, ...]:
-    return tuple(segment.replace("~1", "/").replace("~0", "~") for segment in value.split("/")[1:])
-
-
 def _scope(scope: str) -> ScopeSpec:
     try:
         normalized = normalize_scope(AdapterKind.TOML, scope)
@@ -299,14 +291,14 @@ def _scope(scope: str) -> ScopeSpec:
         return ScopeSpec(
             normalized,
             cast("Literal['key', 'table']", prefix),
-            _pointer(pointer),
+            decode_json_pointer(pointer),
         )
     pointer, binding = normalized.removeprefix("keyed-set:").rsplit("#", 1)
     identity_key, identity = binding.split("=", 1)
     return ScopeSpec(
         normalized,
         "keyed-set",
-        _pointer(pointer),
+        decode_json_pointer(pointer),
         unquote(identity_key),
         unquote(identity),
     )
@@ -398,7 +390,7 @@ def _keyed_entry_statements(
 
 
 def _keyed_fragment_value(content: bytes, spec: ScopeSpec) -> tuple[JsonValue, str]:
-    text = _decode(content)
+    text = decode_utf8(content, "TOML")
     parsed = _parse(text)
     items, match = _keyed_values(parsed, spec)
     if match is None or len(items) != 1:
@@ -507,7 +499,7 @@ def _canonical_path(path: tuple[str, ...]) -> str:
 
 
 def _fragment_value(content: bytes) -> JsonValue:
-    value_text = _decode(content)
+    value_text = decode_utf8(content, "TOML")
     parsed = _parse(f"__project_standards_value__ = {value_text}\n")
     if set(parsed) != {"__project_standards_value__"}:
         raise ControlPlaneError("TOML key fragment exceeds its declared scope")
@@ -525,7 +517,7 @@ def _table_fragment_value(
     content: bytes,
     path: tuple[str, ...],
 ) -> tuple[JsonValue, str]:
-    text = _decode(content)
+    text = decode_utf8(content, "TOML")
     parsed = _parse(text)
     statements = scan_toml_statements(text)
     _reject_array_ambiguity(statements, "table", path)
@@ -588,11 +580,18 @@ def _preserve_comments_and_whitespace(source: str) -> str:
     return "".join(preserved)
 
 
-def _apply_edits(text: str, edits: list[tuple[int, int, str]]) -> str:
-    updated = text
-    for start, end, replacement in sorted(edits, reverse=True):
-        updated = f"{updated[:start]}{replacement}{updated[end:]}"
-    return updated
+def _replacement_edits(
+    text: str,
+    selected: tuple[TomlStatement, ...],
+    fragment: str,
+) -> list[tuple[int, int, str]]:
+    edits: list[tuple[int, int, str]] = []
+    for index, statement in enumerate(selected):
+        source = text[statement.start : statement.end]
+        preserved = _preserve_comments_and_whitespace(source)
+        replacement = f"{fragment}{preserved}" if index == 0 else preserved
+        edits.append((statement.start, statement.end, replacement))
+    return edits
 
 
 def _removal_bounds(
@@ -712,7 +711,7 @@ class TomlAdapter:
     kind = AdapterKind.TOML
 
     def inspect(self, content: bytes, scopes: tuple[str, ...]) -> AdapterState:
-        text = _decode(content)
+        text = decode_utf8(content, "TOML")
         parsed = _parse(text)
         try:
             statements = scan_toml_statements(text)
@@ -731,7 +730,7 @@ class TomlAdapter:
         return AdapterState(content, tuple(units))
 
     def render(self, state: AdapterState, changes: tuple[UnitChange, ...]) -> bytes:
-        text = _decode(state.content)
+        text = decode_utf8(state.content, "TOML")
         parsed = _parse(text)
         try:
             statements = scan_toml_statements(text)
@@ -790,7 +789,7 @@ class TomlAdapter:
                 raise ControlPlaneError("mutating TOML change requires a bounded fragment")
             if spec.kind == "key":
                 desired = _fragment_value(change.content)
-                fragment = _decode(change.content)
+                fragment = decode_utf8(change.content, "TOML")
             elif spec.kind == "keyed-set":
                 desired, fragment = _keyed_fragment_value(change.content, spec)
             else:
@@ -822,22 +821,14 @@ class TomlAdapter:
             elif spec.kind == "keyed-set":
                 assert match is not None
                 selected = _keyed_entry_statements(statements, spec.path, match)
-                for index, statement in enumerate(selected):
-                    source = text[statement.start : statement.end]
-                    preserved = _preserve_comments_and_whitespace(source)
-                    replacement = f"{fragment}{preserved}" if index == 0 else preserved
-                    edits.append((statement.start, statement.end, replacement))
+                edits.extend(_replacement_edits(text, selected, fragment))
             else:
                 selected = _table_statements(statements, spec.path)
                 if not selected:
                     raise ControlPlaneError("TOML update scope is not independently addressable")
-                for index, statement in enumerate(selected):
-                    source = text[statement.start : statement.end]
-                    preserved = _preserve_comments_and_whitespace(source)
-                    replacement = f"{fragment}{preserved}" if index == 0 else preserved
-                    edits.append((statement.start, statement.end, replacement))
+                edits.extend(_replacement_edits(text, selected, fragment))
 
-        updated = _apply_edits(text, edits)
+        updated = apply_edits(text, edits)
         newline = _newline(updated)
         new_keys = [
             (path, value.replace("\r\n", "\n").replace("\n", newline)) for path, value in new_keys

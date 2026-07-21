@@ -4,6 +4,9 @@ import dataclasses
 import itertools
 from typing import Literal, get_type_hints
 
+import pytest
+from pydantic import BaseModel, RootModel, ValidationError
+
 import project_standards.package_contract as package_contract
 from project_standards.package_contract import (
     PackageContractError,
@@ -12,6 +15,16 @@ from project_standards.package_contract import (
     findings_to_jsonable,
     sort_findings,
 )
+from project_standards.package_contract.diagnostics import validation_summary
+
+
+class _SummaryModel(BaseModel):
+    name: str
+    count: int
+
+
+class _RootSummaryModel(RootModel[int]):
+    pass
 
 
 def _finding(
@@ -153,3 +166,26 @@ def test_findings_to_jsonable_is_sorted_and_uses_exact_fields() -> None:
 
 def test_package_contract_error_is_a_value_error() -> None:
     assert issubclass(PackageContractError, ValueError)
+
+
+def test_validation_summary__invalid_model__omits_input_values() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _SummaryModel.model_validate({"name": {"never": "print-this"}, "count": "also-secret"})
+
+    summary = validation_summary(exc_info.value)
+
+    assert summary.startswith("name: ")
+    assert "; count: " in summary
+    assert "never" not in summary
+    assert "print-this" not in summary
+    assert "also-secret" not in summary
+
+
+def test_validation_summary__root_error__uses_root_location() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _RootSummaryModel.model_validate("secret-root-input")
+
+    summary = validation_summary(exc_info.value)
+
+    assert summary.startswith("<root>: ")
+    assert "secret-root-input" not in summary

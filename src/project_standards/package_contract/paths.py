@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import ntpath
 import re
 import unicodedata
@@ -34,7 +35,7 @@ def validate_json_pointer(value: str) -> str:
     return value
 
 
-def _pydantic_string_schema[T](
+def pydantic_string_schema[T](
     scalar_type: type[T],
     validator: Callable[[str], T],
     serializer: Callable[[T], str],
@@ -91,7 +92,7 @@ class PackageVersion:
         _handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Expose the scalar's strict validation and serialization contract to Pydantic."""
-        return _pydantic_string_schema(
+        return pydantic_string_schema(
             cls,
             cls._from_string,
             cls._to_string,
@@ -124,12 +125,17 @@ class Sha256Digest:
         _handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Expose the scalar's strict validation and serialization contract to Pydantic."""
-        return _pydantic_string_schema(
+        return pydantic_string_schema(
             cls,
             cls._from_string,
             cls._to_string,
             pattern=_SHA256_PATTERN_TEXT,
         )
+
+
+def digest_of(content: bytes) -> Sha256Digest:
+    """Return the canonical typed digest of exact bytes."""
+    return Sha256Digest(f"sha256:{hashlib.sha256(content).hexdigest()}")
 
 
 def _normalize_relative_path(value: str) -> PurePosixPath:
@@ -187,7 +193,7 @@ class SafeRelativePath:
         _handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Expose the scalar's strict validation and serialization contract to Pydantic."""
-        return _pydantic_string_schema(cls, cls._from_string, cls._to_string)
+        return pydantic_string_schema(cls, cls._from_string, cls._to_string)
 
 
 def validate_path_collection(

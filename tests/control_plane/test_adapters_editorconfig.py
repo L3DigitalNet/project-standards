@@ -105,9 +105,7 @@ def test_editorconfig_parse__cr_suffix__preserves_content_span_and_round_trip(
     physical: str,
     expected_code: str,
 ) -> None:
-    code_end = editorconfig_adapter._line_end_without_newline(  # pyright: ignore[reportPrivateUsage]  # parser span regression
-        physical
-    )
+    code_end = editorconfig_adapter.line_end_without_newline(physical)
     document = editorconfig_adapter._parse(  # pyright: ignore[reportPrivateUsage]  # parser span regression
         physical.encode()
     )

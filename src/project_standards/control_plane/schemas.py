@@ -4,12 +4,8 @@ from __future__ import annotations
 
 import base64
 import binascii
-import hashlib
-import json
-import os
-import tempfile
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -20,12 +16,14 @@ from project_standards.control_plane.models import (
     ConsumerCatalog,
     DesiredConfig,
 )
+from project_standards.package_contract._write import atomic_write
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId, StrictModel
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
     Sha256Digest,
+    digest_of,
 )
 from project_standards.package_contract.payload import (
     AdapterKind,
@@ -34,12 +32,11 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
     normalize_scope,
 )
-
-type SchemaDocument = dict[str, object]
-
-_SCHEMA_BASE = (
-    "https://raw.githubusercontent.com/L3DigitalNet/project-standards/main/"
-    "src/project_standards/schemas"
+from project_standards.package_contract.schemas import (
+    SCHEMA_BASE,
+    SchemaDocument,
+    build_schema_documents,
+    serialize_schema_documents,
 )
 
 
@@ -87,7 +84,7 @@ class MutationActionSchema(StrictModel):
             raise ValueError("mutation plan content must be canonical base64") from exc
         if base64.b64encode(content).decode("ascii") != self.content_base64:
             raise ValueError("mutation plan content must be canonical base64")
-        digest = f"sha256:{hashlib.sha256(content).hexdigest()}"
+        digest = digest_of(content).value
         if digest != self.content_digest.value:
             raise ValueError("mutation plan content does not match its digest")
         return self
@@ -169,60 +166,14 @@ _SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
 )
 
 
-def _close_objects(value: object) -> object:
-    if isinstance(value, dict):
-        source = cast(dict[str, object], value)
-        closed = {key: _close_objects(nested) for key, nested in source.items()}
-        if closed.get("type") == "object" and "properties" in closed:
-            closed["additionalProperties"] = False
-        return closed
-    if isinstance(value, list):
-        return [_close_objects(nested) for nested in cast(list[object], value)]
-    return value
-
-
 def control_plane_schema_documents() -> dict[str, SchemaDocument]:
     """Return all strict control-plane schemas in stable filename order."""
-    schemas: dict[str, SchemaDocument] = {}
-    for name, model in _SCHEMA_MODELS:
-        raw = cast(SchemaDocument, _close_objects(model.model_json_schema()))
-        definitions = raw.get("$defs")
-        if isinstance(definitions, dict):
-            raw["$defs"] = {
-                key: definitions[key] for key in sorted(cast(dict[str, object], definitions))
-            }
-        schemas[name] = {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": f"{_SCHEMA_BASE}/{name}",
-            **raw,
-        }
-    return schemas
+    return build_schema_documents(_SCHEMA_MODELS, SCHEMA_BASE)
 
 
 def control_plane_schema_bytes() -> dict[str, bytes]:
     """Serialize schemas with stable keys, two-space indent, and a final newline."""
-    return {
-        name: (json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True) + "\n").encode()
-        for name, schema in control_plane_schema_documents().items()
-    }
-
-
-def _atomic_write(path: Path, content: bytes) -> None:
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{path.name}.",
-        dir=path.parent,
-    )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            os.fchmod(stream.fileno(), 0o644)
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(path)
-    except BaseException:
-        temporary.unlink(missing_ok=True)
-        raise
+    return serialize_schema_documents(control_plane_schema_documents())
 
 
 def generate_control_plane_schemas(root: Path, *, check: bool) -> bool:
@@ -250,7 +201,7 @@ def generate_control_plane_schemas(root: Path, *, check: bool) -> bool:
             return False
     try:
         for name, content in expected.items():
-            _atomic_write(output / name, content)
+            atomic_write(output / name, content)
     except OSError as exc:
         raise PackageContractError("control-plane schemas could not be written") from exc
     return True

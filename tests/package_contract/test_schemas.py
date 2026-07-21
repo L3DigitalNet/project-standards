@@ -17,9 +17,13 @@ from project_standards.package_contract.catalog import CatalogSource
 from project_standards.package_contract.family import FamilyManifest
 from project_standards.package_contract.payload import PayloadManifest
 from project_standards.package_contract.schemas import (
+    SCHEMA_BASE,
+    atomic_write,
+    build_schema_documents,
     generate_package_schemas,
     package_schema_bytes,
     package_schema_documents,
+    serialize_schema_documents,
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -70,6 +74,13 @@ def _walk_objects(value: object) -> None:
 
 def _validator(schema: dict[str, object]) -> _SchemaValidator:
     return cast("_SchemaValidator", Draft202012Validator(schema))
+
+
+def test_shared_schema_builders__package_models__match_package_outputs() -> None:
+    documents = build_schema_documents(tuple(_MODELS.items()), SCHEMA_BASE)
+
+    assert documents == package_schema_documents()
+    assert serialize_schema_documents(documents) == package_schema_bytes()
 
 
 def test_generated_schema_documents_are_closed_draft_2020_12_contracts() -> None:
@@ -179,6 +190,24 @@ def test_schema_generation_writes_then_checks_without_mutating_stale_output(
     assert {path.name: path.read_bytes() for path in generated.iterdir()} == stale
     assert generate_package_schemas(tmp_path, check=False)
     assert {path.name: path.read_bytes() for path in generated.iterdir()} == expected
+
+
+def test_atomic_write__fsync_failure__cleans_staged_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "schema.json"
+
+    def fail_fsync(_descriptor: int) -> None:
+        raise OSError("injected fsync failure")
+
+    monkeypatch.setattr("project_standards.package_contract._write.os.fsync", fail_fsync)
+
+    with pytest.raises(OSError, match="injected fsync failure"):
+        atomic_write(target, b"{}\n")
+
+    assert not target.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_schema_generation_rejects_symlinked_output_ancestors(tmp_path: Path) -> None:

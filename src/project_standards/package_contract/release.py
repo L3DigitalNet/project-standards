@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 import subprocess
 import tomllib
@@ -31,6 +30,7 @@ from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
     Sha256Digest,
+    digest_of,
 )
 from project_standards.package_contract.payload import PayloadManifest
 
@@ -385,13 +385,13 @@ def load_git_release_snapshot(
         inventory = [
             PayloadInventoryEntry(
                 path=SafeRelativePath.parse("payload.toml"),
-                digest=Sha256Digest(f"sha256:{hashlib.sha256(payload_raw).hexdigest()}"),
+                digest=digest_of(payload_raw),
             )
         ]
         payload_root = f"standards/{entry.id}/versions/{entry.version.value}"
         for relative_path, declared_digest in _declared_payload_files(manifest).items():
             raw = _git_blob(root, commit, f"{payload_root}/{relative_path}")
-            actual = Sha256Digest(f"sha256:{hashlib.sha256(raw).hexdigest()}")
+            actual = digest_of(raw)
             if actual != declared_digest:
                 raise PackageContractError(
                     f"released baseline digest mismatch for {entry.id}@{entry.version.value}"

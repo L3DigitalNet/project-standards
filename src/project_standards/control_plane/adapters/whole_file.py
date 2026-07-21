@@ -137,6 +137,34 @@ def _modified(entry: SnapshotEntry, previous: LockedUnit) -> bool:
     )
 
 
+def _managed_guard(
+    path: SafeRelativePath,
+    entry: SnapshotEntry,
+    standard_id: str,
+    version: str,
+    previous: LockedUnit,
+) -> WholeFilePlan | None:
+    if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        return _action(
+            ActionKind.PRESERVE,
+            path,
+            standard_id,
+            entry,
+            content=None,
+            mode=entry.mode,
+            created_container=previous.created_container,
+        )
+    if _modified(entry, previous):
+        return _finding(
+            "CP-MODIFIED-MANAGED",
+            path,
+            standard_id,
+            version,
+            "managed whole-file content or mode differs from the lock",
+        )
+    return None
+
+
 def _intent_conflict(
     path: SafeRelativePath,
     intents: tuple[WholeFileIntent, ...],
@@ -194,24 +222,9 @@ def plan_whole_file(
     if intent is None:
         if previous is None:
             return WholeFilePlan(None, None, None, False)
-        if previous.policy is ArtifactPolicy.CREATE_ONLY:
-            return _action(
-                ActionKind.PRESERVE,
-                path,
-                standard_id,
-                entry,
-                content=None,
-                mode=entry.mode,
-                created_container=previous.created_container,
-            )
-        if _modified(entry, previous):
-            return _finding(
-                "CP-MODIFIED-MANAGED",
-                path,
-                standard_id,
-                version,
-                "managed whole-file content or mode differs from the lock",
-            )
+        guarded = _managed_guard(path, entry, standard_id, version, previous)
+        if guarded is not None:
+            return guarded
         if not previous.created_container:
             return _action(
                 ActionKind.PRESERVE,
@@ -280,24 +293,9 @@ def plan_whole_file(
             version,
             "selected package does not match exclusive lock ownership",
         )
-    if previous.policy is ArtifactPolicy.CREATE_ONLY:
-        return _action(
-            ActionKind.PRESERVE,
-            path,
-            standard_id,
-            entry,
-            content=None,
-            mode=entry.mode,
-            created_container=previous.created_container,
-        )
-    if _modified(entry, previous):
-        return _finding(
-            "CP-MODIFIED-MANAGED",
-            path,
-            standard_id,
-            version,
-            "managed whole-file content or mode differs from the lock",
-        )
+    guarded = _managed_guard(path, entry, standard_id, version, previous)
+    if guarded is not None:
+        return guarded
     if entry.content_digest == desired_digest and (
         intent.mode is None or entry.mode == intent.mode
     ):

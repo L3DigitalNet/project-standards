@@ -17,7 +17,9 @@ from project_standards.control_plane.codec import bind_catalog_digest
 from project_standards.control_plane.diagnostics import validation_summary
 from project_standards.control_plane.models import ConsumerCatalog
 from project_standards.control_plane.paths import CatalogMajor
+from project_standards.control_plane.resolution import DeclaredTransition, ResolutionPayload
 from project_standards.package_contract.catalog import (
+    ROLE_COMPATIBILITY,
     CatalogPackageEntry,
     CatalogRole,
     CatalogSource,
@@ -32,6 +34,7 @@ from project_standards.package_contract.integrity import (
 from project_standards.package_contract.payload import (
     PayloadAvailability,
     PayloadManifest,
+    load_option_schema,
 )
 
 _TOOL_RELEASE = re.compile(
@@ -97,6 +100,31 @@ class InstalledCatalog:
         }
 
 
+def resolution_payloads(installed: InstalledCatalog) -> tuple[ResolutionPayload, ...]:
+    return tuple(
+        ResolutionPayload(
+            standard_id=payload.manifest.payload.standard,
+            version=payload.manifest.payload.version,
+            payload_digest=payload.integrity.aggregate_digest,
+            option_schema=load_option_schema(payload.root, payload.manifest),
+        )
+        for payload in installed.payloads
+    )
+
+
+def declared_transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
+    transitions: set[DeclaredTransition] = set()
+    for payload in installed.payloads:
+        for migration in payload.manifest.migrations:
+            source = migration.from_endpoint.package_version
+            target = migration.to_endpoint.package_version
+            if source is not None and target is not None:
+                transitions.add(
+                    DeclaredTransition(payload.manifest.payload.standard, source, target)
+                )
+    return frozenset(transitions)
+
+
 def _load_installed_payload(path: Path) -> PayloadManifest:
     manifest_path = path / "payload.toml"
     try:
@@ -125,13 +153,7 @@ def _load_installed_payload(path: Path) -> PayloadManifest:
 
 
 def _validate_role(entry_role: CatalogRole, availability: PayloadAvailability) -> None:
-    allowed = {
-        PayloadAvailability.CONSUMER: frozenset(
-            {CatalogRole.DEFAULT, CatalogRole.RETAINED, CatalogRole.CANDIDATE}
-        ),
-        PayloadAvailability.REFERENCE_ONLY: frozenset({CatalogRole.REFERENCE_ONLY}),
-        PayloadAvailability.INTERNAL: frozenset({CatalogRole.INTERNAL}),
-    }[availability]
+    allowed = ROLE_COMPATIBILITY[availability]
     if entry_role not in allowed:
         raise PackageContractError("installed payload availability disagrees with catalog role")
 

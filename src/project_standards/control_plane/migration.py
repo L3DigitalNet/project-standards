@@ -54,6 +54,7 @@ from project_standards.control_plane.distribution import (
     InstalledCatalog,
     InstalledDistribution,
     InstalledPayload,
+    declared_transitions,
 )
 from project_standards.control_plane.models import (
     CentralLock,
@@ -66,7 +67,6 @@ from project_standards.control_plane.models import (
 )
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.resolution import (
-    DeclaredTransition,
     ResolutionPayload,
     ResolutionRequest,
 )
@@ -1005,6 +1005,21 @@ def _coverage_findings(
     return findings
 
 
+def _legacy_digest_finding(
+    report: MigrationReport,
+    claim: LegacyClaim,
+) -> ControlFinding:
+    return _finding(
+        "CP-MIGRATION-LEGACY-DIGEST",
+        path=claim.target.original,
+        identity=claim.signature_id,
+        standard_id=report.package.standard_id,
+        version=report.package.version.value,
+        message="legacy claim does not match the observed declared signature",
+        hint="rerun preview after restoring recognized legacy content",
+    )
+
+
 def _claim_findings(
     reports: tuple[MigrationReport, ...],
     observed: Mapping[tuple[str, str, str], _ObservedSignature],
@@ -1051,30 +1066,10 @@ def _claim_findings(
                 )
             claimed[key] = report.package.standard_id
             if item is None:
-                findings.append(
-                    _finding(
-                        "CP-MIGRATION-LEGACY-DIGEST",
-                        path=claim.target.original,
-                        identity=claim.signature_id,
-                        standard_id=report.package.standard_id,
-                        version=report.package.version.value,
-                        message="legacy claim does not match the observed declared signature",
-                        hint="rerun preview after restoring recognized legacy content",
-                    )
-                )
+                findings.append(_legacy_digest_finding(report, claim))
             if item is not None and item.known:
                 if item.digest != claim.observed_digest:
-                    findings.append(
-                        _finding(
-                            "CP-MIGRATION-LEGACY-DIGEST",
-                            path=claim.target.original,
-                            identity=claim.signature_id,
-                            standard_id=report.package.standard_id,
-                            version=report.package.version.value,
-                            message="legacy claim does not match the observed declared signature",
-                            hint="rerun preview after restoring recognized legacy content",
-                        )
-                    )
+                    findings.append(_legacy_digest_finding(report, claim))
                 elif claim.historical_units:
                     if signature is None or signature.kind is not LegacySignatureKind.WHOLE_FILE:
                         findings.append(
@@ -1314,23 +1309,6 @@ def _resolution_payloads(installed: InstalledCatalog) -> tuple[ResolutionPayload
             )
         )
     return tuple(result)
-
-
-def _transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
-    transitions: set[DeclaredTransition] = set()
-    for payload in installed.payloads:
-        for migration in payload.manifest.migrations:
-            source = migration.from_endpoint.package_version
-            target = migration.to_endpoint.package_version
-            if source is not None and target is not None:
-                transitions.add(
-                    DeclaredTransition(
-                        payload.manifest.payload.standard,
-                        source,
-                        target,
-                    )
-                )
-    return frozenset(transitions)
 
 
 def _empty_lock(
@@ -1924,7 +1902,7 @@ def _plan_legacy_migration(
         previous_lock=previous_lock,
         allowed_majors=frozenset(),
         payloads=_resolution_payloads(installed),
-        transition_paths=_transitions(installed),
+        transition_paths=declared_transitions(installed),
     )
     retired_targets, retired_content = _retirement_views(
         ordered_reports,

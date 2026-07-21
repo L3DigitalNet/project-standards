@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -365,6 +365,35 @@ def selected_command(
             explicit_legacy,
             require_reconciled=require_reconciled,
         )
+
+
+def reenter_selected_command(
+    arguments: list[str],
+    *,
+    standard_id: str,
+    mode: LockMode,
+    reenter: Callable[[list[str], SelectedCommandPackage], int],
+) -> int | None:
+    """Acquire the selected-command lock and re-enter the command under it.
+
+    Help and version requests bypass resolution. Return no outcome when the
+    repository has no selected package, so the caller can continue unlocked.
+    """
+    if any(option in arguments for option in {"--help", "-h", "--version"}):
+        return None
+    try:
+        with selected_command(
+            Path.cwd(),
+            standard_id,
+            mode=mode,
+            explicit_legacy=explicit_legacy_argument(arguments),
+        ) as selected:
+            if selected is not None:
+                return reenter(arguments, selected)
+    except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    return None
 
 
 def resolve_selected_package(

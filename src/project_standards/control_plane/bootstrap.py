@@ -27,6 +27,7 @@ from project_standards.control_plane.locking import (
 )
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.paths import CatalogMajor
+from project_standards.control_plane.snapshot import safe_repository_root
 from project_standards.package_contract.payload import JsonValue
 
 _CONTROL_FILES = ("config.toml", "catalog.toml", "lock.toml")
@@ -39,15 +40,6 @@ class InitializationResult:
     repo: Path
     created: bool
     files: tuple[str, ...] = _CONTROL_FILES
-
-
-def _safe_repo(repo: Path) -> Path:
-    try:
-        if repo.is_symlink() or not repo.is_dir():
-            raise ControlPlaneError("repository root must be a regular directory")
-        return repo.resolve(strict=True)
-    except OSError as exc:
-        raise ControlPlaneError("repository root could not be resolved") from exc
 
 
 def _expected_bytes(
@@ -164,7 +156,7 @@ def initialize_control_plane(
     remains visible for explicit incomplete-state recovery rather than being
     silently rolled back after reviewers may have observed it.
     """
-    normalized = _safe_repo(repo)
+    normalized = safe_repository_root(repo)
     major = (
         catalog_major if isinstance(catalog_major, CatalogMajor) else CatalogMajor(catalog_major)
     )

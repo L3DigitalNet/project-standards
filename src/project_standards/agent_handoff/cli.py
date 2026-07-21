@@ -21,6 +21,7 @@ from project_standards.agent_handoff.model import (
     Finding,
     OperationReport,
     PlannedChange,
+    emit_report,
 )
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 from project_standards.control_plane.command_resolution import (
@@ -237,17 +238,6 @@ def _provider_findings(
     )
 
 
-def _emit(report: OperationReport, *, as_json: bool) -> int:
-    if as_json:
-        print(report.to_json(), end="")
-    else:
-        for change in sorted(report.changes, key=lambda item: item.sort_key):
-            print(f"{change.kind.value}: {change.path}")
-        for finding in sorted(report.findings, key=lambda item: item.sort_key):
-            print(f"{finding.severity}: {finding.path}: {finding.message}", file=sys.stderr)
-    return 1 if report.blocked else 0
-
-
 def _run_read_command(
     selected: SelectedCommandPackage,
     operation: V2ProviderOperation,
@@ -270,14 +260,14 @@ def _run_read_command(
             # The selected provider owns the serialized evidence bytes.
             sys.stdout.write(result.content.decode("utf-8"))
             return 0
-        _emit(evidence, as_json=False)
+        emit_report(evidence, as_json=False)
         return 0
     findings = _provider_findings(selected, operation)
     if view == "size":
         findings = tuple(item for item in findings if item.code.startswith("AH-SIZE"))
     elif view == "shape":
         findings = tuple(item for item in findings if item.code.startswith("AH-SHAPE"))
-    return _emit(_report(selected, findings), as_json=args.json)
+    return emit_report(_report(selected, findings), as_json=args.json)
 
 
 def _upgrade_plan(
@@ -366,7 +356,7 @@ def _run_upgrade(selected: SelectedCommandPackage, args: _V2Args) -> int:
     )
     report = _report(selected, findings=findings, changes=changes)
     if findings or args.dry_run:
-        return _emit(report, as_json=args.json)
+        return emit_report(report, as_json=args.json)
     applied = apply_authoring_plan(selected.repo, plan)
     if not applied.success:
         active_path = changes[0].path if changes else "."
@@ -379,7 +369,7 @@ def _run_upgrade(selected: SelectedCommandPackage, args: _V2Args) -> int:
             guidance="Resolve the precondition or I/O failure, then re-plan before retrying.",
         )
         report = _report(selected, findings=(failure,), changes=changes)
-    return _emit(report, as_json=args.json)
+    return emit_report(report, as_json=args.json)
 
 
 def _run_selected(

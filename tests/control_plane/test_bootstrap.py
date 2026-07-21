@@ -15,6 +15,7 @@ from project_standards.control_plane.codec import parse_catalog, parse_config, p
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.locking import LockedControlDirectory
+from project_standards.control_plane.snapshot import safe_repository_root
 from project_standards.package_contract.projection import sync_payload_projection
 from tests.wheel_helpers import extract_pure_python_wheel
 
@@ -47,6 +48,10 @@ def _tree(root: Path) -> dict[str, tuple[str, bytes]]:
         else:
             result[relative] = ("other", b"")
     return result
+
+
+def test_safe_repository_root__regular_directory__returns_resolved_path(tmp_path: Path) -> None:
+    assert safe_repository_root(tmp_path) == tmp_path.resolve(strict=True)
 
 
 def test_initialization_creates_exactly_three_neutral_regular_files(tmp_path: Path) -> None:

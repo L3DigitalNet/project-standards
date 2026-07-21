@@ -254,7 +254,7 @@ def test_missing_include_block_exits(tmp_path: Path) -> None:
 
 
 def test_main_missing_standards_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # monkeypatch owns sys.argv; mock.patch replaces _repo_root because tmp_path is not a
+    # monkeypatch owns sys.argv; mock.patch replaces repo_root because tmp_path is not a
     # git repo and the real implementation calls `git rev-parse --show-toplevel`.
     from unittest.mock import patch
 
@@ -266,7 +266,7 @@ def test_main_missing_standards_exits(tmp_path: Path, monkeypatch: pytest.Monkey
         "sys.argv",
         ["sync-standards-include", str(tmp_path / "missing.yml"), str(settings)],
     )
-    with patch("project_standards.sync_standards_include._repo_root", return_value=tmp_path):
+    with patch("project_standards._sync_cli.repo_root", return_value=tmp_path):
         from project_standards.sync_standards_include import main
 
         with pytest.raises(SystemExit):
@@ -284,7 +284,7 @@ def test_main_missing_settings_exits(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "sys.argv",
         ["sync-standards-include", str(cfg), str(tmp_path / ".vscode" / "missing.json")],
     )
-    with patch("project_standards.sync_standards_include._repo_root", return_value=tmp_path):
+    with patch("project_standards._sync_cli.repo_root", return_value=tmp_path):
         from project_standards.sync_standards_include import main
 
         with pytest.raises(SystemExit):
@@ -292,7 +292,7 @@ def test_main_missing_settings_exits(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
 
 # ---------------------------------------------------------------------------
-# _repo_root + main() success paths (real git repo in tmp)
+# repo_root + main() success paths (real git repo in tmp)
 # ---------------------------------------------------------------------------
 
 
@@ -303,25 +303,21 @@ def test_path_colors_entry_without_path_keys_is_skipped() -> None:
 
 
 def test_repo_root_outside_git_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from project_standards.sync_standards_include import (
-        _repo_root,  # pyright: ignore[reportPrivateUsage]
-    )
+    from project_standards._sync_cli import repo_root
 
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit, match="not inside a git repository"):
-        _repo_root()
+        repo_root()
 
 
 def test_repo_root_returns_git_toplevel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import subprocess
 
-    from project_standards.sync_standards_include import (
-        _repo_root,  # pyright: ignore[reportPrivateUsage]
-    )
+    from project_standards._sync_cli import repo_root
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     monkeypatch.chdir(tmp_path)
-    assert _repo_root().resolve() == tmp_path.resolve()
+    assert repo_root().resolve() == tmp_path.resolve()
 
 
 def test_main_writes_include_patterns_end_to_end(

@@ -37,7 +37,11 @@ from project_standards.control_plane.providers import (
 from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
 from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderEffect
-from project_standards.validate_frontmatter import ConfigError, load_cli_config
+from project_standards.validate_frontmatter import (
+    ConfigError,
+    load_cli_config,
+    load_cli_config_or_exit,
+)
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PAYLOAD_DIGEST = f"sha256:{'a' * 64}"
@@ -332,6 +336,64 @@ def test_cli_config_retains_explicit_legacy_debug_path(tmp_path: Path) -> None:
     assert legacy is True
     assert config.frontmatter_version == "1.1"
     assert config.include == ["docs/**"]
+
+
+def test_load_cli_config_or_exit__legacy_authority__emits_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = validate_frontmatter.ProjectConfig(
+        schema=None,
+        include=[],
+        exclude=[],
+        required=True,
+        require_adr_sections=False,
+    )
+    warnings: list[None] = []
+
+    def fake_load_cli_config(
+        _repo: Path,
+        **_kwargs: object,
+    ) -> tuple[validate_frontmatter.ProjectConfig, bool]:
+        return config, True
+
+    monkeypatch.setattr(validate_frontmatter, "load_cli_config", fake_load_cli_config)
+    monkeypatch.setattr(
+        validate_frontmatter,
+        "emit_legacy_config_warning",
+        lambda: warnings.append(None),
+    )
+
+    loaded = load_cli_config_or_exit(None, schema_arg=None, selected_package=None)
+
+    assert loaded is config
+    assert warnings == [None]
+
+
+def test_mutating_frontmatter_clis__write_flags__request_write_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[tuple[list[str], str, LockMode]] = []
+
+    def record_resolution(
+        arguments: list[str],
+        *,
+        standard_id: str,
+        mode: LockMode,
+        reenter: object,
+    ) -> int:
+        del reenter
+        observed.append((arguments, standard_id, mode))
+        return 0
+
+    monkeypatch.setattr(validate_id, "reenter_selected_command", record_resolution)
+    monkeypatch.setattr(format_frontmatter, "reenter_selected_command", record_resolution)
+
+    assert validate_id.main(["--fix"]) == 0
+    assert format_frontmatter.main(["--write"]) == 0
+    assert observed == [
+        (["--fix"], "markdown-frontmatter", LockMode.WRITE),
+        (["--write"], "markdown-frontmatter", LockMode.WRITE),
+    ]
 
 
 def test_explicit_schema_remains_a_debug_boundary(

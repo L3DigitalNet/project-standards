@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from project_standards.control_plane.cli import run as reconcile
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
     SelectedCommandPackage,
+    reenter_selected_command,
     resolve_enabled_companion,
     resolve_selected_package,
     selected_command,
@@ -38,6 +41,49 @@ def _selected_alpha(tmp_path: Path) -> SelectedCommandPackage:
     selected = resolve_selected_package(repo, "alpha", distribution)
     assert selected is not None
     return selected
+
+
+def test_reenter_selected_command__callback_raises__returns_two_inside_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    selected = _selected_alpha(tmp_path)
+    active = False
+
+    @contextmanager
+    def fake_selected_command(
+        *_args: object,
+        **_kwargs: object,
+    ) -> Generator[SelectedCommandPackage]:
+        nonlocal active
+        active = True
+        try:
+            yield selected
+        finally:
+            active = False
+
+    def fail_reentry(
+        arguments: list[str],
+        selected_package: SelectedCommandPackage,
+    ) -> int:
+        assert active
+        assert arguments == ["--fix"]
+        assert selected_package is selected
+        raise RuntimeError("nested command failed")
+
+    monkeypatch.setattr(command_resolution, "selected_command", fake_selected_command)
+
+    outcome = reenter_selected_command(
+        ["--fix"],
+        standard_id="alpha",
+        mode=LockMode.WRITE,
+        reenter=fail_reentry,
+    )
+
+    assert outcome == 2
+    assert not active
+    assert capsys.readouterr().err == "error: nested command failed\n"
 
 
 def test_legacy_only_state_returns_the_bounded_fallback_with_warning(

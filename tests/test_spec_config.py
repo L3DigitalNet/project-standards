@@ -87,8 +87,13 @@ def test_unknown_spec_version_rejected(tmp_path: Path) -> None:
 
 
 def test_spec_version_must_be_quoted_string(tmp_path: Path) -> None:
-    with pytest.raises(ConfigError, match="must be a quoted string"):
+    with pytest.raises(ConfigError) as exc_info:
         load_spec_config(_write(tmp_path, "spec:\n  version: 1.0\n"))
+
+    assert str(exc_info.value) == (
+        "spec.version must be a quoted string (got 1.0); "
+        "unquoted version numbers lose precision (1.10 parses as 1.1)"
+    )
 
 
 def test_reference_prefixes_bad_shape_rejected(tmp_path: Path) -> None:

@@ -62,7 +62,7 @@ def _precondition(
     return Sha256Digest(f"sha256:{digest.hexdigest()}")
 
 
-def _safe_root(repo: Path) -> Path:
+def safe_repository_root(repo: Path) -> Path:
     try:
         if repo.is_symlink() or not repo.is_dir():
             raise ControlPlaneError("repository root must be a regular directory")
@@ -291,7 +291,7 @@ class RepositorySnapshot:
         repo: Path,
         targets: tuple[SafeRelativePath, ...],
     ) -> RepositorySnapshot:
-        root = _safe_root(repo)
+        root = safe_repository_root(repo)
         try:
             normalized = validate_path_collection(targets)
         except ValueError as exc:

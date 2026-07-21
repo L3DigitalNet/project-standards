@@ -12,6 +12,7 @@ from project_standards.agent_handoff.model import (
     PlannedChange,
     ProvenanceLock,
     StartupMode,
+    emit_report,
 )
 
 
@@ -67,6 +68,39 @@ def test_finding_and_change_sort_order_is_stable() -> None:
         "updated": 1,
         "warnings": 1,
     }
+
+
+def test_emit_report_renders_sorted_human_output_and_blocked_exit(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report = OperationReport(
+        repository="/repo",
+        standard_version="1.0",
+        changes=(
+            PlannedChange(ChangeKind.UPDATE, "z/path"),
+            PlannedChange(ChangeKind.CREATE, "a/path"),
+        ),
+        findings=(
+            Finding("Z-CODE", "warning", "z/path", "line 2", "z", "fix z"),
+            Finding("A-CODE", "error", "a/path", "line 4", "a", "fix a"),
+        ),
+    )
+
+    assert emit_report(report, as_json=False) == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == "create: a/path\nupdate: z/path\n"
+    assert captured.err == "error: a/path: a\nwarning: z/path: z\n"
+
+
+def test_emit_report_renders_json_without_stderr(capsys: pytest.CaptureFixture[str]) -> None:
+    report = OperationReport(repository="/repo", standard_version="1.0")
+
+    assert emit_report(report, as_json=True) == 0
+
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["repository"] == "/repo"
+    assert captured.err == ""
 
 
 def test_planned_change_accepts_sha256_precondition() -> None:

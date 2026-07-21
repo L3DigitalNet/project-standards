@@ -17,8 +17,9 @@ from project_standards.control_plane.diagnostics import (
     findings_to_jsonable,
 )
 from project_standards.control_plane.distribution import (
-    InstalledCatalog,
     InstalledDistribution,
+    declared_transitions,
+    resolution_payloads,
 )
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.locking import ControlPlaneBusyError
@@ -36,9 +37,7 @@ from project_standards.control_plane.recovery import (
     plan_recovery,
 )
 from project_standards.control_plane.resolution import (
-    DeclaredTransition,
     MajorAuthorization,
-    ResolutionPayload,
     ResolutionRequest,
 )
 from project_standards.control_plane.state import (
@@ -50,7 +49,6 @@ from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import (
     ProviderEffect,
     ProviderOperation,
-    load_option_schema,
 )
 
 
@@ -98,31 +96,6 @@ def _parser() -> _Parser:
     return parser
 
 
-def _resolution_payloads(installed: InstalledCatalog) -> tuple[ResolutionPayload, ...]:
-    return tuple(
-        ResolutionPayload(
-            standard_id=payload.manifest.payload.standard,
-            version=payload.manifest.payload.version,
-            payload_digest=payload.integrity.aggregate_digest,
-            option_schema=load_option_schema(payload.root, payload.manifest),
-        )
-        for payload in installed.payloads
-    )
-
-
-def _transitions(installed: InstalledCatalog) -> frozenset[DeclaredTransition]:
-    transitions: set[DeclaredTransition] = set()
-    for payload in installed.payloads:
-        for migration in payload.manifest.migrations:
-            source = migration.from_endpoint.package_version
-            target = migration.to_endpoint.package_version
-            if source is not None and target is not None:
-                transitions.add(
-                    DeclaredTransition(payload.manifest.payload.standard, source, target)
-                )
-    return frozenset(transitions)
-
-
 def build_planner_request(
     repo: Path,
     distribution: InstalledDistribution,
@@ -160,8 +133,8 @@ def build_planner_request(
         catalog=refresh.installed,
         previous_lock=selected_state.lock,
         allowed_majors=allowed_majors,
-        payloads=_resolution_payloads(installed),
-        transition_paths=_transitions(installed),
+        payloads=resolution_payloads(installed),
+        transition_paths=declared_transitions(installed),
     )
     return PlannerRequest(
         selected_state.repo,

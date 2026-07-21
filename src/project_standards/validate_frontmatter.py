@@ -52,9 +52,8 @@ from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
     SelectedCommandPackage,
     emit_legacy_authority_warning,
-    explicit_legacy_argument,
+    reenter_selected_command,
     resolve_selected_package,
-    selected_command,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
@@ -611,7 +610,7 @@ def _as_str_list(value: Any) -> list[str]:
     return []
 
 
-def _version_str(value: Any, key: str) -> str | None:
+def version_str(value: Any, key: str) -> str | None:
     """A config version value, or None when absent. Strings only — no coercion.
 
     str() on a YAML float silently mangles versions: an unquoted `version: 1.10`
@@ -668,7 +667,7 @@ def load_config(path: Path) -> ProjectConfig:
                     include = _as_str_list(fm.get("include"))
                     exclude = _as_str_list(fm.get("exclude"))
                     required = bool(fm.get("required", True))
-                    frontmatter_version = _version_str(
+                    frontmatter_version = version_str(
                         fm.get("version"), "markdown.frontmatter.version"
                     )
                     references = fm.get("references")
@@ -681,29 +680,29 @@ def load_config(path: Path) -> ProjectConfig:
                 if isinstance(adr, dict):
                     adr_dict = cast("dict[str, Any]", adr)
                     require_adr_sections = bool(adr_dict.get("require_sections", False))
-                    adr_version = _version_str(adr_dict.get("version"), "markdown.adr.version")
+                    adr_version = version_str(adr_dict.get("version"), "markdown.adr.version")
             python_tooling = raw_dict.get("python_tooling")
             if isinstance(python_tooling, dict):
                 pt_dict = cast("dict[str, Any]", python_tooling)
-                python_tooling_version = _version_str(
+                python_tooling_version = version_str(
                     pt_dict.get("version"), "python_tooling.version"
                 )
             markdown_tooling = raw_dict.get("markdown_tooling")
             if isinstance(markdown_tooling, dict):
                 mt_dict = cast("dict[str, Any]", markdown_tooling)
-                markdown_tooling_version = _version_str(
+                markdown_tooling_version = version_str(
                     mt_dict.get("version"), "markdown_tooling.version"
                 )
             cli_documentation = raw_dict.get("cli_documentation")
             if isinstance(cli_documentation, dict):
                 cd_dict = cast("dict[str, Any]", cli_documentation)
-                cli_documentation_version = _version_str(
+                cli_documentation_version = version_str(
                     cd_dict.get("version"), "cli_documentation.version"
                 )
             spec = raw_dict.get("spec")
             if isinstance(spec, dict):
                 spec_dict = cast("dict[str, Any]", spec)
-                project_spec_version = _version_str(spec_dict.get("version"), "spec.version")
+                project_spec_version = version_str(spec_dict.get("version"), "spec.version")
 
     return ProjectConfig(
         schema=schema,
@@ -882,6 +881,31 @@ def emit_legacy_config_warning() -> None:
     emit_legacy_authority_warning()
 
 
+def load_cli_config_or_exit(
+    config_arg: Path | None,
+    *,
+    schema_arg: Path | None,
+    selected_package: SelectedCommandPackage | None,
+) -> ProjectConfig | int:
+    """Load effective CLI configuration, returning exit code 2 on operator error."""
+    if config_arg is not None and not config_arg.exists():
+        print(f"error: config file not found: {config_arg}", file=sys.stderr)
+        return 2
+    try:
+        config, legacy = load_cli_config(
+            Path.cwd(),
+            explicit_legacy=config_arg,
+            allow_unlocked_custom_schema=schema_arg is not None,
+            selected_package=selected_package,
+        )
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if legacy:
+        emit_legacy_config_warning()
+    return config
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -910,25 +934,19 @@ def main(
     """CLI entry point; returns an exit code (0 valid / 1 violations / 2 operator error)."""
     reconfigure_output_streams()
     arguments = list(sys.argv[1:] if argv is None else argv)
-    if not _command_locked and not any(
-        option in arguments for option in {"--help", "-h", "--version"}
-    ):
-        try:
-            with selected_command(
-                Path.cwd(),
-                "markdown-frontmatter",
-                mode=LockMode.READ,
-                explicit_legacy=explicit_legacy_argument(arguments),
-            ) as selected:
-                if selected is not None:
-                    return main(
-                        arguments,
-                        _command_locked=True,
-                        _selected_package=selected,
-                    )
-        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+    if not _command_locked:
+        outcome = reenter_selected_command(
+            arguments,
+            standard_id="markdown-frontmatter",
+            mode=LockMode.READ,
+            reenter=lambda args_, selected: main(
+                args_,
+                _command_locked=True,
+                _selected_package=selected,
+            ),
+        )
+        if outcome is not None:
+            return outcome
     if _selected_package is not None:
         from project_standards.frontmatter_commands import run_locked_standalone_validate
 
@@ -985,21 +1003,14 @@ def main(
     )
     args = parser.parse_args(arguments)
 
-    if args.config is not None and not args.config.exists():
-        print(f"error: config file not found: {args.config}", file=sys.stderr)
-        return 2
-    try:
-        config, legacy = load_cli_config(
-            Path.cwd(),
-            explicit_legacy=args.config,
-            allow_unlocked_custom_schema=args.schema is not None,
-            selected_package=_selected_package,
-        )
-    except ConfigError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-    if legacy:
-        emit_legacy_config_warning()
+    loaded = load_cli_config_or_exit(
+        args.config,
+        schema_arg=args.schema,
+        selected_package=_selected_package,
+    )
+    if isinstance(loaded, int):
+        return loaded
+    config = loaded
 
     # The registry is loaded only when a gate actually consults it (version keys,
     # ADR flags). A wheel with a corrupted registry.json must not break the

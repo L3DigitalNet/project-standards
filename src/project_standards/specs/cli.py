@@ -672,21 +672,30 @@ def _safe_atomic_write(target: Path, text: str, *, force: bool) -> bool:
     return overwritten
 
 
+def _print_new_success_json(
+    args: argparse.Namespace,
+    opts: NewOptions,
+    *,
+    overwritten: bool,
+) -> None:
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "spec_id": opts.spec_id,
+                "profile": opts.profile,
+                "path": str(args.path),
+                "written": True,
+                "overwritten": overwritten,
+            }
+        )
+    )
+
+
 def _write_new_file(args: argparse.Namespace, opts: NewOptions, text: str) -> int:
     overwritten = _safe_atomic_write(args.path, text, force=args.force)
     if args.json:
-        print(
-            json.dumps(
-                {
-                    "ok": True,
-                    "spec_id": opts.spec_id,
-                    "profile": opts.profile,
-                    "path": str(args.path),
-                    "written": True,
-                    "overwritten": overwritten,
-                }
-            )
-        )
+        _print_new_success_json(args, opts, overwritten=overwritten)
     else:
         print(f"wrote {args.path}")
     return 0
@@ -761,18 +770,7 @@ def _write_selected_new(
     if not applied.success:
         raise NewError("write_failed", f"cannot write {args.path}: {applied.error_code}")
     if args.json:
-        print(
-            json.dumps(
-                {
-                    "ok": True,
-                    "spec_id": opts.spec_id,
-                    "profile": opts.profile,
-                    "path": str(args.path),
-                    "written": True,
-                    "overwritten": overwritten,
-                }
-            )
-        )
+        _print_new_success_json(args, opts, overwritten=overwritten)
     else:
         print(result.mutation_plan.actions[0].summary)
     return 0

@@ -7,6 +7,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
+from pydantic import ValidationError
+
 from project_standards.package_contract.paths import PackageVersion
 
 
@@ -26,6 +28,19 @@ class PackageFinding:
     identity: str
     message: str
     hint: str
+
+
+def validation_summary(exc: ValidationError) -> str:
+    """Summarize structural failures without echoing untrusted input values."""
+    summaries: list[str] = []
+    for error in exc.errors(
+        include_url=False,
+        include_context=False,
+        include_input=False,
+    ):
+        location = ".".join(str(part) for part in error["loc"])
+        summaries.append(f"{location or '<root>'}: {error['msg']}")
+    return "; ".join(summaries)
 
 
 def _version_sort_key(value: str) -> tuple[int, int, int, str, str]:

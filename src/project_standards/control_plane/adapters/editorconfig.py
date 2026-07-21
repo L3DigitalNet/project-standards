@@ -9,6 +9,8 @@ from project_standards.control_plane.adapters.base import (
     AdapterState,
     AdapterUnit,
     UnitChange,
+    decode_utf8,
+    line_end_without_newline,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -56,23 +58,8 @@ class ScopeSpec:
     key: str
 
 
-def _decode(content: bytes) -> str:
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError("EditorConfig content is not valid UTF-8") from exc
-
-
-def _line_end_without_newline(line: str) -> int:
-    if line.endswith("\r\n"):
-        return len(line) - 2
-    if line.endswith("\n"):
-        return len(line) - 1
-    return len(line)
-
-
 def _parse(content: bytes) -> EditorConfigDocument:
-    text = _decode(content)
+    text = decode_utf8(content, "EditorConfig")
     raw_sections: list[tuple[str, int, int]] = []
     properties: list[EditorConfigProperty] = []
     section = "$global"
@@ -85,7 +72,7 @@ def _parse(content: bytes) -> EditorConfigDocument:
             line = segment
         else:
             line = f"{segment}\n"
-        code_end = _line_end_without_newline(line)
+        code_end = line_end_without_newline(line)
         code = line[:code_end]
         stripped = code.strip()
         source_end = offset + len(line)
@@ -181,7 +168,7 @@ def _unit(document: EditorConfigDocument, spec: ScopeSpec) -> AdapterUnit | None
 
 
 def _fragment(content: bytes) -> tuple[str, str]:
-    text = _decode(content)
+    text = decode_utf8(content, "EditorConfig")
     if "\n" in text or "\r" in text or not text.strip():
         raise ControlPlaneError("EditorConfig fragment must contain a single property value")
     physical = text.strip()

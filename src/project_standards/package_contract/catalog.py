@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
-import tempfile
 import tomllib
 from collections import defaultdict
 from collections.abc import Mapping
@@ -15,13 +12,17 @@ from typing import Literal
 
 from pydantic import Field, ValidationError, model_validator
 
-from project_standards.package_contract.diagnostics import PackageContractError
+from project_standards.package_contract._write import atomic_write
+from project_standards.package_contract.diagnostics import (
+    PackageContractError,
+    validation_summary,
+)
 from project_standards.package_contract.family import (
     FamilyManifest,
     KebabId,
     StrictModel,
 )
-from project_standards.package_contract.paths import PackageVersion, Sha256Digest
+from project_standards.package_contract.paths import PackageVersion, Sha256Digest, digest_of
 from project_standards.package_contract.payload import (
     PayloadAvailability,
     PayloadManifest,
@@ -96,18 +97,6 @@ def _discover_catalog_sources(  # pyright: ignore[reportUnusedFunction]
         raise PackageContractError("catalog sources could not be discovered") from exc
 
 
-def _validation_summary(exc: ValidationError) -> str:
-    summaries: list[str] = []
-    for error in exc.errors(
-        include_url=False,
-        include_context=False,
-        include_input=False,
-    ):
-        location = ".".join(str(part) for part in error["loc"])
-        summaries.append(f"{location or '<root>'}: {error['msg']}")
-    return "; ".join(summaries)
-
-
 def load_catalog_source(path: Path) -> CatalogSource:
     """Load one `catalogs/{catalog-major}.toml` declaration."""
     if path.parent.name != "catalogs":
@@ -130,7 +119,7 @@ def load_catalog_source(path: Path) -> CatalogSource:
         source = CatalogSource.model_validate(raw)
     except ValidationError as exc:
         raise PackageContractError(
-            f"catalog source {path} violates the V2 contract: {_validation_summary(exc)}"
+            f"catalog source {path} violates the V2 contract: {validation_summary(exc)}"
         ) from exc
     if source.catalog_major != path_major:
         raise PackageContractError("catalog major does not match its filename")
@@ -205,18 +194,21 @@ def validate_catalog_source(
     return source
 
 
+ROLE_COMPATIBILITY: Mapping[PayloadAvailability, frozenset[CatalogRole]] = {
+    PayloadAvailability.CONSUMER: frozenset(
+        {CatalogRole.DEFAULT, CatalogRole.RETAINED, CatalogRole.CANDIDATE}
+    ),
+    PayloadAvailability.REFERENCE_ONLY: frozenset({CatalogRole.REFERENCE_ONLY}),
+    PayloadAvailability.INTERNAL: frozenset({CatalogRole.INTERNAL}),
+}
+
+
 def _validate_role_availability(
     catalog_major: int,
     entry: CatalogPackageEntry,
     payload: PayloadManifest,
 ) -> None:
-    allowed = {
-        PayloadAvailability.CONSUMER: frozenset(
-            {CatalogRole.DEFAULT, CatalogRole.RETAINED, CatalogRole.CANDIDATE}
-        ),
-        PayloadAvailability.REFERENCE_ONLY: frozenset({CatalogRole.REFERENCE_ONLY}),
-        PayloadAvailability.INTERNAL: frozenset({CatalogRole.INTERNAL}),
-    }[payload.payload.availability]
+    allowed = ROLE_COMPATIBILITY[payload.payload.availability]
     if entry.role not in allowed:
         raise PackageContractError(
             f"catalog {catalog_major}: role {entry.role.value} disagrees with "
@@ -290,7 +282,7 @@ def render_consumer_catalog(
                 ]
             )
     without_digest = ("\n".join(lines).rstrip() + "\n").encode()
-    digest = f"sha256:{hashlib.sha256(without_digest).hexdigest()}"
+    digest = digest_of(without_digest).value
     lines.insert(4, f"digest = {_toml_string(digest)}")
     return ("\n".join(lines).rstrip() + "\n").encode()
 
@@ -304,19 +296,5 @@ def write_consumer_catalog(output: Path, content: bytes, *, check: bool) -> bool
             return False
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output.name}.",
-        dir=output.parent,
-    )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            os.fchmod(stream.fileno(), 0o644)
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(output)
-    except BaseException:
-        temporary.unlink(missing_ok=True)
-        raise
+    atomic_write(output, content)
     return True

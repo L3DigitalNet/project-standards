@@ -9,6 +9,8 @@ from project_standards.control_plane.adapters.base import (
     AdapterState,
     AdapterUnit,
     UnitChange,
+    decode_utf8,
+    line_end_without_newline,
 )
 from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -51,21 +53,6 @@ class MarkdownDocument:
     blocks: tuple[MarkdownBlock, ...]
 
 
-def _decode(content: bytes) -> str:
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError("Markdown content is not valid UTF-8") from exc
-
-
-def _line_end_without_newline(line: str) -> int:
-    if line.endswith("\r\n"):
-        return len(line) - 2
-    if line.endswith("\n"):
-        return len(line) - 1
-    return len(line)
-
-
 def _lines(text: str) -> tuple[MarkdownLine, ...]:
     result: list[MarkdownLine] = []
     offset = 0
@@ -78,7 +65,7 @@ def _lines(text: str) -> tuple[MarkdownLine, ...]:
             physical = segment
         else:
             physical = f"{segment}\n"
-        code = physical[: _line_end_without_newline(physical)]
+        code = physical[: line_end_without_newline(physical)]
         match = _FENCE.match(code)
         top_level = fence is None
         if match is not None:
@@ -125,7 +112,7 @@ def _validated_id(value: str) -> str:
 
 
 def _parse(content: bytes) -> MarkdownDocument:
-    text = _decode(content)
+    text = decode_utf8(content, "Markdown")
     lines = _lines(text)
     blocks: list[MarkdownBlock] = []
     consumed: set[int] = set()
@@ -224,10 +211,7 @@ def _block(document: MarkdownDocument, marker_id: str) -> MarkdownBlock | None:
 
 def _normalized(content: bytes | str) -> bytes:
     raw = content.encode() if isinstance(content, str) else content
-    try:
-        text = raw.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError("Markdown block content is not valid UTF-8") from exc
+    text = decode_utf8(raw, "Markdown block")
     return text.replace("\r\n", "\n").encode()
 
 
@@ -241,7 +225,7 @@ def _unit(document: MarkdownDocument, scope: str, marker_id: str) -> AdapterUnit
 
 
 def _desired(content: bytes) -> tuple[str, bytes]:
-    text = _decode(content)
+    text = decode_utf8(content, "Markdown")
     lines = _lines(text)
     for line in lines:
         if line.top_level and _contains_marker_syntax(line):

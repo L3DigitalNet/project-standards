@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 
 
-def _sanitize_jsonc(  # pyright: ignore[reportUnusedFunction]  # package-internal parser
-    source: str,
-) -> str:
+def sanitize_jsonc(source: str) -> str:
     """Return strict-JSON-compatible text without changing string contents.
 
     Comments and trailing commas are replaced with spaces so parse diagnostics

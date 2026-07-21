@@ -20,6 +20,9 @@ from project_standards.control_plane.adapters.base import (
     AdapterState,
     AdapterUnit,
     UnitChange,
+    apply_edits,
+    decode_json_pointer,
+    decode_utf8,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -193,13 +196,6 @@ def format_fresh_json_container(content: bytes, kind: AdapterKind) -> bytes:
         raise ControlPlaneError("fresh JSON formatting requires a JSON-family adapter")
     value = _parse(content, kind).root.value
     return f"{_prettier_json(value)}\n".encode()
-
-
-def _decode(content: bytes, label: str) -> str:
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError(f"{label} content is not valid UTF-8") from exc
 
 
 def _scan_string(text: str, start: int) -> int:
@@ -440,7 +436,7 @@ class _StructureParser:
 
 def _parse(content: bytes, kind: AdapterKind, *, fragment: bool = False) -> JsonDocument:
     label = "JSONC" if kind is AdapterKind.JSONC else "JSON"
-    text = _decode(content, label)
+    text = decode_utf8(content, label)
     try:
         tokens = _lex(text, allow_comments=kind is AdapterKind.JSONC)
         semantic = _semantic_view(
@@ -464,7 +460,7 @@ def container_value_without_comments(content: bytes, kind: AdapterKind) -> JsonV
     """Return container semantics only when deleting it cannot discard JSONC comments."""
     if kind not in {AdapterKind.JSON, AdapterKind.JSONC}:
         raise ControlPlaneError("JSON container inspection requires a JSON-family adapter")
-    text = _decode(content, kind.value.upper())
+    text = decode_utf8(content, kind.value.upper())
     try:
         tokens = _lex(text, allow_comments=kind is AdapterKind.JSONC)
     except ValueError as exc:
@@ -474,28 +470,31 @@ def container_value_without_comments(content: bytes, kind: AdapterKind) -> JsonV
     return _parse(content, kind).root.value
 
 
-def _pointer(value: str) -> tuple[str, ...]:
-    return tuple(
-        component.replace("~1", "/").replace("~0", "~") for component in value.split("/")[1:]
-    )
-
-
 def _scope(kind: AdapterKind, value: str) -> ScopeSpec:
     try:
         normalized = normalize_scope(kind, value)
     except ValueError as exc:
         raise ControlPlaneError(f"{kind.value.upper()} scope is not canonical") from exc
     if normalized.startswith("key:"):
-        return ScopeSpec(normalized, "key", _pointer(normalized.removeprefix("key:")))
+        return ScopeSpec(
+            normalized,
+            "key",
+            decode_json_pointer(normalized.removeprefix("key:")),
+        )
     if normalized.startswith("set:"):
         pointer, identity = normalized.removeprefix("set:").rsplit("#value=", 1)
-        return ScopeSpec(normalized, "set", _pointer(pointer), identity=unquote(identity))
+        return ScopeSpec(
+            normalized,
+            "set",
+            decode_json_pointer(pointer),
+            identity=unquote(identity),
+        )
     pointer, binding = normalized.removeprefix("keyed-set:").rsplit("#", 1)
     identity_key, identity = binding.split("=", 1)
     return ScopeSpec(
         normalized,
         "keyed-set",
-        _pointer(pointer),
+        decode_json_pointer(pointer),
         identity_key=unquote(identity_key),
         identity=unquote(identity),
     )
@@ -674,13 +673,6 @@ def _deletion_edits(
     return edits
 
 
-def _apply_edits(text: str, edits: list[tuple[int, int, str]]) -> str:
-    updated = text
-    for start, end, replacement in sorted(edits, reverse=True):
-        updated = f"{updated[:start]}{replacement}{updated[end:]}"
-    return updated
-
-
 def _prune_empty_object_ancestors(
     content: bytes,
     kind: AdapterKind,
@@ -699,7 +691,7 @@ def _prune_empty_object_ancestors(
         located = _key_location(document.root, parent)
         if located is None:
             break
-        content = _apply_edits(
+        content = apply_edits(
             document.text,
             _deletion_edits(located, document.text, prune_whitespace=True),
         ).encode()
@@ -742,13 +734,13 @@ def _append(container: JsonNode, text: str, fragment: str) -> str:
     body = text[container.opening.end : container.closing.start]
     if "\n" not in body:
         if count == 0:
-            return _apply_edits(text, [(container.opening.end, container.opening.end, fragment)])
+            return apply_edits(text, [(container.opening.end, container.opening.end, fragment)])
         last_comma = _item_comma(container, count - 1)
         if last_comma is not None:
             insertion = f" {fragment},"
-            return _apply_edits(text, [(last_comma.end, last_comma.end, insertion)])
+            return apply_edits(text, [(last_comma.end, last_comma.end, insertion)])
         end = _item_end(container, count - 1)
-        return _apply_edits(text, [(end, end, f", {fragment}")])
+        return apply_edits(text, [(end, end, f", {fragment}")])
 
     closing_line = _line_start(text, container.closing.start)
     closing_indent = text[closing_line : container.closing.start]
@@ -777,7 +769,7 @@ def _append(container: JsonNode, text: str, fragment: str) -> str:
         edits[0] = (closing_line, closing_line, f"{child_indent}{indented}{newline}")
     else:
         edits[0] = (closing_line, closing_line, f"{child_indent}{indented}{newline}")
-    return _apply_edits(text, edits)
+    return apply_edits(text, edits)
 
 
 class _JsonFamilyAdapter:
@@ -816,7 +808,7 @@ class _JsonFamilyAdapter:
                     raise ControlPlaneError("JSON removal cannot carry content")
                 if located is None:
                     raise ControlPlaneError("JSON removal scope is not present")
-                content = _apply_edits(
+                content = apply_edits(
                     document.text,
                     _deletion_edits(
                         located,
@@ -850,7 +842,7 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("JSON update scope is not present")
             if _semantically_equal(located.node.value, desired):
                 continue
-            content = _apply_edits(
+            content = apply_edits(
                 document.text,
                 [(located.node.start, located.node.end, fragment_document.text)],
             ).encode()

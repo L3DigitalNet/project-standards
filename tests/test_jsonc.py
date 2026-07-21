@@ -6,13 +6,11 @@ import json
 
 import pytest
 
+from project_standards.jsonc import sanitize_jsonc
+
 
 def _sanitize(source: str) -> str:
-    from project_standards.jsonc import (
-        _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]
-    )
-
-    return _sanitize_jsonc(source)
+    return sanitize_jsonc(source)
 
 
 @pytest.mark.parametrize(

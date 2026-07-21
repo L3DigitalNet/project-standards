@@ -24,39 +24,20 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, cast
 
-from project_standards._version import package_version
-from project_standards.jsonc import (
-    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
-)
-
-# The folder-colorizer color that marks managed-docs paths in the user's VS Code
-# setup. Cross-file contract: must equal _COLOR in sync_vscode_colors.py — the two
-# tools are inverse round-trips of the same convention, and a mismatch makes one
-# direction silently drop every entry the other wrote.
-_COLOR = "foldercolorizer.color_d7af00"
-
-
-def _repo_root() -> Path:
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        sys.exit("error: not inside a git repository")
-    return Path(result.stdout.strip())
+from project_standards._sync_cli import SYNC_COLOR as _COLOR
+from project_standards._sync_cli import resolve_tool_paths
+from project_standards.jsonc import sanitize_jsonc
 
 
 def read_path_colors(settings_path: Path) -> list[dict[str, str]]:
     """Return all folder-color.pathColors entries from *settings_path*."""
     original = settings_path.read_text(encoding="utf-8")
     try:
-        data = cast(dict[str, Any], json.loads(_sanitize_jsonc(original)))
+        data = cast(dict[str, Any], json.loads(sanitize_jsonc(original)))
     except json.JSONDecodeError as exc:
         sys.exit(f"error: cannot parse {settings_path}: {exc}")
     raw = data.get("folder-color.pathColors", [])
@@ -115,26 +96,14 @@ def update_include_list(standards_path: Path, new_patterns: list[str]) -> None:
 
 
 def main() -> None:
-    if "--version" in sys.argv[1:]:
-        print(f"{Path(sys.argv[0]).name} {package_version()}")
-        raise SystemExit(0)
-    if "--help" in sys.argv[1:] or "-h" in sys.argv[1:]:
-        print(
+    root, standards_path, settings_path = resolve_tool_paths(
+        help_text=(
             f"{Path(sys.argv[0]).name} — sync markdown.frontmatter.include in "
             ".project-standards.yml from the folder-color.pathColors entries in "
             ".vscode/settings.json.\n"
             "Usage: sync-standards-include [standards-file] [settings-file]"
         )
-        raise SystemExit(0)
-
-    root = _repo_root()
-    standards_path = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"
-    settings_path = Path(sys.argv[2]) if len(sys.argv) > 2 else root / ".vscode" / "settings.json"
-
-    if not standards_path.is_file():
-        sys.exit(f"error: {standards_path} not found")
-    if not settings_path.is_file():
-        sys.exit(f"error: {settings_path} not found")
+    )
 
     prefix = root.name
     entries = read_path_colors(settings_path)

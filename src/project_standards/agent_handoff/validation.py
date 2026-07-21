@@ -38,9 +38,7 @@ from project_standards.agent_handoff.policy import (
     load_policy,
     measure_bytes,
 )
-from project_standards.jsonc import (
-    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
-)
+from project_standards.jsonc import sanitize_jsonc
 
 _POLICY_PATH = BUNDLES_DIR / "agent-handoff/resources/policy.toml"
 _HOOK_PATH = ".agents/hooks/agent-handoff/session_start.py"
@@ -225,7 +223,7 @@ def _claude_config(repository: RepositoryRoot, findings: list[Finding]) -> None:
                 _finding("AH-CLAUDE-CONFIG-MISSING", relative, "Claude registration is missing")
             )
             return
-        parsed = json.loads(_sanitize_jsonc(raw.decode("utf-8-sig")))
+        parsed = json.loads(sanitize_jsonc(raw.decode("utf-8-sig")))
         if not isinstance(parsed, dict):
             raise IntegrationConflictError("Claude settings root is not an object")
         settings = cast("dict[str, object]", parsed)

@@ -26,6 +26,8 @@ from project_standards.control_plane.adapters.base import (
     AdapterState,
     AdapterUnit,
     UnitChange,
+    decode_json_pointer,
+    decode_utf8,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -86,13 +88,6 @@ class LocatedUnit:
     key_node: ScalarNode | None = None
 
 
-def _decode(content: bytes) -> str:
-    try:
-        return content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ControlPlaneError("YAML content is not valid UTF-8") from exc
-
-
 def _node_start(node: Node) -> int:
     return node.start_mark.index
 
@@ -149,7 +144,7 @@ def _validate_duplicate_keys(node: Node, visited: set[int] | None = None) -> Non
 
 
 def _parse(content: bytes, *, fragment: bool = False) -> YamlDocument:
-    text = _decode(content)
+    text = decode_utf8(content, "YAML")
     try:
         # types-PyYAML leaves the convenience functions untyped even though
         # their SafeLoader-backed return contracts are stable and concrete.
@@ -167,24 +162,18 @@ def _parse(content: bytes, *, fragment: bool = False) -> YamlDocument:
     return YamlDocument(text, root, tokens)
 
 
-def _pointer(value: str) -> tuple[str, ...]:
-    return tuple(
-        component.replace("~1", "/").replace("~0", "~") for component in value.split("/")[1:]
-    )
-
-
 def _scope(value: str) -> ScopeSpec:
     try:
         normalized = normalize_scope(AdapterKind.YAML, value)
     except ValueError as exc:
         raise ControlPlaneError("YAML scope is not canonical") from exc
     if normalized.startswith("key:"):
-        return ScopeSpec(normalized, _pointer(normalized.removeprefix("key:")))
+        return ScopeSpec(normalized, decode_json_pointer(normalized.removeprefix("key:")))
     pointer, binding = normalized.removeprefix("keyed-set:").rsplit("#", 1)
     identity_key, identity = binding.split("=", 1)
     return ScopeSpec(
         normalized,
-        _pointer(pointer),
+        decode_json_pointer(pointer),
         unquote(identity_key),
         unquote(identity),
     )

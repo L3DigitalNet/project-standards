@@ -3,8 +3,8 @@
 ## Current focus
 
 - Project Standards 5.3.0 is published from release commit `9dcec77`. Signed `v5.3.0` and moving `v5` tags, the Latest GitHub release, and byte-verified wheel and sdist assets are live; issues #12/#13 are closed and the default branch has no open Dependabot alerts.
-- Catalog 5 now selects Agent Handoff 1.3, CLI Documentation 1.3, Markdown Frontmatter 1.4, Markdown Tooling 1.5, Project Specification 1.3, and Python Tooling 1.4 alongside ADR 1.2. Released payload directories are unchanged; successor payloads and the repo's `.standards/` dogfood state carry the corrections.
-- The complete local extracted-wheel gate and all eight hosted release-commit workflows pass, including `Check` run `29835903439`. No release work remains; await explicit selection from `docs/TODO.md`.
+- The current `testing` worktree applies all 24 findings from `docs/reviews/2026-07-21-code-simplification.md`. Shared package/schema, control-plane, CLI, sync, Agent Handoff, adapter, and spec helpers replace the verified duplicate implementations; package, catalog, and immutable payload data are unchanged.
+- The exact rebuilt 5.3.0 wheel passes 3,063 ordinary tests, 80 compatibility rows, 5 performance tests, 90% coverage, Ruff, BasedPyright, package graph/schema/projection/catalog checks, Prettier, markdownlint, dependency audit, dogfood validation, and Agent Handoff conformance/drift. The verified implementation is being prepared as the authorized 5.3.1 PATCH release; no new tag or publication exists yet.
 
 ## Active incidents
 

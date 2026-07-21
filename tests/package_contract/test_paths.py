@@ -17,6 +17,7 @@ from project_standards.package_contract import (
     validate_path_collection,
 )
 from project_standards.package_contract import paths as package_paths
+from project_standards.package_contract.paths import digest_of
 
 _PACKAGE_VERSION_JSON_PATTERN = r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 _SHA256_JSON_PATTERN = r"^sha256:[0-9a-f]{64}$"
@@ -110,6 +111,15 @@ def test_sha256_digest_accepts_exact_lowercase_form() -> None:
     value = f"sha256:{'0123456789abcdef' * 4}"
 
     assert Sha256Digest(value).value == value
+
+
+def test_digest_of__exact_bytes__returns_typed_sha256_digest() -> None:
+    digest = digest_of(b"abc")
+
+    assert isinstance(digest, Sha256Digest)
+    assert digest.value == (
+        "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    )
 
 
 @pytest.mark.parametrize(

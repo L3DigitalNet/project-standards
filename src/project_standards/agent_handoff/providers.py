@@ -9,7 +9,13 @@ from importlib import import_module
 from pathlib import Path
 from typing import cast
 
-from project_standards.agent_handoff.model import Finding, Harness, OperationReport, StartupMode
+from project_standards.agent_handoff.model import (
+    Finding,
+    Harness,
+    OperationReport,
+    StartupMode,
+    emit_report,
+)
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 from project_standards.agent_handoff.planning import apply_adoption, plan_adoption, plan_upgrade
 
@@ -19,17 +25,6 @@ def _parse(parser: argparse.ArgumentParser, argv: list[str] | None) -> argparse.
         return parser.parse_args(argv)
     except SystemExit as exc:
         return exc.code if isinstance(exc.code, int) else 1
-
-
-def _emit(report: OperationReport, *, as_json: bool) -> int:
-    if as_json:
-        print(report.to_json(), end="")
-    else:
-        for change in sorted(report.changes, key=lambda item: item.sort_key):
-            print(f"{change.kind.value}: {change.path}")
-        for finding in sorted(report.findings, key=lambda item: item.sort_key):
-            print(f"{finding.severity}: {finding.path}: {finding.message}", file=sys.stderr)
-    return 1 if report.blocked else 0
 
 
 def scaffold(argv: list[str] | None = None) -> int:
@@ -67,7 +62,7 @@ def scaffold(argv: list[str] | None = None) -> int:
         harnesses=harnesses,
     )
     report = apply_adoption(plan, dry_run=parsed.dry_run)
-    return _emit(report, as_json=parsed.json)
+    return emit_report(report, as_json=parsed.json)
 
 
 def _read_parser(prog: str, *, view: bool = False) -> argparse.ArgumentParser:
@@ -116,7 +111,7 @@ def validate(argv: list[str] | None = None) -> int:
     except RepositoryBoundaryError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    return _emit(report, as_json=parsed.json)
+    return emit_report(report, as_json=parsed.json)
 
 
 def drift_check(argv: list[str] | None = None) -> int:
@@ -131,7 +126,7 @@ def drift_check(argv: list[str] | None = None) -> int:
     except RepositoryBoundaryError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    return _emit(report, as_json=parsed.json)
+    return emit_report(report, as_json=parsed.json)
 
 
 def extract(argv: list[str] | None = None) -> int:
@@ -146,7 +141,7 @@ def extract(argv: list[str] | None = None) -> int:
     except RepositoryBoundaryError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    _emit(report, as_json=parsed.json)
+    emit_report(report, as_json=parsed.json)
     return 0
 
 
@@ -159,4 +154,4 @@ def upgrade(argv: list[str] | None = None) -> int:
         return parsed
     plan = plan_upgrade(repository=parsed.repo, standard_ids=("agent-handoff",))
     report = apply_adoption(plan, dry_run=parsed.dry_run)
-    return _emit(report, as_json=parsed.json)
+    return emit_report(report, as_json=parsed.json)

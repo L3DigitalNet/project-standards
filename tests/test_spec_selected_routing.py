@@ -512,6 +512,45 @@ def test_new_write_applies_the_selected_scaffold_plan_through_the_executor(
     assert "spec_id: SPEC-7F3Q" in target.read_text(encoding="utf-8")
 
 
+def test_selected_new_write_emits_the_json_success_contract(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    assert (
+        run(
+            [
+                "new",
+                "--profile",
+                "light",
+                "--id",
+                "SPEC-7F3Q",
+                "--json",
+                "docs/specs/new.md",
+            ],
+            repo=repo,
+            distribution=distribution,
+        )
+        == 0
+    )
+
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {
+        "ok": True,
+        "spec_id": "SPEC-7F3Q",
+        "profile": "light",
+        "path": "docs/specs/new.md",
+        "written": True,
+        "overwritten": False,
+    }
+    assert captured.err == ""
+
+
 def test_selected_new_write_does_not_invoke_the_preview_provider(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

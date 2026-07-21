@@ -13,7 +13,7 @@ from project_standards.registry import RegistryError
 from project_standards.registry import load_registry as load_contract_registry
 from project_standards.specs.document import SpecParseError, parse_document
 from project_standards.specs.registry import load_registry as load_spec_registry
-from project_standards.validate_frontmatter import ConfigError, collect_paths
+from project_standards.validate_frontmatter import ConfigError, collect_paths, version_str
 
 
 class DiscoveryError(ConfigError):
@@ -39,17 +39,6 @@ def _str_list(value: Any, *, field: str) -> list[str]:
         if all(isinstance(item, str) for item in raw):
             return cast("list[str]", raw)
     raise ConfigError(f"spec.{field} must be a string or a list of strings")
-
-
-def _version_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ConfigError(
-            f"spec.version must be a quoted string (got {value!r}); "
-            f"unquoted version numbers lose precision (1.10 parses as 1.1)"
-        )
-    return value
 
 
 _PREFIX_RE = re.compile(r"^[A-Z]{1,4}$")
@@ -94,7 +83,7 @@ def load_spec_config(path: Path) -> SpecConfig:
             if isinstance(block, dict):
                 present = True
                 b = cast("dict[str, Any]", block)
-                version = _version_str(b.get("version"))
+                version = version_str(b.get("version"), "spec.version")
                 if version is not None:
                     try:
                         registry = load_contract_registry()

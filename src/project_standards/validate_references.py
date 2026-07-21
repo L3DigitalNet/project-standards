@@ -18,18 +18,15 @@ from typing import Any, cast
 
 from project_standards._version import package_version
 from project_standards.control_plane.command_resolution import (
-    CommandResolutionError,
     SelectedCommandPackage,
-    explicit_legacy_argument,
-    selected_command,
+    reenter_selected_command,
 )
 from project_standards.control_plane.locking import LockMode
 from project_standards.validate_frontmatter import (
     ConfigError,
     FrontmatterParseError,
     collect_paths,
-    emit_legacy_config_warning,
-    load_cli_config,
+    load_cli_config_or_exit,
     parse_frontmatter,
     reconfigure_output_streams,
     schema_value_is_path,
@@ -281,25 +278,19 @@ def main(
 ) -> int:
     reconfigure_output_streams()
     arguments = list(sys.argv[1:] if argv is None else argv)
-    if not _command_locked and not any(
-        option in arguments for option in {"--help", "-h", "--version"}
-    ):
-        try:
-            with selected_command(
-                Path.cwd(),
-                "markdown-frontmatter",
-                mode=LockMode.READ,
-                explicit_legacy=explicit_legacy_argument(arguments),
-            ) as selected:
-                if selected is not None:
-                    return main(
-                        arguments,
-                        _command_locked=True,
-                        _selected_package=selected,
-                    )
-        except (CommandResolutionError, OSError, RuntimeError, ValueError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+    if not _command_locked:
+        outcome = reenter_selected_command(
+            arguments,
+            standard_id="markdown-frontmatter",
+            mode=LockMode.READ,
+            reenter=lambda args_, selected: main(
+                args_,
+                _command_locked=True,
+                _selected_package=selected,
+            ),
+        )
+        if outcome is not None:
+            return outcome
     if _selected_package is not None:
         from project_standards.frontmatter_commands import run_locked_standalone_validate
 
@@ -331,21 +322,14 @@ def main(
     parser.add_argument("--quiet", "-q", action="store_true")
     args = parser.parse_args(arguments)
 
-    if args.config is not None and not args.config.exists():
-        print(f"error: config file not found: {args.config}", file=sys.stderr)
-        return 2
-    try:
-        config, legacy = load_cli_config(
-            Path.cwd(),
-            explicit_legacy=args.config,
-            allow_unlocked_custom_schema=args.schema is not None,
-            selected_package=_selected_package,
-        )
-    except ConfigError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-    if legacy:
-        emit_legacy_config_warning()
+    loaded = load_cli_config_or_exit(
+        args.config,
+        schema_arg=args.schema,
+        selected_package=_selected_package,
+    )
+    if isinstance(loaded, int):
+        return loaded
+    config = loaded
     if not config.references_enabled:
         return 0  # opt-in: disabled -> no checks
     if args.schema is not None or schema_value_is_path(config.schema):

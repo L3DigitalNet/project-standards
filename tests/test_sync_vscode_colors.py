@@ -13,9 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from project_standards.jsonc import (
-    _sanitize_jsonc,  # pyright: ignore[reportPrivateUsage]
-)
+from project_standards.jsonc import sanitize_jsonc
 from project_standards.sync_vscode_colors import (
     patterns_to_path_colors,
     read_include_patterns,
@@ -243,7 +241,7 @@ def test_rewrite_settings__jsonc_extensions__accepts_inline_comments_and_trailin
     rewrite_settings(settings, entries)
 
     rewritten = settings.read_text()
-    data = json.loads(_sanitize_jsonc(rewritten))
+    data = json.loads(sanitize_jsonc(rewritten))
     assert data["literal"] == "https://example.test/* literal */,}"
     assert data["nested"] == {"enabled": True}
     assert data["folder-color.pathColors"] == entries
@@ -271,7 +269,7 @@ def test_output_ends_with_newline(tmp_path: Path) -> None:
 
 
 def test_main_missing_standards_file_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # monkeypatch owns sys.argv; mock.patch replaces _repo_root because tmp_path is not a
+    # monkeypatch owns sys.argv; mock.patch replaces repo_root because tmp_path is not a
     # git repo and the real implementation calls `git rev-parse --show-toplevel`.
     from unittest.mock import patch
 
@@ -282,7 +280,7 @@ def test_main_missing_standards_file_exits(tmp_path: Path, monkeypatch: pytest.M
     monkeypatch.setattr(
         "sys.argv", ["sync-vscode-colors", str(tmp_path / "missing.yml"), str(settings)]
     )
-    with patch("project_standards.sync_vscode_colors._repo_root", return_value=tmp_path):
+    with patch("project_standards._sync_cli.repo_root", return_value=tmp_path):
         from project_standards.sync_vscode_colors import main
 
         with pytest.raises(SystemExit):
@@ -300,7 +298,7 @@ def test_main_missing_settings_file_exits(tmp_path: Path, monkeypatch: pytest.Mo
         "sys.argv",
         ["sync-vscode-colors", str(cfg), str(tmp_path / ".vscode" / "missing.json")],
     )
-    with patch("project_standards.sync_vscode_colors._repo_root", return_value=tmp_path):
+    with patch("project_standards._sync_cli.repo_root", return_value=tmp_path):
         from project_standards.sync_vscode_colors import main
 
         with pytest.raises(SystemExit):
@@ -308,30 +306,26 @@ def test_main_missing_settings_file_exits(tmp_path: Path, monkeypatch: pytest.Mo
 
 
 # ---------------------------------------------------------------------------
-# _repo_root + rewrite_settings edge cases + main() success path
+# repo_root + rewrite_settings edge cases + main() success path
 # ---------------------------------------------------------------------------
 
 
 def test_repo_root_outside_git_exits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from project_standards.sync_vscode_colors import (
-        _repo_root,  # pyright: ignore[reportPrivateUsage]
-    )
+    from project_standards._sync_cli import repo_root
 
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit, match="not inside a git repository"):
-        _repo_root()
+        repo_root()
 
 
 def test_repo_root_returns_git_toplevel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import subprocess
 
-    from project_standards.sync_vscode_colors import (
-        _repo_root,  # pyright: ignore[reportPrivateUsage]
-    )
+    from project_standards._sync_cli import repo_root
 
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     monkeypatch.chdir(tmp_path)
-    assert _repo_root().resolve() == tmp_path.resolve()
+    assert repo_root().resolve() == tmp_path.resolve()
 
 
 def test_rewrite_settings_single_line_file(tmp_path: Path) -> None:

@@ -29,7 +29,10 @@ from pydantic import (
 from pydantic_core import CoreSchema, core_schema
 from referencing.exceptions import Unresolvable
 
-from project_standards.package_contract.diagnostics import PackageContractError
+from project_standards.package_contract.diagnostics import (
+    PackageContractError,
+    validation_summary,
+)
 from project_standards.package_contract.family import KebabId, StrictModel
 from project_standards.package_contract.paths import (
     PackageVersion,
@@ -933,18 +936,6 @@ class PayloadManifest(StrictModel):
         return self
 
 
-def _validation_summary(exc: ValidationError) -> str:
-    summaries: list[str] = []
-    for error in exc.errors(
-        include_url=False,
-        include_context=False,
-        include_input=False,
-    ):
-        location = ".".join(str(part) for part in error["loc"])
-        summaries.append(f"{location or '<root>'}: {error['msg']}")
-    return "; ".join(summaries)
-
-
 def load_payload_manifest(path: Path) -> PayloadManifest:
     """Load one payload manifest and validate its version-qualified identity."""
     if path.name != "payload.toml":
@@ -960,7 +951,7 @@ def load_payload_manifest(path: Path) -> PayloadManifest:
     try:
         manifest = PayloadManifest.model_validate(raw)
     except ValidationError as exc:
-        summary = _validation_summary(exc)
+        summary = validation_summary(exc)
         raise PackageContractError(
             f"payload manifest {path} violates the V2 contract: {summary}"
         ) from exc

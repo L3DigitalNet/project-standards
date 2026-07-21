@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal, Self
@@ -139,6 +140,17 @@ class OperationReport:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False) + "\n"
+
+
+def emit_report(report: OperationReport, *, as_json: bool) -> int:
+    if as_json:
+        print(report.to_json(), end="")
+    else:
+        for change in sorted(report.changes, key=lambda item: item.sort_key):
+            print(f"{change.kind.value}: {change.path}")
+        for finding in sorted(report.findings, key=lambda item: item.sort_key):
+            print(f"{finding.severity}: {finding.path}: {finding.message}", file=sys.stderr)
+    return 1 if report.blocked else 0
 
 
 class ProvenanceLock(BaseModel):

@@ -27,7 +27,11 @@ from project_standards.control_plane.adapters import (
     WholeFileAdapter,
     YamlAdapter,
 )
-from project_standards.control_plane.adapters.base import AdapterUnit, DocumentAdapter
+from project_standards.control_plane.adapters.base import (
+    AdapterUnit,
+    DocumentAdapter,
+    decode_json_pointer,
+)
 from project_standards.control_plane.adapters.jsonc import (
     container_value_without_comments,
     format_fresh_json_container,
@@ -1131,9 +1135,7 @@ def _json_empty_scaffold(scopes: tuple[str, ...]) -> JsonObject:
     for scope in scopes:
         prefix, body = scope.split(":", 1)
         pointer = body.split("#", 1)[0]
-        path = tuple(
-            component.replace("~1", "/").replace("~0", "~") for component in pointer.split("/")[1:]
-        )
+        path = decode_json_pointer(pointer)
         if prefix == "key":
             scaffold = _nested_empty(path[:-1], {})
         elif prefix in {"set", "keyed-set"}:
