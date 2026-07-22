@@ -149,7 +149,8 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 | T6 | Catalog 5 integration | P3 | T4, T5 | FR-014, NFR-001, NFR-003-004 | graph/projection/matrix |
 | T7 | Upgrade documentation corrections | P3 | T3 | FR-011, NFR-003 | doc gate plus content inspection |
 | T11 | Cross-agent Codex implementation review | P4 | T6, T7 | NFR-003 | reviewed findings dispositioned |
-| T8 | Prepare one 5.6.0 candidate | P4 | T6, T7, T11 | FR-015, NFR-003 | version/build/hash gates |
+| T12 | Null-fidelity conflict values and exhaustive parity regression | P4 | T11 | FR-002, FR-006, NFR-001, NFR-003 | diagnostics/parity pytest |
+| T8 | Prepare one 5.6.0 candidate | P4 | T6, T7, T11, T12 | FR-015, NFR-003 | version/build/hash gates |
 | T9 | Qualify the exact candidate | P4 | T8 | FR-015, NFR-001, NFR-003-004 | complete § 13 gate |
 | T10 | Publish, close issues, close out | P5 | T9 | FR-015-016, NFR-003 | refs/workflows/assets/issues/parity |
 
@@ -267,9 +268,22 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
   - **T11.5 REFACTOR** — none.
   - **T11.6 Verify Task** — dispositions recorded in notes; no undispositioned finding; commit any fixes under their own task IDs.
 
+### T12: Null-fidelity conflict values and exhaustive parity regression
+
+- **goal:** Accepted Codex findings are fixed: a JSON `null` expected/actual value serializes as an explicit null and renders as `null` in human output, and Python Tooling 1.5/1.6 rendering parity is proven for every materialized contribution across representative configurations. · **phase:** P4 · **depends_on:** [T11] · **requirements:** [FR-002, FR-006, NFR-001, NFR-003] · **priority:** must
+- **files:** `src/project_standards/control_plane/diagnostics.py`, `planner.py`, `cli.py` (modify), `tests/control_plane/`, `tests/package_contract/test_python_tooling_reconstruction.py` (test)
+- **acceptance:** a semantic conflict whose expected or actual value is JSON `null` emits `"expected": null` / `"actual": null` in `--json` and `null` in human output, distinguishable from unset fields that stay omitted (TC-T12-001); the parity regression derives its matrix from the 1.5 manifest's materialized contributions, compares provider-rendered and static units across default, flat/pyright, and options-set configurations, and asserts declared roots appear in ruff `src` (TC-T12-002).
+- **sub-tasks:**
+  - **T12.1 RED** — add null-value emission/serialization/rendering regressions and the manifest-derived parity regression; expected failure: null values vanish and the old seven-scope loop is the only parity proof.
+  - **T12.2 Verify RED** — confirm null omission and coverage-gap failures, not fixture errors.
+  - **T12.3 GREEN** — track null presence on `ControlFinding`, emit explicit nulls in JSON and human output, and replace the parity loop with the manifest-derived matrix.
+  - **T12.4 Verify GREEN** — focused diagnostics/planner/CLI and reconstruction suites.
+  - **T12.5 REFACTOR** — keep presence tracking private to the finding shape; no rendering redesign.
+  - **T12.6 Verify Task** — focused tests, Ruff, BasedPyright, schema gate; commit with IDs.
+
 ### T8: Prepare one 5.6.0 candidate
 
-- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T6, T7, T11] · **requirements:** [FR-015, NFR-003] · **priority:** must
+- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T6, T7, T11, T12] · **requirements:** [FR-015, NFR-003] · **priority:** must
 - **files:** version/lock/changelog/status/deployment/session files and build outputs
 - **acceptance:** versions agree across `pyproject.toml`, changelog, and docs (TC-T8-001); prepared/published wording is truthful (TC-T8-002); one artifact pair has recorded hashes (TC-T8-003); the extracted wheel reports 5.6.0 and the successors (TC-T8-004).
 - **sub-tasks:**
@@ -398,6 +412,7 @@ After harvest and close-out commit, delete `.project-pipeline/2026-07-22-v5-upgr
 | TC-T6-001..004 | FR-014, NFR-001, NFR-003-004 | T6 | catalog/lifecycle/matrix/release suites | integration/compatibility |
 | TC-T7-001..003 | FR-011, NFR-003 | T7 | doc gate plus content inspections | documentation |
 | TC-T11-001..002 | NFR-003 | T11 | cross-agent review report and dispositions | end-to-end |
+| TC-T12-001..002 | FR-002, FR-006, NFR-001, NFR-003 | T12 | diagnostics null-fidelity and manifest-derived parity | regression |
 | TC-T8-001..004 | FR-015, NFR-003 | T8 | version/docs/build/integration probes | end-to-end |
 | TC-T9-001..005 | FR-015, NFR-001, NFR-003-004 | T9 | complete local qualification | end-to-end |
 | TC-T10-001..005 | FR-015-016, NFR-003 | T10 | refs/workflows/assets/issues/parity | end-to-end |
