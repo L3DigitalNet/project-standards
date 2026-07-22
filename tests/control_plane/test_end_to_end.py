@@ -319,3 +319,70 @@ print(json.dumps({
         "resolved": "3.0",
         "accepted_major": 3,
     }
+
+
+def test_toml_table_update_preserves_annotated_consumer_comments_end_to_end(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    settings = repo / "settings.toml"
+    settings.write_bytes(b"[consumer]\nkeep = true\n")
+    initial_payload = write_payload(
+        tmp_path / "payload-initial",
+        "declarative-toolbox",
+        contributions=[
+            {
+                "id": "demo",
+                "target": "settings.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/demo",
+                "content": b'[tool.demo]\nvalues = ["a", "b"]\n',
+            }
+        ],
+    )
+    first_request = PlannerRequest(repo, resolution_request((initial_payload,)), (initial_payload,))
+    control = repo / ".standards"
+    control.mkdir()
+    (control / "lock.toml").write_bytes(render_lock(first_request.resolution.previous_lock))
+    first = plan_reconciliation(first_request)
+    assert first.applicable, first.findings
+    assert apply_reconciliation(ApplyRequest(first_request, first)).success
+
+    annotated = settings.read_bytes().replace(
+        b'values = ["a", "b"]',
+        b'values = [\n  # consumer note: keep entry a\n  "a",\n  "b",\n]',
+    )
+    settings.write_bytes(annotated)
+
+    updated_payload = write_payload(
+        tmp_path / "payload-updated",
+        "declarative-toolbox",
+        contributions=[
+            {
+                "id": "demo",
+                "target": "settings.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/demo",
+                "content": b'[tool.demo]\nvalues = ["a", "b", "c"]\n',
+            }
+        ],
+    )
+    second_resolution = resolution_request((updated_payload,), previous_lock=first.next_lock)
+    second_request = PlannerRequest(repo, second_resolution, (updated_payload,))
+    second = plan_reconciliation(second_request)
+    assert second.applicable, second.findings
+    assert apply_reconciliation(ApplyRequest(second_request, second)).success
+
+    after = settings.read_bytes()
+    assert (b'[tool.demo]\n# consumer note: keep entry a\nvalues = ["a", "b", "c"]\n') in after
+    assert b"\n\n\n" not in after
+
+    third_resolution = resolution_request((updated_payload,), previous_lock=second.next_lock)
+    third_request = PlannerRequest(repo, third_resolution, (updated_payload,))
+    third = plan_reconciliation(third_request)
+    result = apply_reconciliation(ApplyRequest(third_request, third))
+    assert third.applicable
+    assert result.success
+    assert result.applied_action_ids == ()
+    assert settings.read_bytes() == after

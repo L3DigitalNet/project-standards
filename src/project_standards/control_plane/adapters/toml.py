@@ -580,17 +580,93 @@ def _preserve_comments_and_whitespace(source: str) -> str:
     return "".join(preserved)
 
 
+def _preserved_comment_lines(source: str) -> list[str]:
+    return [
+        line.lstrip()
+        for line in _preserve_comments_and_whitespace(source).splitlines()
+        if line.strip()
+    ]
+
+
+def _statement_anchor(statement: TomlStatement) -> tuple[str, tuple[str, ...]]:
+    full_key = _full_key(statement)
+    if full_key is not None:
+        return ("key", full_key)
+    return ("table", statement.table)
+
+
+def _is_comment_only(gap: str) -> bool:
+    return all(not line.strip() or line.lstrip().startswith("#") for line in gap.splitlines())
+
+
+def _collect_replaced_comments(
+    text: str,
+    selected: tuple[TomlStatement, ...],
+) -> tuple[list[tuple[tuple[str, tuple[str, ...]], str]], list[tuple[int, int]]]:
+    """Harvest consumer comments from the statements a rewrite consumes.
+
+    Comments found inside a statement span anchor to that statement's key;
+    comments in a whitespace-only gap anchor forward to the next selected
+    statement, matching the convention that a comment precedes its subject.
+    Gaps containing unselected code (interleaved tables) are left untouched.
+    """
+    anchored: list[tuple[tuple[str, tuple[str, ...]], str]] = []
+    gap_spans: list[tuple[int, int]] = []
+    for index, statement in enumerate(selected):
+        for line in _preserved_comment_lines(text[statement.start : statement.source_end]):
+            anchored.append((_statement_anchor(statement), line))
+        if index + 1 < len(selected):
+            gap_start, gap_end = statement.source_end, selected[index + 1].start
+            gap = text[gap_start:gap_end]
+            if _is_comment_only(gap):
+                for line in _preserved_comment_lines(gap):
+                    anchored.append((_statement_anchor(selected[index + 1]), line))
+                gap_spans.append((gap_start, gap_end))
+    return anchored, gap_spans
+
+
+def _weave_comments(
+    fragment: str,
+    anchored: list[tuple[tuple[str, tuple[str, ...]], str]],
+    newline: str,
+) -> str:
+    if not anchored:
+        return fragment
+    positions: dict[tuple[str, tuple[str, ...]], int] = {}
+    for statement in scan_toml_statements(fragment):
+        line_start = fragment.rfind("\n", 0, statement.start) + 1
+        positions.setdefault(_statement_anchor(statement), line_start)
+    inserts: dict[int, list[str]] = {}
+    for anchor, line in anchored:
+        inserts.setdefault(positions.get(anchor, 0), []).append(line)
+    woven = fragment
+    for position in sorted(inserts, reverse=True):
+        block = "".join(f"{line}{newline}" for line in inserts[position])
+        woven = f"{woven[:position]}{block}{woven[position:]}"
+    return woven
+
+
 def _replacement_edits(
     text: str,
     selected: tuple[TomlStatement, ...],
     fragment: str,
 ) -> list[tuple[int, int, str]]:
-    edits: list[tuple[int, int, str]] = []
-    for index, statement in enumerate(selected):
-        source = text[statement.start : statement.end]
-        preserved = _preserve_comments_and_whitespace(source)
-        replacement = f"{fragment}{preserved}" if index == 0 else preserved
-        edits.append((statement.start, statement.end, replacement))
+    """Replace a rewritten unit's full source region with the woven fragment.
+
+    Full logical spans (terminators included) and comment-only gaps are
+    consumed so a rewrite leaves no blank-line residue; harvested comments are
+    re-emitted above their anchor inside the fragment, or above the whole
+    fragment when the anchor no longer exists, so consumer commentary is never
+    displaced under an unrelated statement.
+    """
+    newline = _newline(text)
+    anchored, gap_spans = _collect_replaced_comments(text, selected)
+    woven = _weave_comments(fragment, anchored, newline)
+    if not woven.endswith("\n"):
+        woven += newline
+    edits: list[tuple[int, int, str]] = [(selected[0].start, selected[0].source_end, woven)]
+    edits.extend((statement.start, statement.source_end, "") for statement in selected[1:])
+    edits.extend((start, end, "") for start, end in gap_spans)
     return edits
 
 
@@ -817,6 +893,15 @@ class TomlAdapter:
                 statement = _assignment(statements, spec.path)
                 if statement is None:
                     raise ControlPlaneError("TOML update scope is not independently addressable")
+                interior = _preserved_comment_lines(
+                    text[statement.value_start : statement.value_end]
+                )
+                if interior:
+                    newline = _newline(text)
+                    line_start = text.rfind("\n", 0, statement.start) + 1
+                    indent = text[line_start : statement.start]
+                    block = "".join(f"{indent}{line}{newline}" for line in interior)
+                    edits.append((line_start, line_start, block))
                 edits.append((statement.value_start, statement.value_end, fragment))
             elif spec.kind == "keyed-set":
                 assert match is not None

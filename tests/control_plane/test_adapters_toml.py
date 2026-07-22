@@ -255,6 +255,153 @@ def test_toml_table_update_preserves_unowned_bytes_and_reaches_fixed_point() -> 
     assert adapter.render(adapter.inspect(after, (scope,)), (change,)) == after
 
 
+def test_toml_table_update_relocates_interior_array_comments_above_their_key() -> None:
+    before = (
+        b"[tool.ruff]\n"
+        b"line-length = 100\n"
+        b"extend-exclude = [\n"
+        b"  # Harness-owned; never linted.\n"
+        b'  ".claude",\n'
+        b"  # Archived byte-for-byte. Do not remove.\n"
+        b'  "vendor",\n'
+        b"]\n"
+        b"[tool.ruff.lint]\n"
+        b'ignore = ["E501"]\n'
+        b"\n[project]\nname = 'demo'\n"
+    )
+    desired = (
+        b"[tool.ruff]\n"
+        b"line-length = 100\n"
+        b'extend-exclude = [".claude", "vendor", "build"]\n'
+        b"[tool.ruff.lint]\n"
+        b'ignore = ["E501"]\n'
+    )
+    adapter = TomlAdapter()
+    scope = "table:/tool/ruff"
+    desired_unit = _unit(adapter, desired, scope)
+    change = UnitChange(ActionKind.UPDATE, scope, desired_unit.raw, desired_unit.value)
+
+    after = adapter.render(adapter.inspect(before, (scope,)), (change,))
+
+    assert after == (
+        b"[tool.ruff]\n"
+        b"line-length = 100\n"
+        b"# Harness-owned; never linted.\n"
+        b"# Archived byte-for-byte. Do not remove.\n"
+        b'extend-exclude = [".claude", "vendor", "build"]\n'
+        b"[tool.ruff.lint]\n"
+        b'ignore = ["E501"]\n'
+        b"\n[project]\nname = 'demo'\n"
+    )
+    assert adapter.render(adapter.inspect(after, (scope,)), (change,)) == after
+
+
+def test_toml_table_update_leaves_no_blank_line_residue() -> None:
+    before = (
+        b"[tool.ruff]\n"
+        b"line-length = 100\n"
+        b'extend-exclude = [\n  ".claude",\n  "vendor",\n]\n'
+        b"[tool.ruff.lint]\n"
+        b'ignore = ["E501"]\n'
+        b"\n[project]\nname = 'demo'\n"
+    )
+    desired = (
+        b"[tool.ruff]\n"
+        b"line-length = 100\n"
+        b'extend-exclude = [".claude", "vendor", "build"]\n'
+        b"[tool.ruff.lint]\n"
+        b'ignore = ["E501"]\n'
+    )
+    adapter = TomlAdapter()
+    scope = "table:/tool/ruff"
+    desired_unit = _unit(adapter, desired, scope)
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, desired_unit.raw, desired_unit.value),),
+    )
+
+    assert after == desired + b"\n[project]\nname = 'demo'\n"
+
+
+def test_toml_table_update_anchors_own_line_comments_to_the_next_key() -> None:
+    before = (
+        b"[tool.ruff]\n"
+        b"# explains the line budget\n"
+        b"line-length = 88\n"
+        b'src = ["src"]\n'
+        b"\n[project]\nname = 'demo'\n"
+    )
+    desired = b'[tool.ruff]\nline-length = 100\nsrc = ["src"]\n'
+    adapter = TomlAdapter()
+    scope = "table:/tool/ruff"
+    desired_unit = _unit(adapter, desired, scope)
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, desired_unit.raw, desired_unit.value),),
+    )
+
+    assert after == (
+        b"[tool.ruff]\n"
+        b"# explains the line budget\n"
+        b"line-length = 100\n"
+        b'src = ["src"]\n'
+        b"\n[project]\nname = 'demo'\n"
+    )
+
+
+def test_toml_table_update_hoists_comments_for_keys_absent_from_the_fragment() -> None:
+    before = (
+        b"[tool.ruff]\n"
+        b"line-length = 88\n"
+        b"legacy = [\n  # kept for the record\n  1,\n]\n"
+        b"\n[project]\nname = 'demo'\n"
+    )
+    desired = b"[tool.ruff]\nline-length = 100\n"
+    adapter = TomlAdapter()
+    scope = "table:/tool/ruff"
+    desired_unit = _unit(adapter, desired, scope)
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, desired_unit.raw, desired_unit.value),),
+    )
+
+    assert after == (
+        b"# kept for the record\n[tool.ruff]\nline-length = 100\n\n[project]\nname = 'demo'\n"
+    )
+
+
+def test_toml_key_update_preserves_interior_comments_above_the_assignment() -> None:
+    before = (
+        b"[tool.basedpyright]\n"
+        b'include = [\n  # gate runner lives here\n  "src",\n]\n'
+        b'typeCheckingMode = "strict"\n'
+    )
+    adapter = TomlAdapter()
+    scope = "key:/tool/basedpyright/include"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=b'["src", "scripts"]',
+                value=["src", "scripts"],
+            ),
+        ),
+    )
+
+    assert after == (
+        b"[tool.basedpyright]\n"
+        b"# gate runner lives here\n"
+        b'include = ["src", "scripts"]\n'
+        b'typeCheckingMode = "strict"\n'
+    )
+
+
 def test_toml_table_removal_removes_owned_code_but_preserves_comments() -> None:
     before = _fixture("complex.toml")
     adapter = TomlAdapter()
