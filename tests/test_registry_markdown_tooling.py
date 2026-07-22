@@ -21,5 +21,5 @@ def test_dogfood_config_selects_current_compatibility_successors() -> None:
     lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
 
     assert config["standards"]["markdown-tooling"]["config"]["contract_version"] == "1.1"
-    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.6"
+    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.7"
     assert lock["standards"]["python-tooling"]["resolved"] == "1.5"

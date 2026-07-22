@@ -6,8 +6,8 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-21'
-reviewed: '2026-07-21'
+updated: '2026-07-22'
+reviewed: '2026-07-22'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -36,6 +36,25 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.5.0] — 2026-07-22
+
+> **Why MINOR:** Catalog 5 adds four backward-compatible package successors on their existing major tracks, and the shared Project Specification command layer corrects diagnostic line coordinates without changing finding codes, severity, count, or exit outcomes. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.4.0` classifies the release as minor.
+
+### Added
+
+- **Semantic whole-file legacy signatures retain exact source ownership.** Package-declared YAML or TOML history can authenticate canonical semantics while migration locks, preconditions, replay, and retirement continue to bind the observed source bytes. Strict parsing and enumerated digests keep unknown consumer customization fail-closed. Standard Bundle Authoring 2.4 documents the bounded contract.
+
+### Fixed
+
+- **Markdown Tooling 1.7 migrates the documented disabled formatter caller.** An exact supported V4 `format.yml` with `prettier: false` maps to both disabled formatting options and converges; unsupported custom callers remain blocked (issue #16).
+- **Project Specification 1.4 permits a configured empty corpus.** Selected `validate` and strict `lint` succeed visibly when valid nonempty include patterns match no files, while 1.3 and protected configuration/path errors retain their previous outcomes (issue #17).
+- **Agent Handoff 1.4 budgets only consumer-controlled instruction bytes.** Exact central-lock-authenticated managed Markdown envelopes are excluded; malformed, duplicated, unlocked, wrong-scope, or drifted lookalikes remain counted. Legacy reporting excludes only its exact historical block (issue #18).
+- **Project Specification findings use absolute physical file lines.** Lint and validation output now include the frontmatter offset consistently in human, JSON, and selected-provider results across exact package selections. Structured and embedded coordinates agree, while finding codes, non-coordinate message text, severity, count, loci, and exits remain unchanged (issue #19).
+
+### Changed
+
+- Catalog 5 promotes Markdown Tooling 1.7, Project Specification 1.4, and Agent Handoff 1.4 as compatible consumer defaults and advertises internal Standard Bundle Authoring 2.4. Every predecessor remains retained with unchanged bytes and digests.
 
 ## [5.4.0] — 2026-07-21
 

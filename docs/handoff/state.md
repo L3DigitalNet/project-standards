@@ -3,8 +3,8 @@
 ## Current focus
 
 - Project Standards 5.4.0 is published from release commit `74cb54b`. Signed `v5.4.0` and moving `v5` tags, the Latest GitHub release, and byte-verified wheel and sdist assets are live; issues #14/#15 are closed with release evidence.
-- Python Tooling 1.5 preserves consumer-only checker and pytest keys by managing canonical keys individually, and its declared 1.4→1.5 transition safely retires historical table locks. Markdown Tooling 1.6 code-wraps every configured instruction glob. Catalog 5 retains all predecessors while selecting both successors.
-- The exact 5.4.0 artifacts pass 3,066 ordinary tests, 80 compatibility rows, 5 performance tests, 90% coverage, Ruff, BasedPyright, package graph/schema/projection/catalog and MINOR-classification checks, Prettier, markdownlint, dependency audits, dogfood validation, and Agent Handoff conformance/drift. All eight release-commit workflows passed, including `Check` run `29883365570`; downloaded wheel (`2915f4ce…a2e39`) and sdist (`d9bcfe3e…bac87`) assets match exactly.
+- Project Standards 5.5.0 is prepared for authorized MINOR publication. Issues #16–#19 are implemented through semantic migration signatures, Markdown Tooling 1.7, Project Specification 1.4, Agent Handoff 1.4, Standard Bundle Authoring 2.4, and absolute Project Specification finding coordinates. Catalog 5 retains every predecessor while selecting the three consumer successors and advertising the internal authoring successor.
+- Pre-candidate task evidence is green, including 370 focused Project Specification tests, source/wheel reconstruction, immutable predecessors, package graph/schema/projection/catalog gates, static and Markdown checks, and a finding-free MINOR classification. Exact wheel/sdist qualification, signed refs, hosted workflows, asset parity, and issue closure remain pending.
 
 ## Active incidents
 

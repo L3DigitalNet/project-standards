@@ -103,6 +103,8 @@ def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
     assert "Agent Handoff Standard" in root_readme
     assert "[agent-handoff/]" in standards_index
     assert "project-standards agent-handoff" in package_readme
+    assert "Standard Bundle Authoring 2.4 workflow" in package_readme
+    assert "versions/2.4/README.md" in package_readme
 
 
 def test_repository_dogfoods_agent_handoff_v5() -> None:
@@ -121,7 +123,7 @@ def test_repository_dogfoods_agent_handoff_v5() -> None:
             "harnesses": ["claude-code", "codex"],
         },
     }
-    assert lock["standards"]["agent-handoff"]["resolved"] == "1.3"
+    assert lock["standards"]["agent-handoff"]["resolved"] == "1.4"
     assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
     assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
         _V2_MANAGED / "hook.py"
