@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.cli import main as project_standards_main
+from project_standards.control_plane import command_resolution
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import run, run_init, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
@@ -696,6 +697,28 @@ def test_v5_adopt_never_falls_back_from_present_invalid_or_nonselectable_catalog
     error = capsys.readouterr().err
     assert "installed V2 catalog" in error
     assert "unknown standard" not in error
+
+
+def test_validate_repository__legacy_only_state__emits_the_legacy_authority_note(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T5-003 route 2 (5.8.0 FR-011 / issue #30): the legacy-only validate
+    # path (control_plane/cli.py) must emit the same factual note as the
+    # resolution route, not the retired imperative warning.
+    monkeypatch.setattr(command_resolution, "_legacy_warning_emitted", False)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".project-standards.yml").write_text("legacy: true\n", encoding="utf-8")
+    distribution = installed_distribution(tmp_path)
+
+    assert validate_repository(repo, distribution=distribution) == 0
+
+    assert (
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration"
+    ) in capsys.readouterr().err
 
 
 def test_validate_repository_reports_unified_drift_read_only(

@@ -100,7 +100,40 @@ def test_legacy_only_state_returns_the_bounded_fallback_with_warning(
     (repo / ".project-standards.yml").write_text("legacy: true\n", encoding="utf-8")
 
     assert resolve_selected_package(repo, "alpha", installed_distribution(tmp_path)) is None
-    assert "migrate before using the V5 control plane" in capsys.readouterr().err
+    assert (
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration"
+    ) in capsys.readouterr().err
+
+
+def test_emit_legacy_authority_warning__called_twice__prints_the_note_exactly_once(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T5-001 (5.8.0 FR-011 / issue #30): once-per-process guard is the
+    # invariant under test — a second call in the same process must be silent.
+    monkeypatch.setattr(command_resolution, "_legacy_warning_emitted", False)
+
+    command_resolution.emit_legacy_authority_warning()
+    command_resolution.emit_legacy_authority_warning()
+
+    assert capsys.readouterr().err == (
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration\n"
+    )
+
+
+def test_emit_legacy_authority_warning__text__has_no_imperative_migrate_before_phrasing(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T5-002 (5.8.0 FR-011 / issue #30): the note must read as fact, not as
+    # a directive that contradicts UPGRADING.md §2's pre-migration workflow.
+    monkeypatch.setattr(command_resolution, "_legacy_warning_emitted", False)
+
+    command_resolution.emit_legacy_authority_warning()
+
+    assert "migrate before" not in capsys.readouterr().err
 
 
 def test_initialized_state_returns_exact_payload_and_effective_config(

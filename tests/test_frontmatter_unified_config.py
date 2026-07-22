@@ -16,6 +16,7 @@ from project_standards import (
     validate_id,
     validate_references,
 )
+from project_standards.control_plane import command_resolution
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import run as reconcile
 from project_standards.control_plane.codec import (
@@ -367,6 +368,23 @@ def test_load_cli_config_or_exit__legacy_authority__emits_warning(
 
     assert loaded is config
     assert warnings == [None]
+
+
+def test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T5-003 route 3 (5.8.0 FR-011 / issue #30): exercise the real
+    # delegation (unmocked, unlike the warning-call-count test above) so
+    # wording drift in the shared function is caught at this call site too.
+    monkeypatch.setattr(command_resolution, "_legacy_warning_emitted", False)
+
+    validate_frontmatter.emit_legacy_config_warning()
+
+    assert (
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration"
+    ) in capsys.readouterr().err
 
 
 def test_mutating_frontmatter_clis__write_flags__request_write_lock(

@@ -83,13 +83,20 @@ def explicit_legacy_argument(argv: list[str]) -> Path | None:
 
 
 def emit_legacy_authority_warning() -> None:
-    """Emit the process-wide v5 fallback warning at most once."""
+    """Emit the process-wide legacy-authority note at most once.
+
+    Factual, not imperative (5.8.0 FR-011 / issue #30): UPGRADING.md §2
+    directs consumers to run read-only commands (e.g. `agent-handoff
+    size-report`/`shape-check`) against legacy authority *before* migrating.
+    The prior "migrate before using" wording contradicted that documented
+    workflow at the exact moment it told consumers to follow it.
+    """
     global _legacy_warning_emitted
     if _legacy_warning_emitted:
         return
     print(
-        "warning: legacy .project-standards.yml remains read-only; "
-        "migrate before using the V5 control plane",
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration",
         file=sys.stderr,
     )
     _legacy_warning_emitted = True
