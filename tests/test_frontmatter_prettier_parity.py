@@ -125,6 +125,49 @@ def test_formatter_output_stable_under_pinned_prettier() -> None:
     )
 
 
+# The pre-5.8.0 doubled-apostrophe spelling: the formatter used to EMIT this, but
+# Prettier (singleQuote: true, no-escape-when-possible) always rewrites it to
+# `"Apple's thing"`. Deliberately NOT a fixed point — see the guard test below.
+_NON_FIXED_POINT_DOC = (
+    "---\n"
+    "schema_version: '1.1'\n"
+    "id: 'note-a3f9zk-x'\n"
+    "title: 'X'\n"
+    "description: 'Apple''s thing'\n"
+    "doc_type: 'note'\n"
+    "status: 'draft'\n"
+    "created: '2026-06-08'\n"
+    "updated: '2026-06-08'\n"
+    "tags: []\n"
+    "aliases: []\n"
+    "related: []\n"
+    "---\n"
+    "\n"
+    "# Body\n"
+)
+
+
+def test_prettier_harness_detects_non_fixed_point() -> None:
+    """Committed mutation guard for `_run_prettier`'s `--ignore-path os.devnull` flag:
+    this test is the committed mutation check for --ignore-path; if it fails with
+    output==input, the harness is silently ignoring probe files again.
+
+    `_NON_FIXED_POINT_DOC` is KNOWN not to be a fixed point: Prettier rewrites its
+    doubled-apostrophe `'Apple''s thing'` to the no-escape `"Apple's thing"`. If a
+    future cleanup drops `--ignore-path os.devnull`, Prettier starts treating the
+    (gitignored `prettier_probe_*/`) probe directory as ignored and echoes stdin-mode
+    output back byte-identical with no warning — every parity assertion in this file
+    would then pass trivially. This test is the tripwire for exactly that regression:
+    it fails (output == input) the moment `--ignore-path` stops doing its job."""
+    _require_prettier()
+    output = _run_prettier(_NON_FIXED_POINT_DOC)
+    assert output != _NON_FIXED_POINT_DOC, (
+        "pinned Prettier echoed the probe unchanged — the harness is silently "
+        "ignoring probe files again (the --ignore-path os.devnull regression this "
+        "test exists to catch)"
+    )
+
+
 # The eight scalar keys the formatter always canonicalizes, in canonical order, with
 # their default already-minimal spellings. Corpus builders override one at a time so
 # the class under test is the only variable Prettier or the formatter could touch.
@@ -171,12 +214,27 @@ def _build(
 
 @dataclass(frozen=True)
 class CorpusCase:
-    """One FR-009 scalar class and a document carrying that class's mutual fixed point.
-    `cls` tags the case against `_REQUIRED_CLASSES` so TC-T3-002 can prove no class was
-    silently dropped by a later edit."""
+    """One FR-009 scalar class, a document carrying that class's mutual fixed point,
+    and a `seed` variant used to make Direction B independently informative (T3 review
+    finding #2). `cls` tags the case against `_REQUIRED_CLASSES` so TC-T3-002 can prove
+    no class was silently dropped by a later edit.
+
+    `seed` is a document identical to `doc` except the class-under-test scalar carries
+    a spelling that is LEGAL YAML but NOT the formatter's canonical (minimal-escape)
+    form — e.g. a double-quoted scalar where the canonical form is single-quoted.
+    Direction B runs Prettier on `seed`, not `doc`: `doc` is already the formatter's
+    fixed point (Direction A proves Prettier leaves it alone), so re-running Prettier
+    on it and checking the formatter accepts the result again would just re-derive
+    Direction A's equality. Feeding Prettier a genuinely different starting spelling
+    and checking the formatter accepts Prettier's INDEPENDENTLY-CHOSEN resting spelling
+    is the real cross-tool claim. `seed=None` marks a class with no non-canonical
+    spelling expressible in the frontmatter grammar (currently only
+    `literal_line_breaks`: a block scalar's only legal in-grammar form already is its
+    canonical form), in which case Direction B falls back to reusing `doc`."""
 
     cls: str
     doc: str
+    seed: str | None
 
 
 # Every scalar class FR-009 enumerates. TC-T3-002 asserts the corpus tags exactly this
@@ -207,46 +265,127 @@ _REQUIRED_CLASSES: frozenset[str] = frozenset(
 # of those characters; the block-scalar doc covers genuine multi-line text.
 _CORPUS: tuple[CorpusCase, ...] = (
     # Apostrophe → double-quoted no-escape form wins (single-cost 1 > double-cost 0).
-    CorpusCase("apostrophes", _build({"title": '"Apple\'s"'})),
+    # seed: the pre-5.8.0 doubled-apostrophe single-quoted spelling (legal, non-minimal).
+    CorpusCase(
+        "apostrophes",
+        _build({"title": '"Apple\'s"'}),
+        seed=_build({"title": "'Apple''s'"}),
+    ),
     # Interior double quotes → single-quoted wins (single-cost 0 < double-cost 2).
-    CorpusCase("double_quotes", _build({"title": "'She said \"hi\"'"})),
+    # seed: the double-quoted spelling with both interior quotes escaped (legal, costlier).
+    CorpusCase(
+        "double_quotes",
+        _build({"title": "'She said \"hi\"'"}),
+        seed=_build({"title": '"She said \\"hi\\""'}),
+    ),
     # Both quote kinds → single-quoted wins (single-cost 1 < double-cost 2); the
     # apostrophe is doubled inside single quotes.
-    CorpusCase("both_quote_kinds", _build({"title": "'Apple''s \"pie\"'"})),
+    # seed: the double-quoted spelling with both interior quotes escaped (legal, costlier).
+    CorpusCase(
+        "both_quote_kinds",
+        _build({"title": "'Apple''s \"pie\"'"}),
+        seed=_build({"title": '"Apple\'s \\"pie\\""'}),
+    ),
     # A single backslash is literal inside single quotes (no escaping) → single wins.
-    CorpusCase("single_backslash", _build({"title": r"'a\b'"})),
+    # seed=None: Prettier is quote/escape-*preserving* for this value (module
+    # docstring), not cost-minimizing — verified empirically that neither a
+    # double-quoted-with-escaped-backslash spelling (`"a\\b"`) nor an unquoted plain
+    # spelling (`a\b`) is touched by Prettier; it only forces re-emission for the
+    # apostrophe-doubling trigger the `apostrophes`/`both_quote_kinds` classes exercise.
+    # No legal spelling of this value converges to the canonical form under Prettier.
+    CorpusCase(
+        "single_backslash",
+        _build({"title": r"'a\b'"}),
+        seed=None,
+    ),
     # Repeated backslashes stay literal inside single quotes → single wins; the
     # double-quoted form would have to escape each backslash.
-    CorpusCase("repeated_backslashes", _build({"title": r"'a\\b'"})),
+    # seed=None: same empirically-verified Prettier preserving behavior as
+    # `single_backslash` above — no legal alternate spelling converges.
+    CorpusCase(
+        "repeated_backslashes",
+        _build({"title": r"'a\\b'"}),
+        seed=None,
+    ),
     # `\n` inside a double-quoted scalar: the newline is a control char, so the value
     # has no single-quoted spelling and must be double-quoted.
-    CorpusCase("escaped_line_breaks", _build({"title": r'"line1\nline2"'})),
+    # seed=None: verified empirically that Prettier preserves an alternate in-grammar
+    # double-quoted escape spelling of the same control character verbatim (e.g. the
+    # `\xNN` hex fallback instead of the `\n` mnemonic) rather than normalizing it to
+    # _emit_scalar's mnemonic-preferring canonical form — Prettier does not touch
+    # already-double-quoted internal escape spelling at all, only the outer quote
+    # character. No legal alternate spelling converges.
+    CorpusCase(
+        "escaped_line_breaks",
+        _build({"title": r'"line1\nline2"'}),
+        seed=None,
+    ),
     # Genuine multi-line text lives in a block scalar. Block scalars are OUT OF SCOPE
     # for the formatter (tokenize flags `|`/`>` as unsupported and leaves the document
     # byte-identical with an informational skip warning that does NOT fail the check
     # gate); this case verifies Prettier round-trips such a document so the formatter's
     # hands-off stance and Prettier's agree. This is the in-grammar realization of the
     # "literal line breaks" class (a raw newline cannot appear in a single-line scalar).
+    # seed=None: a block scalar's only legal in-grammar spelling of this text already
+    # IS its canonical form — there is no non-canonical alternative to seed with.
     CorpusCase(
         "literal_line_breaks",
         _build(description_block=["|", "  line one", "  line two"]),
+        seed=None,
     ),
     # Tab is a control char → double-quoted `\t`.
-    CorpusCase("tabs", _build({"title": r'"a\tb"'})),
+    # seed=None: same empirically-verified Prettier preserving behavior as
+    # `escaped_line_breaks` above — a `\xNN` hex-escape alternate spelling of the same
+    # tab is left untouched by Prettier rather than normalized to the `\t` mnemonic.
+    CorpusCase(
+        "tabs",
+        _build({"title": r'"a\tb"'}),
+        seed=None,
+    ),
     # Bell (U+0007) has no double-escape mnemonic → `\xNN` fallback, double-quoted.
-    CorpusCase("control_characters", _build({"title": r'"a\x07b"'})),
+    # seed=None: verified empirically that Prettier also preserves the `\a` mnemonic
+    # spelling (legal per the YAML double-quoted escape table and accepted by PyYAML)
+    # verbatim rather than normalizing it to _emit_scalar's `\xNN` fallback.
+    CorpusCase(
+        "control_characters",
+        _build({"title": r'"a\x07b"'}),
+        seed=None,
+    ),
     # CJK text needs no escaping in either style → single wins on the tie.
-    CorpusCase("cjk", _build({"title": "'你好世界'"})),
+    # seed: the double-quoted spelling of the same text (legal, non-canonical — the tie
+    # resolves to single).
+    CorpusCase(
+        "cjk",
+        _build({"title": "'你好世界'"}),
+        seed=_build({"title": '"你好世界"'}),
+    ),
     # A date string stays single-quoted; Prettier must NOT coerce it to a YAML date.
-    CorpusCase("dates", _build({"title": "'2026-06-08'"})),
-    # An identifier-like number stays a quoted string; Prettier must NOT coerce it to
-    # a YAML int/float (`'v1.2.3'` is unambiguous; `'1.1'`/`'123'` verified separately).
-    CorpusCase("identifier_like_numbers", _build({"title": "'v1.2.3'"})),
+    # seed: the double-quoted spelling of the same date (legal, non-canonical); Prettier
+    # must not coerce it to a YAML date from this spelling either.
+    CorpusCase(
+        "dates",
+        _build({"title": "'2026-06-08'"}),
+        seed=_build({"title": '"2026-06-08"'}),
+    ),
+    # An identifier-like number stays a quoted string; Prettier must NOT coerce it to a
+    # YAML float (`1.1` is exactly the shape a YAML loader parses as a number, so this
+    # case carries real risk — unlike an unambiguous string such as `v1.2.3`).
+    # seed: the double-quoted spelling of the same string (legal, non-canonical);
+    # Prettier must not coerce it to a number from this spelling either.
+    CorpusCase(
+        "identifier_like_numbers",
+        _build({"title": "'1.1'"}),
+        seed=_build({"title": '"1.1"'}),
+    ),
     # Block-list items in BOTH accepted spellings on one list: the single-quoted
     # canonical `'plain'` and the minimal double-quoted `"Apple's"`. Neither must flip.
+    # seed: both items in the OPPOSITE (legal, non-canonical) spelling — `"plain"`
+    # (double-quoted; the tie resolves to single) and `'Apple''s'` (single-quoted with
+    # the apostrophe doubled; double-quoted no-escape wins for this value).
     CorpusCase(
         "block_list_both_spellings",
         _build(related_block=["related:", "  - 'plain'", '  - "Apple\'s"']),
+        seed=_build(related_block=["related:", '  - "plain"', "  - 'Apple''s'"]),
     ),
 )
 
@@ -282,12 +421,19 @@ def test_corpus_class_is_prettier_fixed_point(case: CorpusCase) -> None:
         "quoting fight is live for this class; _emit_scalar must match Prettier"
     )
 
-    # Direction B — Prettier output passes the formatter check unchanged. If the two
-    # tools disagreed on this class's canonical spelling, the formatter would rewrite
+    # Direction B — Prettier's INDEPENDENTLY-PRODUCED resting spelling passes the
+    # formatter check unchanged. Feeding Prettier `case.doc` here would just re-derive
+    # Direction A's already-proven equality (doc is already the fixed point, so
+    # Prettier would echo it back unchanged and this assertion would be trivial).
+    # `case.seed` carries a legal-but-non-canonical spelling instead, so Prettier must
+    # actually choose a resting spelling on its own; that choice — not a copy of
+    # `doc` — is what the formatter is checked against. Classes with no expressible
+    # non-canonical spelling (`seed is None`) fall back to `doc`. If the two tools
+    # disagreed on this class's canonical spelling, the formatter would rewrite
     # Prettier's output here (a live fight), reddening this assertion.
-    prettied = _run_prettier(case.doc)
+    prettied = _run_prettier(case.seed if case.seed is not None else case.doc)
     _reformatted, changed_after_prettier, _ = format_text(prettied, path=None)
     assert not changed_after_prettier, (
-        f"{case.cls}: formatter rewrote Prettier output — the two tools disagree on "
-        "this class's canonical spelling"
+        f"{case.cls}: formatter rewrote Prettier's independently-produced output — "
+        "the two tools disagree on this class's canonical spelling"
     )
