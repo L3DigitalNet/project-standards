@@ -1,5 +1,6 @@
 # Scratch Area
 docs/scratch/
+.project-pipeline/
 
 # Python
 __pycache__/
