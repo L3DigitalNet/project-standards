@@ -1094,6 +1094,44 @@ def test_main_check_named_excluded_file_prints_diagnostic(
     assert "skipped (excluded by config): skip.md" in capsys.readouterr().err
 
 
+def test_main_write_named_excluded_file_prints_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Guards against a refactor moving the named-excluded diagnostic (5.8.0 FR-010)
+    # inside the check-only branch: it must fire before the write/check split (main()
+    # prints it at collect_paths() time, ahead of `write = _resolve_mode(...)`), so
+    # --write gets the same stderr line as --check. Exit code is unchanged from
+    # pre-T4 behavior (0 — nothing else was named).
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "skip.md"
+    f.write_text(CLEAN)
+    cfg = _cfg(tmp_path, extra="    exclude: ['skip.md']\n")
+    rc = main(["--write", "--config", str(cfg), f.name])
+    assert rc == 0
+    assert "skipped (excluded by config): skip.md" in capsys.readouterr().err
+
+
+def test_main_write_named_denylisted_file_refused_not_silent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Check mode and write mode intentionally use different wording for a named
+    # denylisted file: check mode prints "skipped (never-frontmatter file): PATH"
+    # (see test_main_check_named_denylisted_file_prints_diagnostic above); write mode
+    # does NOT print that string. Instead --write routes the file through
+    # plan_frontmatter_format -> format_text, whose pre-existing denylist guard emits
+    # "refused (denylisted): never add frontmatter to this file", surfaced here as
+    # "{path}: {warning}" by main()'s planned.warnings loop. Both wordings satisfy the
+    # same contract (5.8.0 FR-010): a named denylisted file is never silently dropped.
+    # Do not "fix" this by making write mode print the check-mode string too.
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "CLAUDE.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--write", "--config", str(cfg), f.name])
+    assert rc == 0
+    assert "refused (denylisted)" in capsys.readouterr().err
+
+
 def test_main_help_states_check_is_default_mode(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
