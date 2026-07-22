@@ -25,6 +25,7 @@ from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
+    ControlFinding,
     ControlPlaneError,
 )
 from project_standards.control_plane.distribution import (
@@ -45,6 +46,7 @@ from project_standards.control_plane.migration import (
     MigratedPackage,
     MigrationFinding,
     MigrationReport,
+    _ObservedSignature,  # pyright: ignore[reportPrivateUsage]
     apply_legacy_migration,
     legacy_migration_content_fingerprint,
     migration_report_to_jsonable,
@@ -1613,7 +1615,9 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
         signature.id,
         target,
         observed_digest,
+        observed_digest,
         True,
+        legacy,
         legacy,
     )
 
@@ -1857,7 +1861,9 @@ def test_migration_does_not_bridge_unsafe_whole_file_contribution_claims(
         signature.id,
         target,
         observed_digest,
+        observed_digest,
         known,
+        b"legacy",
         b"legacy",
     )
 
@@ -2455,6 +2461,144 @@ def test_bounded_signatures_hash_normalized_bodies_without_markers(
 
     assert not malformed
     assert normalized == expected
+
+
+def _semantic_whole_file_observation(
+    tmp_path: Path,
+    *,
+    syntax: LegacySignatureFormat,
+    content: bytes,
+    known_content: bytes,
+) -> tuple[_ObservedSignature | None, tuple[ControlFinding, ...]]:
+    import project_standards.control_plane.migration as migration_module
+
+    case_root = tmp_path / hashlib.sha256(content).hexdigest()
+    distribution = installed_distribution(case_root)
+    installed = distribution.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse("legacy-structured.yml")
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-structured",
+            "kind": "whole-file",
+            "format": syntax.value,
+            "targets": [target.original],
+            "known_content_digests": [content_digest(known_content).value],
+        }
+    )
+    payload = InstalledPayload(
+        alpha.root,
+        alpha.manifest.model_copy(update={"legacy_signatures": (signature,)}),
+        alpha.integrity,
+    )
+    repo = case_root / "legacy-repo"
+    repo.mkdir()
+    (repo / target.original).write_bytes(content)
+
+    observed, findings = migration_module._inspect_signatures(  # pyright: ignore[reportPrivateUsage]
+        repo,
+        payload,
+        frozenset({signature.id}),
+        {},
+    )
+    return observed.get(("alpha", signature.id, target.original)), tuple(findings)
+
+
+def test_semantic_whole_file_signatures_separate_source_and_signature_views(
+    tmp_path: Path,
+) -> None:
+    canonical = b'{"jobs":{"format":{"enabled":false}}}'
+    first_source = b"jobs:\n  format:\n    enabled: false\n"
+    second_source = b"jobs: {format: {enabled: false}}\n"
+
+    first, first_findings = _semantic_whole_file_observation(
+        tmp_path,
+        syntax=LegacySignatureFormat.YAML,
+        content=first_source,
+        known_content=canonical,
+    )
+    second, second_findings = _semantic_whole_file_observation(
+        tmp_path,
+        syntax=LegacySignatureFormat.YAML,
+        content=second_source,
+        known_content=canonical,
+    )
+
+    assert first is not None
+    assert second is not None
+    assert not first_findings
+    assert not second_findings
+    assert first.known and second.known
+    assert first.signature_content == second.signature_content == canonical
+    assert first.signature_digest == second.signature_digest == content_digest(canonical)
+    assert first.source_content == first_source
+    assert second.source_content == second_source
+    assert first.source_digest != second.source_digest
+
+
+@pytest.mark.parametrize(
+    ("syntax", "content"),
+    [
+        (LegacySignatureFormat.YAML, b"alpha: 1\nalpha: 2\n"),
+        (LegacySignatureFormat.YAML, b"base: &base\n  enabled: true\nalpha: *base\n"),
+        (LegacySignatureFormat.YAML, b"alpha: .nan\n"),
+        (LegacySignatureFormat.TOML, b"alpha = 1979-05-27\n"),
+        (LegacySignatureFormat.TOML, b"alpha = [unterminated\n"),
+    ],
+)
+def test_semantic_whole_file_signatures_reject_ambiguous_or_non_json_content(
+    tmp_path: Path,
+    syntax: LegacySignatureFormat,
+    content: bytes,
+) -> None:
+    observed, findings = _semantic_whole_file_observation(
+        tmp_path,
+        syntax=syntax,
+        content=content,
+        known_content=b"{}",
+    )
+
+    assert observed is None
+    assert [finding.code for finding in findings] == ["CP-MIGRATION-LEGACY-FORMAT"]
+
+
+def test_raw_whole_file_signature_retains_one_exact_byte_view(tmp_path: Path) -> None:
+    import project_standards.control_plane.migration as migration_module
+
+    distribution = installed_distribution(tmp_path)
+    installed = distribution.load_catalog("5")
+    alpha = installed.payload_map[("alpha", "2.0")]
+    target = SafeRelativePath.parse("legacy-raw.txt")
+    content = b"raw legacy bytes\r\n"
+    digest = content_digest(content)
+    signature = LegacySignatureDeclaration.model_validate(
+        {
+            "id": "legacy-raw",
+            "kind": "whole-file",
+            "targets": [target.original],
+            "known_content_digests": [digest.value],
+        }
+    )
+    payload = InstalledPayload(
+        alpha.root,
+        alpha.manifest.model_copy(update={"legacy_signatures": (signature,)}),
+        alpha.integrity,
+    )
+    repo = tmp_path / "raw-repo"
+    repo.mkdir()
+    (repo / target.original).write_bytes(content)
+
+    observed, findings = migration_module._inspect_signatures(  # pyright: ignore[reportPrivateUsage]
+        repo,
+        payload,
+        frozenset({signature.id}),
+        {},
+    )
+    item = observed[("alpha", signature.id, target.original)]
+
+    assert not findings
+    assert item.source_content == item.signature_content == content
+    assert item.source_digest == item.signature_digest == digest
 
 
 def test_migrated_config_quotes_every_non_ascii_or_empty_toml_key() -> None:

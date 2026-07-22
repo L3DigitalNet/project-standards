@@ -12,6 +12,7 @@ from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.payload import (
     LegacySignatureDeclaration,
+    LegacySignatureFormat,
     MaterializationPredicate,
     PackageOptionSchema,
     PayloadAvailability,
@@ -158,6 +159,32 @@ def _whole_file_signature(**overrides: object) -> dict[str, object]:
     return signature
 
 
+@pytest.mark.parametrize(
+    "syntax",
+    [LegacySignatureFormat.YAML, LegacySignatureFormat.TOML],
+)
+def test_whole_file_signature_accepts_semantic_structured_formats(
+    syntax: LegacySignatureFormat,
+) -> None:
+    signature = LegacySignatureDeclaration.model_validate(
+        _whole_file_signature(format=syntax.value)
+    )
+
+    assert signature.format is syntax
+    assert signature.begin is None
+    assert signature.end is None
+
+
+def test_whole_file_signature_rejects_markdown_semantics_and_block_delimiters() -> None:
+    with pytest.raises(ValidationError):
+        LegacySignatureDeclaration.model_validate(_whole_file_signature(format="markdown"))
+
+    with pytest.raises(ValidationError):
+        LegacySignatureDeclaration.model_validate(
+            _whole_file_signature(format="yaml", begin="# begin", end="# end")
+        )
+
+
 def test_owner_resolution_pointer_is_canonical_and_target_specific() -> None:
     signature = LegacySignatureDeclaration.model_validate(
         _whole_file_signature(consumer_owned_intent_pointer="/python_tooling/workflow_ownership")
@@ -170,8 +197,7 @@ def test_owner_resolution_schema_description_distinguishes_package_history() -> 
     schema = LegacySignatureDeclaration.model_json_schema()
 
     assert schema["description"] == (
-        "Declare exact package-history bytes and an optional target-bound "
-        "consumer-owned preservation exception."
+        "Declare authenticated package-history content and an optional preservation exception."
     )
 
 

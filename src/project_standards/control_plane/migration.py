@@ -444,9 +444,19 @@ class _ObservedSignature:
     standard_id: str
     signature_id: str
     target: SafeRelativePath
-    digest: Sha256Digest
+    signature_digest: Sha256Digest
+    source_digest: Sha256Digest
     known: bool
-    content: bytes = field(repr=False, compare=False)
+    source_content: bytes = field(repr=False, compare=False)
+    signature_content: bytes = field(repr=False, compare=False)
+
+    @property
+    def digest(self) -> Sha256Digest:
+        return self.signature_digest
+
+    @property
+    def content(self) -> bytes:
+        return self.source_content
 
     @property
     def key(self) -> tuple[str, str, str]:
@@ -632,6 +642,36 @@ def _load_legacy_yaml(content: bytes) -> JsonObject:
     return value
 
 
+def _normalized_legacy_structure(
+    content: bytes,
+    syntax: LegacySignatureFormat,
+) -> bytes:
+    """Return canonical JSON bytes for strict legacy YAML or TOML content."""
+    if syntax is LegacySignatureFormat.YAML:
+        value: JsonValue = _load_legacy_yaml(content)
+    elif syntax is LegacySignatureFormat.TOML:
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ControlPlaneError("legacy TOML is not valid UTF-8") from exc
+        try:
+            value = _json_value(tomllib.loads(text))
+        except tomllib.TOMLDecodeError as exc:
+            raise ControlPlaneError("legacy config is not valid TOML") from exc
+    else:
+        raise ControlPlaneError("legacy structured signature requires YAML or TOML")
+    try:
+        return json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode()
+    except (TypeError, ValueError) as exc:
+        raise ControlPlaneError("legacy structured content is not canonical JSON data") from exc
+
+
 def _finding(
     code: str,
     *,
@@ -675,20 +715,10 @@ def _bounded_block(
     if signature.format is LegacySignatureFormat.MARKDOWN:
         return body.encode(), False
     try:
-        if signature.format is LegacySignatureFormat.TOML:
-            value = _json_value(tomllib.loads(body))
-        elif signature.format is LegacySignatureFormat.YAML:
-            value = cast(JsonValue, _load_legacy_yaml(body.encode()))
-        else:
+        if signature.format is None:
             return None, True
-        normalized_body = json.dumps(
-            value,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=False,
-            allow_nan=False,
-        ).encode()
-    except ControlPlaneError, tomllib.TOMLDecodeError, TypeError, ValueError:
+        normalized_body = _normalized_legacy_structure(body.encode(), signature.format)
+    except ControlPlaneError:
         return None, True
     return normalized_body, False
 
@@ -771,10 +801,28 @@ def _inspect_signatures(
                 content = _read_regular_file(path, kind="legacy signature target")
                 file_cache[target.original] = content
             candidate = content
+            source_candidate = content
             malformed = False
             if signature.kind is LegacySignatureKind.BOUNDED_BLOCK:
                 candidate, malformed = _bounded_block(content, signature)
                 if candidate is None and not malformed:
+                    continue
+                source_candidate = candidate if candidate is not None else content
+            elif signature.format is not None:
+                try:
+                    candidate = _normalized_legacy_structure(content, signature.format)
+                except ControlPlaneError:
+                    findings.append(
+                        _finding(
+                            "CP-MIGRATION-LEGACY-FORMAT",
+                            path=target.original,
+                            identity=signature.id,
+                            standard_id=payload.manifest.payload.standard,
+                            version=payload.manifest.payload.version.value,
+                            message="legacy semantic content is invalid or ambiguous",
+                            hint="restore a declared canonical YAML or TOML historical shape",
+                        )
+                    )
                     continue
             if malformed or candidate is None:
                 findings.append(
@@ -789,14 +837,17 @@ def _inspect_signatures(
                     )
                 )
                 continue
-            digest = content_digest(candidate)
-            known = digest in signature.known_content_digests
+            signature_digest = content_digest(candidate)
+            source_digest = content_digest(source_candidate)
+            known = signature_digest in signature.known_content_digests
             item = _ObservedSignature(
                 payload.manifest.payload.standard,
                 signature.id,
                 target,
-                digest,
+                signature_digest,
+                source_digest,
                 known,
+                source_candidate,
                 candidate,
             )
             observed[item.key] = item
@@ -822,9 +873,10 @@ def _signature_snapshot(
     for (_standard_id, _signature_id, _target), item in sorted(observed.items()):
         signature = cast(JsonObject, snapshot.setdefault(item.signature_id, {}))
         signature[item.target.original] = {
-            "digest": item.digest.value,
+            "digest": item.signature_digest.value,
+            "source_digest": item.source_digest.value,
             "known": item.known,
-            "content_base64": base64.b64encode(item.content).decode("ascii"),
+            "content_base64": base64.b64encode(item.signature_content).decode("ascii"),
         }
     return snapshot
 

@@ -602,7 +602,7 @@ class LegacySignatureFormat(StrEnum):
 
 
 class LegacySignatureDeclaration(StrictModel):
-    """Declare exact package-history bytes and an optional target-bound consumer-owned preservation exception."""
+    """Declare authenticated package-history content and an optional preservation exception."""
 
     id: ResourceId
     kind: LegacySignatureKind
@@ -646,8 +646,10 @@ class LegacySignatureDeclaration(StrictModel):
                 "unknown-content preservation and consumer-owned intent are mutually exclusive"
             )
         if self.kind is LegacySignatureKind.WHOLE_FILE:
-            if any(value is not None for value in (self.format, self.begin, self.end)):
-                raise ValueError("whole-file legacy signature cannot declare block fields")
+            if self.format is LegacySignatureFormat.MARKDOWN:
+                raise ValueError("whole-file legacy signature format must be yaml or toml")
+            if self.begin is not None or self.end is not None:
+                raise ValueError("whole-file legacy signature cannot declare block delimiters")
             if self.consumer_owned_intent_pointer is not None and len(self.targets) != 1:
                 raise ValueError("consumer-owned intent requires one whole-file legacy target")
             return self

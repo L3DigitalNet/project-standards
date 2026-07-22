@@ -212,7 +212,7 @@
     },
     "LegacySignatureDeclaration": {
       "additionalProperties": false,
-      "description": "Declare exact package-history bytes and an optional target-bound consumer-owned preservation exception.",
+      "description": "Declare authenticated package-history content and an optional preservation exception.",
       "properties": {
         "begin": {
           "anyOf": [
