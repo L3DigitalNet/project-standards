@@ -148,7 +148,8 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 | T5 | Standard Bundle Authoring 2.5 | P2 | T1 | FR-013, NFR-001, NFR-003 | reconstruction/selection/package gates |
 | T6 | Catalog 5 integration | P3 | T4, T5 | FR-014, NFR-001, NFR-003-004 | graph/projection/matrix |
 | T7 | Upgrade documentation corrections | P3 | T3 | FR-011, NFR-003 | doc gate plus content inspection |
-| T8 | Prepare one 5.6.0 candidate | P4 | T6, T7 | FR-015, NFR-003 | version/build/hash gates |
+| T11 | Cross-agent Codex implementation review | P4 | T6, T7 | NFR-003 | reviewed findings dispositioned |
+| T8 | Prepare one 5.6.0 candidate | P4 | T6, T7, T11 | FR-015, NFR-003 | version/build/hash gates |
 | T9 | Qualify the exact candidate | P4 | T8 | FR-015, NFR-001, NFR-003-004 | complete § 13 gate |
 | T10 | Publish, close issues, close out | P5 | T9 | FR-015-016, NFR-003 | refs/workflows/assets/issues/parity |
 
@@ -253,9 +254,22 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 
 ## Phase P4: Candidate and Qualification
 
+### T11: Cross-agent Codex implementation review
+
+- **goal:** An opposite-provider Codex review of the train's implementation commits completes before release preparation, with every finding dispositioned (fixed via appended discovered work, or rejected with recorded technical rationale). · **phase:** P4 · **depends_on:** [T6, T7] · **requirements:** [NFR-003] · **priority:** must
+- **files:** ephemeral review bundle and logs; master plan only if findings append discovered work
+- **acceptance:** the review runs through the cross-agent skill against the train's diff with the design doc as context (TC-T11-001); every finding has a disposition recorded in notes before T8 starts (TC-T11-002).
+- **sub-tasks:**
+  - **T11.1 RED** — user-directed review gate; record the TDD exception (review, not behavior).
+  - **T11.2 Verify RED** — mark skipped with the exception reason.
+  - **T11.3 GREEN** — invoke the cross-agent skill for a bounded adversarial review of the train's implementation; capture the report.
+  - **T11.4 Verify GREEN** — disposition every finding; append discovered work for accepted defects.
+  - **T11.5 REFACTOR** — none.
+  - **T11.6 Verify Task** — dispositions recorded in notes; no undispositioned finding; commit any fixes under their own task IDs.
+
 ### T8: Prepare one 5.6.0 candidate
 
-- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T6, T7] · **requirements:** [FR-015, NFR-003] · **priority:** must
+- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T6, T7, T11] · **requirements:** [FR-015, NFR-003] · **priority:** must
 - **files:** version/lock/changelog/status/deployment/session files and build outputs
 - **acceptance:** versions agree across `pyproject.toml`, changelog, and docs (TC-T8-001); prepared/published wording is truthful (TC-T8-002); one artifact pair has recorded hashes (TC-T8-003); the extracted wheel reports 5.6.0 and the successors (TC-T8-004).
 - **sub-tasks:**
@@ -383,6 +397,7 @@ After harvest and close-out commit, delete `.project-pipeline/2026-07-22-v5-upgr
 | TC-T5-001..002 | FR-013, NFR-001, NFR-003 | T5 | reconstruction/selection suites | contract |
 | TC-T6-001..004 | FR-014, NFR-001, NFR-003-004 | T6 | catalog/lifecycle/matrix/release suites | integration/compatibility |
 | TC-T7-001..003 | FR-011, NFR-003 | T7 | doc gate plus content inspections | documentation |
+| TC-T11-001..002 | NFR-003 | T11 | cross-agent review report and dispositions | end-to-end |
 | TC-T8-001..004 | FR-015, NFR-003 | T8 | version/docs/build/integration probes | end-to-end |
 | TC-T9-001..005 | FR-015, NFR-001, NFR-003-004 | T9 | complete local qualification | end-to-end |
 | TC-T10-001..005 | FR-015-016, NFR-003 | T10 | refs/workflows/assets/issues/parity | end-to-end |
