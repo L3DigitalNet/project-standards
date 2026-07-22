@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- Project Standards 5.6.0 is published from release commit `55ac756`. Signed `v5.6.0` and moving `v5` tags, the Latest GitHub release, and byte-verified wheel and sdist assets are live; issues #20–#23 are closed with release evidence.
-- The release adds Python Tooling 1.6 `additional_source_roots`, governing-option contribution metadata, enriched consumer-conflict diagnostics at reconciliation-plan schema 1.1, readiness-signal migration preview exit codes, corrected upgrade docs, and Standard Bundle Authoring 2.5. Catalog 5 retains every predecessor.
-- A Codex cross-agent review gated the release; its two accepted findings (null-value fidelity, parity breadth) were fixed before publication. Exact evidence: 3,167 ordinary tests, 83 compatibility rows, 5 performance tests, 90% coverage, all eight release-commit workflows including `Check` run `29942273464`, and downloaded asset parity.
+- Project Standards 5.7.0 is published from release commit `06162ec`. Signed `v5.7.0` and moving `v5` tags, the Latest release, and byte-verified assets are live; issues #24–#25 are closed with evidence.
+- The release adds Python Tooling 1.7 per-root coverage scoping and anchored TOML managed-region comment preservation, documented in `UPGRADING.md`. Catalog 5 retains every predecessor.
+- Exact evidence: 3,273 full-suite tests, CI-mirror lanes (3,189/84/5), 90% coverage over the candidate wheel, eight green release-commit workflows (`Check` run `29951568179`), and downloaded asset parity.
 
 ## Active incidents
 

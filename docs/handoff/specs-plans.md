@@ -1,6 +1,6 @@
 # Specs And Plans
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-22
 
 > **Housekeeping (2026-07-19):** `docs/superpowers/` was retired — design docs moved to `docs/specs/archive/`, research to `docs/research/`, the active plan to `docs/plans/`. The implemented Python Tooling checker-table plan and its four design-review audits were deleted. `standard-bundle-authoring@2.1` was authored (contract-conformant correction of 2.0's SPEC-BA02 pointer) and release 5.0.2 was prepared (PATCH under the new internal-additive classification rule).
 >
@@ -8,6 +8,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
+| V5 managed-edit fidelity correction train design | `docs/specs/archive/2026-07-22-v5-managed-edit-fidelity-correction-train-design.md` | **released (5.7.0)** — python-tooling 1.7 per-root coverage scoping and anchored TOML comment preservation (issues #24–#25); the implementation plan was removed under the completed-plan policy |
 | Consumer Standards Control Plane — **SPEC-CP01** | `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` | **approved rev 0.13; implemented; decisions accepted as ADRs 0023-0024** — live-root dogfood, FR-037/FR-038, declared-path provider integrity, scale, and complete integrated evidence pass. |
 | Root-artifact ownership and semantic composition design | `docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md` | **approved; adopted by ADR 0023** after adversarial review converged in round 2 — consumer-owned shared containers, typed package-owned semantic units, reference-counted shared contributions, syntax-preserving adapters, and no precedence; prerequisite input to `SPEC-BA02` |
 | Consumer control-plane architecture decisions | `docs/adr/adr-0023-unified-consumer-standards-control-plane.md`; `docs/adr/adr-0024-catalog-scoped-package-version-channels.md` | **accepted 2026-07-10** — supersede ADRs 0003, 0008, 0017, and 0020; reconcile the retained lifecycle, provenance, packaged-skill, packaged-hook, frontmatter, and versioning decisions before `SPEC-BA02` and implementation |
