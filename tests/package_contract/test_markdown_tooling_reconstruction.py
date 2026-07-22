@@ -40,6 +40,9 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.2"
 _CURRENT_PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.6"
+_SUCCESSOR_PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.7"
+_SBA_SUCCESSOR_PAYLOAD = _ROOT / "standards/standard-bundle-authoring/versions/2.4"
+_ISSUE_16_FORMAT = _ROOT / "tests/fixtures/package_compatibility/issues/16/format-disabled.yml"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _HISTORICAL_SELF_HOST_FORMAT_DIGEST = (
     "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
@@ -54,6 +57,12 @@ _CURRENT_SELF_HOST_FORMAT_DIGEST = (
 )
 _CURRENT_SELF_HOST_LINT_DIGEST = (
     "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656"
+)
+_SEMANTIC_FORMAT_ENABLED_DIGEST = (
+    "sha256:2e4a21b02614a2c240f0f26c6c47890ead8445389fdcf71a1af55ff8f304efaa"
+)
+_SEMANTIC_FORMAT_DISABLED_DIGEST = (
+    "sha256:b7d9816b79e66df79fa02d34bbb01b848a50228d527071a8ec9f566f6da6a9e4"
 )
 
 
@@ -1052,6 +1061,123 @@ def _released_v4_markdown_repo(tmp_path: Path) -> Path:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
     return repo
+
+
+def _issue_16_repo(tmp_path: Path, format_content: bytes) -> Path:
+    repo = _released_v4_markdown_repo(tmp_path)
+    (repo / ".github/workflows/format.yml").write_bytes(format_content)
+    return repo
+
+
+def test_markdown_tooling_16_reproduces_disabled_format_caller_conflict(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.6")
+    repo = _issue_16_repo(tmp_path, _ISSUE_16_FORMAT.read_bytes())
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert {
+        finding.code for finding in plan.findings if finding.path == ".github/workflows/format.yml"
+    } == {"CP-CONSUMER-CONFLICT", "CP-MIGRATION-LEGACY-DIGEST", "MT-LEGACY-MODIFIED"}
+
+
+@pytest.mark.parametrize(
+    "format_content",
+    [
+        pytest.param(_ISSUE_16_FORMAT.read_bytes(), id="reported"),
+        pytest.param(
+            b"name: Format\n"
+            b"jobs:\n"
+            b"  format: {with: {prettier: false}, uses: L3DigitalNet/project-standards/.github/workflows/format.yml@v4}\n"
+            b"on: {push: {branches: [main]}, pull_request: null}\n",
+            id="formatting-variant",
+        ),
+    ],
+)
+def test_markdown_tooling_successor_migrates_disabled_format_caller_and_converges(
+    tmp_path: Path,
+    format_content: bytes,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.7")
+    repo = _issue_16_repo(tmp_path, format_content)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert plan.reports[0].package.config == {
+        "contract_version": "1.1",
+        "format": False,
+        "ci": {"format_caller": False},
+    }
+    assert apply_legacy_migration(plan).success
+    rendered = yaml.safe_load((repo / ".github/workflows/format.yml").read_text(encoding="utf-8"))
+    assert rendered["jobs"]["format"]["uses"].endswith("@v5")
+    assert rendered["jobs"]["format"]["with"]["prettier"] is False
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
+
+
+def test_markdown_tooling_successor_keeps_enabled_format_caller_defaults(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.7")
+    repo = _issue_16_repo(
+        tmp_path,
+        (_PAYLOAD / "resources/legacy-format.caller.yml").read_bytes(),
+    )
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert plan.applicable, plan.findings
+    assert plan.reports[0].package.config == {"contract_version": "1.1"}
+
+
+def test_markdown_tooling_successor_refuses_custom_format_caller_shape(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.7")
+    custom = _ISSUE_16_FORMAT.read_bytes().replace(
+        b"      prettier: false\n",
+        b"      prettier: false\n      globs: docs/**\n",
+    )
+    repo = _issue_16_repo(tmp_path, custom)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    assert "CP-MIGRATION-LEGACY-DIGEST" in {
+        finding.code for finding in plan.findings if finding.path == ".github/workflows/format.yml"
+    }
+
+
+def test_markdown_tooling_successor_declares_closed_semantic_format_history() -> None:
+    manifest = load_payload_manifest(_SUCCESSOR_PAYLOAD / "payload.toml")
+    signature = next(
+        item for item in manifest.legacy_signatures if item.id == "legacy-format-caller"
+    )
+
+    assert signature.format is not None and signature.format.value == "yaml"
+    assert {
+        _SEMANTIC_FORMAT_ENABLED_DIGEST,
+        _SEMANTIC_FORMAT_DISABLED_DIGEST,
+    } <= {digest.value for digest in signature.known_content_digests}
+
+
+def test_standard_bundle_authoring_24_documents_closed_semantic_signatures() -> None:
+    manifest = load_payload_manifest(_SBA_SUCCESSOR_PAYLOAD / "payload.toml")
+    validate_payload_integrity(_SBA_SUCCESSOR_PAYLOAD, manifest)
+    guidance = (_SBA_SUCCESSOR_PAYLOAD / "README.md").read_text(encoding="utf-8").lower()
+
+    assert manifest.payload.version.value == "2.4"
+    assert "closed historical shape" in guidance
+    assert "enumerate" in guidance
+    assert "arbitrary customization" in guidance
 
 
 def test_markdown_tooling_released_v4_editorconfig_migrates_and_applies(tmp_path: Path) -> None:

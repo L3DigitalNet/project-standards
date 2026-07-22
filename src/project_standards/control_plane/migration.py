@@ -393,7 +393,19 @@ def render_migration_report(report: MigrationReport) -> str:
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
-    """Safe YAML loader that rejects duplicate mapping keys."""
+    """YAML 1.2-style safe loader that rejects duplicate mapping keys."""
+
+
+_YAML_BOOL_TAG = "tag:yaml.org,2002:bool"
+_UniqueKeyLoader.yaml_implicit_resolvers = {
+    initial: [(tag, pattern) for tag, pattern in resolvers if tag != _YAML_BOOL_TAG]
+    for initial, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+_UniqueKeyLoader.add_implicit_resolver(  # pyright: ignore[reportUnknownMemberType]
+    _YAML_BOOL_TAG,
+    re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"),
+    list("tTfF"),
+)
 
 
 def _construct_unique_mapping(

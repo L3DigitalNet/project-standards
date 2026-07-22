@@ -1,0 +1,102 @@
+schema_version = "1.0"
+
+[payload]
+standard = "standard-bundle-authoring"
+version = "2.4"
+availability = "internal"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["standard-bundle-authoring.v2"]
+consumes_platform = ["project-standards.package-contract"]
+
+[relations]
+companions = []
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:bd478fa5d006a58337d9a5dac818fab0c193c97d4f368cc0f52ab49d32d895c5"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:b61d37d8f148274cf55cb278c3f4764c92e73f8329d15a7d7e0ee37e61026ccd"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:3a0887e2c695c2d78320555b838de99deb6bb98215e61a150bf9417f58c05313"
+
+[[resources]]
+id = "family-template"
+role = "family-template"
+path = "templates/standard.toml"
+media_type = "application/toml"
+digest = "sha256:98a0e9da471084810b7559cd4ebc6aaf744e390f00f8b343f81f386f67a53cbf"
+
+[[resources]]
+id = "payload-template"
+role = "payload-template"
+path = "templates/payload.toml"
+media_type = "application/toml"
+digest = "sha256:164061f66885da4d25200958f8067f9d8fe36343630134ccedd9877b2487dcdb"
+
+[[resources]]
+id = "option-schema-template"
+role = "option-schema-template"
+path = "templates/config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:fb280bf80ce69cf307b9cce1615c54de47f07f569d4e0fb360690b08ca7b73b9"
+
+[[resources]]
+id = "catalog-template"
+role = "catalog-template"
+path = "templates/catalog.toml"
+media_type = "application/toml"
+digest = "sha256:7cd80d979a7ce9099202b70f778154de571fe2538cb4845478feb2a7e7ef342f"
+
+[[resources]]
+id = "provider-template"
+role = "provider-template"
+path = "templates/provider.toml"
+media_type = "application/toml"
+digest = "sha256:eb96ec08e4983ba2a7fc7cbe1055cf6c214f39b3d5fc51241bbd6d379e069d0d"
+
+[[resources]]
+id = "contribution-template"
+role = "contribution-template"
+path = "templates/contribution.toml"
+media_type = "application/toml"
+digest = "sha256:21cf6eeba24fb9a403171cb949de6aaa3b759ba1ace39dc1cf6c6f9f5a124dac"
+
+[[resources]]
+id = "extension-template"
+role = "extension-template"
+path = "templates/extension.toml"
+media_type = "application/toml"
+digest = "sha256:5ec1da7ff153fc5ea9e5f44ec4a98444a444ccc4323cccf5fbf12d21dad0d3cb"
+
+[[resources]]
+id = "migration-template"
+role = "migration-template"
+path = "templates/migration.toml"
+media_type = "application/toml"
+digest = "sha256:25e44baa25d26b2cced854e6a26196f2de701c1c9199af1e766ff6ffa122d66a"
+
+[[resources]]
+id = "legacy-signature-template"
+role = "legacy-signature-template"
+path = "templates/legacy-signature.toml"
+media_type = "application/toml"
+digest = "sha256:b3547ee32bea4101c44bb74a08409bbba099fa36450fa5f6e35a54c5cc6e8a98"

@@ -1,0 +1,520 @@
+schema_version = "1.0"
+
+[payload]
+standard = "markdown-tooling"
+version = "1.7"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["json.format", "markdown.format", "markdown.lint.structure", "yaml.format"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["markdown-frontmatter"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:331b0e90b99bce929ca222109d4b973050701aa22c71fd5ec1d8daebe6fa891c"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:e5b7023341e2fbfb01c650cc668087f0e664e38989f6db6c3e75fb9898213b25"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:0b15290347e026773067df37942d8484b985ecf25ea90af9369d09dfef8ef5ac"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:e849af8e21a73256457ed65a0f187df7d5df9eca7dcfd29f9fae56bc86de5976"
+
+[[resources]]
+id = "markdownlint-source"
+role = "provider-resource"
+path = "resources/markdownlint.json"
+media_type = "application/json"
+digest = "sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"
+
+[[resources]]
+id = "prettier-source"
+role = "provider-resource"
+path = "resources/prettierrc.json"
+media_type = "application/json"
+digest = "sha256:aa5c52bc44dc778a8842fc0bf5619f1f72f168d9dde297083fbbb0c372467b6b"
+
+[[resources]]
+id = "legacy-editorconfig"
+role = "legacy-reference"
+path = "resources/legacy-editorconfig"
+media_type = "text/plain"
+digest = "sha256:28f7d9fad311f48a3531bce0f745ad98b3e720f0e5cb0a0589823594db710943"
+
+[[resources]]
+id = "legacy-vscode-extensions"
+role = "legacy-reference"
+path = "resources/legacy-vscode-extensions.json"
+media_type = "application/json"
+digest = "sha256:ca0a0311bb9598fc948d8265f5621b591ff3d0c8205b0fd62795b08f341858ba"
+
+[[resources]]
+id = "legacy-lint-caller"
+role = "legacy-reference"
+path = "resources/legacy-lint-markdown.caller.yml"
+media_type = "application/yaml"
+digest = "sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845"
+
+[[resources]]
+id = "legacy-format-caller"
+role = "legacy-reference"
+path = "resources/legacy-format.caller.yml"
+media_type = "application/yaml"
+digest = "sha256:840619f02e769bc1ad06d78473db020673eb06e665b6f549169af078e6ca9a04"
+
+[[resources]]
+id = "self-host-lint-workflow"
+role = "provider-resource"
+path = "resources/self-host-lint-markdown.yml"
+media_type = "application/yaml"
+digest = "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656"
+
+[[resources]]
+id = "self-host-format-workflow"
+role = "provider-resource"
+path = "resources/self-host-format.yml"
+media_type = "application/yaml"
+digest = "sha256:901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/markdown_tooling.py"
+media_type = "text/x-python"
+digest = "sha256:00e08947d6b6e5a81a3cb02340cc68529fa22508acd28042ea025e222bca442e"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:e26a969743aa5d0cecf0f344343017196e485581fc160f876daab80f915a8724"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:760d819048c1f2a153e72227c940f36eed96deb5e2336e802f34caa37ccf14b3"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:b9b10baef03565b623509c63c3d7cd3fea18021ac11307c5e887b3aa698d75de"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:12d1274e51844160c3eb2eb9f4a723bd32133b6e8a46ae3ef641d8207296de13"
+
+[[artifacts]]
+id = "markdownlint-config"
+target = ".markdownlint.json"
+source = "artifacts/markdownlint.json"
+digest = "sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"
+policy = "managed"
+when_any = [{ option = "markdownlint_config_ownership", equals = "managed" }]
+
+[[artifacts]]
+id = "prettier-config"
+target = ".prettierrc.json"
+source = "artifacts/prettierrc.json"
+digest = "sha256:aa5c52bc44dc778a8842fc0bf5619f1f72f168d9dde297083fbbb0c372467b6b"
+policy = "managed"
+
+[[contributions]]
+id = "lint-caller"
+target = ".github/workflows/lint-markdown.yml"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-lint-caller"
+
+[[contributions.when_any]]
+option = "lint_workflow_ownership"
+equals = "managed"
+
+[[contributions]]
+id = "format-caller"
+target = ".github/workflows/format.yml"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-format-caller"
+
+[[contributions.when_any]]
+option = "format_workflow_ownership"
+equals = "managed"
+
+[[contributions]]
+id = "editorconfig-root"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:$global#root"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/root"
+
+[[contributions]]
+id = "editorconfig-charset"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#charset"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-charset"
+
+[[contributions]]
+id = "editorconfig-eol"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#end_of_line"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-end-of-line"
+
+[[contributions]]
+id = "editorconfig-final-newline"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#insert_final_newline"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-final-newline"
+
+[[contributions]]
+id = "editorconfig-global-trailing"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#trim_trailing_whitespace"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-trailing-whitespace"
+
+[[contributions]]
+id = "editorconfig-global-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#indent_style"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-indent-style"
+
+[[contributions]]
+id = "editorconfig-global-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#indent_size"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-indent-size"
+
+[[contributions]]
+id = "editorconfig-markdown-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.md#indent_style"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-markdown-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.md#indent_size"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-markdown-trailing"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.md#trim_trailing_whitespace"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-yaml-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.{yml,yaml}#indent_style"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-yaml-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.{yml,yaml}#indent_size"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-prettier-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=esbenp.prettier-vscode"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "vscode-extension/esbenp-prettier-vscode"
+
+[[contributions]]
+id = "vscode-markdownlint-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=DavidAnson.vscode-markdownlint"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "vscode-extension/davidanson-vscode-markdownlint"
+
+[[contributions]]
+id = "vscode-markdown-formatter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[markdown]/editor.defaultFormatter"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-markdown-format-on-save"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[markdown]/editor.formatOnSave"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-json-formatter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[json]/editor.defaultFormatter"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-jsonc-formatter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[jsonc]/editor.defaultFormatter"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-yaml-formatter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[yaml]/editor.defaultFormatter"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "agents-instructions"
+target = "AGENTS.md"
+adapter = "markdown-block"
+scope = "block:markdown-tooling"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "claude-instructions"
+target = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:markdown-tooling"
+policy = "managed"
+provider = "render-semantic"
+
+[[providers]]
+id = "render-lint-caller"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_lint"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["self-host-lint-workflow"]
+
+[[providers]]
+id = "render-format-caller"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_format"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["self-host-format-workflow"]
+
+[[providers]]
+id = "render-semantic"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_semantic"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = []
+
+[[providers]]
+id = "verify-lint"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify_lint"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["markdownlint-source", "self-host-lint-workflow"]
+
+[[providers]]
+id = "verify-format"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify_format"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["prettier-source", "self-host-format-workflow"]
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-markdown-tooling"
+
+[[migrations]]
+id = "legacy-v4-to-1-7"
+from = "legacy:v4-markdown-tooling"
+to = "package:1.7"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "artifact:markdownlint-config",
+  "artifact:prettier-config",
+  "config:*",
+  "contribution:agents-instructions",
+  "contribution:claude-instructions",
+  "contribution:editorconfig-charset",
+  "contribution:editorconfig-eol",
+  "contribution:editorconfig-final-newline",
+  "contribution:editorconfig-global-indent-size",
+  "contribution:editorconfig-global-indent-style",
+  "contribution:editorconfig-global-trailing",
+  "contribution:editorconfig-markdown-indent-size",
+  "contribution:editorconfig-markdown-indent-style",
+  "contribution:editorconfig-markdown-trailing",
+  "contribution:editorconfig-root",
+  "contribution:editorconfig-yaml-indent-size",
+  "contribution:editorconfig-yaml-indent-style",
+  "contribution:format-caller",
+  "contribution:lint-caller",
+  "contribution:vscode-json-formatter",
+  "contribution:vscode-jsonc-formatter",
+  "contribution:vscode-markdown-format-on-save",
+  "contribution:vscode-markdown-formatter",
+  "contribution:vscode-markdownlint-extension",
+  "contribution:vscode-prettier-extension",
+  "contribution:vscode-yaml-formatter",
+]
+signatures = [
+  "legacy-editorconfig",
+  "legacy-format-caller",
+  "legacy-lint-caller",
+  "legacy-markdownlint-config",
+  "legacy-prettier-config",
+  "legacy-vscode-extensions",
+]
+
+[[legacy_signatures]]
+id = "legacy-markdownlint-config"
+kind = "whole-file"
+targets = [".markdownlint.json"]
+known_content_digests = ["sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"]
+consumer_owned_intent_pointer = "/markdown_tooling/markdownlint_config_ownership"
+
+[[legacy_signatures]]
+id = "legacy-prettier-config"
+kind = "whole-file"
+targets = [".prettierrc.json"]
+known_content_digests = ["sha256:aa5c52bc44dc778a8842fc0bf5619f1f72f168d9dde297083fbbb0c372467b6b"]
+
+[[legacy_signatures]]
+id = "legacy-editorconfig"
+kind = "whole-file"
+targets = [".editorconfig"]
+known_content_digests = [
+  "sha256:28f7d9fad311f48a3531bce0f745ad98b3e720f0e5cb0a0589823594db710943",
+  "sha256:f2f1d10481c70dcc747122fd3b51b2fe09ad7e400d7755c7ffcc7fab7ae517ea",
+]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-vscode-extensions"
+kind = "whole-file"
+targets = [".vscode/extensions.json"]
+known_content_digests = ["sha256:ca0a0311bb9598fc948d8265f5621b591ff3d0c8205b0fd62795b08f341858ba"]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-lint-caller"
+kind = "whole-file"
+targets = [".github/workflows/lint-markdown.yml"]
+known_content_digests = [
+  "sha256:89ad3220574ce78a9628208d768344f300e5e1d701d7adaf16eb923f4cc8f772",
+  "sha256:c51375e9ded693c2148cdcb20c3bfd85b9de4f4017bd8a0b7d05099b1281b845",
+  "sha256:3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656",
+]
+consumer_owned_intent_pointer = "/markdown_tooling/lint_workflow_ownership"
+
+[[legacy_signatures]]
+id = "legacy-format-caller"
+kind = "whole-file"
+format = "yaml"
+targets = [".github/workflows/format.yml"]
+known_content_digests = [
+  "sha256:20849953a584fbb18b8a3a0acab2b1357c23077c226e76bd7a6d580d73a4ce20",
+  "sha256:2e4a21b02614a2c240f0f26c6c47890ead8445389fdcf71a1af55ff8f304efaa",
+  "sha256:6682b88448f4919cba6658cca46dd8c82ea59af2c91823424d03ad26c5a6e2ce",
+  "sha256:b7d9816b79e66df79fa02d34bbb01b848a50228d527071a8ec9f566f6da6a9e4",
+]
+consumer_owned_intent_pointer = "/markdown_tooling/format_workflow_ownership"

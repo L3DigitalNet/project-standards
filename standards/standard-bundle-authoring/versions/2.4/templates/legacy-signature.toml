@@ -1,0 +1,47 @@
+# Marker presence is insufficient: known digests identify exact shipped content.
+[[legacy_signatures]]
+id = "legacy-config-v1"
+kind = "bounded-block"
+format = "yaml"
+targets = [".project-standards.yml"]
+begin = "# BEGIN example-standard managed config"
+end = "# END example-standard managed config"
+known_content_digests = [
+  "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+]
+
+# Whole-file YAML or TOML may authenticate a closed set of canonical semantic
+# shapes. Enumerate every supported historical form; formatting variants share
+# a digest, but arbitrary customization remains unknown and blocks migration.
+# [[legacy_signatures]]
+# id = "legacy-semantic-workflow"
+# kind = "whole-file"
+# format = "yaml"
+# targets = [".github/workflows/check.yml"]
+# known_content_digests = [
+#   "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+# ]
+
+# A single-target whole-file signature may authorize only consumer-owned
+# preservation. Observed bytes never become known package history.
+# Raw migration input must supply literal "consumer-owned" through that pointer.
+# [[legacy_signatures]]
+# id = "legacy-check-workflow"
+# kind = "whole-file"
+# targets = [".github/workflows/check.yml"]
+# known_content_digests = [
+#   "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+# ]
+# consumer_owned_intent_pointer = "/example_standard/workflow_ownership"
+
+# A whole-file signature whose target stays managed only through bounded units
+# may preserve unrecognized consumer bytes instead of blocking (bounded
+# takeover). Mutually exclusive with consumer_owned_intent_pointer.
+# [[legacy_signatures]]
+# id = "legacy-instructions"
+# kind = "whole-file"
+# targets = ["CLAUDE.md"]
+# known_content_digests = [
+#   "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+# ]
+# unknown_content_disposition = "preserve"
