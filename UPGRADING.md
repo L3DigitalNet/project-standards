@@ -73,6 +73,8 @@ Preview is read-only. Review every selected package, migrated option, recognized
 
 Rerun preview after each correction. Do not edit the repository between the accepted preview and apply.
 
+Preview exit codes carry the readiness signal: `0` means the plan is applicable with no error findings and is ready to apply; `1` means the plan is blocked and the findings above list what to resolve. The JSON `ok` and `applicable` fields agree with the exit code, so a wrapper may gate on either.
+
 ### Resolve common preview findings
 
 | Finding | Meaning | Resolution |
@@ -90,7 +92,7 @@ Rerun preview after each correction. Do not edit the repository between the acce
 | `CP-MIGRATION-LEGACY-DIGEST`, `PT-LEGACY-MODIFIED`, `MT-LEGACY-MODIFIED` | A recognized file's bytes match no shipped package history. | Instruction blocks and bounded JSON/JSONC/YAML units resolve automatically: consumer content outside the package-owned unit is preserved and the preview reports `CP-MIGRATION-BOUNDED-TAKEOVER`. Property-level conflicts inside `.editorconfig` and other semantic targets still block; use the reported identity to restore or remove only the conflicting property. For a customized whole-file target, declare its documented ownership option as `"consumer-owned"` in `.project-standards.yml` before previewing. Migration then preserves the bytes and leaves the file consumer-owned. Otherwise restore the released bytes (adopt again with the old CLI, or check the file out from history) and rerun preview. |
 | `CP-MIGRATION-BOUNDED-TAKEOVER` (warning) | Consumer-modified content at a bounded-managed target is preserved; the package takes over only its managed block or properties inside the file. | No action required to apply. After apply, review the preserved file and delete any superseded copy-adopt boilerplate the old release left behind. |
 | `CP-MIGRATION-OWNER-RESOLUTION` | A consumer-owned preservation claim is incomplete. | Ensure the legacy configuration supplies the literal `consumer-owned` value through the documented option (for example `python_tooling.workflow_ownership`) and rerun preview. |
-| `CP-CONSUMER-CONFLICT` | A pre-existing file value conflicts with a package-owned unit and no lock history explains it. | Use the reported path and semantic identity to find the owning option in the selected package's adoption guide. Align the value with that documented package value, or remove the consumer value so the package can create it, then rerun preview. Unrelated sibling values remain consumer-owned. |
+| `CP-CONSUMER-CONFLICT` | A pre-existing file value conflicts with a package-owned unit and no lock history explains it. | The finding reports the expected package value, the observed repository value, and — when the package declares them — the governing options that can reproduce the repository intent. Set a listed governing option (in `.project-standards.yml` during migration) so the package renders the intended value, align the value with the reported expected value, or remove the consumer value so the package can create it, then rerun preview. A finding that states no declared option governs the unit means only alignment or ownership resolution can clear it. Unrelated sibling values remain consumer-owned. |
 
 Python Tooling owns the selected `[build-system]`, but it does not claim `[tool.uv].package`. A repository that uses the tooling baseline without publishing an installable package can retain the managed backend while declaring:
 
@@ -158,7 +160,15 @@ Each enabled package has two separate version planes:
 
 Changing one does not silently change the other. Use `project-standards standards version` for the payload selector, edit only declared package options in `.standards/config.toml`, and preview with `reconcile` before apply.
 
-During legacy migration, ownership options belong under their package namespace in `.project-standards.yml`. The supported whole-file escapes are:
+During legacy migration, `.standards/config.toml` does not exist yet. Every setting a selected package's migration provider recognizes may be set under that package's namespace in `.project-standards.yml`, and the next preview picks it up. That includes ordinary package options — frequently required to resolve a `CP-CONSUMER-CONFLICT` before apply — spelled as nested YAML under the namespace:
+
+```yaml
+python_tooling:
+  ruff:
+    extend_exclude: ['.claude', '.vscode', '*.md']
+```
+
+The whole-file ownership escapes are the subset of those options that transfers file ownership instead of shaping rendered values:
 
 ```yaml
 python_tooling:
@@ -175,7 +185,7 @@ project_spec:
   workflow_ownership: consumer-owned # validate-specs.yml
 ```
 
-These are closed option sets; unrecognized keys produce `CP-MIGRATION-UNCLAIMED-SETTING`. The selected package adoption guides define the same keys for unified `.standards/config.toml` configuration.
+Package options remain closed sets: a key that no selected package's migration provider recognizes produces `CP-MIGRATION-UNCLAIMED-SETTING`, while every recognized key — ownership escape or ordinary option — is carried into the migrated configuration. The selected package adoption guides define the same keys for unified `.standards/config.toml` configuration after migration.
 
 A stock workflow from an older package major can differ from the currently recognized migration signature even when nobody customized it. Treat that state explicitly: choose `consumer-owned` if the repository intends to retain the older workflow, or restore the current legacy package bytes before migrating to managed ownership. Do not label or discard the file as accidental drift.
 
