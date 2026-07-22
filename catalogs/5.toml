@@ -173,6 +173,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.5"
 digest = "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.6"
+digest = "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b"
 role = "default"
 
 [[packages]]
@@ -203,4 +209,10 @@ role = "internal"
 id = "standard-bundle-authoring"
 version = "2.4"
 digest = "sha256:b2bdf94dffb7c8536debca60fdb4eb557cfcc364e47165a2634dccf002ca099f"
+role = "internal"
+
+[[packages]]
+id = "standard-bundle-authoring"
+version = "2.5"
+digest = "sha256:3eb5d86979755372bbe851b06b82235410378cba71c6f1b9dbc7c49557623c4d"
 role = "internal"

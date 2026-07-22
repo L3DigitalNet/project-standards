@@ -74,17 +74,17 @@ _PACKAGES = {
         "Python Tooling SSOT Standard",
         "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects.",
         "active",
-        "1.5",
+        "1.6",
         "default",
-        "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3",
+        "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
         "The contract every standard bundle in this repository must declare.",
         "active",
-        "2.4",
+        "2.5",
         "internal",
-        "sha256:b2bdf94dffb7c8536debca60fdb4eb557cfcc364e47165a2634dccf002ca099f",
+        "sha256:3eb5d86979755372bbe851b06b82235410378cba71c6f1b9dbc7c49557623c4d",
     ),
 }
 
@@ -93,6 +93,18 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "python-tooling",
+        "1.5",
+        "retained",
+        "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3",
+    ),
+    (
+        "standard-bundle-authoring",
+        "2.4",
+        "internal",
+        "sha256:b2bdf94dffb7c8536debca60fdb4eb557cfcc364e47165a2634dccf002ca099f",
+    ),
     (
         "agent-handoff",
         "1.3",
@@ -266,6 +278,10 @@ def _family_source(standard_id: str) -> str:
             'version = "1.4"\n'
             'payload = "versions/1.4/payload.toml"\n'
             'digest = "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e"\n'
+            "\n[[versions]]\n"
+            'version = "1.5"\n'
+            'payload = "versions/1.5/payload.toml"\n'
+            'digest = "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3"\n'
         )
     return source
 
@@ -298,6 +314,7 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
         shutil.copytree(source / "versions" / version, target / "versions" / version)
         if standard_id == "python-tooling":
             shutil.copytree(source / "versions/1.4", target / "versions/1.4")
+            shutil.copytree(source / "versions/1.5", target / "versions/1.5")
         (target / "standard.toml").write_text(_family_source(standard_id), encoding="utf-8")
     catalog = isolated / "catalogs/5.toml"
     catalog.parent.mkdir()
@@ -308,7 +325,7 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
     assert repository.findings == ()
     assert validate_package_repository(repository) == ()
     assert len(repository.families) == len(_PACKAGES)
-    assert len(repository.payloads) == len(_PACKAGES) + 1
+    assert len(repository.payloads) == len(_PACKAGES) + 2
     assert repository.catalog is not None
 
 
