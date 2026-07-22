@@ -11,7 +11,12 @@ import pytest
 
 from project_standards.control_plane.adapters.toml import TomlAdapter
 from project_standards.control_plane.codec import parse_lock, render_lock
-from project_standards.control_plane.diagnostics import ActionKind, ControlAction
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlAction,
+    ControlFinding,
+    findings_to_jsonable,
+)
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.planner import (
@@ -1055,3 +1060,112 @@ def test_canonical_order_controls_placement_never_value_selection(tmp_path: Path
         assert tuple((item.target, item.content) for item in plan.targets) == baseline_bytes
 
     assert baseline.proposed_content("settings.json") == b'{ "alpha": 1, "zeta": 2 }\n'
+
+
+def _conflict_setup(
+    tmp_path: Path,
+    *,
+    governing: list[str] | None = None,
+    option_properties: Mapping[str, object] | None = None,
+) -> tuple[Path, InstalledPayload]:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "shared.toml").write_bytes(b"[tool.demo]\nvalue = 2\n")
+    contribution: ContributionFixture = {
+        "id": "value",
+        "target": "shared.toml",
+        "adapter": "toml",
+        "scope": "key:/tool/demo/value",
+        "content": b"[tool.demo]\nvalue = 1\n",
+    }
+    if governing is not None:
+        contribution["governing_options"] = governing
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[contribution],
+        option_properties=option_properties,
+    )
+    return repo, payload
+
+
+def _consumer_conflict(plan: ReconciliationPlan) -> ControlFinding:
+    return next(finding for finding in plan.findings if finding.code == "CP-CONSUMER-CONFLICT")
+
+
+def test_consumer_conflict_finding_carries_expected_actual_values_and_digests(
+    tmp_path: Path,
+) -> None:
+    repo, payload = _conflict_setup(tmp_path)
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+    finding = _consumer_conflict(plan)
+
+    assert finding.expected == 1
+    assert finding.actual == 2
+    assert finding.expected_digest is not None and finding.expected_digest.startswith("sha256:")
+    assert finding.actual_digest is not None and finding.actual_digest.startswith("sha256:")
+    assert finding.expected_digest != finding.actual_digest
+    assert finding.governing_options is None
+    jsonable = next(
+        item
+        for item in findings_to_jsonable(plan.findings)
+        if item["code"] == "CP-CONSUMER-CONFLICT"
+    )
+    assert jsonable["expected"] == 1
+    assert jsonable["actual"] == 2
+    assert "governing_options" not in jsonable
+
+
+def test_consumer_conflict_finding_lists_declared_governing_options(tmp_path: Path) -> None:
+    repo, payload = _conflict_setup(
+        tmp_path,
+        governing=["mode"],
+        option_properties={"mode": {"type": "string", "default": "on"}},
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+    finding = _consumer_conflict(plan)
+
+    assert finding.governing_options == ("mode",)
+    jsonable = next(
+        item
+        for item in findings_to_jsonable(plan.findings)
+        if item["code"] == "CP-CONSUMER-CONFLICT"
+    )
+    assert jsonable["governing_options"] == ["mode"]
+
+
+def test_consumer_conflict_finding_states_no_declared_governing_option(tmp_path: Path) -> None:
+    repo, payload = _conflict_setup(tmp_path, governing=[])
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+    finding = _consumer_conflict(plan)
+
+    assert finding.governing_options == ()
+    assert "no declared package option governs this unit" in finding.hint
+    jsonable = next(
+        item
+        for item in findings_to_jsonable(plan.findings)
+        if item["code"] == "CP-CONSUMER-CONFLICT"
+    )
+    assert jsonable["governing_options"] == []
+
+
+def test_whole_file_conflict_finding_carries_digests_without_values(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "tool.txt").write_bytes(b"consumer\n")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[{"id": "tool", "target": "tool.txt", "content": b"managed\n"}],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+    finding = _consumer_conflict(plan)
+
+    assert finding.expected is None
+    assert finding.actual is None
+    assert finding.expected_digest == digest(b"managed\n")
+    assert finding.actual_digest == digest(b"consumer\n")

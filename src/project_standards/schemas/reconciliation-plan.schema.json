@@ -210,6 +210,44 @@
       "title": "CreateOnlyAbsence",
       "type": "object"
     },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
     "LockHeader": {
       "additionalProperties": false,
       "description": "Digests binding applied state to one tool release, catalog, and config.",
@@ -476,9 +514,70 @@
       "additionalProperties": false,
       "description": "Content-safe finding fields included in public reconciliation output.",
       "properties": {
+        "actual": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "actual_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Digest"
+        },
         "code": {
           "title": "Code",
           "type": "string"
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expected_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Digest"
+        },
+        "governing_options": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Governing Options"
         },
         "hint": {
           "title": "Hint",
@@ -589,7 +688,7 @@
       "$ref": "#/$defs/CentralLock"
     },
     "schema_version": {
-      "const": "1.0",
+      "const": "1.1",
       "title": "Schema Version",
       "type": "string"
     }

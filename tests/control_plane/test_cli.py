@@ -1160,3 +1160,66 @@ def test_reconcile_bad_arguments_exit_two(
 ) -> None:
     assert run(arguments) == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_human_finding_renderer__enriched_conflict__bounds_values_and_lists_options() -> None:
+    from project_standards.control_plane.cli import (
+        _format_human_finding,  # pyright: ignore[reportPrivateUsage]  # focused rendering boundary
+    )
+
+    enriched = ControlFinding(
+        code="CP-CONSUMER-CONFLICT",
+        severity="error",
+        standard_id="python-tooling",
+        version="1.6",
+        path="pyproject.toml",
+        identity="key:/tool/basedpyright/include",
+        message="pre-existing consumer unit differs from the selected package value",
+        hint="resolve the declared ownership or repository content before applying",
+        expected=["src", "tests"],
+        actual=["src", "tests", *(f"root-{index}" for index in range(40))],
+        expected_digest=f"sha256:{'a' * 64}",
+        actual_digest=f"sha256:{'b' * 64}",
+        governing_options=("/additional_source_roots",),
+    )
+
+    rendered = _format_human_finding(enriched)
+    lines = rendered.splitlines()
+    assert lines[1] == '  expected: ["src", "tests"]'
+    assert lines[2].startswith("  actual: ")
+    assert lines[2].endswith("…")
+    assert len(lines[2]) <= len("  actual: ") + 121
+    assert lines[3] == "  governing options: /additional_source_roots"
+    assert (
+        lines[4] == "  hint: resolve the declared ownership or repository content before applying"
+    )
+
+    digests_only = ControlFinding(
+        code="CP-CONSUMER-CONFLICT",
+        severity="error",
+        standard_id="demo",
+        version="1.0",
+        path="tool.txt",
+        identity="$file",
+        message="pre-existing whole-file content cannot be overwritten implicitly",
+        hint="review the file",
+        expected_digest=f"sha256:{'c' * 64}",
+        actual_digest=f"sha256:{'d' * 64}",
+    )
+    rendered_digests = _format_human_finding(digests_only)
+    digest_lines = rendered_digests.splitlines()
+    assert digest_lines[1] == f"  expected digest: sha256:{'c' * 64}"
+    assert digest_lines[2] == f"  actual digest: sha256:{'d' * 64}"
+
+    none_declared = ControlFinding(
+        code="CP-CONSUMER-CONFLICT",
+        severity="error",
+        standard_id="demo",
+        version="1.0",
+        path="shared.toml",
+        identity="key:/tool/demo/value",
+        message="pre-existing consumer unit differs from the selected package value",
+        hint="no declared package option governs this unit",
+        governing_options=(),
+    )
+    assert "  governing options: none declared" in _format_human_finding(none_declared)

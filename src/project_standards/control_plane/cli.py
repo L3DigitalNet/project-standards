@@ -240,14 +240,30 @@ def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> 
     return exit_code
 
 
+def _bounded_excerpt(value: object) -> str:
+    """Render a single-line JSON excerpt capped for terminal output; JSON keeps full fidelity."""
+    text = json.dumps(value, ensure_ascii=False)
+    return text if len(text) <= 120 else f"{text[:120]}…"
+
+
 def _format_human_finding(finding: ControlFinding) -> str:
     """Render one actionable finding without exposing internal target sentinels."""
     path = finding.path or "."
     identity = "" if finding.identity in {"$file", "$target"} else f" [{finding.identity}]"
-    return (
-        f"{finding.severity.upper()} {finding.code} {path}{identity}: {finding.message}\n"
-        f"  hint: {finding.hint}"
-    )
+    lines = [f"{finding.severity.upper()} {finding.code} {path}{identity}: {finding.message}"]
+    if finding.expected is not None:
+        lines.append(f"  expected: {_bounded_excerpt(finding.expected)}")
+    elif finding.expected_digest is not None:
+        lines.append(f"  expected digest: {finding.expected_digest}")
+    if finding.actual is not None:
+        lines.append(f"  actual: {_bounded_excerpt(finding.actual)}")
+    elif finding.actual_digest is not None:
+        lines.append(f"  actual digest: {finding.actual_digest}")
+    if finding.governing_options is not None:
+        rendered = ", ".join(finding.governing_options) or "none declared"
+        lines.append(f"  governing options: {rendered}")
+    lines.append(f"  hint: {finding.hint}")
+    return "\n".join(lines)
 
 
 def _emit_human_findings(findings: tuple[ControlFinding, ...]) -> None:

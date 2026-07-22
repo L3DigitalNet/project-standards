@@ -6,10 +6,11 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, cast
 
 from project_standards.package_contract.diagnostics import validation_summary as validation_summary
 from project_standards.package_contract.paths import PackageVersion
+from project_standards.package_contract.payload import JsonValue
 
 
 class ControlPlaneError(ValueError):
@@ -51,6 +52,15 @@ class ControlFinding:
     hint: str
     line: int | None = None
     locus: str | None = None
+    # Conflict enrichment (schema 1.1): values are set only for JSON-representable
+    # semantic units; byte-valued and whole-file conflicts carry digests alone.
+    # governing_options mirrors the owning contribution's declaration: None means
+    # the payload declares nothing, an empty tuple means "no option governs".
+    expected: JsonValue | None = None
+    actual: JsonValue | None = None
+    expected_digest: str | None = None
+    actual_digest: str | None = None
+    governing_options: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +107,8 @@ def finding_sort_key(finding: ControlFinding) -> tuple[object, ...]:
         finding.hint,
         finding.line if finding.line is not None else -1,
         finding.locus or "",
+        finding.expected_digest or "",
+        finding.actual_digest or "",
     )
 
 
@@ -128,10 +140,14 @@ def sort_actions(actions: Iterable[ControlAction]) -> list[ControlAction]:
 
 def findings_to_jsonable(findings: Iterable[ControlFinding]) -> list[dict[str, object]]:
     """Return deterministically ordered JSON-compatible finding objects."""
-    return [
-        {key: value for key, value in asdict(finding).items() if value is not None}
-        for finding in sort_findings(findings)
-    ]
+    result: list[dict[str, object]] = []
+    for finding in sort_findings(findings):
+        item = {key: value for key, value in asdict(finding).items() if value is not None}
+        options = item.get("governing_options")
+        if isinstance(options, tuple):
+            item["governing_options"] = list(cast("tuple[str, ...]", options))
+        result.append(item)
+    return result
 
 
 def actions_to_jsonable(actions: Iterable[ControlAction]) -> list[dict[str, object]]:

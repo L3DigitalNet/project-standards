@@ -128,6 +128,11 @@ class PublicFindingSchema(StrictModel):
     identity: str
     message: str
     hint: str
+    expected: JsonValue | None = None
+    actual: JsonValue | None = None
+    expected_digest: str | None = None
+    actual_digest: str | None = None
+    governing_options: list[str] | None = None
 
 
 class PublicActionSchema(StrictModel):
@@ -148,7 +153,7 @@ class PublicActionSchema(StrictModel):
 class ReconciliationPlanSchema(StrictModel):
     """Stable JSON surface for a complete reconciliation preview."""
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.1"]
     applicable: bool
     findings: list[PublicFindingSchema] = Field(default_factory=list)
     actions: list[PublicActionSchema] = Field(default_factory=list)

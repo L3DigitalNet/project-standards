@@ -82,6 +82,9 @@ def _finding(
     standard_id: str,
     version: str,
     message: str,
+    *,
+    expected_digest: str | None = None,
+    actual_digest: str | None = None,
 ) -> WholeFilePlan:
     return WholeFilePlan(
         action=None,
@@ -94,6 +97,8 @@ def _finding(
             identity="$file",
             message=message,
             hint="preserve the file and resolve ownership or local modifications explicitly",
+            expected_digest=expected_digest,
+            actual_digest=actual_digest,
         ),
         mode=None,
         created_container=False,
@@ -283,6 +288,10 @@ def plan_whole_file(
             standard_id,
             version,
             "pre-existing whole-file content cannot be overwritten implicitly",
+            expected_digest=desired_digest.value,
+            actual_digest=(
+                entry.content_digest.value if entry.content_digest is not None else None
+            ),
         )
 
     if previous.owners != (intent.standard_id,):

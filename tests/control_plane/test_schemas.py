@@ -222,3 +222,26 @@ def test_mutation_plan_rejects_incomplete_or_unbounded_actions(
                 "actions": [action],
             }
         )
+
+
+def test_reconciliation_finding_schema_is_additively_enriched_at_1_1() -> None:
+    document = control_plane_schema_documents()["reconciliation-plan.schema.json"]
+    definitions = cast("dict[str, object]", document["$defs"])
+    finding = cast("dict[str, object]", definitions["PublicFindingSchema"])
+    properties = cast("dict[str, object]", finding["properties"])
+
+    for field in ("expected", "actual", "expected_digest", "actual_digest", "governing_options"):
+        assert field in properties
+    assert set(cast("list[str]", finding["required"])) == {
+        "code",
+        "severity",
+        "standard_id",
+        "version",
+        "path",
+        "identity",
+        "message",
+        "hint",
+    }
+    top_properties = cast("dict[str, object]", document["properties"])
+    schema_version = cast("dict[str, object]", top_properties["schema_version"])
+    assert schema_version["const"] == "1.1"

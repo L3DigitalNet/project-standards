@@ -275,6 +275,7 @@ class _DesiredGroup:
     mode: str | None
     provenance: UnitProvenance
     unit: AdapterUnit
+    governing_options: tuple[str, ...] | None
 
 
 type _OwnedNaturalKey = tuple[str, str, str]
@@ -559,6 +560,12 @@ def _finding(
     standard_id: str,
     version: str,
     message: str,
+    hint: str = "resolve the declared ownership or repository content before applying",
+    expected: JsonValue | None = None,
+    actual: JsonValue | None = None,
+    expected_digest: str | None = None,
+    actual_digest: str | None = None,
+    governing_options: tuple[str, ...] | None = None,
 ) -> ControlFinding:
     return ControlFinding(
         code=code,
@@ -568,7 +575,43 @@ def _finding(
         path=target,
         identity=identity,
         message=message,
-        hint="resolve the declared ownership or repository content before applying",
+        hint=hint,
+        expected=expected,
+        actual=actual,
+        expected_digest=expected_digest,
+        actual_digest=actual_digest,
+        governing_options=governing_options,
+    )
+
+
+def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> ControlFinding:
+    expected_value = group.unit.value
+    actual_value = current.value
+    if group.governing_options == ():
+        hint = (
+            "no declared package option governs this unit; align the repository "
+            "content with the package value or take consumer ownership before applying"
+        )
+    elif group.governing_options:
+        hint = (
+            "set a governing option so the package reproduces the repository "
+            "value, or align the content before applying"
+        )
+    else:
+        hint = "resolve the declared ownership or repository content before applying"
+    return _finding(
+        "CP-CONSUMER-CONFLICT",
+        target=group.target.original,
+        identity=group.scope,
+        standard_id=group.owners[0],
+        version=group.versions[0][1],
+        message="pre-existing consumer unit differs from the selected package value",
+        hint=hint,
+        expected=None if isinstance(expected_value, bytes) else expected_value,
+        actual=None if isinstance(actual_value, bytes) else actual_value,
+        expected_digest=group.unit.semantic_digest.value,
+        actual_digest=current.semantic_digest.value,
+        governing_options=group.governing_options,
     )
 
 
@@ -829,6 +872,16 @@ def _group_desired(
             continue
         provenances = {item.intent.provenance for item in items}
         provenance = next(iter(provenances)) if len(provenances) == 1 else UnitProvenance.GENERATED
+        # Shared groups keep governing metadata only when every owner declares the
+        # same pointers; disagreement degrades to unknown rather than misattributing.
+        declared = {
+            tuple(item.intent.declaration.governing_options)
+            if item.intent.declaration is not None
+            and item.intent.declaration.governing_options is not None
+            else None
+            for item in items
+        }
+        governing = next(iter(declared)) if len(declared) == 1 else None
         groups.append(
             _DesiredGroup(
                 target=first.intent.target,
@@ -843,6 +896,7 @@ def _group_desired(
                 mode=first.intent.mode,
                 provenance=provenance,
                 unit=first.unit,
+                governing_options=governing,
             )
         )
     return tuple(groups), tuple(sort_findings(findings))
@@ -955,14 +1009,7 @@ def _classify_desired(
             return _unit_plan(ActionKind.ADOPT, group, current), None
         if group.policy is ArtifactPolicy.CREATE_ONLY and entry.kind is EntryKind.REGULAR:
             return _unit_plan(ActionKind.PRESERVE, group, current), None
-        return None, _finding(
-            "CP-CONSUMER-CONFLICT",
-            target=group.target.original,
-            identity=group.scope,
-            standard_id=group.owners[0],
-            version=group.versions[0][1],
-            message="pre-existing consumer unit differs from the selected package value",
-        )
+        return None, _consumer_conflict_finding(group, current)
     if previous.adapter is not group.adapter or previous.scope != group.scope:
         return None, _finding(
             "CP-LOCK-INCONSISTENT",
