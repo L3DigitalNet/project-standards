@@ -1,6 +1,6 @@
 # Deployed
 
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-22
 
 This repo is consumed as a versioned standard: downstream repos pin a `standards-ref` to a git tag and call the reusable workflow under `.github/workflows/`. "Deployed" here means published git refs on `main`.
 
@@ -28,4 +28,5 @@ This repo is consumed as a versioned standard: downstream repos pin a `standards
 | `v5.3.0` | Consumer-owned relinquishment for customized package scripts, workflows, and documentation; complete adoption-mechanics and consumer-documentation audit remediation; corrected migration diagnostics, rendering, recovery, and lock semantics; conditional-section tailoring; and the patched Markdown development toolchain. **MINOR**; every superseded payload remains advertised. Release commit `9dcec77`; signed tag and byte-verified wheel/sdist assets live; issues #12 and #13 are closed. | published on `main` |
 | `v5.3.1` | Twenty-four verified internal consolidations replace duplicate package/schema, control-plane, CLI, sync, Agent Handoff, adapter, and specification logic with shared helpers and direct contract tests. **PATCH**; accepted inputs, consumer outcomes, defaults, package/catalog selections, schemas, workflows, and immutable payloads are unchanged. Release commit `50d748c`; signed tag and byte-verified wheel/sdist assets live. | published on `main` |
 | `v5.4.0` | Python Tooling 1.5 preserves consumer checker/pytest extensions through key-level ownership and a declared lock-scope transition; Markdown Tooling 1.6 code-wraps managed instruction globs for strict MD037/MD049 policies. **MINOR**; all predecessors remain byte-immutable and selectable. Release commit `74cb54b`; signed tag and byte-verified wheel/sdist assets live; issues #14/#15 are closed. | published on `main` (Latest) |
-| `v5` (moving) | tracks the newest 5.x release (`v5.4.0`) | published on `main` |
+| `v5.5.0` | Bounded semantic migration signatures; Markdown Tooling 1.7 disabled-formatter migration; Project Specification 1.4 empty-corpus success; Agent Handoff 1.4 managed-envelope size accounting; and absolute Project Specification finding coordinates. **MINOR**; all predecessors remain byte-immutable and selectable. Release commit `8cbb306`; signed tag, eight passing release-commit workflows, and byte-verified wheel/sdist assets are live. | published on `main` (Latest); issue closure pending |
+| `v5` (moving) | tracks the newest 5.x release (`v5.5.0`) | published on `main` |
