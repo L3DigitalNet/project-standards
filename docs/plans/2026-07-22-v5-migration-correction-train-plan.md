@@ -18,11 +18,11 @@ test_framework: pytest
 
 ## 1. Objective
 
-Deliver Project Standards 5.5.0 with bounded corrections for GitHub issues #16, #17, and #18, retain every released payload and exact-version behavior, publish one verified candidate from `main`, and close the issues only after hosted evidence is authoritative.
+Deliver Project Standards 5.5.0 with bounded corrections for GitHub issues #16, #17, #18, and discovered issue #19, retain every released payload and compatibility outcome, publish one verified candidate from `main`, and close the issues only after hosted evidence is authoritative.
 
 ## 2. Background
 
-The approved design identifies three 5.4.0 failures: raw whole-file migration signatures cannot recognize the documented disabled V4 format caller; Project Spec rejects a valid configured-empty corpus; and Agent Handoff counts package-managed instruction envelopes against consumer budgets. The solution requires an engine contract addition plus four immutable successor packages.
+The approved design identifies three 5.4.0 failures: raw whole-file migration signatures cannot recognize the documented disabled V4 format caller; Project Spec rejects a valid configured-empty corpus; and Agent Handoff counts package-managed instruction envelopes against consumer budgets. The solution requires an engine contract addition plus four immutable successor packages. During implementation, issue #19 reported that Project Spec lint findings use body-relative rather than absolute file lines; this plan appends the bounded diagnostic correction before candidate preparation.
 
 ## 3. Scope
 
@@ -30,7 +30,7 @@ The approved design identifies three 5.4.0 failures: raw whole-file migration si
 
 - Dual source/signature views for opt-in semantic whole-file YAML/TOML signatures.
 - Markdown Tooling 1.7, Standard Bundle Authoring 2.4, Project Spec 1.4, and Agent Handoff 1.4.
-- Catalog 5 integration, exact predecessor compatibility, 5.5.0 qualification, publication, and issue closeout.
+- Catalog 5 integration, absolute Project Spec lint coordinates, exact predecessor compatibility, 5.5.0 qualification, publication, and issue closeout.
 
 ### 3.2 Out of Scope
 
@@ -65,11 +65,12 @@ The approved design identifies three 5.4.0 failures: raw whole-file migration si
 | FR-011 | Legacy V4 size reporting excludes only its exact historical block. | #18 | must | T6 |
 | FR-012 | Catalog 5 retains predecessors and selects all four successors. | design | must | T7 |
 | FR-013 | One verified 5.5.0 candidate publishes from `main` with signed tags and byte-matching assets. | release contract | must | T8, T9, T10 |
-| FR-014 | Issues #16-#18 close only after published and hosted evidence exists. | design | must | T10 |
-| NFR-001 | Released payloads, immutable tags, historical selection, and exact-version behavior do not change. | design | must | T3-T5, T7, T9 |
+| FR-014 | Issues #16-#19 close only after published and hosted evidence exists. | design + discovered #19 | must | T10 |
+| FR-015 | Every line-bearing Project Spec lint and validate finding reports an absolute physical file line with and without frontmatter, through legacy and selected-provider paths. | #19 | must | T11 |
+| NFR-001 | Released payloads, immutable tags, historical selection, and exact-version validation outcomes do not change; corrected diagnostics may become more precise. | design + #19 | must | T3-T5, T7, T9, T11 |
 | NFR-002 | New accepted states remain bounded by declared history or authenticated ownership. | design | must | T1-T3, T5, T6 |
-| NFR-003 | RED/GREEN plus source, artifact, and hosted evidence supports every completion claim. | design | must | T1-T10 |
-| NFR-004 | The train passes MINOR classification without newly failing a prior consumer. | version policy | must | T7, T9 |
+| NFR-003 | RED/GREEN plus source, artifact, and hosted evidence supports every completion claim. | design | must | T1-T11 |
+| NFR-004 | The train passes MINOR classification without newly failing a prior consumer. | version policy | must | T7, T9, T11 |
 
 ## 5. Repository and Architecture Context
 
@@ -96,6 +97,7 @@ Whole-file `format` is forbidden and `_ObservedSignature` has one digest/content
 | command snapshot/provider paths, `standards/agent-handoff/versions/1.4/**` | modify/create | #18 V5 | T5 |
 | `src/project_standards/agent_handoff/validation.py` | modify | #18 legacy | T6 |
 | family/catalog/projection/matrix files | generate/modify | compatible integration | T7 |
+| `src/project_standards/specs/model.py`, `document.py`, `commands/lint.py`, `commands/validate.py`, Project Spec 1.4 docs/schema/integrity/catalog metadata, command/provider tests | modify | #19 absolute line coordinates | T11 |
 | version/changelog/status/deployment/session files | modify | release and closeout | T8, T10 |
 
 ### 5.4 Dependencies
@@ -116,7 +118,7 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 
 | Category | Purpose | Location |
 | --- | --- | --- |
-| Contract/regression | declarations and #16-#18 | `tests/package_contract/`, focused command tests |
+| Contract/regression | declarations and #16-#19 | `tests/package_contract/`, focused command tests |
 | Integration/compatibility | migration, lifecycle, source/wheel | `tests/control_plane/`, `tests/package_compatibility/` |
 | End-to-end | candidate dogfood and publication | §13 and GitHub evidence |
 
@@ -125,6 +127,7 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 | Task | Reason | Validation |
 | --- | --- | --- |
 | T7 generated artifacts only | generated schema, projection, and catalog render have no independent behavior RED; selection and matrix changes retain T7.1/T7.2 | graph/schema/projection/catalog gates |
+| T11 generated artifacts only | integrity, projection, and catalog regeneration follows the behavior GREEN and has no independent behavior RED | package/schema/projection/catalog gates |
 | T8-T10 | release preparation, qualification, and external publication are not behavior changes | version/build/hash/hosted/ref/issue evidence |
 
 ## 7. Execution Summary
@@ -138,7 +141,8 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 | T5 | V5 Agent Handoff size accounting | P2 | T2 | FR-008-010, NFR-001-003 | snapshot/provider adversarial tests |
 | T6 | Legacy size accounting | P2 | None | FR-011, NFR-002-003 | validation regressions |
 | T7 | Catalog 5 integration | P3 | T3-T6 | FR-012, NFR-001, NFR-003-004 | graph/projection/matrix |
-| T8 | Prepare 5.5.0 candidate | P4 | T7 | FR-013, NFR-003 | version/build/hash gates |
+| T11 | Absolute Project Spec finding lines | P3 | T7 | FR-015, NFR-001, NFR-003-004 | lint/validate and selected-provider regression |
+| T8 | Prepare 5.5.0 candidate | P4 | T11 | FR-013, NFR-003 | version/build/hash gates |
 | T9 | Qualify exact candidate | P4 | T8 | FR-013, NFR-001, NFR-003-004 | complete §13 gate |
 | T10 | Publish and close out | P5 | T9 | FR-013-014, NFR-003 | refs/workflows/assets/issues/parity |
 
@@ -241,11 +245,24 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
   - **T7.5 REFACTOR** — only bounded fixture deduplication if needed.
   - **T7.6 Verify Task** — package/graph/schema/projection/catalog/source-wheel/static/immutable checks; commit with IDs.
 
+### T11: Report absolute Project Spec finding lines
+
+- **goal:** Preserve the body-relative internal model while reporting every line-bearing Project Spec lint and validate finding in the physical file coordinate system. · **phase:** P3 · **depends_on:** [T7] · **requirements:** [FR-015, NFR-001, NFR-003, NFR-004] · **priority:** must
+- **files:** spec document model/parser/linter/validator, Project Spec 1.4 docs/finding schema/integrity/catalog metadata, lint/validate/CLI/selected-provider tests
+- **acceptance:** `SpecDocument.body_line_offset` defaults to zero and records the exact removed frontmatter lines for ordinary and empty-body fence branches while CRLF/no-frontmatter input remains offset zero under the existing splitter contract (TC-T11-001); every line-bearing lint and validate finding reports the absolute line without changing line-less findings (TC-T11-002); legacy and selected-provider human/JSON output agree with physical file lines, and exact Project Spec 1.1, 1.2, and 1.3 selections change only line coordinates while codes, severity, count, messages, loci, and exits stay identical (TC-T11-003); Project Spec 1.4 source/wheel reconstruction, its full digest/catalog chain, released predecessor bytes, MINOR classification, and existing validation outcomes remain green (TC-T11-004).
+- **sub-tasks:**
+  - **T11.1 RED** — first record a clean focused baseline, then add deterministic with/without-frontmatter lint/validate coordinate regressions with exact integer assertions; expected failure: frontmatter findings are short by the fence length.
+  - **T11.2 Verify RED** — confirm only the exact coordinate assertions fail while baseline behavior and no-frontmatter coordinates remain characterized.
+  - **T11.3 GREEN** — derive the removed-line count from the splitter's returned body, retain it on `SpecDocument` with a default of zero, and add it only when constructing line-bearing lint/validate findings; document absolute semantics in Project Spec 1.4 prose and `findings.schema.json`; refresh resource and aggregate digests, `standard.toml`, `catalogs/5.toml`, payload projection, `standards/catalog.md`, and current-catalog test constants in that order.
+  - **T11.4 Verify GREEN** — document/lint/validate/CLI/selected-provider suites, exact-1.1/1.2/1.3 diagnostic-only proof, and source/wheel reconstruction.
+  - **T11.5 REFACTOR** — keep offset naming explicit and avoid changing body-relative structural helpers.
+  - **T11.6 Verify Task** — focused/package/catalog/static/Markdown/immutable checks; commit with IDs.
+
 ## Phase P4: Candidate and Qualification
 
 ### T8: Prepare one 5.5.0 candidate
 
-- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T7] · **requirements:** [FR-013, NFR-003] · **priority:** must
+- **goal:** Create one release commit and one wheel/sdist pair as sole candidate evidence. · **phase:** P4 · **depends_on:** [T11] · **requirements:** [FR-013, NFR-003] · **priority:** must
 - **files:** version/lock/changelog/status/deployment/session and build outputs
 - **acceptance:** versions agree (TC-T8-001); prepared/published wording is truthful (TC-T8-002); one artifact pair has recorded hashes (TC-T8-003); extracted wheel reports 5.5.0 and successors (TC-T8-004).
 - **sub-tasks:**
@@ -273,7 +290,7 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 
 ### T10: Publish, verify, close issues, and close out
 
-- **goal:** Publish exact 5.5.0 from `main`, verify it independently, close #16-#18, synchronize branches, and harvest durable facts. · **phase:** P5 · **depends_on:** [T9] · **requirements:** [FR-013, FR-014, NFR-003] · **priority:** must
+- **goal:** Publish exact 5.5.0 from `main`, verify it independently, close #16-#19, synchronize branches, and harvest durable facts. · **phase:** P5 · **depends_on:** [T9] · **requirements:** [FR-013, FR-014, NFR-003] · **priority:** must
 - **files:** Git/GitHub state plus status/deployment/session/plan closeout
 - **acceptance:** release commit precedes both signed annotated tags and `git verify-tag` succeeds for `v5.5.0` and `v5` (TC-T10-001); commit-bound workflows pass (TC-T10-002); downloads match T8 (TC-T10-003); issues close only after TC-T10-005 branch parity (TC-T10-004); branches/remotes/tags/release/handoff/worktree agree before issue closure (TC-T10-005).
 - **sub-tasks:**
@@ -290,14 +307,14 @@ Each behavior task executes RED, Verify RED, minimum GREEN, Verify GREEN, bounde
 | --- | --- | --- |
 | Fail-closed input/ownership | malformed signatures and block ambiguity tests | T1-T6 |
 | Supply chain/compatibility | audits, signed refs, hash parity, source/wheel matrix | T7-T10 |
-| Performance | existing serial lane; bounded parsers | T5, T9 |
-| Documentation | SBA/package docs, changelog/status/deployment/handoff | T3, T8, T10 |
+| Performance | existing serial lane; bounded parsers | T5, T9, T11 |
+| Documentation | SBA/package docs, changelog/status/deployment/handoff | T3, T8, T10, T11 |
 
 ## 10. Integration and Migration
 
 ### 10.1 Integration Sequence
 
-Foundation → independent successors → Catalog 5 → single candidate → qualification → publication.
+Foundation → independent successors → Catalog 5 → absolute finding coordinates → single candidate → qualification → publication.
 
 ### 10.2 Data or State Migration
 
@@ -317,6 +334,7 @@ Exact predecessors remain selected and tested; compatible `latest` advances. Sou
 | R-003 | empty success leaks to protected states | exact-version negative matrix | T4 |
 | R-004 | size subtraction undercounts consumer bytes | lock/scope/digest auth; raw fallback | T5-T6 |
 | R-005 | projections or artifacts drift | reconstruction, immutable diffs, hashes | T7-T10 |
+| R-006 | absolute reporting leaks into body-relative structural helpers | store one offset and apply it only at lint/validate finding construction | T11 |
 
 | ID | Decision | Rationale | Task |
 | --- | --- | --- | --- |
@@ -342,7 +360,7 @@ With the extracted candidate first on `PYTHONPATH`, without rebuilding:
 6. Candidate dogfood validation, frontmatter format check, reconcile JSON inspection, Agent Handoff conformance/drift/size, and release classification against the published baseline.
 7. Re-hash wheel/sdist; `uv run scripts/plan.py validate docs/plans/2026-07-22-v5-migration-correction-train-plan.md`.
 
-Done also requires complete checklist evidence, signed/hosted/asset proof, closed #16-#18, updated handoff truth, clean worktree, and local/remote `main`/`testing` parity.
+Done also requires complete checklist evidence, signed/hosted/asset proof, closed #16-#19, updated handoff truth, clean worktree, and local/remote `main`/`testing` parity.
 
 ## 14. Close-out
 
@@ -359,6 +377,8 @@ After harvest and close-out commit, delete `.project-pipeline/2026-07-22-v5-migr
 | --- | --- | --- |
 | legacy signature `format` | permit whole YAML/TOML; split observed source/signature views | additive; old declarations unchanged |
 | Project Spec validate/lint | selected 1.4 zero-match success | exact 1.3 unchanged |
+| `SpecDocument.body_line_offset` | default-zero physical-line offset derived after frontmatter split | additive internal model field; out-of-tree construction remains valid |
+| Project Spec lint/validate findings | retain body offset and report absolute physical lines for every line-bearing finding | all selected versions receive diagnostic-only correction; codes, messages, severity, count, loci, and exits unchanged |
 | Agent Handoff snapshot/size | add all-Markdown lock collection; authenticated subtraction | additive snapshot; versioned provider |
 
 ## Appendix B. Test Matrix
@@ -372,6 +392,7 @@ After harvest and close-out commit, delete `.project-pipeline/2026-07-22-v5-migr
 | TC-T5-001..004 | FR-008-010, NFR-001-003 | T5 | Agent Handoff selected/provider/reconstruction |
 | TC-T6-001..003 | FR-011, NFR-002-003 | T6 | legacy validation regression |
 | TC-T7-001..004 | FR-012, NFR-001, NFR-003-004 | T7 | catalog/lifecycle/matrix/release |
+| TC-T11-001..004 | FR-015, NFR-001, NFR-003-004 | T11 | parser/lint/validate/CLI/provider/catalog regression |
 | TC-T8-001..004 | FR-013, NFR-003 | T8 | version/docs/build/integration |
 | TC-T9-001..005 | FR-013, NFR-001, NFR-003-004 | T9 | complete local qualification |
 | TC-T10-001..005 | FR-013-014, NFR-003 | T10 | refs/workflows/assets/issues/parity |
