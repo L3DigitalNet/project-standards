@@ -1,0 +1,24 @@
+# Register every legacy endpoint explicitly in the same payload.
+[[legacy_states]]
+id = "v1-example"
+
+[[migrations]]
+id = "legacy-v1-to-one"
+from = "legacy:v1-example"
+to = "package:1.0"
+mode = "automatic"
+provider = "migrate-v1"
+reversible = false
+affected = ["config:*", "contribution:tool-table"]
+signatures = ["legacy-config-v1"]
+
+# Manual migrations name an instruction path instead of a provider.
+[[migrations]]
+id = "one-to-two-manual"
+from = "package:1.0"
+to = "package:2.0"
+mode = "manual"
+instructions = "migrations/one-to-two.md"
+reversible = true
+affected = ["config:*"]
+signatures = []

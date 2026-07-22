@@ -2163,3 +2163,23 @@ def test_python_tooling_successor_payload_is_integral_and_documented() -> None:
     family_index = (_FAMILY / "standard.toml").read_text(encoding="utf-8")
     assert 'version = "1.6"' in family_index
     assert payload.integrity.aggregate_digest.value in family_index
+
+
+_SBA_SUCCESSOR_PAYLOAD = _ROOT / "standards/standard-bundle-authoring/versions/2.5"
+
+
+def test_standard_bundle_authoring_25_documents_governing_option_pointers() -> None:
+    manifest = load_payload_manifest(_SBA_SUCCESSOR_PAYLOAD / "payload.toml")
+    validate_payload_integrity(_SBA_SUCCESSOR_PAYLOAD, manifest)
+    guidance = (_SBA_SUCCESSOR_PAYLOAD / "README.md").read_text(encoding="utf-8").lower()
+
+    assert manifest.payload.version.value == "2.5"
+    assert "governing_options" in guidance
+    assert "empty list" in guidance
+    assert "cannot produce" in guidance
+    template = (_SBA_SUCCESSOR_PAYLOAD / "templates/contribution.toml").read_text(encoding="utf-8")
+    assert "governing_options" in template
+    family_index = (_ROOT / "standards/standard-bundle-authoring/standard.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'version = "2.5"' in family_index

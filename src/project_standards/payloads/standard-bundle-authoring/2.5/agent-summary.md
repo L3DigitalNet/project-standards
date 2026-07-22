@@ -1,0 +1,1 @@
+../../../../../standards/standard-bundle-authoring/versions/2.5/agent-summary.md
