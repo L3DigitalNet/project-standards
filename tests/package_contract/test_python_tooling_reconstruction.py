@@ -1920,3 +1920,246 @@ def test_python_tooling_adoption_requires_lock_refresh_and_commit() -> None:
     adoption = (_PAYLOAD / "adopt.md").read_text(encoding="utf-8")
     assert "uv lock" in adoption
     assert "uv.lock" in adoption
+
+
+_SUCCESSOR_PAYLOAD = _FAMILY / "versions/1.6"
+
+
+def _successor_payload() -> InstalledPayload:
+    manifest = load_payload_manifest(_SUCCESSOR_PAYLOAD / "payload.toml")
+    return InstalledPayload(
+        _SUCCESSOR_PAYLOAD,
+        manifest,
+        validate_payload_integrity(_SUCCESSOR_PAYLOAD, manifest),
+    )
+
+
+def _successor_options(**overrides: object) -> JsonObject:
+    payload = _successor_payload()
+    schema = load_option_schema(_SUCCESSOR_PAYLOAD, payload.manifest)
+    return schema.resolve_options(cast("JsonObject", overrides))
+
+
+def _render_successor(
+    scope: str,
+    adapter: AdapterKind,
+    config: JsonObject,
+    *,
+    target: str = "pyproject.toml",
+) -> str:
+    payload = _successor_payload()
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=_SUCCESSOR_PAYLOAD,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="render-semantic",
+            operation=ProviderOperation.RENDER,
+            effective_config=config,
+            snapshots={
+                "planned_contribution": {
+                    "id": "test-unit",
+                    "target": target,
+                    "adapter": adapter.value,
+                    "scope": scope,
+                }
+            },
+        )
+    )
+    assert result.effect is ProviderEffect.CONTENT
+    assert result.content is not None
+    return result.content.decode()
+
+
+def _issue_20_repo(tmp_path: Path, *, declare_option: bool) -> Path:
+    """Rebuild the issue #20 consumer: first-party Python outside src/."""
+    repo = _released_v4_repo(tmp_path)
+    option = (
+        '  additional_source_roots:\n    - "docs/handoff/bugs"\n    - "scripts"\n'
+        if declare_option
+        else ""
+    )
+    (repo / ".project-standards.yml").write_text(
+        f'standards_version: "v3"\npython_tooling:\n  version: "1.0"\n{option}',
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests", "docs/handoff/bugs", "scripts"]\n\n'
+        "[tool.coverage.run]\n"
+        "branch = true\n"
+        'source = ["src", "docs/handoff/bugs", "scripts"]\n',
+        encoding="utf-8",
+    )
+    return repo
+
+
+def test_python_tooling_15_cannot_express_additional_source_roots(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.5")
+    repo = _issue_20_repo(tmp_path, declare_option=False)
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert not migration.applicable
+    conflicted = {
+        finding.identity
+        for finding in migration.findings
+        if finding.code == "CP-CONSUMER-CONFLICT" and finding.path == "pyproject.toml"
+    }
+    assert {"key:/tool/basedpyright/include", "table:/tool/coverage/run"} <= conflicted
+
+    (tmp_path / "declared").mkdir()
+    declared = _issue_20_repo(tmp_path / "declared", declare_option=True)
+    blocked = plan_legacy_migration(declared, distribution, "5")
+    assert not blocked.applicable
+    assert any(
+        finding.identity.startswith("/python_tooling/additional_source_roots")
+        for finding in blocked.findings
+        if finding.code == "CP-MIGRATION-UNCLAIMED-SETTING"
+    )
+
+
+def test_python_tooling_successor_merges_additional_source_roots() -> None:
+    config = _successor_options(additional_source_roots=["docs/handoff/bugs", "scripts"])
+
+    include = _render_successor("key:/tool/basedpyright/include", AdapterKind.TOML, config)
+    assert include == (
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests", "docs/handoff/bugs", "scripts"]\n'
+    )
+    coverage = _render_successor("table:/tool/coverage/run", AdapterKind.TOML, config)
+    assert coverage == (
+        "[tool.coverage.run]\n"
+        "branch = true\n"
+        'source = ["src", "docs/handoff/bugs", "scripts"]\n'
+    )
+    flat = _successor_options(
+        source_layout="flat",
+        additional_source_roots=["tools", "src"],
+        type_checker={"name": "pyright", "mode": "standard"},
+    )
+    flat_include = _render_successor("key:/tool/pyright/include", AdapterKind.TOML, flat)
+    assert flat_include == '[tool.pyright]\ninclude = [".", "tests", "tools", "src"]\n'
+    flat_coverage = _render_successor("table:/tool/coverage/run", AdapterKind.TOML, flat)
+    assert flat_coverage == (
+        '[tool.coverage.run]\nbranch = true\nsource = [".", "tools", "src"]\n'
+    )
+
+
+def test_python_tooling_successor_empty_option_renders_current_bytes() -> None:
+    current = _current_options()
+    successor = _successor_options()
+    assert successor == {**current, "additional_source_roots": []}
+    for scope in (
+        "table:/build-system",
+        "key:/dependency-groups/dev",
+        "table:/tool/ruff",
+        "key:/tool/basedpyright/include",
+        "key:/tool/basedpyright/typeCheckingMode",
+        "table:/tool/coverage/run",
+        "table:/tool/coverage/report",
+    ):
+        assert _render_successor(scope, AdapterKind.TOML, successor) == _render_current(
+            scope, AdapterKind.TOML, current
+        )
+
+
+@pytest.mark.parametrize(
+    "roots",
+    [
+        ["/absolute"],
+        ["../escape"],
+        [""],
+        ["back\\slash"],
+        ["src", "src"],
+        ["nested/../escape"],
+        [1],
+    ],
+)
+def test_python_tooling_successor_rejects_unsafe_additional_source_roots(
+    roots: list[object],
+) -> None:
+    with pytest.raises(PackageContractError):
+        _successor_options(additional_source_roots=roots)
+
+
+def test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.6")
+    repo = _issue_20_repo(tmp_path, declare_option=True)
+    (repo / "pyproject.toml").write_text(
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests", "docs/handoff/bugs", "scripts"]\n\n'
+        "[tool.coverage.run]\n"
+        "branch = true\n"
+        'source = ["src", "docs/handoff/bugs", "scripts"]\n',
+        encoding="utf-8",
+    )
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    assert migration.reports[0].package.config.get("additional_source_roots") == [
+        "docs/handoff/bugs",
+        "scripts",
+    ]
+    assert apply_legacy_migration(migration).success
+    pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["tool"]["basedpyright"]["include"] == [
+        "src",
+        "tests",
+        "docs/handoff/bugs",
+        "scripts",
+    ]
+    assert pyproject["tool"]["coverage"]["run"]["source"] == [
+        "src",
+        "docs/handoff/bugs",
+        "scripts",
+    ]
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    _assert_no_mutating_actions(second)
+
+
+def test_python_tooling_successor_names_governing_option_on_unmatched_value(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.6")
+    repo = _issue_20_repo(tmp_path, declare_option=False)
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert not migration.applicable
+    conflict = next(
+        finding
+        for finding in migration.findings
+        if finding.code == "CP-CONSUMER-CONFLICT"
+        and finding.identity == "key:/tool/basedpyright/include"
+    )
+    assert conflict.governing_options is not None
+    assert "additional_source_roots" in conflict.governing_options
+    assert conflict.expected == ["src", "tests"]
+    assert conflict.actual == ["src", "tests", "docs/handoff/bugs", "scripts"]
+
+
+def test_python_tooling_successor_payload_is_integral_and_documented() -> None:
+    payload = _successor_payload()
+
+    assert payload.manifest.payload.version.value == "1.6"
+    include = next(
+        item for item in payload.manifest.contributions if item.id == "basedpyright-include"
+    )
+    assert include.governing_options is not None
+    assert set(include.governing_options) >= {"source_layout", "additional_source_roots"}
+    coverage_run = next(
+        item for item in payload.manifest.contributions if item.id == "coverage-run-config"
+    )
+    assert coverage_run.governing_options is not None
+    assert set(coverage_run.governing_options) >= {"source_layout", "additional_source_roots"}
+    adopt = (_SUCCESSOR_PAYLOAD / "adopt.md").read_text(encoding="utf-8")
+    assert ".project-standards.yml" in adopt
+    family_index = (_FAMILY / "standard.toml").read_text(encoding="utf-8")
+    assert 'version = "1.6"' in family_index
+    assert payload.integrity.aggregate_digest.value in family_index

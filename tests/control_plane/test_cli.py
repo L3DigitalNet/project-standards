@@ -1180,7 +1180,7 @@ def test_human_finding_renderer__enriched_conflict__bounds_values_and_lists_opti
         actual=["src", "tests", *(f"root-{index}" for index in range(40))],
         expected_digest=f"sha256:{'a' * 64}",
         actual_digest=f"sha256:{'b' * 64}",
-        governing_options=("/additional_source_roots",),
+        governing_options=("additional_source_roots",),
     )
 
     rendered = _format_human_finding(enriched)
@@ -1189,7 +1189,7 @@ def test_human_finding_renderer__enriched_conflict__bounds_values_and_lists_opti
     assert lines[2].startswith("  actual: ")
     assert lines[2].endswith("…")
     assert len(lines[2]) <= len("  actual: ") + 121
-    assert lines[3] == "  governing options: /additional_source_roots"
+    assert lines[3] == "  governing options: additional_source_roots"
     assert (
         lines[4] == "  hint: resolve the declared ownership or repository content before applying"
     )
