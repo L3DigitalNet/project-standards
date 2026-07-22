@@ -39,7 +39,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.2"
-_CURRENT_PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.5"
+_CURRENT_PAYLOAD = _ROOT / "standards/markdown-tooling/versions/1.6"
 _LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 _HISTORICAL_SELF_HOST_FORMAT_DIGEST = (
     "sha256:207b5463a64bc7a48e6af31620ebc5052c71118f350e18375a36435061a6e7a5"
@@ -1204,6 +1204,33 @@ def test_markdown_tooling_instructions__singleton_h1__is_markdownlint_bounded() 
     rendered = result.content.decode()
     assert "<!-- markdownlint-disable MD025 -->\n# Markdown" in rendered
     assert "<!-- markdownlint-enable MD025 -->" in rendered
+
+
+def test_markdown_tooling_instructions__globs__are_inline_code() -> None:
+    payload = _current_payload()
+    schema = load_option_schema(_CURRENT_PAYLOAD, payload.manifest)
+    result = invoke_provider(
+        _current_invocation(
+            "render-semantic",
+            ProviderOperation.RENDER,
+            schema.resolve_options({}),
+            snapshots={
+                "planned_contribution": {
+                    "id": "agents-instructions",
+                    "target": "AGENTS.md",
+                    "adapter": "markdown-block",
+                    "scope": "block:markdown-tooling",
+                }
+            },
+        )
+    )
+
+    assert result.content is not None
+    rendered = result.content.decode()
+    assert "Markdown scope: `**/*.md`." in rendered
+    assert (
+        "Structured-config scope: `**/*.json`, `**/*.jsonc`, `**/*.yml`, `**/*.yaml`." in rendered
+    )
 
 
 def test_markdown_tooling_migration__customized_markdownlint_config__relinquishes() -> None:
