@@ -50,7 +50,7 @@ license: null
   - [Consuming repositories](#consuming-repositories)
   - [Pre-1.0 releases](#pre-10-releases)
 
-> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.3.1 is published from release commit `50d748ca0af6607a9013fbe68e7251f7380d7511`; the moving `v5` tag tracks it. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
+> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.4.0 is published from release commit `74cb54b557c89759f769b04131975f3492fda959`; the moving `v5` tag tracks it. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
 
 **Historical policy:** From 2026-07-07 until the v5.0.0 publication, the repository intentionally accumulated all release-affecting work under one v5 freeze. That freeze ended when release commit `8869a08` and the signed `v5.0.0` and `v5` refs were published.
 
