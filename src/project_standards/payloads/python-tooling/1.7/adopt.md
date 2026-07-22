@@ -1,0 +1,1 @@
+../../../../../standards/python-tooling/versions/1.7/adopt.md

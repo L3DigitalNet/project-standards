@@ -2224,3 +2224,236 @@ def test_standard_bundle_authoring_25_documents_governing_option_pointers() -> N
         encoding="utf-8"
     )
     assert 'version = "2.5"' in family_index
+
+
+_V17_PAYLOAD = _FAMILY / "versions/1.7"
+
+
+def _v17_payload() -> InstalledPayload:
+    manifest = load_payload_manifest(_V17_PAYLOAD / "payload.toml")
+    return InstalledPayload(
+        _V17_PAYLOAD,
+        manifest,
+        validate_payload_integrity(_V17_PAYLOAD, manifest),
+    )
+
+
+def _v17_options(**overrides: object) -> JsonObject:
+    payload = _v17_payload()
+    schema = load_option_schema(_V17_PAYLOAD, payload.manifest)
+    return schema.resolve_options(cast("JsonObject", overrides))
+
+
+def _render_v17(
+    scope: str,
+    adapter: AdapterKind,
+    config: JsonObject,
+    *,
+    target: str = "pyproject.toml",
+) -> str:
+    payload = _v17_payload()
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=_V17_PAYLOAD,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="render-semantic",
+            operation=ProviderOperation.RENDER,
+            effective_config=config,
+            snapshots={
+                "planned_contribution": {
+                    "id": "test-unit",
+                    "target": target,
+                    "adapter": adapter.value,
+                    "scope": scope,
+                }
+            },
+        )
+    )
+    assert result.effect is ProviderEffect.CONTENT
+    assert result.content is not None
+    return result.content.decode()
+
+
+def test_python_tooling_17_scopes_coverage_per_root() -> None:
+    config = _v17_options(
+        additional_source_roots=[
+            "docs/handoff/bugs",
+            {"path": "scripts", "coverage": False},
+        ]
+    )
+
+    include = _render_v17("key:/tool/basedpyright/include", AdapterKind.TOML, config)
+    assert include == (
+        '[tool.basedpyright]\ninclude = ["src", "tests", "docs/handoff/bugs", "scripts"]\n'
+    )
+    coverage = _render_v17("table:/tool/coverage/run", AdapterKind.TOML, config)
+    assert coverage == (
+        '[tool.coverage.run]\nbranch = true\nsource = ["src", "docs/handoff/bugs"]\n'
+    )
+    ruff = _render_v17("table:/tool/ruff", AdapterKind.TOML, config)
+    assert 'src = ["src", "tests", "docs/handoff/bugs", "scripts"]' in ruff
+
+    flat = _v17_options(
+        source_layout="flat",
+        additional_source_roots=[{"path": "tools", "coverage": False}],
+        type_checker={"name": "pyright", "mode": "standard"},
+    )
+    flat_include = _render_v17("key:/tool/pyright/include", AdapterKind.TOML, flat)
+    assert flat_include == '[tool.pyright]\ninclude = [".", "tests", "tools"]\n'
+    flat_coverage = _render_v17("table:/tool/coverage/run", AdapterKind.TOML, flat)
+    assert flat_coverage == '[tool.coverage.run]\nbranch = true\nsource = ["."]\n'
+
+
+def test_python_tooling_17_covered_table_entry_renders_as_its_string_form() -> None:
+    string_config = _v17_options(additional_source_roots=["scripts"])
+    table_config = _v17_options(additional_source_roots=[{"path": "scripts", "coverage": True}])
+
+    for scope, adapter in (
+        ("key:/tool/basedpyright/include", AdapterKind.TOML),
+        ("table:/tool/coverage/run", AdapterKind.TOML),
+        ("table:/tool/ruff", AdapterKind.TOML),
+    ):
+        assert _render_v17(scope, adapter, table_config) == _render_v17(
+            scope, adapter, string_config
+        )
+
+
+def test_python_tooling_17_renders_16_bytes_for_string_only_configs() -> None:
+    """FR-002: with string-only entries, every 1.7 unit matches 1.6 output."""
+    successor_manifest = load_payload_manifest(_SUCCESSOR_PAYLOAD / "payload.toml")
+    v17_manifest = load_payload_manifest(_V17_PAYLOAD / "payload.toml")
+    successor_by_id = {item.id: item for item in successor_manifest.contributions}
+    v17_by_id = {item.id: item for item in v17_manifest.contributions}
+    assert set(successor_by_id) == set(v17_by_id)
+
+    variants = [
+        *_parity_variants(),
+        {"additional_source_roots": ["docs/handoff/bugs", "scripts"]},
+    ]
+    for overrides in variants:
+        successor_config = _successor_options(**overrides)
+        v17_config = _v17_options(**overrides)
+        assert v17_config == successor_config
+        for contribution in successor_manifest.contributions:
+            v17 = v17_by_id[contribution.id]
+            assert v17.materializes(v17_config) == contribution.materializes(successor_config), (
+                contribution.id
+            )
+            if not contribution.materializes(successor_config):
+                continue
+            if contribution.provider is None:
+                assert v17.source_digest == contribution.source_digest, contribution.id
+                continue
+            rendered_successor = _render_successor(
+                contribution.scope,
+                contribution.adapter,
+                successor_config,
+                target=contribution.target.original,
+            )
+            rendered_v17 = _render_v17(
+                contribution.scope,
+                contribution.adapter,
+                v17_config,
+                target=contribution.target.original,
+            )
+            assert rendered_v17 == rendered_successor, contribution.id
+
+
+@pytest.mark.parametrize(
+    "roots",
+    [
+        [{"coverage": False}],
+        [{"path": "scripts", "coverage": False, "extra": True}],
+        [{"path": "scripts", "coverage": "no"}],
+        [{"path": "/absolute", "coverage": False}],
+        [{"path": "../escape"}],
+        [{"path": ""}],
+        [{"path": "back\\slash"}],
+        ["/absolute"],
+        ["src", "src"],
+        [1],
+    ],
+)
+def test_python_tooling_17_rejects_malformed_per_root_entries(roots: list[object]) -> None:
+    with pytest.raises(PackageContractError):
+        _v17_options(additional_source_roots=roots)
+
+
+def test_python_tooling_17_rejects_duplicate_declared_paths_across_forms() -> None:
+    config = _v17_options(
+        additional_source_roots=["scripts", {"path": "scripts", "coverage": False}]
+    )
+
+    with pytest.raises(ControlPlaneError) as exc_info:
+        _render_v17("key:/tool/basedpyright/include", AdapterKind.TOML, config)
+
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert "duplicate" in str(exc_info.value.__cause__)
+
+
+def test_python_tooling_17_resolves_issue_24_end_to_end(tmp_path: Path) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.7")
+    repo = _released_v4_repo(tmp_path)
+    (repo / ".project-standards.yml").write_text(
+        'standards_version: "v3"\n'
+        "python_tooling:\n"
+        '  version: "1.0"\n'
+        "  additional_source_roots:\n"
+        '    - "docs/handoff/bugs"\n'
+        '    - path: "scripts"\n'
+        "      coverage: false\n",
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests", "docs/handoff/bugs", "scripts"]\n\n'
+        "[tool.coverage.run]\n"
+        "branch = true\n"
+        'source = ["src", "docs/handoff/bugs"]\n',
+        encoding="utf-8",
+    )
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    assert migration.reports[0].package.config.get("additional_source_roots") == [
+        "docs/handoff/bugs",
+        {"path": "scripts", "coverage": False},
+    ]
+    assert apply_legacy_migration(migration).success
+    pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["tool"]["basedpyright"]["include"] == [
+        "src",
+        "tests",
+        "docs/handoff/bugs",
+        "scripts",
+    ]
+    assert pyproject["tool"]["coverage"]["run"]["source"] == [
+        "src",
+        "docs/handoff/bugs",
+    ]
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    _assert_no_mutating_actions(second)
+
+
+def test_python_tooling_17_payload_is_integral_and_documented() -> None:
+    payload = _v17_payload()
+
+    assert payload.manifest.payload.version.value == "1.7"
+    successor_manifest = load_payload_manifest(_SUCCESSOR_PAYLOAD / "payload.toml")
+    successor_by_id = {item.id: item for item in successor_manifest.contributions}
+    for contribution_id in ("basedpyright-include", "coverage-run-config", "ruff-config"):
+        v17 = next(item for item in payload.manifest.contributions if item.id == contribution_id)
+        assert v17.governing_options == successor_by_id[contribution_id].governing_options
+
+    migrations = {item.id: item for item in payload.manifest.migrations}
+    assert "python-tooling-1-6-to-1-7" in migrations
+    assert "legacy-v4-to-1-7" in migrations
+    adopt = (_V17_PAYLOAD / "adopt.md").read_text(encoding="utf-8")
+    assert "coverage = false" in adopt
+    family_index = (_FAMILY / "standard.toml").read_text(encoding="utf-8")
+    assert 'version = "1.7"' in family_index
+    assert payload.integrity.aggregate_digest.value in family_index
