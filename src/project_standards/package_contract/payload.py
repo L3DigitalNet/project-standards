@@ -357,6 +357,10 @@ class ContributionDeclaration(ConditionalMaterialization):
     source_digest: Sha256Digest | None = None
     provider: ResourceId | None = None
     shared_identity: SharedIdentity | None = None
+    # None means unknown (released payloads predate the field); an explicit empty
+    # list declares that no option can change the rendered unit. Consumers of
+    # conflict findings rely on that three-way distinction — do not collapse it.
+    governing_options: list[OptionName | OptionPointer] | None = None
 
     @model_validator(mode="after")
     def _source_and_scope_contract(self) -> ContributionDeclaration:
@@ -1085,26 +1089,41 @@ def _validate_extension_options(
             )
 
 
+def _require_declared_option_path(
+    document: Mapping[str, JsonValue],
+    option: str,
+    *,
+    role: str,
+) -> None:
+    segments = option.split("/")[1:] if option.startswith("/") else [option]
+    node: Mapping[str, JsonValue] = document
+    for index, segment in enumerate(segments):
+        child = _object_properties(node).get(segment)
+        if not isinstance(child, dict):
+            raise PackageContractError(f"{role} names an undeclared option path: {option}")
+        if index + 1 < len(segments) and child.get("type") != "object":
+            raise PackageContractError(f"{role} traverses a non-object option: {option}")
+        node = child
+
+
 def _validate_predicate_options(
     document: Mapping[str, JsonValue],
     manifest: PayloadManifest,
 ) -> None:
     for declaration in (*manifest.artifacts, *manifest.contributions):
         for predicate in declaration.when_any:
-            option = predicate.option
-            segments = option.split("/")[1:] if option.startswith("/") else [option]
-            node: Mapping[str, JsonValue] = document
-            for index, segment in enumerate(segments):
-                child = _object_properties(node).get(segment)
-                if not isinstance(child, dict):
-                    raise PackageContractError(
-                        f"materialization predicate names an undeclared option path: {option}"
-                    )
-                if index + 1 < len(segments) and child.get("type") != "object":
-                    raise PackageContractError(
-                        f"materialization predicate traverses a non-object option: {option}"
-                    )
-                node = child
+            _require_declared_option_path(
+                document,
+                predicate.option,
+                role="materialization predicate",
+            )
+    for contribution in manifest.contributions:
+        for option in contribution.governing_options or ():
+            _require_declared_option_path(
+                document,
+                option,
+                role="contribution governing option",
+            )
 
 
 def _schema_error_location(error_path: Iterable[object]) -> str:

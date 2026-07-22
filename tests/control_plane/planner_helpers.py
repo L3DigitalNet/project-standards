@@ -41,6 +41,7 @@ class ContributionFixture(TypedDict):
     shared_identity: NotRequired[str]
     policy: NotRequired[str]
     when_any: NotRequired[list[dict[str, object]]]
+    governing_options: NotRequired[list[str]]
 
 
 class ExtensionFixture(TypedDict):
@@ -148,6 +149,8 @@ def write_payload(
             contribution_row["shared_identity"] = item["shared_identity"]
         if "when_any" in item:
             contribution_row["when_any"] = item["when_any"]
+        if "governing_options" in item:
+            contribution_row["governing_options"] = item["governing_options"]
         provider = item.get("provider")
         if provider is not None:
             contribution_row["provider"] = provider

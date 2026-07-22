@@ -763,6 +763,78 @@ def test_option_schema_rejects_predicate_through_non_object_intermediate(
         load_option_schema(payload.root, payload.manifest)
 
 
+def _governing_payload(tmp_path: Path, governing: list[str]) -> InstalledPayload:
+    return write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "governed",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/alpha",
+                "content": b'[tool.alpha]\nmode = "on"\n',
+                "governing_options": governing,
+            }
+        ],
+        option_properties=_ENGINE_SCHEMA,
+    )
+
+
+def test_contribution_without_governing_options_defaults_to_absent(tmp_path: Path) -> None:
+    payload = _predicate_payload(tmp_path, "/engine/name")
+
+    assert payload.manifest.contributions[0].governing_options is None
+
+
+def test_contribution_accepts_empty_governing_options_declaration(tmp_path: Path) -> None:
+    payload = _governing_payload(tmp_path, [])
+
+    assert payload.manifest.contributions[0].governing_options == []
+    load_option_schema(payload.root, payload.manifest)
+
+
+def test_contribution_accepts_governing_options_naming_declared_paths(tmp_path: Path) -> None:
+    payload = _governing_payload(tmp_path, ["/engine/name", "engine"])
+
+    assert payload.manifest.contributions[0].governing_options == ["/engine/name", "engine"]
+    load_option_schema(payload.root, payload.manifest)
+
+
+@pytest.mark.parametrize("option", ["undeclared", "/engine/nmae"])
+def test_option_schema_rejects_governing_option_naming_undeclared_path(
+    tmp_path: Path,
+    option: str,
+) -> None:
+    payload = _governing_payload(tmp_path, [option])
+
+    with pytest.raises(PackageContractError, match="undeclared option path"):
+        load_option_schema(payload.root, payload.manifest)
+
+
+def test_option_schema_rejects_governing_option_through_non_object_intermediate(
+    tmp_path: Path,
+) -> None:
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "governed",
+                "target": "config.toml",
+                "adapter": "toml",
+                "scope": "table:/tool/alpha",
+                "content": b'[tool.alpha]\nmode = "on"\n',
+                "governing_options": ["/engine/name"],
+            }
+        ],
+        option_properties={"engine": {"properties": {"name": {"type": "string"}}}},
+    )
+
+    with pytest.raises(PackageContractError, match="non-object option"):
+        load_option_schema(payload.root, payload.manifest)
+
+
 def test_every_shipped_payload_satisfies_the_predicate_option_contract() -> None:
     for manifest_path in sorted(
         Path(__file__).resolve().parents[2].glob("standards/*/versions/*/payload.toml")
