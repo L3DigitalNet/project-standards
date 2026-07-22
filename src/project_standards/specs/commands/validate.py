@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 
 from project_standards.specs.document import definition_sites
-from project_standards.specs.model import Finding, Registry, SpecDocument
+from project_standards.specs.model import (
+    Finding,
+    Registry,
+    SpecDocument,
+    absolute_finding_lines,
+)
 from project_standards.specs.registry import (
     _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
     appendix_letters,
@@ -51,8 +56,8 @@ def validate_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     out += _check_appendices(doc, reg, structural_body)
     out += _check_references(doc, reg, structural_body)
     out += _check_ids(doc, reg)
-    out += _check_tables(structural_body)
-    return out
+    out += _check_tables(structural_body, body_line_offset=doc.body_line_offset)
+    return absolute_finding_lines(out, body_line_offset=doc.body_line_offset)
 
 
 def _check_frontmatter(doc: SpecDocument, reg: Registry) -> list[Finding]:
@@ -201,7 +206,7 @@ def _check_ids(doc: SpecDocument, reg: Registry) -> list[Finding]:
     return out
 
 
-def _check_tables(structural_body: str) -> list[Finding]:
+def _check_tables(structural_body: str, *, body_line_offset: int) -> list[Finding]:
     out: list[Finding] = []
     lines = structural_body.splitlines()
     i = 0
@@ -218,7 +223,8 @@ def _check_tables(structural_body: str) -> list[Finding]:
                     out.append(
                         _f(
                             "SV-TABLE",
-                            f"L{j + 1}: {_delim_pipes(lines[j])} pipes vs header {cols}",
+                            f"L{j + 1 + body_line_offset}: "
+                            f"{_delim_pipes(lines[j])} pipes vs header {cols}",
                             line=j + 1,
                         )
                     )

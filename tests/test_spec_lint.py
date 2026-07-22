@@ -18,10 +18,49 @@ def test_draft_placeholders_warn() -> None:
     assert "SL-PLACEHOLDER" in _codes("draft_placeholders.md")
 
 
+def test_lint_lines_are_absolute_file_coordinates() -> None:
+    doc = parse_document(
+        "coordinates.md",
+        "---\n"
+        "spec_id: SPEC-0001\n"
+        "profile: light\n"
+        "status: draft\n"
+        "---\n"
+        "# Demo\n"
+        "<replace me>\n"
+        "> **Template instructions**: remove this line.\n",
+    )
+
+    lines = {
+        finding.code: finding.line
+        for finding in lint_document(doc, load_registry())
+        if finding.code in {"SL-PLACEHOLDER", "SL-GUIDANCE"}
+    }
+
+    assert lines == {"SL-PLACEHOLDER": 7, "SL-GUIDANCE": 8}
+
+
+def test_lint_lines_without_frontmatter_remain_body_coordinates() -> None:
+    doc = parse_document("coordinates.md", "# Demo\n<replace me>\n")
+
+    placeholder = next(
+        finding
+        for finding in lint_document(doc, load_registry())
+        if finding.code == "SL-PLACEHOLDER"
+    )
+
+    assert placeholder.line == 2
+
+
 def test_approved_light_flags_dod_not_matrix() -> None:
-    codes = _codes("approved_light.md")
+    doc = parse_document(
+        "approved_light.md", (_FIX / "approved_light.md").read_text(encoding="utf-8")
+    )
+    findings = lint_document(doc, load_registry())
+    codes = {finding.code for finding in findings}
     assert "SL-DOD" in codes
     assert "SL-TRACE" not in codes
+    assert next(finding for finding in findings if finding.code == "SL-DOD").line is None
 
 
 def test_valid_light_is_clean() -> None:

@@ -84,6 +84,40 @@ def test_bad_fixture_reports_code(name: str, code: str) -> None:
     assert code in _codes(name)
 
 
+def test_validate_lines_are_absolute_file_coordinates() -> None:
+    doc = parse_document(
+        "coordinates.md",
+        "---\n"
+        "spec_id: SPEC-0001\n"
+        "profile: light\n"
+        "status: draft\n"
+        "---\n"
+        "# Demo\n"
+        "<replace me>\n"
+        "## 999. Unknown\n",
+    )
+
+    section = next(
+        finding
+        for finding in validate_document(doc, load_registry())
+        if finding.code == "SV-SECTION"
+    )
+
+    assert section.line == 8
+
+
+def test_table_finding_structured_and_embedded_lines_are_absolute() -> None:
+    source = (_FIX / "bad_table.md").read_text(encoding="utf-8")
+    doc = parse_document("bad_table.md", source)
+
+    table = next(
+        finding for finding in validate_document(doc, load_registry()) if finding.code == "SV-TABLE"
+    )
+
+    assert table.line == 161
+    assert table.message == "L161: 5 pipes vs header 6"
+
+
 def test_undeclared_message_names_appendix_a_and_reference_prefixes() -> None:
     doc = parse_document("t.md", "---\nspec_id: SPEC-0001\n---\nBody cites FR-001 as an id.\n")
     findings = validate_document(doc, load_registry())

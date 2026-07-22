@@ -22,7 +22,7 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:cad47c56804541c5083de18f66743b6ea4c4d90048f4a050bba121f8b4f55586"
+digest = "sha256:3dfbef51914b44fafaeb3a6d0916e12e1dadc7fd1a9a7dfeba8742513c5c988a"
 
 [[resources]]
 id = "adopt"
@@ -36,7 +36,7 @@ id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:c60c586470ff1e1e7a0b9b2058595943fb78579e4bf16b2a52f5ef090784c8d3"
+digest = "sha256:f650e731986fe4761719be91617e36450d4efe788de5aa9ee01577ea069d8bb1"
 
 [[resources]]
 id = "config-schema"
@@ -120,7 +120,7 @@ id = "provider-findings"
 role = "provider-resource"
 path = "schemas/findings.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:c838f02865d72e8d2aa4d6640e1fb50d03187122571752d1c75970f93ffb1066"
+digest = "sha256:48e903190fe18088a74c6fe476256856ac7d0805af40292d43b49c4c5ef2dbc6"
 
 [[resources]]
 id = "provider-content"

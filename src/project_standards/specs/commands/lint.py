@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 
 from project_standards.specs.document import section_slice
-from project_standards.specs.model import Finding, Registry, SpecDocument
+from project_standards.specs.model import (
+    Finding,
+    Registry,
+    SpecDocument,
+    absolute_finding_lines,
+)
 from project_standards.specs.registry import (
     _masked_structural_view,  # pyright: ignore[reportPrivateUsage]
 )
@@ -29,7 +34,7 @@ def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
             out.append(_w("SL-GUIDANCE", "template guidance not deleted", line=i))
     if doc.frontmatter.get("status") == "approved":
         out += _traceability(doc, reg)
-    return out
+    return absolute_finding_lines(out, body_line_offset=doc.body_line_offset)
 
 
 def _must_frs(doc: SpecDocument) -> list[str]:

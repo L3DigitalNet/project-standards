@@ -32,6 +32,16 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[1]
 _FAMILY = _ROOT / "standards/project-spec"
 _PAYLOAD = _FAMILY / "versions/1.1"
+_COORDINATE_SOURCE = (
+    "---\n"
+    "spec_id: SPEC-0001\n"
+    "profile: light\n"
+    "status: draft\n"
+    "---\n"
+    "# Demo\n"
+    "<replace me>\n"
+    "## 999. Unknown\n"
+)
 
 
 @pytest.mark.parametrize(
@@ -177,6 +187,61 @@ def test_validate_routes_through_enabled_selected_payload(
 
     result = json.loads(capsys.readouterr().out)
     assert result == [{"file": "docs/specs/example.md", "ok": True, "findings": []}]
+
+
+@pytest.mark.parametrize("version", ["1.1", "1.2", "1.3", "1.4"])
+@pytest.mark.parametrize(
+    ("verb", "code", "severity", "message", "locus", "expected_line"),
+    [
+        (
+            "lint",
+            "SL-PLACEHOLDER",
+            "warning",
+            "unfilled <angle-bracket> placeholder",
+            None,
+            7,
+        ),
+        (
+            "validate",
+            "SV-SECTION",
+            "error",
+            "§999 is not in the canonical registry",
+            "§999",
+            8,
+        ),
+    ],
+)
+def test_selected_predecessors_report_absolute_lines_without_other_finding_changes(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    version: str,
+    verb: str,
+    code: str,
+    severity: str,
+    message: str,
+    locus: str | None,
+    expected_line: int,
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version=version)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+    spec = repo / "docs/specs/coordinates.md"
+    spec.parent.mkdir(parents=True)
+    spec.write_text(_COORDINATE_SOURCE, encoding="utf-8")
+
+    target = str(spec.relative_to(repo))
+    assert run([verb, "--strict", "--json", target], repo=repo, distribution=distribution) == 1
+    result = json.loads(capsys.readouterr().out)
+    finding = next(item for item in result[0]["findings"] if item["code"] == code)
+    assert finding == {
+        "code": code,
+        "severity": severity,
+        "message": message,
+        "line": expected_line,
+        "locus": locus,
+    }
 
 
 @pytest.mark.parametrize(

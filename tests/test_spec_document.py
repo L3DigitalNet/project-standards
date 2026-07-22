@@ -36,6 +36,21 @@ def test_used_ids_line_numbers_are_one_indexed() -> None:
     assert [ln for _fid, ln in doc.used_ids["FR"]] == [3, 5, 5]
 
 
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        pytest.param("# Body\n", 0, id="no-frontmatter"),
+        pytest.param("---\nspec_id: SPEC-0001\n---\n# Body\n", 3, id="frontmatter"),
+        pytest.param("---\nspec_id: SPEC-0001\n---", 2, id="empty-body"),
+        pytest.param("---\r\nspec_id: SPEC-0001\r\n---\r\n# Body\r\n", 0, id="crlf-unrecognized"),
+    ],
+)
+def test_body_line_offset_tracks_split_frontmatter(source: str, expected: int) -> None:
+    doc = parse_document("x.md", source)
+
+    assert doc.body_line_offset == expected
+
+
 def test_denylist_excludes_non_ids() -> None:
     doc = parse_document("x.md", "---\n\n---\n# t\nText about WCAG-2 and PITR-1 and FR-005.\n")
     assert "WCAG" not in doc.used_ids and "PITR" not in doc.used_ids

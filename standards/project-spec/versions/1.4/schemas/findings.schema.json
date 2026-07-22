@@ -15,7 +15,11 @@
 					"identity": { "type": "string" },
 					"message": { "type": "string" },
 					"hint": { "type": "string" },
-					"line": { "type": ["integer", "null"], "minimum": 1 },
+					"line": {
+						"description": "Absolute one-based physical file line, including frontmatter, or null when no line applies.",
+						"type": ["integer", "null"],
+						"minimum": 1
+					},
 					"locus": { "type": ["string", "null"] }
 				},
 				"required": [

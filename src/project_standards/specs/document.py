@@ -85,6 +85,7 @@ def parse_document(
         fm, body = split_front_matter(text)
     except ValueError as exc:
         raise SpecParseError(f"{path}: malformed frontmatter fence: {exc}") from exc
+    body_line_offset = text[: len(text) - len(body)].count("\n")
     structural_body = _masked_structural_view(body)
     hs = headings(structural_body)
     anchors = anchor_headings(structural_body)
@@ -113,6 +114,7 @@ def parse_document(
         slugs=_anchor_slugs(anchors),
         used_ids=used,
         declared_prefixes=declared,
+        body_line_offset=body_line_offset,
     )
 
 

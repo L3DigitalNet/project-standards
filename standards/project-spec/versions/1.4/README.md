@@ -140,6 +140,8 @@ Grouped by what they do to a spec. Each notes the guarantee(s) from [§3](#3-fea
 
 - **Review contract** _(core)_ — a checklist and prompt an agent runs _after_ `validate` and `lint` pass: weak or untestable language ("fast", "robust" without a criterion), terminology drift against the Glossary, requirement atomicity, goal-to-requirement coherence, and non-goal violations. The prose layer the deterministic tools cannot judge. → **G8**
 
+Every line-bearing `validate` or `lint` finding uses the document's absolute, one-based physical file line, including the complete YAML frontmatter envelope. Human output, JSON output, and selected-provider findings therefore use the same coordinates as editors and line-oriented command-line tools. Findings without a physical line retain `null`.
+
 #### External references vs. spec-local IDs
 
 Uppercase `PFX-NNN` tokens are **spec-local IDs** you mint — they must be declared in Appendix A and are width- and tier-checked. Tokens you only **reference** are exempt:

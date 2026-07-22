@@ -11,6 +11,16 @@ from project_standards.specs import cli as spec_cli
 from project_standards.specs.cli import run
 
 _FIX = Path(__file__).resolve().parent / "fixtures" / "specs"
+_COORDINATE_SOURCE = (
+    "---\n"
+    "spec_id: SPEC-0001\n"
+    "profile: light\n"
+    "status: draft\n"
+    "---\n"
+    "# Demo\n"
+    "<replace me>\n"
+    "## 999. Unknown\n"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -104,6 +114,31 @@ def test_lint_json_shape(capsys: pytest.CaptureFixture[str]) -> None:
     assert rc == 0
     assert set(data[0]) == {"file", "ok", "findings"}
     assert data[0]["findings"] and data[0]["findings"][0]["severity"] == "warning"
+
+
+@pytest.mark.parametrize(
+    ("verb", "code", "expected_line"),
+    [("lint", "SL-PLACEHOLDER", 7), ("validate", "SV-SECTION", 8)],
+)
+def test_spec_finding_lines_are_absolute_in_human_and_json_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    verb: str,
+    code: str,
+    expected_line: int,
+) -> None:
+    spec = tmp_path / "coordinates.md"
+    spec.write_text(_COORDINATE_SOURCE, encoding="utf-8")
+
+    assert run([verb, "--strict", str(spec)]) == 1
+    human = capsys.readouterr().out
+    assert f"[{code}]" in human
+    assert f"(L{expected_line})" in human
+
+    assert run([verb, "--strict", "--json", str(spec)]) == 1
+    result = json.loads(capsys.readouterr().out)
+    finding = next(item for item in result[0]["findings"] if item["code"] == code)
+    assert finding["line"] == expected_line
 
 
 def test_extract_json_found_and_no_match(capsys: pytest.CaptureFixture[str]) -> None:

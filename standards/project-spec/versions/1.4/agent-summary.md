@@ -9,6 +9,7 @@ The canonical [README](README.md) is authoritative and wins if this summary conf
 - Keep requirements atomic and testable. Declare spec-local IDs in Appendix A; list cited external namespaces in `reference_prefixes`.
 - Selected-mode CLI paths must be consumer-root-relative and cannot contain traversal or symlinked parents or leaves.
 - `validate`, `lint`, `extract`, and `next` are read-only. `new --stdout` and `upgrade --stdout` are read-only previews. File-producing authoring operations return typed plans for the platform executor.
+- Line-bearing `validate` and `lint` findings use absolute, one-based physical file lines in human, JSON, and selected-provider output; line-less findings remain `null`.
 - With `workflow_ownership = "managed"`, the package manages `.github/workflows/validate-specs.yml`; its jobs use bare spec commands and defer authority resolution to the CLI. Consumer-authored specification documents remain consumer-owned.
 - Automatic migration maps specification settings semantically and adopts only the exact released caller. A customized legacy caller requires explicit `workflow_ownership: "consumer-owned"` intent; other modified or unclaimed state blocks apply.
 - Disable plus reconcile removes managed workflow ownership without deleting authored specifications.

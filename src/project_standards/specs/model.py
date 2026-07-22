@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -45,3 +45,14 @@ class SpecDocument:
     slugs: frozenset[str]
     used_ids: dict[str, list[tuple[str, int]]]
     declared_prefixes: dict[str, str]
+    body_line_offset: int = 0
+
+
+def absolute_finding_lines(findings: list[Finding], *, body_line_offset: int) -> list[Finding]:
+    """Translate body-relative findings once at the shared command boundary."""
+    return [
+        replace(finding, line=finding.line + body_line_offset)
+        if finding.line is not None
+        else finding
+        for finding in findings
+    ]
