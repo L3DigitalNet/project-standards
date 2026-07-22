@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import project_standards.agent_handoff.validation as validation
+from project_standards.agent_handoff.integrations.instructions import merge_instruction_block
 from project_standards.agent_handoff.integrations.links import (
     _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # focused internal contract
 )
@@ -347,6 +348,54 @@ def test_size_and_shape_views_project_policy_findings(tmp_path: Path) -> None:
 
     assert any(finding.code == "AH-SIZE-CAP" for finding in size_report(RepositoryRoot(tmp_path)))
     assert any(finding.code == "AH-SHAPE" for finding in shape_check(RepositoryRoot(tmp_path)))
+
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
+def test_legacy_size_report_excludes_one_exact_instruction_block(
+    tmp_path: Path,
+    newline: bytes,
+) -> None:
+    block = merge_instruction_block("").encode()
+    if newline == b"\r\n":
+        block = block.replace(b"\n", newline)
+    consumer = b"x" * (2048 - 2 * len(newline)) + newline * 2
+    (tmp_path / "CLAUDE.md").write_bytes(consumer + block)
+
+    findings = size_report(RepositoryRoot(tmp_path))
+
+    assert len(consumer) == 2048
+    assert not any(
+        finding.code == "AH-SIZE-CAP" and finding.path == "CLAUDE.md" for finding in findings
+    )
+
+
+@pytest.mark.parametrize("case", ["partial", "nested", "duplicate", "wrong-marker"])
+def test_legacy_size_report_counts_ambiguous_instruction_blocks(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    block = merge_instruction_block("").encode()
+    if case == "partial":
+        block = block.replace(b"<!-- END agent-handoff managed instructions -->\n", b"")
+    elif case == "nested":
+        block = block.replace(
+            b"Use the repo-local",
+            b"<!-- BEGIN agent-handoff managed instructions -->\nUse the repo-local",
+        )
+    elif case == "duplicate":
+        block += block
+    elif case == "wrong-marker":
+        block = block.replace(
+            b"<!-- END agent-handoff managed instructions -->",
+            b"<!-- END agent-handoff other instructions -->",
+        )
+    (tmp_path / "CLAUDE.md").write_bytes(b"x" * 2048 + block)
+
+    findings = size_report(RepositoryRoot(tmp_path))
+
+    assert any(
+        finding.code == "AH-SIZE-CAP" and finding.path == "CLAUDE.md" for finding in findings
+    )
 
 
 def test_shape_check_excludes_index_but_checks_numbered_bug(tmp_path: Path) -> None:

@@ -25,7 +25,10 @@ from project_standards.agent_handoff.integrations.instructions import (
 from project_standards.agent_handoff.integrations.links import (
     _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
 )
-from project_standards.agent_handoff.integrations.markers import IntegrationConflictError
+from project_standards.agent_handoff.integrations.markers import (
+    INSTRUCTION_MARKERS,
+    IntegrationConflictError,
+)
 from project_standards.agent_handoff.integrations.project_config import merge_project_config
 from project_standards.agent_handoff.model import AgentHandoffConfig, Finding, Harness, StartupMode
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
@@ -45,6 +48,11 @@ _HOOK_PATH = ".agents/hooks/agent-handoff/session_start.py"
 _LOCK_PATH = ".agents/agent-handoff/manifest.json"
 _FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
 _INLINE_CODE_RE = re.compile(r"(`+)(.*?)\1")
+_LEGACY_INSTRUCTION_BLOCK_LF = merge_instruction_block("").encode()
+_LEGACY_INSTRUCTION_BLOCKS = (
+    _LEGACY_INSTRUCTION_BLOCK_LF,
+    _LEGACY_INSTRUCTION_BLOCK_LF.replace(b"\n", b"\r\n"),
+)
 
 
 def _finding(
@@ -336,6 +344,8 @@ def size_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
             continue
         if data is None:
             continue
+        if relative in {"AGENTS.md", "CLAUDE.md"}:
+            data = _without_exact_legacy_instruction_block(data)
         measured = measure_bytes(data, cap=budget.cap, target=budget.target)
         if measured.status == "over-cap":
             findings.append(
@@ -358,6 +368,19 @@ def size_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
                 )
             )
     return _sorted(findings)
+
+
+def _without_exact_legacy_instruction_block(data: bytes) -> bytes:
+    """Remove one canonical V4 block while counting every ambiguous variant."""
+    start = INSTRUCTION_MARKERS.start.encode()
+    end = INSTRUCTION_MARKERS.end.encode()
+    if data.count(start) != 1 or data.count(end) != 1:
+        return data
+    for block in _LEGACY_INSTRUCTION_BLOCKS:
+        if data.count(block) == 1:
+            offset = data.index(block)
+            return data[:offset] + data[offset + len(block) :]
+    return data
 
 
 def _shape_targets(repository: RepositoryRoot, pattern: str) -> tuple[tuple[str, bytes], ...]:
