@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -1431,7 +1432,7 @@ def test_bounded_block_without_replacement_target_never_removes_whole_file(
     )
 
 
-def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_update(
+def test_semantic_migration_uses_signature_digest_for_claim_and_source_digest_for_ownership(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1440,8 +1441,10 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
     base = installed_distribution(tmp_path)
     installed = base.load_catalog("5")
     alpha = installed.payload_map[("alpha", "2.0")]
-    legacy_content = b"legacy = true\n"
-    legacy_digest = Sha256Digest(f"sha256:{hashlib.sha256(legacy_content).hexdigest()}")
+    legacy_content = b"legacy=true\n"
+    signature_content = b'{"legacy":true}'
+    signature_digest = content_digest(signature_content)
+    source_digest = content_digest(legacy_content)
     contribution = ContributionDeclaration.model_validate(
         {
             "id": "legacy-rendered",
@@ -1455,7 +1458,8 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
     signature = alpha.manifest.legacy_signatures[0].model_copy(
         update={
             "targets": [SafeRelativePath.parse("legacy-rendered.toml")],
-            "known_content_digests": [legacy_digest],
+            "format": LegacySignatureFormat.TOML,
+            "known_content_digests": [signature_digest],
         }
     )
     manifest = alpha.manifest.model_copy(
@@ -1475,9 +1479,11 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
         _FixtureDistribution(changed, base.consumer_catalog("5")),
     )
     original = provider_module.invoke_provider
+    migrate_snapshot: dict[str, object] = {}
 
     def migration_claim(invocation: ProviderInvocation) -> ProviderResult:
         if invocation.operation is ProviderOperation.MIGRATE:
+            migrate_snapshot.update(invocation.snapshots)
             return ProviderResult(
                 effect=ProviderEffect.MIGRATION_REPORT,
                 migration_report=MigrationReport(
@@ -1496,7 +1502,7 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
                             {
                                 "signature_id": signature.id,
                                 "target": "legacy-rendered.toml",
-                                "observed_digest": legacy_digest.value,
+                                "observed_digest": signature_digest.value,
                                 "ownership": "managed",
                                 "disposition": "adopt",
                             }
@@ -1521,13 +1527,38 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
     plan = plan_legacy_migration(repo, distribution, "5")
 
     assert plan.applicable, plan.findings
+    snapshot = cast(
+        "dict[str, dict[str, dict[str, object]]]",
+        migrate_snapshot["legacy_signatures"],
+    )[signature.id]["legacy-rendered.toml"]
+    assert snapshot == {
+        "digest": signature_digest.value,
+        "source_digest": source_digest.value,
+        "known": True,
+        "content_base64": base64.b64encode(signature_content).decode("ascii"),
+    }
+    assert plan.legacy_preconditions == (
+        (".project-standards.yml", content_digest((repo / ".project-standards.yml").read_bytes())),
+        ("legacy-rendered.toml", source_digest),
+    )
     seeded = next(
         unit
         for unit in plan.planner.resolution.previous_lock.artifacts
         if unit.path.original == "legacy-rendered.toml"
     )
     assert seeded.adapter.value == "whole-file"
-    assert seeded.semantic_digest == legacy_digest
+    assert seeded.semantic_digest == source_digest
+    assert seeded.content_digest == source_digest
+    update = next(action for action in plan.actions if action.target == "legacy-rendered.toml")
+    assert update.before_digest == source_digest.value
+
+    (repo / "legacy-rendered.toml").write_bytes(b"legacy = true\n")
+    stale = apply_legacy_migration(plan)
+    assert not stale.success
+    assert stale.error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards").exists()
+    (repo / "legacy-rendered.toml").write_bytes(legacy_content)
+
     result = apply_legacy_migration(plan)
     assert result.success, result
     assert (repo / "legacy-rendered.toml").read_bytes() == b"[alpha]\nenabled = true\n"
@@ -1539,9 +1570,47 @@ def test_migration_adopts_exact_managed_whole_file_contribution_before_provider_
     )
 
 
+def test_semantic_removal_action_binds_exact_source_digest() -> None:
+    from project_standards.control_plane.migration import (
+        _removal_actions,  # pyright: ignore[reportPrivateUsage]  # exact ownership boundary
+    )
+
+    source = b"legacy=true\n"
+    signature = b'{"legacy":true}'
+    target = SafeRelativePath.parse("legacy-rendered.toml")
+    observed = _ObservedSignature(
+        "demo",
+        "legacy-demo",
+        target,
+        content_digest(signature),
+        content_digest(source),
+        True,
+        source,
+        signature,
+    )
+    report = MigrationReport(
+        schema_version="1.0",
+        package=_package(),
+        claims=(
+            _claim(
+                signature_id=observed.signature_id,
+                target=target.original,
+                observed_digest=observed.signature_digest.value,
+                disposition="remove",
+            ),
+        ),
+    )
+
+    actions = _removal_actions((report,), {observed.key: observed})
+
+    action = next(item for item in actions if item.target == target.original)
+    assert action.before_digest == observed.source_digest.value
+
+
 def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
     tmp_path: Path,
 ) -> None:
+    from project_standards.control_plane.adapters import YamlAdapter
     from project_standards.control_plane.migration import (
         _adopted_legacy_units,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
         _ObservedSignature,  # pyright: ignore[reportPrivateUsage]  # exact bridge boundary
@@ -1560,7 +1629,13 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
     desired = (
         b"jobs:\n  frontmatter:\n    uses: example/actions/.github/workflows/frontmatter.yml@v5\n"
     )
-    observed_digest = Sha256Digest(f"sha256:{hashlib.sha256(legacy).hexdigest()}")
+    signature_content = (
+        b'{"jobs":{"consumer":{"runs-on":"ubuntu-latest","steps":[]},'
+        b'"validate":{"uses":"example/actions/.github/workflows/frontmatter.yml@v4"}},'
+        b'"name":"Validate standards"}'
+    )
+    signature_digest = content_digest(signature_content)
+    source_digest = content_digest(legacy)
     base = write_payload(
         tmp_path / "payload",
         "demo",
@@ -1578,8 +1653,9 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
         {
             "id": "legacy-validate-standards-workflow",
             "kind": "whole-file",
+            "format": "yaml",
             "targets": [target.original],
-            "known_content_digests": [observed_digest.value],
+            "known_content_digests": [signature_digest.value],
         }
     )
     payload = InstalledPayload(
@@ -1602,7 +1678,7 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
                 {
                     "signature_id": signature.id,
                     "target": target.original,
-                    "observed_digest": observed_digest.value,
+                    "observed_digest": signature_digest.value,
                     "ownership": "managed",
                     "disposition": "adopt",
                     "historical_units": [{"adapter": "yaml", "scope": "key:/jobs/validate"}],
@@ -1614,11 +1690,11 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
         "demo",
         signature.id,
         target,
-        observed_digest,
-        observed_digest,
+        signature_digest,
+        source_digest,
         True,
         legacy,
-        legacy,
+        signature_content,
     )
 
     units = _adopted_legacy_units(
@@ -1628,8 +1704,13 @@ def test_migration_bridges_exact_workflow_to_scoped_yaml_unit(
     )
 
     assert len(units) == 1
+    expected = YamlAdapter().inspect(legacy, ("key:/jobs/validate",)).units[0]
     assert units[0].adapter.value == "yaml"
     assert units[0].scope == "key:/jobs/validate"
+    assert units[0].semantic_digest == expected.semantic_digest
+    assert units[0].content_digest == content_digest(expected.raw)
+    assert not hasattr(observed, "digest")
+    assert not hasattr(observed, "content")
     repo = tmp_path / "repo"
     workflow = repo / target.original
     workflow.parent.mkdir(parents=True)

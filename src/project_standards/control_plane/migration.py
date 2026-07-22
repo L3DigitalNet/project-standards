@@ -451,14 +451,6 @@ class _ObservedSignature:
     signature_content: bytes = field(repr=False, compare=False)
 
     @property
-    def digest(self) -> Sha256Digest:
-        return self.signature_digest
-
-    @property
-    def content(self) -> bytes:
-        return self.source_content
-
-    @property
     def key(self) -> tuple[str, str, str]:
         return (self.standard_id, self.signature_id, self.target.original)
 
@@ -1120,7 +1112,7 @@ def _claim_findings(
             if item is None:
                 findings.append(_legacy_digest_finding(report, claim))
             if item is not None and item.known:
-                if item.digest != claim.observed_digest:
+                if item.signature_digest != claim.observed_digest:
                     findings.append(_legacy_digest_finding(report, claim))
                 elif claim.historical_units:
                     if signature is None or signature.kind is not LegacySignatureKind.WHOLE_FILE:
@@ -1190,7 +1182,7 @@ def _claim_findings(
                 and claim.ownership == "consumer-owned"
                 and claim.disposition is LegacyDisposition.PRESERVE
                 and item is not None
-                and item.digest == claim.observed_digest
+                and item.signature_digest == claim.observed_digest
                 and not declaration_materializes
                 and not any(
                     target.target == claim.target.original for target in reconciliation.targets
@@ -1233,7 +1225,7 @@ def _claim_findings(
                 and claim.disposition is LegacyDisposition.PRESERVE
                 and claim.intent_pointer is None
                 and item is not None
-                and item.digest == claim.observed_digest
+                and item.signature_digest == claim.observed_digest
                 and bounded_units_materialize
                 and not whole_file_materializes
             )
@@ -1408,7 +1400,7 @@ def _observed_historical_unit(
 ) -> AdapterUnit | None:
     try:
         state = _historical_adapter(historical.adapter).inspect(
-            observed.content,
+            observed.source_content,
             (historical.scope,),
         )
     except ControlPlaneError:
@@ -1442,10 +1434,10 @@ def _adopted_legacy_units(
                 and claim.ownership == "package-lock"
                 and observed_item is not None
                 and observed_item.known
-                and observed_item.digest == claim.observed_digest
+                and observed_item.signature_digest == claim.observed_digest
             ):
                 try:
-                    lock_data = cast(object, json.loads(observed_item.content))
+                    lock_data = cast(object, json.loads(observed_item.source_content))
                 except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                     raise ControlPlaneError("recognized legacy package lock is invalid") from exc
                 if not isinstance(lock_data, dict):
@@ -1486,7 +1478,7 @@ def _adopted_legacy_units(
             safe_historical_claim = (
                 observed_item is not None
                 and observed_item.known
-                and observed_item.digest == claim.observed_digest
+                and observed_item.signature_digest == claim.observed_digest
                 and signature is not None
                 and signature.kind is LegacySignatureKind.WHOLE_FILE
             )
@@ -1519,7 +1511,7 @@ def _adopted_legacy_units(
             if (
                 observed_item is None
                 or not observed_item.known
-                or observed_item.digest != claim.observed_digest
+                or observed_item.signature_digest != claim.observed_digest
                 or signature is None
                 or signature.kind is not LegacySignatureKind.WHOLE_FILE
                 or policy is not ArtifactPolicy.MANAGED
@@ -1543,8 +1535,8 @@ def _adopted_legacy_units(
                     versions={package.standard_id: package.version},
                     provenance=provenance,
                     policy=ArtifactPolicy.MANAGED,
-                    semantic_digest=claim.observed_digest,
-                    content_digest=claim.observed_digest,
+                    semantic_digest=observed_item.source_digest,
+                    content_digest=observed_item.source_digest,
                     mode=None,
                     created_container=False,
                 )
@@ -1605,6 +1597,7 @@ def _bounded_orphan_findings(
 
 def _removal_actions(
     reports: tuple[MigrationReport, ...],
+    observed: Mapping[tuple[str, str, str], _ObservedSignature],
     replacement_targets: frozenset[str] = frozenset(),
     bounded_targets: frozenset[str] = frozenset(),
 ) -> tuple[ControlAction, ...]:
@@ -1627,6 +1620,9 @@ def _removal_actions(
                 continue
             if claim.target.original in replacement_targets | bounded_targets:
                 continue
+            observed_item = observed.get(
+                (report.package.standard_id, claim.signature_id, claim.target.original)
+            )
             actions.append(
                 ControlAction(
                     kind=ActionKind.REMOVE,
@@ -1635,7 +1631,9 @@ def _removal_actions(
                     scope="$file",
                     standard_id=report.package.standard_id,
                     summary="remove imported legacy state after unified verification",
-                    before_digest=claim.observed_digest.value,
+                    before_digest=(
+                        observed_item.source_digest.value if observed_item is not None else None
+                    ),
                 )
             )
     return tuple(sort_actions(actions))
@@ -2043,6 +2041,7 @@ def _plan_legacy_migration(
     # The executor rejects non-applicable plans before any action is performed.
     removals = _removal_actions(
         ordered_reports,
+        observed,
         replacement_targets,
         frozenset(path.original for path, _content in retired_content),
     )
