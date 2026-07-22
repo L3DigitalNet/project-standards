@@ -50,9 +50,9 @@ _PACKAGES = {
         "Markdown Tooling Standard",
         "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and adjacent structured text.",
         "active",
-        "1.5",
+        "1.6",
         "default",
-        "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091",
+        "sha256:cf123371ac92c23942a37a5765b99d1af4f3c2481e2b75c2a239b6b17bc1ba8b",
     ),
     "project-spec": (
         "Project Specification Standard",
@@ -74,9 +74,9 @@ _PACKAGES = {
         "Python Tooling SSOT Standard",
         "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects.",
         "active",
-        "1.4",
+        "1.5",
         "default",
-        "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e",
+        "sha256:a8a8eb80047f2f142152be66c80e5f766f0d4c400f663970e06b598853b6883d",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -93,6 +93,18 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "markdown-tooling",
+        "1.5",
+        "retained",
+        "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091",
+    ),
+    (
+        "python-tooling",
+        "1.4",
+        "retained",
+        "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e",
+    ),
     (
         "adr",
         "1.1",

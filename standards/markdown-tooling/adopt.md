@@ -1,11 +1,11 @@
 # Adopt the Markdown Tooling Standard
 
-The current consumer package is [`markdown-tooling@1.5`](versions/1.5/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
+The current consumer package is [`markdown-tooling@1.6`](versions/1.6/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable markdown-tooling --version 1.5
+project-standards standards enable markdown-tooling --version 1.6
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -29,4 +29,4 @@ project-standards reconcile --check
 
 Run a local tool only when its matching `lint` or `format` option is `true`. For markdownlint, pass every selected `markdown_globs` value followed by each `lint` or `both` exclusion as a negative glob. For Prettier, pass every selected Markdown and config glob and supply each `format` or `both` exclusion through an additional ignore file. These local commands require the corresponding packages to be installed; the managed reusable lint caller supplies its own action runtime. The reconciled workflow is the canonical option-aware CI verification.
 
-Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.5/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.
+Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.6/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.

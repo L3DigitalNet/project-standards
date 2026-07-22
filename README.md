@@ -38,8 +38,8 @@ project-standards/
 │   ├── README.md              #   family and payload anatomy + Catalog 5 index
 │   ├── markdown-frontmatter/  #   family index + immutable 1.2/1.3 payloads
 │   ├── adr/                   #   family index + immutable 1.1 payload
-│   ├── python-tooling/        #   family index + immutable 1.1 payload
-│   ├── markdown-tooling/      #   family index + immutable 1.2 payload
+│   ├── python-tooling/        #   family index + immutable versioned payloads
+│   ├── markdown-tooling/      #   family index + immutable versioned payloads
 │   ├── project-spec/          #   family index + immutable 1.1/1.2 payloads
 │   ├── cli-documentation/     #   family index + immutable 1.1/1.2 payloads
 │   ├── agent-handoff/         #   family index + immutable 1.1/1.2 payloads
@@ -85,15 +85,15 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
-- **Standard:** [`standards/python-tooling/versions/1.4/README.md`](standards/python-tooling/versions/1.4/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.4/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.5/README.md`](standards/python-tooling/versions/1.5/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.5/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.5/README.md`](standards/markdown-tooling/versions/1.5/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.5/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.6/README.md`](standards/markdown-tooling/versions/1.6/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.6/adopt.md)
 
 ### Project Specification Standard
 
@@ -157,8 +157,8 @@ Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.tom
 | --- | --- | --- |
 | Markdown Frontmatter | `1.4` | [`standards/markdown-frontmatter/versions/1.4/adopt.md`](standards/markdown-frontmatter/versions/1.4/adopt.md) |
 | ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
-| Python Tooling | `1.4` | [`standards/python-tooling/versions/1.4/adopt.md`](standards/python-tooling/versions/1.4/adopt.md) |
-| Markdown Tooling | `1.5` | [`standards/markdown-tooling/versions/1.5/adopt.md`](standards/markdown-tooling/versions/1.5/adopt.md) |
+| Python Tooling | `1.5` | [`standards/python-tooling/versions/1.5/adopt.md`](standards/python-tooling/versions/1.5/adopt.md) |
+| Markdown Tooling | `1.6` | [`standards/markdown-tooling/versions/1.6/adopt.md`](standards/markdown-tooling/versions/1.6/adopt.md) |
 | Project Specification | `1.3` | [`standards/project-spec/versions/1.3/adopt.md`](standards/project-spec/versions/1.3/adopt.md) |
 | CLI Documentation | `1.3` | [`standards/cli-documentation/versions/1.3/adopt.md`](standards/cli-documentation/versions/1.3/adopt.md) |
 | Agent Handoff | `1.3` | [`standards/agent-handoff/versions/1.3/adopt.md`](standards/agent-handoff/versions/1.3/adopt.md) |

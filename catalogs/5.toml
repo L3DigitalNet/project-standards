@@ -89,6 +89,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.5"
 digest = "sha256:2f06b126747822b330ed0239630b0dad413afb9f8c56380d72848403a9c23091"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.6"
+digest = "sha256:cf123371ac92c23942a37a5765b99d1af4f3c2481e2b75c2a239b6b17bc1ba8b"
 role = "default"
 
 [[packages]]
@@ -143,6 +149,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.4"
 digest = "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.5"
+digest = "sha256:a8a8eb80047f2f142152be66c80e5f766f0d4c400f663970e06b598853b6883d"
 role = "default"
 
 [[packages]]

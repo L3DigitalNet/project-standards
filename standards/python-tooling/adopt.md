@@ -1,11 +1,11 @@
 # Adopt the Python Tooling Standard
 
-The current consumer package is [`python-tooling@1.4`](versions/1.4/adopt.md). Use it for the uv/uv_build `src/` baseline, Ruff, BasedPyright strict mode, pytest/coverage, pip-audit, CI, VS Code, and bounded agent instructions.
+The current consumer package is [`python-tooling@1.5`](versions/1.5/adopt.md). Use it for the uv/uv_build `src/` baseline, Ruff, BasedPyright strict mode, pytest/coverage, pip-audit, CI, VS Code, and bounded agent instructions.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable python-tooling --version 1.4
+project-standards standards enable python-tooling --version 1.5
 project-standards reconcile
 project-standards reconcile --apply
 uv lock
@@ -37,4 +37,4 @@ uv run coverage report
 uv run pip-audit
 ```
 
-Unsupported option combinations, conflicting TOML ownership, unsafe paths, or managed-unit drift fail closed. See the [version-specific guide](versions/1.4/adopt.md) for the complete option example, outputs, migration, disable semantics, and recovery guidance.
+Unsupported option combinations, conflicting TOML ownership, unsafe paths, or managed-unit drift fail closed. See the [version-specific guide](versions/1.5/adopt.md) for the complete option example, outputs, migration, disable semantics, and recovery guidance.

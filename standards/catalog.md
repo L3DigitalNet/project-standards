@@ -22,7 +22,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.3 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.4 | retained | consumer | 17 | 6 | 25 |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.5 | default | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.5 | retained | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.6 | default | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.2 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.3 | default | consumer | 23 | 9 | 1 |
@@ -31,7 +32,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`python-tooling`](python-tooling/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 52 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.2 | retained | consumer | 13 | 3 | 52 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.3 | retained | consumer | 13 | 3 | 52 |
-| [`python-tooling`](python-tooling/README.md) | active | 1.4 | default | consumer | 13 | 3 | 52 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.4 | retained | consumer | 13 | 3 | 52 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.5 | default | consumer | 13 | 3 | 63 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.1 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.2 | internal | internal | 12 | 0 | 0 |
@@ -56,6 +58,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.3` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.4` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.5` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
+| `markdown-tooling@1.6` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `project-spec@1.1` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.2` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.3` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
@@ -65,6 +68,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.2` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
 | `python-tooling@1.3` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
 | `python-tooling@1.4` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
+| `python-tooling@1.5` | `python.audit`, `python.format`, `python.lint`, `python.test`, `python.tooling`, `python.typecheck` | `project-standards.reconcile` |
 | `standard-bundle-authoring@2.0` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 | `standard-bundle-authoring@2.1` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 | `standard-bundle-authoring@2.2` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
@@ -86,6 +90,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.3` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.4` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.5` | companion | `markdown-frontmatter` |
+| `markdown-tooling@1.6` | companion | `markdown-frontmatter` |
 | `project-spec@1.1` | companion | `markdown-frontmatter` |
 | `project-spec@1.2` | companion | `markdown-frontmatter` |
 | `project-spec@1.3` | companion | `markdown-frontmatter` |
@@ -95,6 +100,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.2` | companion | `python-coding` |
 | `python-tooling@1.3` | companion | `python-coding` |
 | `python-tooling@1.4` | companion | `python-coding` |
+| `python-tooling@1.5` | companion | `python-coding` |
 
 ## Resources
 
@@ -406,6 +412,23 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.5` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.5/provider-content` | `schemas/content.schema.json` |
 | `markdown-tooling@1.5` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.5/provider-findings` | `schemas/findings.schema.json` |
 | `markdown-tooling@1.5` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.5/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `markdown-tooling@1.6` | `readme` | `canonical-standard` | `standards://markdown-tooling/1.6/readme` | `README.md` |
+| `markdown-tooling@1.6` | `adopt` | `adoption-guide` | `standards://markdown-tooling/1.6/adopt` | `adopt.md` |
+| `markdown-tooling@1.6` | `agent-summary` | `agent-summary` | `standards://markdown-tooling/1.6/agent-summary` | `agent-summary.md` |
+| `markdown-tooling@1.6` | `config-schema` | `config-schema` | `standards://markdown-tooling/1.6/config-schema` | `config.schema.json` |
+| `markdown-tooling@1.6` | `markdownlint-source` | `provider-resource` | `standards://markdown-tooling/1.6/markdownlint-source` | `resources/markdownlint.json` |
+| `markdown-tooling@1.6` | `prettier-source` | `provider-resource` | `standards://markdown-tooling/1.6/prettier-source` | `resources/prettierrc.json` |
+| `markdown-tooling@1.6` | `legacy-editorconfig` | `legacy-reference` | `standards://markdown-tooling/1.6/legacy-editorconfig` | `resources/legacy-editorconfig` |
+| `markdown-tooling@1.6` | `legacy-vscode-extensions` | `legacy-reference` | `standards://markdown-tooling/1.6/legacy-vscode-extensions` | `resources/legacy-vscode-extensions.json` |
+| `markdown-tooling@1.6` | `legacy-lint-caller` | `legacy-reference` | `standards://markdown-tooling/1.6/legacy-lint-caller` | `resources/legacy-lint-markdown.caller.yml` |
+| `markdown-tooling@1.6` | `legacy-format-caller` | `legacy-reference` | `standards://markdown-tooling/1.6/legacy-format-caller` | `resources/legacy-format.caller.yml` |
+| `markdown-tooling@1.6` | `self-host-lint-workflow` | `provider-resource` | `standards://markdown-tooling/1.6/self-host-lint-workflow` | `resources/self-host-lint-markdown.yml` |
+| `markdown-tooling@1.6` | `self-host-format-workflow` | `provider-resource` | `standards://markdown-tooling/1.6/self-host-format-workflow` | `resources/self-host-format.yml` |
+| `markdown-tooling@1.6` | `provider-code` | `provider-resource` | `standards://markdown-tooling/1.6/provider-code` | `providers/markdown_tooling.py` |
+| `markdown-tooling@1.6` | `provider-input` | `provider-resource` | `standards://markdown-tooling/1.6/provider-input` | `schemas/provider-input.schema.json` |
+| `markdown-tooling@1.6` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.6/provider-content` | `schemas/content.schema.json` |
+| `markdown-tooling@1.6` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.6/provider-findings` | `schemas/findings.schema.json` |
+| `markdown-tooling@1.6` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.6/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `project-spec@1.1` | `readme` | `canonical-standard` | `standards://project-spec/1.1/readme` | `README.md` |
 | `project-spec@1.1` | `adopt` | `adoption-guide` | `standards://project-spec/1.1/adopt` | `adopt.md` |
 | `project-spec@1.1` | `agent-summary` | `agent-summary` | `standards://project-spec/1.1/agent-summary` | `agent-summary.md` |
@@ -533,6 +556,19 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.4` | `provider-content` | `provider-resource` | `standards://python-tooling/1.4/provider-content` | `schemas/content.schema.json` |
 | `python-tooling@1.4` | `provider-findings` | `provider-resource` | `standards://python-tooling/1.4/provider-findings` | `schemas/findings.schema.json` |
 | `python-tooling@1.4` | `provider-migration-report` | `provider-resource` | `standards://python-tooling/1.4/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `python-tooling@1.5` | `readme` | `canonical-standard` | `standards://python-tooling/1.5/readme` | `README.md` |
+| `python-tooling@1.5` | `adopt` | `adoption-guide` | `standards://python-tooling/1.5/adopt` | `adopt.md` |
+| `python-tooling@1.5` | `agent-summary` | `agent-summary` | `standards://python-tooling/1.5/agent-summary` | `agent-summary.md` |
+| `python-tooling@1.5` | `build-backend-guidance` | `standard-reference` | `standards://python-tooling/1.5/build-backend-guidance` | `build-backend.md` |
+| `python-tooling@1.5` | `config-schema` | `config-schema` | `standards://python-tooling/1.5/config-schema` | `config.schema.json` |
+| `python-tooling@1.5` | `python-version-source` | `provider-resource` | `standards://python-tooling/1.5/python-version-source` | `resources/python-version` |
+| `python-tooling@1.5` | `check-workflow-source` | `provider-resource` | `standards://python-tooling/1.5/check-workflow-source` | `resources/check.yml` |
+| `python-tooling@1.5` | `check-script-source` | `provider-resource` | `standards://python-tooling/1.5/check-script-source` | `resources/check.py` |
+| `python-tooling@1.5` | `provider-code` | `provider-resource` | `standards://python-tooling/1.5/provider-code` | `providers/python_tooling.py` |
+| `python-tooling@1.5` | `provider-input` | `provider-resource` | `standards://python-tooling/1.5/provider-input` | `schemas/provider-input.schema.json` |
+| `python-tooling@1.5` | `provider-content` | `provider-resource` | `standards://python-tooling/1.5/provider-content` | `schemas/content.schema.json` |
+| `python-tooling@1.5` | `provider-findings` | `provider-resource` | `standards://python-tooling/1.5/provider-findings` | `schemas/findings.schema.json` |
+| `python-tooling@1.5` | `provider-migration-report` | `provider-resource` | `standards://python-tooling/1.5/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `standard-bundle-authoring@2.0` | `readme` | `canonical-standard` | `standards://standard-bundle-authoring/2.0/readme` | `README.md` |
 | `standard-bundle-authoring@2.0` | `agent-summary` | `agent-summary` | `standards://standard-bundle-authoring/2.0/agent-summary` | `agent-summary.md` |
 | `standard-bundle-authoring@2.0` | `config-schema` | `config-schema` | `standards://standard-bundle-authoring/2.0/config-schema` | `config.schema.json` |
@@ -662,6 +698,12 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.5` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
 | `markdown-tooling@1.5` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
 | `markdown-tooling@1.5` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-tooling@1.6` | `render-lint-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_lint` |
+| `markdown-tooling@1.6` | `render-format-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_format` |
+| `markdown-tooling@1.6` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `markdown-tooling@1.6` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
+| `markdown-tooling@1.6` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
+| `markdown-tooling@1.6` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `project-spec@1.1` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `project-spec@1.1` | `lint` | `lint` | `validate` | `findings` | `payload:provider-code#run_lint` |
 | `project-spec@1.1` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
@@ -703,6 +745,9 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.4` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
 | `python-tooling@1.4` | `verify-toolchain` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `python-tooling@1.4` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `python-tooling@1.5` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `python-tooling@1.5` | `verify-toolchain` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `python-tooling@1.5` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 
 ## Managed outputs
 
@@ -893,6 +938,31 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.5` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
 | `markdown-tooling@1.5` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `markdown-tooling@1.5` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.6` | artifact | `markdownlint-config` | `.markdownlint.json` | `managed` | whole-file |
+| `markdown-tooling@1.6` | artifact | `prettier-config` | `.prettierrc.json` | `managed` | whole-file |
+| `markdown-tooling@1.6` | contribution | `lint-caller` | `.github/workflows/lint-markdown.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.6` | contribution | `format-caller` | `.github/workflows/format.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-root` | `.editorconfig` | `managed` | `editorconfig` / `property:$global#root` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-charset` | `.editorconfig` | `managed` | `editorconfig` / `property:*#charset` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-eol` | `.editorconfig` | `managed` | `editorconfig` / `property:*#end_of_line` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-final-newline` | `.editorconfig` | `managed` | `editorconfig` / `property:*#insert_final_newline` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-global-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*#trim_trailing_whitespace` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-global-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_style` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-global-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_size` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-markdown-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_style` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-markdown-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_size` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-markdown-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#trim_trailing_whitespace` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-yaml-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_style` |
+| `markdown-tooling@1.6` | contribution | `editorconfig-yaml-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_size` |
+| `markdown-tooling@1.6` | contribution | `vscode-prettier-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=esbenp.prettier-vscode` |
+| `markdown-tooling@1.6` | contribution | `vscode-markdownlint-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=DavidAnson.vscode-markdownlint` |
+| `markdown-tooling@1.6` | contribution | `vscode-markdown-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.defaultFormatter` |
+| `markdown-tooling@1.6` | contribution | `vscode-markdown-format-on-save` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.formatOnSave` |
+| `markdown-tooling@1.6` | contribution | `vscode-json-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[json]/editor.defaultFormatter` |
+| `markdown-tooling@1.6` | contribution | `vscode-jsonc-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[jsonc]/editor.defaultFormatter` |
+| `markdown-tooling@1.6` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
+| `markdown-tooling@1.6` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.6` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `project-spec@1.1` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.2` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.3` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
@@ -1104,3 +1174,66 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.4` | contribution | `vscode-task-audit` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=audit` |
 | `python-tooling@1.4` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:python-tooling` |
 | `python-tooling@1.4` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:python-tooling` |
+| `python-tooling@1.5` | contribution | `python-version` | `.python-version` | `managed` | `whole-file` / `$file` |
+| `python-tooling@1.5` | contribution | `check-workflow` | `.github/workflows/check.yml` | `managed` | `whole-file` / `$file` |
+| `python-tooling@1.5` | contribution | `check-script` | `scripts/check.py` | `managed` | `whole-file` / `$file` |
+| `python-tooling@1.5` | contribution | `build-system` | `pyproject.toml` | `managed` | `toml` / `table:/build-system` |
+| `python-tooling@1.5` | contribution | `dev-dependencies` | `pyproject.toml` | `managed` | `toml` / `key:/dependency-groups/dev` |
+| `python-tooling@1.5` | contribution | `ruff-config` | `pyproject.toml` | `managed` | `toml` / `table:/tool/ruff` |
+| `python-tooling@1.5` | contribution | `basedpyright-include` | `pyproject.toml` | `managed` | `toml` / `key:/tool/basedpyright/include` |
+| `python-tooling@1.5` | contribution | `basedpyright-mode` | `pyproject.toml` | `managed` | `toml` / `key:/tool/basedpyright/typeCheckingMode` |
+| `python-tooling@1.5` | contribution | `basedpyright-python-version` | `pyproject.toml` | `managed` | `toml` / `key:/tool/basedpyright/pythonVersion` |
+| `python-tooling@1.5` | contribution | `basedpyright-platform` | `pyproject.toml` | `managed` | `toml` / `key:/tool/basedpyright/pythonPlatform` |
+| `python-tooling@1.5` | contribution | `basedpyright-warnings` | `pyproject.toml` | `managed` | `toml` / `key:/tool/basedpyright/failOnWarnings` |
+| `python-tooling@1.5` | contribution | `pyright-include` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pyright/include` |
+| `python-tooling@1.5` | contribution | `pyright-mode` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pyright/typeCheckingMode` |
+| `python-tooling@1.5` | contribution | `pyright-python-version` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pyright/pythonVersion` |
+| `python-tooling@1.5` | contribution | `pyright-platform` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pyright/pythonPlatform` |
+| `python-tooling@1.5` | contribution | `pyright-warnings` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pyright/failOnWarnings` |
+| `python-tooling@1.5` | contribution | `pytest-minversion` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pytest/ini_options/minversion` |
+| `python-tooling@1.5` | contribution | `pytest-testpaths` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pytest/ini_options/testpaths` |
+| `python-tooling@1.5` | contribution | `pytest-addopts` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pytest/ini_options/addopts` |
+| `python-tooling@1.5` | contribution | `pytest-markers` | `pyproject.toml` | `managed` | `toml` / `key:/tool/pytest/ini_options/markers` |
+| `python-tooling@1.5` | contribution | `coverage-run-config` | `pyproject.toml` | `managed` | `toml` / `table:/tool/coverage/run` |
+| `python-tooling@1.5` | contribution | `coverage-report-config` | `pyproject.toml` | `managed` | `toml` / `table:/tool/coverage/report` |
+| `python-tooling@1.5` | contribution | `editorconfig-root` | `.editorconfig` | `managed` | `editorconfig` / `property:$global#root` |
+| `python-tooling@1.5` | contribution | `editorconfig-charset` | `.editorconfig` | `managed` | `editorconfig` / `property:*#charset` |
+| `python-tooling@1.5` | contribution | `editorconfig-eol` | `.editorconfig` | `managed` | `editorconfig` / `property:*#end_of_line` |
+| `python-tooling@1.5` | contribution | `editorconfig-final-newline` | `.editorconfig` | `managed` | `editorconfig` / `property:*#insert_final_newline` |
+| `python-tooling@1.5` | contribution | `editorconfig-global-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*#trim_trailing_whitespace` |
+| `python-tooling@1.5` | contribution | `editorconfig-global-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_style` |
+| `python-tooling@1.5` | contribution | `editorconfig-global-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_size` |
+| `python-tooling@1.5` | contribution | `editorconfig-python-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.py#indent_style` |
+| `python-tooling@1.5` | contribution | `editorconfig-python-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.py#indent_size` |
+| `python-tooling@1.5` | contribution | `editorconfig-toml-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.toml#indent_style` |
+| `python-tooling@1.5` | contribution | `editorconfig-toml-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.toml#indent_size` |
+| `python-tooling@1.5` | contribution | `vscode-python-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=ms-python.python` |
+| `python-tooling@1.5` | contribution | `vscode-basedpyright-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=detachhead.basedpyright` |
+| `python-tooling@1.5` | contribution | `vscode-ruff-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=charliermarsh.ruff` |
+| `python-tooling@1.5` | contribution | `vscode-toml-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=tamasfe.even-better-toml` |
+| `python-tooling@1.5` | contribution | `vscode-yaml-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=redhat.vscode-yaml` |
+| `python-tooling@1.5` | contribution | `vscode-actions-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=github.vscode-github-actions` |
+| `python-tooling@1.5` | contribution | `vscode-editorconfig-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=editorconfig.editorconfig` |
+| `python-tooling@1.5` | contribution | `vscode-interpreter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/python.defaultInterpreterPath` |
+| `python-tooling@1.5` | contribution | `vscode-pytest-enabled` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/python.testing.pytestEnabled` |
+| `python-tooling@1.5` | contribution | `vscode-unittest-disabled` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/python.testing.unittestEnabled` |
+| `python-tooling@1.5` | contribution | `vscode-pytest-args` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/python.testing.pytestArgs` |
+| `python-tooling@1.5` | contribution | `vscode-python-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[python]/editor.defaultFormatter` |
+| `python-tooling@1.5` | contribution | `vscode-python-format-on-save` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[python]/editor.formatOnSave` |
+| `python-tooling@1.5` | contribution | `vscode-python-code-actions` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[python]/editor.codeActionsOnSave` |
+| `python-tooling@1.5` | contribution | `vscode-ruff-server` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/ruff.nativeServer` |
+| `python-tooling@1.5` | contribution | `vscode-basedpyright-mode` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/basedpyright.analysis.typeCheckingMode` |
+| `python-tooling@1.5` | contribution | `vscode-pyright-mode` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/python.analysis.typeCheckingMode` |
+| `python-tooling@1.5` | contribution | `vscode-exclude-pycache` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/files.exclude/**~1__pycache__` |
+| `python-tooling@1.5` | contribution | `vscode-exclude-pytest-cache` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/files.exclude/**~1.pytest_cache` |
+| `python-tooling@1.5` | contribution | `vscode-exclude-ruff-cache` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/files.exclude/**~1.ruff_cache` |
+| `python-tooling@1.5` | contribution | `vscode-exclude-mypy-cache` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/files.exclude/**~1.mypy_cache` |
+| `python-tooling@1.5` | contribution | `vscode-exclude-coverage` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/files.exclude/**~1.coverage` |
+| `python-tooling@1.5` | contribution | `vscode-tasks-version` | `.vscode/tasks.json` | `managed` | `jsonc` / `key:/version` |
+| `python-tooling@1.5` | contribution | `vscode-task-check` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=check` |
+| `python-tooling@1.5` | contribution | `vscode-task-fix` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=fix` |
+| `python-tooling@1.5` | contribution | `vscode-task-test` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=test` |
+| `python-tooling@1.5` | contribution | `vscode-task-typecheck` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=typecheck` |
+| `python-tooling@1.5` | contribution | `vscode-task-audit` | `.vscode/tasks.json` | `managed` | `jsonc` / `keyed-set:/tasks#label=audit` |
+| `python-tooling@1.5` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:python-tooling` |
+| `python-tooling@1.5` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:python-tooling` |

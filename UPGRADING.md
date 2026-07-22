@@ -101,6 +101,8 @@ package = false
 
 That consumer-owned setting survives reconciliation and tells uv not to build or install the project during ordinary environment synchronization.
 
+Python Tooling 1.5 also narrows checker and pytest ownership to the canonical keys it renders. Additional settings in the same tables remain consumer-owned: for example, `[tool.basedpyright].extraPaths` and `[tool.pytest.ini_options].pythonpath` survive V4 migration and later reconciliation. A conflict on a canonical key still blocks before write.
+
 ## 2. Apply the reviewed migration
 
 ```bash
