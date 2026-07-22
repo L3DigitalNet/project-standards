@@ -1716,6 +1716,39 @@ def test_exclude_applies_to_absolute_explicit_paths(
     assert collect_paths([target], None, [], ["standards/**"]) == []
 
 
+def test_collect_paths_reports_named_file_dropped_by_exclude(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # TC-T4-001 (unit level): an explicitly named file that exists but is then
+    # dropped by config `exclude` is a milder version of the missing-file trap —
+    # collect_paths must not just drop it silently; it reports it via the opt-in
+    # `on_named_excluded` callback (5.8.0 FR-010, issue #29), without changing
+    # which paths are returned.
+    (tmp_path / "standards" / "templates").mkdir(parents=True)
+    target = tmp_path / "standards" / "templates" / "t.md"
+    target.write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    reported: list[Path] = []
+
+    got = collect_paths([target], None, [], ["standards/**"], on_named_excluded=reported.append)
+
+    assert got == []
+    assert reported == [target]
+
+
+def test_collect_paths_omits_diagnostic_when_callback_not_given(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Existing callers that do not opt in keep today's exact signature/behavior —
+    # collect_paths must not require the new keyword argument (FR-010 non-regression).
+    (tmp_path / "standards" / "templates").mkdir(parents=True)
+    target = tmp_path / "standards" / "templates" / "t.md"
+    target.write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert collect_paths([target], None, [], ["standards/**"]) == []
+
+
 def test_exclude_double_star_prefix_matches_root_glob(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -17,7 +17,7 @@ import unicodedata
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import yaml
 from yaml.tokens import AliasToken, AnchorToken, Token
@@ -734,6 +734,20 @@ from project_standards.validate_frontmatter import (  # noqa: E402
 )
 
 
+def _resolve_mode(args: argparse.Namespace) -> Literal["check", "write"]:
+    """Resolve the run mode from parsed CLI args (5.8.0 FR-010).
+
+    Contract: `--write` selects write mode; no flag or the explicit `--check`
+    flag (mutually exclusive with `--write`, enforced by argparse) both select
+    check mode — the documented default (docs/usage.md, and now also stated in
+    `--help`). Pulled into its own unit purely so that default-mode contract is
+    unit-testable (TC-T4-004) without going through the whole CLI; this is an
+    observationally-equivalent refactor of the prior inline `write = args.write`
+    — no consumer-visible behavior changes.
+    """
+    return "write" if args.write else "check"
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -767,6 +781,11 @@ def main(
     parser = argparse.ArgumentParser(
         prog="format-frontmatter",
         description=__doc__,
+        # RawDescriptionHelpFormatter leaves both description AND epilog exactly
+        # as written (no re-wrapping) — the epilog is where "default: check"
+        # lives so a narrow terminal's line-wrapping of a normal --help entry
+        # can never split the two words apart (5.8.0 FR-010, TC-T4-003).
+        epilog="default: check",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {package_version()}")
@@ -777,8 +796,10 @@ def main(
     parser.add_argument("--schema", type=Path, default=None)
     parser.add_argument("--glob", metavar="PATTERN")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true")
-    mode.add_argument("--write", action="store_true")
+    mode.add_argument(
+        "--check", action="store_true", help="report files that would change without writing"
+    )
+    mode.add_argument("--write", action="store_true", help="rewrite files in place")
     parser.add_argument("--bump-updated", action="store_true")
     parser.add_argument("--stdin", action="store_true")
     parser.add_argument("--no-require-frontmatter", action="store_true", help=argparse.SUPPRESS)
@@ -817,12 +838,28 @@ def main(
                 unparseable = True
         return 1 if unparseable else 0
 
+    # Named files dropped by config `exclude` are reported here (5.8.0 FR-010,
+    # issue #29): the file exists (else collect_paths already raised ConfigError)
+    # but vanishes from `paths` with no other signal, silently turning a typo'd
+    # exclude pattern or a stale invocation into a green no-op run. Glob/include-
+    # derived paths never reach `on_named_excluded` (see collect_paths' docstring),
+    # so only explicit naming produces this diagnostic. Purely informational: the
+    # returned path set — and therefore every exit code below — is unchanged.
+    named_excluded: list[Path] = []
     try:
-        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+        paths = collect_paths(
+            list(args.files),
+            args.glob,
+            config.include,
+            config.exclude,
+            on_named_excluded=named_excluded.append,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    write = args.write  # default is check-mode
+    for excluded_path in named_excluded:
+        print(f"skipped (excluded by config): {excluded_path}", file=sys.stderr)
+    write = _resolve_mode(args) == "write"
     if write:
         from project_standards.control_plane.executor import apply_authoring_plan
         from project_standards.frontmatter_authoring import plan_frontmatter_format
@@ -856,8 +893,18 @@ def main(
 
     any_change = False
     unparseable = False
+    # Named (positional) files, for the same named-only diagnostic scoping as the
+    # exclude report above: a glob/include-derived denylisted path is expected
+    # (the corpus was never filtered by the denylist) and stays silent, but a
+    # file the operator typed by hand deserves to know it was a no-op (5.8.0
+    # FR-010). Write mode's equivalent path already surfaces this unconditionally
+    # via format_text's own "refused (denylisted)" warning (see frontmatter_authoring
+    # -> format_text); this loop is check mode's previously-silent counterpart.
+    named_files = set(args.files)
     for path in paths:
         if is_denylisted(path):
+            if path in named_files:
+                print(f"skipped (never-frontmatter file): {path}", file=sys.stderr)
             continue
         try:
             text = path.read_text(encoding="utf-8-sig")

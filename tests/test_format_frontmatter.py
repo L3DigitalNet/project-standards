@@ -1063,6 +1063,75 @@ def test_main_denylisted_file_is_skipped(tmp_path: Path, monkeypatch: pytest.Mon
     assert rc == 0
 
 
+def test_main_check_named_denylisted_file_prints_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # TC-T4-002: an explicitly named denylisted file must not vanish with zero
+    # signal (5.8.0 FR-010, issue #29) — the exit code is unchanged (still 0,
+    # matching test_main_denylisted_file_is_skipped above) but stderr now says why.
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "CLAUDE.md"
+    f.write_text(_doc(title="X").replace("title: 'X'", "title: X"))
+    cfg = _cfg(tmp_path)
+    rc = main(["--check", "--config", str(cfg), f.name])
+    assert rc == 0
+    assert "skipped (never-frontmatter file): CLAUDE.md" in capsys.readouterr().err
+
+
+def test_main_check_named_excluded_file_prints_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # TC-T4-001 (CLI level): an explicitly named file that config `exclude`
+    # drops must not vanish with zero signal — issue #29's "typo'd invocation
+    # validates nothing, silently" trap, now surfaced on stderr (5.8.0 FR-010).
+    # Exit code is unchanged: nothing else was named, so 0 both before and after.
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "skip.md"
+    f.write_text(CLEAN)
+    cfg = _cfg(tmp_path, extra="    exclude: ['skip.md']\n")
+    rc = main(["--check", "--config", str(cfg), f.name])
+    assert rc == 0
+    assert "skipped (excluded by config): skip.md" in capsys.readouterr().err
+
+
+def test_main_help_states_check_is_default_mode(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T4-003: docs/usage.md already documents check as the default mode; the
+    # CLI's own --help must say so too (5.8.0 FR-010), not just the docs.
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+    assert exc.value.code == 0
+    assert "default: check" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("cli_args", "expected"),
+    [
+        ([], "check"),
+        (["--check"], "check"),
+        (["--write"], "write"),
+    ],
+)
+def test_resolve_mode_contract(cli_args: list[str], expected: str) -> None:
+    # TC-T4-004: the mode-resolution unit's contract, tested directly (no CLI
+    # round-trip needed) — no-flag and --check both mean check (the default),
+    # --write means write. Observationally equivalent to the prior inline
+    # `write = args.write`; this is a refactor, not new consumer-visible behavior.
+    import argparse
+
+    from project_standards.format_frontmatter import (
+        _resolve_mode,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    parser = argparse.ArgumentParser()
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--write", action="store_true")
+    args = parser.parse_args(cli_args)
+    assert _resolve_mode(args) == expected
+
+
 def test_main_duplicate_key_warning_sets_exit_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

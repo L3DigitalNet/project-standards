@@ -38,7 +38,7 @@ import json
 import os
 import re
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, cast
@@ -419,6 +419,8 @@ def collect_paths(
     glob_pattern: str | None,
     include_patterns: list[str],
     exclude_patterns: list[str],
+    *,
+    on_named_excluded: Callable[[Path], None] | None = None,
 ) -> list[Path]:
     """Resolve the final set of files to check.
 
@@ -430,6 +432,18 @@ def collect_paths(
     Raises ConfigError for an explicitly named file that does not exist: globs and
     includes may legitimately match nothing, but silently dropping a named file
     turns a typo'd CI invocation into a green run that validated nothing.
+
+    An explicitly named file that survives the existence check but is then dropped
+    by `exclude` is a milder version of the same trap (5.8.0 FR-010, issue #29): the
+    file exists, so no ConfigError fires, and it just vanishes from the result with
+    no signal. `on_named_excluded`, when given, is called once per such path, in
+    sorted order, purely for reporting — it never changes which paths are returned.
+    Glob/include-derived paths are expected to be pruned by `exclude` (that is what
+    exclude patterns are for) and never trigger the callback; only a path present in
+    `explicit` does. Kept as an opt-in callback rather than widening the return type
+    so the family of existing `collect_paths(...)` callers (validate_id,
+    validate_references, cli, frontmatter_commands, specs/config, and this module's
+    own CLI) are untouched — only a caller that opts in pays for the diagnostic.
 
     Pattern-dialect warning: include patterns use Path.glob semantics (`*` stops at
     `/`), but exclude patterns use fnmatch semantics where `*` ALSO spans path
@@ -481,6 +495,11 @@ def collect_paths(
             or (pattern.startswith("**/") and fnmatchcase(key, pattern.removeprefix("**/")))
             for pattern in exclude_patterns
         )
+
+    if on_named_excluded is not None:
+        for path in sorted(set(explicit)):
+            if is_excluded(path):
+                on_named_excluded(path)
 
     return sorted(p for p in paths if not is_excluded(p))
 
