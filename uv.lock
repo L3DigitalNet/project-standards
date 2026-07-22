@@ -425,7 +425,7 @@ wheels = [
 
 [[package]]
 name = "project-standards"
-version = "5.6.0"
+version = "5.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },

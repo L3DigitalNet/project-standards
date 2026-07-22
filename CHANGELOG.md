@@ -37,6 +37,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.7.0] — 2026-07-22
+
+> **Why MINOR:** Catalog 5 adds one backward-compatible package successor on its existing major track, and the TOML adapter's managed-unit rewrites become more faithful to consumer bytes without changing any semantic outcome. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.6.0` classifies the release as minor.
+
+### Added
+
+- **Python Tooling 1.7 scopes coverage per declared root.** `additional_source_roots` entries may now be tables — `{ path = "scripts", coverage = false }` — that join the checker `include` and Ruff `src` values while staying out of `coverage.run.source`, so a strictly-typed but untested tooling root no longer drags down the coverage gate. Plain strings keep their both-scope meaning, string-only configurations render byte-identical 1.6 output, duplicate declared paths fail closed, and both the 1.6 → 1.7 and V4 legacy migrations carry the value verbatim (issue #24).
+
+### Fixed
+
+- **Managed TOML rewrites preserve consumer comments and leave no residue.** Rewriting a managed `pyproject.toml` table, keyed-set entry, or key now consumes the full replaced source region and re-emits harvested comments directly above the statement with the same key or table in the new rendering (above the whole unit when the key no longer exists). Previously, comments inside a managed multi-line array were displaced below the rewritten block under an unrelated setting, every rewritten statement left a stray blank line, and key-scope rewrites silently deleted interior comments (issue #25). The contract is documented in `UPGRADING.md`.
+
+### Changed
+
+- Catalog 5 promotes Python Tooling 1.7 as the consumer default. Every predecessor remains retained with unchanged bytes and digests.
+
 ## [5.6.0] — 2026-07-22
 
 > **Why MINOR:** Catalog 5 adds two backward-compatible package successors on their existing major tracks, the control plane adds additive conflict diagnostics at reconciliation-plan schema 1.1, and the migration preview exit code converts a documented failure exit into success for an applicable plan without newly failing any consumer. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.5.0` classifies the release as minor.
