@@ -43,6 +43,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/project-spec"
 _PAYLOAD = _FAMILY / "versions/1.3"
+_SUCCESSOR_PAYLOAD = _FAMILY / "versions/1.4"
 _MARKDOWN_FAMILY = _ROOT / "standards/markdown-tooling"
 _MARKDOWN_PAYLOAD = _MARKDOWN_FAMILY / "versions/1.3"
 _HISTORICAL_SELF_HOST_WORKFLOW_DIGEST = (
@@ -943,14 +944,25 @@ def test_project_spec_provider_uses_resources_from_the_selected_payload_version(
     assert selected.content is not None and marker.encode() in selected.content
 
 
+@pytest.mark.parametrize(
+    ("payload_root", "version"),
+    [(_PAYLOAD, "1.3"), (_SUCCESSOR_PAYLOAD, "1.4")],
+)
 def test_project_spec_payload_is_byte_identical_and_executable_from_built_wheel(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    payload_root: Path,
+    version: str,
 ) -> None:
     project = copy_minimal_repository(tmp_path)
     family = project / "standards/project-spec"
     shutil.copytree(_FAMILY, family)
-    payload = _payload()
+    manifest = load_payload_manifest(payload_root / "payload.toml")
+    payload = InstalledPayload(
+        payload_root,
+        manifest,
+        validate_payload_integrity(payload_root, manifest),
+    )
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -961,8 +973,8 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.3"
-payload = "versions/1.3/payload.toml"
+version = "{version}"
+payload = "versions/{version}/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -994,7 +1006,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/project-spec/1.3/"
+    prefix = f"project_standards/payloads/project-spec/{version}/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)
@@ -1002,8 +1014,8 @@ source-include = ["standards/**"]
             if name.startswith(prefix) and not name.endswith("/")
         }
     source_files = {
-        path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        path.relative_to(payload_root).as_posix(): path.read_bytes()
+        for path in payload_root.rglob("*")
         if path.is_file()
     }
     assert wheel_files == source_files
@@ -1020,7 +1032,7 @@ source-include = ["standards/**"]
     )
     provider_repo = tmp_path / "provider-consumer"
     provider_repo.mkdir()
-    example = (_PAYLOAD / "examples/spec.example.md").read_bytes()
+    example = (payload_root / "examples/spec.example.md").read_bytes()
     upgrade_source = (_ROOT / "tests/fixtures/specs/upgrade_light.md").read_bytes()
 
     def document(content: bytes = example) -> JsonObject:

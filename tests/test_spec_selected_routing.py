@@ -23,8 +23,8 @@ from project_standards.control_plane.locking import LockMode
 from project_standards.control_plane.providers import ProviderInvocation, ProviderResult
 from project_standards.control_plane.snapshot import RepositorySnapshot
 from project_standards.package_contract.integrity import validate_payload_integrity
-from project_standards.package_contract.paths import SafeRelativePath
-from project_standards.package_contract.payload import load_payload_manifest
+from project_standards.package_contract.paths import PackageVersion, SafeRelativePath
+from project_standards.package_contract.payload import JsonObject, load_payload_manifest
 from project_standards.package_contract.projection import sync_payload_projection
 from project_standards.specs.cli import run
 from tests.package_contract.helpers import copy_minimal_repository
@@ -52,18 +52,23 @@ def test_authoring_lock_mode_tracks_actual_write_authorization(
     assert spec_cli._operation_lock_mode(verb, argv) is expected  # pyright: ignore[reportPrivateUsage]
 
 
-def _payload() -> InstalledPayload:
-    manifest = load_payload_manifest(_PAYLOAD / "payload.toml")
-    integrity = validate_payload_integrity(_PAYLOAD, manifest)
-    return InstalledPayload(_PAYLOAD, manifest, integrity)
+def _payload(version: str = "1.1") -> InstalledPayload:
+    root = _FAMILY / "versions" / version
+    manifest = load_payload_manifest(root / "payload.toml")
+    integrity = validate_payload_integrity(root, manifest)
+    return InstalledPayload(root, manifest, integrity)
 
 
-def _installed_distribution(tmp_path: Path) -> InstalledDistribution:
+def _installed_distribution(
+    tmp_path: Path,
+    *,
+    version: str = "1.1",
+) -> InstalledDistribution:
     fixture = tmp_path / "distribution"
     repository = copy_minimal_repository(fixture)
     family = repository / "standards/project-spec"
     shutil.copytree(_FAMILY, family)
-    payload = _payload()
+    payload = _payload(version)
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -74,8 +79,8 @@ summary = "Tiered version-selected project specifications."
 status = "active"
 
 [[versions]]
-version = "1.1"
-payload = "versions/1.1/payload.toml"
+version = "{version}"
+payload = "versions/{version}/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -86,7 +91,7 @@ catalog_major = 5
 
 [[packages]]
 id = "project-spec"
-version = "1.1"
+version = "{version}"
 digest = "{payload.integrity.aggregate_digest.value}"
 role = "default"
 ''',
@@ -172,6 +177,162 @@ def test_validate_routes_through_enabled_selected_payload(
 
     result = json.loads(capsys.readouterr().out)
     assert result == [{"file": "docs/specs/example.md", "ok": True, "findings": []}]
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [("1.3", 2), ("1.4", 0)],
+)
+@pytest.mark.parametrize(
+    "argv",
+    [["validate", "--json"], ["lint", "--strict", "--json"]],
+)
+def test_selected_empty_spec_corpus_is_versioned(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    version: str,
+    expected: int,
+    argv: list[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version=version)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    assert run(argv, repo=repo, distribution=distribution) == expected
+
+    captured = capsys.readouterr()
+    if expected == 0:
+        assert json.loads(captured.out) == []
+        assert captured.err == ""
+    else:
+        assert captured.out == ""
+        assert "spec discovery matched no files" in captured.err
+
+
+@pytest.mark.parametrize("argv", [["validate"], ["lint", "--strict"]])
+def test_selected_empty_spec_corpus_reports_human_success_and_skips_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    def fail_provider(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("empty corpus invoked a provider")
+
+    monkeypatch.setattr(spec_cli, "invoke_provider", fail_provider)
+
+    assert run(argv, repo=repo, distribution=distribution) == 0
+    captured = capsys.readouterr()
+    assert "no specification files matched" in captured.out
+    assert captured.err == ""
+
+
+def test_synthetic_later_project_spec_1x_keeps_empty_corpus_success(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    successor = _payload("1.4")
+    later = InstalledPayload(
+        successor.root,
+        successor.manifest.model_copy(
+            update={
+                "payload": successor.manifest.payload.model_copy(
+                    update={"version": PackageVersion("1.99")}
+                )
+            }
+        ),
+        successor.integrity,
+    )
+    runtime = spec_cli._SpecRuntime(  # pyright: ignore[reportPrivateUsage]
+        tmp_path,
+        later,
+        {"include_patterns": ["docs/specs/**/*.md"]},
+    )
+
+    assert (
+        spec_cli._run_setwide(  # pyright: ignore[reportPrivateUsage]
+            ["--json"], lint=False, runtime=runtime
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out) == []
+
+
+@pytest.mark.parametrize("version", ["1.3", "1.4"])
+@pytest.mark.parametrize(
+    "effective_config",
+    [
+        pytest.param({}, id="absent"),
+        pytest.param({"include_patterns": []}, id="empty-patterns"),
+        pytest.param({"include_patterns": ["../*.md"]}, id="invalid-pattern"),
+    ],
+)
+def test_selected_empty_corpus_success_does_not_relax_configuration_errors(
+    tmp_path: Path,
+    version: str,
+    effective_config: JsonObject,
+) -> None:
+    runtime = spec_cli._SpecRuntime(  # pyright: ignore[reportPrivateUsage]
+        tmp_path,
+        _payload(version),
+        effective_config,
+    )
+
+    with pytest.raises(spec_cli.ConfigError):
+        spec_cli._selected_paths([], runtime)  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.parametrize("version", ["1.3", "1.4"])
+def test_selected_empty_corpus_success_does_not_relax_path_errors(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    version: str,
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version=version)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    assert run(["validate", "missing.md"], repo=repo, distribution=distribution) == 2
+    assert "no such file" in capsys.readouterr().err
+
+    outside = tmp_path / "outside.md"
+    outside.write_bytes((_PAYLOAD / "examples/spec.example.md").read_bytes())
+    linked = repo / "docs/specs/linked.md"
+    linked.parent.mkdir(parents=True)
+    linked.symlink_to(outside)
+    assert run(["validate"], repo=repo, distribution=distribution) == 2
+    assert "symlink" in capsys.readouterr().err
+
+
+def test_project_spec_14_new_retains_best_effort_empty_corpus_behavior(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    distribution = _installed_distribution(tmp_path, version="1.4")
+    initialize_control_plane(repo, "5", distribution=distribution)
+    _enable_selected(repo, distribution)
+
+    assert (
+        run(
+            ["new", "--profile", "light", "--id", "SPEC-7F3Q", "--stdout"],
+            repo=repo,
+            distribution=distribution,
+        )
+        == 0
+    )
+    assert "spec_id: SPEC-7F3Q" in capsys.readouterr().out
 
 
 def test_selected_validate_and_lint_do_not_call_legacy_validators(

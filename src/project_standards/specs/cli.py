@@ -106,8 +106,10 @@ def _selected_paths(
         ]
     assert runtime.effective_config is not None
     raw_patterns = runtime.effective_config.get("include_patterns")
-    if not isinstance(raw_patterns, list) or not all(
-        isinstance(pattern, str) for pattern in raw_patterns
+    if (
+        not isinstance(raw_patterns, list)
+        or not raw_patterns
+        or not all(isinstance(pattern, str) for pattern in raw_patterns)
     ):
         raise ConfigError("selected project-spec include_patterns are invalid")
     paths: set[Path] = set()
@@ -125,8 +127,17 @@ def _selected_paths(
     except (NotImplementedError, ValueError) as exc:
         raise ConfigError(f"invalid selected project-spec include pattern: {exc}") from exc
     if not paths:
+        if _selected_empty_corpus_is_valid(runtime):
+            return []
         raise DiscoveryError("spec discovery matched no files")
     return [(path, _selected_snapshot(path, runtime, must_exist=True)[2]) for path in sorted(paths)]
+
+
+def _selected_empty_corpus_is_valid(runtime: _SpecRuntime) -> bool:
+    """Return whether the selected package defines configured zero matches as valid."""
+    assert runtime.payload is not None
+    version = runtime.payload.manifest.payload.version
+    return version.major == 1 and version.minor >= 4
 
 
 def _selected_snapshot(
@@ -238,11 +249,8 @@ def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
         results: Sequence[tuple[Path, Sequence[Finding | ControlFinding]]] = legacy_results
     else:
         try:
-            selected_results = _selected_findings(
-                _selected_paths(args.files, runtime),
-                runtime,
-                lint=lint,
-            )
+            paths = _selected_paths(args.files, runtime)
+            selected_results = _selected_findings(paths, runtime, lint=lint) if paths else []
         except ControlPlaneError as exc:
             raise ConfigError(_provider_failure_message(exc)) from exc
         results = selected_results
@@ -261,12 +269,15 @@ def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
             )
         )
     else:
-        for path, findings in results:
-            state = "WARN" if lint and findings else "FAIL" if findings else "OK  "
-            print(f"{state} {path}")
-            for finding in findings:
-                line = f" (L{finding.line})" if finding.line else ""
-                print(f"   [{finding.code}] {finding.message}{line}")
+        if not results and runtime.payload is not None and not args.files:
+            print("OK   no specification files matched configured include patterns")
+        else:
+            for path, findings in results:
+                state = "WARN" if lint and findings else "FAIL" if findings else "OK  "
+                print(f"{state} {path}")
+                for finding in findings:
+                    line = f" (L{finding.line})" if finding.line else ""
+                    print(f"   [{finding.code}] {finding.message}{line}")
     any_findings = any(findings for _, findings in results)
     if lint:
         return 1 if any_findings and args.strict else 0
