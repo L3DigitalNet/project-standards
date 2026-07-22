@@ -76,7 +76,7 @@ _PACKAGES = {
         "active",
         "1.5",
         "default",
-        "sha256:a8a8eb80047f2f142152be66c80e5f766f0d4c400f663970e06b598853b6883d",
+        "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -224,7 +224,7 @@ _RETAINED_CATALOG_ENTRIES = {
 
 def _family_source(standard_id: str) -> str:
     name, summary, status, version, _role, digest = _PACKAGES[standard_id]
-    return (
+    source = (
         'schema_version = "2.0"\n\n'
         "[standard]\n"
         f"id = {json.dumps(standard_id)}\n"
@@ -236,6 +236,14 @@ def _family_source(standard_id: str) -> str:
         f"payload = {json.dumps(f'versions/{version}/payload.toml')}\n"
         f"digest = {json.dumps(digest)}\n"
     )
+    if standard_id == "python-tooling":
+        source += (
+            "\n[[versions]]\n"
+            'version = "1.4"\n'
+            'payload = "versions/1.4/payload.toml"\n'
+            'digest = "sha256:6cece71c53909b6dcd04a50e873ce16eb98aa800203b186e472439f7986c3e5e"\n'
+        )
+    return source
 
 
 def _catalog_source() -> str:
@@ -264,6 +272,8 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
         target.mkdir(parents=True)
         shutil.copyfile(source / "README.md", target / "README.md")
         shutil.copytree(source / "versions" / version, target / "versions" / version)
+        if standard_id == "python-tooling":
+            shutil.copytree(source / "versions/1.4", target / "versions/1.4")
         (target / "standard.toml").write_text(_family_source(standard_id), encoding="utf-8")
     catalog = isolated / "catalogs/5.toml"
     catalog.parent.mkdir()
@@ -274,7 +284,7 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
     assert repository.findings == ()
     assert validate_package_repository(repository) == ()
     assert len(repository.families) == len(_PACKAGES)
-    assert len(repository.payloads) == len(_PACKAGES)
+    assert len(repository.payloads) == len(_PACKAGES) + 1
     assert repository.catalog is not None
 
 

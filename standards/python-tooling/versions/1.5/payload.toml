@@ -674,6 +674,30 @@ resources = []
 id = "v4-python-tooling"
 
 [[migrations]]
+id = "python-tooling-1-4-to-1-5"
+from = "package:1.4"
+to = "package:1.5"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "contribution:basedpyright-include",
+  "contribution:basedpyright-mode",
+  "contribution:basedpyright-platform",
+  "contribution:basedpyright-python-version",
+  "contribution:basedpyright-warnings",
+  "contribution:pyright-include",
+  "contribution:pyright-mode",
+  "contribution:pyright-platform",
+  "contribution:pyright-python-version",
+  "contribution:pyright-warnings",
+  "contribution:pytest-addopts",
+  "contribution:pytest-markers",
+  "contribution:pytest-minversion",
+  "contribution:pytest-testpaths",
+]
+
+[[migrations]]
 id = "legacy-v4-to-1-5"
 from = "legacy:v4-python-tooling"
 to = "package:1.5"

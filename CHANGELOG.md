@@ -37,6 +37,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.4.0] — 2026-07-21
+
+> **Why MINOR:** Catalog 5 adds two backward-compatible consumer payloads and promotes them on their existing package-major tracks. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.3.1` classifies the release as minor.
+
+### Added
+
+- **Python Tooling 1.5 uses key-level checker and pytest ownership.** The package continues to manage its canonical BasedPyright/Pyright and pytest values while preserving undeclared sibling settings such as `extraPaths` and `pythonpath` through V4 migration and steady-state reconciliation (issue #14).
+- **Markdown Tooling 1.6 renders configured globs as inline code.** Wildcard characters in generated `AGENTS.md` and `CLAUDE.md` guidance remain literal under strict MD037/MD049 configurations; the closed option schema already excludes backticks, so the code spans are unambiguous (issue #15).
+
+### Changed
+
+- Catalog 5 promotes Python Tooling 1.5 and Markdown Tooling 1.6 as compatible defaults. Python Tooling 1.4, Markdown Tooling 1.5, and every earlier advertised payload remain retained with unchanged bytes and digests.
+
 ## [5.3.1] — 2026-07-21
 
 > **Why PATCH:** this release consolidates duplicated internal implementation without changing any accepted input, validation outcome, public default, package or catalog selection, schema, workflow, or immutable payload. `packages check-release --baseline v5.3.0` classifies the release as patch.

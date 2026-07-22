@@ -192,6 +192,16 @@ def _has_transition_path(
     return False
 
 
+def has_declared_transition_path(
+    transitions: frozenset[DeclaredTransition],
+    standard_id: str,
+    source: PackageVersion,
+    target: PackageVersion,
+) -> bool:
+    """Return whether declared package migrations connect two exact versions."""
+    return _has_transition_path(_transition_graph(transitions), standard_id, source, target)
+
+
 def consumer_versions(
     standard: CatalogStandard,
     major: int,

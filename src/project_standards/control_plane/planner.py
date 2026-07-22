@@ -66,10 +66,12 @@ from project_standards.control_plane.providers import (
 )
 from project_standards.control_plane.resolution import (
     AcceptedTrackTransition,
+    DeclaredTransition,
     ResolutionRequest,
     ResolutionResult,
     ResolvedPackage,
     TrackTransitionKind,
+    has_declared_transition_path,
     resolve_packages,
 )
 from project_standards.control_plane.snapshot import (
@@ -678,6 +680,7 @@ def _scope_declaration(
 def _historical_overlap_findings(
     previous_lock: CentralLock,
     groups: tuple[_DesiredGroup, ...],
+    transitions: frozenset[DeclaredTransition],
 ) -> tuple[ControlFinding, ...]:
     findings: list[ControlFinding] = []
     by_target: dict[str, list[LockedUnit]] = defaultdict(list)
@@ -712,7 +715,7 @@ def _historical_overlap_findings(
                     previous.scope,
                     "previous",
                 ),
-            ):
+            ) and not _overlap_has_declared_transition(group, previous, transitions):
                 findings.append(
                     _finding(
                         "CP-LOCK-INCONSISTENT",
@@ -724,6 +727,30 @@ def _historical_overlap_findings(
                     )
                 )
     return tuple(sort_findings(findings))
+
+
+def _overlap_has_declared_transition(
+    group: _DesiredGroup,
+    previous: LockedUnit,
+    transitions: frozenset[DeclaredTransition],
+) -> bool:
+    if set(group.owners) != set(previous.owners):
+        return False
+    current_versions = dict(group.versions)
+    for owner in group.owners:
+        source = previous.versions.get(owner)
+        target_value = current_versions.get(owner)
+        if source is None or target_value is None:
+            return False
+        target = PackageVersion(target_value)
+        if source == target or not has_declared_transition_path(
+            transitions,
+            owner,
+            source,
+            target,
+        ):
+            return False
+    return True
 
 
 def _normalize_desired(
@@ -1168,6 +1195,7 @@ def _render_targets(
     registry: AdapterRegistry,
     blocked_targets: frozenset[str],
     retained_absence_keys: frozenset[_OwnedNaturalKey],
+    transitions: frozenset[DeclaredTransition],
 ) -> tuple[
     tuple[ControlAction, ...],
     tuple[PlannedUnit, ...],
@@ -1245,6 +1273,15 @@ def _render_targets(
                 target_units.append(planned)
         for locked in previous:
             if (locked.adapter, locked.scope) in desired_map:
+                continue
+            if any(
+                contributions_overlap(
+                    _scope_declaration(group.target, group.adapter, group.scope, "desired"),
+                    _scope_declaration(locked.path, locked.adapter, locked.scope, "previous"),
+                )
+                and _overlap_has_declared_transition(group, locked, transitions)
+                for group in desired
+            ):
                 continue
             planned, finding = _classify_removed(
                 locked,
@@ -1760,7 +1797,13 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         request.resolution.previous_lock,
     )
     findings.extend(group_findings)
-    findings.extend(_historical_overlap_findings(request.resolution.previous_lock, groups))
+    findings.extend(
+        _historical_overlap_findings(
+            request.resolution.previous_lock,
+            groups,
+            request.resolution.transition_paths,
+        )
+    )
     findings.extend(_namespace_findings(request.repo, selected, request.resolution.previous_lock))
     actions, units, target_findings, targets = _render_targets(
         snapshot=snapshot,
@@ -1769,6 +1812,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         registry=registry,
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
         retained_absence_keys=retained_absence_keys,
+        transitions=request.resolution.transition_paths,
     )
     findings.extend(target_findings)
     if request.catalog_refresh is not None and request.catalog_refresh.changed:

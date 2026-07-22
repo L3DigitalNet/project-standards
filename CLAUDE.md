@@ -46,8 +46,8 @@ Use the repo-local `agent-handoff` skill at session startup and closeout. Do not
 Prettier owns physical formatting and markdownlint owns Markdown structure. Do not add overlapping tools.
 
 Enabled checks: format, lint.
-Markdown scope: **/*.md.
-Structured-config scope: **/*.json, **/*.jsonc, **/*.yml, **/*.yaml.
+Markdown scope: `**/*.md`.
+Structured-config scope: `**/*.json`, `**/*.jsonc`, `**/*.yml`, `**/*.yaml`.
 
 Run the enabled checks before claiming completion.
 <!-- markdownlint-enable MD025 -->

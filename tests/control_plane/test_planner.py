@@ -23,6 +23,7 @@ from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
 )
+from project_standards.control_plane.resolution import DeclaredTransition
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
 from project_standards.package_contract.payload import JsonValue, ProviderEffect
 from tests.control_plane.planner_helpers import (
@@ -42,14 +43,16 @@ def _request(
     lock: CentralLock | None = None,
     configs: Mapping[str, Mapping[str, JsonValue]] | None = None,
     provider_runner: Callable[[ProviderInvocation], ProviderResult] | None = None,
+    transition_paths: frozenset[DeclaredTransition] = frozenset(),
 ) -> PlannerRequest:
+    resolution = resolution_request(
+        payloads,
+        configs=configs,
+        previous_lock=lock,
+    )
     return PlannerRequest(
         repo=repo,
-        resolution=resolution_request(
-            payloads,
-            configs=configs,
-            previous_lock=lock,
-        ),
+        resolution=replace(resolution, transition_paths=transition_paths),
         payloads=tuple(payloads),
         provider_runner=provider_runner,
     )
@@ -862,6 +865,53 @@ def test_overlapping_historical_lock_scopes_block_before_render(tmp_path: Path) 
 
     assert not plan.applicable
     assert "CP-LOCK-INCONSISTENT" in {finding.code for finding in plan.findings}
+
+
+def test_declared_version_transition_replaces_parent_scope_with_child_key(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    content = b"[tool.demo]\nowned = 1\nconsumer = 2\n"
+    (repo / "pyproject.toml").write_bytes(content)
+    adapter = TomlAdapter()
+    table = adapter.inspect(content, ("table:/tool/demo",)).units[0]
+    lock = previous_lock(
+        locked_unit(
+            path="pyproject.toml",
+            adapter="toml",
+            scope="table:/tool/demo",
+            owners=["demo"],
+            semantic_digest=table.semantic_digest.value,
+            content_digest=digest(table.raw),
+        )
+    )
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        version="1.1",
+        contributions=[
+            {
+                "id": "owned",
+                "target": "pyproject.toml",
+                "adapter": "toml",
+                "scope": "key:/tool/demo/owned",
+                "content": b"[tool.demo]\nowned = 1\n",
+            }
+        ],
+    )
+    transition = DeclaredTransition("demo", PackageVersion("1.0"), PackageVersion("1.1"))
+
+    plan = plan_reconciliation(
+        _request(repo, (payload,), lock=lock, transition_paths=frozenset({transition}))
+    )
+
+    assert plan.applicable, plan.findings
+    assert plan.proposed_content("pyproject.toml") == content
+    managed = [
+        unit.scope for unit in plan.next_lock.artifacts if unit.path.original == "pyproject.toml"
+    ]
+    assert managed == ["key:/tool/demo/owned"]
 
 
 @pytest.mark.parametrize(
