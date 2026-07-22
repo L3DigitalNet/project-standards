@@ -374,6 +374,7 @@ def _declared_snapshot_paths(snapshots: JsonObject) -> tuple[SafeRelativePath, .
         "legacy_config",
         "legacy_evidence",
         "legacy_signatures",
+        "managed_markdown_units",
         "managed_units",
         "planned_contribution",
         "preview",
@@ -397,6 +398,7 @@ def _declared_snapshot_paths(snapshots: JsonObject) -> tuple[SafeRelativePath, .
         "referenced_inputs",
         "referenced_input_content",
         "managed_units",
+        "managed_markdown_units",
     ):
         raw_items = snapshots.get(collection)
         if not isinstance(raw_items, list):

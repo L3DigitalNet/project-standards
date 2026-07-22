@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.control_plane.providers as provider_runtime
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.providers import (
@@ -987,6 +988,81 @@ def test_provider_integrity_checks_legacy_evidence_paths(
 
     with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
         invoke_provider(legacy_invocation)
+
+
+def test_provider_integrity_checks_managed_markdown_unit_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("repo\n", encoding="utf-8")
+    payload = _write_provider_payload(tmp_path / "payload", behavior="write")
+    invocation = _invocation(repo, payload)
+    markdown_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "managed_markdown_units": [
+                {
+                    "target": "README.md",
+                    "adapter": "markdown-block",
+                    "scope": "block:demo",
+                }
+            ]
+        },
+    )
+    monkeypatch.chdir(repo)
+
+    with pytest.raises(ControlPlaneError, match="CP-PROVIDER-INTEGRITY"):
+        invoke_provider(markdown_invocation)
+
+
+def test_provider_rejects_unsafe_managed_markdown_unit_target(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _write_provider_payload(tmp_path / "payload")
+    invocation = _invocation(repo, payload)
+    markdown_invocation = ProviderInvocation(
+        repo=invocation.repo,
+        payload=invocation.payload,
+        standard_id=invocation.standard_id,
+        version=invocation.version,
+        provider_id=invocation.provider_id,
+        operation=invocation.operation,
+        effective_config=invocation.effective_config,
+        snapshots={
+            "managed_markdown_units": [
+                {
+                    "target": "../outside.md",
+                    "adapter": "markdown-block",
+                    "scope": "block:demo",
+                }
+            ]
+        },
+    )
+
+    with pytest.raises(ControlPlaneError, match="invalid repository path"):
+        invoke_provider(markdown_invocation)
+
+
+def test_provider_does_not_treat_managed_markdown_collection_key_as_path() -> None:
+    assert (
+        provider_runtime._declared_snapshot_paths(  # pyright: ignore[reportPrivateUsage]
+            {
+                "managed_markdown_units": {
+                    "kind": "regular",
+                    "content_base64": "",
+                }
+            }
+        )
+        == ()
+    )
 
 
 def test_provider_integrity_checks_preview_target(

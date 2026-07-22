@@ -17,7 +17,12 @@ from project_standards.control_plane.diagnostics import (
 )
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.locking import LockMode, control_plane_lock
-from project_standards.control_plane.models import CentralLock, ConsumerCatalog, DesiredConfig
+from project_standards.control_plane.models import (
+    CentralLock,
+    ConsumerCatalog,
+    DesiredConfig,
+    LockedUnit,
+)
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
@@ -34,6 +39,7 @@ from project_standards.control_plane.state import (
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import PackageVersion, SafeRelativePath
 from project_standards.package_contract.payload import (
+    AdapterKind,
     JsonObject,
     JsonValue,
     PayloadAvailability,
@@ -124,18 +130,27 @@ def capture_command_snapshot(repo: Path, paths: tuple[str, ...]) -> JsonObject:
 
 def managed_unit_snapshot(lock: CentralLock, standard_id: str) -> list[JsonValue]:
     """Return lock-bound semantic units owned by one selected package."""
+    return [_locked_unit_json(unit) for unit in lock.artifacts if standard_id in unit.owners]
+
+
+def managed_markdown_unit_snapshot(lock: CentralLock) -> list[JsonValue]:
+    """Return every lock-bound Markdown block across all selected packages."""
     return [
-        {
-            "target": unit.path.original,
-            "adapter": unit.adapter.value,
-            "scope": unit.scope,
-            "semantic_digest": unit.semantic_digest.value,
-            "content_digest": unit.content_digest.value,
-            "mode": unit.mode,
-        }
+        _locked_unit_json(unit)
         for unit in lock.artifacts
-        if standard_id in unit.owners
+        if unit.adapter is AdapterKind.MARKDOWN_BLOCK
     ]
+
+
+def _locked_unit_json(unit: LockedUnit) -> JsonValue:
+    return {
+        "target": unit.path.original,
+        "adapter": unit.adapter.value,
+        "scope": unit.scope,
+        "semantic_digest": unit.semantic_digest.value,
+        "content_digest": unit.content_digest.value,
+        "mode": unit.mode,
+    }
 
 
 def invoke_selected_provider(

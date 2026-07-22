@@ -50,6 +50,7 @@ _FAMILY = _ROOT / "standards/agent-handoff"
 _PAYLOAD = _FAMILY / "versions/1.1"
 _PAYLOAD_1_2 = _FAMILY / "versions/1.2"
 _PAYLOAD_1_3 = _FAMILY / "versions/1.3"
+_PAYLOAD_1_4 = _FAMILY / "versions/1.4"
 
 
 def _payload_at(root: Path) -> InstalledPayload:
@@ -67,6 +68,10 @@ def _payload_1_2() -> InstalledPayload:
 
 def _payload_1_3() -> InstalledPayload:
     return _payload_at(_PAYLOAD_1_3)
+
+
+def _payload_1_4() -> InstalledPayload:
+    return _payload_at(_PAYLOAD_1_4)
 
 
 def _options_for(payload: InstalledPayload, **overrides: object) -> JsonObject:
@@ -141,6 +146,24 @@ def _content_snapshot(content: bytes, *, mode: str | None = None) -> JsonObject:
         "content_digest": f"sha256:{hashlib.sha256(content).hexdigest()}",
         "content_base64": base64.b64encode(content).decode("ascii"),
         "mode": mode,
+    }
+
+
+def _markdown_envelope(marker: str, body: bytes) -> tuple[bytes, JsonObject]:
+    envelope = (
+        b"<!-- prettier-ignore-start -->\n\n"
+        + f"<!-- BEGIN project-standards:{marker} -->\n".encode()
+        + body
+        + f"<!-- END project-standards:{marker} -->\n\n".encode()
+        + b"<!-- prettier-ignore-end -->\n"
+    )
+    return envelope, {
+        "target": "CLAUDE.md",
+        "adapter": "markdown-block",
+        "scope": f"block:{marker}",
+        "semantic_digest": f"sha256:{hashlib.sha256(body).hexdigest()}",
+        "content_digest": f"sha256:{hashlib.sha256(body).hexdigest()}",
+        "mode": None,
     }
 
 
@@ -637,6 +660,121 @@ def test_agent_handoff_validate_enforces_layout_shape_credentials_and_integratio
     assert {(finding.code, finding.severity) for finding in legacy_oversized.findings} >= {
         ("AH-SIZE-CAP", "error")
     }
+
+
+def test_agent_handoff_14_size_uses_exact_consumer_controlled_bytes(
+    tmp_path: Path,
+) -> None:
+    payload = _payload_1_4()
+    config = _options_for(payload)
+    snapshots = _valid_handoff_snapshots(config, payload=payload)
+    agent = _render(
+        "CLAUDE.md",
+        AdapterKind.MARKDOWN_BLOCK,
+        "block:agent-handoff",
+        config,
+        payload=payload,
+    ).encode()
+    agent_body = agent.split(b"<!-- BEGIN project-standards:agent-handoff -->\n", 1)[1].split(
+        b"<!-- END project-standards:agent-handoff -->\n", 1
+    )[0]
+    markdown, markdown_unit = _markdown_envelope(
+        "markdown-tooling",
+        b"# Markdown tooling\n\nManaged Markdown policy.\n",
+    )
+    python, python_unit = _markdown_envelope(
+        "python-tooling",
+        b"# Python tooling\n\nManaged Python policy.\n",
+    )
+    agent_unit: JsonObject = {
+        "target": "CLAUDE.md",
+        "adapter": "markdown-block",
+        "scope": "block:agent-handoff",
+        "semantic_digest": f"sha256:{hashlib.sha256(agent_body).hexdigest()}",
+        "content_digest": f"sha256:{hashlib.sha256(agent_body).hexdigest()}",
+        "mode": None,
+    }
+    consumer = b"x" * 2046 + b"\n\n"
+    content = consumer + agent + b"\n" + markdown + b"\n" + python
+    snapshots["CLAUDE.md"] = _content_snapshot(content)
+    snapshots["managed_markdown_units"] = [agent_unit, markdown_unit, python_unit]
+
+    result = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        config,
+        tmp_path,
+        snapshots,
+        payload=payload,
+    )
+
+    finding = next(
+        item for item in result.findings if item.code == "AH-SIZE-CAP" and item.path == "CLAUDE.md"
+    )
+    assert finding.message == "document exceeds 2048 byte hard cap by 2 bytes"
+    assert len(content) - len(agent) - len(markdown) - len(python) == 2050
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "malformed",
+        "nested",
+        "duplicate",
+        "duplicate-lock",
+        "unlocked",
+        "wrong-scope",
+        "drifted",
+    ],
+)
+def test_agent_handoff_14_counts_unauthenticated_managed_envelopes(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    payload = _payload_1_4()
+    config = _options_for(payload)
+    snapshots = _valid_handoff_snapshots(config, payload=payload)
+    body = b"# Markdown tooling\n\nManaged Markdown policy.\n"
+    envelope, unit = _markdown_envelope("markdown-tooling", body)
+    content = b"x" * 2046 + b"\n\n" + envelope
+    units: list[JsonValue] = [unit]
+    if case == "malformed":
+        content = content.replace(b"<!-- prettier-ignore-end -->\n", b"")
+    elif case == "nested":
+        content = content.replace(
+            body,
+            b"<!-- BEGIN project-standards:nested -->\n" + body,
+        )
+    elif case == "duplicate":
+        content += b"\n" + envelope
+    elif case == "duplicate-lock":
+        units.append(
+            {
+                **unit,
+                "semantic_digest": f"sha256:{'0' * 64}",
+            }
+        )
+    elif case == "unlocked":
+        units = []
+    elif case == "wrong-scope":
+        unit["scope"] = "block:other"
+    elif case == "drifted":
+        content = content.replace(body, body + b"drift\n")
+    snapshots["CLAUDE.md"] = _content_snapshot(content)
+    snapshots["managed_markdown_units"] = units
+
+    result = _invoke(
+        "validate",
+        ProviderOperation.VALIDATE,
+        config,
+        tmp_path,
+        snapshots,
+        payload=payload,
+    )
+
+    assert any(
+        finding.code == "AH-SIZE-CAP" and finding.path == "CLAUDE.md" for finding in result.findings
+    )
 
 
 def test_agent_handoff_1_2_local_jsonc_lexer_preserves_string_literals(
@@ -1142,11 +1280,19 @@ def test_agent_handoff_modified_managed_skill_blocks_migration_without_writes(
     assert not (repo / ".standards").exists()
 
 
-def test_agent_handoff_payload_is_byte_identical_in_built_wheel(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("payload_root", "version"),
+    [(_PAYLOAD, "1.1"), (_PAYLOAD_1_4, "1.4")],
+)
+def test_agent_handoff_payload_is_byte_identical_in_built_wheel(
+    tmp_path: Path,
+    payload_root: Path,
+    version: str,
+) -> None:
     project = copy_minimal_repository(tmp_path)
     family = project / "standards/agent-handoff"
     shutil.copytree(_FAMILY, family)
-    payload = _payload()
+    payload = _payload_at(payload_root)
     (family / "standard.toml").write_text(
         f'''schema_version = "2.0"
 
@@ -1157,8 +1303,8 @@ summary = "Repository-local agent continuity."
 status = "active"
 
 [[versions]]
-version = "1.1"
-payload = "versions/1.1/payload.toml"
+version = "{version}"
+payload = "versions/{version}/payload.toml"
 digest = "{payload.integrity.aggregate_digest.value}"
 ''',
         encoding="utf-8",
@@ -1190,7 +1336,7 @@ source-include = ["standards/**"]
         capture_output=True,
     )
     (wheel,) = distribution.glob("*.whl")
-    prefix = "project_standards/payloads/agent-handoff/1.1/"
+    prefix = f"project_standards/payloads/agent-handoff/{version}/"
     with zipfile.ZipFile(wheel) as archive:
         wheel_files = {
             name.removeprefix(prefix): archive.read(name)
@@ -1200,8 +1346,8 @@ source-include = ["standards/**"]
         extracted = tmp_path / "extracted"
         archive.extractall(extracted)
     source_files = {
-        path.relative_to(_PAYLOAD).as_posix(): path.read_bytes()
-        for path in _PAYLOAD.rglob("*")
+        path.relative_to(payload_root).as_posix(): path.read_bytes()
+        for path in payload_root.rglob("*")
         if path.is_file()
     }
     assert wheel_files == source_files
@@ -1217,7 +1363,7 @@ source-include = ["standards/**"]
         _invoke(
             "scaffold",
             ProviderOperation.SCAFFOLD,
-            _options(),
+            _options_for(payload),
             tmp_path,
             {
                 "authoring": {
@@ -1234,7 +1380,7 @@ source-include = ["standards/**"]
     installed_validation = _invoke(
         "validate",
         ProviderOperation.VALIDATE,
-        _options(),
+        _options_for(payload),
         tmp_path,
         {},
         payload=installed_payload,

@@ -30,6 +30,7 @@ from project_standards.control_plane.command_resolution import (
     SelectedCommandPackage,
     capture_command_snapshot,
     invoke_selected_provider,
+    managed_markdown_unit_snapshot,
     managed_unit_snapshot,
     selected_command,
 )
@@ -203,6 +204,7 @@ def _read_snapshots(selected: SelectedCommandPackage) -> JsonObject:
     if missing:
         snapshots.update(capture_command_snapshot(selected.repo, missing))
     snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "agent-handoff")
+    snapshots["managed_markdown_units"] = managed_markdown_unit_snapshot(selected.lock)
     return snapshots
 
 

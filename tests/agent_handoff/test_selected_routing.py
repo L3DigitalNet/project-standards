@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 import project_standards.agent_handoff.cli as agent_handoff_cli
+import project_standards.control_plane.command_resolution as command_resolution
 from project_standards.agent_handoff.cli import run
 from project_standards.agent_handoff.model import Finding
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
+from project_standards.control_plane.codec import parse_lock
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import (
@@ -25,8 +28,27 @@ from project_standards.control_plane.locking import (
 )
 from project_standards.control_plane.planner import plan_reconciliation
 from project_standards.control_plane.schemas import MutationPlanSchema
+from project_standards.package_contract.payload import JsonObject
 
 _ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_managed_markdown_snapshot_spans_all_packages_while_local_units_stay_local() -> None:
+    lock = parse_lock((_ROOT / ".standards/lock.toml").read_bytes())
+    markdown_units = cast(
+        "list[JsonObject]", command_resolution.managed_markdown_unit_snapshot(lock)
+    )
+    assert {(item["target"], item["scope"]) for item in markdown_units} == {
+        (target, f"block:{owner}")
+        for target in ("AGENTS.md", "CLAUDE.md")
+        for owner in ("agent-handoff", "markdown-tooling", "python-tooling")
+    }
+    local_units = cast(
+        "list[JsonObject]",
+        command_resolution.managed_unit_snapshot(lock, "agent-handoff"),
+    )
+    assert not any(item["scope"] == "block:markdown-tooling" for item in local_units)
+    assert not any(item["scope"] == "block:python-tooling" for item in local_units)
 
 
 @pytest.fixture(scope="module")
