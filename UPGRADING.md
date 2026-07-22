@@ -229,6 +229,10 @@ A newer v5 tool may carry a compatible updated catalog-5 snapshot. `reconcile` p
 
 Refresh preserves exact pins, package options, accepted-major tracks, referenced extensions, and unrelated files. It refuses an unavailable pin/track, incompatible default change, older-tool downgrade, or catalog-major mismatch.
 
+### Comments inside managed TOML regions
+
+Consumer comments attached to a managed `pyproject.toml` unit survive a rewrite. When an apply re-renders a managed table, keyed-set entry, or key, comments found in the rewritten region — inside a multi-line array, trailing an owned line, or on their own line between owned lines — are re-emitted directly above the statement with the same key or table in the new rendering; a comment whose key no longer exists moves above the rewritten unit. Rewrites consume the old region completely, so they leave no stray blank lines, and a follow-up `reconcile --check` stays a no-op. The rendered layout of the managed unit itself (line breaks, indentation, entry order) belongs to the package, so annotate managed regions with comment lines rather than relying on a specific array layout.
+
 ## Verify
 
 Run the repository's own checks plus the generic control-plane gates:
