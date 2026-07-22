@@ -226,6 +226,18 @@ def _emit_scalar(value: str) -> str:
     return _emit_single_quoted(value)
 
 
+def _accepted_spelling(original: str, value: str) -> bool:
+    """True when `original` is a spelling the checker already accepts for the string
+    `value` (5.8.0 FR-008): the single-quoted canonical form (always accepted — the
+    5.7.0 default and Prettier's `singleQuote: true` preference), OR the double-quoted
+    form when double-quoting is the strictly minimal style (_emit_scalar returns double
+    only then). Shared by normalize_lists (block items) and _requote_scalar_line (key
+    lines) so the two preserve-or-re-spell decisions never drift. Keeping an accepted
+    `original` verbatim is what makes `'Apple''s'` byte-identical while _emit_scalar
+    alone would flip it to the minimal double form `"Apple's"` (and vice versa)."""
+    return original == _emit_single_quoted(value) or original == _emit_scalar(value)
+
+
 _NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
 
 
@@ -292,10 +304,11 @@ def _requote_scalar_line(line: str, key: str) -> str:
     """Re-quote the scalar value on a `key: value` line WITHOUT resolving its YAML type
     (CR-NEW-001): the author's literal text is quoted, so `on`/`off`/`1.1`/a date keep
     their exact characters. The quote style is minimal-escape (_emit_scalar, 5.8.0
-    FR-008); an already-single-quoted value is returned verbatim so every 5.7.0 spelling
-    stays byte-identical. Indentation, an inline `# comment` (split at a real
-    whitespace-`#` boundary — CR-NEW-003), and the line ending are preserved; explicit
-    `null`/`~`, empty values, and flow lists are left untouched."""
+    FR-008); a value already in the acceptance set (_accepted_spelling — single-quoted,
+    or minimal double-quoted) is returned verbatim so every 5.7.0 spelling stays
+    byte-identical. Indentation, an inline `# comment` (split at a real whitespace-`#`
+    boundary — CR-NEW-003), and the line ending are preserved; explicit `null`/`~`,
+    empty values, and flow lists are left untouched."""
     m = re.match(
         r"^(?P<indent>[ \t]*)(?P<key>" + re.escape(key) + r":)(?P<sep>[ \t]*)"
         r"(?P<rest>[^\r\n]*)(?P<eol>\r?\n?)$",
@@ -309,16 +322,20 @@ def _requote_scalar_line(line: str, key: str) -> str:
         return line  # empty or flow list -> handled by normalize_lists
     if raw in _NULL_TOKENS:
         return line  # explicit null stays null
-    if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
-        return line  # already single-quoted -> idempotent
-    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+    if len(raw) >= 2 and raw[0] in ("'", '"') and raw[-1] == raw[0]:
         try:
             decoded = yaml.safe_load(raw)  # explicit quotes -> intended string, no type guess
         except yaml.YAMLError:
-            return line  # malformed double-quoted scalar -> leave for the validator, never crash
+            return line  # malformed quoted scalar -> leave for the validator, never crash
         text_value = decoded if isinstance(decoded, str) else raw
     else:
         text_value = raw  # unquoted plain scalar: quote the RAW text, never resolve it
+    # Same acceptance predicate as the block-list path (T2): keep an already-accepted
+    # spelling byte-identical, else re-emit minimally. This subsumes the old
+    # single-quoted fast-return (a well-formed single-quoted scalar is always accepted)
+    # and keeps a minimal double-quoted scalar from being flipped back to single.
+    if _accepted_spelling(raw, text_value):
+        return line
     sep = m.group("sep") or " "
     return (
         m.group("indent")
@@ -374,11 +391,34 @@ def _block_list_has_item_comment(item_lines: list[str]) -> bool:
     return False
 
 
+def _block_item_spellings(item_lines: list[str]) -> list[str]:
+    """Raw source text of each `- item` block-list line (eol- and inline-comment-stripped),
+    in source order. normalize_lists calls this BEFORE its BaseLoader decode collapses
+    every item to a bare value, so an item already in the acceptance set can be kept
+    verbatim rather than re-spelled (5.8.0 FR-008 / T2). A flow-list source (`[a, b]` on
+    the key line) has no `-` item lines, so the result is empty and every item re-emits
+    through _emit_scalar. Comment-bearing lists never reach here (_block_list_has_item_comment
+    skips them upstream), so _split_value_comment only trims trailing whitespace."""
+    spellings: list[str] = []
+    for ln in item_lines:
+        stripped = ln.lstrip(" \t").rstrip("\r\n")
+        if not stripped.startswith("-"):
+            continue  # nested-mapping / folded continuation line: not a top-level item
+        after_dash = stripped[1:].lstrip(" \t")
+        spellings.append(_split_value_comment(after_dash)[0].rstrip())
+    return spellings
+
+
 def normalize_lists(entries: list[Entry]) -> None:
-    """In place: render each list-typed field as canonical block style (single-quoted
-    items, duplicates removed first-wins); an empty/absent value becomes `key: []`.
-    Values are read with yaml.BaseLoader so list items are NEVER type-coerced — e.g.
-    `[on, off]` stays the strings 'on'/'off', not booleans (CR-NEW-001)."""
+    """In place: render each list-typed field as canonical block style, duplicates
+    removed first-wins; an empty/absent value becomes `key: []`. Each item keeps its
+    ORIGINAL spelling when that spelling is already accepted for its decoded value
+    (_accepted_spelling — single-quoted, or minimal double-quoted; 5.8.0 FR-008 / T2),
+    otherwise it is re-spelled minimally via _emit_scalar; this stops the block path
+    from re-quoting `- "Apple's"` into `- 'Apple''s'` (the issue #26 Prettier fight) the
+    same way _requote_scalar_line already protects key lines. Values are read with
+    yaml.BaseLoader so list items are NEVER type-coerced — e.g. `[on, off]` stays the
+    strings 'on'/'off', not booleans (CR-NEW-001)."""
     for entry in entries:
         if entry.key not in _LIST_FIELDS:
             continue
@@ -405,24 +445,40 @@ def normalize_lists(entries: list[Entry]) -> None:
         leading = entry.lines[:lead]
         raw_items: list[Any] = cast(list[Any], value) if isinstance(value, list) else []
         items: list[str] = [str(x) for x in raw_items]
-        seen: list[str] = []
-        for item in items:
-            if item not in seen:
-                seen.append(item)
+        # Author's per-item spellings, recovered from the block source before the decode
+        # above discarded them. Recover only when there is exactly one `-` line per decoded
+        # item; a flow-list source or an exotic multi-line item yields a count mismatch, so
+        # we fall back to re-spelling every item minimally (`recovered is None`).
+        spellings = _block_item_spellings(entry.lines[lead + 1 :])
+        recovered = spellings if len(spellings) == len(items) else None
+        # First-wins dedupe on DECODED values; the FIRST occurrence's spelling is chosen
+        # (kept verbatim when accepted, else re-spelled), so a later duplicate never wins.
+        order: list[str] = []
+        chosen: dict[str, str] = {}
+        for idx, item in enumerate(items):
+            if item in chosen:
+                continue
+            order.append(item)
+            original = recovered[idx] if recovered is not None else None
+            chosen[item] = (
+                original
+                if original is not None and _accepted_spelling(original, item)
+                else _emit_scalar(item)
+            )
         # item_eol: block-list items always need a real newline; fall back to '\n'
         # when the key line has no trailing newline (last entry in body — the regex
         # design absorbs that newline into close_fence).
         item_eol = eol or "\n"
-        if not seen:
+        if not order:
             entry.lines = [*leading, f"{indent}{entry.key}: []{inline}{eol}"]
         else:
             rendered = [f"{indent}{entry.key}:{inline}{item_eol}"]
-            for idx, s in enumerate(seen):
+            for idx, s in enumerate(order):
                 # The LAST item carries the entry's own ending (`eol` is '' when this list
                 # is the last frontmatter field — the close fence already owns that newline,
                 # so forcing item_eol here would insert a spurious blank line before `---`).
-                this_eol = eol if idx == len(seen) - 1 else item_eol
-                rendered.append(f"{indent}  - {_emit_single_quoted(s)}{this_eol}")
+                this_eol = eol if idx == len(order) - 1 else item_eol
+                rendered.append(f"{indent}  - {chosen[s]}{this_eol}")
             entry.lines = [*leading, *rendered]
 
 

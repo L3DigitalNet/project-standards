@@ -1511,6 +1511,121 @@ def test_frozen_5_7_0_corpus_stays_green_both_routings(tmp_path: Path) -> None:
     assert not plan.plan.actions  # byte identity -> no mutation actions
 
 
+# ---------------------------------------------------------------------------
+# 5.8.0 FR-008 / T2: block-list item spelling preservation (TC-T2-001..005).
+# normalize_lists keeps any item whose current spelling is an accepted canonical
+# form (single-quoted, or minimal double-quoted per _quote_costs) instead of
+# re-spelling every item through _emit_single_quoted, while still applying
+# flow->block conversion, first-wins dedupe, and two-space indentation.
+# ---------------------------------------------------------------------------
+
+
+def _list_doc(list_block: str) -> str:
+    """A canonical 5.7.0 doc whose only variable is the trailing `related` block-list
+    body (`list_block` is the full `related:` entry incl. its item lines)."""
+    return (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        f"{list_block}"
+        "---\n"
+        "# Body\n"
+    )
+
+
+def test_block_list_doubled_apostrophe_item_stays_byte_identical() -> None:
+    # TC-T2-001: `- 'Apple''s'` is the frozen 5.7.0 single-quoted spelling. The lexical
+    # guarantee (it is in the acceptance set for its decoded value) keeps it
+    # byte-identical, not the coincidence that re-emission reproduces the same text.
+    src = _list_doc("related:\n  - 'Apple''s'\n")
+    new, changed, _ = format_text(src, path=None)
+    assert "  - 'Apple''s'\n" in new
+    assert changed is False
+
+
+def test_block_list_minimal_double_quoted_item_is_preserved() -> None:
+    # TC-T2-002: `- "Apple's"` needs no double-quote escape while a single-quoted
+    # spelling would double the apostrophe, so double is the minimal style and the item
+    # must be preserved, NOT re-spelled to `- 'Apple''s'` (the issue #26 Prettier fight).
+    src = _list_doc('related:\n  - "Apple\'s"\n')
+    new, changed, _ = format_text(src, path=None)
+    assert '  - "Apple\'s"\n' in new
+    assert changed is False
+
+
+def test_block_list_unquoted_item_quotes_minimally_and_flow_converts() -> None:
+    # TC-T2-003: an unquoted item still gains minimal quoting (`- foo` -> `- 'foo'`;
+    # an apostrophe-bearing plain item -> minimal double), and a flow list still
+    # converts to block form. Flow items have no recoverable block spelling, so they
+    # are emitted through _emit_scalar (minimal quoting), never left bare.
+    block = _list_doc("related:\n  - foo\n  - Apple's day\n")
+    new, changed, _ = format_text(block, path=None)
+    assert "  - 'foo'\n" in new  # bare word -> single-quoted (tie -> single)
+    assert '  - "Apple\'s day"\n' in new  # apostrophe -> minimal double
+    assert changed is True
+
+    flow = _list_doc("related: [foo, bar]\n")
+    fnew, fchanged, _ = format_text(flow, path=None)
+    assert "related:\n  - 'foo'\n  - 'bar'\n" in fnew  # flow -> block, minimal quoting
+    assert fchanged is True
+
+
+def test_block_list_dedupe_keeps_first_occurrence_spelling() -> None:
+    # TC-T2-004: two items decoding to the same value dedupe first-wins, keeping the
+    # FIRST occurrence's (accepted) spelling and dropping the later, differently-spelled
+    # duplicate — the first `- "Apple's"` survives, the second `- 'Apple''s'` is removed.
+    src = _list_doc("related:\n  - \"Apple's\"\n  - 'Apple''s'\n")
+    new, changed, _ = format_text(src, path=None)
+    assert '  - "Apple\'s"\n' in new
+    assert "  - 'Apple''s'\n" not in new
+    assert new.count("- ") == 1  # exactly one surviving item line
+    assert changed is True
+
+
+# A frozen corpus of 5.7.0-canonical block lists: plain single-quoted items and the
+# doubled-apostrophe single-quoted spelling. Every one is what 5.7.0 emitted, so the
+# new preserve-or-re-spell logic must leave each byte-identical (no accepted spelling
+# is ever flagged). The minimal double-quoted form is a 5.8.0 addition (TC-T2-002),
+# deliberately excluded here — it was NOT 5.7.0-canonical.
+_FROZEN_5_7_0_LIST_CORPUS = [
+    _list_doc("related:\n  - 'CHANGELOG.md'\n  - 'meta/versioning.md'\n"),
+    _list_doc("related:\n  - 'Apple''s'\n"),
+    _list_doc("related:\n  - 'on'\n  - 'off'\n  - 'C# guide'\n"),
+]
+
+
+def test_frozen_5_7_0_list_corpus_stays_green_both_routings(tmp_path: Path) -> None:
+    # TC-T2-005: every 5.7.0-canonical block list reports no reformatting and stays
+    # byte-identical through both current-default routing (module-level format_text) and
+    # exact markdown-frontmatter 1.4 routing (the version-selected provider path calls the
+    # same engine — see TC-T1-007). No item accepted by the 5.7.0 checker becomes flagged.
+    for doc in _FROZEN_5_7_0_LIST_CORPUS:
+        new, changed, warnings = format_text(doc, path=None)
+        assert new == doc, doc
+        assert changed is False
+        assert warnings == []
+
+    from project_standards.frontmatter_authoring import plan_frontmatter_format
+    from project_standards.package_contract.paths import PackageVersion
+
+    names: list[Path] = []
+    for index, doc in enumerate(_FROZEN_5_7_0_LIST_CORPUS):
+        name = f"note{index}.md"  # no README/index/docs-research rule -> no doc_type change
+        (tmp_path / name).write_text(doc, encoding="utf-8")
+        names.append(Path(name))
+    plan = plan_frontmatter_format(tmp_path, tuple(names), version=PackageVersion("1.4"))
+    assert plan.formatted_paths == ()  # zero reformat reports
+    assert not plan.plan.actions  # byte identity -> no mutation actions
+
+
 def test_main_stdin_non_refusal_warning_exits_0(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
