@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 import project_standards.format_frontmatter as format_frontmatter
 from project_standards.format_frontmatter import (
@@ -259,7 +260,11 @@ def test_null_license_stays_null() -> None:
     assert "license: 'null'" not in new
 
 
-def test_double_quoted_becomes_single_quoted() -> None:
+def test_escape_free_double_quoted_still_normalizes_to_single() -> None:
+    # TC-T1-003: FR-008 narrows the old "double always becomes single" rule to
+    # escape-free input. `"Hello"` has no apostrophe, so single and double cost the
+    # same; the tie resolves to single. (Apostrophe-bearing double-quoted scalars are
+    # now preserved — see test_minimal_double_quoted_scalar_is_preserved.)
     src = _doc(title='"Hello"')
     new, _, _ = format_text(src, path=None)
     assert "title: 'Hello'" in new
@@ -1311,6 +1316,199 @@ def test_main_unreadable_file_reported_exits_1(
     captured = capsys.readouterr()
     assert rc == 1
     assert "cannot read" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# 5.8.0 FR-008: minimal-escape scalar emitter (TC-T1-001..007). The emitter picks
+# the quote style needing fewer escapes (single-cost = count of `'`; double-cost =
+# count of `"` plus `\`; ties -> single), and forces double quotes for control
+# characters so they round-trip losslessly. Every 5.7.0 single-quoted spelling is
+# preserved verbatim (previously-passing rule).
+# ---------------------------------------------------------------------------
+
+
+def test_minimal_double_quoted_scalar_is_preserved() -> None:
+    # TC-T1-001: `"Apple's"` needs no double-quote escape but a single-quoted
+    # spelling would double the apostrophe, so the emitter keeps it double-quoted.
+    # It is already minimal -> byte-identical, no reformat (Prettier agrees).
+    src = _doc(title='"Apple\'s"')
+    new, changed, _ = format_text(src, path=None)
+    assert 'title: "Apple\'s"' in new
+    assert changed is False
+
+
+def test_control_character_scalar_round_trips_losslessly() -> None:
+    # TC-T1-004: a double-quoted scalar decoding to control characters must re-emit
+    # with the YAML escape table, never as literal control bytes inside single
+    # quotes (which produced broken multiline YAML before FR-008).
+    src = _doc(title='"a\\nb"')  # source: a \ n b  -> decodes to a<newline>b
+    new, _changed, _ = format_text(src, path=None)
+    assert 'title: "a\\nb"' in new  # escaped \n, not a literal newline
+    parsed = yaml.safe_load(new.split("---\n", 2)[1])
+    assert parsed["title"] == "a\nb"
+
+
+def test_unquoted_apostrophe_scalar_emits_minimal_double() -> None:
+    # TC-T1-005: an unquoted plain scalar carrying an apostrophe quotes in the
+    # minimal style (double, no escape); the parsed value is unchanged.
+    src = _doc(title="Apple's plan")
+    new, _changed, _ = format_text(src, path=None)
+    assert 'title: "Apple\'s plan"' in new
+    parsed = yaml.safe_load(new.split("---\n", 2)[1])
+    assert parsed["title"] == "Apple's plan"
+
+
+def test_emitter_contract_table() -> None:
+    # TC-T1-006: the full emitter contract, exercised through _requote_scalar_line
+    # (its only production caller for key-line scalars). Each row is
+    # (input `key: value` line, expected output line) for key `title`.
+    from project_standards.format_frontmatter import (
+        _requote_scalar_line,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    # Behavior-changing rows (RED before FR-008): double-preservation branches and
+    # the control-character escape set (\n \t \r \xNN \\ \").
+    behavior_changing = [
+        # double strictly cheaper (one apostrophe, no double-quote) -> preserved
+        ('title: "Apple\'s"\n', 'title: "Apple\'s"\n'),
+        # unquoted apostrophe -> minimal double
+        ("title: Apple's plan\n", 'title: "Apple\'s plan"\n'),
+        # two apostrophes vs one backslash: double still wins; the `\` is escaped
+        ("title: \"a'b'c\\\\d\"\n", "title: \"a'b'c\\\\d\"\n"),
+        # control-character escape set
+        ('title: "a\\tb"\n', 'title: "a\\tb"\n'),
+        ('title: "a\\rb"\n', 'title: "a\\rb"\n'),
+        ('title: "a\\nb"\n', 'title: "a\\nb"\n'),
+        ('title: "a\\x07b"\n', 'title: "a\\x07b"\n'),
+    ]
+    for line, expected in behavior_changing:
+        assert _requote_scalar_line(line, "title") == expected, line
+
+    # Unchanged-behavior rows (tie rule + cheaper-single) — these already held in
+    # 5.7.0 and must keep holding (previously-passing rule).
+    unchanged = [
+        # escape-free double-quoted -> single (tie: both costs 0)
+        ('title: "Hello"\n', "title: 'Hello'\n"),
+        # plain unquoted, no quotes -> single
+        ("title: Hello\n", "title: 'Hello'\n"),
+        # double-quoting needs MORE escapes than single -> single wins
+        ('title: "say \\"hi\\""\n', "title: 'say \"hi\"'\n"),
+        # already single-quoted (doubled apostrophe) -> verbatim idempotent bypass
+        ("title: 'Apple''s'\n", "title: 'Apple''s'\n"),
+    ]
+    for line, expected in unchanged:
+        assert _requote_scalar_line(line, "title") == expected, line
+
+    # Exclusions: null and flow lists are left for their own transforms; block
+    # scalars never reach the emitter because tokenize refuses to reserialize them.
+    assert _requote_scalar_line("license: null\n", "license") == "license: null\n"
+    assert _requote_scalar_line("tags: ['a']\n", "tags") == "tags: ['a']\n"
+    entries, reason = tokenize("title: |\n  block\n")
+    assert entries == [] and reason is not None
+
+
+def test_legacy_single_quoted_spelling_stays_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # TC-T1-002: a 5.7.0 doubled-apostrophe single-quoted scalar is the frozen
+    # canonical spelling; the emitter's single-quote bypass keeps it byte-identical
+    # and the CLI gate exits 0 (never flip pass -> fail).
+    src = _doc(title="'Apple''s'")
+    new, changed, _ = format_text(src, path=None)
+    assert "title: 'Apple''s'" in new
+    assert changed is False
+
+    monkeypatch.chdir(tmp_path)
+    f = tmp_path / "d.md"
+    f.write_text(src)
+    cfg = _cfg(tmp_path)
+    assert main(["--check", "--config", str(cfg), str(f)]) == 0
+
+
+# A frozen corpus of 5.7.0-canonical documents: one per accepted key-line scalar
+# class (plain single-quoted, doubled-apostrophe single-quoted, explicit null,
+# inline comment, block list). The new emitter must leave every one byte-identical.
+_FROZEN_5_7_0_CORPUS = [
+    (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'Plain Title'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "# Body\n"
+    ),
+    (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'  # frozen at creation\n"
+        "title: 'Apple''s'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "license: null\n"
+        "---\n"
+        "# Body\n"
+    ),
+    (
+        "---\n"
+        "schema_version: '1.1'\n"
+        "id: 'note-a3f9zk-x'\n"
+        "title: 'X'\n"
+        "description: 'A doc.'\n"
+        "doc_type: 'note'\n"
+        "status: 'draft'\n"
+        "created: '2026-06-08'\n"
+        "updated: '2026-06-08'\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related:\n"
+        "  - 'CHANGELOG.md'\n"
+        "  - 'meta/versioning.md'\n"
+        "---\n"
+        "# Body\n"
+    ),
+]
+
+
+def test_frozen_5_7_0_corpus_stays_green_both_routings(tmp_path: Path) -> None:
+    """TC-T1-007: every 5.7.0-canonical document reports no reformatting and stays
+    byte-identical through both current-default and exact markdown-frontmatter 1.4
+    routing. The scalar emitter is engine-level: the version-selected provider path
+    (`plan_frontmatter_format(..., version=...)`) calls the same module-level
+    `format_text` regardless of the pinned version, so byte identity through the 1.4
+    provider path and through `format_text` proves the shared emitter for both."""
+    # Current-default routing: the module-level engine.
+    for doc in _FROZEN_5_7_0_CORPUS:
+        new, changed, warnings = format_text(doc, path=None)
+        assert new == doc, doc
+        assert changed is False
+        assert warnings == []
+
+    # Exact markdown-frontmatter 1.4 routing: the version-selected provider path.
+    from project_standards.frontmatter_authoring import plan_frontmatter_format
+    from project_standards.package_contract.paths import PackageVersion
+
+    names: list[Path] = []
+    for index, doc in enumerate(_FROZEN_5_7_0_CORPUS):
+        name = f"note{index}.md"  # no README/index/docs-research rule -> no doc_type change
+        (tmp_path / name).write_text(doc, encoding="utf-8")
+        names.append(Path(name))
+    plan = plan_frontmatter_format(tmp_path, tuple(names), version=PackageVersion("1.4"))
+    assert plan.formatted_paths == ()  # zero reformat reports
+    assert not plan.plan.actions  # byte identity -> no mutation actions
 
 
 def test_main_stdin_non_refusal_warning_exits_0(

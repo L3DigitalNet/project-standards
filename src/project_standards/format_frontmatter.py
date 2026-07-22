@@ -13,6 +13,7 @@ import functools
 import json
 import re
 import sys
+import unicodedata
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -155,8 +156,74 @@ def tokenize(body: str) -> tuple[list[Entry], str | None]:
 
 
 def _emit_single_quoted(value: str) -> str:
-    """YAML single-quoted scalar: wrap in quotes, double internal single-quotes."""
+    """YAML single-quoted scalar: wrap in quotes, double internal single-quotes.
+
+    Retained for the block-list item, scaffold, and bump-updated call sites, whose
+    values never carry quotes or control characters (so the style is fixed). Key-line
+    scalars route through _emit_scalar instead; migrating the list path is T2's job."""
     return "'" + value.replace("'", "''") + "'"
+
+
+# YAML double-quoted escapes preferred over the generic \xNN fallback. \n \t \r are
+# control characters too, so this map is consulted before the category("Cc") check.
+_DOUBLE_ESCAPES = {
+    "\\": "\\\\",
+    '"': '\\"',
+    "\n": "\\n",
+    "\t": "\\t",
+    "\r": "\\r",
+}
+
+
+def _is_control(ch: str) -> bool:
+    """Single source of the control-character test (Unicode category Cc): shared by the
+    force-double-quote decision and the per-character escape loop so they never drift."""
+    return unicodedata.category(ch) == "Cc"
+
+
+def _has_control(value: str) -> bool:
+    """True when `value` holds a control character. Single-quoted YAML cannot escape
+    control bytes, so such a value has no lossless single-quoted spelling and must be
+    emitted double-quoted (5.8.0 FR-008). Before FR-008 these were re-emitted as literal
+    bytes inside single quotes, producing broken multiline YAML."""
+    return any(_is_control(ch) for ch in value)
+
+
+def _quote_costs(value: str) -> tuple[int, int]:
+    """Return (single_style_cost, double_style_cost): the escape counts that pick the
+    minimal quote style (5.8.0 FR-008). Single-quoted YAML escapes only `'` (doubled);
+    double-quoted must escape `"` and `\\`. Sole home of the cost model — _emit_scalar
+    breaks the tie toward single."""
+    return value.count("'"), value.count('"') + value.count("\\")
+
+
+def _emit_double_quoted(value: str) -> str:
+    r"""YAML double-quoted scalar with the full escape table (\n \t \r \xNN \\ \"). The
+    only lossless spelling for control characters."""
+    out = ['"']
+    for ch in value:
+        if ch in _DOUBLE_ESCAPES:
+            out.append(_DOUBLE_ESCAPES[ch])
+        elif _is_control(ch):
+            out.append(f"\\x{ord(ch):02x}")
+        else:
+            out.append(ch)
+    out.append('"')
+    return "".join(out)
+
+
+def _emit_scalar(value: str) -> str:
+    """Quote `value` in the minimal-escape style (5.8.0 FR-008): double-quoted when it
+    holds a control character (the only lossless form) or when double-quoting needs
+    strictly fewer escapes than single-quoting; otherwise single-quoted. Ties resolve to
+    single, matching Prettier's `singleQuote: true` preference and the 5.7.0
+    single-quoted canon, so no previously-accepted spelling ever flips (issue #26)."""
+    if _has_control(value):
+        return _emit_double_quoted(value)
+    single_cost, double_cost = _quote_costs(value)
+    if double_cost < single_cost:
+        return _emit_double_quoted(value)
+    return _emit_single_quoted(value)
 
 
 _NULL_TOKENS = frozenset({"null", "Null", "NULL", "~"})
@@ -223,8 +290,10 @@ def _split_value_comment(rest: str) -> tuple[str, str]:
 
 def _requote_scalar_line(line: str, key: str) -> str:
     """Re-quote the scalar value on a `key: value` line WITHOUT resolving its YAML type
-    (CR-NEW-001): the author's literal text is single-quoted, so `on`/`off`/`1.1`/a date
-    keep their exact characters. Indentation, an inline `# comment` (split at a real
+    (CR-NEW-001): the author's literal text is quoted, so `on`/`off`/`1.1`/a date keep
+    their exact characters. The quote style is minimal-escape (_emit_scalar, 5.8.0
+    FR-008); an already-single-quoted value is returned verbatim so every 5.7.0 spelling
+    stays byte-identical. Indentation, an inline `# comment` (split at a real
     whitespace-`#` boundary — CR-NEW-003), and the line ending are preserved; explicit
     `null`/`~`, empty values, and flow lists are left untouched."""
     m = re.match(
@@ -255,7 +324,7 @@ def _requote_scalar_line(line: str, key: str) -> str:
         m.group("indent")
         + m.group("key")
         + sep
-        + _emit_single_quoted(text_value)
+        + _emit_scalar(text_value)
         + comment
         + m.group("eol")
     )
