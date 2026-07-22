@@ -1,0 +1,1 @@
+../../../../../../standards/project-spec/versions/1.4/templates/spec-light-template.md

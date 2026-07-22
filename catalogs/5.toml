@@ -29,6 +29,12 @@ role = "retained"
 id = "agent-handoff"
 version = "1.3"
 digest = "sha256:3e6e53f9ba889b7f68624c1c3861c5e26ac889a6025c4fb7b819b49e140d1f78"
+role = "retained"
+
+[[packages]]
+id = "agent-handoff"
+version = "1.4"
+digest = "sha256:17bdc8b25c6cc6ac644057a85f55ed244adf88b58f4ad052d68222d20c24120a"
 role = "default"
 
 [[packages]]
@@ -95,6 +101,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.6"
 digest = "sha256:cf123371ac92c23942a37a5765b99d1af4f3c2481e2b75c2a239b6b17bc1ba8b"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.7"
+digest = "sha256:87376b5d4c3ce027ca3db249d5d27bb7a1bc6d2e7f843b7074f8f73d2a084c10"
 role = "default"
 
 [[packages]]
@@ -113,6 +125,12 @@ role = "retained"
 id = "project-spec"
 version = "1.3"
 digest = "sha256:56de712072c586549c68cdadfe4598b63d9d7d3ea7cb4f7727fd48c6ef4084a6"
+role = "retained"
+
+[[packages]]
+id = "project-spec"
+version = "1.4"
+digest = "sha256:1a5df19db6171aa5ece5287b4bc57360b2193205a511df11f69ec19402e7451e"
 role = "default"
 
 [[packages]]
@@ -179,4 +197,10 @@ role = "internal"
 id = "standard-bundle-authoring"
 version = "2.3"
 digest = "sha256:dbe940f518534224ccf58956a3ce02660f99be20cf161241308444eddccee7d5"
+role = "internal"
+
+[[packages]]
+id = "standard-bundle-authoring"
+version = "2.4"
+digest = "sha256:b2bdf94dffb7c8536debca60fdb4eb557cfcc364e47165a2634dccf002ca099f"
 role = "internal"

@@ -92,15 +92,15 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.6/README.md`](standards/markdown-tooling/versions/1.6/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.6/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.7/README.md`](standards/markdown-tooling/versions/1.7/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.7/adopt.md)
 
 ### Project Specification Standard
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.2/README.md`](standards/project-spec/versions/1.2/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.2/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.2/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.2/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.4/README.md`](standards/project-spec/versions/1.4/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.4/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.4/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.4/adopt.md)
 
 ### CLI Documentation Standard
 
@@ -113,9 +113,9 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.2/README.md`](standards/agent-handoff/versions/1.2/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.2/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.2/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.2/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.4/README.md`](standards/agent-handoff/versions/1.4/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.4/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.4/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.4/resources/legacy-migration.md)
 
 ### Python Coding Standard (draft)
 
@@ -125,9 +125,9 @@ Code-shape and agent-behavior rules for Python — the reference companion to Py
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.3`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.4`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/versions/2.3/README.md`](standards/standard-bundle-authoring/versions/2.3/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.4/README.md`](standards/standard-bundle-authoring/versions/2.4/README.md)
 
 ## Consuming the standards
 
@@ -158,10 +158,10 @@ Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.tom
 | Markdown Frontmatter | `1.4` | [`standards/markdown-frontmatter/versions/1.4/adopt.md`](standards/markdown-frontmatter/versions/1.4/adopt.md) |
 | ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
 | Python Tooling | `1.5` | [`standards/python-tooling/versions/1.5/adopt.md`](standards/python-tooling/versions/1.5/adopt.md) |
-| Markdown Tooling | `1.6` | [`standards/markdown-tooling/versions/1.6/adopt.md`](standards/markdown-tooling/versions/1.6/adopt.md) |
-| Project Specification | `1.3` | [`standards/project-spec/versions/1.3/adopt.md`](standards/project-spec/versions/1.3/adopt.md) |
+| Markdown Tooling | `1.7` | [`standards/markdown-tooling/versions/1.7/adopt.md`](standards/markdown-tooling/versions/1.7/adopt.md) |
+| Project Specification | `1.4` | [`standards/project-spec/versions/1.4/adopt.md`](standards/project-spec/versions/1.4/adopt.md) |
 | CLI Documentation | `1.3` | [`standards/cli-documentation/versions/1.3/adopt.md`](standards/cli-documentation/versions/1.3/adopt.md) |
-| Agent Handoff | `1.3` | [`standards/agent-handoff/versions/1.3/adopt.md`](standards/agent-handoff/versions/1.3/adopt.md) |
+| Agent Handoff | `1.4` | [`standards/agent-handoff/versions/1.4/adopt.md`](standards/agent-handoff/versions/1.4/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 

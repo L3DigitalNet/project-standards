@@ -103,6 +103,8 @@ That consumer-owned setting survives reconciliation and tells uv not to build or
 
 Python Tooling 1.5 also narrows checker and pytest ownership to the canonical keys it renders. Additional settings in the same tables remain consumer-owned: for example, `[tool.basedpyright].extraPaths` and `[tool.pytest.ini_options].pythonpath` survive V4 migration and later reconciliation. A conflict on a canonical key still blocks before write.
 
+The current package successors also correct three migration and validation edge cases. Markdown Tooling 1.7 safely adopts an exact released caller whose automatic trigger is disabled. Project Specification 1.4 treats a configured corpus with no matching files as an informational success. Agent Handoff 1.4 excludes only exact central-lock-authenticated managed Markdown envelopes from instruction-file size budgets; malformed, unlocked, or drifted lookalikes still count.
+
 ## 2. Apply the reviewed migration
 
 ```bash

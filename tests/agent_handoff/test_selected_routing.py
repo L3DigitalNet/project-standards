@@ -88,7 +88,7 @@ def test_unified_validate_uses_selected_provider(
 
     assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["standard_version"] == "1.3"
+    assert report["standard_version"] == "1.4"
     assert report["findings"] == []
 
 
@@ -481,7 +481,7 @@ def test_agent_handoff_1_2_selected_provider_normalizes_link_targets(
     report = json.loads(capsys.readouterr().out)
     references = [item for item in report["findings"] if item["code"] == "AH-REFERENCE-MISSING"]
 
-    assert report["standard_version"] == "1.3"
+    assert report["standard_version"] == "1.4"
     assert [(item["path"], item["locus"]) for item in references] == [
         ("docs/handoff/architecture.md", "Markdown link: "),
         ("docs/handoff/architecture.md", "Markdown link: "),
@@ -520,7 +520,7 @@ def test_unified_legacy_report_serializes_platform_evidence_through_provider(
     assert run(["legacy-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
-    assert report["standard_version"] == "1.3"
+    assert report["standard_version"] == "1.4"
 
 
 @pytest.mark.parametrize(

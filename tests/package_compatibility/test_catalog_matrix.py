@@ -10,9 +10,14 @@ import pytest
 
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
-from project_standards.control_plane.config_edit import set_standard_enabled
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.codec import parse_lock
+from project_standards.control_plane.config_edit import (
+    set_standard_enabled,
+    set_standard_version,
+)
+from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
+from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.migration import plan_legacy_migration
 from project_standards.control_plane.planner import plan_reconciliation
 from project_standards.package_contract.family import load_family_manifest
@@ -45,6 +50,11 @@ _ROOT = Path(__file__).resolve().parents[2]
 _ARTIFACT_STATES = _ROOT / "tests/fixtures/package_compatibility/legacy/artifact-states"
 _ALL_NAMESPACES = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml"
+)
+_CORRECTION_TRANSITIONS = (
+    ("agent-handoff", "1.3", "1.4"),
+    ("markdown-tooling", "1.6", "1.7"),
+    ("project-spec", "1.3", "1.4"),
 )
 
 
@@ -111,6 +121,65 @@ def test_consumer_default_matrix_is_derived_from_catalog_5() -> None:
     assert tuple(sorted(_DEFAULTS)) == _DEFAULTS
     assert {item for pair in _PAIRS for item in pair} == set(_DEFAULTS)
     assert set(_DEFAULTS) == _consumer_family_ids()
+
+
+def _apply_exact_selection(
+    repo: Path,
+    distribution: InstalledDistribution,
+) -> tuple[str, tuple[tuple[str, str, str], ...]]:
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    result = apply_reconciliation(ApplyRequest(request, plan))
+    assert result.success, result
+    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    (standard_id,) = lock.standards
+    mutations = tuple(
+        (action.target, action.scope, action.kind.value)
+        for action in plan.actions
+        if action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+    )
+    return lock.standards[standard_id].resolved.value, mutations
+
+
+@pytest.mark.parametrize(
+    ("standard_id", "predecessor", "successor"),
+    _CORRECTION_TRANSITIONS,
+)
+def test_correction_predecessors_resolve_exactly_and_latest_transitions_converge(
+    tmp_path: Path,
+    source_payload_distribution: InstalledDistribution,
+    wheel_payload_distribution: InstalledDistribution,
+    standard_id: str,
+    predecessor: str,
+    successor: str,
+) -> None:
+    results: list[tuple[str, str, tuple[tuple[str, str, str], ...]]] = []
+    for label, distribution in (
+        ("source", source_payload_distribution),
+        ("wheel", wheel_payload_distribution),
+    ):
+        repo = tmp_path / label
+        repo.mkdir()
+        initialize_control_plane(repo, "5", distribution=distribution)
+        set_standard_enabled(repo, standard_id, True)
+        set_standard_version(repo, standard_id, predecessor)
+        exact, _initial_mutations = _apply_exact_selection(repo, distribution)
+
+        set_standard_version(repo, standard_id, "latest")
+        promoted, mutations = _apply_exact_selection(repo, distribution)
+        request = build_planner_request(repo, distribution, frozenset())
+        fixed = plan_reconciliation(request)
+
+        assert exact == predecessor
+        assert promoted == successor
+        assert fixed.applicable, fixed.findings
+        assert not any(
+            action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+            for action in fixed.actions
+        )
+        results.append((exact, promoted, mutations))
+    assert results[0] == results[1]
 
 
 @pytest.mark.parametrize(
