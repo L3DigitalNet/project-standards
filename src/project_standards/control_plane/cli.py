@@ -251,11 +251,11 @@ def _format_human_finding(finding: ControlFinding) -> str:
     path = finding.path or "."
     identity = "" if finding.identity in {"$file", "$target"} else f" [{finding.identity}]"
     lines = [f"{finding.severity.upper()} {finding.code} {path}{identity}: {finding.message}"]
-    if finding.expected is not None:
+    if finding.expected is not None or "expected" in finding.null_values:
         lines.append(f"  expected: {_bounded_excerpt(finding.expected)}")
     elif finding.expected_digest is not None:
         lines.append(f"  expected digest: {finding.expected_digest}")
-    if finding.actual is not None:
+    if finding.actual is not None or "actual" in finding.null_values:
         lines.append(f"  actual: {_bounded_excerpt(finding.actual)}")
     elif finding.actual_digest is not None:
         lines.append(f"  actual digest: {finding.actual_digest}")

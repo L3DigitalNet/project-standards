@@ -2025,15 +2025,14 @@ def test_python_tooling_successor_merges_additional_source_roots() -> None:
 
     include = _render_successor("key:/tool/basedpyright/include", AdapterKind.TOML, config)
     assert include == (
-        "[tool.basedpyright]\n"
-        'include = ["src", "tests", "docs/handoff/bugs", "scripts"]\n'
+        '[tool.basedpyright]\ninclude = ["src", "tests", "docs/handoff/bugs", "scripts"]\n'
     )
     coverage = _render_successor("table:/tool/coverage/run", AdapterKind.TOML, config)
     assert coverage == (
-        "[tool.coverage.run]\n"
-        "branch = true\n"
-        'source = ["src", "docs/handoff/bugs", "scripts"]\n'
+        '[tool.coverage.run]\nbranch = true\nsource = ["src", "docs/handoff/bugs", "scripts"]\n'
     )
+    ruff = _render_successor("table:/tool/ruff", AdapterKind.TOML, config)
+    assert 'src = ["src", "tests", "docs/handoff/bugs", "scripts"]' in ruff
     flat = _successor_options(
         source_layout="flat",
         additional_source_roots=["tools", "src"],
@@ -2042,27 +2041,69 @@ def test_python_tooling_successor_merges_additional_source_roots() -> None:
     flat_include = _render_successor("key:/tool/pyright/include", AdapterKind.TOML, flat)
     assert flat_include == '[tool.pyright]\ninclude = [".", "tests", "tools", "src"]\n'
     flat_coverage = _render_successor("table:/tool/coverage/run", AdapterKind.TOML, flat)
-    assert flat_coverage == (
-        '[tool.coverage.run]\nbranch = true\nsource = [".", "tools", "src"]\n'
-    )
+    assert flat_coverage == ('[tool.coverage.run]\nbranch = true\nsource = [".", "tools", "src"]\n')
 
 
-def test_python_tooling_successor_empty_option_renders_current_bytes() -> None:
-    current = _current_options()
-    successor = _successor_options()
-    assert successor == {**current, "additional_source_roots": []}
-    for scope in (
-        "table:/build-system",
-        "key:/dependency-groups/dev",
-        "table:/tool/ruff",
-        "key:/tool/basedpyright/include",
-        "key:/tool/basedpyright/typeCheckingMode",
-        "table:/tool/coverage/run",
-        "table:/tool/coverage/report",
-    ):
-        assert _render_successor(scope, AdapterKind.TOML, successor) == _render_current(
-            scope, AdapterKind.TOML, current
-        )
+def _parity_variants() -> list[dict[str, object]]:
+    return [
+        {},
+        {
+            "source_layout": "flat",
+            "type_checker": {"name": "pyright", "mode": "standard"},
+        },
+        {
+            "python_version": "3.13",
+            "build_backend": "hatchling",
+            "additional_dev_dependencies": ["pytest-cov"],
+            "ruff": {"line_length": 88, "extend_exclude": [".claude"]},
+            "pytest": {
+                "fail_under": 92,
+                "markers": ["performance: serial lane"],
+                "coverage_exclude_also": ['if __name__ == "__main__":'],
+            },
+            "coverage": {"parallel": True, "patch": ["subprocess"]},
+            "ci": {"enabled": False, "performance": False},
+            "workflow_ownership": "consumer-owned",
+            "vscode": {"format_on_save": False},
+        },
+    ]
+
+
+def test_python_tooling_successor_renders_current_bytes_for_all_units() -> None:
+    """FR-002: without additional_source_roots, every 1.6 unit matches 1.5 output."""
+    current_manifest = load_payload_manifest(_CURRENT_PAYLOAD / "payload.toml")
+    successor_manifest = load_payload_manifest(_SUCCESSOR_PAYLOAD / "payload.toml")
+    current_by_id = {item.id: item for item in current_manifest.contributions}
+    successor_by_id = {item.id: item for item in successor_manifest.contributions}
+    assert set(current_by_id) == set(successor_by_id)
+
+    for overrides in _parity_variants():
+        current_config = _current_options(**overrides)
+        successor_config = _successor_options(**overrides)
+        assert successor_config == {**current_config, "additional_source_roots": []}
+        for contribution in current_manifest.contributions:
+            successor = successor_by_id[contribution.id]
+            assert successor.materializes(successor_config) == contribution.materializes(
+                current_config
+            ), contribution.id
+            if not contribution.materializes(current_config):
+                continue
+            if contribution.provider is None:
+                assert successor.source_digest == contribution.source_digest, contribution.id
+                continue
+            rendered_current = _render_current(
+                contribution.scope,
+                contribution.adapter,
+                current_config,
+                target=contribution.target.original,
+            )
+            rendered_successor = _render_successor(
+                contribution.scope,
+                contribution.adapter,
+                successor_config,
+                target=contribution.target.original,
+            )
+            assert rendered_successor == rendered_current, contribution.id
 
 
 @pytest.mark.parametrize(

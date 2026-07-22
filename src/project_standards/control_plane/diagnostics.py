@@ -61,6 +61,10 @@ class ControlFinding:
     expected_digest: str | None = None
     actual_digest: str | None = None
     governing_options: tuple[str, ...] | None = None
+    # Names among {"expected", "actual"} whose semantic value is a genuine JSON
+    # null. Serialization emits those as explicit nulls; a plain None field stays
+    # omitted as unset. Without this, null-valued units would vanish from output.
+    null_values: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,6 +147,9 @@ def findings_to_jsonable(findings: Iterable[ControlFinding]) -> list[dict[str, o
     result: list[dict[str, object]] = []
     for finding in sort_findings(findings):
         item = {key: value for key, value in asdict(finding).items() if value is not None}
+        item.pop("null_values", None)
+        for name in finding.null_values:
+            item[name] = None
         options = item.get("governing_options")
         if isinstance(options, tuple):
             item["governing_options"] = list(cast("tuple[str, ...]", options))

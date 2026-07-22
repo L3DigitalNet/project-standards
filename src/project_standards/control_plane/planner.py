@@ -566,6 +566,7 @@ def _finding(
     expected_digest: str | None = None,
     actual_digest: str | None = None,
     governing_options: tuple[str, ...] | None = None,
+    null_values: tuple[str, ...] = (),
 ) -> ControlFinding:
     return ControlFinding(
         code=code,
@@ -581,6 +582,7 @@ def _finding(
         expected_digest=expected_digest,
         actual_digest=actual_digest,
         governing_options=governing_options,
+        null_values=null_values,
     )
 
 
@@ -612,6 +614,11 @@ def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> Co
         expected_digest=group.unit.semantic_digest.value,
         actual_digest=current.semantic_digest.value,
         governing_options=group.governing_options,
+        null_values=tuple(
+            name
+            for name, value in (("expected", expected_value), ("actual", actual_value))
+            if value is None
+        ),
     )
 
 

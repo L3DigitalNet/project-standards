@@ -1169,3 +1169,35 @@ def test_whole_file_conflict_finding_carries_digests_without_values(tmp_path: Pa
     assert finding.actual is None
     assert finding.expected_digest == digest(b"managed\n")
     assert finding.actual_digest == digest(b"consumer\n")
+
+
+def test_consumer_conflict_finding_preserves_json_null_values(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "settings.json").write_bytes(b'{"tool": {"demo": {"value": 2}}}\n')
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "value",
+                "target": "settings.json",
+                "adapter": "json",
+                "scope": "key:/tool/demo/value",
+                "content": b'{"tool": {"demo": {"value": null}}}\n',
+            }
+        ],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+    finding = _consumer_conflict(plan)
+
+    assert finding.actual == 2
+    jsonable = next(
+        item
+        for item in findings_to_jsonable(plan.findings)
+        if item["code"] == "CP-CONSUMER-CONFLICT"
+    )
+    assert "expected" in jsonable and jsonable["expected"] is None
+    assert jsonable["actual"] == 2
+    assert "null_values" not in jsonable

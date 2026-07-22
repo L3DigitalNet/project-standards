@@ -1223,3 +1223,29 @@ def test_human_finding_renderer__enriched_conflict__bounds_values_and_lists_opti
         governing_options=(),
     )
     assert "  governing options: none declared" in _format_human_finding(none_declared)
+
+
+def test_human_finding_renderer__null_conflict_value__renders_explicit_null() -> None:
+    from project_standards.control_plane.cli import (
+        _format_human_finding,  # pyright: ignore[reportPrivateUsage]  # focused rendering boundary
+    )
+
+    finding = ControlFinding(
+        code="CP-CONSUMER-CONFLICT",
+        severity="error",
+        standard_id="demo",
+        version="1.0",
+        path="settings.json",
+        identity="key:/tool/demo/value",
+        message="pre-existing consumer unit differs from the selected package value",
+        hint="resolve the declared ownership or repository content before applying",
+        actual=2,
+        expected_digest=f"sha256:{'a' * 64}",
+        actual_digest=f"sha256:{'b' * 64}",
+        null_values=("expected",),
+    )
+
+    rendered = _format_human_finding(finding)
+    lines = rendered.splitlines()
+    assert lines[1] == "  expected: null"
+    assert lines[2] == "  actual: 2"
