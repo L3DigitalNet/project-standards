@@ -65,6 +65,15 @@ class ControlFinding:
     # null. Serialization emits those as explicit nulls; a plain None field stays
     # omitted as unset. Without this, null-valued units would vanish from output.
     null_values: tuple[str, ...] = ()
+    # Whole-file text-conflict pointer (schema 1.2, 5.8.0 FR-012 / SPEC-CP01).
+    # first_difference_expected quotes the EXPECTED (package-side, public) line
+    # ONLY, pre-truncated to <=120 chars with a trailing "…" when cut so terminal,
+    # JSON, and serialized forms agree byte-for-byte. Consumer bytes never enter
+    # either field — the confidentiality contract is absolute; actual content is
+    # represented by actual_digest alone. Both default absent for non-text or
+    # non-whole-file conflicts.
+    first_difference_line: int | None = None
+    first_difference_expected: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

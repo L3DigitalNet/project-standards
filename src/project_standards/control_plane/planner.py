@@ -13,6 +13,7 @@ import stat
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass, replace
+from itertools import zip_longest
 from pathlib import Path
 from typing import cast
 
@@ -567,6 +568,8 @@ def _finding(
     actual_digest: str | None = None,
     governing_options: tuple[str, ...] | None = None,
     null_values: tuple[str, ...] = (),
+    first_difference_line: int | None = None,
+    first_difference_expected: str | None = None,
 ) -> ControlFinding:
     return ControlFinding(
         code=code,
@@ -583,7 +586,40 @@ def _finding(
         actual_digest=actual_digest,
         governing_options=governing_options,
         null_values=null_values,
+        first_difference_line=first_difference_line,
+        first_difference_expected=first_difference_expected,
     )
+
+
+_EXCERPT_LIMIT = 120
+
+
+def _first_difference_pointer(expected: bytes, actual: bytes) -> tuple[int, str] | None:
+    """Locate the first differing line between two text blobs, quoting expected only.
+
+    5.8.0 FR-012 / SPEC-CP01 confidentiality: the returned excerpt is drawn from
+    EXPECTED (package-side, public) bytes only — consumer bytes are read solely to
+    align line numbers and are never surfaced. Both sides must UTF-8 decode; a
+    decode failure on either (binary/undecodable target) yields None so callers
+    fall back to digest-only rendering. Decoding actual is mandatory because a
+    consumer-only decode would make line numbers meaningless against undecodable
+    consumer content.
+    """
+    try:
+        expected_text = expected.decode("utf-8")
+        actual_text = actual.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    expected_lines = expected_text.splitlines()
+    actual_lines = actual_text.splitlines()
+    for index, (expected_line, actual_line) in enumerate(zip_longest(expected_lines, actual_lines)):
+        if expected_line == actual_line:
+            continue
+        line = expected_line or ""
+        if len(line) > _EXCERPT_LIMIT:
+            line = f"{line[:_EXCERPT_LIMIT]}…"
+        return index + 1, line
+    return None
 
 
 def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> ControlFinding:
@@ -601,6 +637,16 @@ def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> Co
         )
     else:
         hint = "resolve the declared ownership or repository content before applying"
+    # 5.8.0 FR-012 / SPEC-CP01: only whole-file text conflicts carry a line
+    # pointer; property-level units already publish JSON expected/actual values,
+    # and a "line number" over a byte-valued property unit would be meaningless.
+    pointer: tuple[int, str] | None = None
+    if (
+        group.adapter is AdapterKind.WHOLE_FILE
+        and isinstance(expected_value, bytes)
+        and isinstance(actual_value, bytes)
+    ):
+        pointer = _first_difference_pointer(expected_value, actual_value)
     return _finding(
         "CP-CONSUMER-CONFLICT",
         target=group.target.original,
@@ -619,6 +665,8 @@ def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> Co
             for name, value in (("expected", expected_value), ("actual", actual_value))
             if value is None
         ),
+        first_difference_line=None if pointer is None else pointer[0],
+        first_difference_expected=None if pointer is None else pointer[1],
     )
 
 

@@ -259,6 +259,12 @@ def _format_human_finding(finding: ControlFinding) -> str:
         lines.append(f"  actual: {_bounded_excerpt(finding.actual)}")
     elif finding.actual_digest is not None:
         lines.append(f"  actual digest: {finding.actual_digest}")
+    # 5.8.0 FR-012 / SPEC-CP01: the excerpt is pre-bounded package-side text; emit
+    # it verbatim (no consumer bytes here) under the digest lines. Actual content
+    # is never rendered — only its digest above.
+    if finding.first_difference_line is not None:
+        lines.append(f"  first difference: line {finding.first_difference_line}")
+        lines.append(f"  expected: {finding.first_difference_expected or ''}")
     if finding.governing_options is not None:
         rendered = ", ".join(finding.governing_options) or "none declared"
         lines.append(f"  governing options: {rendered}")
