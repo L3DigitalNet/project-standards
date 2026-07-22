@@ -103,8 +103,8 @@ def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
     assert "Agent Handoff Standard" in root_readme
     assert "[agent-handoff/]" in standards_index
     assert "project-standards agent-handoff" in package_readme
-    assert "Standard Bundle Authoring 2.4 workflow" in package_readme
-    assert "versions/2.4/README.md" in package_readme
+    assert "Standard Bundle Authoring 2.5 workflow" in package_readme
+    assert "versions/2.5/README.md" in package_readme
 
 
 def test_repository_dogfoods_agent_handoff_v5() -> None:

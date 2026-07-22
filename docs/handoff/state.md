@@ -2,9 +2,10 @@
 
 ## Current focus
 
-- Project Standards 5.5.0 is published from release commit `8cbb306`. Signed `v5.5.0` and moving `v5` tags, the Latest GitHub release, and byte-verified wheel and sdist assets are live; issues #16–#19 are closed with release evidence.
-- The release adds bounded semantic migration signatures, Markdown Tooling 1.7, Project Specification 1.4, Agent Handoff 1.4, Standard Bundle Authoring 2.4, and absolute Project Specification finding coordinates. Catalog 5 retains every predecessor while selecting the three consumer successors and advertising the internal authoring successor.
-- Exact evidence is green: 3,139 ordinary tests, 83 compatibility rows, 5 performance tests, 90% coverage, every local release gate, all eight release-commit workflows including `Check` run `29930356123`, and downloaded asset parity.
+- Project Standards 5.6.0 is prepared (not yet published) on `testing`, fixing issues #20-#23: Python Tooling 1.6 `additional_source_roots`, governing-option metadata, enriched conflict diagnostics at schema 1.1, readiness exit codes, corrected upgrade docs, and Standard Bundle Authoring 2.5.
+- The train's design and plan live in `docs/specs/archive/` and `docs/plans/2026-07-22-v5-upgrade-usability-correction-train-plan.md`.
+- A Codex cross-agent review gated the release: two accepted medium findings (null-value diagnostic fidelity, parity-test breadth) are fixed in T12; dispositions are recorded in the pipeline notes.
+- Project Standards 5.5.0 remains the published release at `8cbb306` with signed tags, hosted evidence, and issues #16-#19 closed.
 
 ## Active incidents
 

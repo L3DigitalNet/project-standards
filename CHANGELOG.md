@@ -37,6 +37,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.6.0] — 2026-07-22
+
+> **Why MINOR:** Catalog 5 adds two backward-compatible package successors on their existing major tracks, the control plane adds additive conflict diagnostics at reconciliation-plan schema 1.1, and the migration preview exit code converts a documented failure exit into success for an applicable plan without newly failing any consumer. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.5.0` classifies the release as minor.
+
+### Added
+
+- **Python Tooling 1.6 makes additional first-party roots expressible.** A closed `additional_source_roots` option merges declared roots, deduplicated and in declared order, after the layout-derived roots into the checker `include`, `coverage.run.source`, and Ruff `src` values. The V4 legacy migration recognizes the option, so the reported include/source conflicts resolve from `.project-standards.yml` before apply, and the adoption guide documents the migration-phase option location (issues #20, #21).
+- **Contribution declarations may name their governing options.** The package contract accepts an optional `governing_options` pointer list validated against the declared option schema; Python Tooling 1.6 declares pointers for its option-governed `pyproject.toml` units, and Standard Bundle Authoring 2.5 documents the absent/empty/populated semantics and the truthful-claim rule.
+- **`CP-CONSUMER-CONFLICT` findings are self-sufficient.** Semantic-unit conflicts carry the expected package value, the observed consumer value (including explicit JSON nulls), semantic digests, and the declared governing options — with a distinct hint when no declared option governs the unit. Whole-file conflicts carry content digests. Human output stays bounded while `--json` keeps full fidelity, and the reconciliation-plan schema advances additively to 1.1 (issue #22).
+
+### Fixed
+
+- **Migration preview exit codes carry the readiness signal.** `init --catalog 5 --migrate` exits 0 for an applicable, error-free plan and 1 only when the plan is blocked or an apply is refused; the JSON `ok`/`applicable` fields and the exit code now agree (issue #23).
+- **`UPGRADING.md` documents the real legacy-config option surface.** Every setting a selected package's migration provider recognizes is accepted under its package namespace in `.project-standards.yml` during migration, shown with a nested example; the unclaimed-setting warning is scoped to genuinely unrecognized keys (issue #21).
+
+### Changed
+
+- Catalog 5 promotes Python Tooling 1.6 as the consumer default and advertises internal Standard Bundle Authoring 2.5. Every predecessor remains retained with unchanged bytes and digests.
+
 ## [5.5.0] — 2026-07-22
 
 > **Why MINOR:** Catalog 5 adds four backward-compatible package successors on their existing major tracks, and the shared Project Specification command layer corrects diagnostic line coordinates without changing finding codes, severity, count, or exit outcomes. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.4.0` classifies the release as minor.
