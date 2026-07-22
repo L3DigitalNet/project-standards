@@ -24,6 +24,11 @@ venv/
 
 # Node (Prettier toolchain)
 node_modules/
+# Transient Prettier probe dirs created inside the repo tree by the parity oracle
+# (mkdtemp needs an in-tree path so the `**/*.md` singleQuote override applies —
+# an out-of-tree probe silently uses the wrong config). Cleaned up per-test, but
+# ignored so a crashed run never leaves a tracked artifact (resolves T1 review minor).
+prettier_probe_*/
 
 # Editor/backup snapshots (never tracked)
 *.bak
