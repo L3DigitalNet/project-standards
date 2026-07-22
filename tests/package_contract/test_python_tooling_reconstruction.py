@@ -50,7 +50,7 @@ from tests.package_contract.helpers import copy_minimal_repository
 _ROOT = Path(__file__).resolve().parents[2]
 _FAMILY = _ROOT / "standards/python-tooling"
 _PAYLOAD = _FAMILY / "versions/1.1"
-_CURRENT_PAYLOAD = _FAMILY / "versions/1.4"
+_CURRENT_PAYLOAD = _FAMILY / "versions/1.5"
 _RELEASE_CURRENT_PRESERVED_CONTAINERS = {
     "legacy-agents": (
         "AGENTS.md",
@@ -1679,6 +1679,48 @@ def test_python_tooling_released_v4_bytes_migrate_and_apply(tmp_path: Path) -> N
     assert migration.applicable, migration.findings
     assert apply_legacy_migration(migration).success
     assert not (repo / ".project-standards.yml").exists()
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    _assert_no_mutating_actions(second)
+
+
+def test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path, version="1.5")
+    repo = _released_v4_repo(tmp_path)
+    (repo / "pyproject.toml").write_text(
+        "[tool.basedpyright]\n"
+        'include = ["src", "tests"]\n'
+        'typeCheckingMode = "strict"\n'
+        'pythonVersion = "3.14"\n'
+        'pythonPlatform = "All"\n'
+        "failOnWarnings = true\n"
+        'extraPaths = ["."]\n\n'
+        "[tool.pytest.ini_options]\n"
+        'minversion = "9.0"\n'
+        'testpaths = ["tests"]\n'
+        'addopts = ["-ra", "--strict-markers", "--strict-config"]\n'
+        'pythonpath = ["."]\n',
+        encoding="utf-8",
+    )
+
+    migration = plan_legacy_migration(repo, distribution, "5")
+
+    assert migration.applicable, migration.findings
+    assert apply_legacy_migration(migration).success
+    pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["tool"]["basedpyright"]["extraPaths"] == ["."]
+    assert pyproject["tool"]["pytest"]["ini_options"]["pythonpath"] == ["."]
+    locked_scopes = {
+        unit.scope
+        for unit in migration.reconciliation.next_lock.artifacts
+        if unit.path.original == "pyproject.toml"
+    }
+    assert "table:/tool/basedpyright" not in locked_scopes
+    assert "table:/tool/pytest/ini_options" not in locked_scopes
+    assert "key:/tool/basedpyright/typeCheckingMode" in locked_scopes
+    assert "key:/tool/pytest/ini_options/addopts" in locked_scopes
     second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
     assert second.applicable, second.findings
     _assert_no_mutating_actions(second)
