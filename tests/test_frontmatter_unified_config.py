@@ -370,6 +370,32 @@ def test_load_cli_config_or_exit__legacy_authority__emits_warning(
     assert warnings == [None]
 
 
+def test_load_cli_config_or_exit__on_disk_legacy_repo__emits_the_real_authority_note(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # TC-T5-003 route 3 (5.8.0 FR-011 / issue #30): unlike the mocked test
+    # above (which only proves load_cli_config_or_exit delegates to
+    # emit_legacy_config_warning on legacy=True), this drives a real
+    # on-disk legacy-only repo (.project-standards.yml present, no
+    # .standards/) through the unmocked detection path — load_cli_config ->
+    # resolve_selected_package -> load_config -> emit_legacy_config_warning
+    # -- and asserts the exact captured stderr text, matching the rigor of
+    # route 1 (test_command_resolution.py) and route 2 (test_cli.py).
+    monkeypatch.setattr(command_resolution, "_legacy_warning_emitted", False)
+    (tmp_path / ".project-standards.yml").write_text("legacy: true\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    loaded = load_cli_config_or_exit(None, schema_arg=None, selected_package=None)
+
+    assert not isinstance(loaded, int)
+    assert (
+        "note: reading legacy .project-standards.yml authority; "
+        "the V5 control plane takes over after migration"
+    ) in capsys.readouterr().err
+
+
 def test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
