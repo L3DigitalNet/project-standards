@@ -1,6 +1,6 @@
 # Python Tooling family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`python-tooling@1.6`](versions/1.6/agent-summary.md). Its [versioned standard](versions/1.6/README.md) wins over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`python-tooling@1.7`](versions/1.7/agent-summary.md). Its [versioned standard](versions/1.7/README.md) wins over this mutable navigation summary.
 
 - Resolve options and resources from the selected immutable payload, never from `.project-standards.yml` under unified authority.
 - Let the control plane compose `pyproject.toml`, EditorConfig, VS Code, workflows, and bounded instruction units. Preserve unrelated consumer values.

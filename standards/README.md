@@ -10,7 +10,7 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | --- | --- | --- | --- | --- | --- |
 | Markdown Frontmatter | Canonical, tool-neutral YAML metadata for Markdown documents | 1.4 | default | [markdown-frontmatter/](markdown-frontmatter/) | [adopt](markdown-frontmatter/adopt.md) |
 | ADR | Architecture Decision Records (MADR on the frontmatter profile) | 1.2 | default | [adr/](adr/) | [adopt](adr/adopt.md) |
-| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.6 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
+| Python Tooling SSOT | Python stack, layout, CI gate, and agent instructions | 1.7 | default | [python-tooling/](python-tooling/) | [adopt](python-tooling/adopt.md) |
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.7 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.4 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | CLI Documentation | User-facing CLI usage docs: help text, usage references, man pages, CI drift checks | 1.3 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |

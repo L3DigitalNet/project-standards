@@ -74,9 +74,9 @@ _PACKAGES = {
         "Python Tooling SSOT Standard",
         "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects.",
         "active",
-        "1.6",
+        "1.7",
         "default",
-        "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b",
+        "sha256:6ffff0fe5b82d15b1a30e23cb49dd0fba7ff8766a42bbf31f83eabb16e63e92b",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -93,6 +93,12 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    (
+        "python-tooling",
+        "1.6",
+        "retained",
+        "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b",
+    ),
     (
         "python-tooling",
         "1.5",
@@ -282,6 +288,10 @@ def _family_source(standard_id: str) -> str:
             'version = "1.5"\n'
             'payload = "versions/1.5/payload.toml"\n'
             'digest = "sha256:734c2b975c01307ed0a27a14c8a391ca4e73334180275d50012076b506021de3"\n'
+            "\n[[versions]]\n"
+            'version = "1.6"\n'
+            'payload = "versions/1.6/payload.toml"\n'
+            'digest = "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b"\n'
         )
     return source
 
@@ -315,6 +325,7 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
         if standard_id == "python-tooling":
             shutil.copytree(source / "versions/1.4", target / "versions/1.4")
             shutil.copytree(source / "versions/1.5", target / "versions/1.5")
+            shutil.copytree(source / "versions/1.6", target / "versions/1.6")
         (target / "standard.toml").write_text(_family_source(standard_id), encoding="utf-8")
     catalog = isolated / "catalogs/5.toml"
     catalog.parent.mkdir()
@@ -325,7 +336,7 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
     assert repository.findings == ()
     assert validate_package_repository(repository) == ()
     assert len(repository.families) == len(_PACKAGES)
-    assert len(repository.payloads) == len(_PACKAGES) + 2
+    assert len(repository.payloads) == len(_PACKAGES) + 3
     assert repository.catalog is not None
 
 

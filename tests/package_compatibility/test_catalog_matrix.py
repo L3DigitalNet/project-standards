@@ -55,6 +55,7 @@ _CORRECTION_TRANSITIONS = (
     ("agent-handoff", "1.3", "1.4"),
     ("markdown-tooling", "1.6", "1.7"),
     ("project-spec", "1.3", "1.4"),
+    ("python-tooling", "1.6", "1.7"),
 )
 
 
