@@ -1211,7 +1211,7 @@ def test_migration_preview_human_and_json_list_control_publications(
     repo = _legacy_repo(tmp_path)
     plan = plan_legacy_migration(repo, distribution, "5")
 
-    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=False) == 1
+    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=False) == 0
     human = capsys.readouterr().out
     for target in (
         ".standards/config.toml",
@@ -1219,7 +1219,7 @@ def test_migration_preview_human_and_json_list_control_publications(
         ".standards/lock.toml",
     ):
         assert target in human
-    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=True) == 1
+    assert _emit_migration_plan(plan, mode="migration-plan", json_mode=True) == 0
     payload = json.loads(capsys.readouterr().out)
     targets = {action["target"] for action in payload["plan"]["actions"]}
     assert {

@@ -402,7 +402,9 @@ def _emit_migration_plan(
                 "no repository writes were performed",
                 file=sys.stderr,
             )
-    return 1
+    # Exit mirrors the JSON `ok`/`applicable` readiness signal: an applicable,
+    # error-free preview succeeds; blocked plans and refused applies stay nonzero.
+    return 0 if plan.applicable and not apply_refused else 1
 
 
 def run_init(

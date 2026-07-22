@@ -365,11 +365,12 @@ def test_init_migration_preview_apply_and_repeat_apply_json_contract(
         project_standards_main(
             ["init", "--catalog", "5", "--migrate", "--repo", str(repo), "--json"]
         )
-        == 1
+        == 0
     )
     preview = capsys.readouterr()
     assert preview.err == ""
     assert '"mode": "migration-plan"' in preview.out
+    assert '"ok": true' in preview.out
     assert '"applicable": true' in preview.out
     assert not (repo / ".standards").exists()
 
@@ -505,10 +506,11 @@ def test_init_migration_state_and_nonapplicable_exit_codes(
         project_standards_main(
             ["init", "--catalog", "5", "--migrate", "--repo", str(dual), "--json"]
         )
-        == 1
+        == 0
     )
     recoverable = capsys.readouterr().out
     assert '"mode": "migration-recovery-plan"' in recoverable
+    assert '"applicable": true' in recoverable
 
     assert (
         project_standards_main(
