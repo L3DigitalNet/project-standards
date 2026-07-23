@@ -100,7 +100,7 @@ The resolved ADR payload declares the Frontmatter contract versions it supports.
 The following current markers are contract-plane inputs retained during V5 migration. They do not identify package payload releases and are deliberately decoupled from the tool release version:
 
 - **`schema_version`** (Markdown Frontmatter) versions the metadata schema's **field set and controlled vocabularies** only. It has no patch component and is enum-gated by the JSON schema. It changes solely when those fields or vocabularies change, so a release can ship without touching it — the `1.1` schema is unchanged by the `2.0.0` release. See [`standards/markdown-frontmatter/README.md`](../standards/markdown-frontmatter/README.md).
-- The **Python Tooling contract version** is the closed `contract_version` option inside the selected Python Tooling payload. It preserves supported toolchain-policy semantics independently from package release `1.5`.
+- The **Python Tooling contract version** is the closed `contract_version` option inside the selected Python Tooling payload. It preserves supported toolchain-policy semantics independently from package release `1.8`.
 - The **Markdown Tooling contract version** is the closed `contract_version` option inside the selected Markdown Tooling payload. The package options and managed lint/format workflows enforce its behavior independently from package release `1.8`.
 - The **Agent Handoff contract version** is the closed `contract_version` option inside the selected Agent Handoff payload. The provider-backed validators and central lock enforce its layout/integration policy independently from package release `1.4`.
 
