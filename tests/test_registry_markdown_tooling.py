@@ -21,5 +21,9 @@ def test_dogfood_config_selects_current_compatibility_successors() -> None:
     lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
 
     assert config["standards"]["markdown-tooling"]["config"]["contract_version"] == "1.1"
+    # The dogfood `.standards/` lock is refreshed only at release prep (T12), once the
+    # tool release advances past 5.7.0: the catalog-refresh guard blocks reconcile while
+    # the catalog changed but the release string has not. Until then the committed lock
+    # still resolves the 5.7.0 defaults (1.7); T12 advances these to the 1.8 successors.
     assert lock["standards"]["markdown-tooling"]["resolved"] == "1.7"
     assert lock["standards"]["python-tooling"]["resolved"] == "1.7"

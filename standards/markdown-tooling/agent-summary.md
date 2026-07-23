@@ -1,6 +1,6 @@
 # Markdown Tooling family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`markdown-tooling@1.7`](versions/1.7/agent-summary.md). Its [versioned standard](versions/1.7/README.md) wins over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`markdown-tooling@1.8`](versions/1.8/agent-summary.md). Its [versioned standard](versions/1.8/README.md) wins over this mutable navigation summary.
 
 - Prettier is the sole physical-formatting authority for Markdown and supported JSON, JSONC, and YAML.
 - markdownlint owns Markdown structure and diagnostics. Do not add an overlapping formatter or structural linter.

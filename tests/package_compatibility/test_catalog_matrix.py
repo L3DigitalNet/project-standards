@@ -51,11 +51,18 @@ _ARTIFACT_STATES = _ROOT / "tests/fixtures/package_compatibility/legacy/artifact
 _ALL_NAMESPACES = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml"
 )
+# Each row is (family, retained predecessor, current default). "latest" must resolve
+# to the default, so these successors track the Catalog 5 default after every advance.
+# FR-013 (5.8.0/T10) advanced three families to correction successors: markdown-tooling
+# and python-tooling to 1.8 (predecessor now the retained 1.7) and markdown-frontmatter
+# to 1.5 (predecessor now the retained 1.4). agent-handoff and project-spec did not
+# advance this train, so their 1.3->1.4 rows are unchanged.
 _CORRECTION_TRANSITIONS = (
     ("agent-handoff", "1.3", "1.4"),
-    ("markdown-tooling", "1.6", "1.7"),
+    ("markdown-frontmatter", "1.4", "1.5"),
+    ("markdown-tooling", "1.7", "1.8"),
     ("project-spec", "1.3", "1.4"),
-    ("python-tooling", "1.6", "1.7"),
+    ("python-tooling", "1.7", "1.8"),
 )
 
 

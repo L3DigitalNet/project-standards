@@ -132,9 +132,11 @@ def _write_unified_config(
     return schema_content
 
 
+# FR-013 (5.8.0/T10) advanced the markdown-frontmatter default to 1.5, so a "latest"
+# selector now refreshes to the 1.5 successor; the exact "1.2" pin stays pinned.
 @pytest.mark.parametrize(
     ("selector", "resolved"),
-    [("latest", "1.4"), ("1.2", "1.2")],
+    [("latest", "1.5"), ("1.2", "1.2")],
     ids=["latest-default-refresh", "exact-pin"],
 )
 def test_cli_config_uses_the_committed_applied_package_version(

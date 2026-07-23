@@ -1,13 +1,13 @@
 # Python Tooling SSOT Standard
 
-This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.7`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
+This is the Catalog 5 family landing page for the active consumer package `python-tooling@1.8`. The immutable versioned payload, not this mutable landing page, defines the selected standard.
 
 ## Current authority
 
-- [Python Tooling 1.7 standard](versions/1.7/README.md) — normative toolchain, configuration, ownership, and verification contract
-- [Python Tooling 1.7 adoption guide](versions/1.7/adopt.md) — complete options, outputs, migration, and recovery
+- [Python Tooling 1.8 standard](versions/1.8/README.md) — normative toolchain, configuration, ownership, and verification contract
+- [Python Tooling 1.8 adoption guide](versions/1.8/adopt.md) — complete options, outputs, migration, and recovery
 - [Current family adoption guide](adopt.md) — concise enable/reconcile workflow
-- [Python Tooling 1.7 agent summary](versions/1.7/agent-summary.md) — compact authority rules
+- [Python Tooling 1.8 agent summary](versions/1.8/agent-summary.md) — compact authority rules
 - [Family index](standard.toml) — indexed payload and digest
 
 ## Use this standard when
@@ -17,7 +17,7 @@ Use Python Tooling for the uv/uv_build `src/` baseline, Ruff formatting and lint
 ## Adopt
 
 ```bash
-project-standards standards enable python-tooling --version 1.7
+project-standards standards enable python-tooling --version 1.8
 project-standards reconcile
 project-standards reconcile --apply
 uv lock
@@ -28,7 +28,7 @@ Review [adopt.md](adopt.md) before applying. Commit unified config, catalog, loc
 
 ## Released-version errata
 
-The immutable 1.1, 1.2, 1.3, 1.4, 1.5, and 1.6 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.7`; the immutable payload bytes remain unchanged.
+The immutable 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, and 1.7 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.8`; the immutable payload bytes remain unchanged.
 
 In the immutable 1.4 README, the statement that a modified `scripts/check.py` remains blocking applies only while `script_ownership = "managed"`. Setting `script_ownership = "consumer-owned"` preserves the customized script and leaves it outside reconciliation, verification, and lock state. `.python-version` and modified managed outputs retain the stated blocking behavior.
 

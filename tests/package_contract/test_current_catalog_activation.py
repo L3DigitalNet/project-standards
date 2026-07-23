@@ -42,17 +42,17 @@ _PACKAGES = {
         "Markdown Frontmatter Standard",
         "Canonical metadata, ID, and reference validation for managed Markdown documents.",
         "active",
-        "1.4",
+        "1.5",
         "default",
-        "sha256:a981a54cb6c6a36e2bfb73eca61c9b84100da67b072cd07c7c4ffea4b0593647",
+        "sha256:b31b9a97edb48334bbb6af2988272baf071449a457a303e218dbb8c6436a540c",
     ),
     "markdown-tooling": (
         "Markdown Tooling Standard",
         "Prettier, markdownlint, EditorConfig, and CI tooling for Markdown and adjacent structured text.",
         "active",
-        "1.7",
+        "1.8",
         "default",
-        "sha256:87376b5d4c3ce027ca3db249d5d27bb7a1bc6d2e7f843b7074f8f73d2a084c10",
+        "sha256:64542b8b45aeced4907e02806be0a439be5b38d4dd6ae4afbd15fd012cf1b9d6",
     ),
     "project-spec": (
         "Project Specification Standard",
@@ -74,9 +74,9 @@ _PACKAGES = {
         "Python Tooling SSOT Standard",
         "uv, Ruff, BasedPyright, pytest/coverage, pip-audit, CI, and agent-instruction tooling for Python projects.",
         "active",
-        "1.7",
+        "1.8",
         "default",
-        "sha256:6ffff0fe5b82d15b1a30e23cb49dd0fba7ff8766a42bbf31f83eabb16e63e92b",
+        "sha256:7397498723a1f683b09037c233e1872df825cd70a27c514a45bb2bacf24cb312",
     ),
     "standard-bundle-authoring": (
         "Standard Bundle Authoring Standard",
@@ -93,13 +93,13 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
-    # 5.8.0 issue #31: python-tooling 1.8 is advertised as retained; T10 flips
-    # the retained->default authority for the 5.8.0 successors.
+    # 5.8.0 FR-013: T10 flipped python-tooling 1.8 to default; the superseded 1.7
+    # predecessor stays advertised as retained (removal needs a catalog-major bump).
     (
         "python-tooling",
-        "1.8",
+        "1.7",
         "retained",
-        "sha256:7397498723a1f683b09037c233e1872df825cd70a27c514a45bb2bacf24cb312",
+        "sha256:6ffff0fe5b82d15b1a30e23cb49dd0fba7ff8766a42bbf31f83eabb16e63e92b",
     ),
     (
         "python-tooling",
@@ -125,13 +125,13 @@ _RETAINED_CATALOG_ENTRIES = {
         "retained",
         "sha256:3e6e53f9ba889b7f68624c1c3861c5e26ac889a6025c4fb7b819b49e140d1f78",
     ),
-    # 5.8.0 issue #27: markdown-tooling 1.8 is advertised as retained; T10 flips
-    # the retained->default authority for the 5.8.0 successors.
+    # 5.8.0 FR-013: T10 flipped markdown-tooling 1.8 to default; the superseded 1.7
+    # predecessor stays advertised as retained (removal needs a catalog-major bump).
     (
         "markdown-tooling",
-        "1.8",
+        "1.7",
         "retained",
-        "sha256:64542b8b45aeced4907e02806be0a439be5b38d4dd6ae4afbd15fd012cf1b9d6",
+        "sha256:87376b5d4c3ce027ca3db249d5d27bb7a1bc6d2e7f843b7074f8f73d2a084c10",
     ),
     (
         "markdown-tooling",
@@ -241,13 +241,13 @@ _RETAINED_CATALOG_ENTRIES = {
         "retained",
         "sha256:97327fffde61fd981c08949292c504a930f4fe6786af455cb1f6c7d204dc7c43",
     ),
-    # 5.8.0 issue #28: markdown-frontmatter 1.5 is advertised as retained; T10 flips
-    # the retained->default authority for the 5.8.0 successors.
+    # 5.8.0 FR-013: T10 flipped markdown-frontmatter 1.5 to default; the superseded
+    # 1.4 predecessor stays advertised as retained (removal needs a catalog-major bump).
     (
         "markdown-frontmatter",
-        "1.5",
+        "1.4",
         "retained",
-        "sha256:b31b9a97edb48334bbb6af2988272baf071449a457a303e218dbb8c6436a540c",
+        "sha256:a981a54cb6c6a36e2bfb73eca61c9b84100da67b072cd07c7c4ffea4b0593647",
     ),
     (
         "python-tooling",
@@ -316,6 +316,30 @@ def _family_source(standard_id: str) -> str:
             'version = "1.6"\n'
             'payload = "versions/1.6/payload.toml"\n'
             'digest = "sha256:78e9f7737e78990bdb32b559b87d3ba4f975ddf4b0d0bd5f1ecac1e772da1e5b"\n'
+            # 1.7 is the now-retained predecessor of the 1.8 default (FR-013); the
+            # isolated multi-version family accumulates it so resolution stays covered.
+            "\n[[versions]]\n"
+            'version = "1.7"\n'
+            'payload = "versions/1.7/payload.toml"\n'
+            'digest = "sha256:6ffff0fe5b82d15b1a30e23cb49dd0fba7ff8766a42bbf31f83eabb16e63e92b"\n'
+        )
+    if standard_id == "markdown-tooling":
+        # The 1.8 default's correction migration declares from = "package:1.7", so the
+        # isolated family must advertise the retained 1.7 predecessor as its endpoint.
+        source += (
+            "\n[[versions]]\n"
+            'version = "1.7"\n'
+            'payload = "versions/1.7/payload.toml"\n'
+            'digest = "sha256:87376b5d4c3ce027ca3db249d5d27bb7a1bc6d2e7f843b7074f8f73d2a084c10"\n'
+        )
+    if standard_id == "markdown-frontmatter":
+        # The 1.5 default's correction migration declares from = "package:1.4", so the
+        # isolated family must advertise the retained 1.4 predecessor as its endpoint.
+        source += (
+            "\n[[versions]]\n"
+            'version = "1.4"\n'
+            'payload = "versions/1.4/payload.toml"\n'
+            'digest = "sha256:a981a54cb6c6a36e2bfb73eca61c9b84100da67b072cd07c7c4ffea4b0593647"\n'
         )
     return source
 
@@ -350,6 +374,11 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
             shutil.copytree(source / "versions/1.4", target / "versions/1.4")
             shutil.copytree(source / "versions/1.5", target / "versions/1.5")
             shutil.copytree(source / "versions/1.6", target / "versions/1.6")
+            shutil.copytree(source / "versions/1.7", target / "versions/1.7")
+        if standard_id == "markdown-tooling":
+            shutil.copytree(source / "versions/1.7", target / "versions/1.7")
+        if standard_id == "markdown-frontmatter":
+            shutil.copytree(source / "versions/1.4", target / "versions/1.4")
         (target / "standard.toml").write_text(_family_source(standard_id), encoding="utf-8")
     catalog = isolated / "catalogs/5.toml"
     catalog.parent.mkdir()
@@ -360,7 +389,10 @@ def test_isolated_nine_family_repository_validates_before_root_activation(
     assert repository.findings == ()
     assert validate_package_repository(repository) == ()
     assert len(repository.families) == len(_PACKAGES)
-    assert len(repository.payloads) == len(_PACKAGES) + 3
+    # Each advancing family carries the retained predecessor its correction migration
+    # names: python-tooling 1.4-1.7 (4), markdown-tooling 1.7 (1), markdown-frontmatter
+    # 1.4 (1) — six extra payloads beyond one default per family.
+    assert len(repository.payloads) == len(_PACKAGES) + 6
     assert repository.catalog is not None
 
 
