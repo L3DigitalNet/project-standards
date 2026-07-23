@@ -107,6 +107,8 @@ Python Tooling 1.5 also narrows checker and pytest ownership to the canonical ke
 
 The current package successors also correct three migration and validation edge cases. Markdown Tooling 1.7 safely adopts an exact released caller whose automatic trigger is disabled. Project Specification 1.4 treats a configured corpus with no matching files as an informational success. Agent Handoff 1.4 excludes only exact central-lock-authenticated managed Markdown envelopes from instruction-file size budgets; malformed, unlocked, or drifted lookalikes still count.
 
+Project Standards 5.8.0 advances three more successors that widen what migrates cleanly. Python Tooling 1.8 adds `pytest.test_paths`, an array of collection roots (unique safe relative paths, default `["tests"]`) that governs the pytest `testpaths`, the checker `include`, the Ruff `src` value, and the VS Code `python.testing.pytestArgs`, but never `coverage.run.source`. A repository whose suite does not live in `tests/` sets it under the `python_tooling` namespace in `.project-standards.yml` to resolve the include/`testpaths` `CP-CONSUMER-CONFLICT` before apply; the conflict now names the governing option instead of `none declared`. Undeclared, every unit renders byte-identically to 1.7. Markdown Tooling 1.8 accepts a `.markdownlint.json` that is byte-for-byte the shipped config re-serialized with literal (non-escaped) UTF-8 punctuation: the proven legacy byte form is parsed-JSON-equal to the shipped resource, so a consumer holding it migrates to managed ownership of the current escaped bytes with no findings on that file instead of blocking as a modified config (`CP-MIGRATION-LEGACY-DIGEST` / `MT-LEGACY-MODIFIED`). Markdown Frontmatter 1.5 adds the `workflow_ownership` escape for `.github/workflows/validate-standards.yml` documented in §3.
+
 ## 2. Apply the reviewed migration
 
 ```bash
@@ -121,6 +123,8 @@ When Agent Handoff is selected, run its size and shape reports before apply. Con
 project-standards agent-handoff size-report --repo .
 project-standards agent-handoff shape-check --repo .
 ```
+
+Running these reports under legacy authority before apply is expected. The tool emits only a factual note — `note: reading legacy .project-standards.yml authority; the V5 control plane takes over after migration` — and does not instruct you to stop; the pre-migration reports this runbook prescribes and the emitted message no longer contradict each other.
 
 If apply is interrupted after unified files appear beside the legacy configuration, keep both authorities. Rerun the migration entry point: it recognizes only a sanctioned migration prefix, previews the recovery, and completes it on apply.
 
@@ -183,6 +187,8 @@ cli_documentation:
   usage_ownership: consumer-owned # docs/usage.md
 project_spec:
   workflow_ownership: consumer-owned # validate-specs.yml
+markdown_frontmatter:
+  workflow_ownership: consumer-owned # validate-standards.yml
 ```
 
 Package options remain closed sets: a key that no selected package's migration provider recognizes produces `CP-MIGRATION-UNCLAIMED-SETTING`, while every recognized key — ownership escape or ordinary option — is carried into the migrated configuration. The selected package adoption guides define the same keys for unified `.standards/config.toml` configuration after migration.
@@ -190,6 +196,8 @@ Package options remain closed sets: a key that no selected package's migration p
 A stock workflow from an older package major can differ from the currently recognized migration signature even when nobody customized it. Treat that state explicitly: choose `consumer-owned` if the repository intends to retain the older workflow, or restore the current legacy package bytes before migrating to managed ownership. Do not label or discard the file as accidental drift.
 
 A relinquished target is intentionally absent from the action list because the resulting package has no ownership claim on it. The migrated option and unchanged target bytes are the confirmation: inspect both in the preview/post-apply review and keep the consumer-owned file in the repository's own verification scope.
+
+`markdown.frontmatter.workflow_ownership: consumer-owned` relinquishes `.github/workflows/validate-standards.yml`, and it carries an obligation the other escapes do not. Markdown Frontmatter composes that caller from four bounded contributions — the workflow `name`, `on` triggers, `permissions`, and the `frontmatter` job — so relinquishing it transfers the whole file, including the job wiring that dispatches the reusable Frontmatter workflow. The package then keeps none of the job reference, permissions, or triggers current; track upstream workflow changes yourself and keep the caller in the repository's own verification scope. This is the declared preservation path for a caller that was hand-edited (added `paths:` filters, comments, or extra jobs) and therefore holds a byte form migration does not recognize — declare the option in the legacy configuration before migration to preserve those exact bytes instead of blocking. The documented path back to managed ownership: restore the shipped caller bytes for your `workflow_mode`, then set `workflow_ownership` back to `managed`; the next reconcile recomposes the four contributions and resumes managing the file.
 
 An exact selector remains pinned. `latest` follows only the compatible default or an explicitly accepted package-major track. Entering or leaving a non-default major requires the matching `--allow-major STANDARD_ID@MAJOR` and a declared migration path.
 
@@ -214,6 +222,10 @@ Markdown Tooling's local `npx --no-install` checks require Node plus repository-
 `fix` can change files whose current digests participate in the central lock. Reconcile those reviewed changes before `validate`; otherwise validation correctly reports `CP-DRIFT` against the pre-fix lock.
 
 An explicit `--config .project-standards.yml` is now a legacy/debug-only path and is rejected under unified authority.
+
+### Frontmatter serialization convergence
+
+Project Standards 5.8.0 converges `format-frontmatter` (the format stage of `fix`) with the Markdown Tooling Prettier configuration on one frontmatter serialization. The formatter now emits each scalar in the minimal-escape quote style — the style that needs no escapes, which is Prettier's resting state under `singleQuote: true` — instead of unconditionally single-quoting and doubling apostrophes (`'Apple''s'`). Both quote forms are accepted: a value already spelled single-quoted, or double-quoted when double is the minimal style for that value, is kept verbatim; only a value in neither form is re-spelled. Legacy single-quoted spellings therefore stay valid forever, and no scalar the 5.7.0 checker accepted is now reported as needing reformatting — an additive, previously-passing-safe widening that exact `markdown-frontmatter@1.4` pins inherit through the shared engine. The one-time effect a consumer sees is that when `fix` or Prettier next rewrites a legacy escaped spelling such as `'Apple''s'`, it lands as the minimal `"Apple's"` form — itself an accepted state — so the two companion tools no longer each flag the other's output. A latent corruption where control-character values were re-emitted as literal control bytes is fixed at the same time.
 
 ## 5. Re-pin workflows and the tool
 

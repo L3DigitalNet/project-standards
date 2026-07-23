@@ -813,6 +813,10 @@ Options:
 - **`--stdin`** — Read one document from standard input and write the formatted result to standard output. Mutually exclusive with `<file>`, `--glob`, and `--write`.
 - **`-q`, `--quiet`** — Suppress per-file output.
 
+Check mode is the default, as `--check`'s entry states and as `--help` reports; running `format-frontmatter FILE` with no mode flag reports what would change without writing.
+
+Named-file skip diagnostics: when a file is passed explicitly but skipped, the reason is printed to standard error rather than the file vanishing silently. In check mode, a file dropped by a config `exclude` pattern prints `skipped (excluded by config): PATH`, and a frontmatter-denylisted file (for example `CLAUDE.md`) prints `skipped (never-frontmatter file): PATH`. In write mode, the exclude diagnostic is identical, while a denylisted file is refused through the formatter's denylist guard and surfaces as `refused (denylisted): never add frontmatter to this file`. Exit codes are unchanged in every case.
+
 Exit status: `0` nothing to do, or all writes succeeded · `1` in check mode a file would change, or any mode encountered a refused (duplicate-key) block · `2` operator error, or an incompatible `--stdin` combination.
 
 ### `validate-references`
