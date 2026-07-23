@@ -74,6 +74,12 @@ digest = "sha256:a981a54cb6c6a36e2bfb73eca61c9b84100da67b072cd07c7c4ffea4b059364
 role = "default"
 
 [[packages]]
+id = "markdown-frontmatter"
+version = "1.5"
+digest = "sha256:b31b9a97edb48334bbb6af2988272baf071449a457a303e218dbb8c6436a540c"
+role = "retained"
+
+[[packages]]
 id = "markdown-tooling"
 version = "1.2"
 digest = "sha256:0d4f89403c4b4c4a2d1dc9c579deddf717f5e01d1c424cac4a103ecb03be12ae"

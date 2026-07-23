@@ -241,6 +241,14 @@ _RETAINED_CATALOG_ENTRIES = {
         "retained",
         "sha256:97327fffde61fd981c08949292c504a930f4fe6786af455cb1f6c7d204dc7c43",
     ),
+    # 5.8.0 issue #28: markdown-frontmatter 1.5 is advertised as retained; T10 flips
+    # the retained->default authority for the 5.8.0 successors.
+    (
+        "markdown-frontmatter",
+        "1.5",
+        "retained",
+        "sha256:b31b9a97edb48334bbb6af2988272baf071449a457a303e218dbb8c6436a540c",
+    ),
     (
         "python-tooling",
         "1.2",

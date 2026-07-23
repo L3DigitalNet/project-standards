@@ -1,0 +1,48 @@
+---
+schema_version: '1.1'
+id: 'runbook-xxxxxx-replace-with-readable-slug' # format: {doc_type}-{6-char base36 token}-{frozen slug} — see the standard's Formatting rules
+title: 'Runbook: Procedure Name'
+description: 'One-sentence description of the operational procedure.'
+doc_type: 'runbook'
+status: 'draft'
+created: 'YYYY-MM-DD'
+updated: 'YYYY-MM-DD'
+reviewed: null
+owner: 'repo-maintainers'
+consumer: 'mix'
+tags: []
+aliases: []
+related: []
+source: []
+confidence: 'unknown'
+visibility: 'internal'
+license: null
+---
+
+# Runbook: Procedure Name
+
+## Trigger
+
+When to use this runbook. What condition or alert leads here?
+
+## Prerequisites
+
+- Access to ...
+
+## Steps
+
+1.
+2.
+3.
+
+## Verification
+
+How do you confirm the procedure completed successfully?
+
+## Rollback
+
+How do you undo or recover if something goes wrong?
+
+## References
+
+List supporting documents, links, or sources.
