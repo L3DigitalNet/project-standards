@@ -35,7 +35,9 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.8.0] — 2026-07-22
+
+> **Why MINOR:** Catalog 5 adds three backward-compatible package successors on their existing major tracks — Python Tooling 1.8, Markdown Tooling 1.8, and Markdown Frontmatter 1.5 — and the correction train's fixes converge the frontmatter serialization on the Prettier oracle, downgrade the legacy-authority stop-warning to a factual note, point whole-file conflict findings at the first difference, and make `format-frontmatter` mode and skip handling explicit, all without changing any semantic outcome. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.7.0` classifies the release as minor.
 
 ### Added
 
