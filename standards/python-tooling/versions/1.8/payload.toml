@@ -1,0 +1,887 @@
+schema_version = "1.0"
+
+[payload]
+standard = "python-tooling"
+version = "1.8"
+availability = "consumer"
+
+[config]
+schema_resource = "config-schema"
+
+[capabilities]
+provides = ["python.audit", "python.format", "python.lint", "python.test", "python.tooling", "python.typecheck"]
+consumes_platform = ["project-standards.reconcile"]
+
+[relations]
+companions = ["python-coding"]
+extends = []
+conflicts = []
+
+[[resources]]
+id = "readme"
+role = "canonical-standard"
+path = "README.md"
+media_type = "text/markdown"
+digest = "sha256:3eb28236de0bc426aa3eee27b4b78e0c5f806864397fd50b1ceb636d0dd0d82d"
+
+[[resources]]
+id = "adopt"
+role = "adoption-guide"
+path = "adopt.md"
+media_type = "text/markdown"
+digest = "sha256:aaa62b97061271961f24140fc89d21478c1d8a0548e9f56544982d4a73bbde4a"
+
+[[resources]]
+id = "agent-summary"
+role = "agent-summary"
+path = "agent-summary.md"
+media_type = "text/markdown"
+digest = "sha256:b4e24b85b0afe136326a15128236af1f3858147568c4346648c24a9c62d09398"
+
+[[resources]]
+id = "build-backend-guidance"
+role = "standard-reference"
+path = "build-backend.md"
+media_type = "text/markdown"
+digest = "sha256:0370fe3b196fe47ed97bc742dfa1000d97468e21e2434ba73abea206d2d21fda"
+
+[[resources]]
+id = "config-schema"
+role = "config-schema"
+path = "config.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:3f8385c6cf7096b943b5ba870d6bf105c6d43ca38e5673e341d3fe15f60336e3"
+
+[[resources]]
+id = "python-version-source"
+role = "provider-resource"
+path = "resources/python-version"
+media_type = "text/plain"
+digest = "sha256:a876e0b10411037a012498b9fe18d9bc1df32ed8b722a13564dc944ddcfd9135"
+
+[[resources]]
+id = "check-workflow-source"
+role = "provider-resource"
+path = "resources/check.yml"
+media_type = "application/yaml"
+digest = "sha256:574193ff5e3ff8cc3c9334883f6af7820eb5219419d89766836da87b2c827a5b"
+
+[[resources]]
+id = "check-script-source"
+role = "provider-resource"
+path = "resources/check.py"
+media_type = "text/x-python"
+digest = "sha256:3e4372ec5c51594b3bbb3a4b270999ab8251d3876390f230b5a9855cc51bb0e6"
+
+[[resources]]
+id = "provider-code"
+role = "provider-resource"
+path = "providers/python_tooling.py"
+media_type = "text/x-python"
+digest = "sha256:e79a6789ec40a211c90153092f488b513016d538320f4fe890a2c7c95e2d8cca"
+
+[[resources]]
+id = "provider-input"
+role = "provider-resource"
+path = "schemas/provider-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:dc734270a8058077205e9e381d4ea2d336ff6ae7df95b362539c7dc1f5a3287c"
+
+[[resources]]
+id = "provider-content"
+role = "provider-resource"
+path = "schemas/content.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:760d819048c1f2a153e72227c940f36eed96deb5e2336e802f34caa37ccf14b3"
+
+[[resources]]
+id = "provider-findings"
+role = "provider-resource"
+path = "schemas/findings.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:c838f02865d72e8d2aa4d6640e1fb50d03187122571752d1c75970f93ffb1066"
+
+[[resources]]
+id = "provider-migration-report"
+role = "provider-resource"
+path = "schemas/migration-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:2d1e1aee445bd30b6f3fe3ed8c05982f831fb130c500e56460803905708ebc20"
+
+[[contributions]]
+id = "python-version"
+target = ".python-version"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "check-workflow"
+target = ".github/workflows/check.yml"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions.when_any]]
+option = "workflow_ownership"
+equals = "managed"
+
+[[contributions]]
+id = "check-script"
+target = "scripts/check.py"
+adapter = "whole-file"
+scope = "$file"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions.when_any]]
+option = "script_ownership"
+equals = "managed"
+
+[[contributions]]
+id = "build-system"
+governing_options = ["build_backend"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "table:/build-system"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "dev-dependencies"
+governing_options = ["/type_checker/name", "/coverage/patch", "additional_dev_dependencies"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/dependency-groups/dev"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "ruff-config"
+governing_options = ["python_version", "/ruff/line_length", "/ruff/extend_exclude", "source_layout", "additional_source_roots", "/pytest/test_paths"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "table:/tool/ruff"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "basedpyright-include"
+governing_options = ["source_layout", "additional_source_roots", "/pytest/test_paths"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/basedpyright/include"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
+
+[[contributions]]
+id = "basedpyright-mode"
+governing_options = ["/type_checker/mode"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/basedpyright/typeCheckingMode"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
+
+[[contributions]]
+id = "basedpyright-python-version"
+governing_options = ["python_version"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/basedpyright/pythonVersion"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
+
+[[contributions]]
+id = "basedpyright-platform"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/basedpyright/pythonPlatform"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
+
+[[contributions]]
+id = "basedpyright-warnings"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/basedpyright/failOnWarnings"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "basedpyright" }]
+
+[[contributions]]
+id = "pyright-include"
+governing_options = ["source_layout", "additional_source_roots", "/pytest/test_paths"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pyright/include"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
+
+[[contributions]]
+id = "pyright-mode"
+governing_options = ["/type_checker/mode"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pyright/typeCheckingMode"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
+
+[[contributions]]
+id = "pyright-python-version"
+governing_options = ["python_version"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pyright/pythonVersion"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
+
+[[contributions]]
+id = "pyright-platform"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pyright/pythonPlatform"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
+
+[[contributions]]
+id = "pyright-warnings"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pyright/failOnWarnings"
+policy = "managed"
+provider = "render-semantic"
+when_any = [{ option = "/type_checker/name", equals = "pyright" }]
+
+[[contributions]]
+id = "pytest-minversion"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pytest/ini_options/minversion"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "pytest-testpaths"
+governing_options = ["/pytest/test_paths"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pytest/ini_options/testpaths"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "pytest-addopts"
+governing_options = []
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pytest/ini_options/addopts"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "pytest-markers"
+governing_options = ["/pytest/markers"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "key:/tool/pytest/ini_options/markers"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "coverage-run-config"
+governing_options = ["source_layout", "additional_source_roots", "/coverage/parallel", "/coverage/patch"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "table:/tool/coverage/run"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "coverage-report-config"
+governing_options = ["/pytest/fail_under", "/pytest/coverage_exclude_also"]
+target = "pyproject.toml"
+adapter = "toml"
+scope = "table:/tool/coverage/report"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-root"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:$global#root"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/root"
+
+[[contributions]]
+id = "editorconfig-charset"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#charset"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-charset"
+
+[[contributions]]
+id = "editorconfig-eol"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#end_of_line"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-end-of-line"
+
+[[contributions]]
+id = "editorconfig-final-newline"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#insert_final_newline"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-final-newline"
+
+[[contributions]]
+id = "editorconfig-global-trailing"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#trim_trailing_whitespace"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-trailing-whitespace"
+
+[[contributions]]
+id = "editorconfig-global-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#indent_style"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-indent-style"
+
+[[contributions]]
+id = "editorconfig-global-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*#indent_size"
+policy = "managed"
+provider = "render-semantic"
+shared_identity = "editorconfig/global-indent-size"
+
+[[contributions]]
+id = "editorconfig-python-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.py#indent_style"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-python-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.py#indent_size"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-toml-indent-style"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.toml#indent_style"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "editorconfig-toml-indent-size"
+target = ".editorconfig"
+adapter = "editorconfig"
+scope = "property:*.toml#indent_size"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-python-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=ms-python.python"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-basedpyright-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=detachhead.basedpyright"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-ruff-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=charliermarsh.ruff"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-toml-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=tamasfe.even-better-toml"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-yaml-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=redhat.vscode-yaml"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-actions-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=github.vscode-github-actions"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-editorconfig-extension"
+target = ".vscode/extensions.json"
+adapter = "jsonc"
+scope = "set:/recommendations#value=editorconfig.editorconfig"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-interpreter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/python.defaultInterpreterPath"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-pytest-enabled"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/python.testing.pytestEnabled"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-unittest-disabled"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/python.testing.unittestEnabled"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-pytest-args"
+governing_options = ["/pytest/test_paths"]
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/python.testing.pytestArgs"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-python-formatter"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[python]/editor.defaultFormatter"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-python-format-on-save"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[python]/editor.formatOnSave"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-python-code-actions"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/[python]/editor.codeActionsOnSave"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-ruff-server"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/ruff.nativeServer"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-basedpyright-mode"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/basedpyright.analysis.typeCheckingMode"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-pyright-mode"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/python.analysis.typeCheckingMode"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-exclude-pycache"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/files.exclude/**~1__pycache__"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-exclude-pytest-cache"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/files.exclude/**~1.pytest_cache"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-exclude-ruff-cache"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/files.exclude/**~1.ruff_cache"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-exclude-mypy-cache"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/files.exclude/**~1.mypy_cache"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-exclude-coverage"
+target = ".vscode/settings.json"
+adapter = "jsonc"
+scope = "key:/files.exclude/**~1.coverage"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-tasks-version"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "key:/version"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-task-check"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "keyed-set:/tasks#label=check"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-task-fix"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "keyed-set:/tasks#label=fix"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-task-test"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "keyed-set:/tasks#label=test"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-task-typecheck"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "keyed-set:/tasks#label=typecheck"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "vscode-task-audit"
+target = ".vscode/tasks.json"
+adapter = "jsonc"
+scope = "keyed-set:/tasks#label=audit"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "agents-instructions"
+target = "AGENTS.md"
+adapter = "markdown-block"
+scope = "block:python-tooling"
+policy = "managed"
+provider = "render-semantic"
+
+[[contributions]]
+id = "claude-instructions"
+target = "CLAUDE.md"
+adapter = "markdown-block"
+scope = "block:python-tooling"
+policy = "managed"
+provider = "render-semantic"
+
+[[providers]]
+id = "render-semantic"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#run_render_semantic"
+input_schema = "provider-input"
+output_schema = "provider-content"
+resources = ["check-script-source", "check-workflow-source", "python-version-source"]
+
+[[providers]]
+id = "verify-toolchain"
+operation = "verify"
+kind = "python"
+phase = "verify"
+effect = "findings"
+entrypoint = "payload:provider-code#run_verify"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = ["check-script-source", "check-workflow-source", "python-version-source"]
+
+[[providers]]
+id = "migrate-legacy"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate"
+input_schema = "provider-input"
+output_schema = "provider-migration-report"
+resources = []
+
+[[legacy_states]]
+id = "v4-python-tooling"
+
+[[migrations]]
+# 5.8.0 FR-001..004 / issue #31: the 1.7->1.8 delta is the pytest collection
+# roots surfacing across the pytest testpaths key, both checker include tables,
+# the Ruff src value, and the VS Code pytestArgs setting. Coverage sources are
+# unchanged, so coverage-run-config is not in the affected set.
+id = "python-tooling-1-7-to-1-8"
+from = "package:1.7"
+to = "package:1.8"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "contribution:basedpyright-include",
+  "contribution:pyright-include",
+  "contribution:pytest-testpaths",
+  "contribution:ruff-config",
+  "contribution:vscode-pytest-args",
+]
+
+[[migrations]]
+id = "legacy-v4-to-1-8"
+from = "legacy:v4-python-tooling"
+to = "package:1.8"
+mode = "automatic"
+provider = "migrate-legacy"
+reversible = false
+affected = [
+  "config:*",
+  "contribution:agents-instructions",
+  "contribution:basedpyright-include",
+  "contribution:basedpyright-mode",
+  "contribution:basedpyright-platform",
+  "contribution:basedpyright-python-version",
+  "contribution:basedpyright-warnings",
+  "contribution:build-system",
+  "contribution:check-script",
+  "contribution:check-workflow",
+  "contribution:claude-instructions",
+  "contribution:coverage-report-config",
+  "contribution:coverage-run-config",
+  "contribution:dev-dependencies",
+  "contribution:editorconfig-charset",
+  "contribution:editorconfig-eol",
+  "contribution:editorconfig-final-newline",
+  "contribution:editorconfig-global-indent-size",
+  "contribution:editorconfig-global-indent-style",
+  "contribution:editorconfig-global-trailing",
+  "contribution:editorconfig-python-indent-size",
+  "contribution:editorconfig-python-indent-style",
+  "contribution:editorconfig-root",
+  "contribution:editorconfig-toml-indent-size",
+  "contribution:editorconfig-toml-indent-style",
+  "contribution:pyright-include",
+  "contribution:pyright-mode",
+  "contribution:pyright-platform",
+  "contribution:pyright-python-version",
+  "contribution:pyright-warnings",
+  "contribution:pytest-addopts",
+  "contribution:pytest-markers",
+  "contribution:pytest-minversion",
+  "contribution:pytest-testpaths",
+  "contribution:python-version",
+  "contribution:ruff-config",
+  "contribution:vscode-actions-extension",
+  "contribution:vscode-basedpyright-extension",
+  "contribution:vscode-basedpyright-mode",
+  "contribution:vscode-editorconfig-extension",
+  "contribution:vscode-exclude-coverage",
+  "contribution:vscode-exclude-mypy-cache",
+  "contribution:vscode-exclude-pycache",
+  "contribution:vscode-exclude-pytest-cache",
+  "contribution:vscode-exclude-ruff-cache",
+  "contribution:vscode-interpreter",
+  "contribution:vscode-pyright-mode",
+  "contribution:vscode-pytest-args",
+  "contribution:vscode-pytest-enabled",
+  "contribution:vscode-python-code-actions",
+  "contribution:vscode-python-extension",
+  "contribution:vscode-python-format-on-save",
+  "contribution:vscode-python-formatter",
+  "contribution:vscode-ruff-extension",
+  "contribution:vscode-ruff-server",
+  "contribution:vscode-task-audit",
+  "contribution:vscode-task-check",
+  "contribution:vscode-task-fix",
+  "contribution:vscode-task-test",
+  "contribution:vscode-task-typecheck",
+  "contribution:vscode-tasks-version",
+  "contribution:vscode-toml-extension",
+  "contribution:vscode-unittest-disabled",
+  "contribution:vscode-yaml-extension",
+]
+signatures = [
+  "legacy-agents",
+  "legacy-check-script",
+  "legacy-check-workflow",
+  "legacy-claude",
+  "legacy-editorconfig",
+  "legacy-python-version",
+  "legacy-vscode-extensions",
+  "legacy-vscode-settings",
+  "legacy-vscode-tasks",
+]
+
+[[legacy_signatures]]
+id = "legacy-agents"
+kind = "whole-file"
+targets = ["AGENTS.md"]
+known_content_digests = [
+  "sha256:960e17f7c7f0980a979b48e4457de958697afeb3d6e1953c379e20a443669b92",
+  "sha256:c1da8ce6520f8aaa300f37f43810a45c8a39596d5e6c2fa965eb8b3ef4702caf",
+  "sha256:f345f6167f040071b925a0c3b507cbe7e62a41b05ffc662055b25fb1f595405a",
+  "sha256:68eba3cdc1101d739ae5aafb2407f5237e3d8fdce74ff6a3cc4ba1ff37491aa2",
+  "sha256:449b5809bb35cf339664ecf531b1154b3871cb3dcac4d6cf79aa22b75a515148",
+  "sha256:b7b00e3bf4a74e47a19418979925260f73098734c805148ee31384f3e6571b2b",
+]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-check-script"
+kind = "whole-file"
+targets = ["scripts/check.py"]
+known_content_digests = [
+  "sha256:2dd6b7c11db910458add9696ade9b37c9f5ae4e23004da5333b52e3669bd15e5",
+  "sha256:3388c726847101eb1dc39ef4982b23c90b9c69f71d81f4347a446bb185db5ebe",
+]
+consumer_owned_intent_pointer = "/python_tooling/script_ownership"
+
+[[legacy_signatures]]
+id = "legacy-check-workflow"
+kind = "whole-file"
+targets = [".github/workflows/check.yml"]
+known_content_digests = [
+  "sha256:16a65f2bdc06adfc814786201ec32937bad4b5930cbf2bf722489007150c933e",
+  "sha256:f117ab3c10060ce8937ff94d9639017eaa40aece133b64e4962801a63c966b47",
+]
+consumer_owned_intent_pointer = "/python_tooling/workflow_ownership"
+
+[[legacy_signatures]]
+id = "legacy-claude"
+kind = "whole-file"
+targets = ["CLAUDE.md"]
+known_content_digests = [
+  "sha256:21cd73316ba5128b5a0bc66a34de4563dcf8af6b049f22ff4409f40c496850c0",
+  "sha256:8da15c367a9863310000a48ad49f46bff7e67734d2e860face27016e3e6df806",
+  "sha256:8c9ba6563c70ea051ad36f2054d41f36aa048ce61d813d100d4e7b25d5e05de0",
+]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-editorconfig"
+kind = "whole-file"
+targets = [".editorconfig"]
+known_content_digests = [
+  "sha256:28f7d9fad311f48a3531bce0f745ad98b3e720f0e5cb0a0589823594db710943",
+  "sha256:f2f1d10481c70dcc747122fd3b51b2fe09ad7e400d7755c7ffcc7fab7ae517ea",
+]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-python-version"
+kind = "whole-file"
+targets = [".python-version"]
+known_content_digests = ["sha256:a876e0b10411037a012498b9fe18d9bc1df32ed8b722a13564dc944ddcfd9135"]
+
+[[legacy_signatures]]
+id = "legacy-vscode-extensions"
+kind = "whole-file"
+targets = [".vscode/extensions.json"]
+known_content_digests = ["sha256:ca0a0311bb9598fc948d8265f5621b591ff3d0c8205b0fd62795b08f341858ba"]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-vscode-settings"
+kind = "whole-file"
+targets = [".vscode/settings.json"]
+known_content_digests = [
+  "sha256:22f598ebf1f24e29041289891b3c56131f0acc4dddfed802d92a6a3802eab55f",
+  "sha256:83e90eb79fc75e1bcd13dc83283a608aea1cdc322ccb11fcefc5cc29f0e82f4e",
+]
+unknown_content_disposition = "preserve"
+
+[[legacy_signatures]]
+id = "legacy-vscode-tasks"
+kind = "whole-file"
+targets = [".vscode/tasks.json"]
+known_content_digests = [
+  "sha256:17ba0089915fafae10400a63675808ed67e532e4952544dd8d49cac3348128c1",
+  "sha256:8dcb4880139bb708bf20819479bcb7898bb5d1dabd8d79e43b7d64bb3e4b3b08",
+  "sha256:cf4aa30c3e2bfb1d69d0cfb7953d1e351db0e6ab06c5812f48cf9eface79a9f7",
+]
+unknown_content_disposition = "preserve"

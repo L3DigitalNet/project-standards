@@ -93,6 +93,14 @@ _PACKAGES = {
 # listed beside their successors. Only the activation test compares the full
 # catalog entry set; the per-family tests above track current authority only.
 _RETAINED_CATALOG_ENTRIES = {
+    # 5.8.0 issue #31: python-tooling 1.8 is advertised as retained; T10 flips
+    # the retained->default authority for the 5.8.0 successors.
+    (
+        "python-tooling",
+        "1.8",
+        "retained",
+        "sha256:7397498723a1f683b09037c233e1872df825cd70a27c514a45bb2bacf24cb312",
+    ),
     (
         "python-tooling",
         "1.6",
