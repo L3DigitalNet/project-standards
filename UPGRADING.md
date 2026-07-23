@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.7.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.8.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.7.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.8.0"
   project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.7.0` before continuing.
+  Confirm that the command reports `project-standards 5.8.0` before continuing.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -230,7 +230,7 @@ Project Standards 5.8.0 converges `format-frontmatter` (the format stage of `fix
 
 ## 5. Re-pin workflows and the tool
 
-Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.7.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
+Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.8.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
 
 Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
 

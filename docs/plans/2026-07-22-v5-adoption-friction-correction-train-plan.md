@@ -2,11 +2,11 @@
 title: 'V5 Adoption Friction Correction Train Implementation Plan'
 slug: 'v5-adoption-friction-correction-train'
 size: full
-status: active # active | complete  (coarse lifecycle only; live progress lives in the per-phase checklists)
+status: complete # active | complete  (coarse lifecycle only; live progress lives in the per-phase checklists)
 source: 'GitHub issues #26-#31 against Project Standards 5.7.0'
 spec_ref: 'docs/specs/2026-07-22-v5-adoption-friction-correction-train-design.md'
 created: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-23
 owners:
   - 'Claude (Fable 5) with Chris Purcell / L3DigitalNet'
 test_framework: pytest
@@ -489,10 +489,16 @@ Run at close-out; evidence in checklists/notes, summary in §14.
 
 ## 14. Close-out
 
-- **Completed:** _pending_ · final commit _pending_
-- **Deviations / decisions harvested from notes:** _pending close-out_
-- **Risks closed / accepted:** _pending close-out_
-- **Deferred work filed:** _pending close-out_
+- **Completed:** 2026-07-23 · release commit `d007ba0` published as 5.8.0 (signed `v5.8.0` + moving `v5`, nine green release-commit workflow runs including `Check` `30002838425`, byte-verified assets, issues #26–#31 closed).
+- **Deviations / decisions harvested from notes:**
+  1. Known-digest relinquishment is intent-pointer-free by engine constraint (known history cannot use owner-resolution); the relinquishment claim proper serves only unknown callers. The issue #28 consumer (customized caller, unknown digest) still lands byte-intact — precedented by markdown-tooling's own provider.
+  2. The `.standards/` reconcile deferred from T10 to T12: the release-lineage guard fails closed until the pyproject version advances, mirroring the 5.7.0 train.
+  3. Prettier 3 honors `.gitignore`, so the parity harness pins `--ignore-path os.devnull` behind a committed mutation-guard test; parity probe files must live inside the repository tree because the `**/*.md` singleQuote override is path-relative.
+  4. FR-009 divergence record: none. Prettier is quote/escape-preserving (not cost-minimizing) for 6 of the 13 corpus classes, so no non-canonical seed converges for those classes, but the FR-008 cost model matched pinned Prettier 3.8.3 exactly wherever Prettier does normalize.
+  5. The inherited misnamed `legacy-v4-to-1-3` migration id carries forward into the markdown-frontmatter 1.5 copy under the immutable-copy rule.
+  6. Markdown Frontmatter 1.5 example/template files carry generic infra-flavored example strings byte-identical to the released 1.4 payload — mandatory immutable carry-forward, accepted.
+- **Risks closed / accepted:** R-001 closed (oracle corpus green, no cost-model divergence); R-002 closed (integrity/reconstruction suites plus the T12 reconcile no-op); R-003 closed (dogfood validate passes under the candidate); R-004 closed (`check-release --baseline v5.7.0` → minor, no findings).
+- **Deferred work filed:** backlog-triaged minors from the final review (redundant `order` list, multi-line block-list continuation fixture, `splitlines()` Unicode line counting, `expected:` label reuse, TC-T7-003/TC-T7-006 coverage widening, dedicated `workflow_ownership` bad-enum test) and the confirmed-dead `plan_whole_file` cleanup candidate — none release-blocking, recorded in the session record.
 
 Teardown: harvest notes here (+ ADRs/issues) → set `status: complete`, update `updated` → commit master → `rm -rf .project-pipeline/2026-07-22-{slug}/`.
 

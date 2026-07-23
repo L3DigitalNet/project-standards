@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- Project Standards 5.7.0 is published from release commit `06162ec`. Signed `v5.7.0` and moving `v5` tags, the Latest release, and byte-verified assets are live; issues #24–#25 are closed with evidence.
-- The release adds Python Tooling 1.7 per-root coverage scoping and anchored TOML managed-region comment preservation, documented in `UPGRADING.md`. Catalog 5 retains every predecessor.
-- Exact evidence: 3,273 full-suite tests, CI-mirror lanes (3,189/84/5), 90% coverage over the candidate wheel, eight green release-commit workflows (`Check` run `29951568179`), and downloaded asset parity.
+- Project Standards 5.8.0 is published from `d007ba0`: signed `v5.8.0`/`v5` tags, verified assets, issues #26–#31 closed with evidence.
+- It ships Python Tooling 1.8, Markdown Tooling 1.8, Markdown Frontmatter 1.5, and the converged serialization; see `docs/STATUS.md`.
+- Evidence: 3,266/85/5 test lanes, 90% coverage, nine green workflow runs (`Check` `30002838425`), MINOR classification, asset parity.
 
 ## Active incidents
 

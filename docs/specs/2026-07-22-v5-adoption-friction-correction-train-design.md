@@ -1,6 +1,6 @@
 # V5 Adoption Friction Correction Train Design
 
-**Date:** 2026-07-22 **Status:** authored for autonomous implementation from the owner's resolve-open-issues directive; publication requires owner confirmation **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
+**Date:** 2026-07-22 **Status:** released (5.8.0, 2026-07-23) from commit `d007ba0` under recorded owner authorization; issues #26–#31 closed with evidence **Author:** Claude (Fable 5) with Chris Purcell / L3DigitalNet
 
 ## Problem and goal
 
@@ -156,3 +156,9 @@ Implementation follows RED-GREEN-REFACTOR in this order:
 11. Publish 5.8.0 from `main`, verify signed tags, GitHub release metadata, every release-commit workflow, and downloaded asset hashes; synchronize `testing`; close #26–#31 with the released version, regression evidence, and #29's non-reproduction record.
 
 Acceptance requires every FR/NFR above, exact predecessor-version proofs, a clean worktree, exact `main`/`testing`/remote parity after release, and no remaining open issue among #26–#31.
+
+## Deviation record (close-out, 2026-07-23)
+
+- **FR-006 scope refinement:** the payload model forbids combining a `consumer_owned_intent_pointer` with known-digest history on one signature, so known-digest relinquishment is intent-pointer-free and the relinquishment claim proper serves only unknown callers. The issue #28 consumer (customized caller, unknown digest) still lands byte-intact through the declared escape; this matches the sibling packages' accepted resolution and the alternative rejected in §Rejected 11.
+- **FR-009 divergence record: none.** The FR-008 cost model matched pinned Prettier 3.8.3 exactly wherever Prettier normalizes. Prettier is quote/escape-preserving (not cost-minimizing) for 6 of the 13 corpus classes, so those classes have no non-canonical converging seed; the parity harness therefore pins `--ignore-path os.devnull` (Prettier 3 honors `.gitignore`) behind a committed mutation-guard test, and probe files live inside the repository tree because the `**/*.md` `singleQuote` override is path-relative.
+- **Process:** the `.standards/` reconcile deferred from catalog integration to release preparation because the release-lineage guard fails closed until the package version advances (mirrors the 5.7.0 train); the inherited misnamed `legacy-v4-to-1-3` migration id carries into the markdown-frontmatter 1.5 copy under the immutable-copy rule.

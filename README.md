@@ -36,15 +36,15 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 project-standards/
 ├── standards/                 # V2 families: mutable index/landing + immutable versions/
 │   ├── README.md              #   family and payload anatomy + Catalog 5 index
-│   ├── markdown-frontmatter/  #   family index + immutable 1.2/1.3 payloads
-│   ├── adr/                   #   family index + immutable 1.1 payload
+│   ├── markdown-frontmatter/  #   family index + immutable versioned payloads
+│   ├── adr/                   #   family index + immutable versioned payloads
 │   ├── python-tooling/        #   family index + immutable versioned payloads
 │   ├── markdown-tooling/      #   family index + immutable versioned payloads
-│   ├── project-spec/          #   family index + immutable 1.1/1.2 payloads
-│   ├── cli-documentation/     #   family index + immutable 1.1/1.2 payloads
-│   ├── agent-handoff/         #   family index + immutable 1.1/1.2 payloads
-│   ├── python-coding/         #   reference-only family + immutable 0.5 payload
-│   └── standard-bundle-authoring/ # internal family + immutable 2.0/2.1/2.2 payloads
+│   ├── project-spec/          #   family index + immutable versioned payloads
+│   ├── cli-documentation/     #   family index + immutable versioned payloads
+│   ├── agent-handoff/         #   family index + immutable versioned payloads
+│   ├── python-coding/         #   reference-only family + immutable versioned payloads
+│   └── standard-bundle-authoring/ # internal family + immutable versioned payloads
 ├── meta/                      # repository policy, including release/versioning
 ├── src/project_standards/     # CLI/control plane + installed package projections
 ├── tests/                     # implementation, package, compatibility, and coherence tests
@@ -63,13 +63,13 @@ The standards this repository defines. Each lives in a family under [`standards/
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/versions/1.3/README.md`](standards/markdown-frontmatter/versions/1.3/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.3/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.3/field-values.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.3/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.3/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.3/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.3/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.3/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.5/README.md`](standards/markdown-frontmatter/versions/1.5/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.5/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.5/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.5/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.5/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.5/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.5/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.5/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.3/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.3/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.3/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.5/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.5/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.5/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -85,15 +85,15 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
-- **Standard:** [`standards/python-tooling/versions/1.5/README.md`](standards/python-tooling/versions/1.5/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.5/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.8/README.md`](standards/python-tooling/versions/1.8/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.8/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.7/README.md`](standards/markdown-tooling/versions/1.7/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.7/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.8/README.md`](standards/markdown-tooling/versions/1.8/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.8/adopt.md)
 
 ### Project Specification Standard
 
@@ -131,18 +131,18 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 
 ## Consuming the standards
 
-Project Standards 5.7.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.8.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.7.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.8.0"
 project-standards --version
 ```
 
-The version command must report `project-standards 5.7.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.8.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.4
+project-standards standards enable markdown-frontmatter --version 1.5
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -155,10 +155,10 @@ Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.tom
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.4` | [`standards/markdown-frontmatter/versions/1.4/adopt.md`](standards/markdown-frontmatter/versions/1.4/adopt.md) |
+| Markdown Frontmatter | `1.5` | [`standards/markdown-frontmatter/versions/1.5/adopt.md`](standards/markdown-frontmatter/versions/1.5/adopt.md) |
 | ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
-| Python Tooling | `1.5` | [`standards/python-tooling/versions/1.5/adopt.md`](standards/python-tooling/versions/1.5/adopt.md) |
-| Markdown Tooling | `1.7` | [`standards/markdown-tooling/versions/1.7/adopt.md`](standards/markdown-tooling/versions/1.7/adopt.md) |
+| Python Tooling | `1.8` | [`standards/python-tooling/versions/1.8/adopt.md`](standards/python-tooling/versions/1.8/adopt.md) |
+| Markdown Tooling | `1.8` | [`standards/markdown-tooling/versions/1.8/adopt.md`](standards/markdown-tooling/versions/1.8/adopt.md) |
 | Project Specification | `1.4` | [`standards/project-spec/versions/1.4/adopt.md`](standards/project-spec/versions/1.4/adopt.md) |
 | CLI Documentation | `1.3` | [`standards/cli-documentation/versions/1.3/adopt.md`](standards/cli-documentation/versions/1.3/adopt.md) |
 | Agent Handoff | `1.4` | [`standards/agent-handoff/versions/1.4/adopt.md`](standards/agent-handoff/versions/1.4/adopt.md) |
@@ -174,7 +174,7 @@ The migration removes `.project-standards.yml` only after unified validation and
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.7.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.8.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 #### Reusable workflow inputs
 
@@ -223,7 +223,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.7.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.8.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check
