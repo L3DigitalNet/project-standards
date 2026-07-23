@@ -1,6 +1,6 @@
 # Specs And Plans
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-23
 
 > **Housekeeping (2026-07-19):** `docs/superpowers/` was retired — design docs moved to `docs/specs/archive/`, research to `docs/research/`, the active plan to `docs/plans/`. The implemented Python Tooling checker-table plan and its four design-review audits were deleted. `standard-bundle-authoring@2.1` was authored (contract-conformant correction of 2.0's SPEC-BA02 pointer) and release 5.0.2 was prepared (PATCH under the new internal-additive classification rule).
 >
@@ -8,8 +8,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
-| V5 adoption friction correction train design | `docs/specs/2026-07-22-v5-adoption-friction-correction-train-design.md` | **approved (codex r4, verdict `ready`) 2026-07-22** — six-issue 5.8.0 train (#26–#31): python-tooling 1.8 `pytest.test_paths`, markdown-tooling 1.8 legacy byte-form acceptance, markdown-frontmatter 1.5 `workflow_ownership`, minimal-escape frontmatter serialization, CLI hardening, legacy-note rewording |
-| V5 adoption friction correction train — implementation plan | `docs/plans/2026-07-22-v5-adoption-friction-correction-train-plan.md` | **approved (codex plan review r4, verdict `ready`) 2026-07-22** — 13 tasks, five phases; T13 publication is owner-gated |
+| V5 adoption friction correction train design | `docs/specs/archive/2026-07-22-v5-adoption-friction-correction-train-design.md` | **released (5.8.0)** — python-tooling 1.8 `pytest.test_paths`, markdown-tooling 1.8 legacy byte-form acceptance, markdown-frontmatter 1.5 `workflow_ownership`, minimal-escape frontmatter serialization converged on the pinned Prettier oracle, CLI hardening, legacy-note rewording (issues #26–#31); the implementation plan was removed under the completed-plan policy |
 | V5 managed-edit fidelity correction train design | `docs/specs/archive/2026-07-22-v5-managed-edit-fidelity-correction-train-design.md` | **released (5.7.0)** — python-tooling 1.7 per-root coverage scoping and anchored TOML comment preservation (issues #24–#25); the implementation plan was removed under the completed-plan policy |
 | Consumer Standards Control Plane — **SPEC-CP01** | `docs/specs/2026-07-10-consumer-standards-control-plane-spec.md` | **approved rev 0.13; implemented; decisions accepted as ADRs 0023-0024** — live-root dogfood, FR-037/FR-038, declared-path provider integrity, scale, and complete integrated evidence pass. |
 | Root-artifact ownership and semantic composition design | `docs/specs/archive/2026-07-10-root-artifact-ownership-semantic-composition-design.md` | **approved; adopted by ADR 0023** after adversarial review converged in round 2 — consumer-owned shared containers, typed package-owned semantic units, reference-counted shared contributions, syntax-preserving adapters, and no precedence; prerequisite input to `SPEC-BA02` |
