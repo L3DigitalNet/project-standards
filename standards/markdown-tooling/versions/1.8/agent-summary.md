@@ -1,4 +1,4 @@
-# Markdown Tooling 1.7: Agent Summary
+# Markdown Tooling 1.8: Agent Summary
 
 The canonical [standard](README.md) is authoritative. Use the [adoption guide](adopt.md) for package-specific options, outputs, migration, and ownership; use `docs/usage.md` from the project-standards distribution for generic lifecycle commands.
 

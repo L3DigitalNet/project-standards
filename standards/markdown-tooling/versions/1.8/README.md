@@ -1,6 +1,6 @@
 # Markdown Tooling Standard
 
-- **Package version:** `1.7`
+- **Package version:** `1.8`
 - **Markdown Tooling contract:** `1.1`, selected independently with `contract_version`
 - **Status:** Source-checked, consumer-selectable standard
 - **Last updated:** 2026-07-21
@@ -40,7 +40,7 @@ Work over an enabled surface is incomplete until its selected checks pass, or th
 
 ## Managed package surface
 
-Package 1.7 exclusively manages the two configs and, while the per-caller ownership options stay `managed`, the two caller workflows:
+Package 1.8 exclusively manages the two configs and, while the per-caller ownership options stay `managed`, the two caller workflows:
 
 | Path | Contract |
 | --- | --- |

@@ -1,4 +1,4 @@
-# Adopt Markdown Tooling 1.7
+# Adopt Markdown Tooling 1.8
 
 This package manages the Markdown Tooling configuration, caller workflows, and bounded shared-container contributions. Use the generic lifecycle commands documented in the project-standards CLI usage reference at `docs/usage.md` to initialize a repository, enable this package, preview or apply reconciliation, update its selected version, and disable it.
 
@@ -6,7 +6,7 @@ This package manages the Markdown Tooling configuration, caller workflows, and b
 
 Configure these fields under the `markdown-tooling` package selection:
 
-- `contract_version`: the independent Markdown Tooling contract selector; package 1.7 supports `1.1`.
+- `contract_version`: the independent Markdown Tooling contract selector; package 1.8 supports `1.1`.
 - `workflow_mode`: `caller` uses reusable workflows pinned to `v5`; `self-hosted` installs immutable in-repository jobs without a remote standards dependency. The default is `caller`.
 - `lint` and `format`: enable markdownlint structure checks and Prettier physical-format checks independently.
 - `ci.lint_caller` and `ci.format_caller`: add automatic push and pull-request triggers to the corresponding managed caller. A disabled caller remains installed with only `workflow_dispatch`, so toggling enforcement does not churn ownership.

@@ -22,21 +22,21 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:331b0e90b99bce929ca222109d4b973050701aa22c71fd5ec1d8daebe6fa891c"
+digest = "sha256:87e88cdd8dd9d3213ce3311de22ca4fe670688d9d608b64028e10958750bb181"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:2642c734385ca791b7b46815b61ceccbbc610ed64d33527e4676793ad72c86d4"
+digest = "sha256:d84341783f9987a2f99e025872bba9cf3cb7e9cee03cb2852fd4936a0f1495c8"
 
 [[resources]]
 id = "agent-summary"
 role = "agent-summary"
 path = "agent-summary.md"
 media_type = "text/markdown"
-digest = "sha256:0b15290347e026773067df37942d8484b985ecf25ea90af9369d09dfef8ef5ac"
+digest = "sha256:609f17eed9e96218517d11958ace30c5dd81a76b10e353414f69c05731ec0de3"
 
 [[resources]]
 id = "config-schema"
