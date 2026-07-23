@@ -25,7 +25,8 @@
 		"CLAUDE.md",
 		"docs/handoff/**",
 		"tests/fixtures/specs/**",
-		"tests/fixtures/package_compatibility/legacy/**"
+		"tests/fixtures/package_compatibility/legacy/**",
+		"tests/fixtures/observed_consumers/**"
 	],
 	"gitignore": true
 }

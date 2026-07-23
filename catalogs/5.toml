@@ -110,6 +110,12 @@ digest = "sha256:87376b5d4c3ce027ca3db249d5d27bb7a1bc6d2e7f843b7074f8f73d2a084c1
 role = "default"
 
 [[packages]]
+id = "markdown-tooling"
+version = "1.8"
+digest = "sha256:64542b8b45aeced4907e02806be0a439be5b38d4dd6ae4afbd15fd012cf1b9d6"
+role = "retained"
+
+[[packages]]
 id = "project-spec"
 version = "1.1"
 digest = "sha256:ed1445342d72836707dd455fd5771f28b71b53acbb1499e4f9250e33f548d36e"

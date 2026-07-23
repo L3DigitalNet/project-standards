@@ -26,6 +26,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.5 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.6 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.7 | default | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.8 | retained | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.2 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.3 | retained | consumer | 23 | 9 | 1 |
@@ -69,6 +70,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.5` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.6` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.7` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
+| `markdown-tooling@1.8` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `project-spec@1.1` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.2` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.3` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
@@ -108,6 +110,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.5` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.6` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.7` | companion | `markdown-frontmatter` |
+| `markdown-tooling@1.8` | companion | `markdown-frontmatter` |
 | `project-spec@1.1` | companion | `markdown-frontmatter` |
 | `project-spec@1.2` | companion | `markdown-frontmatter` |
 | `project-spec@1.3` | companion | `markdown-frontmatter` |
@@ -496,6 +499,23 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.7` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.7/provider-content` | `schemas/content.schema.json` |
 | `markdown-tooling@1.7` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.7/provider-findings` | `schemas/findings.schema.json` |
 | `markdown-tooling@1.7` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.7/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `markdown-tooling@1.8` | `readme` | `canonical-standard` | `standards://markdown-tooling/1.8/readme` | `README.md` |
+| `markdown-tooling@1.8` | `adopt` | `adoption-guide` | `standards://markdown-tooling/1.8/adopt` | `adopt.md` |
+| `markdown-tooling@1.8` | `agent-summary` | `agent-summary` | `standards://markdown-tooling/1.8/agent-summary` | `agent-summary.md` |
+| `markdown-tooling@1.8` | `config-schema` | `config-schema` | `standards://markdown-tooling/1.8/config-schema` | `config.schema.json` |
+| `markdown-tooling@1.8` | `markdownlint-source` | `provider-resource` | `standards://markdown-tooling/1.8/markdownlint-source` | `resources/markdownlint.json` |
+| `markdown-tooling@1.8` | `prettier-source` | `provider-resource` | `standards://markdown-tooling/1.8/prettier-source` | `resources/prettierrc.json` |
+| `markdown-tooling@1.8` | `legacy-editorconfig` | `legacy-reference` | `standards://markdown-tooling/1.8/legacy-editorconfig` | `resources/legacy-editorconfig` |
+| `markdown-tooling@1.8` | `legacy-vscode-extensions` | `legacy-reference` | `standards://markdown-tooling/1.8/legacy-vscode-extensions` | `resources/legacy-vscode-extensions.json` |
+| `markdown-tooling@1.8` | `legacy-lint-caller` | `legacy-reference` | `standards://markdown-tooling/1.8/legacy-lint-caller` | `resources/legacy-lint-markdown.caller.yml` |
+| `markdown-tooling@1.8` | `legacy-format-caller` | `legacy-reference` | `standards://markdown-tooling/1.8/legacy-format-caller` | `resources/legacy-format.caller.yml` |
+| `markdown-tooling@1.8` | `self-host-lint-workflow` | `provider-resource` | `standards://markdown-tooling/1.8/self-host-lint-workflow` | `resources/self-host-lint-markdown.yml` |
+| `markdown-tooling@1.8` | `self-host-format-workflow` | `provider-resource` | `standards://markdown-tooling/1.8/self-host-format-workflow` | `resources/self-host-format.yml` |
+| `markdown-tooling@1.8` | `provider-code` | `provider-resource` | `standards://markdown-tooling/1.8/provider-code` | `providers/markdown_tooling.py` |
+| `markdown-tooling@1.8` | `provider-input` | `provider-resource` | `standards://markdown-tooling/1.8/provider-input` | `schemas/provider-input.schema.json` |
+| `markdown-tooling@1.8` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.8/provider-content` | `schemas/content.schema.json` |
+| `markdown-tooling@1.8` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.8/provider-findings` | `schemas/findings.schema.json` |
+| `markdown-tooling@1.8` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.8/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `project-spec@1.1` | `readme` | `canonical-standard` | `standards://project-spec/1.1/readme` | `README.md` |
 | `project-spec@1.1` | `adopt` | `adoption-guide` | `standards://project-spec/1.1/adopt` | `adopt.md` |
 | `project-spec@1.1` | `agent-summary` | `agent-summary` | `standards://project-spec/1.1/agent-summary` | `agent-summary.md` |
@@ -871,6 +891,12 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.7` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
 | `markdown-tooling@1.7` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
 | `markdown-tooling@1.7` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-tooling@1.8` | `render-lint-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_lint` |
+| `markdown-tooling@1.8` | `render-format-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_format` |
+| `markdown-tooling@1.8` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `markdown-tooling@1.8` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
+| `markdown-tooling@1.8` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
+| `markdown-tooling@1.8` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `project-spec@1.1` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `project-spec@1.1` | `lint` | `lint` | `validate` | `findings` | `payload:provider-code#run_lint` |
 | `project-spec@1.1` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
@@ -1191,6 +1217,31 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.7` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
 | `markdown-tooling@1.7` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `markdown-tooling@1.7` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.8` | artifact | `markdownlint-config` | `.markdownlint.json` | `managed` | whole-file |
+| `markdown-tooling@1.8` | artifact | `prettier-config` | `.prettierrc.json` | `managed` | whole-file |
+| `markdown-tooling@1.8` | contribution | `lint-caller` | `.github/workflows/lint-markdown.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.8` | contribution | `format-caller` | `.github/workflows/format.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-root` | `.editorconfig` | `managed` | `editorconfig` / `property:$global#root` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-charset` | `.editorconfig` | `managed` | `editorconfig` / `property:*#charset` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-eol` | `.editorconfig` | `managed` | `editorconfig` / `property:*#end_of_line` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-final-newline` | `.editorconfig` | `managed` | `editorconfig` / `property:*#insert_final_newline` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-global-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*#trim_trailing_whitespace` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-global-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_style` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-global-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_size` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-markdown-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_style` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-markdown-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_size` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-markdown-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#trim_trailing_whitespace` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-yaml-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_style` |
+| `markdown-tooling@1.8` | contribution | `editorconfig-yaml-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_size` |
+| `markdown-tooling@1.8` | contribution | `vscode-prettier-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=esbenp.prettier-vscode` |
+| `markdown-tooling@1.8` | contribution | `vscode-markdownlint-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=DavidAnson.vscode-markdownlint` |
+| `markdown-tooling@1.8` | contribution | `vscode-markdown-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.defaultFormatter` |
+| `markdown-tooling@1.8` | contribution | `vscode-markdown-format-on-save` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.formatOnSave` |
+| `markdown-tooling@1.8` | contribution | `vscode-json-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[json]/editor.defaultFormatter` |
+| `markdown-tooling@1.8` | contribution | `vscode-jsonc-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[jsonc]/editor.defaultFormatter` |
+| `markdown-tooling@1.8` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
+| `markdown-tooling@1.8` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.8` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `project-spec@1.1` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.2` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.3` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |

@@ -43,6 +43,10 @@ standards/*/versions/*/schemas/mutation-plan.schema.json
 # declared digests are one test contract, not formatter-owned source documents.
 tests/fixtures/package_contract/
 
+# Observed-consumer fixtures are recovered byte-exact configs pinned by digest;
+# the sibling provenance note travels with them and is not formatter-owned.
+tests/fixtures/observed_consumers/
+
 # Control-plane parser fixtures intentionally preserve consumer formatting,
 # malformed syntax, duplicate keys, and other bytes that Prettier must not own.
 tests/control_plane/fixtures/

@@ -125,6 +125,14 @@ _RETAINED_CATALOG_ENTRIES = {
         "retained",
         "sha256:3e6e53f9ba889b7f68624c1c3861c5e26ac889a6025c4fb7b819b49e140d1f78",
     ),
+    # 5.8.0 issue #27: markdown-tooling 1.8 is advertised as retained; T10 flips
+    # the retained->default authority for the 5.8.0 successors.
+    (
+        "markdown-tooling",
+        "1.8",
+        "retained",
+        "sha256:64542b8b45aeced4907e02806be0a439be5b38d4dd6ae4afbd15fd012cf1b9d6",
+    ),
     (
         "markdown-tooling",
         "1.6",

@@ -1,0 +1,93 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"contract_version": { "const": "1.1", "default": "1.1" },
+		"workflow_mode": { "enum": ["caller", "self-hosted"], "default": "caller" },
+		"lint_workflow_ownership": {
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
+		"format_workflow_ownership": {
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
+		"markdownlint_config_ownership": {
+			"enum": ["managed", "consumer-owned"],
+			"default": "managed"
+		},
+		"lint": { "type": "boolean", "default": true },
+		"format": { "type": "boolean", "default": true },
+		"ci": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"lint_caller": { "type": "boolean", "default": true },
+				"format_caller": { "type": "boolean", "default": true }
+			},
+			"default": { "lint_caller": true, "format_caller": true }
+		},
+		"markdown_globs": {
+			"type": "array",
+			"items": {
+				"type": "string",
+				"minLength": 1,
+				"pattern": "^(?!.*\\s$)[^!\\s\\u0000-\\u001F\\u007F`][^\\u0000-\\u001F\\u007F`]*$"
+			},
+			"minItems": 1,
+			"uniqueItems": true,
+			"default": ["**/*.md"]
+		},
+		"config_globs": {
+			"type": "array",
+			"items": {
+				"type": "string",
+				"minLength": 1,
+				"pattern": "^(?!.*\\s$)[^!\\s\\u0000-\\u001F\\u007F`][^\\u0000-\\u001F\\u007F`]*$"
+			},
+			"minItems": 1,
+			"uniqueItems": true,
+			"default": ["**/*.json", "**/*.jsonc", "**/*.yml", "**/*.yaml"]
+		},
+		"exclusions": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"properties": {
+					"glob": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^(?!.*\\s$)[^!\\s\\u0000-\\u001F\\u007F`][^\\u0000-\\u001F\\u007F`]*$"
+					},
+					"applies_to": { "enum": ["lint", "format", "both"] },
+					"reason": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^[^\\u0000-\\u001F\\u007F<>`]+$",
+						"not": { "pattern": "(?:BEGIN|END) project-standards" }
+					}
+				},
+				"required": ["glob", "applies_to", "reason"]
+			},
+			"default": []
+		}
+	},
+	"allOf": [
+		{
+			"if": { "properties": { "lint": { "const": false } }, "required": ["lint"] },
+			"then": {
+				"properties": { "ci": { "properties": { "lint_caller": { "const": false } } } }
+			}
+		},
+		{
+			"if": { "properties": { "format": { "const": false } }, "required": ["format"] },
+			"then": {
+				"properties": {
+					"ci": { "properties": { "format_caller": { "const": false } } }
+				}
+			}
+		}
+	]
+}
