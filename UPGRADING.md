@@ -185,10 +185,11 @@ markdown_tooling:
 cli_documentation:
   workflow_ownership: consumer-owned # cli-docs-check.yml
   usage_ownership: consumer-owned # docs/usage.md
-project_spec:
+spec:
   workflow_ownership: consumer-owned # validate-specs.yml
-markdown_frontmatter:
-  workflow_ownership: consumer-owned # validate-standards.yml
+markdown:
+  frontmatter:
+    workflow_ownership: consumer-owned # validate-standards.yml
 ```
 
 Package options remain closed sets: a key that no selected package's migration provider recognizes produces `CP-MIGRATION-UNCLAIMED-SETTING`, while every recognized key — ownership escape or ordinary option — is carried into the migrated configuration. The selected package adoption guides define the same keys for unified `.standards/config.toml` configuration after migration.
@@ -225,7 +226,7 @@ An explicit `--config .project-standards.yml` is now a legacy/debug-only path an
 
 ### Frontmatter serialization convergence
 
-Project Standards 5.8.0 converges `format-frontmatter` (the format stage of `fix`) with the Markdown Tooling Prettier configuration on one frontmatter serialization. The formatter now emits each scalar in the minimal-escape quote style — the style that needs no escapes, which is Prettier's resting state under `singleQuote: true` — instead of unconditionally single-quoting and doubling apostrophes (`'Apple''s'`). Both quote forms are accepted: a value already spelled single-quoted, or double-quoted when double is the minimal style for that value, is kept verbatim; only a value in neither form is re-spelled. Legacy single-quoted spellings therefore stay valid forever, and no scalar the 5.7.0 checker accepted is now reported as needing reformatting — an additive, previously-passing-safe widening that exact `markdown-frontmatter@1.4` pins inherit through the shared engine. The one-time effect a consumer sees is that when `fix` or Prettier next rewrites a legacy escaped spelling such as `'Apple''s'`, it lands as the minimal `"Apple's"` form — itself an accepted state — so the two companion tools no longer each flag the other's output. A latent corruption where control-character values were re-emitted as literal control bytes is fixed at the same time.
+Project Standards 5.8.0 converges `format-frontmatter` (the format stage of `fix`) with the Markdown Tooling Prettier configuration on one frontmatter serialization. The formatter now emits each scalar in the minimal-escape quote style — the style that needs no escapes, which is Prettier's resting state under `singleQuote: true` — instead of unconditionally single-quoting and doubling apostrophes (`'Apple''s'`). Both quote forms are accepted: a value already spelled single-quoted, or double-quoted when double is the minimal style for that value, is kept verbatim; only a value in neither form is re-spelled. Legacy single-quoted spellings therefore stay valid forever, and no scalar the 5.7.0 checker accepted is now reported as needing reformatting — an additive, previously-passing-safe widening that exact `markdown-frontmatter@1.4` pins inherit through the shared engine. The one-time effect a consumer sees is that `format-frontmatter` keeps a legacy escaped spelling such as `'Apple''s'` byte-identical, while Prettier performs the one-time normalization to the minimal `"Apple's"` form the next time it rewrites the file — a form `format-frontmatter` now also accepts — so the two companion tools no longer each flag the other's output. A latent corruption where control-character values were re-emitted as literal control bytes is fixed at the same time.
 
 ## 5. Re-pin workflows and the tool
 
