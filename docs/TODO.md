@@ -38,17 +38,13 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
+- [ ] Correct the Standard Bundle Authoring documentation drift without rewriting historical evidence: update the current-authority reference from 2.2 to 2.5, correct the SPEC-BA02 index revision from 0.13 to 0.14, and verify the SPEC-CP01 and SPEC-DPEY index rows against their revision histories.
+
 ### Future programs
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 
-- [ ] Execute the MCP documentation reconciliation plan and re-lock the governing
-      specifications and implementation plan without starting MCP T1.
-
-- [ ] After documentation reconciliation, execute the reviewed MCP implementation
-      plan only after its Step 09 gate
-      freezes a final stable protocol/SDK pair, client compatibility, and the
-      SDK-independent service boundary.
+- [ ] Begin MCP implementation-plan T1 only after final post-2026-07-28 protocol and stable SDK evidence is available. T1 freezes the protocol/SDK pair, client compatibility, and SDK-independent service boundary; T2 remains blocked until T1 completes.
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.

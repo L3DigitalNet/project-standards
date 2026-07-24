@@ -2,7 +2,7 @@
 title: 'Project Standards MCP Documentation Reconciliation Plan'
 slug: 'project-standards-mcp-documentation-reconciliation'
 size: full
-status: active
+status: complete
 source: '2026-07-24 MCP documentation readiness assessment and the approved SPEC-MT01, SPEC-RD01, and SPEC-MS01 corpus'
 created: 2026-07-24
 updated: 2026-07-24
@@ -648,14 +648,14 @@ Omit nonexistent/unchanged conditional paths from `git add`; never broaden stagi
 
 ## 14. Close-out
 
-- **Completed:** _pending_ · closeout commit: the T8 closeout commit on `testing` (resolve its identity from Git history after push)
-- **Final locked spec revisions:** _pending_
-- **Opus spec review result:** _pending_
-- **Opus plan review result:** _pending_
-- **MCP implementation plan counts/hash:** _pending_
-- **Deviations / decisions harvested from notes:** _pending_
-- **Risks closed / accepted:** _pending_
-- **Deferred work filed:** _pending_
+- **Completed:** 2026-07-24 · closeout commit: the T8 closeout commit on `testing` (resolve its identity from Git history after push)
+- **Final locked spec revisions:** `SPEC-MT01` rev 1.3; `SPEC-RD01` rev 1.5; `SPEC-MS01` rev 1.1.
+- **Opus spec review result:** the original two-round high-effort review converged as `ready_with_advisories`, with no required specification backtrack. `OSR-001` is the non-blocking Standard Bundle Authoring drift filed in `docs/TODO.md`; `OSR-002` accepts specification-local milestone identifiers because no cross-spec bare reference exists. After closeout QA exposed stale §3.1 text, the bounded rev 1.5 correction received a fresh high-effort Opus review that converged with no backtrack; its transient low advisories were closed by the approved-state transition and the separate plan confirmation.
+- **Opus plan review result:** the original correction and final-evidence rounds converged `ready` with zero findings. After the rev 1.5 synchronization, a separate fresh high-effort review of the final corrected plan hash again converged `ready` with zero findings and no specification backtrack.
+- **MCP implementation plan counts/hash:** 12 tasks; 72 subtasks; 61 governing requirements, including 43 task-declared FR/NFR requirements; SHA-256 `51783be849d524e547e521e188475c9f1b11359a2fdd7ad2e3ee3ce40aeb00a8`.
+- **Deviations / decisions harvested from notes:** no requirement, scope, or implementation deviation. Cross-spec reuse of local milestone IDs remains intentional because every reference is specification-qualified; the noncontiguous T12 `.0`/`.6` verification labels are documented as a TDD exception.
+- **Risks closed / accepted:** documentation scope, historical integrity, review lineage, candidate-wheel authority, reconciliation, and shared-branch risks closed. Volatile protocol/SDK/client selection remains intentionally accepted only as a blocking T1 decision gate.
+- **Deferred work filed:** Standard Bundle Authoring current-authority and specification-index drift is queued under `docs/TODO.md` maintenance; all MCP implementation remains deferred to plan T1-T12, beginning only after the post-2026-07-28 T1 gate.
 
 Final handoff state must say:
 

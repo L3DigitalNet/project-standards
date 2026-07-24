@@ -36,11 +36,11 @@ This result authorizes only the next design/research phase. It does not start MC
 
 ## Current Successor State
 
-The 2026-07-24 documentation refresh preserves this historical pass while reconciling the downstream design with Project Standards 5.8.0:
+The 2026-07-24 documentation reconciliation preserves this historical pass while aligning the downstream design with Project Standards 5.8.0:
 
-- `SPEC-MT01` rev 1.1 records the completed readiness contract and current V2 package/control-plane successor architecture.
-- `SPEC-RD01` rev 1.1 and `SPEC-MS01` rev 0.9 are approved and locked after Claude Opus high-effort convergence review.
-- The active implementation plan under `docs/plans/` was written at maximum agent effort, validates as 12 ordered tasks, and passed Fable high-effort convergence review. It is definition-only; generated checklist state is ignored and no task has started.
+- `SPEC-MT01` rev 1.3 records the completed readiness contract and current V2 package/control-plane successor architecture.
+- `SPEC-RD01` rev 1.5 and `SPEC-MS01` rev 1.1 are approved and locked after separate Claude Opus high-effort specification and implementation-plan convergence reviews, including the final closeout correction.
+- The active implementation plan under `docs/plans/` validates as 12 ordered tasks and 72 subtasks against 61 governing requirements. Its final SHA-256 is `51783be849d524e547e521e188475c9f1b11359a2fdd7ad2e3ee3ce40aeb00a8`. It remains definition-only; T1 has not started.
 - Step 09 remains a no-code gate that must select the final stable protocol/SDK pair and verify license, conformance, and Codex/Claude client behavior after the 2026-07-28 protocol publication.
 
 ## Readiness Checklist

@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.5 | 2026-07-24 | Codex with Claude Opus review | Correct the stale Step 08 current-state paragraph after closeout quality review: documentation reconciliation and both reviews are complete, while Step 09 remains the next no-code T1 gate after final publication evidence becomes available. |
 | 1.4 | 2026-07-24 | Codex with Claude Opus review | Record the separately converged implementation-plan review, complete the three combined spec-plus-plan evidence markers, and move FR-020 to Passing without starting Step 09 or implementation. |
 | 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the current-state and v1 runtime-authority reconciliation after high-effort Opus spec review convergence; record this roadmap's own approval and FR-016 evidence while leaving combined plan convergence open. |
 | 1.2 | 2026-07-24 | Codex | Reopen for the narrow T2-T3 reconciliation of current state and v1 tool/runtime authority against the installed Catalog 5 contracts. |
@@ -123,7 +124,7 @@ Project Standards 5.8.0 is published from `d007ba0`. Catalog 5 contains seven co
 
 The unified `.standards/` control plane now owns consumer desired state, installed catalog state, applied-state provenance, deterministic reconciliation planning, explicit apply, recovery, and drift reporting. `InstalledDistribution` is the production boundary for package facts; `PackageRepository` is the source-repository validation boundary. Typed provider operations and structured reconciliation results already supply the non-MCP semantics the server should expose.
 
-`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation is active under `docs/plans/2026-07-24-project-standards-mcp-documentation-reconciliation-plan.md`. Step 09 remains the next no-code decision gate only after the T5 specification review and T7 implementation-plan review converge; it then freezes the protocol, SDK, client, and service boundary before code begins.
+`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 remains the next no-code decision gate, executed by implementation-plan T1 only after final post-2026-07-28 protocol and stable SDK evidence is available; it freezes the protocol, SDK, client, and service boundary before code begins.
 
 External MCP inputs are unusually time-sensitive on this review date. MCP `2025-11-25` is the latest stable protocol revision; the breaking `2026-07-28` revision is a locked release candidate scheduled four days later. The official Python SDK v1 line remains stable while v2 is pre-release with stable release targeted alongside the new protocol. The roadmap therefore forbids selecting a pre-release merely to make this document look current.
 
