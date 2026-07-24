@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.4 | 2026-07-24 | Codex with Claude Opus review | Record the separately converged implementation-plan review, complete the three combined spec-plus-plan evidence markers, and move FR-020 to Passing without starting Step 09 or implementation. |
 | 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the current-state and v1 runtime-authority reconciliation after high-effort Opus spec review convergence; record this roadmap's own approval and FR-016 evidence while leaving combined plan convergence open. |
 | 1.2 | 2026-07-24 | Codex | Reopen for the narrow T2-T3 reconciliation of current state and v1 tool/runtime authority against the installed Catalog 5 contracts. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by separating optional expansion from controlled writes, normalizing traceability statuses and ADR evidence, and making structured-output acceptance deterministic. |
@@ -50,7 +51,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This approved revision is re-locked after narrow current-state and v1 runtime-authority review and remains change-controlled. `SPEC-MT01` is complete, while Step 08 remains open until the separately reviewed implementation plan also converges. Step 09 remains the next no-code decision gate after that plan review. Later controlled-write and remote-transport phases still require separate approval.
+**Spec lifecycle:** This approved revision is re-locked after separate high-effort Opus spec and implementation-plan reviews converged and remains change-controlled. `SPEC-MT01` and Step 08 are complete. Step 09 is the next no-code protocol, SDK, client, and service-boundary decision gate; implementation remains unstarted. Later controlled-write and remote-transport phases still require separate approval.
 
 ---
 
@@ -573,7 +574,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 - [x] Read-only MCP before writes.
 - [x] Local stdio before remote.
 - [x] Generic tools before standard-specific exceptions.
-- [ ] Refreshed MCP specs and implementation plan converge before coding server.
+- [x] Refreshed MCP specs and implementation plan converge before coding server.
 - [ ] Write-tool safety ADR completed before apply tools.
 - [ ] Remote transport security spec completed before HTTP.
 - [ ] Tool outputs structured and sanitized.
@@ -622,7 +623,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 ### 17.1 Definition of Done
 
 - [x] `SPEC-MT01` readiness gate passes; see `docs/mcp-readiness.md`.
-- [ ] Refreshed `SPEC-RD01`, `SPEC-MS01`, and the implementation plan pass local validation and Claude Opus review to convergence.
+- [x] Refreshed `SPEC-RD01`, `SPEC-MS01`, and the implementation plan pass local validation and Claude Opus review to convergence.
 - [ ] Required MCP boundary and dependency ADRs are accepted before implementation code.
 - [ ] Read-only local MCP can list/read exact V2 payload resources from a fully validated `InstalledDistribution`.
 - [ ] Generic tools work against a standards repo and at least one consumer fixture.
@@ -667,7 +668,7 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
 | FR-019 | 2026-07-24 stable/RC research baseline plus mandatory Step 09 final recheck and exact pin. | Gate Defined |
-| FR-020 | `docs/plans/2026-07-24-project-standards-mcp-server-plan.md`, `scripts/plan.py validate`, and converged plan-review result. | In Progress |
+| FR-020 | `docs/plans/2026-07-24-project-standards-mcp-server-plan.md`, `scripts/plan.py validate`, and converged plan-review result. | Passing |
 
 ---
 
@@ -746,7 +747,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 - [x] This roadmap approved.
 - [x] `SPEC-MT01` completed; Step 07 passed on 2026-07-12.
-- [ ] Refreshed MCP implementation spec and plan converge after readiness.
+- [x] Refreshed MCP implementation spec and plan converge after readiness.
 - [ ] MCP ADRs for local stdio, read-only-first, generic tools, controlled writes, and remote deferral.
 - [ ] User setup instructions for local MCP.
 - [ ] Tool/resource reference generated from server schemas.
