@@ -6,9 +6,9 @@ This directory is the durable home for Project Specification Standard documents 
 
 | Specification | Status | Role |
 | --- | --- | --- |
-| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | review rev 1.2; complete | Historical Step 07 contract plus current 5.8.0 successor-state reconciliation |
-| [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | review rev 1.2; T2-T3 reconciliation active | Step 08 documentation gate and Step 09-through-18 sequencing |
-| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | review rev 1.0; implementation not started | SDK-independent services plus thin local read-only stdio adapter; implementation not started |
+| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved and locked rev 1.3; Opus spec review converged; complete historical contract | Historical Step 07 contract plus current 5.8.0 successor-state reconciliation |
+| [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | approved and locked rev 1.3; Opus spec review converged; plan review pending | Step 08 documentation gate and Step 09-through-18 sequencing |
+| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | approved and locked rev 1.1; Opus spec review converged; implementation not started | SDK-independent services plus thin local read-only stdio adapter; implementation not started |
 | [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.6; implementation complete; retirement pending | V1 baseline plus accepted Catalog 5 package `1.1` supersession and Task 18 retirement gates |
 | [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.13; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
 | [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.13; implemented | Immutable family/payload authoring contract; FR-028 checklist interpretation clarified without payload changes |

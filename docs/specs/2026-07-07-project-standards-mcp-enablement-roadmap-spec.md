@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-RD01
 title: 'Project Standards MCP Enablement Roadmap'
-status: review
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the current-state and v1 runtime-authority reconciliation after high-effort Opus spec review convergence; record this roadmap's own approval and FR-016 evidence while leaving combined plan convergence open. |
 | 1.2 | 2026-07-24 | Codex | Reopen for the narrow T2-T3 reconciliation of current state and v1 tool/runtime authority against the installed Catalog 5 contracts. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by separating optional expansion from controlled writes, normalizing traceability statuses and ADR evidence, and making structured-output acceptance deterministic. |
 | 1.0 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged roadmap after Claude Opus high-effort review; implementation remains blocked on the Step 09 final protocol, SDK, client, and service-boundary gate. |
@@ -49,7 +50,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This revision is under narrow review and remains change-controlled. `SPEC-MT01` is complete, so the active boundary is Step 08 documentation reconciliation before any MCP implementation. Step 09 remains the next no-code decision gate after the specification and implementation-plan reviews converge. Later controlled-write and remote-transport phases still require separate approval.
+**Spec lifecycle:** This approved revision is re-locked after narrow current-state and v1 runtime-authority review and remains change-controlled. `SPEC-MT01` is complete, while Step 08 remains open until the separately reviewed implementation plan also converges. Step 09 remains the next no-code decision gate after that plan review. Later controlled-write and remote-transport phases still require separate approval.
 
 ---
 
@@ -662,7 +663,7 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 | FR-013 | Remote transport blocked until local evidence criteria. | Guard Active |
 | FR-014 | Write safety ADR/spec review. | Not Started |
 | FR-015 | Apply tool plan identity tests, when write phase starts. | Not Started |
-| FR-016 | Refreshed `SPEC-MS01` and converged specification-review result. | In Progress |
+| FR-016 | Refreshed `SPEC-MS01` and converged specification-review result. | Passing |
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
 | FR-019 | 2026-07-24 stable/RC research baseline plus mandatory Step 09 final recheck and exact pin. | Gate Defined |
@@ -743,7 +744,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 ### 18.7 Documentation Deliverables
 
-- [ ] This roadmap approved.
+- [x] This roadmap approved.
 - [x] `SPEC-MT01` completed; Step 07 passed on 2026-07-12.
 - [ ] Refreshed MCP implementation spec and plan converge after readiness.
 - [ ] MCP ADRs for local stdio, read-only-first, generic tools, controlled writes, and remote deferral.

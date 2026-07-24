@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-MT01
 title: 'Project Standards Meta-Repository MCP Readiness Preparation'
-status: review
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -45,6 +45,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority correction after high-effort Opus review convergence. |
 | 1.2 | 2026-07-24 | Codex | Correct the current Standard Bundle Authoring package authority from 2.2 to 2.5 without changing the accepted historical readiness contract or evidence. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories by restoring unique section numbering, ordering revision history, and linking the two governing successor specifications. |
 | 1.0 | 2026-07-24 | Codex | Reconcile the completed historical readiness contract with Project Standards 5.8.0 and the successor V2 payload, provider, installed-distribution, and unified consumer-control-plane architecture without rewriting its accepted requirements or evidence. |
@@ -58,7 +59,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full specification for preparing the `project-standards` meta-repository for a future scalable MCP server. |
 
-**Spec lifecycle:** This document is reopened for narrow review of a current package-authority correction and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
+**Spec lifecycle:** This approved document is re-locked after narrow review of its current package-authority correction and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
 
 ---
 

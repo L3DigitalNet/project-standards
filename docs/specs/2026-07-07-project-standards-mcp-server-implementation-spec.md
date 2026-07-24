@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-MS01
 title: 'Project Standards MCP Server Implementation'
-status: review
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.1 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority corrections after high-effort Opus review convergence; implementation and the protocol/SDK decision gate remain unstarted. |
 | 1.0 | 2026-07-24 | Codex | Correct the two current Standard Bundle Authoring package-authority references from 2.2 to 2.5 without changing server scope or requirements. |
 | 0.9 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by defining eager installed-distribution integrity versus lazy MCP context loading, completing all-requirement traceability, aligning descriptor fields, clarifying snapshot refresh behavior, and making the client fallback condition mandatory. |
 | 0.8 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged local read-only server contract after Claude Opus high-effort review; retain the implementation-plan and protocol/SDK decision gates. |
@@ -47,7 +48,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
-**Spec lifecycle:** This document is reopened for narrow review of current package-authority corrections and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 now supplies the package and consumer control planes required by this design; implementation remains blocked until the approved implementation plan and the protocol/SDK decision gate in §19 pass.
+**Spec lifecycle:** This approved document is re-locked after narrow review of current package-authority corrections and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 now supplies the package and consumer control planes required by this design; implementation remains blocked until the implementation plan review and the protocol/SDK decision gate in §19 pass.
 
 ---
 
