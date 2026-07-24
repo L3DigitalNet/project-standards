@@ -6,8 +6,8 @@ description: 'Step 07 evidence that the standards repository is manifest-driven,
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-12'
-updated: '2026-07-19'
-reviewed: '2026-07-12'
+updated: '2026-07-24'
+reviewed: '2026-07-24'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -33,6 +33,15 @@ license: null
 **Step 07 passes with no blocking gaps.** The repository is ready to support a separately specified MCP implementation without hardcoding standards or bypassing package, graph, composition, and provider contracts.
 
 This result authorizes only the next design/research phase. It does not start MCP server implementation or select an MCP SDK or protocol version. Those decisions remain governed by `SPEC-RD01`, `SPEC-MS01`, and a fresh protocol/SDK review before server MS-0.
+
+## Current Successor State
+
+The 2026-07-24 documentation refresh preserves this historical pass while reconciling the downstream design with Project Standards 5.8.0:
+
+- `SPEC-MT01` rev 1.1 records the completed readiness contract and current V2 package/control-plane successor architecture.
+- `SPEC-RD01` rev 1.1 and `SPEC-MS01` rev 0.9 are approved and locked after Claude Opus high-effort convergence review.
+- The active implementation plan under `docs/plans/` was written at maximum agent effort, validates as 12 ordered tasks, and passed Fable high-effort convergence review. It is definition-only; generated checklist state is ignored and no task has started.
+- Step 09 remains a no-code gate that must select the final stable protocol/SDK pair and verify license, conformance, and Codex/Claude client behavior after the 2026-07-28 protocol publication.
 
 ## Readiness Checklist
 
@@ -73,4 +82,4 @@ Observed results were zero package or graph findings, current generated artifact
 - Recheck the MCP protocol, Python SDK, licenses, and supported client capabilities before server MS-0.
 - Keep `project-toolbox` and `agent-managed-repo` in their dedicated post-v5 package programs.
 
-No MCP server code should begin until the separately governed `SPEC-RD01` Step 08 work is explicitly started.
+No MCP server code should begin until plan T1 completes the separately governed `SPEC-RD01` Step 09 protocol, SDK, client, and service-boundary gate.

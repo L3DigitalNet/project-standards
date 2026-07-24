@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-12'
+last_reviewed: '2026-07-24'
 supersedes: null
 superseded_by: null
 related:
@@ -29,6 +29,9 @@ related:
     - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
     - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
     - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
+    - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
+    - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+    - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 
   tickets: []
   repositories:
@@ -42,17 +45,19 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories by restoring unique section numbering, ordering revision history, and linking the two governing successor specifications. |
+| 1.0 | 2026-07-24 | Codex | Reconcile the completed historical readiness contract with Project Standards 5.8.0 and the successor V2 payload, provider, installed-distribution, and unified consumer-control-plane architecture without rewriting its accepted requirements or evidence. |
 | 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Complete Step 07: publish the no-blocker MCP-readiness report, close FR-019 and the remaining documentation deliverable, and approve the completed meta-repository preparation contract. |
-| 0.6 | 2026-07-09 | Coding agent | Aligned the manifest example, adoption-mode references, and authority tuple with the implemented ADR 0017-0021 package methodology. |
-| 0.7 | 2026-07-12 | Codex V5 documentation closeout | Resolve OQ-005 from implemented V2 package evidence: agent summaries are hand-authored immutable payload resources with machine-enforced presence, size, digest, projection, and catalog checks. Mark completed readiness/documentation DoD evidence; MCP implementation remains separately deferred. |
 | 0.8 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Reviewed and accepted the empty implementation Deviations Log through Step 06. No requirement or scope changed; Step 07 remains the readiness-report gate. |
+| 0.7 | 2026-07-12 | Codex V5 documentation closeout | Resolve OQ-005 from implemented V2 package evidence: agent summaries are hand-authored immutable payload resources with machine-enforced presence, size, digest, projection, and catalog checks. Mark completed readiness/documentation DoD evidence; MCP implementation remains separately deferred. |
+| 0.6 | 2026-07-09 | Coding agent | Aligned the manifest example, adoption-mode references, and authority tuple with the implemented ADR 0017-0021 package methodology. |
 | 0.5 | 2026-07-09 | Coding agent | Added ADR 0017-0021 package-methodology references after the adoption, lifecycle, provenance, versioning, and packaged-skill decisions were recorded. |
 | 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references from placeholders to recorded ADR paths. |
 | 0.3 | 2026-07-07 | ChatGPT | Review pass: tightened independent-standard-package rules, relationship taxonomy, MCP-evidence alignment, and graph gates for package independence. |
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full specification for preparing the `project-standards` meta-repository for a future scalable MCP server. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. This spec intentionally excludes implementation of the MCP server itself; it prepares the standards repository so a later MCP server can be thin, generic, and manifest-driven.
+**Spec lifecycle:** This approved document is the completed historical readiness contract and is change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
 
 ---
 
@@ -126,7 +131,7 @@ This is preparation only. The future MCP server should be able to read these con
 
 ## 3. Context
 
-### 3.1 Current State
+### 3.1 Starting State (Historical)
 
 The repository already has many prerequisites for scalable agent integration:
 
@@ -146,7 +151,7 @@ Current gaps:
 - Individual standards are not uniformly self-describing for future lazy loading.
 - ADRs do not yet lock the future MCP-facing architecture boundaries.
 
-### 3.2 Target State
+### 3.2 Target State (Historical)
 
 The repository exposes a complete, validated standards graph:
 
@@ -196,6 +201,21 @@ A future MCP server can then be thin:
 2. Expose manifest-declared resources.
 3. Use existing provider declarations for validation, fixing, drift, and planning.
 4. Keep tools generic because new standards are added as metadata and plugins, not top-level MCP tools.
+
+#### Completion State (Current as of 2026-07-24)
+
+The readiness goal remains satisfied, but Catalog 5 has evolved beyond the provisional names and layouts used by this implementation contract:
+
+- Project Standards 5.8.0 publishes nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.2.
+- Immutable V2 family and payload manifests now carry exact version, exposure, capability, relationship, provider, resource, media-type, and digest contracts.
+- `InstalledDistribution` is the production package authority; `PackageRepository` is the bounded source validation and test-injection authority.
+- `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` form the unified consumer control plane.
+- Reconciliation and provider APIs expose stable structured actions, findings, preconditions, notices, typed inputs, and results.
+- Legacy `standard.toml`/`adopt.toml` V1 projections, `.project-standards.yml`, the registry, and copy-adopt engine remain historical/migration evidence rather than current MCP authorities.
+- The current V2 package contracts supersede the provisional payload/resource shape, ADR 0023 supersedes the split adoption control plane, and ADR 0024 defines catalog-scoped published version authority.
+- `docs/mcp-readiness.md` remains the completion evidence for this spec. `SPEC-RD01` and `SPEC-MS01` govern the current MCP boundary and sequencing.
+
+The historical target tree, examples, requirements, and traceability below are retained as accepted implementation evidence. They are not instructions to recreate V1 surfaces.
 
 ### 3.3 Assumptions
 
@@ -1052,6 +1072,8 @@ The owner reviewed and accepted this empty log on 2026-07-12. Step 07 readiness 
 
 ### Project References
 
+- [SPEC-RD01](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) — current MCP sequencing and phase gates.
+- [SPEC-MS01](2026-07-07-project-standards-mcp-server-implementation-spec.md) — current MCP server boundary and acceptance contract.
 - `docs/specs/` — maintained Project Specification documents.
 - `docs/adr/` — target ADR directory.
 - `.project-standards.yml` — current standards validation config.

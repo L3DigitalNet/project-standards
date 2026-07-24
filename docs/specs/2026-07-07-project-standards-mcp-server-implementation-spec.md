@@ -1,32 +1,26 @@
 ---
 spec_id: SPEC-MS01
 title: 'Project Standards MCP Server Implementation'
-status: draft
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-12'
+last_reviewed: '2026-07-24'
 supersedes: null
 superseded_by: null
 related:
   adrs:
-    - 'docs/adr/adr-NNNN-project-standards-mcp-server-boundary.md'
-    - 'docs/adr/adr-NNNN-local-stdio-first-mcp-transport.md'
-    - 'docs/adr/adr-NNNN-mcp-resources-before-tools.md'
     - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
-    - 'docs/adr/adr-NNNN-read-only-first-controlled-write-later.md'
-    - 'docs/adr/adr-NNNN-mcp-sdk-adapter-boundary.md'
-    - 'docs/adr/adr-NNNN-remote-mcp-transport-deferred.md'
+    - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
+    - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
     - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
-    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
     - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
     - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
-    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
     - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
-    - 'docs/adr/adr-NNNN-mcp-roots-and-repo-boundary-policy.md'
-    - 'docs/adr/adr-NNNN-mcp-capability-advertisement-policy.md'
-    - 'docs/adr/adr-NNNN-mcp-protocol-and-sdk-version-selection.md'
+    - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
+    - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+    - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 
   tickets: []
   repositories:
@@ -42,31 +36,35 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.9 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by defining eager installed-distribution integrity versus lazy MCP context loading, completing all-requirement traceability, aligning descriptor fields, clarifying snapshot refresh behavior, and making the client fallback condition mandatory. |
+| 0.8 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged local read-only server contract after Claude Opus high-effort review; retain the implementation-plan and protocol/SDK decision gates. |
+| 0.7 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories: reconcile ADR paths, make catalog discovery generation-explicit, define deterministic normalization and full-distribution fail-closed behavior, and clarify client-conditional tools/prompts. |
+| 0.6 | 2026-07-24 | Codex | Refresh the server boundary for Project Standards 5.8.0, Catalog 5 V2 payloads, the unified `.standards/` control plane, current MCP protocol/SDK transition, and current Codex/Claude client capabilities. |
 | 0.5 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Record the SPEC-MT01 readiness prerequisite as passed. Server work remains deferred until v5 priorities permit, the roadmap advances, and protocol/SDK research is refreshed. |
 | 0.4 | 2026-07-09 | Coding agent | Added package-methodology ADR references and split standard descriptor version fields into package and consumer-contract planes. |
 | 0.3 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12; implementation remains deferred by `SPEC-RD01` sequencing, v5 release priority, and the required fresh protocol/SDK review.
+**Spec lifecycle:** This document is approved and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 now supplies the package and consumer control planes required by this design; implementation remains blocked until the approved implementation plan and the protocol/SDK decision gate in §19 pass.
 
 ---
 
 ## 1. Purpose & Background
 
-The Project Standards MCP server shall expose the `project-standards` repository to coding agents through the Model Context Protocol as a local, manifest-driven, standards-aware interface. The server is not the canonical source of standards. It is an access and orchestration layer over the repository's standards graph, CLI, validators, adoption engine, resource indexes, and provider declarations.
+The Project Standards MCP server shall expose installed Project Standards packages and explicit consumer repositories to coding agents through the Model Context Protocol as a local, package-driven, standards-aware interface. The server is not a canonical source of standards. It is an adapter over the package-contract and unified consumer-control-plane services already shipped by `project-standards`.
 
-The repository already aims to be a single source of truth for project standards. `SPEC-MT01` prepares that source of truth by adding manifest contracts, authority maps, graph validation, resource indexes, and provider declarations. `SPEC-RD01` defines the ordered enablement path from repository readiness through MCP implementation. This specification defines the actual MCP server once those prerequisites exist.
+`SPEC-MT01` established the readiness contract. Catalog 5 subsequently replaced its provisional graph/adopt model with immutable V2 family and payload manifests, digest-addressed resources, provider declarations, an installed-distribution loader, a source-repository validation boundary, and the `.standards/` desired-state/reconciliation control plane. `SPEC-RD01` defines the ordered enablement path. This specification defines the server against those current authorities rather than recreating their obsolete predecessors.
 
-The server's first useful version shall target the MCP 2025-06-18 protocol revision, be local and read-only, and use stdio unless a later ADR approves another transport. It shall allow an agent to discover standards, read only the relevant canonical resources, inspect a consumer repository's adoption state, and produce deterministic plans and validation/drift reports without mutating the repository. Controlled writes, fleet reporting, GitHub integration, and remote HTTP transport are later phases gated by explicit ADRs and safety checks.
+The server's first useful version shall target the stable MCP revision and official Python SDK line selected at its implementation preflight, be local and read-only, and use stdio. The selection shall account for the locked 2026-07-28 protocol release candidate and the Python SDK v2 transition without coding against a prerelease assumption. It shall allow an agent to discover exact package versions, read declared immutable resources, inspect a consumer repository's `.standards/` state, and return the existing deterministic reconciliation plan and provider findings without mutation. Controlled writes, fleet reporting, GitHub integration, and remote HTTP transport are later phases gated by explicit specifications and safety checks.
 
 The long-term goal is to make agent workflows safer and more efficient while preserving the repository's independent-standard-package model:
 
 - agents load only relevant standard resources rather than entire standards documents;
-- standard discovery is generated from manifests rather than hardcoded in prompts or tools;
+- standard discovery is generated from installed Catalog 5 manifests rather than hardcoded in prompts or tools;
 - companion and extension relationships are surfaced explicitly; optional companions are never silently treated as hard dependencies;
 - standards remain independent packages, while groups and companions are recommendations rather than hidden MCP-enforced dependencies;
-- repo adoption, validation, and drift results are structured and traceable;
+- repo inspection, reconciliation previews, validation, and drift results reuse stable control-plane schemas;
 - new standards do not require new top-level MCP tools;
 - MCP remains optional because docs, CLI, and CI continue to work without it.
 
@@ -78,13 +76,13 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 - A local MCP server entry point distributed with the `project-standards` Python package.
 - Initial stdio transport support.
-- Manifest-generated MCP resources for standards, templates, examples, manifests, generated indexes, and readiness/status reports.
-- MCP prompts generated from standard prompt resources where available.
-- Generic read-only and planning tools over the standards graph.
+- MCP resources generated from exact, installed Catalog 5 family/payload manifests and their declared resources.
+- MCP prompts generated from declared prompt resources where the selected clients expose prompts usefully.
+- Generic read-only and planning tools over the package service boundary and unified consumer control plane.
 - Relationship-aware behavior that can recommend companion standards without auto-requiring or auto-adopting them.
 - Consumer repository inspection using approved roots and explicit paths.
 - Structured tool results with standard IDs, resource URIs, file paths, rule IDs, severities, remediation guidance, and machine-readable payloads.
-- Integration with existing internal APIs and CLI/provider layers from `SPEC-MT01`, especially the standards graph API.
+- A typed, SDK-independent service facade over `InstalledDistribution`, `PackageRepository`, package-contract models, reconciliation planning, and provider dispatch.
 - Tests covering server startup, resource listing/reading, prompt listing/retrieval, generic tool behavior, fixture standards, consumer repo fixtures, and protocol-output safety.
 - Documentation for local setup with Claude Code/Codex-compatible MCP clients where applicable.
 
@@ -115,9 +113,9 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 | Boundary | Description |
 | --- | --- |
-| Server owns | MCP entry point, resource/prompt/tool registration, protocol-safe output, local root validation, adapter boundary to standards graph/CLI providers, structured result models, and server tests. |
-| Server depends on | `SPEC-MT01` standards graph API, standard manifests, authority maps, resource indexes, provider registries, existing CLI/validators/adopt engine, and Python packaging/tooling standards. |
-| Server does not own | The canonical standard text, manifest schema authority, graph validation semantics, consumer repo business logic, remote auth, GitHub token handling, or future third-party standards marketplace. |
+| Server owns | MCP entry point, resource/prompt/tool registration, protocol-safe output, local root validation, the SDK adapter, structured MCP result models, and server tests. |
+| Server depends on | Public package-contract and control-plane services, installed Catalog 5 payloads, provider declarations, and existing validators. |
+| Server does not own | Package or reconciliation semantics, canonical standard content, manifest/schema authority, consumer mutation, remote auth, GitHub token handling, or a third-party standards marketplace. |
 
 ---
 
@@ -125,16 +123,17 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 ### 3.1 Current State
 
-Before this spec begins, the repository is expected to have completed or be actively completing `SPEC-MT01`:
+Project Standards 5.8.0 is the published baseline:
 
-- every standard has a machine-readable manifest or explicit non-adoptable/draft declaration;
-- authority/capability/dependency/resource metadata is graph-validated;
-- existing standards are retrofitted into the same bundle contract;
-- graph APIs expose standard metadata, resources, artifacts, providers, and validation results;
-- ADRs record manifest-first discovery, authority-map composition, generic agent interfaces, provider plugins, and graph validation;
-- non-MCP docs/CLI/CI remain working.
+- Catalog 5 contains nine independently versioned package families; seven are consumer packages, Python Coding is reference-only, and Standard Bundle Authoring 2.2 is internal.
+- V2 family and payload manifests declare exact versions, capabilities, relations, providers, resources, media types, and SHA-256 digests.
+- `InstalledDistribution` loads published package projections; `PackageRepository` validates source bundles for development and tests.
+- `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` are the unified consumer control plane.
+- Reconciliation already produces stable JSON actions, findings, preconditions, provider notices, and a proposed next lock; provider operations expose typed inputs and results.
+- Legacy V1 manifests, `.project-standards.yml`, registry projections, and copy-adopt machinery remain migration-only evidence and are not MCP authorities.
+- `SPEC-MT01` and `docs/mcp-readiness.md` record the completed readiness gate.
 
-If these conditions are not true, this spec must not proceed beyond MS-0 preflight.
+The remaining preflight is not meta-repository readiness. It is selection of the final stable MCP protocol/SDK pair, client compatibility verification, and approval of the SDK-independent service boundary.
 
 ### 3.2 Target State
 
@@ -154,48 +153,31 @@ The server exposes stable generic capabilities:
 
 ```text
 Resources:
-  standards://index
-  standards://registry
-  standards://{standard_id}/metadata
-  standards://{standard_id}/README.md
-  standards://{standard_id}/adopt.md
-  standards://{standard_id}/agent-summary.md
-  standards://{standard_id}/templates/{name}
-  standards://{standard_id}/examples/{name}
-  standards://{standard_id}/manifest
-  consumer://repo/status
-  consumer://repo/config
-  consumer://repo/adoption-plan/{plan_id}
-  consumer://repo/drift-report/{report_id}
+  standards://catalog/{catalog_major}
+  standards://{standard_id}/{version}
+  standards://{standard_id}/{version}/resources/{resource_id}
 
 Prompts:
-  standard-adoption
-  standard-review
-  standard-exception-adr
-  repo-standards-audit
+  {declared prompt-role resources, if any}
 
 Tools:
   standards_list
-  standard_read
+  standard_read  # client-compatibility fallback when required
   repo_inspect
-  standards_resolve
-  adoption_plan
+  reconcile_preview
   validate_repo
   drift_check
-  exception_plan
-  spec_next_id
-  doc_next_id
 ```
 
-The server does not expose one tool per standard. Adding a fixture standard changes resource and metadata output, not the top-level tool list.
+For the current installed distribution, `{catalog_major}` is `5`. A server instance exposes the catalog generation carried by its installed distribution; a future generation receives its own URI, and one instance does not silently alias or combine catalog generations. `standard_read` is the client-compatibility path for clients that do not make MCP resources directly available to the model. Prompt registration is likewise declaration-, capability-, and client-dependent. The server does not expose one tool per standard. Adding a fixture package changes resource and metadata output, not the top-level tool list.
 
 ### 3.3 Assumptions
 
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
-| A-001 | `SPEC-MT01` produces a stable standards graph API. | If false, this server must stop after preflight and not duplicate graph logic. |
+| A-001 | Public package-contract and control-plane services remain the semantic authority. | If false, stop and revise the service boundary; do not duplicate semantics in MCP. |
 | A-002 | The initial server runs locally through stdio. | If remote is required, remote security design becomes blocking before implementation. |
-| A-003 | The official MCP Python SDK can be used behind a local adapter boundary. | If the SDK is unsuitable, the adapter allows replacement without changing standards logic. |
+| A-003 | A final stable official MCP Python SDK can be used behind a local adapter boundary. | If false, stop at the dependency gate and reassess; do not hand-roll the protocol. |
 | A-004 | The first user is a coding agent operating in or near a repository checkout. | If the primary user is a GUI or remote service, resource and root assumptions must change. |
 | A-005 | Consumer repo inspection can be limited to explicit repo roots. | If clients cannot pass roots consistently, tool arguments must require repo paths and perform containment checks. |
 | A-006 | Read-only server value is sufficient for first release. | If writes are mandatory, controlled-write safety work becomes earlier and blocking. |
@@ -205,12 +187,14 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 | ID | Constraint | Source |
 | --- | --- | --- |
 | C-001 | Use the Full Project Specification structure. | User instruction and Project Specification Standard. |
-| C-002 | Do not start server implementation until `SPEC-MT01` readiness gates pass. | `SPEC-RD01` sequencing requirement. |
+| C-002 | Do not start server implementation until this spec and its durable implementation plan converge and the Step 09 boundary/dependency gate is approved. | `SPEC-RD01` sequencing requirement. |
 | C-003 | Server tools must remain generic over `standard_id`, repo path/root, ref, profile, and operation. | Scalability requirement. |
 | C-004 | Server must write logs to stderr only under stdio and never emit non-protocol text to stdout. | MCP stdio transport constraint. |
 | C-005 | Remote HTTP transport is deferred. | Security and complexity control. |
 | C-006 | Dependency versions must be pinned or otherwise controlled by the Python Tooling SSOT Standard. | Repository tooling standard. |
 | C-007 | SDK major/pre-release adoption requires exact pinning and explicit review. | MCP Python SDK stability risk. |
+| C-008 | MCP code shall not parse CLI text, legacy V1 manifests, `.project-standards.yml`, or migration-only copy-adopt state. | Current package/control-plane authority. |
+| C-009 | Installed, version-qualified payloads are the production resource authority; source checkout loading is a development/test injection only. | ADR 0019, ADR 0024, and current control-plane design. |
 
 ---
 
@@ -218,11 +202,11 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Expose standards through lazy, canonical MCP resources. | Agent can load one standard summary or adopt guide without loading all standards. | FR-001 through FR-006 |
+| G-001 | Expose exact installed payloads through lazy MCP resources. | Agent can load one declared resource by standard ID, version, and resource ID without loading all standards. | FR-001 through FR-006 |
 | G-002 | Keep MCP tooling scalable as standards grow. | Adding a fixture standard requires no new top-level tool. | FR-007, FR-008, FR-014 |
-| G-003 | Provide safe read-only repo intelligence. | Agent can inspect adoption status, validate, and report drift without mutation. | FR-009 through FR-013 |
+| G-003 | Provide safe read-only repo intelligence. | Agent can inspect `.standards/` state, preview reconciliation, validate, and report drift without mutation. | FR-009 through FR-013 |
 | G-004 | Preserve canonical non-MCP workflows. | CLI and CI remain the enforcement backstop; MCP delegates to them/providers. | FR-015, FR-016 |
-| G-005 | Make future controlled writes possible without redesign. | Planning outputs include stable plan IDs/hashes and target-state fingerprints. | FR-017, FR-018 |
+| G-005 | Preserve a future controlled-write path without adding MCP-specific planning semantics. | MCP returns the control plane's preconditions and reconciliation fingerprint unchanged. | FR-017, FR-018 |
 | G-006 | Keep transport/security risk low. | v1 uses local stdio only; remote/write phases are gated. | NFR-003, NFR-008 |
 | G-007 | Preserve independent-standard-package semantics. | Tools surface companions/extensions as explicit findings or plan entries and never infer hidden requirements. | FR-021, DR-006 |
 
@@ -245,13 +229,13 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 | Term | Definition | Notes / Not to be confused with |
 | --- | --- | --- |
 | MCP server | Local process exposing Project Standards resources, prompts, and tools through MCP. | Not the standards authority itself. |
-| Standards graph API | Internal package API that loads validated standard manifests and exposes graph data. | Built by `SPEC-MT01`; consumed here. |
+| Package service boundary | Narrow, SDK-independent service facade that exposes installed catalog, exact payload resources, consumer inspection, reconciliation, and provider results. | Composes existing public package/control-plane APIs; it does not redefine them. |
 | Resource | MCP-readable URI-addressed context such as a standard README, manifest, template, or repo status. | Preferred for canonical content. |
 | Prompt | User-selected reusable MCP workflow message. | Not a model-controlled tool. |
 | Tool | Model-callable MCP function with input schema and structured output. | Keep small and generic. |
-| Plan identity | Stable ID/hash for a dry-run plan tied to inputs, repo state, package version, and standard refs. | Required before future writes. |
+| Reconciliation fingerprint | Existing deterministic control-plane fingerprint over a reconciliation plan and its preconditions. | Returned unchanged for future write compatibility; not invented by MCP. |
 | Root | Approved filesystem boundary for repo inspection. | Must prevent path traversal and accidental unrelated file access. |
-| Provider | Internal plugin implementing validation, fixing, drift, ID generation, or resource behavior for a standard. | Registered through manifests/API, not hardcoded into MCP tools. |
+| Provider | Payload-qualified operation declaration and dispatcher for validation, verification, lint, drift, IDs, rendering, scaffolding, upgrade, migration, or semantic review. | MCP v1 invokes only allowlisted non-mutating effects. |
 | Companion standard | A related standard that may be useful in the same repo but is not required. | MCP may recommend it, not silently require it. |
 | Extension standard | A standard that explicitly extends another standard's authority/schema. | Must be graph-declared and ADR-backed before MCP exposes it as such. |
 | Protocol stdout | JSON-RPC messages written by stdio MCP server. | Must not contain logs or human text outside protocol messages. |
@@ -264,31 +248,36 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The server shall expose `standards://index` as a resource generated from the standards graph. | Agents need a compact entry point. | Resource lists every known standard with ID, title, status, contract/default version, summary, and key resource URIs. | Must |
-| FR-002 | The server shall expose per-standard metadata resources. | Standards must be self-describing. | `standards://{standard_id}/metadata` returns manifest-derived JSON/text for every graph-valid standard. | Must |
-| FR-003 | The server shall expose canonical standard documents as resources. | Agents should lazy-load docs. | README/adopt/agent-summary/templates/examples are readable when declared by the manifest. | Must |
-| FR-004 | The server shall expose resource templates rather than hardcoding every resource URI. | New standards should appear automatically. | A fixture standard with manifest-declared resources appears through resource template listing/reading. | Must |
-| FR-005 | The server shall expose prompts from manifest-declared prompt resources. | Standards may ship reusable workflows. | Prompt listing includes standard adoption/review/exception prompts where available. | Should |
-| FR-006 | The server shall refuse undeclared or path-escaping resources. | Prevents arbitrary file exposure. | Attempts to read unmanifested files, absolute paths, or `..` traversal return structured errors. | Must |
-| FR-007 | The server shall expose a stable generic `standards_list` tool. | Agents need structured discovery. | Tool returns standards, capabilities, statuses, versions, and resource URIs. | Must |
-| FR-008 | The server shall expose a generic `standard_read` tool only if resource reads through MCP are insufficient for target clients. | Avoid redundant tool surface. | If implemented, it delegates to the same resource provider and accepts `standard_id` plus resource kind/path. | Could |
-| FR-009 | The server shall expose `repo_inspect` for explicit consumer repo roots. | Agents need adoption context. | Tool detects `.project-standards.yml`, workflows, package/tooling files, docs/spec/ADR directories, and declared standards without mutating files. | Must |
-| FR-010 | The server shall expose `standards_resolve`. | Agents need relevance selection. | Given repo state and task hints, tool returns relevant standards, reasons, resource URIs, and confidence. | Should |
-| FR-011 | The server shall expose `adoption_plan` as a dry-run-only tool in v1. | Adoption must be reviewable before writes. | Tool returns create/skip/overwrite/fragment actions, conflicts, prerequisites, plan identity, and postconditions without writing. | Must |
-| FR-012 | The server shall expose `validate_repo` as a read-only tool. | Existing validators remain authoritative. | Tool runs/dispatches applicable validation providers and returns structured findings with exit status. | Must |
-| FR-013 | The server shall expose `drift_check` as a read-only tool. | Consumers need drift visibility. | Tool compares adopted artifacts/config against canonical refs/manifests and returns structured drift findings. | Should |
-| FR-014 | The server shall expose ID helper tools generically. | Specs/ADRs/docs need stable IDs. | `spec_next_id` and `doc_next_id` call internal providers; no standard-specific ID tools are added. | Should |
-| FR-015 | The server shall delegate standards semantics to internal graph/provider APIs. | Prevents parallel implementation. | Code review finds no duplicated manifest parsing, schema semantics, or per-standard switch logic outside adapters/tests. | Must |
-| FR-016 | The server shall preserve CLI/CI as enforcement backstops. | MCP is optional. | Server docs point to CLI commands and CI workflows; tool results include equivalent commands where useful. | Must |
-| FR-017 | Planning tools shall include stable plan identity and repo-state fingerprints. | Future writes need safe binding. | Plans include package version/ref, standard IDs/versions, repo root, file fingerprints where relevant, and plan hash. | Should |
-| FR-018 | Controlled write tools shall not ship in v1. | Read-only first reduces risk. | No tool mutates consumer files in initial release. | Must |
-| FR-019 | If controlled writes are later added, apply tools shall reject missing/stale/mismatched plan identity. | Prevents unreviewed mutation. | Apply tool tests cover missing plan, changed repo state, changed standards version, and path escape. | Should |
-| FR-020 | The server shall provide client setup documentation. | Users need to install/configure it. | Docs include local stdio config pattern, package invocation command, logging notes, and troubleshooting. | Should |
-| FR-021 | The server shall surface standard relationships without creating hidden dependencies. | Independent standards must remain independently adoptable even when companions/extensions exist. | `standards_list`, `standards_resolve`, and `adoption_plan` distinguish independent, companion, extension, and conflict relationships; optional companions never block validation or planning. | Must |
-| FR-022 | The server shall declare output schemas and structured results for generic tools. | Clients and agents need reliable machine-readable findings and plans. | Every v1 tool has an output schema or typed model test; structured JSON is returned alongside concise human text where the SDK/protocol supports it. | Must |
-| FR-023 | Tool names and descriptions shall be concise, unambiguous, and test-reviewed. | Tool metadata influences model tool selection and context cost. | Tool descriptions state purpose, safe scope, and side-effect level in compact language; tests snapshot tool metadata. | Should |
-| FR-024 | The server shall use MCP roots when available and explicit repo roots otherwise. | Filesystem boundaries are a protocol security concern. | Server handles `roots/list` support when the client advertises roots; otherwise requires explicit `repo_root` and validates all paths against the approved root. | Must |
-| FR-025 | The server shall declare MCP capabilities accurately. | Capability flags and `listChanged` values affect client behavior and trust. | Capability tests prove resources/prompts/tools capability flags match implemented list/read/get/call and notification behavior. | Must |
+| FR-001 | The server shall expose `standards://catalog/{catalog_major}` from the installed catalog projection (`5` for the current distribution). | Agents need one compact, generation-explicit discovery point. | The resource lists every installed family with ID, title, status, package version, exposure, capabilities, relations, and version-qualified resource URIs; a fixture with another catalog major receives a distinct URI and is never silently merged or aliased. | Must |
+| FR-002 | The server shall expose exact per-package metadata resources. | Standards must be self-describing and reproducible. | `standards://{standard_id}/{version}` is populated from the matching V2 family and payload manifests and rejects unknown versions. | Must |
+| FR-003 | The server shall expose every declared payload resource by immutable identity. | Agents should lazy-load exact content into model context while the installed distribution remains integrity-checked. | `standards://{standard_id}/{version}/resources/{resource_id}` returns bytes and media type only after startup validation has verified the complete installed payload inventory and the read has rechecked the selected declaration, contained path, and byte digest. | Must |
+| FR-004 | The server shall expose resource templates rather than enumerate URI logic per package. | New packages and versions should appear without MCP code changes. | A fixture payload appears through the same templates, without server code or tool-list changes, when a new service/server instance loads the updated installed distribution; v1 does not watch a running process for installation changes. | Must |
+| FR-005 | The server shall expose prompts only from declared prompt-role resources and only where selected clients support them usefully. | Prompts remain package data and client behavior differs. | Prompt listing/retrieval is derived from payload declarations; unsupported-client behavior is documented and covered by the compatibility matrix. | Should |
+| FR-006 | The server shall refuse undeclared, digest-invalid, or path-escaping resources. | Prevents arbitrary or corrupted file exposure. | Undeclared IDs, absolute paths, traversal, and digest mismatches return structured errors without resource bytes. | Must |
+| FR-007 | The server shall expose a stable generic `standards_list` tool. | Agents need structured discovery even when resource UX is weak. | Tool returns the same installed catalog facts and exact resource URIs as FR-001. | Must |
+| FR-008 | The server shall expose a generic `standard_read` compatibility tool when any supported primary client cannot give the model direct resource access. | Codex and Claude expose MCP features differently. | The Step 09 compatibility matrix decides the condition; when it holds, the tool is mandatory, delegates to the same exact-resource service as FR-003, and cannot accept arbitrary paths. | Must |
+| FR-009 | The server shall expose `repo_inspect` for an explicit consumer repository root. | Agents need current consumer context. | Tool loads `.standards/config.toml`, catalog, and lock through control-plane models, reports missing/invalid state, and does not treat legacy config as current authority. | Must |
+| FR-010 | The server may expose deterministic package recommendations only when an existing typed service can justify them. | Avoid model-like relevance logic in the deterministic server. | No v1 tool returns invented confidence; any recommendation includes declared capability/relation evidence and exact resource URIs. | Could |
+| FR-011 | The server shall expose `reconcile_preview` as a dry-run-only tool. | The existing reconciliation plan is the review boundary. | Tool returns `ReconciliationPlan.to_jsonable()` facts—including actions, findings, preconditions, provider notices, and next lock—without applying them. | Must |
+| FR-012 | The server shall expose `validate_repo` as a read-only tool. | Existing validators/providers remain authoritative. | Tool dispatches applicable validate/verify/lint providers and returns their typed status, findings, and diagnostics. | Must |
+| FR-013 | The server shall expose `drift_check` as a read-only tool. | Consumers need a concise current-state signal. | Tool derives drift from reconciliation/provider results and returns stable structured findings without reparsing CLI text. | Should |
+| FR-014 | Provider-backed helper operations shall remain generic and payload-qualified. | IDs and semantic review should not create per-standard tools. | If exposed in v1, one allowlisted provider tool accepts exact payload identity, declared operation, and typed input; operations with mutating effects are rejected. | Should |
+| FR-015 | The server shall delegate all package and consumer semantics to the service facade over public package/control-plane APIs. | Prevents a parallel implementation. | Code review finds no V1 parsing, CLI-output parsing, manifest reimplementation, or per-package switch logic in MCP modules. | Must |
+| FR-016 | The server shall preserve CLI/CI as enforcement backstops. | MCP is optional. | Setup/reference docs identify equivalent package and consumer-control-plane commands; existing CLI/CI behavior remains green. | Must |
+| FR-017 | Planning outputs shall preserve control-plane fingerprints and preconditions. | Future writes need the same safe binding already used by the executor. | MCP serializes the existing plan fingerprint/preconditions without creating a competing plan identity scheme. | Should |
+| FR-018 | Controlled write tools shall not ship in v1. | Read-only first reduces risk. | No registered v1 tool invokes reconciliation apply, provider mutation, or consumer file writes. | Must |
+| FR-019 | If controlled writes are later added, apply tools shall use the control plane's stale-plan and precondition checks. | Prevents divergent write safety. | A later spec covers changed repo state, changed payload version, path escape, explicit approval, and postcondition failure. | Should |
+| FR-020 | The server shall provide setup and troubleshooting documentation for each supported primary client. | Users need reproducible local configuration. | Docs include stdio invocation, config location, resource/prompt/tool limitations, stderr logging, exact package version, and smoke commands. | Should |
+| FR-021 | The server shall surface declared package relationships without creating hidden dependencies. | Packages remain independently selectable. | Results distinguish companions, extensions, and conflicts exactly as V2 declarations encode them; empty relations remain independent and companions never block. | Must |
+| FR-022 | The server shall declare structured output schemas for generic tools. | Clients and agents need reliable results. | Every v1 tool has a typed input/output model test and returns protocol-supported structured content plus bounded human text where useful. | Must |
+| FR-023 | Tool names and descriptions shall be concise, unambiguous, and test-reviewed. | Metadata affects model selection and context cost. | Descriptions state purpose, input authority, and read-only effect; tests snapshot the supported-client tool metadata. | Should |
+| FR-024 | The server shall require an explicit `repo_root` and may additionally honor client-advertised roots after compatibility verification. | Root support varies by client and protocol revision. | Every consumer tool validates normalized paths and symlink resolution against `repo_root`; advertised roots can only narrow, never widen, that boundary. | Must |
+| FR-025 | The server shall declare capabilities accurately for the selected protocol revision. | Discovery and capability contracts are revision-dependent. | Protocol tests prove every advertised resource/prompt/tool/list-change capability is implemented and omit unsupported features. | Must |
+| FR-026 | A typed SDK-independent service facade shall be implemented and tested before MCP registration. | Package semantics must remain usable without protocol types. | Service tests cover installed catalog/resource lookup, source fixture injection, repo inspection, reconciliation preview, and provider dispatch without importing MCP SDK types. | Must |
+| FR-027 | Production resource lookup shall be installed-distribution and exact-version authoritative. | Mutable aliases would undermine reproducibility. | Runtime rejects absent versions and digest mismatches; source repository injection is available only through explicit development/test construction. | Must |
+| FR-028 | Consumer diagnostics shall exclude file contents and secret material unless a specific declared operation requires safe content. | Inspection findings do not require broad content disclosure. | Fixtures prove `.env`, credential stores, private config, and unrelated files are neither read nor returned. | Must |
+| FR-029 | Implementation shall pass a final protocol, SDK, license, and conformance gate before dependency lock-in. | MCP protocol and Python SDK are in an active transition. | The decision records stable versions, official sources, license result, transport/capability contracts, and conformance evidence; prereleases require explicit owner approval. | Must |
+| FR-030 | The release candidate shall be exercised against the current Codex and Claude Code client surfaces. | Client feature exposure differs despite common protocol support. | A compatibility matrix records setup, tool use, resource access, prompt access, roots behavior, and required fallbacks for both clients. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -298,39 +287,43 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 | NFR-002 | Context efficiency | Resource summaries shall be compact and useful before full docs are loaded. | Agent can resolve relevant standard from index/metadata without loading all README files. | Must |
 | NFR-003 | Transport safety | stdio server shall emit only protocol messages on stdout. | Tests assert startup/log output does not contaminate stdout. | Must |
 | NFR-004 | Error clarity | All tool/resource failures shall be structured. | Error includes code, message, affected path/standard, severity when applicable, and remediation. | Must |
-| NFR-005 | Determinism | Read-only and planning tools shall be deterministic for a fixed repo state and standards version. | Golden fixtures compare stable JSON outputs with accepted normalization. | Must |
-| NFR-006 | Maintainability | MCP-specific code shall be thin over graph/provider APIs. | Implementation uses adapter modules and typed result models; provider semantics live outside MCP layer. | Must |
+| NFR-005 | Determinism | Read-only and planning tools shall be deterministic for a fixed repo state, provider/tool versions, and exact installed payload set. | Golden fixtures compare stable service and MCP JSON outputs under the explicit DR-009 normalization contract; any unlisted variance is a defect. | Must |
+| NFR-006 | Maintainability | MCP-specific code shall be thin over the SDK-independent service facade. | Protocol modules contain registration/mapping only; package and provider semantics remain outside the MCP layer. | Must |
 | NFR-007 | Performance | Common resource reads shall not scan the entire repository unnecessarily. | Index/manifest reads are cached within process; repo scans are explicit and bounded. | Should |
 | NFR-008 | Security | Remote transport shall be absent until separately approved. | No Streamable HTTP entry point in v1. | Must |
-| NFR-009 | Testability | Protocol, graph fixture, and repo fixture tests shall run in CI. | `uv run pytest` covers server registration and tool outputs. | Must |
-| NFR-010 | Compatibility | The server shall run from both source checkout and installed package. | Tests or documented smoke checks cover both modes where practical. | Should |
-| NFR-011 | Protocol currency and compatibility | The server shall document the targeted MCP protocol revision and SDK version line, and recheck both before dependency lock-in. | MS-0 includes source-checked SDK/protocol decision; implementation docs/tests record protocol target, SDK constraint, and any deviations. | Must |
+| NFR-009 | Testability | Protocol, package fixture, and repo fixture tests shall run in CI. | `uv run pytest` covers services, server registration, and tool outputs. | Must |
+| NFR-010 | Compatibility | Production shall run from an installed package; development/tests shall also support an explicit source fixture. | Installed-wheel integration is required and produces equivalent service results to the source fixture for the same payloads. | Must |
+| NFR-011 | Protocol currency and compatibility | The server shall pin a final stable protocol/SDK contract and verify supported clients before dependency lock-in. | Step 09 records official-source evidence, exact dependency constraint, protocol conformance, and Codex/Claude compatibility. | Must |
 | NFR-012 | Tool-context efficiency | Tool metadata and default outputs shall avoid unnecessary verbosity. | Snapshot review confirms tools have compact descriptions and structured details are opt-in or bounded. | Should |
+| NFR-013 | Authority isolation | SDK types and protocol-version conditionals shall not cross into package/control-plane services. | Import-boundary tests and code review enforce one adapter direction. | Must |
 
 ### 7.3 Interface Requirements
 
 | ID | Interface | Requirement | Contract / Format | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
 | IR-001 | CLI entry point | The package shall expose an MCP server launch command. | `project-standards mcp` or `project-standards-mcp`; exact form decided by ADR. | Command starts stdio server without writing non-protocol stdout. |
-| IR-002 | MCP resources | Resource URIs shall use stable custom schemes. | `standards://...`, `consumer://...`, optionally `plan://...`. | Resource listing/reading follows manifest declarations. |
+| IR-002 | MCP resources | Resource URIs shall identify an installed catalog generation and exact payloads. | `standards://catalog/{catalog_major}`, `standards://{standard_id}/{version}`, and `standards://{standard_id}/{version}/resources/{resource_id}`. | Listing/reading follows validated V2 declarations and digests. |
 | IR-003 | MCP tools | Tool schemas shall be typed and generic. | JSON-schema-compatible input/output through SDK. | Tool list is small and stable across fixture standard addition. |
-| IR-004 | Internal graph API | Server shall call public internal graph/provider APIs. | Python typed interfaces, not private path scraping. | Unit tests can mock graph API. |
+| IR-004 | Package service facade | MCP adapter shall call one public typed facade. | Python types independent of MCP SDK, composed over package-contract/control-plane APIs. | Service unit tests run without the MCP dependency. |
 | IR-005 | Consumer repo filesystem | Repo inspection shall require explicit root/path and containment checks. | `repo_root` path argument or client root capability if available. | Path traversal and unrelated path access are rejected. |
 | IR-006 | Logs | Logs shall go to stderr under stdio. | Structured or plain text stderr; no stdout logs. | Protocol tests assert stdout cleanliness. |
 | IR-007 | Roots/repo boundaries | Server shall accept client roots or explicit root arguments and enforce containment. | MCP roots when available; otherwise absolute/normalized local path with symlink/traversal checks. | Unapproved paths and root escapes are rejected with structured errors. |
-| IR-008 | Capability advertisement | Server shall advertise only implemented MCP capabilities and `listChanged` flags. | Initialization capability payload. | Tests fail if flags imply unsupported notifications or feature surfaces. |
+| IR-008 | Capability discovery | Server shall advertise/discover only implemented capabilities using the selected protocol revision's contract. | Revision-specific SDK adapter payload. | Tests fail if metadata implies unsupported notifications or feature surfaces. |
+| IR-009 | Provider dispatch | Helper operations shall use exact payload-qualified provider entrypoints and typed schemas. | Standard ID, version, provider ID/operation, typed input, typed result. | Undeclared and mutating-effect operations are rejected before dispatch. |
 
 ### 7.4 Data Requirements
 
 | ID | Data Entity | Requirement | Validation Rules | Ownership |
 | --- | --- | --- | --- | --- |
-| DR-001 | Standard metadata | Server shall consume manifest-derived metadata, not infer from prose. | Must pass graph validation before exposure. | Standards graph API |
-| DR-002 | Resource descriptor | Each resource shall include URI, name/title, description, MIME/type, audience, priority, last-modified/ref where available, and source path/ref. | URI must be stable and path-safe; annotations are derived from manifest/frontmatter when available. | MCP resource provider |
+| DR-001 | Package descriptor | Server shall consume V2 family/payload metadata, not infer from prose. | Exact family/version pair must pass package validation before exposure. | Package service facade |
+| DR-002 | Resource descriptor | Each exposed resource shall include URI, declared resource ID, role, media type, digest, standard ID, and exact package version. | URI must be version-qualified; declaration path and bytes must pass containment and digest validation. | Package service facade / MCP mapper |
 | DR-003 | Tool finding | Findings shall carry rule ID, severity, standard ID, path, message, and remediation. | JSON schema/model validation in tests. | MCP tool result models |
-| DR-004 | Plan | Dry-run plans shall carry inputs, actions, conflicts, postconditions, repo fingerprint, standards version/ref, and plan ID/hash. | Stable serialization and deterministic hash. | Planning provider |
-| DR-005 | Repo inspection snapshot | Repo status shall include detected config/workflows/docs/tooling files and adopted standards. | No file contents outside approved root; redact secrets. | Repo inspection provider |
-| DR-006 | Standard relationship result | Relationship data shall distinguish independent, recommendation, enhancement, integration, extension, conflict, and exceptional hard requirement states. | Optional companions are advisory; extensions require manifest/ADR evidence; conflicts block only the specified combination; recommendations never become requirements. | Standards graph API / MCP result models |
+| DR-004 | Reconciliation preview | Dry-run results shall preserve control-plane actions, findings, preconditions, provider notices, next lock, and reconciliation fingerprint. | Reuse stable control-plane serialization; no parallel MCP plan schema. | Consumer control plane |
+| DR-005 | Repo inspection snapshot | Repo status shall include normalized root and parsed `.standards/` desired, catalog, and lock state plus bounded diagnostics. | No unrelated file contents; secret/credential paths are excluded. | Package service facade |
+| DR-006 | Package relationship result | Relationship data shall preserve V2 companions, extends, and conflicts exactly; independence is the empty default. | Extensions/conflicts retain declared evidence; companions remain advisory. | Package service facade / MCP result models |
 | DR-007 | MCP capability descriptor | Server shall expose implemented resource/prompt/tool capabilities accurately. | `listChanged` true only when notifications are implemented and tested. | MCP adapter layer |
+| DR-008 | Provider result | Provider results shall preserve operation, phase/effect, status, findings, diagnostics, and any declared output schema fields. | Exact payload/provider qualification required; mutation plans are not executable in v1. | Provider dispatcher / service facade |
+| DR-009 | Deterministic normalization | Stable fields—including IDs, statuses, versions, digests, actions, findings, and preconditions—shall compare verbatim; filesystem paths shall be root-relative; semantically unordered collections shall use declared stable ordering; timestamps and durations shall be excluded from the stable result rather than rewritten; provider/tool versions shall be explicit inputs/metadata. | Golden tests fail on any nondeterministic field not enumerated here; raw provider diagnostics remain bounded supplemental text and are not used for fingerprints. | Package service facade |
 
 ---
 
@@ -338,7 +331,7 @@ The server does not expose one tool per standard. Adding a fixture standard chan
 
 ### 8.1 Architecture Summary
 
-The MCP server is a thin adapter layer. It translates MCP resource/prompt/tool requests into calls to the internal standards graph and provider APIs. The standards graph remains the canonical machine-readable source for standard metadata. Existing CLI commands and validators remain the canonical enforcement mechanisms where they already exist.
+The MCP server is a thin protocol adapter over a typed, SDK-independent package service facade. The facade composes existing installed-distribution, source-repository, reconciliation, and provider APIs. V2 manifests and immutable payload bytes remain the package authority; the `.standards/` control plane remains the consumer authority. Existing CLI commands and validators remain enforcement backstops.
 
 The architecture separates concerns:
 
@@ -346,12 +339,12 @@ The architecture separates concerns:
 MCP client / coding agent
   -> MCP server transport adapter (stdio v1)
   -> MCP resource/prompt/tool registry
-  -> typed service layer
-  -> standards graph API / provider registries / existing CLI internals
-  -> standard manifests, schemas, templates, validators, adopt engine, repo files
+  -> typed package service facade (no MCP SDK types)
+  -> InstalledDistribution / PackageRepository / reconciliation / providers
+  -> V2 manifests and payloads / .standards consumer files
 ```
 
-No server code should need to know that `markdown-tooling` uses Prettier or that `python-tooling` uses Ruff except through provider/manifest data returned by the graph layer. Likewise, no server code should infer that one standard requires another from naming or prose; relationship behavior comes only from graph-validated metadata.
+No server code should need to know that `markdown-tooling` uses Prettier or that `python-tooling` uses Ruff except through payload/provider data returned by the service facade. Likewise, no server code should infer that one standard requires another from naming or prose; relationship behavior comes only from validated V2 declarations.
 
 ### 8.2 Architecture Views
 
@@ -360,11 +353,11 @@ No server code should need to know that `markdown-tooling` uses Prettier or that
 ```mermaid
 flowchart LR
     Agent[Coding Agent / MCP Client] --> Server[Project Standards MCP Server]
-    Server --> Graph[Standards Graph API]
-    Graph --> Manifests[standard.toml / adopt.toml / registry]
-    Graph --> Providers[Validation / Drift / ID Providers]
-    Providers --> CLI[Existing project-standards CLI Internals]
-    Server --> ConsumerRepo[Explicit Consumer Repo Root]
+    Server --> Facade[Package Service Facade]
+    Facade --> Distribution[InstalledDistribution]
+    Facade --> Control[Unified Consumer Control Plane]
+    Facade --> Providers[Payload-qualified Providers]
+    Control --> ConsumerRepo[Explicit Consumer Repo Root]
 ```
 
 #### 8.2.2 Container / Deployment View
@@ -383,43 +376,45 @@ flowchart LR
 | --- | --- | --- | --- |
 | `mcp_server.entrypoint` | Parse launch args and start stdio server. | CLI entry point. | No standards semantics. |
 | `mcp_server.transport` | SDK/server setup and protocol registration. | MCP SDK adapter. | Keeps SDK replaceable. |
-| `mcp_server.resources` | Register/list/read resource templates and resources. | Standards graph resource API. | Resource-first design. |
+| `mcp_server.resources` | Register/list/read exact resource templates and resources. | Package service facade. | Version-qualified, digest-checked resources. |
 | `mcp_server.prompts` | Expose manifest-declared prompts. | Prompt registry. | User-controlled workflows. |
-| `mcp_server.tools` | Register stable generic tools. | Tool schemas and service layer. | Small surface. |
+| `mcp_server.tools` | Register stable generic tools. | Tool schemas and package service facade. | Small, read-only surface. |
 | `mcp_server.models` | Typed request/result/error models. | Pydantic/dataclasses. | Stable structured outputs. |
 | `mcp_server.repo_access` | Approved-root and path containment checks. | Filesystem APIs. | No path escapes. |
-| `standards_graph` | Load/validate standard graph and providers. | Internal API from `SPEC-MT01`. | Canonical metadata source. |
-| Existing providers | Validate, drift-check, plan, ID generation. | Internal provider interfaces. | MCP delegates. |
+| `mcp_services` | Present installed catalog/resources and consumer operations without MCP types. | Public package/control-plane APIs. | New boundary, not new semantics. |
+| Existing package/control-plane APIs | Load/validate payloads, reconcile consumer state, and dispatch providers. | Typed Python contracts. | Semantic authorities. |
 
 ### 8.3 Design Decisions
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | MCP server is a thin adapter over the standards graph API. | Prevents parallel standards implementation. | Server parses docs/manifests directly; rejected as duplication. | `adr-NNNN-project-standards-mcp-server-boundary` |
-| D-002 | Use local stdio first. | Safest first transport and fits coding-agent workflows. | Streamable HTTP first; rejected until auth/threat model exists. | `adr-NNNN-local-stdio-first-mcp-transport` |
-| D-003 | Expose canonical content primarily as resources. | Resources are lazy context; tools are model-callable and should stay small. | Tool per document; rejected as tool bloat. | `adr-NNNN-mcp-resources-before-tools` |
+| D-001 | MCP server is a thin adapter over an SDK-independent package service facade. | Prevents parallel package/control-plane semantics and contains SDK churn. | Protocol modules call internals directly; rejected as coupling. | Planned Step 09 boundary ADR |
+| D-002 | Use local stdio first. | Fits local coding-agent workflows without remote operation. | Streamable HTTP first; rejected as unnecessary scope. | Planned Step 09 boundary ADR |
+| D-003 | Expose canonical content primarily as exact-version resources, with a shared read-tool fallback. | Resources are lazy context while supported clients differ. | Tool per document; rejected as tool bloat. | ADR 0010 plus planned client-compatibility decision |
 | D-004 | Keep MCP tools generic over standards. | New standards should not expand tool surface. | Per-standard tools; rejected. | `adr-0005-stable-generic-agent-tooling-interface.md` |
-| D-005 | Ship read-only/planning v1; defer controlled writes. | Reduces risk and proves value first. | Write tools immediately; rejected until plan identity and approval model are proven. | `adr-NNNN-read-only-first-controlled-write-later` |
-| D-006 | Wrap MCP SDK behind an adapter boundary. | SDK behavior/version may change; internal services should not depend on SDK types. | SDK types everywhere; rejected for maintainability. | `adr-NNNN-mcp-sdk-adapter-boundary` |
-| D-007 | Defer remote transport. | Streamable HTTP requires origin validation/auth/session security. | Local HTTP by default; rejected. | `adr-NNNN-remote-mcp-transport-deferred` |
+| D-005 | Ship read-only/planning v1; defer controlled writes. | Proves value while reusing, not bypassing, executor safety. | Write tools immediately; rejected until separately specified. | Planned Step 09 boundary ADR |
+| D-006 | Wrap the selected MCP SDK behind one adapter. | Protocol/SDK contracts are transitioning; services must remain stable. | SDK types in services; rejected. | Planned Step 09 dependency ADR |
+| D-007 | Defer remote transport. | It provides no required v1 value. | Local HTTP by default; rejected. | Planned Step 09 boundary ADR |
 | D-008 | Preserve independent standard package semantics. | MCP should reveal graph relationships, not enforce hidden bundles. | Auto-adopt companion standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
-| D-009 | Treat roots as the preferred repo boundary when the client supports them. | MCP roots define filesystem boundaries for servers. | Trust arbitrary repo paths from prompts; rejected. | `adr-NNNN-mcp-roots-and-repo-boundary-policy.md` |
-| D-010 | Advertise only implemented MCP capabilities. | Incorrect capability flags cause client trust and compatibility problems. | Optimistically advertise future features; rejected. | `adr-NNNN-mcp-capability-advertisement-policy.md` |
+| D-009 | Require explicit `repo_root`; client roots may only narrow it. | Client roots support is not uniform and filesystem authority must be explicit. | Trust arbitrary paths or require roots; rejected. | Planned Step 09 boundary ADR |
+| D-010 | Advertise/discover only implemented revision-specific capabilities. | Incorrect metadata causes client compatibility failures. | Optimistically advertise future features; rejected. | Planned Step 09 dependency ADR |
+| D-011 | Use installed exact-version payloads in production and source injection only in development/tests. | Preserves published-version and artifact-parity authority. | Read live source checkout in production; rejected. | ADR 0019 and ADR 0024 |
+| D-012 | Reuse stable reconciliation/provider schemas instead of MCP-specific planning or validation schemas. | One consumer truth surface prevents drift. | Reimplement adoption/drift logic; rejected. | ADR 0023 |
 
 ### 8.4 Solution Alternatives Considered
 
 | Alternative | Why Rejected |
 | --- | --- |
 | Keep using only skills/prompts. | Skills help invocation but cannot provide typed repo inspection, validation, drift checks, and structured plans. |
-| Build an MCP server before meta-repo readiness. | Would force hardcoded assumptions and duplicate graph logic. |
+| Build an MCP server before meta-repo readiness. | Rejected historically; the completed readiness gate now supplies the package/control-plane foundation. |
 | Build one tool per standard. | Does not scale and pollutes model-controlled tool surface. |
 | Make MCP own the standards registry. | Violates SSOT; standards must remain usable without MCP. |
 | Remote service first. | Adds unnecessary auth/network/DNS-rebinding risk for the first local coding-agent use case. |
 
 ### 8.5 Design Constraints
 
-- Do not parse canonical Markdown prose for semantics when a manifest/schema/provider exists.
-- Do not infer resource availability from directory listing alone; use graph-validated manifest/resource declarations.
+- Do not parse canonical Markdown prose, CLI text, or legacy manifests for semantics.
+- Do not infer resource availability from directory listing; use validated V2 resource declarations and digests.
 - Do not expose undeclared files as MCP resources.
 - Do not run mutating commands in v1.
 - Do not add a standard-specific tool unless an ADR proves the generic tool vocabulary cannot express the operation.
@@ -430,12 +425,14 @@ flowchart LR
 - Do not turn a `companion` relationship into an adoption blocker.
 - Do not advertise MCP `listChanged` capabilities unless notifications are implemented and tested.
 - Do not inspect paths outside MCP roots or explicitly approved `repo_root` boundaries.
+- Do not let SDK types or protocol revision branches cross the package service boundary.
+- Do not make mutable `latest` aliases the identity of returned resources.
 
 ### 8.6 Dependency Policy
 
 | Dependency | Allowed? | Reason |
 | --- | --- | --- |
-| Official MCP Python SDK (`mcp`) | Conditional | Preferred implementation path. Default assumption is stable v1 with an upper bound such as `mcp[cli]>=1.27,<2`; v2/pre-release may be used only with exact pin and ADR because it is documented as pre-release. Keep behind adapter boundary. |
+| Official MCP Python SDK (`mcp`) | Conditional | Required implementation path if the Step 09 gate identifies a final stable compatible release. Use an exact reviewed constraint and keep it behind the adapter; prereleases require explicit owner approval. |
 | Pydantic v2 | Yes if already present/consistent | Useful for typed structured tool outputs and validation. |
 | FastAPI/HTTP server dependencies | No for v1 | Remote HTTP transport deferred; no ASGI/FastAPI dependency unless a later transport spec approves it. |
 | Watchdog/file watchers | No for v1 | Resource list changes can be handled without runtime watch initially. |
@@ -457,27 +454,28 @@ StandardDescriptor:
   title: str
   status: str
   package_version: str
-  default_consumer_contract: str | None
+  exposure: consumer | reference-only | internal
   resources: list[ResourceDescriptor]
   capabilities: list[str]
-  authorities: list[AuthorityDescriptor]
+  companions: list[str]
+  extends: list[str]
+  conflicts: list[str]
   providers: list[ProviderDescriptor]
 
 ResourceDescriptor:
   uri: str
-  name: str
-  title: str | None
-  description: str
   mime_type: str
-  standard_id: str | None
-  source_path: str | None
-  audience: user | agent | mix | unknown
+  standard_id: str
+  package_version: str
+  resource_id: str
+  role: str
+  digest: str
 
 RepoInspectionSnapshot:
   repo_root: Path
-  standards_config: Path | None
-  adopted_standards: list[str]
-  detected_files: dict[str, list[str]]
+  desired_config: object | None
+  consumer_catalog: object | None
+  central_lock: object | None
   warnings: list[Finding]
 
 Finding:
@@ -488,16 +486,13 @@ Finding:
   message: str
   remediation: str | None
 
-Plan:
-  plan_id: str
-  operation: str
-  standard_ids: list[str]
-  repo_root: str
-  repo_fingerprint: str
-  standards_ref: str
-  actions: list[PlanAction]
-  conflicts: list[Finding]
-  postconditions: list[str]
+ReconciliationPreview:
+  actions: list[Action]
+  findings: list[Finding]
+  preconditions: list[Precondition]
+  provider_notices: list[ProviderNotice]
+  next_lock: object
+  fingerprint: str
 
 ToolDescriptorReview:
   tool_name: str
@@ -508,7 +503,7 @@ ToolDescriptorReview:
   output_schema_present: bool
 ```
 
-Plan IDs should be deterministic hashes over normalized inputs and relevant file fingerprints, so a future apply tool can reject stale plans.
+These models map existing package/control-plane values into protocol-safe shapes. The service facade shall not introduce a second durable schema, recalculate package digests, or replace the executor's reconciliation fingerprint.
 
 ---
 
@@ -521,20 +516,20 @@ sequenceDiagram
     actor User
     participant Agent as Coding Agent / MCP Client
     participant Server as Project Standards MCP Server
-    participant Graph as Standards Graph API
+    participant Services as Package Service Facade
     participant Repo as Consumer Repository
 
     User->>Agent: Work in consumer repo using project standards
     Agent->>Server: resources/list or standards_list
-    Server->>Graph: load graph/index
-    Graph-->>Server: standards descriptors
+    Server->>Services: load installed Catalog 5
+    Services-->>Server: exact package descriptors
     Server-->>Agent: compact index and resource URIs
     Agent->>Server: repo_inspect(repo_root)
     Server->>Repo: read approved config/workflow/doc paths
-    Server-->>Agent: adoption status and relevant resources
+    Server-->>Agent: consumer control-plane status and relevant resources
     Agent->>Server: read selected standards resources
     Server-->>Agent: canonical standard docs/summaries
-    Agent->>Server: adoption_plan / validate_repo / drift_check
+    Agent->>Server: reconcile_preview / validate_repo / drift_check
     Server-->>Agent: structured findings and plans
 ```
 
@@ -546,22 +541,22 @@ Expected result:
 
 | ID | Trigger | Behavior | Expected Result |
 | --- | --- | --- | --- |
-| AW-001 | User asks to adopt standards. | Agent calls `adoption_plan`; server returns dry-run plan and fragments. | User reviews plan; no files are written in v1. |
+| AW-001 | User asks to reconcile standards. | Agent calls `reconcile_preview`; server returns the control-plane plan. | User reviews it; no files are written in v1. |
 | AW-002 | User asks why repo is failing standards. | Agent calls `validate_repo` and `drift_check`. | Findings identify failing standard, file, rule, and remediation. |
-| AW-003 | New standard added to meta repo. | Server graph/index reload reflects new standard resources. | Tool list unchanged; resources/prompts update. |
-| AW-004 | Consumer repo has partial config. | `repo_inspect` reports adopted, missing, stale, and ambiguous standards. | Agent asks for relevant resource or plan. |
-| AW-005 | Client cannot use resources well. | Optional `standard_read` tool returns same content through tool path. | Compatibility without duplicating logic. |
+| AW-003 | New package version is installed. | A newly constructed service/server instance reflects its declared resources. | Tool list unchanged; exact-version resources update. |
+| AW-004 | Consumer repo has partial control-plane state. | `repo_inspect` reports missing, invalid, or inconsistent `.standards/` files. | Agent asks for an exact resource or reconciliation preview. |
+| AW-005 | A supported primary client cannot give the model direct resource access. | `standard_read` is registered as the mandatory compatibility fallback identified by the Step 09 client matrix and returns the same content through the shared tool path. | Compatibility without duplicating logic. |
 
 ### 10.3 Edge Cases
 
 | ID | Edge Case | Expected Behavior |
 | --- | --- | --- |
-| EC-001 | Standards graph validation fails at startup. | Server starts in degraded mode only if safe, exposes error resource, and mutating/planning tools fail closed; otherwise exits with stderr diagnostic. |
+| EC-001 | Any catalog, family, payload manifest, declared payload file, or aggregate digest in the installed distribution fails validation at startup. | `InstalledDistribution.load_catalog()` verifies every selected payload byte before serving; the entire server exits fail-closed with a stderr diagnostic and never exposes a valid subset. This eager bounded installation check does not scan a consumer repository or load payload text into model context. |
 | EC-002 | Unknown `standard_id`. | Tool/resource returns structured not-found error with known IDs. |
-| EC-003 | Manifest declares resource whose file is missing. | Graph validation should catch before server; server returns provider error if encountered. |
+| EC-003 | Manifest declares missing or digest-invalid resource bytes, or selected bytes no longer match the startup-validated declaration. | Startup package validation catches the initial defect; each resource read rechecks the selected contained path and byte digest and fails closed without bytes if the installed file changed. |
 | EC-004 | Consumer repo root path escapes allowed root. | Request is rejected. |
-| EC-005 | Repo has no `.project-standards.yml`. | `repo_inspect` reports unadopted state and possible adoption resources. |
-| EC-006 | Repo has custom schema or local exceptions. | Tool reports custom behavior and avoids applying bundled assumptions unless provider supports it. |
+| EC-005 | Repo lacks `.standards/config.toml`, catalog, or lock. | `repo_inspect` reports the exact missing state and `reconcile_preview` returns control-plane findings. |
+| EC-006 | Repo contains legacy V1/copy-adopt files. | Tool may report migration evidence but never treats it as current desired or locked state. |
 | EC-007 | Tool execution fails due to missing dependency. | Return structured error with command/provider and remediation. |
 | EC-008 | SDK emits logs or warnings to stdout. | Adapter/test must catch; stdout contamination is release-blocking. |
 
@@ -569,8 +564,8 @@ Expected result:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NotReady
-    NotReady --> ReadOnlyDev : SPEC-MT01 gate passes
+    [*] --> BoundaryGate
+    BoundaryGate --> ReadOnlyDev : spec/plan and protocol/SDK gate pass
     ReadOnlyDev --> ReadOnlyApproved : resources/tools pass fixtures
     ReadOnlyApproved --> PlanningApproved : plans/validation/drift stable
     PlanningApproved --> ControlledWriteDev : write ADR approved
@@ -580,8 +575,8 @@ stateDiagram-v2
 
 | State | Meaning | Entry Condition | Exit Condition |
 | --- | --- | --- | --- |
-| NotReady | Meta repo contracts incomplete. | `SPEC-MT01` not passed. | Readiness gate passes. |
-| ReadOnlyDev | Server resources/read-only tools being implemented. | Approved server spec and preflight. | Resource/tool fixture tests pass. |
+| BoundaryGate | Server docs are ready; dependency and service boundary await approval. | `SPEC-MT01` is complete. | Step 09 protocol/SDK/client/boundary gate passes. |
+| ReadOnlyDev | Service facade and server resources/read-only tools are being implemented. | Approved server spec, plan, and preflight. | Resource/tool fixture tests pass. |
 | ReadOnlyApproved | Safe local read-only MCP usable. | MS-2 complete. | Planning tools complete. |
 | PlanningApproved | Dry-run adoption/validation/drift useful. | MS-3/MS-4 complete. | Controlled write ADR approved. |
 | ControlledWriteDev | Mutating tools under development. | Write safety ADR/spec approved. | Apply safety tests pass. |
@@ -608,7 +603,7 @@ This project has no user-facing web UI or HTTP API in v1. Its user interface is 
 
 | ID | Failure Mode | User/System Behavior | Logging / Observability | Recovery |
 | --- | --- | --- | --- | --- |
-| ERR-001 | Standards graph invalid. | Server refuses affected resources/tools or exits fail-closed. | stderr startup error and structured tool error if running. | Run graph validation CLI and fix manifests. |
+| ERR-001 | Any catalog, family, payload declaration, payload byte, or aggregate digest in the installed package projection is invalid. | Startup verifies the complete bounded installed distribution and exits fail-closed; no partial catalog is served. Payload content remains lazy with respect to MCP/model context, not installation-integrity validation. | stderr startup error. | Validate the installed artifact/package projection and correct the release input. |
 | ERR-002 | Unknown resource URI. | Resource read fails with not-found error. | Debug log optional. | List resources and use declared URI. |
 | ERR-003 | Repo root invalid or unsafe. | Tool rejects request. | Structured warning. | Pass explicit valid repo root. |
 | ERR-004 | Provider command fails. | Tool returns provider exit/status and findings. | stderr only for server logs; result payload includes summary. | Run equivalent CLI command directly or fix dependency. |
@@ -620,7 +615,7 @@ This project has no user-facing web UI or HTTP API in v1. Its user interface is 
 - Resource reads may be retried safely.
 - Read-only tools may be retried safely for the same repo state.
 - Planning tools must be deterministic for the same normalized inputs and repo fingerprints.
-- Future apply tools must not be idempotent by assumption; they must bind to plan IDs and re-check repo state.
+- Future apply tools must not be idempotent by assumption; they must use the executor's reconciliation fingerprint and precondition checks.
 
 ### 12.3 Rollback / Recovery
 
@@ -667,7 +662,7 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 | Arbitrary filesystem exposure | Sensitive files leaked into model context. | Manifest resource allowlist and repo-root containment checks. |
 | stdout contamination under stdio | Protocol breakage or client confusion. | stderr-only logs; stdout protocol tests. |
 | Per-standard tool sprawl | Larger model-controlled attack surface. | Generic tools; ADR required for new top-level tool. |
-| Future write misuse | Accidental or malicious file mutation. | Defer writes; later require plan ID, explicit approval, path allowlist, postcondition validation. |
+| Future write misuse | Accidental or malicious file mutation. | Defer writes; later reuse reconciliation fingerprint/preconditions, explicit approval, path allowlist, and postcondition validation. |
 | Remote DNS rebinding if HTTP added later | Remote site interacts with local server. | Remote deferred; future HTTP requires origin validation, localhost bind, and auth. |
 
 ### 13.6 Hardening Checklist
@@ -692,7 +687,7 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 | Resource count | Dozens to low hundreds. | Templates/examples increase over time. | Support pagination where SDK/protocol exposes it. |
 | Consumer repo size | Small/medium code repositories. | Some repos may contain many docs/specs. | Repo scans are explicit and bounded. |
 | Concurrent clients | One local client process normally. | Multiple clients only after remote/HTTP. | v1 can keep simple in-memory cache. |
-| Tool latency | Sub-second for graph reads; validation may take longer. | Validators may be command-backed. | Return progress later if needed; v1 can block for local commands within reasonable bounds. |
+| Tool latency | Sub-second for installed catalog/resource reads; validation may take longer. | Providers may run subprocesses. | Bound provider execution and return structured diagnostics; progress is deferred unless required. |
 
 ---
 
@@ -700,11 +695,11 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 
 | ID | Risk | Likelihood | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- | --- |
-| R-001 | Server duplicates standards graph logic. | Med | High | Enforce adapter-only architecture and tests against graph API fixtures. | Implementer |
+| R-001 | Server duplicates package/control-plane logic. | Med | High | Enforce the service boundary and test it against public API fixtures. | Implementer |
 | R-002 | MCP SDK line changes during implementation. | Med | Med | Adapter boundary, exact pin, dependency review OQ. | Implementer |
 | R-003 | Tool surface grows too quickly. | Med | High | Tool count review; fixture standard test; ADR for new top-level tools. | Owner |
 | R-004 | Resource exposure leaks files. | Low/Med | High | Manifest allowlist and root containment tests. | Implementer |
-| R-005 | Server starts before meta readiness. | Med | High | MS-0 preflight is hard gate. | Owner |
+| R-005 | Server starts before the protocol/SDK/client/boundary decision is stable. | Med | High | Step 09 preflight is a hard gate. | Owner |
 | R-006 | Read-only tools are too limited for user value. | Low/Med | Med | Add planning/validation/drift before writes; evaluate against real consumer workflow. | Owner |
 | R-007 | Future remote transport introduces security burden. | Med | High | Separate remote threat model/spec. | Owner |
 
@@ -741,44 +736,78 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 
 | Layer | Scope | Required Coverage | Required? |
 | --- | --- | --- | --- |
-| Unit | Resource URI mapping, result models, path containment, plan hashing. | Success and failure paths. | Yes |
-| Integration | Server registration against real standards graph fixtures. | Current standards plus fixture standard. | Yes |
+| Unit | Service facade, resource URI mapping, result models, path containment, and MCP mapping. | Success and failure paths. | Yes |
+| Integration | Server registration against real installed/source package fixtures. | Current Catalog 5 plus fixture package/version. | Yes |
 | Protocol | stdio launch, list/read resources, list/call tools. | stdout cleanliness and expected JSON-RPC behavior. | Yes |
-| Repo fixture | Consumer repos with none/partial/full adoption. | inspect, plan, validate, drift. | Yes |
+| Repo fixture | Consumer repos with missing/partial/valid `.standards/` state. | inspect, reconcile preview, validate, drift. | Yes |
 | Security | Path traversal, undeclared resource read, secret-ish file avoidance. | Rejection cases. | Yes |
-| Regression | Known MCP/SDK or graph bugs. | Tests added as discovered. | Yes |
+| Regression | Known MCP/SDK or package/control-plane bugs. | Tests added as discovered. | Yes |
 
 ### 17.3 Requirement-to-Test Traceability
 
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001 | `test_resources__index__lists_graph_standards` | Not Started |
-| FR-002 | `test_resources__metadata__manifest_derived` | Not Started |
-| FR-003 | `test_resources__declared_docs__readable` | Not Started |
-| FR-004 | `test_resources__fixture_standard__appears_without_tool_change` | Not Started |
-| FR-005 | `test_prompts__manifest_declared__listed` | Not Started |
-| FR-006 | `test_resources__path_escape__rejected` | Not Started |
+| FR-001 | Installed Catalog 5 resource lists every family and exact URI. | Not Started |
+| FR-002 | Exact family/payload metadata lookup accepts known and rejects unknown versions. | Not Started |
+| FR-003 | Declared resource read verifies path, media type, and digest. | Not Started |
+| FR-004 | Fixture package/version appears without registration or tool changes. | Not Started |
+| FR-005 | Declared prompt-role resource and client compatibility tests. | Not Started |
+| FR-006 | Undeclared/traversal/digest-invalid resource rejection tests. | Not Started |
 | FR-007 | `test_tools__standards_list__structured_output` | Not Started |
-| FR-008 | Client-compatibility review decides whether `standard_read` exists. | Not Started |
-| FR-009 | `test_tools__repo_inspect__detects_adoption_state` | Not Started |
-| FR-010 | `test_tools__standards_resolve__returns_reasons_and_confidence` | Not Started |
-| FR-011 | `test_tools__adoption_plan__dry_run_only` | Not Started |
+| FR-008 | Client matrix and shared-service parity test for `standard_read`. | Not Started |
+| FR-009 | Repo inspection fixtures parse current `.standards/` models only. | Not Started |
+| FR-010 | Review confirms no invented relevance/confidence logic. | Not Started |
+| FR-011 | Reconciliation preview equals stable control-plane serialization and performs no writes. | Not Started |
 | FR-012 | `test_tools__validate_repo__provider_results` | Not Started |
 | FR-013 | `test_tools__drift_check__structured_findings` | Not Started |
-| FR-014 | `test_tools__id_helpers__generic_dispatch` | Not Started |
-| FR-015 | Code review: MCP layer delegates to graph/provider APIs. | Not Started |
+| FR-014 | Payload-qualified allowlist and mutating-effect rejection tests. | Not Started |
+| FR-015 | Import/code review: MCP delegates through facade; no legacy/CLI parsing. | Not Started |
 | FR-016 | Documentation and tool outputs link equivalent CLI/CI commands. | Not Started |
-| FR-017 | `test_plans__identity__stable_for_fixed_inputs` | Not Started |
+| FR-017 | Reconciliation fingerprint/precondition preservation tests. | Not Started |
 | FR-018 | `test_tools__v1__no_mutating_tools_registered` | Not Started |
 | FR-019 | Future write-phase tests for stale/mismatched plan identity. | Deferred |
 | FR-020 | Client setup documentation review. | Not Started |
 | FR-021 | Relationship fixture tests for independent, companion, extension, and conflict states. | Not Started |
 | FR-022 | Output-schema and structured-result tests for every v1 tool. | Not Started |
 | FR-023 | Tool metadata snapshot/review test. | Not Started |
-| FR-024 | `test_roots__supported_client__uses_roots` and `test_roots__unsupported_client__requires_explicit_repo_root`. | Not Started |
-| FR-025 | `test_capabilities__advertisement_matches_implemented_features`. | Not Started |
+| FR-024 | Explicit-root containment plus optional advertised-root narrowing tests. | Not Started |
+| FR-025 | Revision-specific capability discovery matches implemented surfaces. | Not Started |
+| FR-026 | Service facade tests run without MCP SDK imports. | Not Started |
+| FR-027 | Installed exact-version authority and explicit source-injection tests. | Not Started |
+| FR-028 | Secret/unrelated-content non-read and non-return fixtures. | Not Started |
+| FR-029 | Protocol/SDK/license/conformance decision record and dependency check. | Not Started |
+| FR-030 | Codex and Claude Code compatibility matrix and smoke evidence. | Not Started |
+| NFR-001 | Fixture package addition leaves the top-level tool registry unchanged. | Not Started |
+| NFR-002 | Catalog/metadata workflow selects one resource without returning unrelated payload text. | Not Started |
 | NFR-003 | `test_stdio__logs_to_stderr_only` | Not Started |
+| NFR-004 | Every resource/tool failure validates against the structured error model. | Not Started |
 | NFR-005 | Golden fixture comparison for deterministic outputs. | Not Started |
+| NFR-006 | Import and code-boundary review keeps package/control-plane semantics outside the MCP adapter. | Not Started |
+| NFR-007 | Performance test proves cached installed reads and explicit bounded consumer scans. | Not Started |
+| NFR-008 | Registry and launch tests prove no remote transport exists in v1. | Not Started |
+| NFR-009 | CI runs service, protocol, installed-package, and consumer-repository fixture tests. | Not Started |
+| NFR-010 | Source fixture and extracted-wheel service results compare equal for identical payloads. | Not Started |
+| NFR-011 | Step 09 decision record, exact dependency constraint, conformance tests, and client matrix. | Not Started |
+| NFR-012 | Tool metadata/output snapshots stay within reviewed context bounds. | Not Started |
+| NFR-013 | Import-boundary tests reject MCP SDK types outside the adapter. | Not Started |
+| IR-001 | Source and extracted-wheel launch smoke tests start the stdio server with clean stdout. | Not Started |
+| IR-002 | Resource list/read protocol tests cover catalog-major and exact-version URI templates. | Not Started |
+| IR-003 | JSON-schema and registry tests cover every generic tool input/output and stable tool count. | Not Started |
+| IR-004 | Facade unit tests run with the MCP dependency unavailable. | Not Started |
+| IR-005 | Consumer-fixture tests reject traversal, symlink escape, and unrelated paths. | Not Started |
+| IR-006 | Protocol subprocess test proves all logs and startup diagnostics use stderr. | Not Started |
+| IR-007 | Explicit-root and client-root narrowing tests prove roots never widen authority. | Not Started |
+| IR-008 | Revision-specific discovery tests compare advertised and implemented capabilities. | Not Started |
+| IR-009 | Provider tests require exact payload/provider identity and reject undeclared or mutating effects before dispatch. | Not Started |
+| DR-001 | Descriptor fixtures compare returned facts with validated V2 family/payload manifests. | Not Started |
+| DR-002 | Resource descriptor schema and read tests verify URI, role, media type, digest, identity, containment, and bytes. | Not Started |
+| DR-003 | Finding model tests require rule ID, severity, standard ID, path, message, and remediation. | Not Started |
+| DR-004 | Reconciliation preview golden test equals `ReconciliationPlan.to_jsonable()` without writes. | Not Started |
+| DR-005 | Repo inspection schema tests require normalized root and bounded desired/catalog/lock diagnostics without unrelated content. | Not Started |
+| DR-006 | Relationship fixtures preserve companions, extensions, conflicts, and the independent empty default. | Not Started |
+| DR-007 | Capability descriptor tests set `listChanged` only for implemented and tested notifications. | Not Started |
+| DR-008 | Provider result tests preserve operation, effect, status, findings, diagnostics, and declared output fields. | Not Started |
+| DR-009 | Golden normalization tests enforce verbatim stable fields, root-relative paths, declared ordering, excluded timing fields, and explicit provider/tool versions. | Not Started |
 
 ---
 
@@ -788,7 +817,7 @@ No secrets are required for v1. The server must not read `.env`, secret-manager 
 
 | Item              | Value                                                   |
 | ----------------- | ------------------------------------------------------- |
-| Runtime           | Python, matching repository `requires-python` policy.   |
+| Runtime           | Python 3.14, matching the current repository policy.    |
 | OS / Platform     | Local developer workstation, shell-launched subprocess. |
 | Datastore         | None in v1.                                             |
 | External services | None in v1.                                             |
@@ -799,15 +828,14 @@ Runtime services:
 
 | Service | Purpose | Start Mode | Health Signal |
 | --- | --- | --- | --- |
-| `project-standards mcp` | Local MCP stdio server. | MCP client launches subprocess. | Successful initialize/list resources call. |
+| `project-standards mcp` | Local MCP stdio server. | MCP client launches subprocess. | Successful revision-appropriate discovery and resource/tool smoke calls. |
 
 ### 18.2 Configuration
 
 | Setting | Required? | Default | Description |
 | --- | --- | --- | --- |
 | `PROJECT_STANDARDS_MCP_LOG_LEVEL` | No | `warning` | Optional stderr log verbosity. |
-| `PROJECT_STANDARDS_MCP_ALLOW_WRITES` | No | `false` | Reserved for future controlled writes; ignored or rejected in v1. |
-| `PROJECT_STANDARDS_MCP_REPO_ROOT` | No | unset | Optional default repo root; explicit tool argument preferred. |
+| `PROJECT_STANDARDS_MCP_REPO_ROOT` | No | unset | Optional client-configured default; every consumer operation still carries and validates an explicit effective root. |
 
 **Environment matrix:**
 
@@ -819,14 +847,14 @@ Runtime services:
 
 ### 18.3 Deployment Flow
 
-1. Complete and approve `SPEC-MT01` readiness gate.
-2. Complete/update ADRs listed in §8.3.
-3. Add MCP server package modules and tests.
-4. Add dependency after SDK review and exact pin decision.
-5. Run fix pass and verification gate.
-6. Smoke-test local stdio launch from source checkout.
-7. Document client configuration.
-8. Release as part of normal `project-standards` package process.
+1. Confirm the completed `SPEC-MT01`/Step 07 evidence.
+2. Approve this spec, its durable plan, and the Step 09 boundary/dependency ADRs.
+3. Select a final stable protocol/SDK pair and record license, conformance, and client evidence.
+4. Implement/test the SDK-independent package service facade.
+5. Add the MCP adapter, resources, prompts/fallbacks, and generic read-only tools in plan order.
+6. Verify from source fixtures and an extracted candidate wheel.
+7. Smoke-test Codex and Claude Code and complete client documentation.
+8. Prepare release evidence; publication requires separate release authorization.
 
 ### 18.4 Rollout Controls
 
@@ -842,12 +870,12 @@ Minimum signals:
 - structured MCP errors for resource/tool failures;
 - optional debug log level;
 - test fixtures for protocol exchange;
-- tool result metadata including package version and standards graph version/ref.
+- tool result metadata including exact package versions and resource digests.
 
 | Alert | Trigger | Severity | Owner / Action |
 | --- | --- | --- | --- |
 | stdout contamination | Test detects non-protocol stdout. | Critical | Fix before release. |
-| graph invalid at startup | Server cannot load graph. | Critical | Fix manifests/graph validation. |
+| installed projection invalid at startup | Server cannot validate installed Catalog 5. | Critical | Fix package projection/release input. |
 | resource path escape accepted | Security test fails. | Critical | Fix containment logic. |
 | fixture standard adds tool | Scalability test fails. | Warning/Critical | Refactor to resource/provider model. |
 
@@ -861,7 +889,7 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 - [ ] Client configuration examples for local stdio.
 - [ ] Tool/resource reference generated from schemas/registration.
 - [ ] Security notes: read-only v1, repo-root boundaries, no remote transport, no writes.
-- [ ] Troubleshooting: stdout contamination, missing graph, missing dependency, invalid repo root.
+- [ ] Troubleshooting: stdout contamination, invalid installed projection, missing dependency, invalid repo root, and client feature gaps.
 - [ ] Handoff/state docs updated per repository convention.
 
 ---
@@ -872,62 +900,55 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 | Wave | Scope | Exit Criteria |
 | --- | --- | --- |
-| Wave 0 | Preflight and adapter foundation. | `SPEC-MT01` gate passes; SDK decision recorded; entry point skeleton starts. |
-| Wave 1 | Read-only resources/prompts. | Standards resources generated from graph and fixture standard. |
-| Wave 2 | Read-only tools and planning. | inspect/resolve/plan/validate/drift tools pass fixtures. |
+| Wave 0 | Boundary/dependency decision and service facade. | Final stable SDK decision recorded; SDK-independent services pass source and installed fixtures. |
+| Wave 1 | Local adapter and exact resources/prompts. | Revision-appropriate stdio discovery works; exact resources pass digest and fixture tests. |
+| Wave 2 | Read-only consumer tools and hardening. | Inspect/reconcile/validate/drift tools and both client smoke matrices pass. |
 | Later | Controlled writes, fleet reporting, remote transport. | Separate ADR/spec gates pass. |
 
-### MS-0 — Foundation / Preflight
+### MS-0 — Step 09 Boundary / Dependency Gate
 
-1. Confirm `SPEC-MT01` readiness gate is complete, including independent-standard-package validation.
-2. Confirm `SPEC-RD01` permits server implementation phase.
-3. Create/approve ADRs for server boundary, stdio-first, resource-first, generic tools, read-only-first, SDK adapter, and remote deferral.
-4. Recheck current MCP protocol, roots/resources/tools/prompts docs, and MCP SDK line/version; record dependency decision and update the reference pack if needed.
-5. Add package module skeleton and test scaffolding.
+1. Confirm this spec and the durable implementation plan have converged.
+2. Recheck the final 2026-07-28 protocol publication, official Python SDK releases, license, conformance tooling, and Codex/Claude client behavior.
+3. Approve boundary/dependency ADRs covering local stdio, read-only scope, exact installed resources, explicit roots, SDK isolation, and remote deferral.
+4. Freeze the v1 surface and exact dependency constraint before adding code.
 
-### MS-1 — Transport and server skeleton
+### MS-1 — SDK-independent package service facade
 
-1. Add local stdio server entry point.
-2. Register server capabilities for resources/prompts/tools as appropriate.
-3. Ensure logs go to stderr only.
-4. Advertise only implemented capabilities and `listChanged` flags.
-5. Add roots-capability detection or explicit-root fallback scaffolding.
-6. Add protocol smoke test.
-7. Add setup docs draft.
+1. Characterize current installed/source package and control-plane outputs.
+2. Add typed services for catalog/resource lookup, repo inspection, reconciliation preview, and allowlisted provider dispatch.
+3. Prove exact-version/digest authority, source injection boundaries, secret-content exclusions, and source/wheel parity.
 
-### MS-2 — Resource and prompt layer
+### MS-2 — Transport and server skeleton
 
-1. Expose `standards://index`.
-2. Expose `standards://registry`.
-3. Expose per-standard metadata and declared document resources.
-4. Expose templates/examples where declared.
-5. Expose manifest-declared prompts or explicit empty prompt state.
-6. Add fixture standard test proving resource expansion without tool expansion.
+1. Add the local stdio entry point and one SDK adapter.
+2. Register only implemented revision-specific capabilities.
+3. Enforce stderr-only logging and explicit-root containment.
+4. Add protocol smoke and tool-metadata snapshot tests.
 
-### MS-3 — Generic read-only tools
+### MS-3 — Exact resources and client-compatible prompts
 
-1. Implement `standards_list`.
-2. Implement `repo_inspect` with root containment.
-3. Implement `standards_resolve` if graph/provider data supports relevance.
-4. Implement optional `standard_read` only if client compatibility requires it.
-5. Add structured result models and tests.
+1. Expose the Catalog 5 and exact family/payload resource templates.
+2. Map declared resources with digest verification.
+3. Expose declared prompt-role resources where useful.
+4. Add `standard_read` through the same service for client compatibility.
+5. Prove fixture expansion does not alter the tool list.
 
-### MS-4 — Planning, validation, and drift
+### MS-4 — Generic read-only tools
 
-1. Implement `adoption_plan` dry-run over existing adopt/graph planner.
-2. Implement `validate_repo` over validation providers/CLI internals.
-3. Implement `drift_check` over drift providers.
-4. Add plan IDs/repo fingerprints for future write compatibility.
-5. Add golden fixture output tests.
+1. Implement `standards_list` and `repo_inspect`.
+2. Implement `reconcile_preview` over stable control-plane serialization.
+3. Implement `validate_repo` and `drift_check` over provider/control-plane results.
+4. Add optional generic provider dispatch only for allowlisted non-mutating effects.
+5. Add structured/golden fixture tests.
 
 ### MS-5 — Hardening and release readiness
 
 1. Run full verification gate.
-2. Run smoke tests against `project-standards` and at least one consumer fixture.
-3. Complete documentation deliverables.
-4. Review tool count and tool descriptions.
-5. Confirm v1 has no mutating tools and no remote transport.
-6. Update handoff docs and traceability matrix.
+2. Run installed-wheel conformance plus Codex and Claude Code smoke tests.
+3. Complete documentation and compatibility deliverables.
+4. Review tool count, descriptions, output bounds, and content exclusions.
+5. Confirm v1 has no mutating tools or remote transport.
+6. Prepare release-readiness evidence without publishing.
 
 ### MS-6 — Controlled writes `[future]`
 
@@ -947,11 +968,11 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 | Milestone | Deliverable | Exit Criteria |
 | --- | --- | --- |
-| MS-0 Foundation | Approved preflight and skeleton | Readiness gate, ADRs, SDK decision complete |
-| MS-1 Server skeleton | Local stdio launch | Initialize/list smoke test; stdout clean |
-| MS-2 Resources/prompts | Lazy standards context | Resources generated from graph and fixture standard |
-| MS-3 Read-only tools | Discovery and repo inspection | Generic tools pass fixture tests |
-| MS-4 Plans/validation/drift | Deterministic reports | Structured plans/findings with golden tests |
+| MS-0 Boundary gate | Approved preflight | Spec/plan, ADRs, final stable protocol/SDK/client decision complete |
+| MS-1 Service facade | SDK-independent package/consumer services | Source/installed fixtures and authority boundaries pass |
+| MS-2 Server skeleton | Local stdio launch | Revision-appropriate discovery smoke test; stdout clean |
+| MS-3 Resources/prompts | Lazy exact standards context | Versioned/digest-checked resources and client fallbacks pass |
+| MS-4 Read-only tools | Deterministic consumer reports | Structured inspection/reconciliation/provider outputs pass |
 | MS-5 Release readiness | v1 read-only server | Verification passes; docs complete; no writes/remote |
 | MS-6 Future writes | Controlled mutation | Separate gate and stale-plan tests pass |
 | MS-7 Future remote | Network transport | Separate security gate and auth/origin tests pass |
@@ -975,12 +996,13 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Which MCP Python SDK major/version should be pinned? | Use official SDK behind adapter; choose exact reviewed stable version unless v2 pre-release is explicitly approved. | Yes | Owner/implementer | MS-0 | Open |
+| OQ-001 | Which final stable MCP protocol and Python SDK versions should be pinned after the 2026-07-28 publication? | Use the official final stable pair behind one adapter; prereleases require explicit owner approval. | Yes | Owner/implementer | MS-0 | Open |
 | OQ-002 | Should entry point be `project-standards mcp` or separate `project-standards-mcp`? | Prefer `project-standards mcp` for discoverability. | No | Owner | MS-1 | Open |
-| OQ-003 | Does the target MCP client support resources well enough, or is `standard_read` needed? | Implement resources first; add tool only for client compatibility. | No | Implementer | MS-3 | Open |
+| OQ-003 | Which supported clients give the model direct resource access, and where is `standard_read` required? | Provide the shared read-tool fallback when either primary client needs it. | Yes | Implementer | MS-0 | Open |
 | OQ-004 | How should repo roots be supplied for clients without MCP roots support? | Require explicit `repo_root` tool argument. | No | Implementer | MS-3 | Open |
 | OQ-005 | What minimum real consumer repo should be used for smoke testing? | Use a low-risk L3Digital repo after fixtures pass. | No | Owner | MS-5 | Open |
-| OQ-006 | Which target MCP clients actually support roots/resources/prompts well enough for v1 ergonomics? | Test at least the primary coding-agent client and record compatibility gaps before release. | No | Implementer | MS-5 | Open |
+| OQ-006 | What exact resources/prompts/roots semantics do current Codex and Claude Code builds expose after the final protocol/SDK selection? | Record both clients in a checked compatibility matrix and let explicit `repo_root` remain authoritative. | Yes | Implementer | MS-0 | Open |
+| OQ-007 | Should generic provider dispatch ship in v1 or remain behind specialized validate/drift tools? | Include it only if the non-mutating effect allowlist and typed results materially reduce tool surface. | No | Owner | MS-4 | Open |
 
 ---
 
@@ -996,27 +1018,19 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 ### Standards
 
-- Project Specification Standard — `standards/project-spec/README.md`.
-- Full Project Specification Template — `standards/project-spec/templates/spec-full-template.md`.
+- Project Specification package 1.4 — installed Catalog 5 resource.
 - Meta-Repository MCP Readiness Preparation Spec — `SPEC-MT01`.
 - MCP Enablement Roadmap Spec — `SPEC-RD01`.
-- Standard Bundle Authoring Standard — to be created by `SPEC-MT01`.
-- Python Tooling SSOT Standard — `standards/python-tooling/README.md`.
-- Python Coding Standard — `standards/python-coding/README.md`.
-- Markdown Frontmatter Standard — `standards/markdown-frontmatter/README.md`.
-- Markdown Tooling Standard — `standards/markdown-tooling/README.md`.
-- ADR Standard — `standards/adr/README.md`.
-- Existing package internals — `src/project_standards/README.md`.
-- Existing adopt manifest loader — `src/project_standards/adopt/manifest.py`.
-- Existing adopt engine — `src/project_standards/adopt/engine.py`.
-- Existing registry — `src/project_standards/schemas/registry.json`.
-- Project Standards MCP Specification Reference Pack — supporting source register and reference summaries.
+- Standard Bundle Authoring 2.2 — current internal package authoring authority.
+- V2 package contracts — `src/project_standards/package_contract/`.
+- Installed distribution and unified consumer control plane — `src/project_standards/control_plane/`.
+- Project Standards MCP Specification Reference Pack — current external/internal source register.
 
 ### External References
 
-- MCP Specification 2025-06-18 — overview, resources, prompts, tools, transports, roots, authorization, and security considerations.
-- MCP Python SDK main README — official Python implementation and current v2/pre-release caution.
-- MCP Python SDK v1 README — stable production line and `<2` dependency-bound guidance.
+- MCP Specification 2025-11-25 — current stable overview and capability contracts at review time.
+- MCP 2026-07-28 release candidate announcement — locked next revision and final publication schedule.
+- MCP Python SDK repository/releases — current v1 stable and v2 transition status; recheck at MS-0.
 - MCP Roots — filesystem boundary model for client-provided roots.
 - MCP Authorization — future HTTP transport authorization guidance; stdio auth remains out of scope for v1.
 - MCP tool-description research — evidence for compact, reviewed tool metadata.
@@ -1029,8 +1043,8 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 - `docs/adr/` — ADRs created by this spec.
 - `docs/specs/` — durable location for this specification.
-- `.project-standards.yml` — validation config and spec include/exclude behavior.
-- `scripts/check.py` — candidate local gate integration point if present.
+- `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` — consumer control-plane files.
+- `docs/mcp-readiness.md` — completed readiness evidence.
 
 ---
 
@@ -1076,7 +1090,7 @@ The implementer shall:
 - On any divergence from the spec: record a `DEV-` row rather than adapting silently.
 - Add or update tests for every implemented requirement; keep §17.3 current.
 - Follow milestone order; do not build later milestones on unproven earlier ones.
-- Keep server code as an adapter over graph/provider APIs.
+- Keep protocol code as an adapter over the SDK-independent package service facade.
 - Preserve non-MCP CLI/docs/CI workflows.
 
 ### B.2 Prohibited Behaviors
@@ -1120,22 +1134,21 @@ For multi-session implementation, record current milestone, in-progress requirem
 
 Controlled write tools are deferred, but v1 planning data should preserve compatibility.
 
-Future apply contract shape:
+Future apply contract shape is illustrative and must be reconciled with the then-current executor contract:
 
 ```text
 apply_request:
-  plan_id
-  expected_repo_fingerprint
-  expected_standards_ref
+  reconciliation_fingerprint
+  expected_preconditions
   approved_by_user: true
   operation
 ```
 
 Rules:
 
-- Missing plan ID fails.
-- Changed repo fingerprint fails.
-- Changed standards ref fails.
+- Missing reconciliation fingerprint fails.
+- Failed control-plane precondition fails.
+- Changed payload version fails.
 - Path outside planned allowlist fails.
 - Postcondition validation failure returns non-zero structured result and remediation.
 

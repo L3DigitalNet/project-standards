@@ -1,34 +1,33 @@
 ---
 spec_id: SPEC-RD01
 title: 'Project Standards MCP Enablement Roadmap'
-status: draft
+status: approved
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-12'
+last_reviewed: '2026-07-24'
 supersedes: null
 superseded_by: null
 related:
   adrs:
     - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
     - 'docs/adr/adr-0005-stable-generic-agent-tooling-interface.md'
-    - 'docs/adr/adr-NNNN-local-stdio-first-mcp-transport.md'
-    - 'docs/adr/adr-NNNN-read-only-first-controlled-write-later.md'
-    - 'docs/adr/adr-NNNN-defer-remote-mcp-transport.md'
     - 'docs/adr/adr-0013-independent-standard-packages-and-relationship-taxonomy.md'
-    - 'docs/adr/adr-0017-unified-standard-adoption-methodology.md'
     - 'docs/adr/adr-0018-standard-package-lifecycle-methodology.md'
     - 'docs/adr/adr-0019-packaged-artifact-parity-and-provenance.md'
-    - 'docs/adr/adr-0020-standard-package-versioning-methodology.md'
     - 'docs/adr/adr-0021-standard-packaged-skill-installation-methodology.md'
-    - 'docs/adr/adr-NNNN-mcp-protocol-and-sdk-version-selection.md'
+    - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
+    - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
+    - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
 
   tickets: []
   repositories:
     - 'L3DigitalNet/project-standards'
   prior_specs:
     - 'SPEC-MT01'
+    - 'SPEC-CP01'
+    - 'SPEC-BA02'
 ---
 
 # Project Standards MCP Enablement Roadmap — Specification (Full)
@@ -37,6 +36,11 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by separating optional expansion from controlled writes, normalizing traceability statuses and ADR evidence, and making structured-output acceptance deterministic. |
+| 1.0 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged roadmap after Claude Opus high-effort review; implementation remains blocked on the Step 09 final protocol, SDK, client, and service-boundary gate. |
+| 0.9 | 2026-07-24 | Codex with Claude Opus review | Close the final review advisory by defining every traceability status used and normalizing the remote-deferral guard label. |
+| 0.8 | 2026-07-24 | Codex with Claude Opus review | Clarify Step 08 convergence with Step 09 decisions still open, distinguish defined gates from executed evidence, declare completed prerequisite specs, map optional Steps 17-18, and align tool-phase terminology. |
+| 0.7 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Refresh the roadmap for published Project Standards 5.8.0, Catalog 5 immutable V2 packages, the unified consumer control plane, Project Specification 1.4, and the July 2026 MCP protocol/SDK transition. Replace the obsolete pre-v5 starting point with completed Step 00-07 evidence, move unresolved MCP decisions into the implementation preflight, and require a converged implementation plan before coding. |
 | 0.6 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Record SPEC-MT01 Step 07 as passed with no blocking gaps. The roadmap may proceed to Step 08 when v5 release priorities permit; protocol and SDK research remains required before server MS-0. |
 | 0.5 | 2026-07-09 | Coding agent | Added package-methodology ADR references so future MCP phases inherit adoption, lifecycle, provenance, versioning, and skill-installation policy. |
 | 0.4 | 2026-07-09 | Coding agent | Resolved accepted ADR references while leaving future MCP ADR placeholders unchanged. |
@@ -44,19 +48,19 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This document is living until `approved`, then change-controlled. This roadmap depends on the meta-repository preparation spec (`SPEC-MT01`) and includes MCP server design/implementation only after the readiness gate passes.
+**Spec lifecycle:** This revision is approved and change-controlled. `SPEC-MT01` is complete, so the active boundary is the approved specification-and-plan gate before any MCP implementation. Step 09 still must freeze the final protocol, SDK, client, and service boundary before code begins. Later controlled-write and remote-transport phases still require separate approval.
 
 ---
 
 ## 1. Purpose & Background
 
-This roadmap defines the ordered design and implementation sequence for turning the `project-standards` repository into a scalable standards platform and then building a Project Standards MCP server on top of that platform.
+This roadmap defines the ordered design and implementation sequence for exposing the now-published Project Standards platform through a local Model Context Protocol (MCP) server without creating a second standards authority.
 
 The key sequencing rule is:
 
 > Do not build the MCP server until the standards repository is manifest-driven, graph-validated, and composition-safe enough that the server can remain generic.
 
-Without that ordering, the MCP server would likely hardcode today's standards, duplicate repository policy in server code, and make every new standard a server maintenance event. With the ordering in this roadmap, the repository first becomes self-describing and proves that standards remain independently adoptable by default; only then does the MCP server become a thin local server that exposes repository resources, generic planning/validation/drift tools, and standard-defined prompts.
+Steps 00-07 established that foundation and are complete. Project Standards 5.8.0 now ships Catalog 5, immutable V2 package families and payloads, validated resource/provider declarations, and one `.standards/` reconciliation control plane. The remaining program begins by reconciling the MCP specifications and plan with those contracts, then builds a thin local server over installed package and control-plane APIs.
 
 This roadmap is not the detailed MCP implementation spec. It is the program plan and dependency order. It states what must exist before each phase starts, what each phase must deliver, and what gates must pass before proceeding.
 
@@ -103,7 +107,7 @@ This roadmap is not the detailed MCP implementation spec. It is the program plan
 | Boundary | Description |
 | --- | --- |
 | Roadmap owns | Sequencing, prerequisites, gates, deliverables, and phase dependencies from meta-prep through MCP rollout. |
-| Roadmap depends on | `SPEC-MT01`, existing standards repository structure, existing CLI/adopt engine, project-spec tooling, and future MCP implementation specs. |
+| Roadmap depends on | Completed `SPEC-MT01`, `SPEC-CP01`, `SPEC-BA02`, ADRs 0023-0024, Catalog 5 package contracts, the existing CLI/control plane, Project Specification 1.4, and `SPEC-MS01`. |
 | Roadmap does not own | The exact MCP code design, exact server SDK choice, remote hosting, or final UX of every MCP client. |
 
 ---
@@ -112,26 +116,30 @@ This roadmap is not the detailed MCP implementation spec. It is the program plan
 
 ### 3.1 Current State
 
-The standards repository has a strong starting foundation: standards are already organized as bundles, the package already includes validators and adopt tooling, and the Project Specification Standard already defines a machine-checkable spec format with validation/lint/extract/next/new/upgrade commands.
+Project Standards 5.8.0 is published from `d007ba0`. Catalog 5 contains seven consumer packages plus reference-only Python Coding and internal Standard Bundle Authoring. Every advertised version is an immutable V2 payload with integrity-checked resources, declared providers and schemas, explicit relationships, and source/wheel parity.
 
-The repository is not yet fully ready for a maximally scalable MCP server because standards are not uniformly self-describing. A future MCP server needs metadata that is currently split across prose, registry entries, package code, adoption manifests, and implicit knowledge. The roadmap therefore begins with repository preparation and only later moves into MCP implementation.
+The unified `.standards/` control plane now owns consumer desired state, installed catalog state, applied-state provenance, deterministic reconciliation planning, explicit apply, recovery, and drift reporting. `InstalledDistribution` is the production boundary for package facts; `PackageRepository` is the source-repository validation boundary. Typed provider operations and structured reconciliation results already supply the non-MCP semantics the server should expose.
+
+`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. The remaining blockers are documentation and dependency decisions: refresh and converge `SPEC-RD01` and `SPEC-MS01`, produce an executable implementation plan, and then freeze the protocol/SDK/client contract at the plan's preflight task.
+
+External MCP inputs are unusually time-sensitive on this review date. MCP `2025-11-25` is the latest stable protocol revision; the breaking `2026-07-28` revision is a locked release candidate scheduled four days later. The official Python SDK v1 line remains stable while v2 is pre-release with stable release targeted alongside the new protocol. The roadmap therefore forbids selecting a pre-release merely to make this document look current.
 
 ### 3.2 Target State
 
 The final target state is a layered system:
 
 ```text
-Layer 0 — Canonical standards repository
-  Markdown standards, ADRs, templates, examples, schemas, manifests, generated indexes.
+Layer 0 — Immutable Catalog 5 packages
+  Family indexes, versioned payloads, resources, providers, schemas, and catalog channels.
 
-Layer 1 — Standards graph package/API
-  Loads manifests, validates composition, provides resource/provider indexes.
+Layer 1 — Package and control-plane APIs
+  InstalledDistribution, PackageRepository, typed provider invocation, reconciliation planning.
 
 Layer 2 — Existing CLI and CI
-  Enforces standards for humans, agents, and consumer repositories without MCP.
+  Validates packages and consumer repos, reconciles desired state, and reports drift without MCP.
 
 Layer 3 — Project Standards MCP server
-  Local stdio server exposing resources, prompts, and generic tools over Layer 1/2.
+  Local stdio adapter exposing package resources and generic read-only tools over Layers 1/2.
 
 Layer 4 — Optional future expansion
   Controlled writes, multi-repo reporting, remote transport, GitHub integration.
@@ -143,9 +151,9 @@ Layer 4 — Optional future expansion
 | --- | --- | --- |
 | A-001 | The future MCP server will target coding-agent workflows first. | If human UI is the primary target, roadmap should add UI/reporting work earlier. |
 | A-002 | Local stdio MCP is sufficient for v1. | If remote is mandatory, auth and transport design must move earlier and become blocking. |
-| A-003 | The standards graph API can be built before MCP and reused by MCP. | If not, MCP would need to own graph logic, which violates the architecture goal. |
+| A-003 | Existing package-contract and control-plane APIs can be exposed through a narrow public service boundary without duplicating their semantics. | If the current boundaries are too private or CLI-shaped, the implementation plan must add a tested public facade before the MCP adapter. |
 | A-004 | Controlled writes are useful but not required for first value. | If writes are mandatory, plan-token and approval semantics become earlier blockers. |
-| A-005 | Current repository tests can be expanded without major restructuring. | If not, a test architecture cleanup phase is required before graph validation. |
+| A-005 | Current repository tests can add MCP protocol and client-compatibility lanes without restructuring unrelated package tests. | If not, the implementation plan must isolate only the minimum MCP test harness work. |
 
 ### 3.4 Constraints
 
@@ -157,6 +165,8 @@ Layer 4 — Optional future expansion
 | C-004 | MCP server must not replace docs/CLI/CI. | Standards repository governance requirement. |
 | C-005 | Local stdio is preferred before remote transport. | Security and complexity control. |
 | C-006 | Sensitive/destructive operations require explicit review and plan-first semantics. | MCP tool safety and agent trust boundary. |
+| C-007 | Consumer inspection and planning must use the unified `.standards/` control plane; legacy `.project-standards.yml`, V1 manifests, and copy-adopt engines are migration evidence only. | ADR 0023 and the published Catalog 5 architecture. |
+| C-008 | Protocol, SDK, and client feature claims must be reverified at implementation preflight and exact dependency versions locked before code depends on them. | July 2026 MCP protocol and Python SDK transition. |
 
 ---
 
@@ -164,8 +174,8 @@ Layer 4 — Optional future expansion
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Put the standards repository in ideal MCP-ready condition before server work. | `SPEC-MT01` readiness gate passes. | MS-0 through MS-5 |
-| G-002 | Build MCP on stable internal contracts, not hardcoded standards. | MCP reads graph API/manifests and exposes generic resources/tools. | MS-1 through MS-4 |
+| G-001 | Preserve the completed MCP-ready repository foundation. | `SPEC-MT01` remains passing and no MCP change bypasses Catalog 5 or the control plane. | FR-003, FR-004, FR-018 |
+| G-002 | Build MCP on stable internal contracts, not hardcoded standards. | MCP reads exact payload and control-plane services and exposes generic resources/tools. | MS-1 through MS-4 |
 | G-003 | Deliver value incrementally. | Read-only resource server works before planners, writes, or remote features. | FR-007 through FR-014 |
 | G-004 | Keep operations safe. | Write tools require prior plan identity and explicit approval. | FR-015, FR-016 |
 | G-005 | Preserve non-MCP usability. | Consumer repos can still adopt and validate standards without MCP. | FR-004, FR-005 |
@@ -196,7 +206,8 @@ Layer 4 — Optional future expansion
 | Planning tool | Tool that returns an adoption, validation, drift, or write plan without mutating files. | Required before write tools. |
 | Controlled write | Mutating operation constrained by prior reviewed plan and explicit user approval. | Deferred until read-only/planning layers are stable. |
 | Generic MCP tool | Tool whose arguments include `standard_id`, operation, repo root, ref, or profile. | Opposite of per-standard tool. |
-| Standards graph API | Internal package layer that loads/validates manifests and exposes standard metadata/resources/providers. | MCP consumes it but does not own it. |
+| Package service boundary | Narrow typed facade over installed Catalog 5 package facts, resources, relationships, and provider descriptors. | MCP consumes it; `InstalledDistribution`, package contracts, and the control plane remain authoritative. |
+| Consumer control plane | `.standards/` desired/catalog/lock state plus deterministic reconciliation, provider, and drift behavior. | Replaces the roadmap's original adopt-engine assumptions. |
 | Transport | MCP communication mechanism, e.g. stdio or Streamable HTTP. | Local stdio first; remote deferred. |
 
 ---
@@ -207,25 +218,26 @@ Layer 4 — Optional future expansion
 
 | ID | Requirement | Rationale | Acceptance Criteria | Priority |
 | --- | --- | --- | --- | --- |
-| FR-001 | The roadmap shall require baseline inventory before design changes. | Existing strengths and gaps must be known before refactoring. | Inventory covers standards, registry, adopt manifests, validators, workflows, tests, and docs. | Must |
+| FR-001 | The roadmap shall require baseline inventory before design changes. | Existing strengths and gaps must be known before refactoring. | The completed inventory and this refresh cover Catalog 5 families/payloads, catalog channels, provider contracts, control-plane APIs, validators, workflows, tests, and docs. | Must |
 | FR-002 | The roadmap shall require ADRs before implementing irreversible architecture choices. | Decisions should be durable and reviewable. | ADRs for manifest model, authority graph, generic tooling interface, provider model, and MCP readiness are approved or explicitly deferred. | Must |
 | FR-003 | The roadmap shall require `SPEC-MT01` implementation before MCP implementation. | MCP must consume stable repo contracts. | `SPEC-MT01` Definition of Done passes. | Must |
 | FR-004 | The roadmap shall preserve docs/CLI/CI as first-class interfaces. | MCP is optional access/orchestration, not the canonical system. | No phase removes existing non-MCP workflows. | Must |
-| FR-005 | The roadmap shall define a standards graph API before MCP server work. | MCP should not duplicate manifest parsing and graph logic. | Graph API has tests and JSON/human CLI output. | Must |
-| FR-006 | The roadmap shall require existing standards to be retrofitted before MCP resource exposure. | MCP resources should be complete and uniform. | Existing standards have manifests/resources/authority declarations. | Must |
+| FR-005 | The roadmap shall require a typed package service boundary before MCP registration code. | MCP should not duplicate package loading, manifest parsing, relationship logic, or provider dispatch. | The boundary wraps installed-distribution and control-plane APIs, has direct tests, and returns SDK-independent models. | Must |
+| FR-006 | The roadmap shall require the selected Catalog 5 payloads to pass package, graph, resource, and provider validation before MCP resource exposure. | MCP resources must come from version-qualified immutable package contracts. | All selected payloads validate and adding a new fixture payload requires no MCP registration branch. | Must |
 | FR-007 | The first MCP implementation phase shall be read-only and local. | Early value with low risk. | Local stdio server lists/reads standards resources and returns repo status without writes. | Must |
 | FR-008 | MCP resources shall be manifest-generated. | New standards should appear without tool-code updates. | Adding a fixture standard creates resources automatically. | Must |
 | FR-009 | MCP tools shall be generic, not per-standard. | Tool surface must remain small and scalable. | Tool list remains stable when a new fixture standard is added. | Must |
-| FR-010 | The roadmap shall add planning tools before write tools. | Writes should be reviewable and deterministic. | `adoption_plan`, `drift_plan`, or equivalent exists before any apply tool. | Must |
-| FR-011 | The roadmap shall require structured MCP tool outputs. | Agents and clients need reliable parsing and traceability. | Tool outputs include JSON structured content and human text where appropriate. | Should |
+| FR-010 | The roadmap shall add planning tools before write tools. | Writes should be reviewable and deterministic. | `reconcile_preview` or an equivalent control-plane preview exists before any apply tool. | Must |
+| FR-011 | The roadmap shall require structured MCP tool outputs. | Agents and clients need reliable parsing and traceability. | Every tool result includes typed JSON structured content; findings-bearing results additionally include bounded human-readable text. | Should |
 | FR-012 | The roadmap shall require validation/drift tools before adoption apply tools. | Users need confidence before mutating repos. | Read-only validation and drift reports work against at least one consumer fixture. | Must |
 | FR-013 | The roadmap shall defer remote transport until local MCP proves useful. | Remote transport adds auth and DNS rebinding concerns. | Remote phase remains blocked until local server adoption criteria pass. | Must |
 | FR-014 | The roadmap shall require security review before exposing write tools. | MCP tools can perform arbitrary actions if poorly scoped. | Write-tool ADR/spec includes approval, path allowlist, plan identity, and audit behavior. | Must |
 | FR-015 | Controlled write tools shall require prior reviewed plan identity. | Prevents agent from applying unreviewed mutation. | Apply tool rejects stale/missing/mismatched plan IDs. | Should |
-| FR-016 | The roadmap shall require a separate detailed MCP implementation spec before coding the server. | This roadmap is sequencing, not implementation design. | MCP spec exists and is approved before Step 10 / MS-1 server coding starts. | Must |
+| FR-016 | The roadmap shall require a separate detailed MCP implementation spec before coding the server. | This roadmap is sequencing, not implementation design. | Refreshed MCP spec passes local gates and semantic review, then receives owner approval before Step 10 / MS-2 server coding starts. | Must |
 | FR-017 | The roadmap shall include fleet/multi-repo reporting only after single-repo accuracy. | Fleet reports multiply errors if primitives are wrong. | Single-repo resource, status, validation, and drift tools pass fixtures first. | Should |
 | FR-018 | The roadmap shall require independent-standard-package validation before server implementation. | The MCP server should consume explicit relationships, not infer hidden dependencies. | `SPEC-MT01` graph tests reject hidden hard dependencies and generated indexes show companions/extensions before Step 08 starts. | Must |
-| FR-019 | The roadmap shall require MCP protocol/SDK source recheck before dependency selection. | MCP Python SDK and protocol guidance are version-sensitive. | MCP server MS-0 cannot start until the current MCP spec, Python SDK stable/pre-release status, and client compatibility assumptions are rechecked and recorded. | Must |
+| FR-019 | The roadmap shall require MCP protocol/SDK source recheck before dependency selection. | MCP Python SDK and protocol guidance are version-sensitive. | MCP server implementation preflight cannot complete until the latest final protocol, stable SDK line, licenses, conformance status, and target-client capabilities are rechecked, recorded, and exactly constrained. | Must |
+| FR-020 | The roadmap shall require a durable, validated, review-converged implementation plan before server code. | The refreshed specifications are too broad to execute safely from milestone prose alone. | One active master plan under `docs/plans/` traces every `SPEC-MS01` Must and Should requirement to dependency-ordered RED-GREEN-REFACTOR tasks and passes its plan validator plus opposite-provider review. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -233,9 +245,9 @@ Layer 4 — Optional future expansion
 | --- | --- | --- | --- | --- |
 | NFR-001 | Sequencing | Later phases shall not start until prerequisite gates pass. | Completion report for each milestone names gate evidence. | Must |
 | NFR-002 | Safety | Mutating features shall be delayed until read-only and planning features are stable. | No apply/write tools in first MCP release. | Must |
-| NFR-003 | Maintainability | MCP implementation shall call internal graph/CLI/provider APIs instead of parsing prose. | Code review verifies no per-standard switch statements except provider registration. | Must |
+| NFR-003 | Maintainability | MCP implementation shall call package/control-plane service APIs instead of parsing prose, V1 manifests, or CLI text. | Code review verifies no per-standard switch statements and no duplicate package, provider, reconciliation, or finding semantics in the MCP layer. | Must |
 | NFR-004 | Context efficiency | MCP resources shall support lazy access to standard docs/summaries/templates. | Client can fetch one standard summary without loading all standards. | Must |
-| NFR-005 | Portability | Local server shall run from source checkout and installed package. | Tests cover both path assumptions where practical. | Should |
+| NFR-005 | Portability | Local server shall run from source checkout and an extracted/installed wheel with equivalent exposed package facts. | Contract tests cover both modes and compare normalized resource/tool results. | Should |
 | NFR-006 | Observability | MCP tools shall return explicit findings and traceable resource links. | Structured outputs include rule IDs, standard IDs, paths, severity, and remediation. | Should |
 | NFR-007 | Security | Remote transport shall require a separate threat model. | No remote phase begins without security ADR/spec. | Must |
 
@@ -245,7 +257,7 @@ Layer 4 — Optional future expansion
 | --- | --- | --- | --- | --- |
 | IR-001 | Project specs | Each major phase shall have or reference an approved spec. | Full/Standard/Light project-spec docs as appropriate. | MCP coding does not begin without MCP-specific spec. |
 | IR-002 | ADRs | Architecture decisions shall be recorded in ADRs. | ADR Standard. | ADRs referenced from specs and implementation PRs. |
-| IR-003 | Internal graph API | MCP shall consume typed graph/resource/provider APIs. | Python package API. | Read-only MCP can list resources from graph. |
+| IR-003 | Package/control-plane APIs | MCP shall consume typed package, resource, provider, and reconciliation-plan APIs behind an SDK-independent facade. | Python typed interfaces; JSON CLI output is a compatibility oracle, not the in-process implementation boundary. | Read-only MCP can list resources and inspect/plan against a consumer fixture without parsing subprocess prose. |
 | IR-004 | MCP transport | First MCP version shall use stdio. | MCP stdio server process. | Client can launch server locally as subprocess. |
 | IR-005 | MCP resources | Standards resources shall use manifest-derived URIs. | `standards://...` scheme or equivalent. | Resource list matches generated index. |
 | IR-006 | MCP tools | Tools shall expose generic operations. | Stable tool names and input/output schemas. | New standard fixture does not add tools. |
@@ -257,7 +269,7 @@ Layer 4 — Optional future expansion
 | --- | --- | --- | --- | --- |
 | DR-001 | Roadmap phase | Track step order, prerequisites, required inputs, exit criteria, and unlocks. | Unique step label; dependencies exist; no circular dependency. | This roadmap spec. |
 | DR-002 | Readiness gate | Track blocking conditions before MCP. | All Must checklist items pass. | `SPEC-MT01`. |
-| DR-003 | MCP resource descriptor | Generated from standard manifests. | URI unique; path exists; MIME/audience declared. | Standards graph API. |
+| DR-003 | MCP resource descriptor | Generated from the exact selected payload's declared resources. | URI unique; payload identity/version and digest retained; path exists; media type declared. | Package service boundary. |
 | DR-004 | MCP tool descriptor | Stable generic tool schemas. | Names stable; input/output schema defined; safety class declared. | MCP implementation spec. |
 | DR-005 | Plan identity | Identifies reviewed mutation plan. | Hash or opaque ID tied to standard IDs, repo state, and action list. | Future write-tool design. |
 
@@ -267,7 +279,7 @@ Layer 4 — Optional future expansion
 
 ### 8.1 Architecture Summary
 
-The roadmap uses a staged dependency architecture. First, the repository becomes self-describing and graph-validated. Second, the internal graph API becomes stable enough for consumers. Third, a local read-only MCP server exposes graph-derived resources and generic analysis tools. Fourth, planning tools add structured adoption/drift plans. Fifth, controlled writes are introduced only after the safety model is reviewed. Remote transport and multi-repo reporting remain later optional phases.
+The roadmap now starts from a completed platform rather than a proposed graph. Catalog 5 package manifests, immutable resources, providers, and relationships feed a narrow SDK-independent service facade. The same facade delegates consumer inspection and planning to the `.standards/` control plane. A local read-only MCP adapter registers protocol resources, prompts where clients support them, and a small set of generic tools. Controlled writes, remote transport, and fleet reporting remain later optional phases with separate approval gates.
 
 ### 8.2 Architecture Views
 
@@ -275,9 +287,9 @@ The roadmap uses a staged dependency architecture. First, the repository becomes
 
 ```mermaid
 flowchart LR
-    StandardsRepo[project-standards Repo] --> GraphAPI[Standards Graph API]
-    GraphAPI --> CLI[Existing CLI / CI]
-    GraphAPI --> MCP[Future MCP Server]
+    StandardsRepo[Catalog 5 Packages] --> Services[Package and Control-Plane Services]
+    Services --> CLI[Existing CLI / CI]
+    Services --> MCP[Future MCP Server]
     MCP --> Agent[Claude Code / Codex / Other MCP Client]
     Agent --> Consumer[Consumer Repository]
     CLI --> Consumer
@@ -289,8 +301,8 @@ flowchart LR
 flowchart TB
     subgraph PhaseA[Meta Repo Preparation]
         ADRs[ADRs]
-        Manifests[standard.toml + adopt.toml]
-        Graph[Graph Validator]
+        Manifests[V2 family and payload manifests]
+        Graph[Package and Graph Validators]
         Fixtures[Consumer Fixtures]
     end
 
@@ -311,9 +323,11 @@ flowchart TB
 | Component | Responsibility | Interfaces | Notes |
 | --- | --- | --- | --- |
 | `SPEC-MT01` | Defines the meta-repo changes required before MCP. | Full project spec. | Blocking prerequisite. |
-| Standards graph API | Provides typed standard/resource/provider graph. | Python API, CLI JSON. | MCP dependency. |
+| Package service facade | Exposes version-qualified package, resource, relationship, and provider facts from installed Catalog 5 data. | SDK-independent Python models. | May wrap existing internals; must not reinterpret them. |
+| Consumer service facade | Exposes control-plane state, reconciliation plans, findings, and read-only provider results. | SDK-independent Python models. | No CLI-text parsing or writes in v1. |
 | Read-only MCP server | Exposes standards resources and safe analysis. | MCP stdio. | First server version. |
-| Generic MCP tool layer | Provides `standards_list`, `repo_inspect`, `adoption_plan`, `validate_repo`, `drift_check`, etc. | MCP tools with schemas. | No per-standard tools. |
+| Generic MCP read layer | Provides `standards_list`, `repo_inspect`, `validate_repo`, and `drift_check`. | MCP tools with schemas. | No per-standard tools; no mutation. |
+| Generic MCP planning layer | Provides later-phase `reconcile_preview` over the existing control-plane plan. | Stable reconciliation schema. | Planning precedes any separately governed apply tool. |
 | Controlled write layer | Applies reviewed plans. | MCP tools with plan IDs. | Later phase only. |
 | Remote transport layer | Optional Streamable HTTP. | MCP HTTP endpoint. | Requires separate security spec. |
 
@@ -322,20 +336,21 @@ flowchart TB
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
 | D-001 | Complete `SPEC-MT01` before MCP implementation. | Prevents hardcoded server assumptions. | Start MCP now and refactor later. | `adr-0012-mcp-readiness-before-server-implementation.md` |
-| D-002 | Local stdio first for MCP. | Simplest local agent integration and lowest security surface. | Streamable HTTP first. | `adr-NNNN-local-stdio-first-mcp-transport.md` |
-| D-003 | Read-only MCP first. | Early value without mutation risk. | Start with adoption apply/write tools. | `adr-NNNN-read-only-first-mcp-scope.md` |
+| D-002 | Local stdio first for MCP. | Simplest local agent integration and lowest security surface. | Streamable HTTP first. | Planned MCP boundary ADR in Step 09 |
+| D-003 | Read-only MCP first. | Early value without mutation risk. | Start with adoption apply/write tools. | Planned MCP boundary ADR in Step 09 |
 | D-004 | Generic tools only. | Stable tool surface as standards grow. | Per-standard tools. | `adr-0005-stable-generic-agent-tooling-interface.md` |
-| D-005 | Manifest-generated resources. | New standards become visible automatically. | Hardcoded resource list. | `adr-NNNN-manifest-generated-mcp-resources.md` |
-| D-006 | Plan-first controlled writes. | Mutations need reviewable intent and replay protection. | Direct apply commands from agent request. | `adr-NNNN-plan-first-controlled-mcp-writes.md` |
-| D-007 | Remote transport deferred. | HTTP transport requires auth/origin/security design. | Remote server first. | `adr-NNNN-defer-remote-mcp-transport.md` |
+| D-005 | Payload-declared resources. | New package versions become visible automatically and exact version/digest identity survives exposure. | Hardcoded resource list. | ADR 0010 plus `SPEC-BA02` |
+| D-006 | Plan-first controlled writes. | Mutations need reviewable intent and replay protection. | Direct apply commands from agent request. | Future controlled-write ADR in Step 15 |
+| D-007 | Remote transport deferred. | HTTP transport requires auth/origin/security design. | Remote server first. | Planned MCP boundary ADR in Step 09 |
 | D-008 | Independent-standard-package validation gates MCP implementation. | MCP must consume a composable graph, not repair dependency problems at runtime. | Let MCP auto-adopt or auto-require standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
-| D-009 | Recheck MCP spec/SDK before implementation starts. | MCP SDK and protocol releases are active; dependency decisions can stale quickly. | Freeze July 2026 research as final; rejected. | `adr-NNNN-mcp-protocol-and-sdk-version-selection.md` |
+| D-009 | Recheck MCP spec/SDK before implementation starts. | MCP SDK and protocol releases are active; dependency decisions can stale quickly. | Freeze July 2026 research as final; rejected. | Planned protocol/SDK selection ADR in Step 09 |
+| D-010 | Reuse the unified consumer control plane for repository state, reconciliation plans, findings, and provider execution. | ADR 0023 superseded the original adopt-engine and package-specific provenance model. | Preserve a parallel MCP-only adoption/drift model; rejected. | ADR 0023 |
 
 ### 8.4 Solution Alternatives Considered
 
 | Alternative | Why Rejected |
 | --- | --- |
-| Build MCP immediately from current docs. | Would duplicate implicit repo knowledge and slow future standards additions. |
+| Build MCP directly over filesystem layout or CLI text. | Would duplicate package/control-plane semantics and couple the protocol layer to incidental presentation. |
 | Build a CLI-only solution and skip MCP. | CLI remains required, but MCP adds lazy resource and tool integration for agents. |
 | Build a remote MCP service first. | Adds security/auth complexity before proving local value. |
 | Implement write tools first. | Higher risk; read-only and planning tools deliver value sooner and establish safety contracts. |
@@ -343,18 +358,20 @@ flowchart TB
 
 ### 8.5 Design Constraints
 
-- No MCP coding before `SPEC-MT01` readiness gate.
+- No MCP coding before the refreshed specs and implementation plan converge and Step 09 freezes the implementation boundary.
 - No write tools before read-only and planning tools.
 - No remote transport before local stdio proof and security spec.
 - No per-standard tools unless an approved ADR proves a generic operation cannot represent the need.
 - No standards canonical data stored only in MCP server code.
+- No V1 manifest, legacy config, copy-adopt, or package-specific provenance path may become a current MCP authority.
+- No SDK type may cross the MCP adapter boundary into package/control-plane services.
 - No hidden mutation; every write requires plan review and explicit authorization.
 
 ### 8.6 Dependency Policy
 
 | Dependency | Allowed? | Reason |
 | --- | --- | --- |
-| MCP Python SDK | Conditional in MCP implementation phase | Exact SDK choice belongs to MCP implementation spec, not this roadmap. |
+| Official MCP Python SDK | Conditional after Step 09 | Select an exact stable release only after rechecking the final protocol, SDK support/conformance, license, and target-client behavior. Pre-release use requires explicit owner approval and a recorded risk disposition. |
 | Existing `project-standards` package | Yes | Canonical implementation substrate. |
 | New web framework | No for local stdio phase | Remote HTTP is deferred. |
 | GitHub API client | Deferred | GitHub mutations and fleet reporting are later phases. |
@@ -543,7 +560,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 | Threat | Impact | Mitigation |
 | --- | --- | --- |
-| Premature MCP hardcoding. | New standards require code changes and server becomes policy source. | Readiness gate and graph API prerequisite. |
+| Premature MCP hardcoding. | New standards require code changes and server becomes policy source. | Completed readiness gate plus package-service facade prerequisite. |
 | Tool poisoning / untrusted output. | Agent may treat repo data as instructions. | Keep instruction hierarchy explicit; expose standard docs as resources/data. |
 | Unsafe write tool. | File corruption or unintended repo mutation. | Read-only first; plan-first writes; explicit approval; path allowlists. |
 | Remote local-server attack. | Remote site interacts with local server. | Remote deferred; if used, bind localhost, validate origins, require auth. |
@@ -554,7 +571,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 - [x] Read-only MCP before writes.
 - [x] Local stdio before remote.
 - [x] Generic tools before standard-specific exceptions.
-- [ ] MCP implementation spec completed before coding server.
+- [ ] Refreshed MCP specs and implementation plan converge before coding server.
 - [ ] Write-tool safety ADR completed before apply tools.
 - [ ] Remote transport security spec completed before HTTP.
 - [ ] Tool outputs structured and sanitized.
@@ -566,7 +583,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 | Dimension | v1 Expectation | Growth Assumption | Design Consequence |
 | --- | --- | --- | --- |
-| Standards count | 7–12 | Dozens | Generic tools and manifest resources. |
+| Package-family count | 9 in Catalog 5 | Dozens | Generic tools and payload-declared resources. |
 | Consumer repos | 1–5 early dogfood repos | 20+ personal/org repos | Single-repo accuracy before fleet reporting. |
 | MCP clients | Claude Code/Codex-like local agents | More clients later | Use protocol-conformant stdio and stable schemas. |
 | Resource count | Hundreds at most | More with examples/templates | Lazy loading and resource annotations. |
@@ -578,13 +595,13 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 | ID | Risk | Likelihood | Impact | Mitigation | Owner |
 | --- | --- | --- | --- | --- | --- |
-| R-001 | MCP work starts before meta readiness. | Med | High | Make readiness gate blocking and ADR-backed. | Standards owner |
+| R-001 | MCP code starts from stale specifications or before the Step 09 dependency/client gate. | Med | High | Require converged specs/plan, accepted ADRs, and an exact stable dependency contract before the first RED test. | Standards owner |
 | R-002 | Read-only MCP lacks enough value. | Low | Med | Include repo inspection, resource reading, validation status, and drift report in early tools. | MCP spec owner |
 | R-003 | Tool surface grows too large. | Med | High | Generic tool ADR; review every proposed new tool as a new operation, not new standard. | MCP owner |
 | R-004 | Controlled writes introduce risk. | Med | High | Defer writes; require plan identity and safety spec. | Security reviewer |
 | R-005 | Different MCP clients behave differently. | Med | Med | Keep server protocol-simple, structured, and local first. | MCP implementer |
 | R-006 | Remote transport becomes tempting too early. | Med | High | Explicitly defer until local adoption criteria pass. | Standards owner |
-| R-007 | Standards graph API is too coupled to MCP. | Low | High | Build graph API for CLI/CI first; MCP consumes it later. | Tooling owner |
+| R-007 | Existing package/control-plane internals leak MCP SDK types or force CLI-text parsing. | Med | High | Add one narrow SDK-independent service facade before protocol registration. | Tooling owner |
 
 ---
 
@@ -603,8 +620,8 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 ### 17.1 Definition of Done
 
 - [x] `SPEC-MT01` readiness gate passes; see `docs/mcp-readiness.md`.
-- [ ] Required ADRs for MCP sequencing are approved.
-- [ ] Detailed MCP implementation spec is created and approved before MCP coding.
+- [ ] Refreshed `SPEC-RD01`, `SPEC-MS01`, and the implementation plan pass local validation and Claude Opus review to convergence.
+- [ ] Required MCP boundary and dependency ADRs are accepted before implementation code.
 - [ ] Read-only local MCP can list/read manifest-generated standards resources.
 - [ ] Generic tools work against a standards repo and at least one consumer fixture.
 - [ ] Adding a fixture standard changes resources/data but not top-level tools.
@@ -619,33 +636,36 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 | Meta readiness | `SPEC-MT01` graph/manifests/fixtures. | All Must readiness checks. | Yes |
 | MCP unit | Resource URI generation, tool schemas, structured outputs. | Valid/invalid arguments and unknown standards. | Yes for MCP phase |
 | MCP integration | Local stdio server lifecycle. | Start server, initialize, list resources/tools, read resource, call tools. | Yes for MCP phase |
-| Consumer fixture | Repo inspection, adoption plan, validate, drift check. | At least one Python/docs repo fixture. | Yes |
+| Consumer fixture | Repo inspection, reconciliation preview, validate, drift check. | At least one Python/docs repo fixture. | Yes |
 | Safety | Controlled write plan/apply. | Missing plan, stale plan, path escape, symlink/path allowlist. | Required before write phase |
 | Remote | HTTP transport/auth/origin. | Deferred. | No for v1 |
 
 ### 17.3 Requirement-to-Test Traceability
 
+Status distinguishes completed evidence (`Passing`), an active prohibition (`Guard Active`), a specified but unexecuted future gate (`Gate Defined`), and implementation work that has begun but lacks complete acceptance evidence (`In Progress`) or has not begun (`Not Started`).
+
 | Requirement ID | Test / Verification Method | Status |
 | --- | --- | --- |
-| FR-001 | Baseline inventory artifact. | Not Started |
-| FR-002 | ADR files and review checklist. | Not Started |
+| FR-001 | `docs/mcp-readiness.md`, `docs/handoff/architecture.md`, Catalog 5 manifests, and the 2026-07-24 spec refresh evidence ledger. | Passing |
+| FR-002 | Accepted ADRs 0005, 0012, 0013, 0018, 0019, and 0021-0024; Step 09 plan task covers remaining MCP-only decisions before code. | Passing |
 | FR-003 | `docs/mcp-readiness.md`. | Passing |
-| FR-004 | Existing CLI/docs/CI tests remain passing. | Not Started |
-| FR-005 | Standards graph API tests. | Not Started |
-| FR-006 | Existing standards manifest coverage report. | Not Started |
+| FR-004 | Published 5.8.0 verification plus future implementation regression gates. | Passing; Gate Defined |
+| FR-005 | Current package/control-plane API tests plus planned facade contract tests. | In Progress |
+| FR-006 | `docs/research/2026-07-12-catalog-5-mcp-exposure-review.md` and current package-contract gates. | Passing |
 | FR-007 | Local read-only MCP smoke test. | Not Started |
 | FR-008 | Fixture standard resource discovery test. | Not Started |
 | FR-009 | Tool list snapshot test across fixture standard addition. | Not Started |
 | FR-010 | Planning tool exists before apply tool registration. | Not Started |
 | FR-011 | Structured output schema review. | Not Started |
 | FR-012 | Validation/drift consumer fixture tests. | Not Started |
-| FR-013 | Remote transport blocked until local evidence criteria. | Not Started |
+| FR-013 | Remote transport blocked until local evidence criteria. | Guard Active |
 | FR-014 | Write safety ADR/spec review. | Not Started |
 | FR-015 | Apply tool plan identity tests, when write phase starts. | Not Started |
-| FR-016 | `SPEC-MS01` approved before server coding. | Not Started |
+| FR-016 | Refreshed `SPEC-MS01` and converged specification-review result. | In Progress |
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
-| FR-019 | MCP protocol/SDK source recheck entry recorded before server MS-0. | Not Started |
+| FR-019 | 2026-07-24 stable/RC research baseline plus mandatory Step 09 final recheck and exact pin. | Gate Defined |
+| FR-020 | `docs/plans/2026-07-24-project-standards-mcp-server-plan.md`, `scripts/plan.py validate`, and converged plan-review result. | In Progress |
 
 ---
 
@@ -655,7 +675,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 | Item              | Value                                                   |
 | ----------------- | ------------------------------------------------------- |
-| Runtime           | Python package and local MCP subprocess.                |
+| Runtime           | Python 3.14+ package and local MCP subprocess.          |
 | OS / Platform     | Developer workstation / local coding-agent environment. |
 | Datastore         | Repository files and transient in-memory graph.         |
 | External services | None for read-only local v1.                            |
@@ -666,15 +686,11 @@ Runtime services:
 
 | Service | Purpose | Start Mode | Health Signal |
 | --- | --- | --- | --- |
-| Project Standards MCP | Expose standards resources and generic tools. | Client-launched stdio subprocess. | Successful initialize/list/read/tool calls. |
+| Project Standards MCP | Expose standards resources and generic tools. | Client-launched stdio subprocess. | Successful protocol discovery plus supported list/read/call operations for the selected final revision. |
 
 ### 18.2 Configuration
 
-| Setting | Required? | Default | Description |
-| --- | --- | --- | --- |
-| `PROJECT_STANDARDS_REPO_ROOT` | Conditional | current working directory | Explicit standards repo root for server/dev testing. |
-| `PROJECT_STANDARDS_CONSUMER_ROOT` | Conditional | client root / argument | Consumer repo root for repo-inspection tools. |
-| `PROJECT_STANDARDS_MCP_READ_ONLY` | No | true for v1 | Safety mode disabling writes. |
+The v1 server has no behavior-changing environment-variable configuration. The launch command and selected Catalog 5 distribution determine package resources. Consumer operations receive an approved root from the client capability when supported or an explicit absolute `repo_root` argument. Read-only behavior is structural because no mutating tools are registered.
 
 **Environment matrix:**
 
@@ -686,21 +702,21 @@ Runtime services:
 
 ### 18.3 Deployment Flow
 
-1. Complete `SPEC-MT01` readiness.
-2. Write detailed MCP implementation spec.
-3. Add MCP package entrypoint behind read-only server mode.
-4. Add local stdio integration tests.
-5. Add resource listing/reading from standards graph.
-6. Add generic non-mutating tools.
-7. Dogfood with one consumer repo.
-8. Expand to planning tools.
-9. Review write-tool safety spec before any mutation.
-10. Release only when existing non-MCP gates still pass.
+1. Preserve the completed `SPEC-MT01` readiness evidence.
+2. Converge the refreshed roadmap, server specification, and implementation plan.
+3. Recheck and record the final protocol, stable SDK, license, conformance, and target-client matrix; accept MCP boundary ADRs.
+4. Add the SDK-independent package/control-plane service facade through RED-GREEN-REFACTOR tasks.
+5. Add the client-launched stdio adapter and protocol contract tests.
+6. Add version-qualified resource discovery/reads and only the client-compatible prompt surface.
+7. Add generic non-mutating tools over package/control-plane services.
+8. Dogfood with repository fixtures, an installed wheel, and an owner-approved real consumer repository.
+9. Keep write and remote work outside the v1 implementation plan.
+10. Release only through a separately authorized release task after every existing non-MCP gate remains green.
 
 ### 18.4 Rollout Controls
 
 - Server starts read-only.
-- Write tools disabled by default even after implemented.
+- No write tools are registered in v1.
 - Remote transport absent until approved.
 - Tool count reviewed in every server PR.
 - New standard fixture must not add top-level tools.
@@ -728,7 +744,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 - [ ] This roadmap approved.
 - [x] `SPEC-MT01` completed; Step 07 passed on 2026-07-12.
-- [ ] MCP implementation spec created after readiness.
+- [ ] Refreshed MCP implementation spec and plan converge after readiness.
 - [ ] MCP ADRs for local stdio, read-only-first, generic tools, controlled writes, and remote deferral.
 - [ ] User setup instructions for local MCP.
 - [ ] Tool/resource reference generated from server schemas.
@@ -743,7 +759,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | Wave | Scope | Exit Criteria |
 | --- | --- | --- |
 | Wave 0 | Repository readiness and contracts. | `SPEC-MT01` complete. |
-| Wave 1 | Detailed MCP design. | MCP implementation spec and ADRs approved. |
+| Wave 1 | Current MCP specification and implementation planning. | Refreshed specs and plan converge; boundary/dependency ADR work is explicitly sequenced. |
 | Wave 2 | Local read-only MCP. | Resource server and safe generic tools pass fixtures. |
 | Wave 3 | Planning and drift workflows. | Plans and reports work without writes. |
 | Wave 4 | Controlled writes. | Safety model approved and apply tools pass tests. |
@@ -761,67 +777,72 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | Step 05 | Retrofit existing standards | Step 04 | Graph validator available. | Manifests/resources/authorities for all existing standards. | All existing standards pass graph validation. | Step 06 |
 | Step 06 | Dogfood fixtures and generated index | Step 05 | Standards retrofitted. | Consumer fixtures, generated standards index, relationship catalog, freshness checks. | Pairwise/all-standard fixture checks pass and companion/extension metadata is visible. | Step 07 |
 | Step 07 | MCP-readiness gate | Step 06 | `SPEC-MT01` traceability complete. | Readiness report. | No blocking gaps, no hidden hard dependencies, no stale generated indexes. | Step 08 |
-| Step 08 | MCP implementation spec | Step 07 | Readiness gate pass. | Full project spec for MCP server. | Spec approved. | Step 09 |
-| Step 09 | MCP ADRs | Step 08 | MCP spec draft. | ADRs for stdio-first, read-only-first, generic tools, resource URI scheme. | ADRs approved. | Step 10 |
-| Step 10 | MCP skeleton | Step 09 | MCP spec + ADRs; SDK dependency rechecked and pinned behind adapter. | Package entrypoint, local stdio lifecycle, initialization tests. | Server starts and responds to basic protocol tests without stdout contamination. | Step 11 |
-| Step 11 | Resource layer | Step 10 | Graph API available. | Manifest-generated `standards://` resources. | List/read resources pass tests. | Step 12 |
+| Step 08 | MCP specification and plan refresh | Step 07 | Readiness gate pass and current repository evidence. | Refreshed `SPEC-RD01`, `SPEC-MS01`, reference pack, and durable TDD implementation plan. | Local validators pass and Claude Opus spec/plan reviews converge. OQ-001 and other Step 09 decisions may remain open only when the converged plan binds them to a pre-code Step 09 gate. | Step 09 |
+| Step 09 | Implementation boundary and dependency freeze | Step 08 | Converged spec and plan; final protocol/SDK releases available or owner accepts a documented alternative. | ADRs for service/SDK boundary, stdio/read-only scope, resource URI rules, protocol/SDK version selection, and remote deferral; exact dependency constraint and client matrix. | ADRs accepted; final protocol and stable SDK support are proven; no blocking client gap. | Step 10 |
+| Step 10 | Service facade and MCP skeleton | Step 09 | Accepted boundary ADRs and exact dependency lock. | SDK-independent package/control-plane facade, package entrypoint, local stdio adapter, protocol tests. | Server starts from source and installed wheel, reports accurate capabilities, and keeps stdout protocol-clean. | Step 11 |
+| Step 11 | Resource and prompt layer | Step 10 | Service facade available. | Payload-derived, version-qualified resources and only client-supported prompt exposure. | List/read resources pass; fixture payload appears without registration changes; prompt/tool fallback decisions match the client matrix. | Step 12 |
 | Step 12 | Generic read-only tools | Step 11 | Resource layer. | `standards_list`, `repo_inspect`, `standards_resolve`, plus `standard_read` only if client resource UX requires it. | Tool schemas and fixture calls pass; optional fallback is justified if present. | Step 13 |
 | Step 13 | Validation and drift tools | Step 12 | Repo inspection working. | `validate_repo`, `drift_check`, structured findings. | Consumer fixture reports accurately. | Step 14 |
-| Step 14 | Planning tools | Step 13 | Validation/drift stable. | `adoption_plan`, `upgrade_plan`, `exception_plan`. | Plans are deterministic and reviewable. | Step 15 |
+| Step 14 | Planning tools | Step 13 | Validation/drift stable. | Generic preview of the existing reconciliation and provider mutation plans without apply access. | Plans are deterministic, content-safe, reviewable, and byte-equivalent in meaning to authoritative control-plane JSON. | Step 15; optional Step 17 or Step 18 design |
 | Step 15 | Controlled write safety spec | Step 14 | Planning tools stable. | Separate safety spec/ADR for apply tools. | Approved by owner. | Step 16 |
-| Step 16 | Controlled local write tools | Step 15 | Safety spec approved. | `adoption_apply`, `fix_apply`, plan ID/hash checks. | Apply tests reject unsafe/stale/unplanned writes. | Step 17 |
-| Step 17 | Multi-repo/fleet design | Step 16 | Single-repo workflows stable. | Separate fleet reporting spec. | Approved if needed. | Step 18 |
-| Step 18 | Remote transport design | Step 16 | Local use proves value; remote need exists. | Remote security/transport spec. | Approved threat model, auth, origin handling. | Optional remote implementation |
+| Step 16 | Controlled local write tools | Step 15 | Safety spec approved. | Separately specified apply tools that reuse reconciliation fingerprint/precondition checks. | Apply tests reject unsafe/stale/unplanned writes. | — |
+| Step 17 | Multi-repo/fleet design | Step 14 | Single-repo workflows stable and a fleet use case exists. | Separate fleet reporting spec. | Approved if needed. | Optional fleet implementation |
+| Step 18 | Remote transport design | Step 14 | Local use proves value; remote need exists. | Remote security/transport spec. | Approved threat model, auth, origin handling. | Optional remote implementation |
 
-### MS-0 — Foundation
+### MS-0 — Completed Repository Foundation
 
 1. Complete Step 00 through Step 07.
 2. Do not write MCP code.
 3. Ensure standards graph and readiness report exist.
 4. Ensure existing non-MCP workflows still pass.
 
-### MS-1 — Core workflow
+### MS-1 — Reviewed Implementation Boundary
 
-1. Complete Step 08 through Step 12.
+1. Complete Step 08 and Step 09.
+2. Converge specifications and plan before implementation.
+3. Freeze the service boundary, final protocol, stable SDK, exact dependency constraint, and target-client contract.
+
+### MS-2 — Local Read-Only Server
+
+1. Complete Step 10 through Step 12.
 2. Implement only local read-only MCP server features.
-3. Prove resources and generic read-only tools.
+3. Prove package resources and generic discovery/inspection tools from source and installed wheel.
 
-### MS-2 — Domain logic
+### MS-3 — Validation and Planning
 
 1. Complete Step 13 and Step 14.
-2. Add validation, drift, and planning semantics.
-3. Ensure outputs are structured and deterministic.
+2. Expose existing validation, drift, reconciliation-plan, and provider-plan semantics without writes.
+3. Ensure outputs are structured, deterministic, bounded, and content-safe.
 
-### MS-3 — User and admin experience
+### MS-4 — User Experience and Hardening
 
-1. Document local MCP setup.
-2. Document resource URI scheme and tool reference.
-3. Dogfood with at least one consumer repo.
-4. Improve error messages and remediation hints.
+1. Document local MCP setup, resource URI rules, tool reference, and client-specific gaps.
+2. Dogfood with fixtures, installed wheel, and an owner-approved consumer repository.
+3. Run the complete repository gate and produce release-readiness evidence without publishing.
 
-### MS-4 — Automation / notifications / external actions
+### MS-5 — Future Controlled Writes
 
-1. Complete Step 15 and Step 16 only after safety approval.
-2. Add controlled local write tools.
-3. Keep remote/GitHub writes out of scope.
+1. Complete Step 15 and Step 16 only under a separate approved scope.
+2. Reuse the control-plane executor; do not add an MCP writer.
+3. Keep remote and GitHub writes out of scope.
 
-### MS-5 — Hardening and production readiness
+### MS-6 — Optional Expansion
 
-1. Run full repo gate and MCP integration tests.
-2. Validate no per-standard tool sprawl.
-3. Validate new fixture standard is discovered without tool-code changes.
-4. Produce final completion report.
+1. Step 17 may produce a separately approved fleet-reporting specification after single-repository workflows are stable.
+2. Step 18 may produce a separately approved remote-transport specification only after local use proves value and a concrete remote need exists.
+3. Neither optional design is part of the local read-only MCP release.
 
 ### Milestone Summary
 
 | Milestone | Deliverable | Exit Criteria |
 | --- | --- | --- |
 | MS-0 Foundation | MCP-ready standards repository | `SPEC-MT01` passes readiness gate |
-| MS-1 Read-only MCP | Local stdio resources and generic read-only tools | MCP lists/reads resources and inspects repo fixtures |
-| MS-2 Planning | Validation, drift, adoption/upgrade/exception plans | Plans deterministic and structured |
-| MS-3 UX/docs | Setup and tool/resource docs | A coding agent can use server from docs alone |
-| MS-4 Controlled writes | Plan-first local apply tools | Safety tests pass and writes are disabled-by-default or explicitly approved |
-| MS-5 Hardening | Stable local release candidate | Full gate, integration tests, dogfood pass |
+| MS-1 Reviewed boundary | Converged docs, ADRs, final protocol/SDK/client contract | No code starts with an unresolved dependency or client decision |
+| MS-2 Read-only MCP | Local stdio resources and generic discovery/inspection tools | MCP reads exact payload resources and inspects repo fixtures from source and wheel |
+| MS-3 Planning | Validation, drift, and reconciliation/provider previews | Plans and findings are deterministic, structured, bounded, and non-mutating |
+| MS-4 UX and hardening | Setup/reference docs and stable local candidate | Full gate, integration tests, client matrix, and dogfood pass |
+| MS-5 Future writes | Separately governed plan-first apply tools | Separate safety approval and stale-plan tests pass |
+| MS-6 Optional expansion | Separately governed fleet and/or remote designs | Step 17/18 need is demonstrated and each applicable specification is approved |
 
 ---
 
@@ -843,12 +864,12 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Which Python MCP SDK/package should be used? | Decide in the detailed MCP implementation spec, not this roadmap. | Yes | MCP implementer | Step 08 | Open |
-| OQ-002 | What exact `standards://` URI scheme should be used? | Define in MCP resource ADR/spec after manifest resource IDs exist. | Yes | MCP implementer | Step 09 | Open |
-| OQ-003 | Should MCP use package-bundled standards, live repo checkout, or both? | Support both; exact resolution order belongs in MCP spec. | Yes | MCP implementer | Step 08 | Open |
+| OQ-001 | Which final MCP protocol revision and stable Python SDK release should implementation pin? | On 2026-07-24, `2025-11-25` and SDK v1 are stable while the breaking `2026-07-28` protocol and SDK v2 are pre-release. Recheck after final publication and prefer an exact stable, conformance-tested combination. | Yes | Owner / MCP implementer | Step 09 | Open |
+| OQ-002 | What exact version-qualified resource URI grammar should be frozen? | Derive it from Catalog 5 standard ID, exact payload version, and declared resource ID; record canonicalization and compatibility in the Step 09 ADR. | Yes | MCP implementer | Step 09 | Open |
+| OQ-003 | Should MCP use package-bundled standards, live repo checkout, or both? | Installed wheel data is the production authority. Source checkout is a development/test mode and must produce equivalent exposed facts through an explicit injected repository service. | No | MCP implementer | Step 09 | Resolved |
 | OQ-004 | Should controlled writes ever call GitHub directly? | No for v1; local repo writes first. | No | Standards owner | Step 15 | Open |
 | OQ-005 | How should MCP clients surface approval for apply tools? | Server enforces plan identity; client UX varies. | No | MCP implementer | Step 15 | Open |
-| OQ-006 | Should semantic review be an MCP prompt or tool? | Prompt first; tool only if output becomes structured and deterministic enough. | No | Standards owner | Step 14 | Open |
+| OQ-006 | Should semantic review be an MCP prompt or tool? | Expose the declared provider only when the selected client surface can preserve its user-controlled semantics; otherwise omit it from v1 rather than reclassifying it as a model-controlled tool. | No | Standards owner | Step 11 | Open |
 | OQ-007 | When is remote MCP justified? | Only after local server has recurring use and a concrete remote use case. | No | Standards owner | Step 18 | Open |
 
 ---
@@ -868,18 +889,19 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 - Project Specification Standard — `standards/project-spec/README.md`.
 - Full Project Specification Template — `standards/project-spec/templates/spec-full-template.md`.
 - Meta-repository MCP Readiness Preparation Spec — `SPEC-MT01`.
-- Existing `project-standards` package docs — `src/project_standards/README.md`.
-- Existing adopt manifest loader — `src/project_standards/adopt/manifest.py`.
-- Existing adopt engine — `src/project_standards/adopt/engine.py`.
-- MCP Specification 2025-06-18 — especially Resources, Tools, Prompts, Roots, Transports, and Authorization.
-- MCP Python SDK main/v1 README — source for SDK stability and exact-pin dependency decision.
+- Current package and control-plane source — `src/project_standards/package_contract/` and `src/project_standards/control_plane/`.
+- MCP Specification 2025-11-25 — latest stable protocol on 2026-07-24.
+- MCP 2026-07-28 release candidate — breaking next revision scheduled for final publication on 2026-07-28.
+- MCP Python SDK main/v1 documentation — v1 is stable and v2 is pre-release on 2026-07-24; Step 09 rechecks the exact implementation target.
 - Project Standards MCP Specification Reference Pack — supporting source register and reference summaries.
 
 ### Project References
 
 - `docs/adr/` — ADRs created by Step 01/Step 09/Step 15.
 - `docs/specs/` — durable location for maintained Project Specification documents.
-- `.project-standards.yml` — existing repository validation config.
+- `.standards/config.toml` — current repository package-selection and configured-spec authority.
+- `src/project_standards/package_contract/` — source-repository package discovery, graph, resource, provider, and catalog contracts.
+- `src/project_standards/control_plane/` — installed-distribution, consumer state, provider, reconciliation-plan, finding, and executor boundaries.
 
 ---
 
@@ -917,7 +939,7 @@ The implementer shall:
 
 - Read this roadmap, `SPEC-MT01`, and relevant ADRs before starting any phase.
 - Do phases in order unless an approved `DEV-` row permits reordering.
-- Treat Step 07 as a hard gate before MCP implementation.
+- Treat completed Step 07 plus the Step 08-09 review and dependency gates as hard prerequisites to MCP implementation.
 - Treat Step 15 as a hard gate before controlled writes.
 - Record phase completion evidence in §17.3 or a linked completion report.
 - Keep tool additions generic and justify any new top-level MCP tool through ADR/OQ.
@@ -927,12 +949,13 @@ The implementer shall:
 
 The implementer shall not:
 
-- Start MCP server code before readiness gate.
+- Start MCP server code before the refreshed specifications, plan, MCP ADRs, and dependency/client gate pass.
 - Add per-standard MCP tools by default.
 - Add remote transport before local stdio proof and remote security spec.
 - Add write tools before planning tools and safety ADR.
 - Store standards policy only in MCP server code.
 - Bypass existing CLI/CI to make MCP tests pass.
+- Reintroduce legacy V1 manifests, `.project-standards.yml`, copy-adopt, or package-specific provenance as current authorities.
 
 ### B.3 Required Completion Report (verification gate)
 
