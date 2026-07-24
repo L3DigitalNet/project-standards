@@ -42,7 +42,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 
-- [ ] Execute the reviewed MCP implementation plan only after its Step 09 gate
+- [ ] Execute the MCP documentation reconciliation plan and re-lock the governing
+      specifications and implementation plan without starting MCP T1.
+
+- [ ] After documentation reconciliation, execute the reviewed MCP implementation
+      plan only after its Step 09 gate
       freezes a final stable protocol/SDK pair, client compatibility, and the
       SDK-independent service boundary.
 
