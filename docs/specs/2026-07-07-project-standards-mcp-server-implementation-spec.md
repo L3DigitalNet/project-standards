@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-MS01
 title: 'Project Standards MCP Server Implementation'
-status: approved
+status: review
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.0 | 2026-07-24 | Codex | Correct the two current Standard Bundle Authoring package-authority references from 2.2 to 2.5 without changing server scope or requirements. |
 | 0.9 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by defining eager installed-distribution integrity versus lazy MCP context loading, completing all-requirement traceability, aligning descriptor fields, clarifying snapshot refresh behavior, and making the client fallback condition mandatory. |
 | 0.8 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged local read-only server contract after Claude Opus high-effort review; retain the implementation-plan and protocol/SDK decision gates. |
 | 0.7 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories: reconcile ADR paths, make catalog discovery generation-explicit, define deterministic normalization and full-distribution fail-closed behavior, and clarify client-conditional tools/prompts. |
@@ -46,7 +47,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
-**Spec lifecycle:** This document is approved and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 now supplies the package and consumer control planes required by this design; implementation remains blocked until the approved implementation plan and the protocol/SDK decision gate in §19 pass.
+**Spec lifecycle:** This document is reopened for narrow review of current package-authority corrections and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 now supplies the package and consumer control planes required by this design; implementation remains blocked until the approved implementation plan and the protocol/SDK decision gate in §19 pass.
 
 ---
 
@@ -125,7 +126,7 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 Project Standards 5.8.0 is the published baseline:
 
-- Catalog 5 contains nine independently versioned package families; seven are consumer packages, Python Coding is reference-only, and Standard Bundle Authoring 2.2 is internal.
+- Catalog 5 contains nine independently versioned package families; seven are consumer packages, Python Coding is reference-only, and Standard Bundle Authoring 2.5 is internal.
 - V2 family and payload manifests declare exact versions, capabilities, relations, providers, resources, media types, and SHA-256 digests.
 - `InstalledDistribution` loads published package projections; `PackageRepository` validates source bundles for development and tests.
 - `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` are the unified consumer control plane.
@@ -1021,7 +1022,7 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 - Project Specification package 1.4 — installed Catalog 5 resource.
 - Meta-Repository MCP Readiness Preparation Spec — `SPEC-MT01`.
 - MCP Enablement Roadmap Spec — `SPEC-RD01`.
-- Standard Bundle Authoring 2.2 — current internal package authoring authority.
+- Standard Bundle Authoring 2.5 — current internal package authoring authority.
 - V2 package contracts — `src/project_standards/package_contract/`.
 - Installed distribution and unified consumer control plane — `src/project_standards/control_plane/`.
 - Project Standards MCP Specification Reference Pack — current external/internal source register.

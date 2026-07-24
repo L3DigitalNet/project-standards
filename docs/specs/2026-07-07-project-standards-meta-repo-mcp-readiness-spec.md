@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-MT01
 title: 'Project Standards Meta-Repository MCP Readiness Preparation'
-status: approved
+status: review
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -45,6 +45,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.2 | 2026-07-24 | Codex | Correct the current Standard Bundle Authoring package authority from 2.2 to 2.5 without changing the accepted historical readiness contract or evidence. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories by restoring unique section numbering, ordering revision history, and linking the two governing successor specifications. |
 | 1.0 | 2026-07-24 | Codex | Reconcile the completed historical readiness contract with Project Standards 5.8.0 and the successor V2 payload, provider, installed-distribution, and unified consumer-control-plane architecture without rewriting its accepted requirements or evidence. |
 | 0.9 | 2026-07-12 | Chris Purcell / L3DigitalNet with Codex | Complete Step 07: publish the no-blocker MCP-readiness report, close FR-019 and the remaining documentation deliverable, and approve the completed meta-repository preparation contract. |
@@ -57,7 +58,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full specification for preparing the `project-standards` meta-repository for a future scalable MCP server. |
 
-**Spec lifecycle:** This approved document is the completed historical readiness contract and is change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
+**Spec lifecycle:** This document is reopened for narrow review of a current package-authority correction and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. Its accepted requirements and evidence describe the path that completed on 2026-07-12; the Completion State subsection under §3.2 records the current successor architecture that the MCP server shall consume. This spec still excludes MCP server implementation.
 
 ---
 
@@ -206,7 +207,7 @@ A future MCP server can then be thin:
 
 The readiness goal remains satisfied, but Catalog 5 has evolved beyond the provisional names and layouts used by this implementation contract:
 
-- Project Standards 5.8.0 publishes nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.2.
+- Project Standards 5.8.0 publishes nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.5.
 - Immutable V2 family and payload manifests now carry exact version, exposure, capability, relationship, provider, resource, media-type, and digest contracts.
 - `InstalledDistribution` is the production package authority; `PackageRepository` is the bounded source validation and test-injection authority.
 - `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` form the unified consumer control plane.

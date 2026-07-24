@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-RD01
 title: 'Project Standards MCP Enablement Roadmap'
-status: approved
+status: review
 profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -36,6 +36,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.2 | 2026-07-24 | Codex | Reopen for the narrow T2-T3 reconciliation of current state and v1 tool/runtime authority against the installed Catalog 5 contracts. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve lock-review findings by separating optional expansion from controlled writes, normalizing traceability statuses and ADR evidence, and making structured-output acceptance deterministic. |
 | 1.0 | 2026-07-24 | Chris Purcell / L3DigitalNet with Codex | Approve and lock the converged roadmap after Claude Opus high-effort review; implementation remains blocked on the Step 09 final protocol, SDK, client, and service-boundary gate. |
 | 0.9 | 2026-07-24 | Codex with Claude Opus review | Close the final review advisory by defining every traceability status used and normalizing the remote-deferral guard label. |
@@ -48,7 +49,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This revision is approved and change-controlled. `SPEC-MT01` is complete, so the active boundary is the approved specification-and-plan gate before any MCP implementation. Step 09 still must freeze the final protocol, SDK, client, and service boundary before code begins. Later controlled-write and remote-transport phases still require separate approval.
+**Spec lifecycle:** This revision is under narrow review and remains change-controlled. `SPEC-MT01` is complete, so the active boundary is Step 08 documentation reconciliation before any MCP implementation. Step 09 remains the next no-code decision gate after the specification and implementation-plan reviews converge. Later controlled-write and remote-transport phases still require separate approval.
 
 ---
 
@@ -120,7 +121,7 @@ Project Standards 5.8.0 is published from `d007ba0`. Catalog 5 contains seven co
 
 The unified `.standards/` control plane now owns consumer desired state, installed catalog state, applied-state provenance, deterministic reconciliation planning, explicit apply, recovery, and drift reporting. `InstalledDistribution` is the production boundary for package facts; `PackageRepository` is the source-repository validation boundary. Typed provider operations and structured reconciliation results already supply the non-MCP semantics the server should expose.
 
-`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. The remaining blockers are documentation and dependency decisions: refresh and converge `SPEC-RD01` and `SPEC-MS01`, produce an executable implementation plan, and then freeze the protocol/SDK/client contract at the plan's preflight task.
+`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation is active under `docs/plans/2026-07-24-project-standards-mcp-documentation-reconciliation-plan.md`. Step 09 remains the next no-code decision gate only after the T5 specification review and T7 implementation-plan review converge; it then freezes the protocol, SDK, client, and service boundary before code begins.
 
 External MCP inputs are unusually time-sensitive on this review date. MCP `2025-11-25` is the latest stable protocol revision; the breaking `2026-07-28` revision is a locked release candidate scheduled four days later. The official Python SDK v1 line remains stable while v2 is pre-release with stable release targeted alongside the new protocol. The roadmap therefore forbids selecting a pre-release merely to make this document look current.
 
