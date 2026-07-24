@@ -26,7 +26,8 @@
 - Core control-plane, package, migration, source/wheel compatibility, composition, performance, formatting, typing, dependency, and documentation checks remain required.
 - The 5.1.1 migration correction preserves partial Catalog 4 adoption: absent package namespaces are skipped, present empty namespaces adopt defaults, unknown settings remain blocking findings, and malformed selected values fail closed with a trusted provider coordinate.
 - Verification claims are command-based; rerun the retained gate against current HEAD before claiming completion.
-- MCP readiness Step 07 is complete. MCP server implementation still waits for its separately governed protocol and SDK refresh.
+- MCP readiness Step 07 remains complete. SPEC-MT01 rev 1.1, SPEC-RD01 rev 1.1, and SPEC-MS01 rev 0.9 are refreshed for Project Standards 5.8.0, approved, and locked after Claude Opus high-effort convergence review.
+- The maximum-effort 12-task MCP plan passed Fable high-effort convergence review and remains definition-only. Step 09 must recheck the final 2026-07-28 protocol publication, stable SDK, license/conformance, and Codex/Claude compatibility before T2 begins.
 - Agent Handoff consumer retirement and the future `project-toolbox` and `agent-managed-repo` packages remain post-v5 work.
 - The consumer-facing [agent adoption/update prompt](adoption-prompt.md) resolves GitHub's latest official release once, pins that immutable tag for the task, and provides preview/apply and preservation guidance, verification, and sanitized upstream irregularity reporting.
 - Housekeeping 2026-07-19: `docs/superpowers/` retired (designs → `docs/specs/archive/`, research → `docs/research/`, active plan → `docs/plans/`); completed plans, review audits, and `docs/codex-reviews/` deleted.

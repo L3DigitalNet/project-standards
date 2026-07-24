@@ -42,7 +42,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 
-- [ ] Continue MCP enablement from SPEC-RD01 and SPEC-MS01 after refreshing current protocol and SDK inputs.
+- [ ] Execute the reviewed MCP implementation plan only after its Step 09 gate
+      freezes a final stable protocol/SDK pair, client compatibility, and the
+      SDK-independent service boundary.
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.
