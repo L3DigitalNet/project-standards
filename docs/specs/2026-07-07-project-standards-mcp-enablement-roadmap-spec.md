@@ -226,7 +226,7 @@ Layer 4 — Optional future expansion
 | FR-005 | The roadmap shall require a typed package service boundary before MCP registration code. | MCP should not duplicate package loading, manifest parsing, relationship logic, or provider dispatch. | The boundary wraps installed-distribution and control-plane APIs, has direct tests, and returns SDK-independent models. | Must |
 | FR-006 | The roadmap shall require the selected Catalog 5 payloads to pass package, graph, resource, and provider validation before MCP resource exposure. | MCP resources must come from version-qualified immutable package contracts. | All selected payloads validate and adding a new fixture payload requires no MCP registration branch. | Must |
 | FR-007 | The first MCP implementation phase shall be read-only and local. | Early value with low risk. | Local stdio server lists/reads standards resources and returns repo status without writes. | Must |
-| FR-008 | MCP resources shall be manifest-generated. | New standards should appear without tool-code updates. | Adding a fixture standard creates resources automatically. | Must |
+| FR-008 | MCP resources shall be derived from exact V2 payload declarations exposed by `InstalledDistribution`. | New standards should appear without tool-code updates. | Adding a valid fixture payload creates resources automatically, while an invalid installed payload prevents startup. | Must |
 | FR-009 | MCP tools shall be generic, not per-standard. | Tool surface must remain small and scalable. | Tool list remains stable when a new fixture standard is added. | Must |
 | FR-010 | The roadmap shall add planning tools before write tools. | Writes should be reviewable and deterministic. | `reconcile_preview` or an equivalent control-plane preview exists before any apply tool. | Must |
 | FR-011 | The roadmap shall require structured MCP tool outputs. | Agents and clients need reliable parsing and traceability. | Every tool result includes typed JSON structured content; findings-bearing results additionally include bounded human-readable text. | Should |
@@ -260,7 +260,7 @@ Layer 4 — Optional future expansion
 | IR-002 | ADRs | Architecture decisions shall be recorded in ADRs. | ADR Standard. | ADRs referenced from specs and implementation PRs. |
 | IR-003 | Package/control-plane APIs | MCP shall consume typed package, resource, provider, and reconciliation-plan APIs behind an SDK-independent facade. | Python typed interfaces; JSON CLI output is a compatibility oracle, not the in-process implementation boundary. | Read-only MCP can list resources and inspect/plan against a consumer fixture without parsing subprocess prose. |
 | IR-004 | MCP transport | First MCP version shall use stdio. | MCP stdio server process. | Client can launch server locally as subprocess. |
-| IR-005 | MCP resources | Standards resources shall use manifest-derived URIs. | `standards://...` scheme or equivalent. | Resource list matches generated index. |
+| IR-005 | MCP resources | Standards resources shall use exact payload-derived URIs. | Generation- and version-qualified `standards://...` scheme. | Resource discovery matches the complete validated `InstalledDistribution` and every read rechecks declaration, contained path, and digest integrity. |
 | IR-006 | MCP tools | Tools shall expose generic operations. | Stable tool names and input/output schemas. | New standard fixture does not add tools. |
 | IR-007 | Controlled writes | Apply tools shall require plan ID/hash. | Plan output + apply input contract. | Apply rejects mismatched plan. |
 
@@ -452,7 +452,7 @@ Expected result:
 | EC-001 | New standard added after MCP v1 ships. | MCP resources and generic tools discover it through manifests without new tool names. |
 | EC-002 | Standard declares no validator. | MCP reports no validator provider rather than inventing one. |
 | EC-003 | Consumer repo has local exception. | MCP reports exception and links ADR/config if declared; otherwise reports unmanaged drift. |
-| EC-004 | MCP server sees stale generated index. | It should rely on graph loader or report stale index; not silently trust stale generated docs. |
+| EC-004 | The installed distribution contains an undeclared, missing, escaping, or digest-mismatched resource. | Eager construction or the selected read fails closed with a structured integrity error; the server never exposes a valid subset or trusts generated documentation as runtime authority. |
 | EC-005 | Client asks MCP to apply unplanned change. | Apply tool rejects request and asks for a plan-first workflow. |
 
 ### 10.4 State Transitions
@@ -500,7 +500,7 @@ No web UI is in scope. Future MCP surfaces are protocol interfaces.
 | ID | Failure Mode | User/System Behavior | Logging / Observability | Recovery |
 | --- | --- | --- | --- | --- |
 | ERR-001 | MCP work requested before readiness. | Roadmap blocks and points to failing readiness items. | Completion report lists blockers. | Finish `SPEC-MT01` gates. |
-| ERR-002 | Read-only MCP cannot load graph. | Server fails closed with structured startup error. | stderr/log plus tool/resource error. | Fix graph package/import/config. |
+| ERR-002 | Read-only MCP cannot validate the complete installed Catalog 5 distribution. | Server fails closed before stdio registration. | Structured startup error on stderr only. | Fix the installed family/payload declaration, resource path, bytes, or digest. |
 | ERR-003 | Resource path missing. | Resource read returns structured error. | Error includes standard ID and URI. | Fix manifest/resource. |
 | ERR-004 | Tool request targets unknown standard. | Tool returns validation error, not fallback guess. | Structured tool error. | Add manifest or correct ID. |
 | ERR-005 | Apply requested without plan. | Apply tool refuses. | Tool error says plan required. | Run planning tool first. |
@@ -623,7 +623,7 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 - [x] `SPEC-MT01` readiness gate passes; see `docs/mcp-readiness.md`.
 - [ ] Refreshed `SPEC-RD01`, `SPEC-MS01`, and the implementation plan pass local validation and Claude Opus review to convergence.
 - [ ] Required MCP boundary and dependency ADRs are accepted before implementation code.
-- [ ] Read-only local MCP can list/read manifest-generated standards resources.
+- [ ] Read-only local MCP can list/read exact V2 payload resources from a fully validated `InstalledDistribution`.
 - [ ] Generic tools work against a standards repo and at least one consumer fixture.
 - [ ] Adding a fixture standard changes resources/data but not top-level tools.
 - [ ] Planning tools precede write tools.
@@ -674,14 +674,14 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 
 ### 18.1 Runtime Environment
 
-| Item              | Value                                                   |
-| ----------------- | ------------------------------------------------------- |
-| Runtime           | Python 3.14+ package and local MCP subprocess.          |
-| OS / Platform     | Developer workstation / local coding-agent environment. |
-| Datastore         | Repository files and transient in-memory graph.         |
-| External services | None for read-only local v1.                            |
-| Scheduling        | None.                                                   |
-| Hosting           | Local process launched by MCP client.                   |
+| Item | Value |
+| --- | --- |
+| Runtime | Python 3.14+ package and local MCP subprocess. |
+| OS / Platform | Developer workstation / local coding-agent environment. |
+| Datastore | None; immutable installed payload bytes and an explicitly selected consumer repository remain authoritative. |
+| External services | None for read-only local v1. |
+| Scheduling | None. |
+| Hosting | Local process launched by MCP client. |
 
 Runtime services:
 
@@ -733,9 +733,9 @@ Minimum signals:
 
 | Alert | Trigger | Severity | Owner / Action |
 | --- | --- | --- | --- |
-| MCP startup failure | Server cannot load graph. | Warning during dev / blocking in CI | Fix graph imports/manifests. |
+| MCP startup failure | Complete installed-distribution validation fails. | Warning during dev / blocking in CI | Fix the invalid family, payload, resource declaration, contained path, bytes, or digest. |
 | Tool schema regression | Integration test fails. | Blocking | Restore schema compatibility or version intentionally. |
-| Resource drift | Resource list differs from manifest/index. | Blocking | Regenerate/fix manifests. |
+| Resource integrity failure | Declared resource is missing, escapes its payload, or no longer matches its digest. | Blocking | Repair and republish the immutable payload; never expose a partial catalog. |
 
 ### 18.6 Backup and Disaster Recovery
 
@@ -782,9 +782,9 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | Step 09 | Implementation boundary and dependency freeze | Step 08 | Converged spec and plan; final protocol/SDK releases available or owner accepts a documented alternative. | ADRs for service/SDK boundary, stdio/read-only scope, resource URI rules, protocol/SDK version selection, and remote deferral; exact dependency constraint and client matrix. | ADRs accepted; final protocol and stable SDK support are proven; no blocking client gap. | Step 10 |
 | Step 10 | Service facade and MCP skeleton | Step 09 | Accepted boundary ADRs and exact dependency lock. | SDK-independent package/control-plane facade, package entrypoint, local stdio adapter, protocol tests. | Server starts from source and installed wheel, reports accurate capabilities, and keeps stdout protocol-clean. | Step 11 |
 | Step 11 | Resource and prompt layer | Step 10 | Service facade available. | Payload-derived, version-qualified resources and only client-supported prompt exposure. | List/read resources pass; fixture payload appears without registration changes; prompt/tool fallback decisions match the client matrix. | Step 12 |
-| Step 12 | Generic read-only tools | Step 11 | Resource layer. | `standards_list`, `repo_inspect`, `standards_resolve`, plus `standard_read` only if client resource UX requires it. | Tool schemas and fixture calls pass; optional fallback is justified if present. | Step 13 |
+| Step 12 | Generic read-only tools | Step 11 | Resource layer. | `standards_list`, `repo_inspect`, plus `standard_read` only if the client matrix proves a primary client cannot give the model direct resource access. | Tool schemas and fixture calls pass; the fallback decision is justified by the frozen client matrix. | Step 13 |
 | Step 13 | Validation and drift tools | Step 12 | Repo inspection working. | `validate_repo`, `drift_check`, structured findings. | Consumer fixture reports accurately. | Step 14 |
-| Step 14 | Planning tools | Step 13 | Validation/drift stable. | Generic preview of the existing reconciliation and provider mutation plans without apply access. | Plans are deterministic, content-safe, reviewable, and byte-equivalent in meaning to authoritative control-plane JSON. | Step 15; optional Step 17 or Step 18 design |
+| Step 14 | Planning tools | Step 13 | Validation/drift stable. | `reconcile_preview` exposes the authoritative public `ReconciliationPlan.to_jsonable()` facts plus its reconciliation fingerprint, without provider mutation-plan preview or apply access. | Preview output is deterministic, content-safe, reviewable, and byte-equivalent in meaning to authoritative control-plane JSON. | Step 15; optional Step 17 or Step 18 design |
 | Step 15 | Controlled write safety spec | Step 14 | Planning tools stable. | Separate safety spec/ADR for apply tools. | Approved by owner. | Step 16 |
 | Step 16 | Controlled local write tools | Step 15 | Safety spec approved. | Separately specified apply tools that reuse reconciliation fingerprint/precondition checks. | Apply tests reject unsafe/stale/unplanned writes. | — |
 | Step 17 | Multi-repo/fleet design | Step 14 | Single-repo workflows stable and a fleet use case exists. | Separate fleet reporting spec. | Approved if needed. | Optional fleet implementation |
@@ -812,7 +812,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 ### MS-3 — Validation and Planning
 
 1. Complete Step 13 and Step 14.
-2. Expose existing validation, drift, reconciliation-plan, and provider-plan semantics without writes.
+2. Expose existing validation, drift, and authoritative reconciliation-preview semantics without writes or provider mutation-plan preview.
 3. Ensure outputs are structured, deterministic, bounded, and content-safe.
 
 ### MS-4 — User Experience and Hardening
@@ -840,7 +840,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | MS-0 Foundation | MCP-ready standards repository | `SPEC-MT01` passes readiness gate |
 | MS-1 Reviewed boundary | Converged docs, ADRs, final protocol/SDK/client contract | No code starts with an unresolved dependency or client decision |
 | MS-2 Read-only MCP | Local stdio resources and generic discovery/inspection tools | MCP reads exact payload resources and inspects repo fixtures from source and wheel |
-| MS-3 Planning | Validation, drift, and reconciliation/provider previews | Plans and findings are deterministic, structured, bounded, and non-mutating |
+| MS-3 Planning | Validation, drift, and reconciliation preview | Preview facts and findings are deterministic, structured, bounded, and non-mutating |
 | MS-4 UX and hardening | Setup/reference docs and stable local candidate | Full gate, integration tests, client matrix, and dogfood pass |
 | MS-5 Future writes | Separately governed plan-first apply tools | Separate safety approval and stale-plan tests pass |
 | MS-6 Optional expansion | Separately governed fleet and/or remote designs | Step 17/18 need is demonstrated and each applicable specification is approved |
