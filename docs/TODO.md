@@ -44,7 +44,14 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 
-- [ ] Begin MCP implementation-plan T1 only after final post-2026-07-28 protocol and stable SDK evidence is available. T1 freezes the protocol/SDK pair, client compatibility, and SDK-independent service boundary; T2 remains blocked until T1 completes.
+- [ ] Complete the reviewed MCP implementation plan.
+  - [ ] Resume T1 only after the final 2026-07-28 protocol publication and official stable Python SDK release evidence are available.
+  - [ ] Verify the protocol, SDK, license, conformance, and current Codex/Claude client capabilities in the dated evidence matrix.
+  - [ ] Create and accept ADRs 0025-0026, obtain the recorded owner decisions required by T1, resolve the assigned SPEC-RD01/SPEC-MS01 open questions, and update their revisions and indexes.
+  - [ ] Pin the approved SDK dependency, update `uv.lock`, and pass the T1 lock, audit, client-probe, candidate-wheel, specification, and documentation gates.
+  - [ ] Begin MCP source implementation at T2 only after T1 completes.
+
+- [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline.
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.

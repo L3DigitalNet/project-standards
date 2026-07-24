@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- Project Standards 5.8.0 is published from `d007ba0`: signed `v5.8.0`/`v5` tags, verified assets, issues #26–#31 closed with evidence.
-- It ships Python Tooling 1.8, Markdown Tooling 1.8, Markdown Frontmatter 1.5, and the converged serialization; see `docs/STATUS.md`.
-- Evidence: 3,266/85/5 test lanes, 90% coverage, nine green workflow runs (`Check` `30002838425`), MINOR classification, asset parity.
-- MCP documentation is reconciled and re-locked: SPEC-MT01 rev 1.3, SPEC-RD01 rev 1.5, and SPEC-MS01 rev 1.1. The MCP implementation plan remains active and definition-only; T1 has not started. Final protocol/SDK/license/conformance/client decisions remain gated on the post-2026-07-28 T1 review. No MCP source, dependency, standards-package, release, publication, tag, or `main` integration occurred.
+- Project Standards 5.8.0 is published and verified; see `docs/STATUS.md` and `docs/handoff/deployed.md` for release truth.
+- MCP documentation is re-locked. T1 is blocked before CHARACTERIZE pending final post-2026-07-28 protocol and official stable SDK evidence.
+- Before T2, T1 must complete the matrix, ADRs 0025-0026, owner decisions, spec updates, dependency lock, and required gates.
+- MCP hold through T12: defer significant non-MCP features, refactors, standards work, releases, and changes; owner directs exceptions.
 
 ## Active incidents
 
