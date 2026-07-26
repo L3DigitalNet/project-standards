@@ -12,6 +12,9 @@ import json
 import math
 import re
 import unicodedata
+import zlib
+from base64 import b85decode
+from bisect import bisect_right
 from dataclasses import dataclass
 from typing import Literal, cast
 from urllib.parse import unquote
@@ -35,6 +38,79 @@ from project_standards.package_contract.payload import (
 _NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 _MISSING = object()
 _PRETTIER_PRINT_WIDTH = 88
+
+
+def _range_bounds(spec: str) -> tuple[int, ...]:
+    bounds: list[int] = []
+    for raw_interval in spec.split(","):
+        raw_start, separator, raw_stop = raw_interval.partition("-")
+        start = int(raw_start, 16)
+        stop = int(raw_stop, 16) + 1 if separator else start + 1
+        bounds.extend((start, stop))
+    return tuple(bounds)
+
+
+# These generated constants pin Prettier 3.8.3's East Asian width lookup and
+# emoji-regex 10.6.0 semantics without adding formatter runtime dependencies.
+_PRETTIER_DOUBLE_WIDTH_BOUNDS = _range_bounds(
+    "1100-115f,231a-231b,2329-232a,23e9-23ec,23f0,23f3,25fd-25fe,2614-2615,2630-2637,2648-2"
+    "653,267f,268a-268f,2693,26a1,26aa-26ab,26bd-26be,26c4-26c5,26ce,26d4,26ea,26f2-26f3,26"
+    "f5,26fa,26fd,2705,270a-270b,2728,274c,274e,2753-2755,2757,2795-2797,27b0,27bf,2b1b-2b1"
+    "c,2b50,2b55,2e80-2e99,2e9b-2ef3,2f00-2fd5,2ff0-303e,3041-3096,3099-30ff,3105-312f,3131"
+    "-318e,3190-31e5,31ef-321e,3220-3247,3250-a48c,a490-a4c6,a960-a97c,ac00-d7a3,f900-faff,"
+    "fe10-fe19,fe30-fe52,fe54-fe66,fe68-fe6b,ff01-ff60,ffe0-ffe6,16fe0-16fe4,16ff0-16ff6,17"
+    "000-18cd5,18cff-18d1e,18d80-18df2,1aff0-1aff3,1aff5-1affb,1affd-1affe,1b000-1b122,1b13"
+    "2,1b150-1b152,1b155,1b164-1b167,1b170-1b2fb,1d300-1d356,1d360-1d376,1f004,1f0cf,1f18e,"
+    "1f191-1f19a,1f200-1f202,1f210-1f23b,1f240-1f248,1f250-1f251,1f260-1f265,1f300-1f320,1f"
+    "32d-1f335,1f337-1f37c,1f37e-1f393,1f3a0-1f3ca,1f3cf-1f3d3,1f3e0-1f3f0,1f3f4,1f3f8-1f43"
+    "e,1f440,1f442-1f4fc,1f4ff-1f53d,1f54b-1f54e,1f550-1f567,1f57a,1f595-1f596,1f5a4,1f5fb-"
+    "1f64f,1f680-1f6c5,1f6cc,1f6d0-1f6d2,1f6d5-1f6d8,1f6dc-1f6df,1f6eb-1f6ec,1f6f4-1f6fc,1f"
+    "7e0-1f7eb,1f7f0,1f90c-1f93a,1f93c-1f945,1f947-1f9ff,1fa70-1fa7c,1fa80-1fa8a,1fa8e-1fac"
+    "6,1fac8,1facd-1fadc,1fadf-1faea,1faef-1faf8,20000-2fffd,30000-3fffd"
+)
+_PRETTIER_EMOJI_PATTERN_SHA256 = "be213f75d7b014abceaffc0e69aa362b426c387fb6213394c6940e116ff226be"
+_PRETTIER_EMOJI_PATTERN = re.compile(
+    zlib.decompress(
+        b85decode(
+            "c-rlo-ICiZ5{55kPu5%IDoIEnzLS*ryNSe?k*YoL#V<T9d5~n!II%rDoBa;*dJxbw{WeV_l<)ueS97$dA3sxU("
+            "zhQ!yC$mh_aFbBZ2lKZS^0v!&DeHbLB-#;Kk`Fi5}Y!sR?rpf#)3W-jN!-+h17x_I8u>HzuuQe1CoZR$QYb1=$"
+            "nFxC&`0FJ>4`%etM8cZ42_G9l)Z7?i#QI6{x`pq;FTW(+Z8WqN1l;Pq$tw26_*))l_SqXhzdW)r@Hzh-^c9iy*"
+            "O{wg$8yO>LQ*o)9`wi!HR{iDPOmfC%+W(=!-$)`2z=nMtgZ&?_M>(G+8wrUOUNf<=UBd5#55tHCm)>56Eh6i96"
+            "^SR|VP#1dvIEiG-VDx<q*IPy~(IlRNQWv*_>)v8eqn1@kau}a2^TV{tWB%(s&!EpNLx4(Y;45RY7GNj~={G`)a"
+            "Ivu2!X=I}AX8XCJidNjy<BJWb@H4D!A(&}t{8D?2>R}<kLWHR#dJY&2)As1xM~tM7{7`MNiNOmD3>%lQNmJ&L<"
+            "*L~PXx}wWU=9WSG-TBo(0*u(OZV@!M=$mjIY#%}!4|n?ywDA23V9kK8hfBu88o*l<NC4&Lof~4f)PxmNAa}~l_"
+            "{zfKg!snXXgtlUC@+~lI3qpQ)_8d7DvVi7J13j)bk{Wq(DV+_Kc?Xo{&bKmgthveBceaNe@o%H2lz}A_&F3KRw"
+            "P7MlNeSgb~Bq_Q=nKeTz+F%ikRqSKW~x4USTverP~gAb@5T8Zb~$7)u!ny#fa*OrWP=V9rDeBNiLA&_$m~M0>{"
+            "ZLIBj3aFx-5Nw}j&lpYCX*cTQXg%I_d{X(QJl+~IMYb0E*Y$+LW#e_1U#JY?$O}O$!q^U*f%cDRr$UjL0ANMjX"
+            "=qkx^C3)OS9z`<fj+Nq#h%}<?aV5vra;9p|qFS??^U`s;r9dr2tYKy|%{^V+Gahe@W9HWW0~5yDgbEz?w8U9js"
+            "HCk1Rh5bCO5J$HEvDPN&ArmjuB+J%(hL>0=C9{fD>qasUU3Qh^UYGnijr7OcP7KtW?`5una7I3X5}>KbDjHJtE"
+            "S)0U|LD+MWQHkzBJwpGF{P0)w8mD%9DN*9rgL5!G;`BaI76??mu2JYt7W+ulscy)>gB3E!iOMvl4wHA}oThEJe"
+            "Tbp7DyuxO>)ctc1*KBCQsss5H)1p<=Q*Uk2TndtN3f?KGH`7VD?J-)AN%I>`-E@2=I_xz?*YHdje5_WNNaShCG"
+            "JlX)x8LnU=JwUHECvV@CSQZrt<)w7cW#HFz-8U?RS^>-(K%d~ts4P2^X-KF&RMpcihzfCXIwP0UWt3y@DdBZ_e"
+            "4@(-R3TIw6x*n%w(+)aS=^5@~WVIL?jd<}WOL(OBL_C;qIY*puknivwPkIr^ltPeL%PyXuNdeD{bd0L<-c);R$"
+            "wWw!qGvruGMp%xK#T)eG>inunA9q<^W|WcQGraz4`MWZ;m2!S%WD#6(}|gRWN2kZu*}Pkh$3I~Bet|H`8HNGpv"
+            "5xesj+1D8PVFK;yc;ilE&#Mqqi4N5W@Y)lMxk1bc2{E`B&_vfW7(vl8;YCM07nkJesuz1F5#T@068Of7tR3Q)t"
+            "-veK|g66iPbG*%5?2NvKy|3K8a@tfxy)+o3&P7LnKVFe12|sWaj&exxJGryoaoghWe)#Yug6Kao+qfavIxgm5|"
+            "A^b*{$Wf)}V!gInTA)fl!1<9@@mG0$0BfOA(<Asq~#9k6^)?OUNn<vgd6P_2HP$vDIxKAr90H+VqC(tJd{b2;X"
+            "6l9^`3+x3kiDV|Y<kHmVjGB1uo3V~)`5Z2h&bPxlQey}=&9$B0#Le9CT%Qc*fa#T6#pS-Q<8o%Uy?LA^Hq>qPx"
+            "Z49PCvL0drN!wj7*}W4TI?K$M^`^Qd=u&C%CDJjVj0edn)v|3nT7y3+cAdICfsU5hb}KGb|Y(j<=n3IGDEYe{a"
+            "%NyQ;F<6arnCg-43VZ$Q*I~Xggu{;jx7Gd0JsgZ;{^3Z(FWyw={OLVw^f14sS07Bx1al#aqGYDb(I)`10mzWA&"
+            "9<{t|pQCT@u)F`e%0e}0UZC8zQK_l!tH3=i_Mk@6&V!r$zOmxA#b6s<))iKqBCPoh?MkfODeC$W?MW=GVD5AqT"
+            "pXJp9@wS5&S>pbjpd3Z4Gnl1B!-0@2%bbH1&q^=trzUG3nccpp1Y54Q9SZ^8SdX6ZI`(9O_n-u<mtbULxeg?PO"
+            "Jo6rgw`xB(z5HW&en08_JhC?#>-~&xCh**B^-rYz{T%jF7~dqocagnO`?-1VpUZRnZ!#QziQ8D`&cO`N_{1l_x"
+            "{lXABpT;hHC(H8OYJ5hg~-mW2k5(%9{DRlaM<YK^k-cCZOLw+xq<Rl?$28aN{Ho+e&BnVz->%$-19h|;E93P@y"
+            "k6I@9Dj&UfR!hRPyCbzH|NH9w>B(=6jnUR|!FJ9VfRVVSW)WS8!DD-BXayfP&n;$u(XG4`2Jpja^8m`<mkjp`l"
+            "YNCTwMiN`XtCAeTO&6H9Y_rsVF0i=NO+y%DnuEnH*;Cmc+&MCG;-3Imszarx?j57Oke#Q5sEWt6*@DEx4b!uLm"
+            "!?~j)I#^B{LMeZA?`E<;(^YOE8sI%qn58dwsR{09+<M4WaY<)Ob3OiRqrZ`(WPk&d@UAd78-D0j=wNE{-*55x~"
+            "_CQ_&U9`V>3VWQR2e!cXlskM1t2dK^^#=H^qE9)U{vwB0PFr7%$(Ni-U&rT5&Z57?>i$^uHK~2YG4$2^zT)Kht"
+            "0eDFQeTeWSDZIrNbM`mnZL(s{K|aB{}m=zr^=YxOM1J{mfrraNB#A2y*=+X=UZL2JHRgfzu$2aT6TfuX77#n?t"
+            "J%yj*)AWZ-@T?>w`&y"
+        )
+    ).decode("ascii")
+)
+_PRETTIER_NARROW_EMOJIS = frozenset(
+    "\xa9\xae\u203c\u2049\u2122\u2139\u2194\u2195\u2196\u2197\u2198\u2199\u21a9\u21aa\u2328\u23cf\u23f1\u23f2\u23f8\u23f9\u23fa\u25aa\u25ab\u25b6\u25c0\u25fb\u25fc\u2600\u2601\u2602\u2603\u2604\u260e\u2611\u2618\u261d\u2620\u2622\u2623\u2626\u262a\u262e\u262f\u2638\u2639\u263a\u2640\u2642\u265f\u2660\u2663\u2665\u2666\u2668\u267b\u267e\u2692\u2694\u2695\u2696\u2697\u2699\u269b\u269c\u26a0\u26a7\u26b0\u26b1\u26c8\u26cf\u26d1\u26d3\u26e9\u26f1\u26f7\u26f8\u26f9\u2702\u2708\u2709\u270c\u270d\u270f\u2712\u2714\u2716\u271d\u2721\u2733\u2734\u2744\u2747\u2763\u2764\u27a1\u2934\u2935\u2b05\u2b06\u2b07"
+)
 
 type TokenKind = Literal[
     "string",
@@ -118,8 +194,73 @@ class LocatedUnit:
     member: JsonMember | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class JsonLayout:
+    """Newline and indentation inferred from the containing consumer document."""
+
+    newline: str
+    indent_unit: str
+
+
 class _DuplicateObjectKey(ValueError):
     pass
+
+
+def _codepoint_width(character: str) -> int:
+    codepoint = ord(character)
+    if (
+        codepoint <= 31
+        or 127 <= codepoint <= 159
+        or 768 <= codepoint <= 879
+        or 65024 <= codepoint <= 65039
+    ):
+        return 0
+    return 2 if bisect_right(_PRETTIER_DOUBLE_WIDTH_BOUNDS, codepoint) % 2 == 1 else 1
+
+
+def _utf16_units(value: str) -> str:
+    encoded = value.encode("utf-16-le", errors="surrogatepass")
+    return "".join(
+        chr(encoded[index] | encoded[index + 1] << 8) for index in range(0, len(encoded), 2)
+    )
+
+
+def _decode_utf16_units(value: str) -> str:
+    encoded = b"".join(ord(character).to_bytes(2, "little") for character in value)
+    return encoded.decode("utf-16-le", errors="surrogatepass")
+
+
+def _emoji_width_replacement(match: re.Match[str]) -> str:
+    return " " if match.group() in _PRETTIER_NARROW_EMOJIS else "  "
+
+
+def _prettier_width(value: str) -> int:
+    """Mirror pinned Prettier display width without a formatter dependency."""
+    if value.isascii() and all(0x20 <= ord(character) <= 0x7F for character in value):
+        return len(value)
+    utf16 = _utf16_units(value)
+    replaced = _PRETTIER_EMOJI_PATTERN.sub(_emoji_width_replacement, utf16)
+    return sum(_codepoint_width(character) for character in _decode_utf16_units(replaced))
+
+
+def _fits_prettier_line(indent: str, prefix_width: int, flat: str) -> bool:
+    return len(indent.expandtabs(2)) + prefix_width + _prettier_width(flat) <= _PRETTIER_PRINT_WIDTH
+
+
+def _prettier_number(token: str) -> str:
+    """Normalize JSON number spelling without a lossy numeric conversion."""
+    mantissa, separator, exponent = token.lower().partition("e")
+    if "." in mantissa:
+        whole, fraction = mantissa.split(".", 1)
+        mantissa = f"{whole}.{fraction.rstrip('0') or '0'}"
+    if not separator:
+        return mantissa
+    negative = exponent.startswith("-")
+    digits = exponent.lstrip("+-").lstrip("0") or "0"
+    if digits == "0":
+        return mantissa
+    sign = "-" if negative else ""
+    return f"{mantissa}e{sign}{digits}"
 
 
 def _flat_json(value: JsonValue) -> str:
@@ -160,15 +301,17 @@ def _prettier_json(
     *,
     force_break: bool = False,
     prefix_width: int = 0,
+    indent_unit: str = "\t",
+    newline: str = "\n",
 ) -> str:
     flat = _flat_json(value)
     if (
         not force_break
         and not _forces_prettier_break(value)
-        and len(indent.expandtabs(2)) + prefix_width + len(flat) <= _PRETTIER_PRINT_WIDTH
+        and _fits_prettier_line(indent, prefix_width, flat)
     ):
         return flat
-    child_indent = f"{indent}\t"
+    child_indent = f"{indent}{indent_unit}"
     if isinstance(value, dict):
         members: list[str] = []
         for index, (key, item) in enumerate(value.items()):
@@ -177,16 +320,26 @@ def _prettier_json(
                 item,
                 child_indent,
                 force_break=_forces_prettier_break(item),
-                prefix_width=(len(rendered_key) + 2 + (1 if index < len(value) - 1 else 0)),
+                prefix_width=(
+                    _prettier_width(rendered_key) + 2 + (1 if index < len(value) - 1 else 0)
+                ),
+                indent_unit=indent_unit,
+                newline=newline,
             )
             members.append(f"{child_indent}{rendered_key}: {rendered_value}")
-        return "{\n" + ",\n".join(members) + f"\n{indent}}}"
+        return f"{{{newline}" + f",{newline}".join(members) + f"{newline}{indent}}}"
     if isinstance(value, list):
-        items = [
-            f"{child_indent}{_prettier_json(item, child_indent, prefix_width=(1 if index < len(value) - 1 else 0))}"
-            for index, item in enumerate(value)
-        ]
-        return "[\n" + ",\n".join(items) + f"\n{indent}]"
+        items: list[str] = []
+        for index, item in enumerate(value):
+            rendered = _prettier_json(
+                item,
+                child_indent,
+                prefix_width=(1 if index < len(value) - 1 else 0),
+                indent_unit=indent_unit,
+                newline=newline,
+            )
+            items.append(f"{child_indent}{rendered}")
+        return f"[{newline}" + f",{newline}".join(items) + f"{newline}{indent}]"
     return flat
 
 
@@ -454,6 +607,20 @@ def _parse(content: bytes, kind: AdapterKind, *, fragment: bool = False) -> Json
         detail = "a single JSON value" if fragment else f"valid {label}"
         raise ControlPlaneError(f"{noun} must contain {detail}") from exc
     return JsonDocument(text, root)
+
+
+def _normalize_fragment_numbers(document: JsonDocument) -> str:
+    """Apply Prettier's lexical number normalization inside an owned fragment."""
+    edits = [
+        (
+            token.start,
+            token.end,
+            _prettier_number(document.text[token.start : token.end]),
+        )
+        for token in _lex(document.text, allow_comments=True)
+        if token.kind == "number"
+    ]
+    return apply_edits(document.text, edits)
 
 
 def container_value_without_comments(content: bytes, kind: AdapterKind) -> JsonValue | None:
@@ -725,11 +892,287 @@ def _item_comma(container: JsonNode, index: int) -> JsonToken | None:
     return container.commas[index]
 
 
-def _append(container: JsonNode, text: str, fragment: str) -> str:
+def _container_nodes(node: JsonNode) -> tuple[JsonNode, ...]:
+    descendants: list[JsonNode] = []
+    if node.kind in {"object", "array"}:
+        descendants.append(node)
+    if node.kind == "object":
+        for member in node.members:
+            descendants.extend(_container_nodes(member.value))
+    elif node.kind == "array":
+        for element in node.elements:
+            descendants.extend(_container_nodes(element))
+    return tuple(descendants)
+
+
+def _layout(document: JsonDocument) -> JsonLayout:
+    newline = _newline(document.text)
+    for container in _container_nodes(document.root):
+        if container.opening is None or container.closing is None:
+            continue
+        body = document.text[container.opening.end : container.closing.start]
+        if "\n" not in body:
+            continue
+        closing_line = _line_start(document.text, container.closing.start)
+        closing_indent = document.text[closing_line : container.closing.start]
+        if closing_indent.strip():
+            continue
+        count = len(container.members) if container.kind == "object" else len(container.elements)
+        starts = tuple(_item_start(container, index) for index in range(count))
+        for start in starts:
+            line = _line_start(document.text, start)
+            child_indent = document.text[line:start]
+            if (
+                not child_indent.strip()
+                and child_indent.startswith(closing_indent)
+                and child_indent != closing_indent
+            ):
+                return JsonLayout(newline, child_indent[len(closing_indent) :])
+        for line in body.splitlines():
+            indentation = line[: len(line) - len(line.lstrip(" \t"))]
+            if (
+                line.strip()
+                and indentation.startswith(closing_indent)
+                and indentation != closing_indent
+            ):
+                return JsonLayout(newline, indentation[len(closing_indent) :])
+    return JsonLayout(newline, "\t")
+
+
+def _node_location(
+    root: JsonNode,
+    target: JsonNode,
+    depth: int = 0,
+) -> tuple[LocatedUnit, int] | None:
+    if root.kind == "object":
+        for index, member in enumerate(root.members):
+            if member.value is target:
+                return LocatedUnit(target, root, index, member), depth + 1
+            found = _node_location(member.value, target, depth + 1)
+            if found is not None:
+                return found
+    elif root.kind == "array":
+        for index, element in enumerate(root.elements):
+            if element is target:
+                return LocatedUnit(target, root, index), depth + 1
+            found = _node_location(element, target, depth + 1)
+            if found is not None:
+                return found
+    return None
+
+
+def _located_layout(
+    document: JsonDocument,
+    located: LocatedUnit,
+    layout: JsonLayout,
+) -> tuple[str, int]:
+    start = located.member.key_token.start if located.member is not None else located.node.start
+    line = _line_start(document.text, start)
+    line_prefix = document.text[line:start]
+    if not line_prefix.strip():
+        indent = line_prefix
+    else:
+        if located.container is document.root:
+            container_depth = 0
+        else:
+            container_location = _node_location(document.root, located.container)
+            if container_location is None:
+                raise ControlPlaneError("JSON insertion target is outside the parsed document")
+            container_depth = container_location[1]
+        indent = layout.indent_unit * (container_depth + 1)
+    if located.member is not None:
+        key = document.text[located.member.key_token.start : located.member.key_token.end]
+        prefix_width = _prettier_width(key) + 2 + (1 if located.member.comma is not None else 0)
+    else:
+        comma = located.container.commas[located.index]
+        prefix_width = 1 if comma is not None else 0
+    return indent, prefix_width
+
+
+def _node_layout(
+    document: JsonDocument,
+    node: JsonNode,
+    layout: JsonLayout,
+) -> tuple[str, int]:
+    if node is document.root:
+        return "", 0
+    location = _node_location(document.root, node)
+    if location is None:
+        raise ControlPlaneError("JSON node is outside the parsed document")
+    return _located_layout(document, location[0], layout)
+
+
+def _flat_preserving(node: JsonNode, text: str) -> str:
+    if node.kind == "scalar":
+        return text[node.start : node.end]
+    if node.kind == "object":
+        if not node.members:
+            return "{}"
+        members = (
+            (
+                f"{text[member.key_token.start : member.key_token.end]}: "
+                f"{_flat_preserving(member.value, text)}"
+            )
+            for member in node.members
+        )
+        return f"{{ {', '.join(members)} }}"
+    return f"[{', '.join(_flat_preserving(element, text) for element in node.elements)}]"
+
+
+def _render_preserving(
+    node: JsonNode,
+    text: str,
+    layout: JsonLayout,
+    indent: str = "",
+    *,
+    prefix_width: int = 0,
+) -> str:
+    """Render layout while retaining every validated key and scalar token."""
+    if node.kind == "scalar":
+        return text[node.start : node.end]
+    flat = _flat_preserving(node, text)
+    if not _forces_prettier_break(node.value) and _fits_prettier_line(indent, prefix_width, flat):
+        return flat
+    child_indent = f"{indent}{layout.indent_unit}"
+    if node.kind == "object":
+        members: list[str] = []
+        for index, member in enumerate(node.members):
+            key = text[member.key_token.start : member.key_token.end]
+            value = _render_preserving(
+                member.value,
+                text,
+                layout,
+                child_indent,
+                prefix_width=(
+                    _prettier_width(key) + 2 + (1 if index < len(node.members) - 1 else 0)
+                ),
+            )
+            members.append(f"{child_indent}{key}: {value}")
+        return (
+            f"{{{layout.newline}"
+            + f",{layout.newline}".join(members)
+            + f"{layout.newline}{indent}}}"
+        )
+    elements: list[str] = []
+    for index, element in enumerate(node.elements):
+        rendered = _render_preserving(
+            element,
+            text,
+            layout,
+            child_indent,
+            prefix_width=(1 if index < len(node.elements) - 1 else 0),
+        )
+        elements.append(f"{child_indent}{rendered}")
+    return f"[{layout.newline}" + f",{layout.newline}".join(elements) + f"{layout.newline}{indent}]"
+
+
+def _has_comments(document: JsonDocument) -> bool:
+    return any(token.kind == "comment" for token in _lex(document.text, allow_comments=True))
+
+
+def _is_clean_container(
+    document: JsonDocument,
+    node: JsonNode,
+    layout: JsonLayout,
+) -> bool:
+    if any(
+        token.kind == "comment" and node.start <= token.start < node.end
+        for token in _lex(document.text, allow_comments=True)
+    ):
+        return False
+    indent, prefix_width = _node_layout(document, node, layout)
+    expected = _render_preserving(
+        node,
+        document.text,
+        layout,
+        indent=indent,
+        prefix_width=prefix_width,
+    )
+    return document.text[node.start : node.end] == expected
+
+
+def _mutation_container_path(spec: ScopeSpec) -> tuple[str, ...]:
+    return spec.path[:-1] if spec.kind == "key" else spec.path
+
+
+def _clean_mutation_container_path(
+    document: JsonDocument,
+    spec: ScopeSpec,
+    layout: JsonLayout,
+) -> tuple[str, ...] | None:
+    if not _has_comments(document):
+        expected = _render_preserving(document.root, document.text, layout)
+        if document.text != f"{expected}{layout.newline}":
+            return None
+        return ()
+    path = _mutation_container_path(spec)
+    for length in range(len(path) + 1):
+        candidate = path[:length]
+        container = _node_at(document.root, candidate)
+        if container is None:
+            break
+        if container.kind in {"object", "array"} and _is_clean_container(
+            document,
+            container,
+            layout,
+        ):
+            return candidate
+    if _node_at(document.root, path) is None:
+        return path
+    return None
+
+
+def _finish_owned_mutation(
+    document: JsonDocument,
+    spec: ScopeSpec,
+    layout: JsonLayout,
+    *,
+    clean_container_path: tuple[str, ...] | None,
+) -> str:
+    """Format the owned value, reflowing ancestors only in a clean context."""
+    located = _locate(document.root, spec)
+    if located is None:
+        raise ControlPlaneError("JSON mutation did not materialize its declared scope")
+    if clean_container_path is not None:
+        container = _node_at(document.root, clean_container_path)
+        if container is None or container.kind not in {"object", "array"}:
+            raise ControlPlaneError("JSON mutation did not materialize its containing scope")
+        indent, prefix_width = _node_layout(document, container, layout)
+        formatted = _render_preserving(
+            container,
+            document.text,
+            layout,
+            indent,
+            prefix_width=prefix_width,
+        )
+        return apply_edits(
+            document.text,
+            [(container.start, container.end, formatted)],
+        )
+    indent, prefix_width = _located_layout(document, located, layout)
+    formatted = _render_preserving(
+        located.node,
+        document.text,
+        layout,
+        indent,
+        prefix_width=prefix_width,
+    )
+    return apply_edits(
+        document.text,
+        [(located.node.start, located.node.end, formatted)],
+    )
+
+
+def _append(
+    container: JsonNode,
+    text: str,
+    fragment: str,
+    layout: JsonLayout,
+) -> str:
     if container.opening is None or container.closing is None:
         raise ControlPlaneError("JSON insertion target has no bounded container")
     count = len(container.members) if container.kind == "object" else len(container.elements)
-    newline = _newline(text)
+    newline = layout.newline
     fragment = fragment.replace("\r\n", "\n").replace("\n", newline)
     body = text[container.opening.end : container.closing.start]
     if "\n" not in body:
@@ -751,9 +1194,9 @@ def _append(container: JsonNode, text: str, fragment: str) -> str:
         first_line = _line_start(text, first_start)
         child_indent = text[first_line:first_start]
         if child_indent.strip():
-            child_indent = f"{closing_indent}  "
+            child_indent = f"{closing_indent}{layout.indent_unit}"
     else:
-        child_indent = f"{closing_indent}  "
+        child_indent = f"{closing_indent}{layout.indent_unit}"
     indented = fragment.replace(newline, f"{newline}{child_indent}")
     edits: list[tuple[int, int, str]] = [
         (closing_line, closing_line, f"{child_indent}{indented}"),
@@ -824,6 +1267,7 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("mutating JSON change requires a bounded fragment")
             fragment_document = _parse(change.content, self.kind, fragment=True)
             desired = fragment_document.root.value
+            fragment = _normalize_fragment_numbers(fragment_document)
             _check_declared_value(desired, change.value)
             _check_fragment_identity(spec, desired)
             if change.kind is ActionKind.ADOPT:
@@ -833,7 +1277,20 @@ class _JsonFamilyAdapter:
             if change.kind is ActionKind.CREATE:
                 if located is not None:
                     raise ControlPlaneError("JSON creation scope already exists")
-                content = self._create(document, spec, fragment_document.text).encode()
+                layout = _layout(document)
+                clean_container_path = _clean_mutation_container_path(
+                    document,
+                    spec,
+                    layout,
+                )
+                created = self._create(document, spec, fragment, layout)
+                created_document = _parse(created.encode(), self.kind)
+                content = _finish_owned_mutation(
+                    created_document,
+                    spec,
+                    layout,
+                    clean_container_path=clean_container_path,
+                ).encode()
                 _parse(content, self.kind)
                 continue
             if change.kind is not ActionKind.UPDATE:
@@ -842,14 +1299,33 @@ class _JsonFamilyAdapter:
                 raise ControlPlaneError("JSON update scope is not present")
             if _semantically_equal(located.node.value, desired):
                 continue
-            content = apply_edits(
+            layout = _layout(document)
+            clean_container_path = _clean_mutation_container_path(
+                document,
+                spec,
+                layout,
+            )
+            updated = apply_edits(
                 document.text,
-                [(located.node.start, located.node.end, fragment_document.text)],
+                [(located.node.start, located.node.end, fragment)],
+            )
+            updated_document = _parse(updated.encode(), self.kind)
+            content = _finish_owned_mutation(
+                updated_document,
+                spec,
+                layout,
+                clean_container_path=clean_container_path,
             ).encode()
             _parse(content, self.kind)
         return content
 
-    def _create(self, document: JsonDocument, spec: ScopeSpec, fragment: str) -> str:
+    def _create(
+        self,
+        document: JsonDocument,
+        spec: ScopeSpec,
+        fragment: str,
+        layout: JsonLayout,
+    ) -> str:
         if spec.kind == "key":
             if not spec.path:
                 raise ControlPlaneError("JSON key scope must identify an object member")
@@ -866,11 +1342,12 @@ class _JsonFamilyAdapter:
                     grandparent,
                     document.text,
                     f"{parent_key}: {{{member_key}: {fragment}}}",
+                    layout,
                 )
             if parent.kind != "object":
                 raise ControlPlaneError("JSON creation parent is not an object")
             member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: {fragment}"
-            return _append(parent, document.text, member)
+            return _append(parent, document.text, member, layout)
         container = _node_at(document.root, spec.path)
         if container is None:
             if not spec.path:
@@ -890,14 +1367,15 @@ class _JsonFamilyAdapter:
                     grandparent,
                     document.text,
                     f"{parent_key}: {{{member_key}: [{fragment}]}}",
+                    layout,
                 )
             if parent.kind != "object":
                 raise ControlPlaneError("JSON set container parent is not an object")
             member = f"{json.dumps(spec.path[-1], ensure_ascii=False)}: [{fragment}]"
-            return _append(parent, document.text, member)
+            return _append(parent, document.text, member, layout)
         if container.kind != "array":
             raise ControlPlaneError("JSON set scope does not identify an array")
-        return _append(container, document.text, fragment)
+        return _append(container, document.text, fragment, layout)
 
 
 class JsonAdapter(_JsonFamilyAdapter):

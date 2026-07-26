@@ -1,20 +1,38 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from project_standards.control_plane.adapters.base import AdapterUnit, UnitChange
 from project_standards.control_plane.adapters.jsonc import (
+    _PRETTIER_EMOJI_PATTERN,  # pyright: ignore[reportPrivateUsage]
+    _PRETTIER_EMOJI_PATTERN_SHA256,  # pyright: ignore[reportPrivateUsage]
     JsonAdapter,
     JsoncAdapter,
+    _prettier_width,  # pyright: ignore[reportPrivateUsage]
     format_fresh_json_container,
 )
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
-from project_standards.package_contract.payload import AdapterKind, JsonObject
+from project_standards.package_contract.payload import AdapterKind, JsonObject, JsonValue
+from tests.issue_regressions.tool_oracle import (
+    format_with_prettier,
+    prettier_differences,
+    prettier_string_widths,
+)
 
 _FIXTURES = Path(__file__).parent / "fixtures/jsonc"
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _fixture_prettier_config(tmp_path: Path) -> Path:
+    config = tmp_path / ".prettierrc.json"
+    if not config.exists():
+        config.write_bytes((_ROOT / ".prettierrc.json").read_bytes())
+    return config
 
 
 @pytest.mark.parametrize("kind", [AdapterKind.JSON, AdapterKind.JSONC])
@@ -79,6 +97,615 @@ def _unit(adapter: JsoncAdapter | JsonAdapter, content: bytes, scope: str) -> Ad
     state = adapter.inspect(content, (scope,))
     assert len(state.units) == 1
     return state.units[0]
+
+
+def _prettier_clean_seed(tmp_path: Path, relative: str, content: bytes) -> tuple[Path, bytes]:
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    config = _fixture_prettier_config(tmp_path)
+    format_with_prettier(_ROOT, tmp_path, (relative,), config_path=config)
+    canonical = path.read_bytes()
+    assert prettier_differences(_ROOT, tmp_path, (relative,), config_path=config) == ()
+    return path, canonical
+
+
+def _assert_prettier_fixed_point(tmp_path: Path, path: Path, content: bytes) -> None:
+    path.write_bytes(content)
+    relative = path.relative_to(tmp_path).as_posix()
+    config = _fixture_prettier_config(tmp_path)
+    assert prettier_differences(_ROOT, tmp_path, (relative,), config_path=config) == ()
+    format_with_prettier(_ROOT, tmp_path, (relative,), config_path=config)
+    once = path.read_bytes()
+    format_with_prettier(_ROOT, tmp_path, (relative,), config_path=config)
+    assert once == content
+    assert path.read_bytes() == once
+
+
+@pytest.mark.parametrize(
+    ("relative", "kind", "seed", "scope", "fragment", "value", "preserved"),
+    [
+        (
+            ".vscode/settings.json",
+            AdapterKind.JSON,
+            b'{"consumer":{"keep":true}}\n',
+            "key:/[json]",
+            b'{"editor.defaultFormatter":"esbenp.prettier-vscode"}',
+            {"editor.defaultFormatter": "esbenp.prettier-vscode"},
+            b'"consumer": { "keep": true }',
+        ),
+        (
+            ".vscode/settings.json",
+            AdapterKind.JSON,
+            b'{"consumer":{"keep":true}}\n',
+            "key:/[markdown]",
+            (b'{"editor.defaultFormatter":"esbenp.prettier-vscode","editor.formatOnSave":true}'),
+            {
+                "editor.defaultFormatter": "esbenp.prettier-vscode",
+                "editor.formatOnSave": True,
+            },
+            b'"consumer": { "keep": true }',
+        ),
+        (
+            ".claude/settings.json",
+            AdapterKind.JSON,
+            b'{"consumer":{"keep":true}}\n',
+            "key:/hooks",
+            (
+                b'{"SessionStart":[{"matcher":"startup|resume|clear|compact",'
+                b'"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/'
+                b'.agents/hooks/agent-handoff/session_start.py","args":[],'
+                b'"timeout":10,"statusMessage":"Loading agent handoff state..."}]}]}'
+            ),
+            {
+                "SessionStart": [
+                    {
+                        "matcher": "startup|resume|clear|compact",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": (
+                                    "${CLAUDE_PROJECT_DIR}/.agents/hooks/"
+                                    "agent-handoff/session_start.py"
+                                ),
+                                "args": cast("JsonValue", []),
+                                "timeout": 10,
+                                "statusMessage": "Loading agent handoff state...",
+                            }
+                        ],
+                    }
+                ]
+            },
+            b'"consumer": { "keep": true }',
+        ),
+        (
+            ".vscode/tasks.json",
+            AdapterKind.JSON,
+            (
+                b'{"version":"2.0.0","tasks":[{"label":"consumer","type":"shell",'
+                b'"command":"keep"}]}\n'
+            ),
+            "keyed-set:/tasks#label=check",
+            (
+                b'{"label":"check","type":"shell",'
+                b'"command":"uv run python scripts/check.py",'
+                b'"problemMatcher":[],"group":"test"}'
+            ),
+            {
+                "label": "check",
+                "type": "shell",
+                "command": "uv run python scripts/check.py",
+                "problemMatcher": cast("JsonValue", []),
+                "group": "test",
+            },
+            b'"label": "consumer"',
+        ),
+        (
+            "settings.jsonc",
+            AdapterKind.JSONC,
+            b'{\n// keep this consumer comment\n"consumer":{"compact":true}\n}\n',
+            "key:/managed",
+            b'{"enabled":true}',
+            {"enabled": True},
+            b"// keep this consumer comment",
+        ),
+        (
+            ".vscode/settings.json",
+            AdapterKind.JSON,
+            b'{"consumer":true,"[json]":{}}\n',
+            "key:/[json]/editor.defaultFormatter",
+            b'"esbenp.prettier-vscode"',
+            "esbenp.prettier-vscode",
+            b'"consumer": true',
+        ),
+    ],
+)
+def test_json_family_create_preserves_prettier_fixed_point(
+    tmp_path: Path,
+    relative: str,
+    kind: AdapterKind,
+    seed: bytes,
+    scope: str,
+    fragment: bytes,
+    value: JsonValue,
+    preserved: bytes,
+) -> None:
+    path, before = _prettier_clean_seed(tmp_path, relative, seed)
+    assert before.count(preserved) == 1
+    adapter: JsonAdapter | JsoncAdapter = (
+        JsoncAdapter() if kind is AdapterKind.JSONC else JsonAdapter()
+    )
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, content=fragment, value=value),),
+    )
+
+    assert after.count(preserved) == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+@pytest.mark.parametrize("position", ["first", "middle", "last"])
+def test_json_update_position_preserves_prettier_fixed_point(
+    tmp_path: Path,
+    position: str,
+) -> None:
+    relative = f"{position}.json"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        b'{"first":0,"middle":1,"last":2,"consumer":{"keep":true}}\n',
+    )
+    preserved = b'"consumer": { "keep": true }'
+    assert before.count(preserved) == 1
+    value: JsonObject = {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": True,
+    }
+    fragment = b'{"editor.defaultFormatter":"esbenp.prettier-vscode","editor.formatOnSave":true}'
+    adapter = JsonAdapter()
+    scope = f"key:/{position}"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, content=fragment, value=value),),
+    )
+
+    assert after.count(preserved) == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+def test_json_create_formats_owned_fragment_inside_compact_consumer_object() -> None:
+    before = b'{"consumer":{"keep":true}}\n'
+    scope = "key:/[json]"
+    value: JsonObject = {"editor.defaultFormatter": "esbenp.prettier-vscode"}
+    adapter = JsonAdapter()
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=b'{"editor.defaultFormatter":"esbenp.prettier-vscode"}',
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.startswith(b'{"consumer":{"keep":true}')
+    assert b'"[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" }' in after
+    assert _unit(adapter, after, scope).value == value
+
+
+def test_jsonc_create_formats_owned_fragment_with_crlf_and_space_indent() -> None:
+    before = b'{\r\n  "consumer": true\r\n}\r\n'
+    scope = "key:/[markdown]"
+    value: JsonObject = {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": True,
+    }
+    adapter = JsoncAdapter()
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=(
+                    b'{"editor.defaultFormatter":"esbenp.prettier-vscode",'
+                    b'"editor.formatOnSave":true}'
+                ),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after == (
+        b"{\r\n"
+        b'  "consumer": true,\r\n'
+        b'  "[markdown]": {\r\n'
+        b'    "editor.defaultFormatter": "esbenp.prettier-vscode",\r\n'
+        b'    "editor.formatOnSave": true\r\n'
+        b"  }\r\n"
+        b"}\r\n"
+    )
+
+
+def test_json_create_into_empty_root_preserves_prettier_fixed_point(tmp_path: Path) -> None:
+    relative = "empty.json"
+    path, before = _prettier_clean_seed(tmp_path, relative, b"{}\n")
+    adapter = JsonAdapter()
+    scope = "key:/enabled"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.CREATE, scope, content=b"true", value=True),),
+    )
+
+    assert _unit(adapter, after, scope).value is True
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+def test_jsonc_create_into_comment_only_root_preserves_prettier_fixed_point(
+    tmp_path: Path,
+) -> None:
+    relative = "comment-only.jsonc"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        b"{\n// keep this consumer comment\n}\n",
+    )
+    adapter = JsoncAdapter()
+    scope = "keyed-set:/tasks#label=check"
+    value: JsonObject = {
+        "label": "check",
+        "type": "shell",
+        "command": "uv run python scripts/check.py",
+        "problemMatcher": cast("JsonValue", []),
+        "group": "test",
+    }
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=(
+                    b'{"label":"check","type":"shell",'
+                    b'"command":"uv run python scripts/check.py",'
+                    b'"problemMatcher":[],"group":"test"}'
+                ),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(b"// keep this consumer comment") == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+def test_jsonc_nested_create_with_unrelated_comment_preserves_prettier_fixed_point(
+    tmp_path: Path,
+) -> None:
+    relative = "nested-comment.jsonc"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        b'{\n// keep this consumer comment\n"target":{}\n}\n',
+    )
+    adapter = JsoncAdapter()
+    scope = "key:/target/managed"
+    value: JsonObject = {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": True,
+    }
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.CREATE,
+                scope,
+                content=(
+                    b'{"editor.defaultFormatter":"esbenp.prettier-vscode",'
+                    b'"editor.formatOnSave":true}'
+                ),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(b"// keep this consumer comment") == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+def test_jsonc_deep_update_reflows_safe_ancestors_below_unrelated_comment(
+    tmp_path: Path,
+) -> None:
+    relative = "deep-comment.jsonc"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        (
+            b"{\n// keep this consumer comment\n"
+            b'"outer":{"inner":{"managed":"short","consumer":"keep"}}\n}\n'
+        ),
+    )
+    adapter = JsoncAdapter()
+    scope = "key:/outer/inner/managed"
+    value = "x" * 80
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=json.dumps(value).encode(),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(b"// keep this consumer comment") == 1
+    assert after.count(b'"consumer": "keep"') == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+def test_json_nested_update_preserves_prettier_fixed_point(tmp_path: Path) -> None:
+    relative = "nested.json"
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        b'{"outer":{"managed":{"short":true}},"consumer":"keep"}\n',
+    )
+    adapter = JsonAdapter()
+    scope = "key:/outer/managed"
+    value: JsonObject = {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": True,
+    }
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=(
+                    b'{"editor.defaultFormatter":"esbenp.prettier-vscode",'
+                    b'"editor.formatOnSave":true}'
+                ),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(b'"consumer": "keep"') == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+@pytest.mark.parametrize(
+    ("before_value", "after_value"),
+    [
+        ("short", "x" * 80),
+        ("x" * 80, "short"),
+    ],
+)
+def test_json_scalar_update_reflows_only_clean_container_layout(
+    tmp_path: Path,
+    before_value: str,
+    after_value: str,
+) -> None:
+    relative = "threshold.json"
+    seed = json.dumps(
+        {"managed": before_value, "consumer": "keep"},
+        separators=(",", ":"),
+    ).encode()
+    path, before = _prettier_clean_seed(tmp_path, relative, seed)
+    adapter = JsonAdapter()
+    scope = "key:/managed"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=json.dumps(after_value).encode(),
+                value=after_value,
+            ),
+        ),
+    )
+
+    assert after.count(b'"consumer": "keep"') == 1
+    assert _unit(adapter, after, scope).value == after_value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+    assert (
+        adapter.render(
+            adapter.inspect(after, (scope,)),
+            (
+                UnitChange(
+                    ActionKind.UPDATE,
+                    scope,
+                    content=json.dumps(after_value).encode(),
+                    value=after_value,
+                ),
+            ),
+        )
+        == after
+    )
+
+
+def test_prettier_emoji_pattern_matches_pinned_formatter_source() -> None:
+    source = (_ROOT / "node_modules/prettier/index.mjs").read_text(encoding="utf-8")
+    start = source.index("var emoji_regex_default = () => {")
+    start = source.index("return /", start) + len("return /")
+    end = source.index("/g;", start)
+    bundled_digest = hashlib.sha256(source[start:end].encode("ascii")).hexdigest()
+    compiled_digest = hashlib.sha256(_PRETTIER_EMOJI_PATTERN.pattern.encode("ascii")).hexdigest()
+
+    assert compiled_digest == _PRETTIER_EMOJI_PATTERN_SHA256
+    assert bundled_digest == _PRETTIER_EMOJI_PATTERN_SHA256
+
+
+def test_prettier_width_matches_pinned_unicode_display_width() -> None:
+    values = (
+        "ASCII",
+        "𐐀",
+        "界",
+        "𠀀",
+        "e\u0301",
+        "©",
+        "©️",
+        "❤",
+        "❤️",
+        "Ⓜ️",
+        "▪️",
+        "↚️",
+        "☀🏻",
+        "🇺🇸",
+        "👨‍👩‍👧‍👦",
+        "😀‍😀",
+        "©‍©",
+        "😀\U000e0020",
+    )
+
+    assert tuple(_prettier_width(value) for value in values) == prettier_string_widths(
+        _ROOT, values
+    )
+
+
+@pytest.mark.parametrize(
+    ("relative", "adapter"),
+    [
+        ("unicode-width.json", JsonAdapter()),
+        ("unicode-width.jsonc", JsoncAdapter()),
+    ],
+)
+@pytest.mark.parametrize(
+    ("consumer", "value"),
+    [
+        ("😀" * 18, "x" * 20),
+        ("⏭" * 21, "x" * 15),
+    ],
+)
+def test_json_family_uses_prettier_display_width_for_consumer_text(
+    tmp_path: Path,
+    relative: str,
+    adapter: JsonAdapter | JsoncAdapter,
+    consumer: str,
+    value: str,
+) -> None:
+    seed = f'{{"consumer":"{consumer}","managed":"a"}}\n'.encode()
+    path, before = _prettier_clean_seed(tmp_path, relative, seed)
+    scope = "key:/managed"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=json.dumps(value).encode(),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(f'"consumer": "{consumer}"'.encode()) == 1
+    assert _unit(adapter, after, scope).value == value
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+@pytest.mark.parametrize(
+    ("relative", "adapter"),
+    [
+        ("unicode-key-width.json", JsonAdapter()),
+        ("unicode-key-width.jsonc", JsoncAdapter()),
+    ],
+)
+def test_json_family_uses_prettier_display_width_for_owned_key(
+    tmp_path: Path,
+    relative: str,
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    managed_key = "𐐀" * 39
+    seed = json.dumps(
+        {managed_key: "a", "consumer": "keep"},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode()
+    path, before = _prettier_clean_seed(tmp_path, relative, seed)
+    scope = f"key:/{managed_key}"
+    value = "x" * 20
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (
+            UnitChange(
+                ActionKind.UPDATE,
+                scope,
+                content=json.dumps(value).encode(),
+                value=value,
+            ),
+        ),
+    )
+
+    assert after.count(f'"{managed_key}": "{value}"'.encode()) == 1
+    assert after.count(b'"consumer": "keep"') == 1
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+@pytest.mark.parametrize(
+    ("relative", "adapter"),
+    [
+        ("exponent.json", JsonAdapter()),
+        ("exponent.jsonc", JsoncAdapter()),
+    ],
+)
+@pytest.mark.parametrize(
+    ("fragment", "expected", "value"),
+    [
+        (b"1e30", b"1e30", 1e30),
+        (b"1e+30", b"1e30", 1e30),
+        (b"1e-7", b"1e-7", 1e-7),
+        (b"1e-07", b"1e-7", 1e-7),
+        (b"1.2300E+03", b"1.23e3", 1230.0),
+    ],
+)
+def test_json_family_update_normalizes_numeric_lexeme_to_prettier(
+    tmp_path: Path,
+    relative: str,
+    adapter: JsonAdapter | JsoncAdapter,
+    fragment: bytes,
+    expected: bytes,
+    value: float,
+) -> None:
+    path, before = _prettier_clean_seed(
+        tmp_path,
+        relative,
+        b'{"managed":0,"consumer":"keep"}\n',
+    )
+    scope = "key:/managed"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.UPDATE, scope, content=fragment, value=value),),
+    )
+
+    assert after.count(b'"consumer": "keep"') == 1
+    assert _unit(adapter, after, scope).raw == expected
+    _assert_prettier_fixed_point(tmp_path, path, after)
 
 
 def test_jsonc_inspects_keys_sets_and_keyed_sets_with_exact_raw_values() -> None:
@@ -182,7 +809,11 @@ def test_jsonc_updates_keyed_entry_without_touching_siblings_or_comments() -> No
     assert b'{ "label": "consumer", "type": "shell", "command": "echo \\"keep\\"" }' in after
     assert b"// consumer task" in after
     assert b"/* lint note */" not in after
-    assert desired in after
+    assert _unit(adapter, after, scope).value == {
+        "label": "lint",
+        "type": "shell",
+        "command": "ruff check --fix .",
+    }
     assert after.endswith(b'  "escaped/key": "quoted \\"value\\"",\n}\n')
 
 
@@ -272,8 +903,8 @@ def test_jsonc_appends_new_set_and_keyed_entries_in_canonical_scope_order() -> N
         b'"zeta.extension"', recommendations
     )
     tasks = after.index(b'"tasks"')
-    assert after.index(b'"label":"format"', tasks) < after.index(b'"label":"test"', tasks)
-    assert after.index(b'"label": "lint"', tasks) < after.index(b'"label":"format"', tasks)
+    assert after.index(b'"label": "format"', tasks) < after.index(b'"label": "test"', tasks)
+    assert after.index(b'"label": "lint"', tasks) < after.index(b'"label": "format"', tasks)
 
 
 @pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
@@ -288,7 +919,7 @@ def test_jsonc_appends_new_set_and_keyed_entries_in_canonical_scope_order() -> N
         (
             "keyed-set:/tasks#label=check",
             b'{"label":"check","type":"shell","command":"check"}',
-            b'"tasks": [{"label":"check","type":"shell","command":"check"}]',
+            b'"tasks": [{ "label": "check", "type": "shell", "command": "check" }]',
         ),
     ],
 )

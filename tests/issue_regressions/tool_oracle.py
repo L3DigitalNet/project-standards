@@ -116,12 +116,13 @@ def prettier_differences(
     cwd: Path,
     patterns: tuple[str, ...],
     *,
+    config_path: Path | None = None,
     ignore_path: Path | None = None,
 ) -> tuple[str, ...]:
     args = [
         str(_binary(repo, "prettier")),
         "--config",
-        str(repo / ".prettierrc.json"),
+        str(config_path or repo / ".prettierrc.json"),
         "--list-different",
     ]
     if ignore_path is not None:
@@ -152,6 +153,35 @@ def format_with_prettier(
     )
     if outcome.returncode != 0:
         raise AssertionError(f"Prettier write failed: {outcome.output}")
+
+
+def prettier_string_widths(repo: Path, values: tuple[str, ...]) -> tuple[int, ...]:
+    """Measure strings through the exact pinned Prettier utility."""
+    script = """
+import fs from "node:fs";
+import prettier from "./node_modules/prettier/index.mjs";
+const values = JSON.parse(fs.readFileSync(0, "utf8"));
+process.stdout.write(JSON.stringify(values.map(prettier.util.getStringWidth)));
+"""
+    completed = subprocess.run(
+        ["node", "--input-type=module", "--eval", script],
+        cwd=repo,
+        check=False,
+        capture_output=True,
+        input=json.dumps(values),
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise AssertionError(
+            f"Prettier string-width probe failed: {completed.stdout}{completed.stderr}"
+        )
+    raw_widths: object = json.loads(completed.stdout)
+    if not isinstance(raw_widths, list):
+        raise AssertionError("Prettier string-width probe returned invalid JSON")
+    untyped_widths = cast("list[object]", raw_widths)
+    if not all(isinstance(width, int) for width in untyped_widths):
+        raise AssertionError("Prettier string-width probe returned invalid JSON")
+    return tuple(cast("list[int]", untyped_widths))
 
 
 def markdownlint(repo: Path, path: Path) -> ToolOutcome:
