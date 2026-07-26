@@ -131,6 +131,41 @@ def test_fix_skips_under_custom_schema(tmp_path: Path) -> None:
     assert (tmp_path / "a.md").read_text() == before  # CR-001: no writes under custom schema
 
 
+@pytest.mark.parametrize("command", ["validate", "fix"])
+def test_top_level_explicit_directory_reports_own_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert cli_main([command, directory.name, "--quiet"]) == 2
+    error = capsys.readouterr().err
+    assert directory.name in error
+    assert f"run 'project-standards {command}' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
+def test_top_level_fix_custom_schema_still_rejects_explicit_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    schema = tmp_path / "custom.schema.json"
+    schema.write_text("{}", encoding="utf-8")
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert cli_main(["fix", "--schema", str(schema), directory.name, "--quiet"]) == 2
+    error = capsys.readouterr().err
+    assert "run 'project-standards fix' without positional FILE arguments" in error
+    assert "custom schema in use; skipping" not in error
+
+
 def test_fix_skips_with_schema_flag(tmp_path: Path) -> None:
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")

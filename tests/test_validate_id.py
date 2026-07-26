@@ -809,6 +809,39 @@ def test_main_missing_explicit_file_exits_2(
     assert main([str(tmp_path / "no-such-file.md")]) == 2
 
 
+def test_main_explicit_directory_reports_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert main([directory.name]) == 2
+    error = capsys.readouterr().err
+    assert directory.name in error
+    assert "run 'validate-id' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
+def test_custom_schema_still_rejects_explicit_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    schema = tmp_path / "custom.schema.json"
+    schema.write_text("{}", encoding="utf-8")
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["--schema", str(schema), directory.name, "--quiet"]) == 2
+    error = capsys.readouterr().err
+    assert "run 'validate-id' without positional FILE arguments" in error
+    assert "custom schema in use; skipping" not in error
+
+
 def test_main_absolute_glob_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Same exit-2 contract as validate-frontmatter for bad glob patterns (F44).
     monkeypatch.chdir(tmp_path)

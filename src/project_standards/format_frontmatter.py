@@ -753,6 +753,7 @@ def main(
     *,
     _command_locked: bool = False,
     _selected_package: SelectedCommandPackage | None = None,
+    _config_driven_invocation: str = "format-frontmatter",
 ) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if not _command_locked:
@@ -764,6 +765,7 @@ def main(
                 args_,
                 _command_locked=True,
                 _selected_package=selected,
+                _config_driven_invocation=_config_driven_invocation,
             ),
         )
         if outcome is not None:
@@ -777,6 +779,7 @@ def main(
             arguments,
             _selected_package,
             surface="format-frontmatter",
+            config_driven_invocation=_config_driven_invocation,
         )
     parser = argparse.ArgumentParser(
         prog="format-frontmatter",
@@ -820,7 +823,20 @@ def main(
         return loaded
     config = loaded
 
-    if args.schema is not None or schema_value_is_path(config.schema):
+    custom_schema = args.schema is not None or schema_value_is_path(config.schema)
+    if custom_schema and args.files:
+        try:
+            collect_paths(
+                list(args.files),
+                args.glob,
+                config.include,
+                config.exclude,
+                config_driven_invocation=_config_driven_invocation,
+            )
+        except ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if custom_schema:
         if not args.quiet:
             print("note: custom schema in use; skipping frontmatter formatting")
         return 0
@@ -853,6 +869,7 @@ def main(
             config.include,
             config.exclude,
             on_named_excluded=named_excluded.append,
+            config_driven_invocation=_config_driven_invocation,
         )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)

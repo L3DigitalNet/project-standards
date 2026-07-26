@@ -1409,6 +1409,39 @@ def test_main_missing_explicit_file_exits_2(
     assert "error:" in captured.err
 
 
+def test_main_explicit_directory_reports_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert main([directory.name]) == 2
+    error = capsys.readouterr().err
+    assert directory.name in error
+    assert "run 'format-frontmatter' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
+def test_custom_schema_still_rejects_explicit_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    schema = tmp_path / "custom.schema.json"
+    schema.write_text("{}", encoding="utf-8")
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["--schema", str(schema), directory.name, "--quiet"]) == 2
+    error = capsys.readouterr().err
+    assert "run 'format-frontmatter' without positional FILE arguments" in error
+    assert "custom schema in use; skipping" not in error
+
+
 def test_main_unreadable_file_reported_exits_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

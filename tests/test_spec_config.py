@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from project_standards.specs import config as spec_config
 from project_standards.specs.config import DiscoveryError, collect_spec_paths, load_spec_config
 from project_standards.validate_frontmatter import ConfigError
 
@@ -27,6 +28,29 @@ def test_zero_match_include_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert cfg.present is True
     with pytest.raises(DiscoveryError):
         collect_spec_paths([], cfg)
+
+
+def test_config_discovery_collector_remains_config_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = load_spec_config(_write(tmp_path, "spec:\n  include: ['docs/specs/**/*.md']\n"))
+    discovered = Path("docs/specs/example.md")
+    observed: list[list[Path]] = []
+
+    def collect(
+        explicit: list[Path],
+        _glob_pattern: str | None,
+        _include: list[str],
+        _exclude: list[str],
+    ) -> list[Path]:
+        observed.append(explicit)
+        return [discovered]
+
+    monkeypatch.setattr(spec_config, "collect_paths", collect)
+
+    assert collect_spec_paths([], cfg) == [discovered]
+    assert observed == [[]]
 
 
 def test_empty_include_list_does_not_fall_back_to_corpus(

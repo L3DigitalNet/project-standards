@@ -1677,6 +1677,70 @@ def test_main_missing_explicit_file_exits_2(
     assert "no such file" in capsys.readouterr().err
 
 
+def test_main_explicit_directory_reports_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    rc = main([directory.name, "--schema", str(SCHEMA_PATH), "--quiet"])
+
+    assert rc == 2
+    error = capsys.readouterr().err
+    assert directory.name in error
+    assert "run 'validate-frontmatter' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
+def test_collect_paths_directory_guidance_is_opt_in(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(
+        _vf.ConfigError,
+        match=r"run 'validate-frontmatter' without positional FILE arguments",
+    ):
+        collect_paths(
+            [Path(directory.name)],
+            None,
+            [],
+            [],
+            config_driven_invocation="validate-frontmatter",
+        )
+
+    with pytest.raises(_vf.ConfigError, match=r"no such file: docs"):
+        collect_paths([Path(directory.name)], None, [], [])
+
+
+def test_collect_paths_reports_directory_and_missing_inputs_together(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    directory = tmp_path / "docs"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(_vf.ConfigError) as exc_info:
+        collect_paths(
+            [Path(directory.name), Path("missing.md")],
+            None,
+            [],
+            [],
+            config_driven_invocation="validate-frontmatter",
+        )
+
+    message = str(exc_info.value)
+    assert f"directory inputs are not supported: {directory.name}" in message
+    assert "no such file: missing.md" in message
+
+
 def test_main_absolute_glob_exits_2(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

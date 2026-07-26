@@ -458,8 +458,14 @@ def main(argv: list[str] | None = None) -> int:
         v2_result = _run_v2_validate(validator_args, validate_control=True)
         if v2_result is not None:
             return v2_result
-        rc_frontmatter = validate_frontmatter.main(validator_args)
-        rc_id = validate_id.main(validator_args)
+        rc_frontmatter = validate_frontmatter.main(
+            validator_args,
+            _config_driven_invocation="project-standards validate",
+        )
+        rc_id = validate_id.main(
+            validator_args,
+            _config_driven_invocation="project-standards validate",
+        )
         rc_refs = validate_references.main(validator_args)
         from project_standards.control_plane.cli import validate_repository
 
@@ -503,9 +509,22 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         if legacy:
             validate_frontmatter.emit_legacy_config_warning()
-        if parsed_fix.schema is not None or validate_frontmatter.schema_value_is_path(
+        custom_schema = parsed_fix.schema is not None or validate_frontmatter.schema_value_is_path(
             fix_cfg.schema
-        ):
+        )
+        if custom_schema and parsed_fix.files:
+            try:
+                validate_frontmatter.collect_paths(
+                    list(parsed_fix.files),
+                    parsed_fix.glob,
+                    fix_cfg.include,
+                    fix_cfg.exclude,
+                    config_driven_invocation="project-standards fix",
+                )
+            except validate_frontmatter.ConfigError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 2
+        if custom_schema:
             print("note: custom schema in use; skipping fix", file=sys.stderr)
             return 0
         try:
@@ -514,6 +533,7 @@ def main(argv: list[str] | None = None) -> int:
                 parsed_fix.glob,
                 fix_cfg.include,
                 fix_cfg.exclude,
+                config_driven_invocation="project-standards fix",
             )
             from project_standards.control_plane.executor import apply_authoring_plan
             from project_standards.frontmatter_authoring import plan_frontmatter_fix
@@ -543,8 +563,14 @@ def main(argv: list[str] | None = None) -> int:
         # Final postcondition = the SAME contract as `project-standards validate`,
         # references included, so a "successful" fix cannot hide a reference error (CR-001).
         return max(
-            validate_frontmatter.main(fix_args),
-            validate_id.main(fix_args),
+            validate_frontmatter.main(
+                fix_args,
+                _config_driven_invocation="project-standards fix",
+            ),
+            validate_id.main(
+                fix_args,
+                _config_driven_invocation="project-standards fix",
+            ),
             validate_references.main(fix_args),
         )
 

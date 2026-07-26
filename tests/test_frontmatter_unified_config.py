@@ -723,6 +723,67 @@ def test_top_level_fix_applies_selected_provider_plan(
     assert "id: 'note-" in document.read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize(
+    ("surface", "arguments"),
+    [
+        ("validate-frontmatter", []),
+        ("validate-id", []),
+        ("validate-id", ["--fix"]),
+        ("format-frontmatter", []),
+        ("format-frontmatter", ["--write"]),
+        ("project-standards validate", []),
+        ("project-standards fix", []),
+    ],
+)
+def test_selected_explicit_directory_reports_originating_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    surface: str,
+    arguments: list[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    _write_unified_config(tmp_path, custom_schema=False)
+    directory = tmp_path / "handbook"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+    argv = [*arguments, directory.name, "--quiet"]
+
+    if surface == "validate-frontmatter":
+        status = validate_frontmatter.main(argv)
+    elif surface == "validate-id":
+        status = validate_id.main(argv)
+    elif surface == "format-frontmatter":
+        status = format_frontmatter.main(argv)
+    elif surface == "project-standards validate":
+        status = project_standards_main(["validate", *argv])
+    else:
+        status = project_standards_main(["fix", *argv])
+
+    assert status == 2
+    error = capsys.readouterr().err
+    assert directory.name in error
+    assert f"run '{surface}' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
+def test_selected_validate_references_does_not_gain_directory_guidance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_unified_config(tmp_path, custom_schema=False)
+    directory = tmp_path / "handbook"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert validate_references.main([directory.name, "--quiet"]) == 2
+    error = capsys.readouterr().err
+    assert f"no such file: {directory.name}" in error
+    assert "without positional FILE arguments" not in error
+
+
 def test_top_level_validate_maps_selected_provider_refusal_to_operator_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1088,6 +1149,28 @@ def test_top_level_validate_supports_adr_without_frontmatter_package(
     assert "ADR is missing required section" in capsys.readouterr().err
 
 
+def test_adr_only_explicit_directory_reports_top_level_config_driven_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from project_standards.cli import main as project_standards_main
+
+    distribution = InstalledDistribution.current()
+    initialize_control_plane(tmp_path, "5", distribution=distribution)
+    set_standard_enabled(tmp_path, "adr", True)
+    assert reconcile(["--repo", str(tmp_path), "--apply"], distribution=distribution) == 0
+    directory = tmp_path / "docs/adr"
+    directory.mkdir(parents=True, exist_ok=True)
+    monkeypatch.chdir(tmp_path)
+
+    assert project_standards_main(["validate", "--quiet", "docs/adr"]) == 2
+    error = capsys.readouterr().err
+    assert "docs/adr" in error
+    assert "run 'project-standards validate' without positional FILE arguments" in error
+    assert "no such file" not in error
+
+
 def test_adr_only_scope_uses_frontmatter_defaults_plus_standards(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1105,15 +1188,19 @@ def test_adr_only_scope_uses_frontmatter_defaults_plus_standards(
     assert ordinary.include == ["selected.md"]
     assert ordinary.exclude == ["ignored/**"]
     observed: dict[str, list[str]] = {}
+    observed_invocation: list[str | None] = []
 
     def collect(
         _explicit: list[Path],
         _glob_pattern: str | None,
         include: list[str],
         exclude: list[str],
+        *,
+        config_driven_invocation: str | None,
     ) -> list[Path]:
         observed["include"] = include
         observed["exclude"] = exclude
+        observed_invocation.append(config_driven_invocation)
         return []
 
     monkeypatch.setattr(validate_frontmatter, "collect_paths", collect)
@@ -1123,3 +1210,4 @@ def test_adr_only_scope_uses_frontmatter_defaults_plus_standards(
         "include": ["selected.md"],
         "exclude": ["ignored/**", ".standards/**"],
     }
+    assert observed_invocation == ["project-standards validate"]

@@ -507,6 +507,7 @@ def main(
     *,
     _command_locked: bool = False,
     _selected_package: SelectedCommandPackage | None = None,
+    _config_driven_invocation: str = "validate-id",
 ) -> int:
     """CLI entry point; returns an exit code."""
     reconfigure_output_streams()
@@ -520,6 +521,7 @@ def main(
                 args_,
                 _command_locked=True,
                 _selected_package=selected,
+                _config_driven_invocation=_config_driven_invocation,
             ),
         )
         if outcome is not None:
@@ -532,6 +534,7 @@ def main(
                 arguments,
                 _selected_package,
                 surface="validate-id",
+                config_driven_invocation=_config_driven_invocation,
             )
         from project_standards.frontmatter_commands import run_locked_standalone_validate
 
@@ -539,6 +542,7 @@ def main(
             arguments,
             _selected_package,
             surface="validate-id",
+            config_driven_invocation=_config_driven_invocation,
         )
     parser = argparse.ArgumentParser(
         prog="validate-id",
@@ -614,7 +618,20 @@ def main(
     # Skip id-format validation when a custom (non-bundled) schema is in use — either
     # via the --schema CLI flag or via a config-level path. Custom schemas are
     # consumer-owned and may define different id conventions.
-    if args.schema is not None or schema_value_is_path(config.schema):
+    custom_schema = args.schema is not None or schema_value_is_path(config.schema)
+    if custom_schema and args.files:
+        try:
+            collect_paths(
+                list(args.files),
+                args.glob,
+                config.include,
+                config.exclude,
+                config_driven_invocation=_config_driven_invocation,
+            )
+        except ConfigError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if custom_schema:
         if not args.quiet:
             print("note: custom schema in use; skipping id-format validation")
         return 0
@@ -632,7 +649,13 @@ def main(
         return 2
 
     try:
-        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+        paths = collect_paths(
+            list(args.files),
+            args.glob,
+            config.include,
+            config.exclude,
+            config_driven_invocation=_config_driven_invocation,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

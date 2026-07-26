@@ -277,6 +277,8 @@ def _emit_authoring_diagnostics(
 def _selected_context(
     parsed: argparse.Namespace,
     selected: SelectedCommandPackage,
+    *,
+    config_driven_invocation: str | None,
 ) -> tuple[validate_frontmatter.ProjectConfig, list[Path], JsonObject, JsonObject]:
     config = validate_frontmatter.config_from_unified_options(
         selected.effective_config,
@@ -288,6 +290,7 @@ def _selected_context(
         parsed.glob,
         config.include,
         config.exclude,
+        config_driven_invocation=config_driven_invocation,
     )
     effective, snapshots = _provider_inputs(
         selected,
@@ -386,10 +389,17 @@ def run_locked_standalone_validate(
     selected: SelectedCommandPackage,
     *,
     surface: str,
+    config_driven_invocation: str | None = None,
 ) -> int:
     """Run one legacy-named read command through the selected validate provider."""
     parsed = _parser(surface).parse_args(argv)
-    config, paths, effective, snapshots = _selected_context(parsed, selected)
+    config, paths, effective, snapshots = _selected_context(
+        parsed,
+        selected,
+        config_driven_invocation=(
+            None if surface == "validate-references" else config_driven_invocation
+        ),
+    )
     if surface == "validate-references":
         references = effective.get("references")
         if not isinstance(references, dict) or references.get("enabled") is not True:
@@ -455,11 +465,16 @@ def run_locked_standalone_fix(
     selected: SelectedCommandPackage,
     *,
     surface: str,
+    config_driven_invocation: str,
 ) -> int:
     """Apply a legacy-named authoring surface through the selected fix provider."""
     removed = {"--fix"} if surface == "validate-id" else {"--write", "--bump-updated"}
     parsed = _parser(surface).parse_args([argument for argument in argv if argument not in removed])
-    _config, paths, effective, snapshots = _selected_context(parsed, selected)
+    _config, paths, effective, snapshots = _selected_context(
+        parsed,
+        selected,
+        config_driven_invocation=config_driven_invocation,
+    )
     if effective.get("schema") == "custom":
         label = "id-format" if surface == "validate-id" else "frontmatter formatting"
         print(f"note: custom schema in use; skipping {label}", file=sys.stderr)
@@ -516,6 +531,7 @@ def run_locked_standalone_fix(
             ],
             selected,
             surface="validate-id",
+            config_driven_invocation=config_driven_invocation,
         )
         status = max(
             diagnostic_status,
@@ -584,6 +600,7 @@ def run_validate(
                     parsed.glob,
                     list(validate_frontmatter.DEFAULT_INCLUDE),
                     [*validate_frontmatter.DEFAULT_EXCLUDE, ".standards/**"],
+                    config_driven_invocation="project-standards validate",
                 )
                 if not paths:
                     if not parsed.quiet:
@@ -607,7 +624,11 @@ def run_validate(
                         validate_repository(selected.repo, distribution=installed),
                     )
                 return status
-            config, paths, effective, snapshots = _selected_context(parsed, selected)
+            config, paths, effective, snapshots = _selected_context(
+                parsed,
+                selected,
+                config_driven_invocation="project-standards validate",
+            )
             if not paths:
                 if not parsed.quiet:
                     print("no files matched", file=sys.stderr)
@@ -670,7 +691,11 @@ def run_fix(
         ) as selected:
             if selected is None:
                 return None
-            config, paths, effective, snapshots = _selected_context(parsed, selected)
+            config, paths, effective, snapshots = _selected_context(
+                parsed,
+                selected,
+                config_driven_invocation="project-standards fix",
+            )
             if effective.get("schema") == "custom":
                 print("note: custom schema in use; skipping fix", file=sys.stderr)
                 return 0
@@ -717,7 +742,11 @@ def run_fix(
                         and previous_ids.get(action.target.original) != document_id
                     ):
                         print(f"fixed: {action.target.original}: id → '{document_id}'")
-            _, _, validation_effective, validation_snapshots = _selected_context(parsed, selected)
+            _, _, validation_effective, validation_snapshots = _selected_context(
+                parsed,
+                selected,
+                config_driven_invocation="project-standards fix",
+            )
             validation = _validate_selected(
                 parsed,
                 selected,

@@ -237,11 +237,19 @@ def test_validate_subcommand_delegates_flags(
     captured_id: list[list[str]] = []
     captured_refs: list[list[str]] = []
 
-    def fake_fm(argv: list[str]) -> int:
+    def fake_fm(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-frontmatter",
+    ) -> int:
         captured_fm.append(list(argv))
         return 0
 
-    def fake_id(argv: list[str]) -> int:
+    def fake_id(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-id",
+    ) -> int:
         captured_id.append(list(argv))
         return 0
 
@@ -279,10 +287,20 @@ def test_validate_exit_code_is_maximum_of_all(
     ]
     for rc_fm, rc_id, rc_refs, expected in cases:
 
-        def fake_fm(_argv: list[str], _r: int = rc_fm) -> int:
+        def fake_fm(
+            _argv: list[str],
+            _r: int = rc_fm,
+            *,
+            _config_driven_invocation: str = "validate-frontmatter",
+        ) -> int:
             return _r
 
-        def fake_id(_argv: list[str], _r: int = rc_id) -> int:
+        def fake_id(
+            _argv: list[str],
+            _r: int = rc_id,
+            *,
+            _config_driven_invocation: str = "validate-id",
+        ) -> int:
             return _r
 
         def fake_refs(_argv: list[str], _r: int = rc_refs) -> int:
@@ -305,7 +323,11 @@ def test_validate_schema_flag_skips_id_check(
     schema_file.write_text("{}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
-    def fake_fm(_argv: list[str]) -> int:
+    def fake_fm(
+        _argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-frontmatter",
+    ) -> int:
         return 0
 
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
@@ -331,7 +353,11 @@ def test_validate_config_custom_schema_skips_id_check(
     )
     monkeypatch.chdir(tmp_path)
 
-    def fake_fm(_argv: list[str]) -> int:
+    def fake_fm(
+        _argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-frontmatter",
+    ) -> int:
         return 0
 
     monkeypatch.setattr(cli.validate_frontmatter, "main", fake_fm)
@@ -351,11 +377,19 @@ def test_validate_glob_forwarded_to_all_validators(
     captured_id: list[list[str]] = []
     captured_refs: list[list[str]] = []
 
-    def fake_fm(argv: list[str]) -> int:
+    def fake_fm(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-frontmatter",
+    ) -> int:
         captured_fm.append(list(argv))
         return 0
 
-    def fake_id(argv: list[str]) -> int:
+    def fake_id(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-id",
+    ) -> int:
         captured_id.append(list(argv))
         return 0
 
@@ -383,11 +417,19 @@ def test_validate_no_require_frontmatter_forwarded(
     captured_id: list[list[str]] = []
     captured_refs: list[list[str]] = []
 
-    def fake_fm(argv: list[str]) -> int:
+    def fake_fm(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-frontmatter",
+    ) -> int:
         captured_fm.append(list(argv))
         return 0
 
-    def fake_id(argv: list[str]) -> int:
+    def fake_id(
+        argv: list[str],
+        *,
+        _config_driven_invocation: str = "validate-id",
+    ) -> int:
         captured_id.append(list(argv))
         return 0
 

@@ -37,6 +37,7 @@ import io
 import json
 import os
 import re
+import stat
 import sys
 from collections.abc import Callable, Mapping
 from fnmatch import fnmatchcase
@@ -421,6 +422,7 @@ def collect_paths(
     exclude_patterns: list[str],
     *,
     on_named_excluded: Callable[[Path], None] | None = None,
+    config_driven_invocation: str | None = None,
 ) -> list[Path]:
     """Resolve the final set of files to check.
 
@@ -429,9 +431,12 @@ def collect_paths(
     Only when nothing is named do we fall back to config `include`, and failing
     that to every Markdown file under cwd. `exclude` is applied in all cases.
 
-    Raises ConfigError for an explicitly named file that does not exist: globs and
-    includes may legitimately match nothing, but silently dropping a named file
-    turns a typo'd CI invocation into a green run that validated nothing.
+    Raises ConfigError for an explicitly named path that is not a regular file:
+    globs and includes may legitimately match nothing, but silently dropping a
+    named file turns a typo'd CI invocation into a green run that validated
+    nothing. Explicit-file callers can set `config_driven_invocation` to render a
+    distinct directory diagnostic with their supported no-positional-file command.
+    Config-only callers omit it and retain the existing missing-file behavior.
 
     An explicitly named file that survives the existence check but is then dropped
     by `exclude` is a milder version of the same trap (5.8.0 FR-010, issue #29): the
@@ -441,9 +446,7 @@ def collect_paths(
     Glob/include-derived paths are expected to be pruned by `exclude` (that is what
     exclude patterns are for) and never trigger the callback; only a path present in
     `explicit` does. Kept as an opt-in callback rather than widening the return type
-    so the family of existing `collect_paths(...)` callers (validate_id,
-    validate_references, cli, frontmatter_commands, specs/config, and this module's
-    own CLI) are untouched — only a caller that opts in pays for the diagnostic.
+    so only a caller that opts in pays for the diagnostic.
 
     Pattern-dialect warning: include patterns use Path.glob semantics (`*` stops at
     `/`), but exclude patterns use fnmatch semantics where `*` ALSO spans path
@@ -455,9 +458,33 @@ def collect_paths(
     paths: set[Path] = set()
 
     if explicit or glob_pattern:
-        missing = [p for p in explicit if not p.is_file()]
+        invalid: list[tuple[Path, bool]] = []
+        for path in explicit:
+            try:
+                mode = path.stat().st_mode
+            except OSError:
+                invalid.append((path, False))
+                continue
+            if stat.S_ISDIR(mode):
+                invalid.append((path, True))
+            elif not stat.S_ISREG(mode):
+                invalid.append((path, False))
+        messages: list[str] = []
+        directories = [path for path, is_directory in invalid if is_directory]
+        if directories and config_driven_invocation is not None:
+            messages.append(
+                "directory inputs are not supported: "
+                + ", ".join(str(path) for path in directories)
+                + f"; run {config_driven_invocation!r} without positional FILE arguments "
+                "to use configured include patterns"
+            )
+            missing = [path for path, is_directory in invalid if not is_directory]
+        else:
+            missing = [path for path, _is_directory in invalid]
         if missing:
-            raise ConfigError("no such file: " + ", ".join(str(p) for p in missing))
+            messages.append("no such file: " + ", ".join(str(path) for path in missing))
+        if messages:
+            raise ConfigError("; ".join(messages))
         paths.update(explicit)
         if glob_pattern:
             paths.update(_glob_files(glob_pattern))
@@ -949,6 +976,7 @@ def main(
     *,
     _command_locked: bool = False,
     _selected_package: SelectedCommandPackage | None = None,
+    _config_driven_invocation: str = "validate-frontmatter",
 ) -> int:
     """CLI entry point; returns an exit code (0 valid / 1 violations / 2 operator error)."""
     reconfigure_output_streams()
@@ -962,6 +990,7 @@ def main(
                 args_,
                 _command_locked=True,
                 _selected_package=selected,
+                _config_driven_invocation=_config_driven_invocation,
             ),
         )
         if outcome is not None:
@@ -973,6 +1002,7 @@ def main(
             arguments,
             _selected_package,
             surface="validate-frontmatter",
+            config_driven_invocation=_config_driven_invocation,
         )
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -1144,7 +1174,13 @@ def main(
 
     require_frontmatter = config.required and not args.no_require_frontmatter
     try:
-        paths = collect_paths(list(args.files), args.glob, config.include, config.exclude)
+        paths = collect_paths(
+            list(args.files),
+            args.glob,
+            config.include,
+            config.exclude,
+            config_driven_invocation=_config_driven_invocation,
+        )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

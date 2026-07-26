@@ -289,6 +289,33 @@ def test_references_index_is_repo_wide_under_scoped_invocation(tmp_path: Path) -
     assert "note-aaaaaa-x" in r.stderr
 
 
+def test_references_collector_remains_config_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = tmp_path / ".project-standards.yml"
+    cfg.write_text(
+        "markdown:\n  frontmatter:\n    references:\n      enabled: true\n    include: ['*.md']\n",
+        encoding="utf-8",
+    )
+    observed: list[list[Path]] = []
+
+    def collect(
+        explicit: list[Path],
+        _glob_pattern: str | None,
+        _include: list[str],
+        _exclude: list[str],
+    ) -> list[Path]:
+        observed.append(explicit)
+        return []
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(validate_references_module, "collect_paths", collect)
+
+    assert validate_references_module.main(["named.md", "--config", str(cfg), "--quiet"]) == 0
+    assert observed == [[]]
+
+
 def test_disabled_by_default_exits_0(tmp_path: Path) -> None:
     cfg = tmp_path / ".project-standards.yml"
     cfg.write_text("markdown:\n  frontmatter:\n    include: ['*.md']\n")

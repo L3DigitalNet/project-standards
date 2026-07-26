@@ -751,7 +751,7 @@ def test_top_level_validate_warns_for_legacy_and_rejects_dual_authority(
     distribution = installed_distribution(tmp_path)
     _use_distribution(monkeypatch, distribution)
 
-    def clean_validator(_args: list[str] | None = None) -> int:
+    def clean_validator(_args: list[str] | None = None, **_kwargs: object) -> int:
         return 0
 
     monkeypatch.setattr("project_standards.cli.validate_frontmatter.main", clean_validator)
