@@ -30,7 +30,7 @@ config = { contract_version = "1.1", workflow_mode = "self-hosted" }
 [standards.project-spec]
 enabled = true
 version = "latest"
-config = { contract_version = "1.1", include_patterns = ["standards/project-spec/examples/**/*.md", "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md", "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md", "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md", "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md", "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md", "docs/specs/2026-07-09-agent-handoff-standard-package.md", "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md", "docs/specs/future/usage-documentation-site/**/*.md"], workflow_mode = "self-hosted" }
+config = { contract_version = "1.1", include_patterns = ["standards/project-spec/examples/**/*.md", "docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md", "docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md", "docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md", "docs/specs/archive/2026-07-07-standard-bundle-authoring-standard.md", "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md", "docs/specs/2026-07-09-agent-handoff-standard-package.md", "docs/specs/2026-07-10-consumer-standards-control-plane-spec.md", "docs/specs/2026-07-26-v5-adoption-integrity-correction-train-spec.md", "docs/specs/future/usage-documentation-site/**/*.md"], workflow_mode = "self-hosted" }
 
 [standards.python-tooling]
 enabled = true
