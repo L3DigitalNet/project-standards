@@ -537,13 +537,24 @@ def _typed_result(
                 raise ControlPlaneError("findings provider returned an invalid finding")
             if not isinstance(hint, str):
                 raise ControlPlaneError("findings provider returned an invalid finding")
-            raw_line = table.get("line")
-            if raw_line is None:
-                line = None
-            elif isinstance(raw_line, int) and not isinstance(raw_line, bool):
-                line = raw_line
-            else:
-                raise ControlPlaneError("findings provider returned an invalid finding")
+            measures: dict[str, int | None] = {}
+            for field, minimum in (
+                ("line", 1),
+                ("column", 1),
+                ("observed", 0),
+                ("limit", 1),
+            ):
+                raw_value = table.get(field)
+                if raw_value is None:
+                    measures[field] = None
+                elif (
+                    isinstance(raw_value, int)
+                    and not isinstance(raw_value, bool)
+                    and raw_value >= minimum
+                ):
+                    measures[field] = raw_value
+                else:
+                    raise ControlPlaneError("findings provider returned an invalid finding")
             locus = table.get("locus")
             if locus is not None and not isinstance(locus, str):
                 raise ControlPlaneError("findings provider returned an invalid finding")
@@ -557,8 +568,11 @@ def _typed_result(
                     identity=identity,
                     message=message,
                     hint=hint,
-                    line=line,
+                    line=measures["line"],
+                    column=measures["column"],
                     locus=locus,
+                    observed=measures["observed"],
+                    limit=measures["limit"],
                 )
             )
         return ProviderResult(

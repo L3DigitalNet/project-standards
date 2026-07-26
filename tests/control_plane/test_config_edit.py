@@ -137,6 +137,43 @@ def _write_control_plane(repo: Path, config_content: str = _PHYSICAL_CONFIG) -> 
     (control / "lock.toml").write_bytes(render_lock(lock))
 
 
+@pytest.mark.parametrize("command", ["list", "show"])
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_standard_inspection__invalid_config_toml__reports_safe_coordinates(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+    json_mode: bool,
+) -> None:
+    _write_control_plane(tmp_path)
+    (tmp_path / ".standards/config.toml").write_text(
+        '[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n'
+        "private_token = null\n# do-not-print-secret\n",
+        encoding="utf-8",
+    )
+    arguments = [
+        command,
+        *(["alpha"] if command == "show" else []),
+        "--repo",
+        str(tmp_path),
+        *(["--json"] if json_mode else []),
+    ]
+
+    assert run(arguments) == 2
+
+    captured = capsys.readouterr()
+    public = captured.out if json_mode else captured.err
+    assert "line 4, column 17" in public
+    assert "private_token" not in public
+    assert "do-not-print-secret" not in public
+    if json_mode:
+        payload = json.loads(public)
+        assert payload["line"] == 4
+        assert payload["column"] == 17
+    else:
+        assert captured.out == ""
+
+
 def test_scanner_indexes_multiline_values_without_splitting_nested_content() -> None:
     statements = scan_toml_statements(_PHYSICAL_CONFIG)
 

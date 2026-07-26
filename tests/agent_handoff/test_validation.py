@@ -241,15 +241,21 @@ def test_symlinked_required_path_is_reported_without_following(tmp_path: Path) -
 def test_missing_local_markdown_link_is_reported(tmp_path: Path) -> None:
     _adopt(tmp_path)
     state = tmp_path / "docs/handoff/state.md"
-    state.write_text(
-        state.read_text(encoding="utf-8") + "\n- [Missing](docs/missing.md)\n",
-        encoding="utf-8",
-    )
+    secret_target = "docs/sk-live-consumer-secret.md"
+    link = f"- [Missing]({secret_target})"
+    content = state.read_text(encoding="utf-8").rstrip() + f"\n\n{link}\n"
+    state.write_text(content, encoding="utf-8")
 
-    assert any(
-        finding.code == "AH-REFERENCE-MISSING" and finding.locus == "Markdown link: docs/missing.md"
+    finding = next(
+        finding
         for finding in validate_repository(RepositoryRoot(tmp_path))
+        if finding.code == "AH-REFERENCE-MISSING"
     )
+    assert finding.path == "docs/handoff/state.md"
+    assert finding.line == content.splitlines().index(link) + 1
+    assert finding.column is not None and finding.column > 0
+    assert finding.locus == "Markdown link"
+    assert secret_target not in str(finding.to_dict())
 
 
 def test_reference_validation__empty_targets__reports_missing_findings(tmp_path: Path) -> None:
@@ -270,7 +276,9 @@ def test_reference_validation__empty_targets__reports_missing_findings(tmp_path:
     ]
 
     assert len(missing) == 3
-    assert all(finding.locus == "Markdown link: " for finding in missing)
+    assert all(finding.locus == "Markdown link" for finding in missing)
+    assert len({finding.line for finding in missing}) == 3
+    assert all(finding.column is not None and finding.column > 0 for finding in missing)
 
 
 @pytest.mark.parametrize(
@@ -346,7 +354,16 @@ def test_size_and_shape_views_project_policy_findings(tmp_path: Path) -> None:
     state = tmp_path / "docs/handoff/state.md"
     state.write_text("x" * 2050, encoding="utf-8")
 
-    assert any(finding.code == "AH-SIZE-CAP" for finding in size_report(RepositoryRoot(tmp_path)))
+    size = next(
+        finding
+        for finding in size_report(RepositoryRoot(tmp_path))
+        if finding.code == "AH-SIZE-CAP" and finding.path == "docs/handoff/state.md"
+    )
+    assert size.locus == "byte budget"
+    assert size.line is None
+    assert size.column is None
+    assert size.observed == 2050
+    assert size.limit == 2048
     assert any(finding.code == "AH-SHAPE" for finding in shape_check(RepositoryRoot(tmp_path)))
 
 

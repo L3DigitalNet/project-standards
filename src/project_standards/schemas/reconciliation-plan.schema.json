@@ -510,6 +510,103 @@
       "title": "PublicActionSchema",
       "type": "object"
     },
+    "PublicCatalogLineageSchema": {
+      "additionalProperties": false,
+      "description": "One catalog identity in a planned installed-catalog refresh.",
+      "properties": {
+        "catalog": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Catalog",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "release": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Release",
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalog",
+        "release",
+        "digest"
+      ],
+      "title": "PublicCatalogLineageSchema",
+      "type": "object"
+    },
+    "PublicCatalogRefreshSchema": {
+      "additionalProperties": false,
+      "description": "Public lineage and selection facts for an installed-catalog refresh.",
+      "properties": {
+        "affected_selections": {
+          "items": {
+            "$ref": "#/$defs/PublicCatalogSelectionChangeSchema"
+          },
+          "title": "Affected Selections",
+          "type": "array"
+        },
+        "after": {
+          "$ref": "#/$defs/PublicCatalogLineageSchema"
+        },
+        "before": {
+          "$ref": "#/$defs/PublicCatalogLineageSchema"
+        },
+        "changed": {
+          "title": "Changed",
+          "type": "boolean"
+        },
+        "classification": {
+          "$ref": "#/$defs/ReleaseClassification"
+        }
+      },
+      "required": [
+        "changed",
+        "classification",
+        "before",
+        "after"
+      ],
+      "title": "PublicCatalogRefreshSchema",
+      "type": "object"
+    },
+    "PublicCatalogSelectionChangeSchema": {
+      "additionalProperties": false,
+      "description": "One enabled package selection changed by catalog refresh.",
+      "properties": {
+        "current": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Current",
+          "type": "string"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "previous",
+        "current"
+      ],
+      "title": "PublicCatalogSelectionChangeSchema",
+      "type": "object"
+    },
     "PublicFindingSchema": {
       "additionalProperties": false,
       "description": "Content-safe finding fields included in public reconciliation output.",
@@ -541,6 +638,19 @@
           "title": "Code",
           "type": "string"
         },
+        "column": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
         "expected": {
           "anyOf": [
             {
@@ -563,6 +673,31 @@
           ],
           "default": null,
           "title": "Expected Digest"
+        },
+        "first_difference_expected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Difference Expected"
+        },
+        "first_difference_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Difference Line"
         },
         "governing_options": {
           "anyOf": [
@@ -587,9 +722,60 @@
           "title": "Identity",
           "type": "string"
         },
+        "limit": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Limit"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "locus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locus"
+        },
         "message": {
           "title": "Message",
           "type": "string"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed"
         },
         "path": {
           "title": "Path",
@@ -625,6 +811,275 @@
       "title": "PublicFindingSchema",
       "type": "object"
     },
+    "PublicPlannedUnitSchema": {
+      "additionalProperties": false,
+      "description": "One public semantic-unit transition with package provenance.",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/AdapterKind"
+        },
+        "after_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "After Digest"
+        },
+        "before_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Before Digest"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActionKind"
+        },
+        "owners": {
+          "items": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "title": "Owners",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/UnitProvenance"
+        },
+        "scope": {
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "shared_identity": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9]+(?:[./_-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Shared Identity"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "versions": {
+          "patternProperties": {
+            "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "title": "Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "target",
+        "adapter",
+        "scope",
+        "owners",
+        "shared_identity",
+        "versions",
+        "provenance",
+        "before_digest",
+        "after_digest"
+      ],
+      "title": "PublicPlannedUnitSchema",
+      "type": "object"
+    },
+    "PublicProviderNoticeSchema": {
+      "additionalProperties": false,
+      "description": "One content-safe notice emitted by a package provider.",
+      "properties": {
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "version",
+        "provider_id",
+        "message"
+      ],
+      "title": "PublicProviderNoticeSchema",
+      "type": "object"
+    },
+    "PublicResolutionSchema": {
+      "additionalProperties": false,
+      "description": "Public package selections and accepted-major transitions.",
+      "properties": {
+        "packages": {
+          "items": {
+            "$ref": "#/$defs/PublicResolvedPackageSchema"
+          },
+          "title": "Packages",
+          "type": "array"
+        },
+        "track_transitions": {
+          "items": {
+            "$ref": "#/$defs/PublicTrackTransitionSchema"
+          },
+          "title": "Track Transitions",
+          "type": "array"
+        }
+      },
+      "title": "PublicResolutionSchema",
+      "type": "object"
+    },
+    "PublicResolvedPackageSchema": {
+      "additionalProperties": false,
+      "description": "One package selection and its public applied-state facts.",
+      "properties": {
+        "applied": {
+          "$ref": "#/$defs/AppliedPackage"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "applied"
+      ],
+      "title": "PublicResolvedPackageSchema",
+      "type": "object"
+    },
+    "PublicTargetPreconditionSchema": {
+      "additionalProperties": false,
+      "description": "One target identity bound to the snapshot observed during planning.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "digest"
+      ],
+      "title": "PublicTargetPreconditionSchema",
+      "type": "object"
+    },
+    "PublicTrackTransitionSchema": {
+      "additionalProperties": false,
+      "description": "One accepted-major authorization transition.",
+      "properties": {
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AcceptedTrack"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/TrackTransitionKind"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AcceptedTrack"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "kind",
+        "previous",
+        "current"
+      ],
+      "title": "PublicTrackTransitionSchema",
+      "type": "object"
+    },
+    "PublicVerificationRequestSchema": {
+      "additionalProperties": false,
+      "description": "One package verification provider deferred until apply.",
+      "properties": {
+        "provider_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "version",
+        "provider_id"
+      ],
+      "title": "PublicVerificationRequestSchema",
+      "type": "object"
+    },
+    "ReleaseClassification": {
+      "description": "Minimum tool release level, or a change that cannot be released.",
+      "enum": [
+        "patch",
+        "minor",
+        "major",
+        "forbidden"
+      ],
+      "title": "ReleaseClassification",
+      "type": "string"
+    },
     "SelectionKind": {
       "description": "Resolution channel recorded for an applied package.",
       "enum": [
@@ -634,6 +1089,16 @@
         "exact"
       ],
       "title": "SelectionKind",
+      "type": "string"
+    },
+    "TrackTransitionKind": {
+      "description": "Mutation required in the lock's independent authorization partition.",
+      "enum": [
+        "create",
+        "replace",
+        "remove"
+      ],
+      "title": "TrackTransitionKind",
       "type": "string"
     },
     "UnitProvenance": {
@@ -677,6 +1142,17 @@
       "title": "Applicable",
       "type": "boolean"
     },
+    "catalog_refresh": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PublicCatalogRefreshSchema"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "findings": {
       "items": {
         "$ref": "#/$defs/PublicFindingSchema"
@@ -684,13 +1160,62 @@
       "title": "Findings",
       "type": "array"
     },
+    "namespace_prunes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Namespace Prunes",
+      "type": "array"
+    },
+    "next_lock": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CentralLock"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "preconditions": {
+      "items": {
+        "$ref": "#/$defs/PublicTargetPreconditionSchema"
+      },
+      "title": "Preconditions",
+      "type": "array"
+    },
     "proposed_lock": {
       "$ref": "#/$defs/CentralLock"
     },
+    "provider_notices": {
+      "items": {
+        "$ref": "#/$defs/PublicProviderNoticeSchema"
+      },
+      "title": "Provider Notices",
+      "type": "array"
+    },
+    "resolution": {
+      "$ref": "#/$defs/PublicResolutionSchema"
+    },
     "schema_version": {
-      "const": "1.1",
+      "const": "1.2",
       "title": "Schema Version",
       "type": "string"
+    },
+    "units": {
+      "items": {
+        "$ref": "#/$defs/PublicPlannedUnitSchema"
+      },
+      "title": "Units",
+      "type": "array"
+    },
+    "verification_requests": {
+      "items": {
+        "$ref": "#/$defs/PublicVerificationRequestSchema"
+      },
+      "title": "Verification Requests",
+      "type": "array"
     }
   },
   "required": [

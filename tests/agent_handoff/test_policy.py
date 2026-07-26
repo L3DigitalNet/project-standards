@@ -102,6 +102,25 @@ def test_state_shape_rules_are_fatal(policy: HandoffPolicy, extra: str, message:
     assert all(finding.severity == "error" for finding in findings)
 
 
+def test_overlong_bullet_reports_safe_line_measure_and_limit(policy: HandoffPolicy) -> None:
+    secret = "sk-live-consumer-secret"
+    bullet = f"- {secret}{'x' * 150}"
+    text = _state(f"{bullet}\n")
+    expected_line = text.splitlines().index(bullet) + 1
+
+    finding = next(
+        item
+        for item in check_document("docs/handoff/state.md", text, policy)
+        if item.limit == 140 and item.observed == len(bullet)
+    )
+
+    assert finding.line == expected_line
+    assert finding.column == 1
+    assert "bullet" in finding.locus.casefold()
+    assert secret not in finding.message
+    assert secret not in str(finding.to_dict())
+
+
 def test_status_shape_is_advisory(policy: HandoffPolicy) -> None:
     text = "# Status\n\n## History\n\n" + ("narrative\n" * 70)
 

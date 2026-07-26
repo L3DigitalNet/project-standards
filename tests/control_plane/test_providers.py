@@ -250,6 +250,11 @@ def _provider_schema(effect: ProviderEffect) -> dict[str, object]:
                         "identity": {"type": "string"},
                         "message": {"type": "string"},
                         "hint": {"type": "string"},
+                        "line": {"type": ["integer", "null"]},
+                        "column": {"type": ["integer", "null"]},
+                        "locus": {"type": ["string", "null"]},
+                        "observed": {"type": ["integer", "null"]},
+                        "limit": {"type": ["integer", "null"]},
                     },
                     "required": ["code", "severity", "path", "identity", "message", "hint"],
                 },
@@ -325,6 +330,11 @@ def _provider_code(
             "identity": "demo",
             "message": "review",
             "hint": "inspect",
+            "line": 12,
+            "column": 7,
+            "locus": "document bullet",
+            "observed": 191,
+            "limit": 160,
         }
         if invalid_finding is not None:
             field, value = invalid_finding
@@ -715,6 +725,11 @@ def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
 
     assert findings.findings[0].code == "DEMO"
     assert findings.findings[0].standard_id == "demo"
+    assert findings.findings[0].line == 12
+    assert findings.findings[0].column == 7
+    assert findings.findings[0].locus == "document bullet"
+    assert findings.findings[0].observed == 191
+    assert findings.findings[0].limit == 160
     assert plan.mutation_plan is not None
     assert plan.mutation_plan.version.value == "2.0"
     assert migration.migration_report is not None
@@ -729,7 +744,11 @@ def test_provider_returns_typed_findings_mutation_plan_and_migration_report(
         pytest.param("path", 7, id="integer-path"),
         pytest.param("identity", 7, id="integer-identity"),
         pytest.param("line", "7", id="invalid-line"),
+        pytest.param("column", "7", id="invalid-column"),
         pytest.param("locus", 7, id="invalid-locus"),
+        pytest.param("observed", "191", id="invalid-observed"),
+        pytest.param("limit", "160", id="invalid-limit"),
+        pytest.param("limit", 0, id="zero-limit"),
     ],
 )
 def test_provider_rejects_invalid_finding_fields(

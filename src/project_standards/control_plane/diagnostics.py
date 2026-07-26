@@ -6,6 +6,7 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from tomllib import TOMLDecodeError
 from typing import Literal, cast
 
 from project_standards.package_contract.diagnostics import validation_summary as validation_summary
@@ -15,6 +16,66 @@ from project_standards.package_contract.payload import JsonValue
 
 class ControlPlaneError(ValueError):
     """Report an invalid control-plane boundary without leaking input content."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        path: str | None = None,
+        line: int | None = None,
+        column: int | None = None,
+        locus: str | None = None,
+        observed: int | None = None,
+        limit: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.path = path
+        self.line = line
+        self.column = column
+        self.locus = locus
+        self.observed = observed
+        self.limit = limit
+
+    @property
+    def message(self) -> str:
+        """Return the safe message before structural rendering is applied."""
+        return cast(str, self.args[0])
+
+    def __str__(self) -> str:
+        location = structural_location(self.path, self.line, self.column)
+        return f"{self.message} ({location})" if location else self.message
+
+    def to_jsonable(self) -> dict[str, object]:
+        """Return only the typed structural facts safe for public diagnostics."""
+        return {
+            key: value
+            for key, value in (
+                ("path", self.path),
+                ("line", self.line),
+                ("column", self.column),
+                ("locus", self.locus),
+                ("observed", self.observed),
+                ("limit", self.limit),
+            )
+            if value is not None
+        }
+
+
+def toml_error(message: str, error: TOMLDecodeError) -> ControlPlaneError:
+    """Convert a TOML parser failure without retaining its source-bearing text."""
+    return ControlPlaneError(message, line=error.lineno, column=error.colno)
+
+
+def structural_location(path: str | None, line: int | None, column: int | None) -> str:
+    """Render a path and parser coordinates without inspecting consumer content."""
+    parts: list[str] = []
+    if path:
+        parts.append(path)
+    if line is not None:
+        parts.append(f"line {line}")
+    if column is not None:
+        parts.append(f"column {column}")
+    return ", ".join(parts)
 
 
 class ControlPlaneConfigurationError(ControlPlaneError):
@@ -51,7 +112,10 @@ class ControlFinding:
     message: str
     hint: str
     line: int | None = None
+    column: int | None = None
     locus: str | None = None
+    observed: int | None = None
+    limit: int | None = None
     # Conflict enrichment (schema 1.1): values are set only for JSON-representable
     # semantic units; byte-valued and whole-file conflicts carry digests alone.
     # governing_options mirrors the owning contribution's declaration: None means
@@ -119,7 +183,10 @@ def finding_sort_key(finding: ControlFinding) -> tuple[object, ...]:
         finding.message,
         finding.hint,
         finding.line if finding.line is not None else -1,
+        finding.column if finding.column is not None else -1,
         finding.locus or "",
+        finding.observed if finding.observed is not None else -1,
+        finding.limit if finding.limit is not None else -1,
         finding.expected_digest or "",
         finding.actual_digest or "",
     )

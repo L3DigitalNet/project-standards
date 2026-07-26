@@ -9,6 +9,7 @@ from project_standards.agent_handoff.model import (
     Finding,
     Harness,
     OperationReport,
+    OperationReportEnvelope,
     PlannedChange,
     ProvenanceLock,
     StartupMode,
@@ -54,6 +55,7 @@ def test_finding_and_change_sort_order_is_stable() -> None:
     ]
     assert [item["path"] for item in payload["changes"]] == ["a/path", "z/path"]
     assert list(payload) == [
+        "schema_version",
         "repository",
         "standard_version",
         "changes",
@@ -68,6 +70,63 @@ def test_finding_and_change_sort_order_is_stable() -> None:
         "updated": 1,
         "warnings": 1,
     }
+
+
+def test_operation_report_uses_closed_current_envelope_version() -> None:
+    report = OperationReport(repository="/repo", standard_version="1.0")
+    current = report.to_dict()
+
+    assert OperationReportEnvelope.model_validate(current).schema_version == "1.1"
+    for version in ("1.0", "9.9"):
+        with pytest.raises(ValidationError):
+            OperationReportEnvelope.model_validate({**current, "schema_version": version})
+    with pytest.raises(ValidationError):
+        OperationReportEnvelope.model_validate({**current, "consumer_content": "unsafe"})
+
+
+def test_structural_finding_json_and_human_rendering_have_field_parity(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    finding = Finding(
+        code="AH-SHAPE",
+        severity="error",
+        path="docs/TODO.md",
+        locus="document bullet",
+        message="bullet exceeds its configured character limit",
+        guidance="condense the bullet",
+        line=22,
+        column=7,
+        observed=191,
+        limit=160,
+    )
+    report = OperationReport(
+        repository="/repo",
+        standard_version="1.0",
+        findings=(finding,),
+    )
+
+    payload = report.to_dict()
+    assert payload["findings"] == [
+        {
+            "code": "AH-SHAPE",
+            "severity": "error",
+            "path": "docs/TODO.md",
+            "locus": "document bullet",
+            "message": "bullet exceeds its configured character limit",
+            "guidance": "condense the bullet",
+            "line": 22,
+            "column": 7,
+            "observed": 191,
+            "limit": 160,
+        }
+    ]
+
+    assert emit_report(report, as_json=False) == 1
+    rendered = capsys.readouterr().err
+    assert "docs/TODO.md:22:7" in rendered
+    assert "document bullet" in rendered
+    assert "observed: 191" in rendered
+    assert "limit: 160" in rendered
 
 
 def test_emit_report_renders_sorted_human_output_and_blocked_exit(
@@ -90,7 +149,9 @@ def test_emit_report_renders_sorted_human_output_and_blocked_exit(
 
     captured = capsys.readouterr()
     assert captured.out == "create: a/path\nupdate: z/path\n"
-    assert captured.err == "error: a/path: a\nwarning: z/path: z\n"
+    assert captured.err == (
+        "error: a/path: a (locus: line 4)\nwarning: z/path: z (locus: line 2)\n"
+    )
 
 
 def test_emit_report_renders_json_without_stderr(capsys: pytest.CaptureFixture[str]) -> None:

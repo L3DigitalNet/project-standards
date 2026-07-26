@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import tomllib
 
 import pytest
 
@@ -22,6 +23,24 @@ from project_standards.package_contract.payload import JsonValue
 
 _DIGEST_A = f"sha256:{'a' * 64}"
 _DIGEST_B = f"sha256:{'b' * 64}"
+
+
+def test_parse_config__invalid_toml__reports_safe_parser_coordinates_and_cause() -> None:
+    content = (
+        b'[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n'
+        b"private_token = null\n# do-not-print-secret\n"
+    )
+
+    with pytest.raises(ControlPlaneError) as caught:
+        parse_config(content)
+
+    assert str(caught.value) == "config is not valid TOML (line 4, column 17)"
+    assert caught.value.line == 4
+    assert caught.value.column == 17
+    assert isinstance(caught.value.__cause__, tomllib.TOMLDecodeError)
+    public = f"{caught.value!s} {caught.value!r}"
+    assert "private_token" not in public
+    assert "do-not-print-secret" not in public
 
 
 def test_content_digest_is_canonical() -> None:

@@ -478,6 +478,21 @@ def test_toml_rejects_malformed_duplicate_or_ambiguous_selected_input(
         TomlAdapter().inspect(content, ("table:/tool/items",))
 
 
+def test_toml_adapter__invalid_toml__reports_safe_parser_coordinates_and_cause() -> None:
+    content = b'[tool.demo]\nsecret = "do-not-print"\nbroken = null\n'
+
+    with pytest.raises(ControlPlaneError) as caught:
+        TomlAdapter().inspect(content, ("table:/tool/demo",))
+
+    assert str(caught.value) == "content is not valid TOML (line 3, column 10)"
+    assert caught.value.line == 3
+    assert caught.value.column == 10
+    assert isinstance(caught.value.__cause__, tomllib.TOMLDecodeError)
+    public = f"{caught.value!s} {caught.value!r}"
+    assert "secret" not in public
+    assert "do-not-print" not in public
+
+
 def test_toml_rejects_duplicate_or_mismatched_changes() -> None:
     content = b"[tool]\nvalue = 1\n"
     adapter = TomlAdapter()

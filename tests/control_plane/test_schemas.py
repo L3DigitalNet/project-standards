@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from project_standards.control_plane.schemas import (
     MutationPlanSchema,
+    ReconciliationPlanSchema,
     control_plane_schema_bytes,
     control_plane_schema_documents,
     generate_control_plane_schemas,
@@ -224,13 +225,24 @@ def test_mutation_plan_rejects_incomplete_or_unbounded_actions(
         )
 
 
-def test_reconciliation_finding_schema_is_additively_enriched_at_1_1() -> None:
+def test_reconciliation_finding_schema__structural_diagnostics__is_closed_version_1_2() -> None:
     document = control_plane_schema_documents()["reconciliation-plan.schema.json"]
     definitions = cast("dict[str, object]", document["$defs"])
     finding = cast("dict[str, object]", definitions["PublicFindingSchema"])
     properties = cast("dict[str, object]", finding["properties"])
 
-    for field in ("expected", "actual", "expected_digest", "actual_digest", "governing_options"):
+    for field in (
+        "expected",
+        "actual",
+        "expected_digest",
+        "actual_digest",
+        "governing_options",
+        "line",
+        "column",
+        "locus",
+        "observed",
+        "limit",
+    ):
         assert field in properties
     assert set(cast("list[str]", finding["required"])) == {
         "code",
@@ -244,4 +256,60 @@ def test_reconciliation_finding_schema_is_additively_enriched_at_1_1() -> None:
     }
     top_properties = cast("dict[str, object]", document["properties"])
     schema_version = cast("dict[str, object]", top_properties["schema_version"])
-    assert schema_version["const"] == "1.1"
+    assert schema_version["const"] == "1.2"
+
+
+def test_reconciliation_plan_model__version_1_2_diagnostics__accepts_only_closed_current_shape() -> (
+    None
+):
+    document: dict[str, object] = {
+        "schema_version": "1.2",
+        "applicable": False,
+        "findings": [
+            {
+                "code": "CP-MALFORMED-CONTAINER",
+                "severity": "error",
+                "standard_id": "demo",
+                "version": "1.0",
+                "path": "config/demo.toml",
+                "identity": "$target",
+                "message": "target is not valid TOML",
+                "hint": "repair the TOML syntax",
+                "line": 4,
+                "column": 9,
+                "locus": "TOML syntax",
+                "observed": 191,
+                "limit": 160,
+            }
+        ],
+        "actions": [],
+        "proposed_lock": {
+            "project_standards": {
+                "schema_version": "1.1",
+                "catalog": "5",
+                "release": "5.9.0",
+                "catalog_digest": f"sha256:{'a' * 64}",
+                "config_digest": f"sha256:{'b' * 64}",
+            }
+        },
+    }
+
+    parsed = ReconciliationPlanSchema.model_validate(document)
+
+    assert parsed.schema_version == "1.2"
+    assert parsed.findings[0].column == 9
+    assert parsed.findings[0].observed == 191
+    assert parsed.findings[0].limit == 160
+
+    prior = {**document, "schema_version": "1.1"}
+    with pytest.raises(ValidationError):
+        ReconciliationPlanSchema.model_validate(prior)
+
+    top_level_extra = {**document, "consumer_content": "must-not-be-accepted"}
+    with pytest.raises(ValidationError):
+        ReconciliationPlanSchema.model_validate(top_level_extra)
+
+    finding = cast("dict[str, object]", cast("list[object]", document["findings"])[0])
+    finding_extra = {**finding, "source_line": "must-not-be-accepted"}
+    with pytest.raises(ValidationError):
+        ReconciliationPlanSchema.model_validate({**document, "findings": [finding_extra]})

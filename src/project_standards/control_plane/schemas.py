@@ -12,10 +12,16 @@ from pydantic import BaseModel, Field, model_validator
 from project_standards.control_plane.diagnostics import ActionKind
 from project_standards.control_plane.migration import MigrationReport
 from project_standards.control_plane.models import (
+    AcceptedTrack,
+    AppliedPackage,
     CentralLock,
     ConsumerCatalog,
     DesiredConfig,
+    ToolRelease,
+    UnitProvenance,
 )
+from project_standards.control_plane.paths import CatalogMajor
+from project_standards.control_plane.resolution import TrackTransitionKind
 from project_standards.package_contract._write import atomic_write
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId, StrictModel
@@ -30,8 +36,11 @@ from project_standards.package_contract.payload import (
     JsonValue,
     PosixMode,
     ProviderOperation,
+    ResourceId,
+    SharedIdentity,
     normalize_scope,
 )
+from project_standards.package_contract.release import ReleaseClassification
 from project_standards.package_contract.schemas import (
     SCHEMA_BASE,
     SchemaDocument,
@@ -128,11 +137,18 @@ class PublicFindingSchema(StrictModel):
     identity: str
     message: str
     hint: str
+    line: int | None = Field(default=None, ge=1)
+    column: int | None = Field(default=None, ge=1)
+    locus: str | None = None
+    observed: int | None = Field(default=None, ge=0)
+    limit: int | None = Field(default=None, ge=1)
     expected: JsonValue | None = None
     actual: JsonValue | None = None
     expected_digest: str | None = None
     actual_digest: str | None = None
     governing_options: list[str] | None = None
+    first_difference_line: int | None = Field(default=None, ge=1)
+    first_difference_expected: str | None = None
 
 
 class PublicActionSchema(StrictModel):
@@ -150,13 +166,109 @@ class PublicActionSchema(StrictModel):
     after_mode: PosixMode | None = None
 
 
+class PublicPlannedUnitSchema(StrictModel):
+    """One public semantic-unit transition with package provenance."""
+
+    kind: ActionKind
+    target: SafeRelativePath
+    adapter: AdapterKind
+    scope: str = Field(min_length=1)
+    owners: list[KebabId]
+    shared_identity: SharedIdentity | None
+    versions: dict[KebabId, PackageVersion]
+    provenance: UnitProvenance
+    before_digest: Sha256Digest | None
+    after_digest: Sha256Digest | None
+
+
+class PublicTargetPreconditionSchema(StrictModel):
+    """One target identity bound to the snapshot observed during planning."""
+
+    target: SafeRelativePath
+    digest: Sha256Digest
+
+
+class PublicResolvedPackageSchema(StrictModel):
+    """One package selection and its public applied-state facts."""
+
+    standard_id: KebabId
+    applied: AppliedPackage
+
+
+class PublicTrackTransitionSchema(StrictModel):
+    """One accepted-major authorization transition."""
+
+    standard_id: KebabId
+    kind: TrackTransitionKind
+    previous: AcceptedTrack | None
+    current: AcceptedTrack | None
+
+
+class PublicResolutionSchema(StrictModel):
+    """Public package selections and accepted-major transitions."""
+
+    packages: list[PublicResolvedPackageSchema] = Field(default_factory=list)
+    track_transitions: list[PublicTrackTransitionSchema] = Field(default_factory=list)
+
+
+class PublicVerificationRequestSchema(StrictModel):
+    """One package verification provider deferred until apply."""
+
+    standard_id: KebabId
+    version: PackageVersion
+    provider_id: ResourceId
+
+
+class PublicProviderNoticeSchema(StrictModel):
+    """One content-safe notice emitted by a package provider."""
+
+    standard_id: KebabId
+    version: PackageVersion
+    provider_id: ResourceId
+    message: str
+
+
+class PublicCatalogLineageSchema(StrictModel):
+    """One catalog identity in a planned installed-catalog refresh."""
+
+    catalog: CatalogMajor
+    release: ToolRelease
+    digest: Sha256Digest
+
+
+class PublicCatalogSelectionChangeSchema(StrictModel):
+    """One enabled package selection changed by catalog refresh."""
+
+    standard_id: KebabId
+    previous: PackageVersion | None
+    current: PackageVersion
+
+
+class PublicCatalogRefreshSchema(StrictModel):
+    """Public lineage and selection facts for an installed-catalog refresh."""
+
+    changed: bool
+    classification: ReleaseClassification
+    before: PublicCatalogLineageSchema
+    after: PublicCatalogLineageSchema
+    affected_selections: list[PublicCatalogSelectionChangeSchema] = Field(default_factory=list)
+
+
 class ReconciliationPlanSchema(StrictModel):
     """Stable JSON surface for a complete reconciliation preview."""
 
-    schema_version: Literal["1.1"]
+    schema_version: Literal["1.2"]
     applicable: bool
-    findings: list[PublicFindingSchema] = Field(default_factory=list)
     actions: list[PublicActionSchema] = Field(default_factory=list)
+    units: list[PublicPlannedUnitSchema] = Field(default_factory=list)
+    findings: list[PublicFindingSchema] = Field(default_factory=list)
+    preconditions: list[PublicTargetPreconditionSchema] = Field(default_factory=list)
+    resolution: PublicResolutionSchema = Field(default_factory=PublicResolutionSchema)
+    verification_requests: list[PublicVerificationRequestSchema] = Field(default_factory=list)
+    provider_notices: list[PublicProviderNoticeSchema] = Field(default_factory=list)
+    namespace_prunes: list[SafeRelativePath] = Field(default_factory=list)
+    catalog_refresh: PublicCatalogRefreshSchema | None = None
+    next_lock: CentralLock | None = None
     proposed_lock: CentralLock
 
 

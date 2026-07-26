@@ -6,6 +6,7 @@ import argparse
 import base64
 import os
 import posixpath
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -13,6 +14,7 @@ from typing import NoReturn, cast
 
 from project_standards.adopt.errors import AdoptError
 from project_standards.agent_handoff.integrations.links import (
+    _normalized_link_occurrences,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
     _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
 )
 from project_standards.agent_handoff.legacy import legacy_report
@@ -24,6 +26,16 @@ from project_standards.agent_handoff.model import (
     emit_report,
 )
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
+from project_standards.agent_handoff.policy import check_document, load_policy
+from project_standards.agent_handoff.validation import (
+    _reference_text,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
+)
+from project_standards.control_plane.adapters.markdown import (
+    MarkdownBlockAdapter,
+)
+from project_standards.control_plane.adapters.markdown import (
+    _parse as _parse_managed_markdown,  # pyright: ignore[reportPrivateUsage]  # predecessor measure
+)
 from project_standards.control_plane.command_resolution import (
     CommandConfigurationError,
     CommandResolutionError,
@@ -34,6 +46,7 @@ from project_standards.control_plane.command_resolution import (
     managed_unit_snapshot,
     selected_command,
 )
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import apply_authoring_plan
 from project_standards.control_plane.locking import LockMode
@@ -221,23 +234,219 @@ def _report(
     )
 
 
+def _snapshot_content(snapshots: JsonObject, path: str) -> bytes | None:
+    raw = snapshots.get(path)
+    if not isinstance(raw, dict):
+        return None
+    encoded = raw.get("content_base64")
+    if not isinstance(encoded, str):
+        return None
+    return base64.b64decode(encoded)
+
+
+def _snapshot_text(snapshots: JsonObject, path: str) -> str | None:
+    content = _snapshot_content(snapshots, path)
+    return content.decode("utf-8", errors="replace") if content is not None else None
+
+
+def _authenticated_markdown_envelope_bytes(
+    snapshots: JsonObject,
+    path: str,
+    content: bytes,
+) -> int:
+    raw_units = snapshots.get("managed_markdown_units")
+    if not isinstance(raw_units, list):
+        return 0
+    locked: dict[str, str] = {}
+    for raw in raw_units:
+        if not isinstance(raw, dict):
+            return 0
+        if raw.get("target") != path or raw.get("adapter") != "markdown-block":
+            continue
+        scope = raw.get("scope")
+        digest = raw.get("semantic_digest")
+        if not isinstance(scope, str) or not isinstance(digest, str) or scope in locked:
+            return 0
+        locked[scope] = digest
+    if not locked:
+        return 0
+    try:
+        document = _parse_managed_markdown(content)
+        state = MarkdownBlockAdapter().inspect(content, tuple(locked))
+    except ControlPlaneError:
+        return 0
+    observed = {unit.scope: unit.semantic_digest.value for unit in state.units}
+    return sum(
+        len(document.text[block.envelope_start : block.envelope_end].encode("utf-8"))
+        for block in document.blocks
+        if observed.get(f"block:{block.block_id}") == locked.get(f"block:{block.block_id}")
+    )
+
+
+_PREDECESSOR_SIZE_LIMIT = re.compile(
+    r"^document exceeds (?P<limit>[1-9][0-9]*) byte (?:hard cap|target)(?: by .*)?$"
+)
+
+
+def _predecessor_size_measure(
+    snapshots: JsonObject,
+    path: str,
+    message: str,
+    *,
+    subtract_authenticated_envelopes: bool,
+) -> tuple[int, int] | None:
+    match = _PREDECESSOR_SIZE_LIMIT.fullmatch(message)
+    content = _snapshot_content(snapshots, path)
+    if match is None or content is None:
+        return None
+    observed = len(content)
+    if subtract_authenticated_envelopes:
+        observed -= _authenticated_markdown_envelope_bytes(
+            snapshots,
+            path,
+            content,
+        )
+    return observed, int(match.group("limit"))
+
+
+def _predecessor_shape_locus(message: str) -> str:
+    """Classify released provider prose without returning consumer fragments."""
+    normalized = message.casefold()
+    for fragment, locus in (
+        ("invalid section:", "section heading"),
+        ("exceeds its bullet count", "section bullet count"),
+        ("contains an overlong bullet", "document bullet"),
+        ("paragraph not allowed in section", "document paragraph"),
+        ("overlong paragraph", "document paragraph"),
+        ("target bytes exceeded", "document byte target"),
+        ("hard byte cap exceeded", "document byte budget"),
+        ("target lines exceeded", "document line target"),
+        ("required section order", "required section order"),
+        ("missing required section", "required section"),
+        ("missing quick reference", "required section"),
+        ("requires tables or bullets", "document structure"),
+        ("changelog section", "section heading"),
+        ("narrative history", "section heading"),
+        ("rule summary", "rule summary cell"),
+        ("rule entry", "section entry"),
+        ("row is too long", "document row"),
+        ("headline is too long", "document headline"),
+        ("blocked phrase:", "blocked phrase"),
+    ):
+        if fragment in normalized:
+            return locus
+    return "document shape"
+
+
+def _selected_shape_findings(
+    selected: SelectedCommandPackage,
+    snapshots: JsonObject,
+) -> dict[tuple[str, str], list[Finding]]:
+    resource = next(
+        (item for item in selected.payload.manifest.resources if item.id == "policy"),
+        None,
+    )
+    if resource is None:
+        raise CommandResolutionError("selected Agent Handoff provider has no policy resource")
+    policy = load_policy(selected.payload.root / resource.path.normalized)
+    grouped: dict[tuple[str, str], list[Finding]] = {}
+    for path in snapshots:
+        text = _snapshot_text(snapshots, path)
+        if text is None:
+            continue
+        for finding in check_document(path, text, policy):
+            grouped.setdefault((finding.path, finding.locus), []).append(finding)
+    return grouped
+
+
 def _provider_findings(
     selected: SelectedCommandPackage, operation: V2ProviderOperation
 ) -> tuple[Finding, ...]:
-    result = invoke_selected_provider(selected, operation, _read_snapshots(selected))
+    snapshots = _read_snapshots(selected)
+    result = invoke_selected_provider(selected, operation, snapshots)
     if result.effect is not ProviderEffect.FINDINGS:
         raise CommandResolutionError("selected Agent Handoff provider returned the wrong effect")
-    return tuple(
-        Finding(
-            code=item.code,
-            severity=item.severity,
-            path=item.path,
-            locus=item.locus or item.identity,
-            message=item.message,
-            guidance=item.hint,
-        )
-        for item in result.findings
+
+    shape_findings = (
+        _selected_shape_findings(selected, snapshots)
+        if any(item.code == "AH-SHAPE" for item in result.findings)
+        else {}
     )
+    link_occurrences: dict[tuple[str, str], list[tuple[int, int]]] = {}
+    findings: list[Finding] = []
+    for item in result.findings:
+        locus = item.locus or item.identity
+        message = item.message
+        line = item.line
+        column = item.column
+        observed = item.observed
+        limit = item.limit
+        if item.code == "AH-REFERENCE-MISSING":
+            raw_target = (
+                locus.removeprefix("Markdown link: ")
+                if locus.startswith("Markdown link: ")
+                else None
+            )
+            locus = "Markdown link"
+            text = _snapshot_text(snapshots, item.path)
+            if raw_target is not None and text is not None:
+                key = (item.path, raw_target)
+                occurrences = link_occurrences.setdefault(
+                    key,
+                    [
+                        (candidate.line, candidate.column)
+                        for candidate in _normalized_link_occurrences(_reference_text(text))
+                        if candidate.target == raw_target
+                    ],
+                )
+                if occurrences:
+                    line, column = occurrences.pop(0)
+        elif item.code in {"AH-SIZE-CAP", "AH-SIZE-TARGET"} and (observed is None or limit is None):
+            locus = "byte budget"
+            measure = _predecessor_size_measure(
+                snapshots,
+                item.path,
+                item.message,
+                subtract_authenticated_envelopes=(
+                    selected.resolved.major > 1
+                    or (selected.resolved.major == 1 and selected.resolved.minor >= 4)
+                ),
+            )
+            if measure is not None:
+                observed, limit = measure
+        elif (
+            item.code == "AH-SHAPE"
+            and locus == "shape"
+            and all(value is None for value in (line, column, observed, limit))
+        ):
+            locus = _predecessor_shape_locus(item.message)
+            candidates = shape_findings.get((item.path, locus), [])
+            if candidates:
+                enriched = candidates.pop(0)
+                message = enriched.message
+                line = enriched.line
+                column = enriched.column
+                observed = enriched.observed
+                limit = enriched.limit
+            else:
+                message = "document shape violates its configured policy"
+                observed = None
+                limit = None
+        findings.append(
+            Finding(
+                code=item.code,
+                severity=item.severity,
+                path=item.path,
+                locus=locus,
+                message=message,
+                guidance=item.hint,
+                line=line,
+                column=column,
+                observed=observed,
+                limit=limit,
+            )
+        )
+    return tuple(findings)
 
 
 def _run_read_command(

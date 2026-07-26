@@ -8,6 +8,7 @@ from pathlib import Path
 
 from project_standards.control_plane.catalog_refresh import CATALOG_REFRESH_BACKUP
 from project_standards.control_plane.codec import parse_catalog, parse_config, parse_lock
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import ParsedToolRelease
 from project_standards.control_plane.locking import (
     LockedControlDirectory,
@@ -43,6 +44,8 @@ class ControlPlaneState:
     lock: CentralLock | None = None
     detail: str | None = None
     malformed_file: str | None = None
+    line: int | None = None
+    column: int | None = None
     missing_files: tuple[str, ...] = ()
 
 
@@ -61,6 +64,8 @@ def _state(
     detail: str | None = None,
     *,
     malformed_file: str | None = None,
+    line: int | None = None,
+    column: int | None = None,
     missing_files: tuple[str, ...] = (),
 ) -> ControlPlaneState:
     return ControlPlaneState(
@@ -68,6 +73,8 @@ def _state(
         repo=repo,
         detail=detail,
         malformed_file=malformed_file,
+        line=line,
+        column=column,
         missing_files=missing_files,
     )
 
@@ -114,6 +121,15 @@ def _load_initialized_state(
 
     try:
         config = parse_config(control.read_bytes("config.toml"))
+    except ControlPlaneError as exc:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "control-plane config is invalid",
+            malformed_file="config.toml",
+            line=exc.line,
+            column=exc.column,
+        )
     except ValueError:
         return _state(
             StateKind.MALFORMED,
@@ -123,6 +139,15 @@ def _load_initialized_state(
         )
     try:
         catalog = parse_catalog(control.read_bytes("catalog.toml"))
+    except ControlPlaneError as exc:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "control-plane catalog is invalid",
+            malformed_file="catalog.toml",
+            line=exc.line,
+            column=exc.column,
+        )
     except ValueError:
         return _state(
             StateKind.MALFORMED,
@@ -132,6 +157,15 @@ def _load_initialized_state(
         )
     try:
         lock = parse_lock(control.read_bytes("lock.toml"))
+    except ControlPlaneError as exc:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "control-plane lock is invalid",
+            malformed_file="lock.toml",
+            line=exc.line,
+            column=exc.column,
+        )
     except ValueError:
         return _state(
             StateKind.MALFORMED,
@@ -148,11 +182,21 @@ def _load_initialized_state(
             if backup_kind == "regular"
             else None
         )
+    except ControlPlaneError as exc:
+        return _state(
+            StateKind.MALFORMED,
+            repo,
+            "catalog refresh backup is invalid",
+            malformed_file=CATALOG_REFRESH_BACKUP,
+            line=exc.line,
+            column=exc.column,
+        )
     except ValueError:
         return _state(
             StateKind.MALFORMED,
             repo,
             "catalog refresh backup is invalid",
+            malformed_file=CATALOG_REFRESH_BACKUP,
         )
     if not control.is_current():
         return _state(

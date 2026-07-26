@@ -118,6 +118,23 @@ class SizeResult:
     spare_to_target: int
 
 
+@dataclass(frozen=True, slots=True)
+class _LocatedLine:
+    number: int
+    text: str
+
+    @property
+    def column(self) -> int:
+        return len(self.text) - len(self.text.lstrip()) + 1
+
+
+@dataclass(frozen=True, slots=True)
+class _Section:
+    name: str
+    heading: _LocatedLine
+    lines: tuple[_LocatedLine, ...]
+
+
 def load_policy(path: Path) -> HandoffPolicy:
     """Load a policy with controlled errors and strict nested-key rejection."""
     try:
@@ -154,43 +171,59 @@ def measure_file(path: Path, *, cap: int, target: int) -> SizeResult:
     return measure_bytes(path.read_bytes(), cap=cap, target=target)
 
 
-def _sections(text: str) -> dict[str, list[str]]:
-    sections: dict[str, list[str]] = {}
-    current: str | None = None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            current = line.removeprefix("## ").strip()
-            sections[current] = []
-        elif current is not None:
-            sections[current].append(line)
+def _sections(text: str) -> dict[str, _Section]:
+    sections: dict[str, _Section] = {}
+    current_name: str | None = None
+    current_heading: _LocatedLine | None = None
+    current_lines: list[_LocatedLine] = []
+    for number, text_line in enumerate(text.splitlines(), start=1):
+        line = _LocatedLine(number, text_line)
+        if text_line.startswith("## "):
+            if current_name is not None and current_heading is not None:
+                sections[current_name] = _Section(
+                    current_name,
+                    current_heading,
+                    tuple(current_lines),
+                )
+            current_name = text_line.removeprefix("## ").strip()
+            current_heading = line
+            current_lines = []
+        elif current_name is not None:
+            current_lines.append(line)
+    if current_name is not None and current_heading is not None:
+        sections[current_name] = _Section(
+            current_name,
+            current_heading,
+            tuple(current_lines),
+        )
     return sections
 
 
 _BULLET_RE = re.compile(r"^\s*[-*+]\s+(?:\[[ xX]\]\s+)?\S")
 
 
-def _bullets(lines: list[str]) -> list[str]:
-    return [line.strip() for line in lines if _BULLET_RE.match(line)]
+def _bullets(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
+    return tuple(line for line in lines if _BULLET_RE.match(line.text))
 
 
-def _table_lines(lines: list[str]) -> list[str]:
-    tables: list[str] = []
+def _table_lines(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
+    tables: list[_LocatedLine] = []
     for line in lines:
-        stripped = line.strip()
+        stripped = line.text.strip()
         if not stripped.startswith("|") or not stripped.endswith("|"):
             continue
         cells = [cell.strip() for cell in stripped.strip("|").split("|")]
         if cells and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
             continue
-        tables.append(stripped)
-    return tables
+        tables.append(line)
+    return tuple(tables)
 
 
-def _paragraphs(lines: list[str]) -> list[str]:
-    paragraphs: list[str] = []
+def _paragraphs(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
+    paragraphs: list[_LocatedLine] = []
     in_fence = False
     for line in lines:
-        stripped = line.strip()
+        stripped = line.text.strip()
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
             continue
@@ -199,24 +232,11 @@ def _paragraphs(lines: list[str]) -> list[str]:
             or in_fence
             or stripped.startswith(("#", "|", "<!--"))
             or stripped.endswith("-->")
-            or _BULLET_RE.match(line)
+            or _BULLET_RE.match(line.text)
         ):
             continue
-        paragraphs.append(stripped)
-    return paragraphs
-
-
-def _required_order(text: str, order: tuple[str, ...]) -> list[str]:
-    headings = [line[3:].strip() for line in text.splitlines() if line.startswith("## ")]
-    missing = [section for section in order if section not in headings]
-    if missing:
-        return [f"required order missing section: {section}" for section in missing]
-    positions = [headings.index(section) for section in order]
-    return (
-        []
-        if positions == sorted(positions)
-        else [f"required order violation: {' before '.join(order)}"]
-    )
+        paragraphs.append(line)
+    return tuple(paragraphs)
 
 
 def _document_config(path: str, policy: HandoffPolicy) -> DocumentPolicy | None:
@@ -233,14 +253,28 @@ def _document_config(path: str, policy: HandoffPolicy) -> DocumentPolicy | None:
     )
 
 
-def _finding(path: str, severity: Literal["error", "warning"], message: str) -> Finding:
+def _finding(
+    path: str,
+    severity: Literal["error", "warning"],
+    message: str,
+    *,
+    locus: str = "document shape",
+    line: int | None = None,
+    column: int | None = None,
+    observed: int | None = None,
+    limit: int | None = None,
+) -> Finding:
     return Finding(
         code="AH-SHAPE",
         severity=severity,
         path=path,
-        locus="document shape",
+        locus=locus,
         message=message,
         guidance="Condense the document or move detail to the appropriate lazy handoff file.",
+        line=line,
+        column=column,
+        observed=observed,
+        limit=limit,
     )
 
 
@@ -250,109 +284,293 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
     if config is None:
         return ()
     severity: Literal["error", "warning"] = "error" if config.severity == "fatal" else "warning"
-    advisory_messages: list[str] = []
-    messages: list[str] = []
+    advisory: list[Finding] = []
+    findings: list[Finding] = []
     sections = _sections(text)
+    all_lines = tuple(
+        _LocatedLine(number, line) for number, line in enumerate(text.splitlines(), start=1)
+    )
+    byte_count = len(text.encode())
+    line_count = len(all_lines)
 
-    if config.hard_byte_cap is not None and len(text.encode()) > config.hard_byte_cap:
-        messages.append(f"byte cap exceeded: {len(text.encode())} > {config.hard_byte_cap}")
-    if config.target_bytes is not None and len(text.encode()) > config.target_bytes:
-        advisory_messages.append(
-            f"target bytes exceeded: {len(text.encode())} > {config.target_bytes}"
+    if config.hard_byte_cap is not None and byte_count > config.hard_byte_cap:
+        findings.append(
+            _finding(
+                path,
+                severity,
+                "byte cap exceeded",
+                locus="document byte budget",
+                observed=byte_count,
+                limit=config.hard_byte_cap,
+            )
         )
-    if config.target_lines is not None and len(text.splitlines()) > config.target_lines:
-        advisory_messages.append(
-            f"target lines exceeded: {len(text.splitlines())} > {config.target_lines}"
+    if config.target_bytes is not None and byte_count > config.target_bytes:
+        advisory.append(
+            _finding(
+                path,
+                "warning",
+                "target bytes exceeded",
+                locus="document byte target",
+                observed=byte_count,
+                limit=config.target_bytes,
+            )
+        )
+    if config.target_lines is not None and line_count > config.target_lines:
+        advisory.append(
+            _finding(
+                path,
+                "warning",
+                "target lines exceeded",
+                locus="document line target",
+                line=config.target_lines + 1,
+                column=1,
+                observed=line_count,
+                limit=config.target_lines,
+            )
         )
     for section in config.required_sections:
         if section not in sections:
-            messages.append(f"missing required section: {section}")
-    messages.extend(_required_order(text, config.required_order))
-    for section in sections:
-        if config.allowed_sections and section not in config.allowed_sections:
-            messages.append(f"invalid section: {section}")
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    f"missing required section: {section}",
+                    locus="required section",
+                )
+            )
+    missing_order = [section for section in config.required_order if section not in sections]
+    for section in missing_order:
+        findings.append(
+            _finding(
+                path,
+                severity,
+                f"required order missing section: {section}",
+                locus="required section order",
+            )
+        )
+    if not missing_order:
+        positions = [tuple(sections).index(section) for section in config.required_order]
+        if positions != sorted(positions):
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    "required order violation",
+                    locus="required section order",
+                )
+            )
+    for section in sections.values():
+        if config.allowed_sections and section.name not in config.allowed_sections:
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    "invalid section is not allowed",
+                    locus="section heading",
+                    line=section.heading.number,
+                    column=section.heading.column,
+                )
+            )
 
     max_bullet_chars = config.max_bullet_chars or policy.shape.defaults.max_bullet_chars
-    for section, lines in sections.items():
-        bullets = _bullets(lines)
+    for section in sections.values():
+        bullets = _bullets(section.lines)
         if (
             config.max_bullets_per_section is not None
             and len(bullets) > config.max_bullets_per_section
         ):
-            messages.append(
-                f"section {section} has {len(bullets)} bullets; max {config.max_bullets_per_section}"
+            first_excess = bullets[config.max_bullets_per_section]
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    f"section has too many bullets; max {config.max_bullets_per_section}",
+                    locus="section bullet count",
+                    line=first_excess.number,
+                    column=first_excess.column,
+                    observed=len(bullets),
+                    limit=config.max_bullets_per_section,
+                )
             )
         for bullet in bullets:
-            if len(bullet) > max_bullet_chars:
-                messages.append(
-                    f"section {section} bullet has {len(bullet)} chars; max {max_bullet_chars}"
+            observed = len(bullet.text.strip())
+            if observed > max_bullet_chars:
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        f"bullet exceeds its configured character limit; max {max_bullet_chars}",
+                        locus="document bullet",
+                        line=bullet.number,
+                        column=bullet.column,
+                        observed=observed,
+                        limit=max_bullet_chars,
+                    )
                 )
         if config.forbid_paragraphs:
-            messages.extend(
-                f"paragraph not allowed in section {section}: {paragraph[:80]}"
-                for paragraph in _paragraphs(lines)
-            )
+            for paragraph in _paragraphs(section.lines):
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        "paragraph not allowed in this document",
+                        locus="document paragraph",
+                        line=paragraph.number,
+                        column=paragraph.column,
+                        observed=len(paragraph.text.strip()),
+                    )
+                )
 
     if config.max_paragraph_chars is not None:
-        for paragraph in _paragraphs(text.splitlines()):
-            if len(paragraph) > config.max_paragraph_chars:
-                messages.append(
-                    f"paragraph has {len(paragraph)} chars; max {config.max_paragraph_chars}"
+        for paragraph in _paragraphs(all_lines):
+            observed = len(paragraph.text.strip())
+            if observed > config.max_paragraph_chars:
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        f"paragraph exceeds its configured character limit; max {config.max_paragraph_chars}",
+                        locus="document paragraph",
+                        line=paragraph.number,
+                        column=paragraph.column,
+                        observed=observed,
+                        limit=config.max_paragraph_chars,
+                    )
                 )
     if config.require_quick_reference and not any(
         section.casefold() == "quick reference" for section in sections
     ):
-        messages.append("missing Quick Reference")
-    if config.require_tables_or_bullets:
-        lines = text.splitlines()
-        if not _bullets(lines) and not _table_lines(lines):
-            messages.append("document requires tables or bullets")
-    if config.forbid_changelog and re.search(r"(?im)^#{1,6}\s+changelog\b", text):
-        messages.append("changelog section is not allowed")
-    if config.forbid_narrative_history and re.search(
-        r"(?im)^#{1,6}\s+(?:history|changelog)\b", text
-    ):
-        messages.append("narrative history section is not allowed")
+        findings.append(
+            _finding(
+                path,
+                severity,
+                "missing Quick Reference",
+                locus="required section",
+            )
+        )
+    if config.require_tables_or_bullets and not _bullets(all_lines) and not _table_lines(all_lines):
+        findings.append(
+            _finding(
+                path,
+                severity,
+                "document requires tables or bullets",
+                locus="document structure",
+            )
+        )
+    changelog = re.search(r"(?im)^#{1,6}\s+changelog\b", text)
+    if config.forbid_changelog and changelog is not None:
+        findings.append(
+            _finding(
+                path,
+                severity,
+                "changelog section is not allowed",
+                locus="section heading",
+                line=text.count("\n", 0, changelog.start()) + 1,
+                column=1,
+            )
+        )
+    history = re.search(r"(?im)^#{1,6}\s+(?:history|changelog)\b", text)
+    if config.forbid_narrative_history and history is not None:
+        findings.append(
+            _finding(
+                path,
+                severity,
+                "narrative history section is not allowed",
+                locus="section heading",
+                line=text.count("\n", 0, history.start()) + 1,
+                column=1,
+            )
+        )
     if config.max_rule_summary_chars is not None:
-        for line in _table_lines(text.splitlines()):
-            cells = [cell.strip() for cell in line.strip("|").split("|")]
+        for line in _table_lines(all_lines):
+            cells = [cell.strip() for cell in line.text.strip().strip("|").split("|")]
             if (
                 len(cells) >= 2
                 and cells[0].isdigit()
                 and len(cells[1]) > config.max_rule_summary_chars
             ):
-                messages.append(
-                    f"rule summary has {len(cells[1])} chars; max {config.max_rule_summary_chars}"
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        f"rule summary exceeds its configured character limit; max {config.max_rule_summary_chars}",
+                        locus="rule summary cell",
+                        line=line.number,
+                        column=line.column,
+                        observed=len(cells[1]),
+                        limit=config.max_rule_summary_chars,
+                    )
                 )
     if config.max_entry_chars is not None:
-        for section, lines in sections.items():
-            if section == "Quick Reference":
+        for section in sections.values():
+            if section.name == "Quick Reference":
                 continue
-            size = len("\n".join(lines).strip())
+            size = len("\n".join(line.text for line in section.lines).strip())
             if size > config.max_entry_chars:
-                messages.append(f"entry has {size} chars; max {config.max_entry_chars}")
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        f"entry has too many characters; max {config.max_entry_chars}",
+                        locus="section entry",
+                        line=section.heading.number,
+                        column=section.heading.column,
+                        observed=size,
+                        limit=config.max_entry_chars,
+                    )
+                )
     if config.row_max_chars is not None or config.headline_max_words is not None:
-        for line in text.splitlines():
-            stripped = line.strip()
+        for line in all_lines:
+            stripped = line.text.strip()
             if not stripped:
                 continue
             if config.row_max_chars is not None and len(stripped) > config.row_max_chars:
-                messages.append(f"row has {len(stripped)} chars; max {config.row_max_chars}")
+                findings.append(
+                    _finding(
+                        path,
+                        severity,
+                        f"row has too many characters; max {config.row_max_chars}",
+                        locus="document row",
+                        line=line.number,
+                        column=line.column,
+                        observed=len(stripped),
+                        limit=config.row_max_chars,
+                    )
+                )
             if config.headline_max_words is not None:
                 cells = [cell.strip() for cell in stripped.strip("|").split("|")]
                 headline = cells[1] if stripped.startswith("|") and len(cells) >= 2 else stripped
                 words = len(headline.split())
                 if words > config.headline_max_words:
-                    messages.append(f"headline has {words} words; max {config.headline_max_words}")
+                    findings.append(
+                        _finding(
+                            path,
+                            severity,
+                            f"headline has too many words; max {config.headline_max_words}",
+                            locus="document headline",
+                            line=line.number,
+                            column=line.column,
+                            observed=words,
+                            limit=config.headline_max_words,
+                        )
+                    )
 
     lowered = text.lower()
     for phrase in policy.shape.blocked_phrases.phrases:
-        if phrase.lower() in lowered:
-            messages.append(f"blocked phrase: {phrase}")
-    return (
-        *(_finding(path, "warning", message) for message in advisory_messages),
-        *(_finding(path, severity, message) for message in messages),
-    )
+        start = lowered.find(phrase.lower())
+        if start >= 0:
+            previous_newline = text.rfind("\n", 0, start)
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    "blocked phrase is not allowed",
+                    locus="blocked phrase",
+                    line=text.count("\n", 0, start) + 1,
+                    column=start - previous_newline,
+                )
+            )
+    return (*advisory, *findings)
 
 
 def _is_reference(value: str, policy: CredentialsPolicy) -> bool:
@@ -387,9 +605,11 @@ def check_secret_references(path: str, text: str, policy: HandoffPolicy) -> tupl
                     code="AH-SECRET-LITERAL",
                     severity="error",
                     path=path,
-                    locus=f"line {line_number}",
+                    locus="credential reference",
                     message="probable literal credential material is not allowed",
                     guidance="Store only an environment variable, secret name, or OpenBao path.",
+                    line=line_number,
+                    column=1,
                 )
             )
     return tuple(findings)

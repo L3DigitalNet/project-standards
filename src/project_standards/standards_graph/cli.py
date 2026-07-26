@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards.adopt.errors import ManifestError
+from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.locking import ControlPlaneBusyError
 from project_standards.standard_manifest import StandardManifestError
 from project_standards.standards_graph.catalog import load_contract_defaults, render_catalog
@@ -34,9 +35,19 @@ class _Parser(argparse.ArgumentParser):
         raise _ArgparseError(message)
 
 
-def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int = 2) -> int:
+def _emit_error(
+    json_mode: bool,
+    code: str,
+    error: str | ControlPlaneError,
+    *,
+    exit_code: int = 2,
+) -> int:
+    message = str(error)
     if json_mode:
-        print(json.dumps({"ok": False, "code": code, "error": message}))
+        payload: dict[str, object] = {"ok": False, "code": code, "error": message}
+        if isinstance(error, ControlPlaneError):
+            payload.update(error.to_jsonable())
+        print(json.dumps(payload))
     else:
         print(f"error: {message}", file=sys.stderr)
     return exit_code
@@ -171,6 +182,8 @@ def _run_control_inspection(command: str, argv: list[str]) -> int:
         return _emit_error("--json" in argv, "bad_args", str(exc))
     except ControlPlaneBusyError as exc:
         return _emit_error("--json" in argv, exc.code, str(exc), exit_code=1)
+    except ControlPlaneError as exc:
+        return _emit_error("--json" in argv, "control_state_error", exc)
     except (OSError, ValueError) as exc:
         return _emit_error("--json" in argv, "control_state_error", str(exc))
 

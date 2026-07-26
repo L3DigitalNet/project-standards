@@ -23,7 +23,7 @@ from project_standards.agent_handoff.integrations.instructions import (
     merge_instruction_block,
 )
 from project_standards.agent_handoff.integrations.links import (
-    _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
+    _normalized_link_occurrences,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
 )
 from project_standards.agent_handoff.integrations.markers import (
     INSTRUCTION_MARKERS,
@@ -62,6 +62,10 @@ def _finding(
     *,
     severity: Literal["error", "warning"] = "error",
     locus: str = "repository",
+    line: int | None = None,
+    column: int | None = None,
+    observed: int | None = None,
+    limit: int | None = None,
 ) -> Finding:
     return Finding(
         code=code,
@@ -70,13 +74,15 @@ def _finding(
         locus=locus,
         message=message,
         guidance="Run the matching agent-handoff repair or reconcile the path manually.",
+        line=line,
+        column=column,
+        observed=observed,
+        limit=limit,
     )
 
 
 def _sorted(findings: list[Finding]) -> tuple[Finding, ...]:
-    return tuple(
-        sorted(findings, key=lambda item: (item.code, item.path, item.locus, item.message))
-    )
+    return tuple(sorted(findings, key=lambda item: (item.code, *item.sort_key)))
 
 
 def _read_optional(repository: RepositoryRoot, relative: str) -> bytes | None:
@@ -355,6 +361,8 @@ def size_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
                     f"document exceeds {budget.cap} byte hard cap by {measured.over_by} bytes",
                     severity="error" if budget.fatal else "warning",
                     locus="byte budget",
+                    observed=measured.bytes,
+                    limit=budget.cap,
                 )
             )
         elif measured.status == "over-target":
@@ -365,6 +373,8 @@ def size_report(repository: RepositoryRoot) -> tuple[Finding, ...]:
                     f"document exceeds {budget.target} byte target",
                     severity="warning",
                     locus="byte budget",
+                    observed=measured.bytes,
+                    limit=budget.target,
                 )
             )
     return _sorted(findings)
@@ -475,7 +485,7 @@ def _reference_text(text: str) -> str:
         if line.startswith(("    ", "\t")):
             visible.append("\n" if line.endswith("\n") else "")
             continue
-        visible.append(_INLINE_CODE_RE.sub("", line))
+        visible.append(_INLINE_CODE_RE.sub(lambda match: " " * len(match.group(0)), line))
     return "".join(visible)
 
 
@@ -490,7 +500,8 @@ def _references(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[Find
             text = data.decode("utf-8")
         except RepositoryBoundaryError, UnicodeDecodeError:
             continue
-        for target in _normalized_link_targets(_reference_text(text)):
+        for occurrence in _normalized_link_occurrences(_reference_text(text)):
+            target = occurrence.target
             if "://" in target or target.startswith(("mailto:", "#")):
                 continue
             if target:
@@ -503,7 +514,9 @@ def _references(repository: RepositoryRoot, policy: HandoffPolicy) -> tuple[Find
                     "AH-REFERENCE-MISSING",
                     relative,
                     "local Markdown link target is missing or outside the repository",
-                    locus=f"Markdown link: {target}",
+                    locus="Markdown link",
+                    line=occurrence.line,
+                    column=occurrence.column,
                 )
             )
     return _sorted(findings)

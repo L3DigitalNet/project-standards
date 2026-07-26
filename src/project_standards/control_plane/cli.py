@@ -113,7 +113,14 @@ def build_planner_request(
         or selected_state.lock is None
     ):
         raise ControlPlaneError(
-            selected_state.detail or f"control-plane state is {selected_state.kind.value}"
+            selected_state.detail or f"control-plane state is {selected_state.kind.value}",
+            path=(
+                f".standards/{selected_state.malformed_file}"
+                if selected_state.malformed_file is not None
+                else None
+            ),
+            line=selected_state.line,
+            column=selected_state.column,
         )
     installed = distribution.load_catalog(
         selected_state.config.project_standards.catalog,
@@ -168,7 +175,6 @@ def run_render(
     standard_id = cast("str", args.standard_id)
     provider_id = cast("str", args.provider_id)
     from project_standards.control_plane.command_resolution import (
-        CommandResolutionError,
         invoke_selected_provider,
         selected_command,
     )
@@ -214,14 +220,9 @@ def run_render(
         return 0
     except ControlPlaneBusyError as exc:
         return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
-    except (
-        CommandResolutionError,
-        ControlPlaneError,
-        PackageContractError,
-        OSError,
-        RuntimeError,
-        ValueError,
-    ) as exc:
+    except ControlPlaneError as exc:
+        return _emit_error(json_mode, "CP-RENDER", exc, exit_code=2)
+    except (PackageContractError, OSError, RuntimeError, ValueError) as exc:
         return _emit_error(json_mode, "CP-RENDER", str(exc), exit_code=2)
 
 
@@ -232,9 +233,19 @@ def _drift(plan: ReconciliationPlan, previous_lock: CentralLock) -> bool:
     )
 
 
-def _emit_error(json_mode: bool, code: str, message: str, *, exit_code: int) -> int:
+def _emit_error(
+    json_mode: bool,
+    code: str,
+    error: str | ControlPlaneError,
+    *,
+    exit_code: int,
+) -> int:
+    message = str(error)
     if json_mode:
-        print(json.dumps({"ok": False, "code": code, "error": message}, indent=2))
+        payload: dict[str, object] = {"ok": False, "code": code, "error": message}
+        if isinstance(error, ControlPlaneError):
+            payload.update(error.to_jsonable())
+        print(json.dumps(payload, indent=2))
     else:
         print(f"error: {message}", file=sys.stderr)
     return exit_code
@@ -249,8 +260,19 @@ def _bounded_excerpt(value: object) -> str:
 def _format_human_finding(finding: ControlFinding) -> str:
     """Render one actionable finding without exposing internal target sentinels."""
     path = finding.path or "."
+    location = path
+    if finding.line is not None:
+        location += f":{finding.line}"
+        if finding.column is not None:
+            location += f":{finding.column}"
     identity = "" if finding.identity in {"$file", "$target"} else f" [{finding.identity}]"
-    lines = [f"{finding.severity.upper()} {finding.code} {path}{identity}: {finding.message}"]
+    lines = [f"{finding.severity.upper()} {finding.code} {location}{identity}: {finding.message}"]
+    if finding.locus is not None:
+        lines.append(f"  locus: {finding.locus}")
+    if finding.observed is not None:
+        lines.append(f"  observed: {finding.observed}")
+    if finding.limit is not None:
+        lines.append(f"  limit: {finding.limit}")
     if finding.expected is not None or "expected" in finding.null_values:
         lines.append(f"  expected: {_bounded_excerpt(finding.expected)}")
     elif finding.expected_digest is not None:
@@ -577,7 +599,10 @@ def run_init(
         return 0 if result.success else 1
     except ControlPlaneBusyError as exc:
         return _emit_error(json_mode, exc.code, str(exc), exit_code=1)
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+    except ControlPlaneError as exc:
+        code = "CP-MIGRATION-STATE" if cast("bool", args.migrate) else "CP-INIT-STATE"
+        return _emit_error(json_mode, code, exc, exit_code=2)
+    except (PackageContractError, OSError, ValueError) as exc:
         code = "CP-MIGRATION-STATE" if cast("bool", args.migrate) else "CP-INIT-STATE"
         return _emit_error(json_mode, code, str(exc), exit_code=2)
 
@@ -817,7 +842,9 @@ def run(
         else:
             _emit_human_findings((finding,))
         return 1
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+    except ControlPlaneError as exc:
+        return _emit_error(json_mode, "CP-CONTROL-STATE", exc, exit_code=2)
+    except (PackageContractError, OSError, ValueError) as exc:
         return _emit_error(json_mode, "CP-CONTROL-STATE", str(exc), exit_code=2)
 
 
@@ -843,8 +870,18 @@ def validate_repository(
             emit_legacy_authority_warning()
             return 0
         if state.kind is not StateKind.INITIALIZED:
+            error = ControlPlaneError(
+                state.detail or state.kind.value,
+                path=(
+                    f".standards/{state.malformed_file}"
+                    if state.malformed_file is not None
+                    else None
+                ),
+                line=state.line,
+                column=state.column,
+            )
             print(
-                f"CP-CONTROL-STATE: {state.detail or state.kind.value}",
+                f"CP-CONTROL-STATE: {error}",
                 file=sys.stderr,
             )
             return 1

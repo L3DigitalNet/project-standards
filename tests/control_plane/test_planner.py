@@ -29,6 +29,7 @@ from project_standards.control_plane.providers import (
     ProviderResult,
 )
 from project_standards.control_plane.resolution import DeclaredTransition
+from project_standards.control_plane.schemas import ReconciliationPlanSchema
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
 from project_standards.package_contract.payload import JsonValue, ProviderEffect
 from tests.control_plane.planner_helpers import (
@@ -125,6 +126,8 @@ def test_planner_composes_complete_virtual_tree_and_next_lock(tmp_path: Path) ->
     assert [request.provider_id for request in plan.verification_requests] == ["verify-alpha"]
     assert len(plan.preconditions) == 3
     public = plan.to_jsonable()
+    assert public["schema_version"] == "1.2"
+    assert ReconciliationPlanSchema.model_validate(public).schema_version == "1.2"
     assert json.dumps(public, sort_keys=True)
     assert "alpha\\n" not in json.dumps(public, sort_keys=True)
     assert (repo / "tools/alpha.py").exists() is False
@@ -1002,6 +1005,36 @@ def test_every_conflict_class_blocks_the_complete_plan(
     assert not plan.applicable
     assert code in {finding.code for finding in plan.findings}
     assert (repo / "shared.toml").read_bytes() if (repo / "shared.toml").exists() else True
+
+
+def test_planner__malformed_toml_target__reports_safe_structural_location(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "shared.toml").write_bytes(b'[tool.demo]\nvalue = null\nsecret = "must-not-appear"\n')
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        contributions=[
+            {
+                "id": "value",
+                "target": "shared.toml",
+                "adapter": "toml",
+                "scope": "key:/tool/demo/value",
+                "content": b"[tool.demo]\nvalue = 1\n",
+            }
+        ],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+
+    finding = next(item for item in plan.findings if item.code == "CP-MALFORMED-CONTAINER")
+    assert finding.path == "shared.toml"
+    assert finding.locus == "TOML syntax"
+    assert finding.line == 2
+    assert finding.column == 9
+    assert "must-not-appear" not in json.dumps(findings_to_jsonable((finding,)))
 
 
 def test_canonical_order_controls_placement_never_value_selection(tmp_path: Path) -> None:

@@ -140,6 +140,27 @@ def test_detects_incomplete_dual_and_malformed_authority(tmp_path: Path) -> None
     assert "not =" not in (state.detail or "")
 
 
+def test_detect_control_plane_state__invalid_config_toml__retains_safe_coordinates(
+    tmp_path: Path,
+) -> None:
+    _initialize(tmp_path)
+    (tmp_path / ".standards/config.toml").write_text(
+        '[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n'
+        "private_token = null\n# do-not-print-secret\n",
+        encoding="utf-8",
+    )
+
+    state = detect_control_plane_state(tmp_path, tool_release="5.0.0")
+
+    assert state.kind is StateKind.MALFORMED
+    assert state.malformed_file == "config.toml"
+    assert state.line == 4
+    assert state.column == 17
+    public = f"{state.detail} {state!r}"
+    assert "private_token" not in public
+    assert "do-not-print-secret" not in public
+
+
 def test_loads_complete_state_and_detects_release_incompatibility(tmp_path: Path) -> None:
     _initialize(tmp_path)
 

@@ -19,7 +19,11 @@ from project_standards.control_plane.adapters.base import (
     decode_utf8,
 )
 from project_standards.control_plane.codec import semantic_digest
-from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.control_plane.diagnostics import (
+    ActionKind,
+    ControlPlaneError,
+    toml_error,
+)
 from project_standards.package_contract.payload import (
     AdapterKind,
     JsonValue,
@@ -263,7 +267,7 @@ def _parse(text: str) -> dict[str, object]:
     try:
         return tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
-        raise ControlPlaneError("content is not valid TOML") from exc
+        raise toml_error("content is not valid TOML", exc) from exc
 
 
 def _json_value(value: object) -> JsonValue:

@@ -84,6 +84,7 @@ def test_agent_handoff_adopt_json_dry_run_is_aggregate_and_non_mutating(
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert list(payload) == [
+        "schema_version",
         "repository",
         "standard_version",
         "changes",

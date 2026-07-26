@@ -205,7 +205,9 @@ class ReconciliationPlan:
             for package in self.resolution.packages
         ]
         transitions = [_transition_json(item) for item in self.resolution.track_transitions]
+        public_lock = cast(JsonValue, self.next_lock.model_dump(mode="json"))
         return {
+            "schema_version": "1.2",
             "applicable": self.applicable,
             "actions": cast(JsonValue, actions_to_jsonable(self.actions)),
             "units": cast(
@@ -239,7 +241,8 @@ class ReconciliationPlan:
             ),
             "namespace_prunes": list(self.namespace_prunes),
             "catalog_refresh": _catalog_refresh_json(self.catalog_refresh),
-            "next_lock": cast(JsonValue, self.next_lock.model_dump(mode="json")),
+            "next_lock": public_lock,
+            "proposed_lock": public_lock,
         }
 
 
@@ -568,6 +571,11 @@ def _finding(
     actual_digest: str | None = None,
     governing_options: tuple[str, ...] | None = None,
     null_values: tuple[str, ...] = (),
+    line: int | None = None,
+    column: int | None = None,
+    locus: str | None = None,
+    observed: int | None = None,
+    limit: int | None = None,
     first_difference_line: int | None = None,
     first_difference_expected: str | None = None,
 ) -> ControlFinding:
@@ -580,6 +588,11 @@ def _finding(
         identity=identity,
         message=message,
         hint=hint,
+        line=line,
+        column=column,
+        locus=locus,
+        observed=observed,
+        limit=limit,
         expected=expected,
         actual=actual,
         expected_digest=expected_digest,
@@ -1345,7 +1358,7 @@ def _render_targets(
         entry = snapshot.entry(SafeRelativePath.parse(target))
         try:
             current_content, current_units = _current_state(adapter, entry, scopes)
-        except ControlPlaneError:
+        except ControlPlaneError as exc:
             findings.append(
                 _finding(
                     "CP-MALFORMED-CONTAINER",
@@ -1354,6 +1367,9 @@ def _render_targets(
                     standard_id=(desired[0].owners[0] if desired else previous[0].owners[0]),
                     version="",
                     message="target cannot be parsed as its declared semantic container",
+                    line=exc.line,
+                    column=exc.column,
+                    locus="TOML syntax" if adapter_kind is AdapterKind.TOML else "syntax",
                 )
             )
             continue

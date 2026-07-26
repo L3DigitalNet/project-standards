@@ -9,7 +9,7 @@ import pytest
 from project_standards.cli import main as project_standards_main
 from project_standards.control_plane import command_resolution
 from project_standards.control_plane.bootstrap import initialize_control_plane
-from project_standards.control_plane.cli import run, run_init, validate_repository
+from project_standards.control_plane.cli import run, run_init, run_render, validate_repository
 from project_standards.control_plane.config_edit import set_standard_enabled
 from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
@@ -886,6 +886,108 @@ def test_reconcile_authorization__unrelated_same_word_error__keeps_control_state
     failure = json.loads(capsys.readouterr().out)
     assert failure["code"] == "CP-CONTROL-STATE"
     assert failure["error"] == "authorization metadata is malformed"
+
+
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_reconcile__invalid_config_toml__reports_safe_coordinates(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    json_mode: bool,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / ".standards/config.toml").write_text(
+        '[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n'
+        "private_token = null\n# do-not-print-secret\n",
+        encoding="utf-8",
+    )
+    arguments = ["--repo", str(repo), *(["--json"] if json_mode else [])]
+
+    assert run(arguments, distribution=distribution) == 2
+
+    captured = capsys.readouterr()
+    public = captured.out if json_mode else captured.err
+    assert "line 4, column 17" in public
+    assert "private_token" not in public
+    assert "do-not-print-secret" not in public
+    if json_mode:
+        payload = json.loads(public)
+        assert payload["code"] == "CP-CONTROL-STATE"
+        assert payload["line"] == 4
+        assert payload["column"] == 17
+    else:
+        assert captured.out == ""
+
+
+@pytest.mark.parametrize(
+    ("malformed_file", "content", "line", "column"),
+    [
+        pytest.param(
+            "config.toml",
+            '[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n'
+            "private_token = null\n# do-not-print-secret\n",
+            4,
+            17,
+            id="config",
+        ),
+        pytest.param(
+            "catalog.toml",
+            "private_token = null\n# do-not-print-secret\n",
+            1,
+            17,
+            id="catalog",
+        ),
+        pytest.param(
+            "lock.toml",
+            "private_token = null\n# do-not-print-secret\n",
+            1,
+            17,
+            id="lock",
+        ),
+        pytest.param(
+            ".catalog-refresh.previous.toml",
+            "private_token = null\n# do-not-print-secret\n",
+            1,
+            17,
+            id="catalog-refresh-backup",
+        ),
+    ],
+)
+def test_public_control_plane_routes__invalid_toml__retain_coordinates(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    malformed_file: str,
+    content: str,
+    line: int,
+    column: int,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / ".standards" / malformed_file).write_text(content, encoding="utf-8")
+
+    assert (
+        run_render(
+            ["alpha", "render", "--repo", str(repo), "--json"],
+            distribution=distribution,
+        )
+        == 2
+    )
+    rendered = json.loads(capsys.readouterr().out)
+    assert rendered["path"] == f".standards/{malformed_file}"
+    assert rendered["line"] == line
+    assert rendered["column"] == column
+    assert "private_token" not in json.dumps(rendered)
+    assert "do-not-print-secret" not in json.dumps(rendered)
+
+    assert validate_repository(repo, distribution=distribution) == 1
+    validated = capsys.readouterr()
+    assert f".standards/{malformed_file}, line {line}, column {column}" in validated.err
+    assert "private_token" not in validated.err
+    assert "do-not-print-secret" not in validated.err
 
 
 def test_reconcile_missing_lock_requires_repair_and_apply(

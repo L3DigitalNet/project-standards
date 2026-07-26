@@ -14,7 +14,11 @@ from project_standards.agent_handoff.model import Finding
 from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.cli import build_planner_request
 from project_standards.control_plane.codec import parse_lock
-from project_standards.control_plane.config_edit import set_standard_enabled
+from project_standards.control_plane.config_edit import (
+    set_standard_enabled,
+    set_standard_selection,
+)
+from project_standards.control_plane.diagnostics import ControlFinding
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import (
     ApplyRequest,
@@ -27,8 +31,9 @@ from project_standards.control_plane.locking import (
     control_plane_lock,
 )
 from project_standards.control_plane.planner import plan_reconciliation
+from project_standards.control_plane.providers import ProviderResult
 from project_standards.control_plane.schemas import MutationPlanSchema
-from project_standards.package_contract.payload import JsonObject
+from project_standards.package_contract.payload import JsonObject, ProviderEffect
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -58,11 +63,18 @@ def distribution(tmp_path_factory: pytest.TempPathFactory) -> InstalledDistribut
     return InstalledDistribution(installed, tool_release="5.0.0")
 
 
-def _consumer(tmp_path: Path, distribution: InstalledDistribution) -> Path:
+def _consumer(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    *,
+    version: str | None = None,
+) -> Path:
     repo = tmp_path / "consumer"
     repo.mkdir()
     initialize_control_plane(repo, "5", distribution=distribution)
     set_standard_enabled(repo, "agent-handoff", True)
+    if version is not None:
+        set_standard_selection(repo, "agent-handoff", version=version)
     request = build_planner_request(repo, distribution, frozenset())
     plan = plan_reconciliation(request)
     assert plan.applicable, plan.findings
@@ -90,6 +102,135 @@ def test_unified_validate_uses_selected_provider(
     report = json.loads(capsys.readouterr().out)
     assert report["standard_version"] == "1.4"
     assert report["findings"] == []
+
+
+def test_selected_predecessor_provider_redacts_and_locates_missing_link(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    state = repo / "docs/handoff/state.md"
+    secret_target = "docs/sk-live-consumer-secret.md"
+    secret_heading = "sk-live-consumer-heading"
+    link = f"- [Missing]({secret_target})"
+    content = (
+        state.read_text(encoding="utf-8").rstrip()
+        + f"\n\n## {secret_heading}\n\n{link}\n\n{link}\n"
+    )
+    state.write_text(content, encoding="utf-8")
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 1
+
+    payload = json.loads(capsys.readouterr().out)
+    links = [item for item in payload["findings"] if item["code"] == "AH-REFERENCE-MISSING"]
+    assert len(links) == 2
+    assert {item["path"] for item in links} == {"docs/handoff/state.md"}
+    assert {item["locus"] for item in links} == {"Markdown link"}
+    assert [item["line"] for item in links] == [
+        index + 1 for index, line in enumerate(content.splitlines()) if line == link
+    ]
+    assert all(item["column"] > 0 for item in links)
+    shape = next(item for item in payload["findings"] if item["code"] == "AH-SHAPE")
+    assert shape["locus"] == "section heading"
+    assert shape["line"] == content.splitlines().index(f"## {secret_heading}") + 1
+    assert secret_target not in json.dumps(payload)
+    assert secret_heading not in json.dumps(payload)
+
+
+def test_selected_predecessor_provider_enriches_size_measure_and_limit(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    (repo / "docs/handoff/state.md").write_text("x" * 2050, encoding="utf-8")
+
+    assert run(["size-report", "--repo", str(repo), "--json"], distribution=distribution) == 1
+
+    payload = json.loads(capsys.readouterr().out)
+    finding = next(item for item in payload["findings"] if item["code"] == "AH-SIZE-CAP")
+    assert finding["path"] == "docs/handoff/state.md"
+    assert finding["locus"] == "byte budget"
+    assert finding["observed"] == 2050
+    assert finding["limit"] == 2048
+
+
+def test_exact_older_provider_uses_its_raw_size_measure(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution, version="1.3")
+    agents = repo / "AGENTS.md"
+    content = agents.read_bytes()
+    content += b"\n" + (b"x" * (3500 - len(content) - 1))
+    assert len(content) == 3500
+    agents.write_bytes(content)
+
+    assert run(["size-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["standard_version"] == "1.3"
+    finding = next(item for item in payload["findings"] if item["code"] == "AH-SIZE-TARGET")
+    assert finding["path"] == "AGENTS.md"
+    assert finding["observed"] == 3500
+    assert finding["limit"] == 3480
+
+
+def test_selected_provider_preserves_structural_fields_in_json_and_text(
+    tmp_path: Path,
+    distribution: InstalledDistribution,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _consumer(tmp_path, distribution)
+    finding = ControlFinding(
+        code="AH-SHAPE",
+        severity="error",
+        standard_id="agent-handoff",
+        version="1.4",
+        path="docs/TODO.md",
+        identity="shape",
+        message="bullet exceeds its configured character limit",
+        hint="condense the bullet",
+        line=22,
+        column=7,
+        locus="document bullet",
+        observed=191,
+        limit=160,
+    )
+
+    def structured_findings(*_args: object, **_kwargs: object) -> ProviderResult:
+        return ProviderResult(ProviderEffect.FINDINGS, findings=(finding,))
+
+    monkeypatch.setattr(agent_handoff_cli, "invoke_selected_provider", structured_findings)
+
+    assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 1
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert captured.err == ""
+    assert payload["schema_version"] == "1.1"
+    assert payload["findings"][0] == {
+        "code": "AH-SHAPE",
+        "severity": "error",
+        "path": "docs/TODO.md",
+        "locus": "document bullet",
+        "message": "bullet exceeds its configured character limit",
+        "guidance": "condense the bullet",
+        "line": 22,
+        "column": 7,
+        "observed": 191,
+        "limit": 160,
+    }
+
+    assert run(["validate", "--repo", str(repo)], distribution=distribution) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "docs/TODO.md:22:7" in captured.err
+    assert "document bullet" in captured.err
+    assert "observed: 191" in captured.err
+    assert "limit: 160" in captured.err
 
 
 @pytest.mark.parametrize("command", ["size-report", "shape-check"])
@@ -483,10 +624,12 @@ def test_agent_handoff_1_2_selected_provider_normalizes_link_targets(
 
     assert report["standard_version"] == "1.4"
     assert [(item["path"], item["locus"]) for item in references] == [
-        ("docs/handoff/architecture.md", "Markdown link: "),
-        ("docs/handoff/architecture.md", "Markdown link: "),
-        ("docs/handoff/architecture.md", "Markdown link: "),
+        ("docs/handoff/architecture.md", "Markdown link"),
+        ("docs/handoff/architecture.md", "Markdown link"),
+        ("docs/handoff/architecture.md", "Markdown link"),
     ]
+    assert len({item["line"] for item in references}) == 3
+    assert all(item["column"] > 0 for item in references)
 
 
 def test_unified_validate_does_not_follow_a_symlinked_link_target(
@@ -590,4 +733,6 @@ def test_legacy_report__emitted_inventory_with_errors__returns_success_and_retai
         assert report["summary"]["errors"] == 1
     else:
         assert captured.out == ""
-        assert captured.err == "error: legacy.txt: legacy evidence requires review\n"
+        assert captured.err == (
+            "error: legacy.txt: legacy evidence requires review (locus: legacy inventory)\n"
+        )

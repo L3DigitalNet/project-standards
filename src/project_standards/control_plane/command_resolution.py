@@ -47,7 +47,7 @@ from project_standards.package_contract.payload import (
 )
 
 
-class CommandResolutionError(ValueError):
+class CommandResolutionError(ControlPlaneError):
     """Report an unusable command authority or package selection."""
 
 
@@ -195,7 +195,17 @@ def invoke_selected_provider(
                 snapshots=snapshots,
             )
         )
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+    except ControlPlaneError as exc:
+        raise CommandResolutionError(
+            exc.message,
+            path=exc.path,
+            line=exc.line,
+            column=exc.column,
+            locus=exc.locus,
+            observed=exc.observed,
+            limit=exc.limit,
+        ) from exc
+    except (PackageContractError, OSError, ValueError) as exc:
         raise CommandResolutionError(str(exc)) from exc
 
 
@@ -238,7 +248,21 @@ def _resolve_state(
     if state.kind is StateKind.UNINITIALIZED:
         return None
     if state.kind is StateKind.MALFORMED and state.malformed_file == "config.toml":
-        raise CommandConfigurationError(state.detail or "control-plane config is invalid")
+        raise CommandConfigurationError(
+            state.detail or "control-plane config is invalid",
+            path=".standards/config.toml",
+            line=state.line,
+            column=state.column,
+        )
+    if state.kind is StateKind.MALFORMED:
+        raise CommandResolutionError(
+            state.detail or "control-plane state is malformed",
+            path=(
+                f".standards/{state.malformed_file}" if state.malformed_file is not None else None
+            ),
+            line=state.line,
+            column=state.column,
+        )
     if state.kind is StateKind.INCOMPLETE and "config.toml" in state.missing_files:
         raise CommandConfigurationError(state.detail or "control-plane config is missing")
     if (
@@ -327,8 +351,26 @@ def _resolve_state_for_command(
     except CommandResolutionError:
         raise
     except ControlPlaneConfigurationError as exc:
-        raise CommandConfigurationError(str(exc)) from exc
-    except (ControlPlaneError, PackageContractError, OSError, ValueError) as exc:
+        raise CommandConfigurationError(
+            exc.message,
+            path=exc.path,
+            line=exc.line,
+            column=exc.column,
+            locus=exc.locus,
+            observed=exc.observed,
+            limit=exc.limit,
+        ) from exc
+    except ControlPlaneError as exc:
+        raise CommandResolutionError(
+            exc.message,
+            path=exc.path,
+            line=exc.line,
+            column=exc.column,
+            locus=exc.locus,
+            observed=exc.observed,
+            limit=exc.limit,
+        ) from exc
+    except (PackageContractError, OSError, ValueError) as exc:
         raise CommandResolutionError(str(exc)) from exc
 
 

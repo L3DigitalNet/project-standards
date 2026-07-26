@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from project_standards.control_plane.diagnostics import (
     ControlPlaneError,
+    toml_error,
     validation_summary,
 )
 from project_standards.control_plane.models import (
@@ -259,7 +260,7 @@ def _load_toml(content: bytes, *, kind: str) -> dict[str, object]:
     try:
         return tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
-        raise ControlPlaneError(f"{kind} is not valid TOML") from exc
+        raise toml_error(f"{kind} is not valid TOML", exc) from exc
 
 
 def parse_config(content: bytes) -> DesiredConfig:
