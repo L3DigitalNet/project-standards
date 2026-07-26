@@ -55,10 +55,11 @@ _ALL_NAMESPACES = (
 # to the default, so these successors track the Catalog 5 default after every advance.
 # FR-013 (5.8.0/T10) advanced three families to correction successors: markdown-tooling
 # and python-tooling to 1.8 (predecessor now the retained 1.7) and markdown-frontmatter
-# to 1.5 (predecessor now the retained 1.4). agent-handoff and project-spec did not
-# advance this train, so their 1.3->1.4 rows are unchanged.
+# to 1.5 (predecessor now the retained 1.4). agent-handoff, cli-documentation, and
+# project-spec did not advance this train, so their retained-to-default rows are unchanged.
 _CORRECTION_TRANSITIONS = (
     ("agent-handoff", "1.3", "1.4"),
+    ("cli-documentation", "1.2", "1.3"),
     ("markdown-frontmatter", "1.4", "1.5"),
     ("markdown-tooling", "1.7", "1.8"),
     ("project-spec", "1.3", "1.4"),

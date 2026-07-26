@@ -16,6 +16,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Ledger amendment authority needs its seed commits and release tags.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
