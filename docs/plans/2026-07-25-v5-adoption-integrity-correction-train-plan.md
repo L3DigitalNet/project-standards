@@ -15,7 +15,7 @@ test_framework: pytest
 
 # V5 Adoption Integrity Correction Train Implementation Plan
 
-> **This file is definition, not state.** It is the proposed implementation contract for owner review. Do not execute T1 or make implementation changes until the owner approves this plan and explicitly grants an exception to the active MCP change hold. Live progress, once authorized, belongs under `.project-pipeline/2026-07-25-v5-adoption-integrity-correction-train/`.
+> **This file is definition, not state.** The owner approved this implementation contract and granted the required MCP-hold exception for T1-T17 on 2026-07-26. Live progress belongs under `.project-pipeline/2026-07-25-v5-adoption-integrity-correction-train/`. T18 remains blocked on separate authorization for the exact qualified candidate.
 
 ## 1. Objective
 
@@ -31,12 +31,13 @@ Close GitHub issues #32 and #35-#49 in one internally phased correction train th
 
 1. This plan may be reviewed and edited while the MCP change hold remains active.
 2. The durable 2026-07-26 closed-issue regression audit establishes SPEC-VAIC's pre-authorization `baseline_verified` state. T1 is the first authorized implementation task: it converts that proof into a committed ledger and reruns it before any current-train RED work.
-3. T1-T17 require owner approval of SPEC-VAIC and this plan plus an explicit exception to the MCP hold recorded in the durable handoff.
+3. The owner approved SPEC-VAIC and this plan and granted the MCP-hold exception for T1-T17 on 2026-07-26; the authorization is recorded in the durable handoff.
 4. T18 additionally requires explicit release authorization after the complete candidate and Opus audit evidence are available.
 5. No task may edit an immutable released payload. Package behavior changes ship only in successor payloads.
 6. A newly discovered material requirement, incompatible issue expectation, package-boundary change, new payload, or expanded task change surface returns first to SPEC-VAIC and then to this master plan; both artifacts require renewed review and owner approval before the affected GREEN step continues. Pure evidence-pointer or wording corrections that do not change scope, behavior, or authorization may be synchronized without reopening approval.
 7. The planned train version is Project Standards 5.9.0, subject to pre-GREEN analysis and exact-candidate `uv run project-standards packages check-release --baseline v5.8.0` evidence confirming MINOR. Any different classification or pass-to-fail consumer outcome stops before affected GREEN work or candidate assembly for owner disposition.
 8. T15 assembles the exact release commit, including version, `uv.lock`, dated changelog, and release-current documentation bytes. T16 reviews it; T17 rebuilds and qualifies it without tracked changes; T18 may land it on `main` only by a tree-preserving fast-forward or equivalent unchanged-commit operation. Any byte or commit substitution restarts T15-T17 and requires renewed release authorization.
+9. Every implementation task must pass the scope-verification checkpoints in §6.1. Optional cleanup, speculative hardening, generalized infrastructure, and unrelated maintenance are prohibited even when adjacent to an edited surface.
 
 ## 3. Scope
 
@@ -166,7 +167,18 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 - Consumer-outcome invariant: exact-version and `latest` fixtures are compared from 5.8.0 through candidate migration, and no validation, lint, format, reconcile, or installed-workflow result may move from pass to fail.
 - Release-identity invariant: T17 qualifies the final release commit only after its version, lock, changelog, documentation, and candidate-specific bytes are complete; T18 lands that exact commit unchanged.
 
-### 6.1 TDD Exceptions
+### 6.1 Scope Verification Checkpoints
+
+Each T1-T17 checklist must record a task base commit and the task's declared requirements, acceptance tests, and expected paths before any task edit. The executor then performs these checkpoints:
+
+1. **Task start:** compare the clean working tree and intended paths with the task definition. Record the base commit and allowed change surface in the task log. Mechanically required generated outputs or cross-file contract counterparts are allowed only when named before editing.
+2. **Before GREEN:** inspect `git diff --name-status "$TASK_BASE"` and `git diff --stat "$TASK_BASE"`. The RED diff may contain only focused tests, fixtures, and ephemeral evidence needed to prove the task's specified behavior. Production changes or unrelated cleanup at this checkpoint are a hard stop.
+3. **Before Verify Task:** repeat the name/status and stat review, inspect the complete diff against the task's requirements and acceptance tests, and run `git diff --check`. Every changed path and behavior must be necessary for the current task or a previously declared generated/cross-file counterpart. REFACTOR may simplify only inside that verified surface and may not introduce a new abstraction, option, dependency, framework, or generalized capability without a demonstrated task requirement.
+4. **Phase boundary:** after the final task in each phase, compare the aggregate phase diff and commits with SPEC-VAIC scope, constraints, and non-goals before starting the next phase.
+
+An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops the task. Record it in `.project-pipeline/2026-07-25-v5-adoption-integrity-correction-train/notes.md`; remove it from the current diff or route it through the plan's discovered-work/spec-change procedure and obtain any required renewed approval. Do not absorb it because it is convenient or nearby.
+
+### 6.2 TDD Exceptions
 
 | Task | Exception reason | Objective validation |
 | --- | --- | --- |
@@ -498,7 +510,7 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 
 | ID | Question | Blocking? | Owner | Current assumption |
 | --- | --- | --- | --- | --- |
-| OQ-001 | Does the owner approve this plan and grant an exception to the MCP hold? | yes before T1 | Owner | No; implementation remains blocked pending morning review. |
+| OQ-001 | Does the owner approve this plan and grant an exception to the MCP hold? | yes before T1 | Owner | Yes; approved for T1-T17 on 2026-07-26. |
 | OQ-002 | Does refreshed pinned-tool evidence confirm #47’s exact `dir/**` divergence? | yes at T9 GREEN | Implementer | Characterize first; do not pre-commit to normalization. |
 | OQ-003 | Does the owner authorize the exact T17 candidate for release? | yes before T18 | Owner | No; T17 stops unpublished. |
 
@@ -538,6 +550,8 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 - `uv run project-standards agent-handoff size-report --repo .`
 - `uv run project-standards agent-handoff shape-check --repo .`
 - `git diff --check`
+- For every T1-T17 commit, verify the recorded task base, allowed change surface, pre-GREEN scope result, pre-Verify-Task scope result, and any generated/cross-file counterpart justification are present in the ephemeral evidence.
+- At each phase boundary, verify the completed task commits remain within SPEC-VAIC scope, constraints, and non-goals; unresolved scope exceptions block the next phase.
 - Require `git status --porcelain` to produce no output.
 - Compare `git rev-parse HEAD` with the exact T15/T16 recorded release commit.
 - Audit every SPEC-VAIC FR/NFR/IR/DR and TC row bidirectionally against exact passing evidence; any missing Must evidence blocks T17.

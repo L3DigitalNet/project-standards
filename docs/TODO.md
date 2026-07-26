@@ -38,9 +38,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
-- [ ] Review and approve the Opus-converged V5 adoption integrity correction train for issues #32 and #35-#49.
+- [ ] Execute the approved V5 adoption integrity correction train for issues #32 and #35-#49 through the qualified-candidate gate.
 
-  SPEC-VAIC rev 0.3 and the 18-task plan are definition-only. Closed issues #3 and #8-#31 have no present regressions. Implementation requires explicit owner approval plus an exception to the active MCP project change hold; carry non-blocking plan-review advisory PA-013 into T14. Publication requires separate release authorization after the candidate and blocking Opus audit pass.
+  The owner approved SPEC-VAIC rev 0.3 and its 18-task plan and granted the MCP-hold exception for T1-T17 on 2026-07-26. Closed issues #3 and #8-#31 have no present regressions. Carry non-blocking plan-review advisory PA-013 into T14. Publication and issue closure require separate release authorization after the candidate and blocking Opus audit pass.
 
 - [ ] Correct the Standard Bundle Authoring documentation drift without rewriting historical evidence: update the current-authority reference from 2.2 to 2.5, correct the SPEC-BA02 index revision from 0.13 to 0.14, and verify the SPEC-CP01 and SPEC-DPEY index rows against their revision histories.
 

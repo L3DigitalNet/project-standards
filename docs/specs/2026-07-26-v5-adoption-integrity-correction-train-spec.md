@@ -1,7 +1,7 @@
 ---
 spec_id: SPEC-VAIC
 title: 'V5 Adoption Integrity Correction Train'
-status: review
+status: approved
 profile: standard
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
@@ -35,7 +35,7 @@ related:
 | 0.2 | 2026-07-26 | Codex with Opus specification review | Resolve round-1 review findings: bound immutable TOML-guide scope, separate payload-byte and outcome compatibility, define shared path classification, make the regression ledger evolvable, correct release authorities, version diagnostic schemas, complete migration/config semantics, and require direct spec-plan traceability. |
 | 0.3 | 2026-07-26 | Codex with Opus specification review | Resolve round-2 review findings: qualify the release commit after all byte-changing release preparation, update the Markdown split-ownership declaration with MD060, protect exact and default-track consumers, and preserve historical release references and lint scope. |
 
-**Spec lifecycle:** This document remains under review until the owner approves it. After approval it is change-controlled: implementation deviations belong in the [Deviations Log](#deviations-log), and scope-affecting edits require a new revision and renewed owner approval.
+**Spec lifecycle:** The owner approved rev 0.3 and its governing plan on 2026-07-26 and granted the required exception to the MCP change hold for implementation through T17. This document is now change-controlled: implementation deviations belong in the [Deviations Log](#deviations-log), and scope-affecting edits require a new revision and renewed owner approval. Publication and issue closure remain separately unauthorized.
 
 ---
 
@@ -466,8 +466,8 @@ Consumer repository values, source lines, hook commands, paths outside the repos
 
 ### 17.1 Definition of Done
 
-- [ ] Owner has approved this specification and the governing implementation plan.
-- [ ] Owner has granted an explicit exception to the MCP hold before implementation.
+- [x] Owner has approved this specification and the governing implementation plan.
+- [x] Owner has granted an explicit exception to the MCP hold before implementation.
 - [ ] Every Must requirement has focused passing evidence.
 - [ ] The exact baseline passes every applicable seed ledger row and the candidate passes every applicable seed/current-train row.
 - [ ] Issue #21 has a dedicated committed semantic documentation guard.
@@ -628,7 +628,7 @@ The train's operational evidence is deterministic command output and durable rep
 
 | ID | Question | Current Assumption | Blocking? | Owner | Resolve By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Does the owner approve the converged specification/plan and grant an exception to the MCP hold? | No implementation authority exists yet. | Yes, before MS-1 or successor work | Owner | Before implementation | Open |
+| OQ-001 | Does the owner approve the converged specification/plan and grant an exception to the MCP hold? | Approved for implementation through T17 on 2026-07-26; release remains separately gated. | Yes, before MS-1 or successor work | Owner | Before implementation | Resolved |
 | OQ-002 | Does pinned-tool characterization reproduce #47's reported `dir/**` divergence exactly? | Characterize first; apply no speculative normalization. | Yes, before FR-015 GREEN | Implementer | MS-2 characterization | Open |
 | OQ-003 | Does the owner authorize publication of the exact qualified candidate? | The candidate remains unpublished and issues remain open. | Yes, before MS-4 | Owner | After MS-3 evidence | Open |
 
