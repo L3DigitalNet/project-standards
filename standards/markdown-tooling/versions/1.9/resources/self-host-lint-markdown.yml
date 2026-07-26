@@ -1,0 +1,73 @@
+name: Lint Markdown
+
+# Stack B (the Markdown *body* linter) — distinct from validate-markdown-frontmatter.yml,
+# which gates the YAML *frontmatter*. Kept as a separate, opt-in reusable workflow so
+# frontmatter-only consumers never inherit a Node/markdownlint toolchain (DEC-8). The
+# action ships its own Node runtime and auto-discovers the repo's `.markdownlint.json`,
+# so neither this repo nor a consumer needs a committed Node project (DEC-3 / DEC-7).
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**/*.md"
+      - ".markdownlint.json"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/lint-markdown.yml"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - ".markdownlint.json"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/lint-markdown.yml"
+
+  # Reusable: opt-in Markdown body linting for a consuming repo. It lints the
+  # CALLER's Markdown against the CALLER's `.markdownlint.json` (seed yours from
+  # this repo's published config) — nothing is installed from this repo. Pass
+  # multiple globs newline-delimited via a YAML block scalar.
+  #
+  #   jobs:
+  #     lint-markdown:
+  #       uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v5
+  #       with:
+  #         globs: '**/*.md'
+  workflow_call:
+    inputs:
+      markdownlint:
+        description: "Run the Markdown lint check."
+        required: false
+        type: boolean
+        default: true
+      globs:
+        description: "Newline-delimited glob(s) of Markdown files to lint."
+        required: false
+        type: string
+        default: "**/*.md"
+      config:
+        description: "Path to a base markdownlint config file. Empty = auto-discover the caller's .markdownlint.json."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Markdown
+    # Direct events have no reusable-workflow input and therefore keep the
+    # default run behavior; an explicit typed false skips setup and linting.
+    if: ${{ format('{0}', inputs.markdownlint) != 'false' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # The action's own `globs` default is the non-recursive `*.{md,markdown}`,
+      # so it is passed explicitly. On this repo's push/PR runs `inputs.globs` is
+      # empty and the `||` fallback supplies the recursive default.
+      - name: Lint Markdown (markdownlint-cli2)
+        uses: DavidAnson/markdownlint-cli2-action@v24
+        with:
+          globs: ${{ inputs.globs || '**/*.md' }}
+          config: ${{ inputs.config }}
