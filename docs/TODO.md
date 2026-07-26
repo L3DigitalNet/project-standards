@@ -38,6 +38,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
+- [ ] Review the proposed V5 adoption integrity correction train for issues #32 and #35-#49.
+
+  The 18-task plan is definition-only. Implementation requires explicit owner approval plus an exception to the active MCP project change hold; publication requires separate release authorization after the candidate and blocking Opus audit pass.
+
 - [ ] Correct the Standard Bundle Authoring documentation drift without rewriting historical evidence: update the current-authority reference from 2.2 to 2.5, correct the SPEC-BA02 index revision from 0.13 to 0.14, and verify the SPEC-CP01 and SPEC-DPEY index rows against their revision histories.
 
 ### Future programs
