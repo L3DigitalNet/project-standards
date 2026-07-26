@@ -32,6 +32,7 @@ from project_standards.control_plane.diagnostics import (
     ControlAction,
     ControlFinding,
     ControlPlaneError,
+    findings_to_jsonable,
     sort_findings,
 )
 from project_standards.control_plane.distribution import InstalledPayload
@@ -42,8 +43,10 @@ from project_standards.control_plane.locking import (
     control_plane_lock,
 )
 from project_standards.control_plane.planner import (
+    ManagedRestorePlan,
     PlannerRequest,
     ReconciliationPlan,
+    plan_managed_restore,
     plan_reconciliation,
 )
 from project_standards.control_plane.providers import (
@@ -106,6 +109,40 @@ class AuthoringApplyResult:
     success: bool
     applied_targets: tuple[str, ...]
     error_code: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ManagedRestoreApplyRequest:
+    """Bind one reviewed managed-restore preview to an apply attempt."""
+
+    planner: PlannerRequest
+    expected_plan: ManagedRestorePlan
+    fault_hook: FaultHook | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ManagedRestoreApplyResult:
+    """Report content-safe evidence for one managed-restore apply attempt."""
+
+    success: bool
+    action: str | None
+    target: str | None
+    superseded_state: str | None
+    resulting_digest: str | None
+    error_code: str | None = None
+    findings: tuple[ControlFinding, ...] = ()
+
+    def to_jsonable(self) -> dict[str, object]:
+        """Return only digests, structural identities, and bounded findings."""
+        return {
+            "success": self.success,
+            "action": self.action,
+            "target": self.target,
+            "superseded_state": self.superseded_state,
+            "resulting_digest": self.resulting_digest,
+            "error_code": self.error_code,
+            "findings": findings_to_jsonable(self.findings),
+        }
 
 
 @dataclass(slots=True)
@@ -204,6 +241,30 @@ def _open_parent(
                 raise _ApplyFailure(
                     "CP-APPLY-PATH",
                     "target parent is not a safe directory",
+                ) from exc
+            os.close(descriptor)
+            descriptor = child
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _open_existing_parent(root_descriptor: int, parent: PurePosixPath) -> int:
+    """Open one contained existing parent without creating repository paths."""
+    descriptor = os.dup(root_descriptor)
+    try:
+        for part in parent.parts:
+            try:
+                child = os.open(
+                    part,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    dir_fd=descriptor,
+                )
+            except OSError as exc:
+                raise _ApplyFailure(
+                    "CP-RESTORE-PATH",
+                    "managed restore target parent is not an existing safe directory",
                 ) from exc
             os.close(descriptor)
             descriptor = child
@@ -321,6 +382,170 @@ def _cleanup_staged(
     for relative in sorted(created, key=lambda item: len(item.parts), reverse=True):
         with suppress(OSError):
             (root / relative).rmdir()
+
+
+def _restore_failure(
+    request: ManagedRestoreApplyRequest,
+    code: str,
+    *,
+    findings: tuple[ControlFinding, ...] = (),
+) -> ManagedRestoreApplyResult:
+    preview = request.expected_plan.preview
+    return ManagedRestoreApplyResult(
+        success=False,
+        action=None,
+        target=preview.target if preview is not None else None,
+        superseded_state=None,
+        resulting_digest=None,
+        error_code=code,
+        findings=findings,
+    )
+
+
+def _restore_plan_current(
+    request: ManagedRestoreApplyRequest,
+    control: LockedControlDirectory,
+) -> ManagedRestorePlan | None:
+    expected = request.expected_plan
+    preview = expected.preview
+    if (
+        not expected.applicable
+        or preview is None
+        or expected.target_precondition_digest is None
+        or expected.desired_content is None
+        or not expected.authority_preconditions
+        or not control.is_current()
+    ):
+        return None
+    current = plan_managed_restore(request.planner, preview.target)
+    return current if current == expected and control.is_current() else None
+
+
+def _restore_target_current(repo: Path, plan: ManagedRestorePlan) -> bool:
+    preview = plan.preview
+    expected = plan.target_precondition_digest
+    if preview is None or expected is None:
+        return False
+    try:
+        relative = SafeRelativePath.parse(preview.target)
+        observed = RepositorySnapshot.capture(repo, (relative,)).entry(relative)
+    except ControlPlaneError, OSError, ValueError:
+        return False
+    return observed.precondition_digest.value == expected
+
+
+def _restore_fault(
+    request: ManagedRestoreApplyRequest,
+    phase: str,
+    target: str,
+) -> None:
+    if request.fault_hook is not None:
+        request.fault_hook(phase, target)
+
+
+def _apply_managed_restore_locked(
+    request: ManagedRestoreApplyRequest,
+    control: LockedControlDirectory,
+) -> ManagedRestoreApplyResult:
+    current = _restore_plan_current(request, control)
+    if current is None:
+        return _restore_failure(request, "CP-STALE-PLAN")
+    preview = current.preview
+    desired = current.desired_content
+    if preview is None or desired is None:
+        return _restore_failure(request, "CP-RESTORE-PLAN")
+    if preview.action == "noop":
+        return ManagedRestoreApplyResult(
+            success=True,
+            action="noop",
+            target=preview.target,
+            superseded_state=preview.current_state,
+            resulting_digest=preview.desired_digest,
+        )
+
+    root: Path | None = None
+    root_descriptor: int | None = None
+    parent_descriptor: int | None = None
+    temporary: str | None = None
+    try:
+        root, root_descriptor = _open_repository(request.planner.repo)
+        relative = SafeRelativePath.parse(preview.target)
+        parent_descriptor = _open_existing_parent(
+            root_descriptor,
+            relative.normalized.parent,
+        )
+        temporary = _stage_bytes(
+            parent_descriptor,
+            desired,
+            current.desired_mode or "0644",
+        )
+        _restore_fault(request, "precondition", preview.target)
+        if (
+            not _restore_target_current(root, current)
+            or _restore_plan_current(request, control) is None
+        ):
+            return _restore_failure(request, "CP-STALE-PLAN")
+        _assert_parent_current(root, relative.normalized.parent, parent_descriptor)
+
+        # A deterministic publish hook may alter the target or authorities. Recheck
+        # after it so tests and embedding callers cannot bypass the final CAS fence.
+        _restore_fault(request, "publish", preview.target)
+        if (
+            not _restore_target_current(root, current)
+            or _restore_plan_current(request, control) is None
+        ):
+            return _restore_failure(request, "CP-STALE-PLAN")
+        _assert_parent_current(root, relative.normalized.parent, parent_descriptor)
+        os.replace(
+            temporary,
+            relative.normalized.name,
+            src_dir_fd=parent_descriptor,
+            dst_dir_fd=parent_descriptor,
+        )
+        temporary = None
+        os.fsync(parent_descriptor)
+        observed = RepositorySnapshot.capture(root, (relative,)).entry(relative)
+        if (
+            observed.kind is not EntryKind.REGULAR
+            or observed.content_digest is None
+            or observed.content_digest.value != preview.desired_digest
+        ):
+            raise _ApplyFailure(
+                "CP-RESTORE-VERIFY",
+                "managed restore target changed before verification",
+            )
+        return ManagedRestoreApplyResult(
+            success=True,
+            action=preview.action,
+            target=preview.target,
+            superseded_state=preview.current_state,
+            resulting_digest=observed.content_digest.value,
+        )
+    except _ApplyFailure as exc:
+        return _restore_failure(request, exc.code)
+    except ControlPlaneError, OSError, ValueError:
+        return _restore_failure(request, "CP-RESTORE-APPLY")
+    finally:
+        if temporary is not None and parent_descriptor is not None:
+            with suppress(OSError):
+                os.unlink(temporary, dir_fd=parent_descriptor)
+        if parent_descriptor is not None:
+            os.close(parent_descriptor)
+        if root_descriptor is not None:
+            os.close(root_descriptor)
+
+
+def apply_managed_restore(
+    request: ManagedRestoreApplyRequest,
+) -> ManagedRestoreApplyResult:
+    """Apply one current managed-restore preview through an atomic replacement."""
+    try:
+        with control_plane_lock(request.planner.repo, LockMode.WRITE) as control:
+            return _apply_managed_restore_locked(request, control)
+    except ControlPlaneBusyError:
+        return _restore_failure(request, "CP-BUSY")
+    except ControlPlaneError, OSError, ValueError:
+        return _restore_failure(request, "CP-RESTORE-APPLY")
 
 
 def _authoring_entries(

@@ -149,6 +149,15 @@ project-standards reconcile --apply
 
 Commit `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and reconciled outputs together. The package selector chooses an immutable payload; package options such as `contract_version` remain independent. Each versioned adoption guide defines the package-specific options, outputs, migration, verification, and troubleshooting.
 
+To restore one missing or changed, exclusively managed whole file, preview the exact lock-backed restore before applying it:
+
+```bash
+project-standards reconcile --restore-managed path/to/file
+project-standards reconcile --restore-managed path/to/file --apply
+```
+
+The path must be one exact repo-relative, non-glob path with exclusive whole-file ownership and matching lock authority. The preview is read-only and reports only structural evidence (owner, digests or `absent`, action, and the exact apply command); apply never creates parent directories, and a `noop` writes nothing. This restore path is separate from incomplete-state recovery.
+
 > **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md). It routes fresh adoption, V5 updates, and V4 migration; requires preview-before-apply and preservation checks; and requires sanitized upstream issue reports for irregularities.
 
 ### Current consumer packages

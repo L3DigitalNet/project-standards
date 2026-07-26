@@ -38,6 +38,7 @@ project-standards validate [<file>...] [--config <path>] [--schema <path>] [--gl
 project-standards fix [<file>...] [--config <path>] [--schema <path>] [--glob <pattern>] [--no-require-frontmatter] [--quiet]
 project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [--json]
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
+project-standards reconcile --restore-managed <path> [--apply] [--repo <dir>] [--json]
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
@@ -146,12 +147,14 @@ When the installed tool carries a newer compatible snapshot of the same configur
 
 ```text
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
+project-standards reconcile --restore-managed <path> [--apply] [--repo <dir>] [--json]
 ```
 
 Options:
 
 - **`--check`** — Report pending mutations, lock changes, or conflicts without writing. Mutually exclusive with `--apply`.
 - **`--apply`** — Apply the current conflict-free plan. The executor rechecks each precondition and does not retry automatically.
+- **`--restore-managed <path>`** — Preview restoration of one exact, repo-relative non-glob target. It is available only for an exclusively managed whole file with exact authoritative lock evidence. Preview is non-mutating and reports the target, owner, current digest (or `absent`), lock digest, desired digest, action, and exact apply command. Add `--apply` to perform the revalidated restore; `noop` writes nothing and the command never creates a parent directory. This mode cannot be combined with `--check`, `--repair-state`, or `--allow-major`, and is separate from incomplete-state recovery. Output contains structural evidence only, never file content.
 - **`--allow-major <standard>@<major>`** — Authorize one exact package and target major for this invocation. Repeat for independent authorizations.
 - **`--repair-state`** — Preview a sanctioned missing-catalog or missing-lock recovery. Recovery writes require both this flag and `--apply`. Missing user config is never inferred.
 - **`--repo <dir>`** — Repository to reconcile. Default: current directory.

@@ -1459,3 +1459,162 @@ def test_human_finding_renderer__null_conflict_value__renders_explicit_null() ->
     lines = rendered.splitlines()
     assert lines[1] == "  expected: null"
     assert lines[2] == "  actual: 2"
+
+
+def _settled_alpha_restore_repo(
+    root: Path,
+) -> tuple[Path, InstalledDistribution, Path]:
+    repo = root / "repo"
+    repo.mkdir(parents=True)
+    distribution = installed_distribution(root)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    extension = repo / ".standards/extensions/alpha/options.toml"
+    extension.parent.mkdir(parents=True)
+    extension.write_text("enabled = true\n", encoding="utf-8")
+    set_standard_enabled(repo, "alpha", True)
+    assert run(["--repo", str(repo), "--apply"], distribution=distribution) == 0
+    target = repo / ".standards/alpha/config.toml"
+    assert target.is_file()
+    return repo, distribution, target
+
+
+def test_tc_t7_002_restore_cli_preview_apply_text_json_parity(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    text_repo, text_distribution, text_target = _settled_alpha_restore_repo(tmp_path / "text")
+    capsys.readouterr()
+    json_repo, json_distribution, json_target = _settled_alpha_restore_repo(tmp_path / "json")
+    capsys.readouterr()
+    secret = b"api_token = cli-secret-value\n"
+    text_target.write_bytes(secret)
+    json_target.write_bytes(secret)
+    relative = ".standards/alpha/config.toml"
+    text_before = _tree_snapshot(text_repo)
+    json_before = _tree_snapshot(json_repo)
+
+    assert (
+        run(
+            ["--repo", str(text_repo), "--restore-managed", relative],
+            distribution=text_distribution,
+        )
+        == 0
+    )
+    human_preview = capsys.readouterr()
+    assert _tree_snapshot(text_repo) == text_before
+    assert relative in human_preview.out
+    assert "overwrite" in human_preview.out
+    assert f"reconcile --restore-managed {relative} --apply" in human_preview.out
+    assert human_preview.err == ""
+
+    assert (
+        run(
+            ["--repo", str(json_repo), "--restore-managed", relative, "--json"],
+            distribution=json_distribution,
+        )
+        == 0
+    )
+    json_preview = capsys.readouterr()
+    preview_payload = json.loads(json_preview.out)
+    assert _tree_snapshot(json_repo) == json_before
+    assert preview_payload["ok"] is True
+    assert preview_payload["mode"] == "restore-preview"
+    assert preview_payload["restore"]["target"] == relative
+    assert preview_payload["restore"]["owner"] == "alpha"
+    assert preview_payload["restore"]["action"] == "overwrite"
+    assert json_preview.err == ""
+
+    assert (
+        run(
+            ["--repo", str(text_repo), "--restore-managed", relative, "--apply"],
+            distribution=text_distribution,
+        )
+        == 0
+    )
+    human_apply = capsys.readouterr()
+    assert "overwrite" in human_apply.out
+    assert relative in human_apply.out
+    assert human_apply.err == ""
+    assert {key: value for key, value in text_before.items() if key != relative} == {
+        key: value for key, value in _tree_snapshot(text_repo).items() if key != relative
+    }
+
+    assert (
+        run(
+            [
+                "--repo",
+                str(json_repo),
+                "--restore-managed",
+                relative,
+                "--apply",
+                "--json",
+            ],
+            distribution=json_distribution,
+        )
+        == 0
+    )
+    json_apply = capsys.readouterr()
+    apply_payload = json.loads(json_apply.out)
+    assert apply_payload["ok"] is True
+    assert apply_payload["mode"] == "restore-apply"
+    assert apply_payload["restore"]["action"] == "overwrite"
+    assert (
+        apply_payload["result"]["superseded_state"] == preview_payload["restore"]["current_state"]
+    )
+    assert (
+        apply_payload["result"]["resulting_digest"] == preview_payload["restore"]["desired_digest"]
+    )
+    assert json_apply.err == ""
+
+    assert (
+        run(
+            ["--repo", str(json_repo), "--restore-managed", relative, "--json"],
+            distribution=json_distribution,
+        )
+        == 0
+    )
+    repeated = json.loads(capsys.readouterr().out)
+    assert repeated["restore"]["action"] == "noop"
+    combined = human_preview.out + human_apply.out + json_preview.out + json_apply.out
+    assert "api_token" not in combined
+    assert "cli-secret-value" not in combined
+
+
+@pytest.mark.parametrize(
+    "conflicting",
+    [
+        ["--check"],
+        ["--repair-state"],
+        ["--allow-major", "alpha@2"],
+        ["--restore-managed", "other.txt"],
+    ],
+    ids=["check", "repair-state", "allow-major", "duplicate-target"],
+)
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_tc_t7_003_restore_cli_rejects_conflicting_modes(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    conflicting: list[str],
+    json_mode: bool,
+) -> None:
+    arguments = [
+        "--repo",
+        str(tmp_path),
+        "--restore-managed",
+        "tool.txt",
+        *conflicting,
+    ]
+    if json_mode:
+        arguments.append("--json")
+
+    assert run(arguments) == 2
+
+    captured = capsys.readouterr()
+    if json_mode:
+        payload = json.loads(captured.out)
+        assert payload["ok"] is False
+        assert payload["code"] == "CP-ARGUMENT"
+        assert captured.err == ""
+    else:
+        assert captured.out == ""
+        assert "CP-ARGUMENT" in captured.err

@@ -21,13 +21,20 @@ from project_standards.control_plane.distribution import (
     declared_transitions,
     resolution_payloads,
 )
-from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+from project_standards.control_plane.executor import (
+    ApplyRequest,
+    ManagedRestoreApplyRequest,
+    apply_managed_restore,
+    apply_reconciliation,
+)
 from project_standards.control_plane.locking import ControlPlaneBusyError
 from project_standards.control_plane.models import CentralLock
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
+    ManagedRestorePlan,
     PlannerRequest,
     ReconciliationPlan,
+    plan_managed_restore,
     plan_reconciliation,
 )
 from project_standards.control_plane.recovery import (
@@ -75,9 +82,15 @@ def _major_authorization(value: str) -> MajorAuthorization:
 
 def _parser() -> _Parser:
     parser = _Parser(prog="project-standards reconcile")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="report drift without applying it")
-    mode.add_argument("--apply", action="store_true", help="apply a conflict-free current plan")
+    parser.add_argument("--check", action="store_true", help="report drift without applying it")
+    parser.add_argument("--apply", action="store_true", help="apply a conflict-free current plan")
+    parser.add_argument(
+        "--restore-managed",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="preview exact lock-backed restoration of one exclusively managed whole file",
+    )
     parser.add_argument(
         "--allow-major",
         action="append",
@@ -738,6 +751,76 @@ def _run_recovery(
     return 0 if result.success else 1
 
 
+def _restore_payload(
+    plan: ManagedRestorePlan,
+    *,
+    mode: str,
+) -> dict[str, object]:
+    return {
+        "ok": plan.applicable,
+        "mode": mode,
+        "restore": plan.preview.to_jsonable() if plan.preview is not None else None,
+        "findings": findings_to_jsonable(plan.findings),
+    }
+
+
+def _run_managed_restore(
+    planner: PlannerRequest,
+    target: str,
+    *,
+    apply: bool,
+    json_mode: bool,
+) -> int:
+    plan = plan_managed_restore(planner, target)
+    if not apply:
+        if json_mode:
+            print(json.dumps(_restore_payload(plan, mode="restore-preview"), indent=2))
+        elif plan.preview is not None:
+            preview = plan.preview
+            print(f"Managed restore preview: {preview.action} {preview.target}")
+            print(f"  owner: {preview.owner}")
+            print(f"  current state: {preview.current_state}")
+            print(f"  lock digest: {preview.lock_digest}")
+            print(f"  desired digest: {preview.desired_digest}")
+            print(f"  apply: {preview.apply_command}")
+        else:
+            _emit_human_findings(plan.findings)
+        return 0 if plan.applicable else 1
+
+    if not plan.applicable:
+        if json_mode:
+            print(json.dumps(_restore_payload(plan, mode="restore-apply"), indent=2))
+        else:
+            _emit_human_findings(plan.findings)
+        return 1
+
+    result = apply_managed_restore(ManagedRestoreApplyRequest(planner=planner, expected_plan=plan))
+    if json_mode:
+        print(
+            json.dumps(
+                {
+                    **_restore_payload(plan, mode="restore-apply"),
+                    "ok": result.success,
+                    "result": result.to_jsonable(),
+                },
+                indent=2,
+            )
+        )
+    elif result.success:
+        print(f"Managed restore {result.action} applied to {result.target}.")
+    else:
+        _emit_human_findings(result.findings)
+        print(
+            _apply_failure_message(
+                result.error_code,
+                operation="managed restore",
+                preview_command=f"reconcile --restore-managed {target}",
+            ),
+            file=sys.stderr,
+        )
+    return 0 if result.success else 1
+
+
 def run(
     argv: list[str] | None = None,
     *,
@@ -757,6 +840,34 @@ def run(
     repo = cast("Path", args.repo).resolve()
     json_mode = cast("bool", args.json)
     allowed_majors = frozenset(cast("list[MajorAuthorization]", args.allow_major))
+    restore_paths = cast("list[str]", args.restore_managed)
+    if cast("bool", args.check) and cast("bool", args.apply):
+        return _emit_error(
+            json_mode,
+            "CP-ARGUMENT",
+            "CP-ARGUMENT: --check cannot be combined with --apply",
+            exit_code=2,
+        )
+    if len(restore_paths) > 1:
+        return _emit_error(
+            json_mode,
+            "CP-ARGUMENT",
+            "CP-ARGUMENT: --restore-managed accepts exactly one PATH",
+            exit_code=2,
+        )
+    restore_target = restore_paths[0] if restore_paths else None
+    if restore_target is not None and (
+        cast("bool", args.check) or cast("bool", args.repair_state) or bool(allowed_majors)
+    ):
+        return _emit_error(
+            json_mode,
+            "CP-ARGUMENT",
+            (
+                "CP-ARGUMENT: --restore-managed cannot be combined with "
+                "--check, --repair-state, or --allow-major"
+            ),
+            exit_code=2,
+        )
     mode = "apply" if cast("bool", args.apply) else "check" if cast("bool", args.check) else "plan"
     try:
         selected_distribution = distribution or InstalledDistribution.current()
@@ -764,6 +875,19 @@ def run(
             repo,
             tool_release=selected_distribution.tool_release.value,
         )
+        if restore_target is not None:
+            planner = build_planner_request(
+                repo,
+                selected_distribution,
+                frozenset(),
+                state=state,
+            )
+            return _run_managed_restore(
+                planner,
+                restore_target,
+                apply=cast("bool", args.apply),
+                json_mode=json_mode,
+            )
         if state.kind in {StateKind.INCOMPLETE, StateKind.INTERRUPTED_REFRESH}:
             if not cast("bool", args.repair_state):
                 return _emit_error(

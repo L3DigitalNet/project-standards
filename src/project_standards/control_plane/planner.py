@@ -8,14 +8,16 @@ whole-file preconditions and proposed bytes in a later phase.
 
 from __future__ import annotations
 
+import glob
 import os
+import shlex
 import stat
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from itertools import zip_longest
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from project_standards.control_plane.adapters import (
     AdapterRegistry,
@@ -38,7 +40,14 @@ from project_standards.control_plane.adapters.jsonc import (
     format_fresh_json_container,
 )
 from project_standards.control_plane.catalog_refresh import CatalogRefreshPlan
-from project_standards.control_plane.codec import content_digest, render_catalog, semantic_digest
+from project_standards.control_plane.codec import (
+    content_digest,
+    parse_catalog,
+    parse_config,
+    parse_lock,
+    render_catalog,
+    semantic_digest,
+)
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -169,6 +178,64 @@ class ProviderNotice:
 
 
 @dataclass(frozen=True, slots=True)
+class ManagedRestorePreview:
+    """Describe one content-safe exact-target restore decision."""
+
+    target: str
+    owner: str
+    current_state: str
+    lock_digest: str
+    desired_digest: str
+    action: Literal["overwrite", "recreate", "noop"]
+    apply_command: str
+
+    def to_jsonable(self) -> dict[str, JsonValue]:
+        """Return the bounded fields safe for text and JSON projection."""
+        return {
+            "target": self.target,
+            "owner": self.owner,
+            "current_state": self.current_state,
+            "lock_digest": self.lock_digest,
+            "desired_digest": self.desired_digest,
+            "action": self.action,
+            "apply_command": self.apply_command,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ManagedRestorePlan:
+    """Carry a public restore preview beside executor-only bytes and preconditions."""
+
+    applicable: bool
+    preview: ManagedRestorePreview | None
+    findings: tuple[ControlFinding, ...]
+    target_precondition_digest: str | None = None
+    desired_content: bytes | None = field(default=None, repr=False)
+    desired_mode: str | None = None
+    authority_preconditions: tuple[TargetPrecondition, ...] = ()
+
+    def to_jsonable(self) -> dict[str, JsonValue]:
+        """Return restore facts without exposing current or desired content bytes."""
+        return {
+            "applicable": self.applicable,
+            "preview": self.preview.to_jsonable() if self.preview is not None else None,
+            "findings": cast(JsonValue, findings_to_jsonable(self.findings)),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class _ManagedWholeFileTarget:
+    """Retain one selected package's restore authority outside public plan output."""
+
+    target: str
+    standard_id: str
+    version: str
+    content: bytes = field(repr=False)
+    mode: str | None
+    digest: str
+
+
+@dataclass(frozen=True, slots=True)
 class ReconciliationPlan:
     """Carry public plan facts and executor-only proposed state immutably."""
 
@@ -184,6 +251,9 @@ class ReconciliationPlan:
     namespace_prunes: tuple[str, ...]
     catalog_refresh: CatalogRefreshPlan | None
     next_lock: CentralLock
+    # Restore candidates remain executor-private because provider-rendered bytes
+    # must never enter ordinary text or JSON reconciliation evidence.
+    restore_targets: tuple[_ManagedWholeFileTarget, ...] = ()
 
     def proposed_content(self, target: str) -> bytes:
         """Return the complete proposed bytes for one declared target."""
@@ -280,6 +350,7 @@ class _DesiredGroup:
     provenance: UnitProvenance
     unit: AdapterUnit
     governing_options: tuple[str, ...] | None
+    ownership_options: tuple[str, ...]
 
 
 type _OwnedNaturalKey = tuple[str, str, str]
@@ -635,21 +706,50 @@ def _first_difference_pointer(expected: bytes, actual: bytes) -> tuple[int, str]
     return None
 
 
-def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> ControlFinding:
-    expected_value = group.unit.value
-    actual_value = current.value
+def _consumer_alignment_hint(group: _DesiredGroup) -> str:
     if group.governing_options == ():
-        hint = (
+        return (
             "no declared package option governs this unit; align the repository "
             "content with the package value or take consumer ownership before applying"
         )
-    elif group.governing_options:
-        hint = (
+    if group.governing_options:
+        return (
             "set a governing option so the package reproduces the repository "
             "value, or align the content before applying"
         )
-    else:
-        hint = "resolve the declared ownership or repository content before applying"
+    return "resolve the declared ownership or repository content before applying"
+
+
+def _consumer_conflict_hint(group: _DesiredGroup) -> str:
+    if len(group.owners) > 1:
+        return (
+            f"ownership class: shared semantic unit; deleting {group.target.original} "
+            "is not authorized because the file can contain consumer-owned or "
+            f"separately managed content; {_consumer_alignment_hint(group)}"
+        )
+    if group.adapter is AdapterKind.WHOLE_FILE:
+        recovery_command = (
+            f"rm -- {shlex.quote(group.target.original)} && project-standards reconcile --apply"
+        )
+        hint = (
+            "ownership class: pre-adoption exclusive whole-file target; deleting "
+            f"{group.target.original} is permitted to let the selected package create "
+            f"it; from the repository root, run {recovery_command}"
+        )
+        if group.ownership_options:
+            selectors = ", ".join(f'{option} = "managed"' for option in group.ownership_options)
+            hint = f"{hint}; current ownership option: {selectors}"
+        return hint
+    return (
+        f"ownership class: partial semantic unit; deleting {group.target.original} "
+        "is not authorized because the file can contain consumer-owned or separately "
+        f"managed content; {_consumer_alignment_hint(group)}"
+    )
+
+
+def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> ControlFinding:
+    expected_value = group.unit.value
+    actual_value = current.value
     # 5.8.0 FR-012 / SPEC-CP01: only whole-file text conflicts carry a line
     # pointer; property-level units already publish JSON expected/actual values,
     # and a "line number" over a byte-valued property unit would be meaningless.
@@ -667,7 +767,7 @@ def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> Co
         standard_id=group.owners[0],
         version=group.versions[0][1],
         message="pre-existing consumer unit differs from the selected package value",
-        hint=hint,
+        hint=_consumer_conflict_hint(group),
         expected=None if isinstance(expected_value, bytes) else expected_value,
         actual=None if isinstance(actual_value, bytes) else actual_value,
         expected_digest=group.unit.semantic_digest.value,
@@ -950,6 +1050,18 @@ def _group_desired(
             for item in items
         }
         governing = next(iter(declared)) if len(declared) == 1 else None
+        ownership_options = tuple(
+            sorted(
+                {
+                    predicate.option
+                    for item in items
+                    if item.intent.declaration is not None
+                    for predicate in item.intent.declaration.when_any
+                    if predicate.equals == "managed"
+                    and predicate.option.rsplit("/", 1)[-1].endswith("ownership")
+                }
+            )
+        )
         groups.append(
             _DesiredGroup(
                 target=first.intent.target,
@@ -965,9 +1077,44 @@ def _group_desired(
                 provenance=provenance,
                 unit=first.unit,
                 governing_options=governing,
+                ownership_options=ownership_options,
             )
         )
     return tuple(groups), tuple(sort_findings(findings))
+
+
+def _managed_restore_targets(
+    groups: tuple[_DesiredGroup, ...],
+    blocked_targets: frozenset[str],
+) -> tuple[_ManagedWholeFileTarget, ...]:
+    """Retain only unambiguous, exclusively managed whole-file restore authorities."""
+    by_target: dict[str, list[_DesiredGroup]] = defaultdict(list)
+    for group in groups:
+        by_target[group.target.original].append(group)
+    candidates: list[_ManagedWholeFileTarget] = []
+    for target, target_groups in sorted(by_target.items()):
+        if target in blocked_targets or len(target_groups) != 1:
+            continue
+        group = target_groups[0]
+        if (
+            group.adapter is not AdapterKind.WHOLE_FILE
+            or group.scope != "$file"
+            or group.policy is not ArtifactPolicy.MANAGED
+            or len(group.owners) != 1
+            or group.shared_identity is not None
+        ):
+            continue
+        candidates.append(
+            _ManagedWholeFileTarget(
+                target=target,
+                standard_id=group.owners[0],
+                version=group.versions[0][1],
+                content=group.unit.raw,
+                mode=group.mode,
+                digest=content_digest(group.unit.raw).value,
+            )
+        )
+    return tuple(candidates)
 
 
 def _initial_content(kind: AdapterKind) -> bytes:
@@ -1923,6 +2070,10 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         )
     )
     findings.extend(_namespace_findings(request.repo, selected, request.resolution.previous_lock))
+    restore_targets = _managed_restore_targets(
+        groups,
+        frozenset(finding.path for finding in findings if finding.path),
+    )
     actions, units, target_findings, targets = _render_targets(
         snapshot=snapshot,
         groups=groups,
@@ -1992,4 +2143,206 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         namespace_prunes=namespace_prunes,
         catalog_refresh=request.catalog_refresh,
         next_lock=next_lock,
+        restore_targets=restore_targets,
+    )
+
+
+def _restore_refusal(
+    code: str,
+    *,
+    target: str,
+    message: str,
+    hint: str,
+    standard_id: str = "project-standards",
+    version: str = "",
+) -> ManagedRestorePlan:
+    finding = ControlFinding(
+        code=code,
+        severity="error",
+        standard_id=standard_id,
+        version=version,
+        path=target,
+        identity="$file",
+        message=message,
+        hint=hint,
+        locus="managed restore",
+    )
+    return ManagedRestorePlan(False, None, (finding,))
+
+
+def _restore_authority_snapshot(
+    request: PlannerRequest,
+    target: str,
+) -> tuple[RepositorySnapshot, tuple[TargetPrecondition, ...]] | ManagedRestorePlan:
+    authority_paths = tuple(
+        SafeRelativePath.parse(path)
+        for path in (
+            ".standards/config.toml",
+            ".standards/catalog.toml",
+            ".standards/lock.toml",
+        )
+    )
+    snapshot = RepositorySnapshot.capture(request.repo, authority_paths)
+    entries = {entry.path.original: entry for entry in snapshot.entries}
+    if any(entry.kind is not EntryKind.REGULAR for entry in entries.values()):
+        return _restore_refusal(
+            "CP-RESTORE-AUTHORITY",
+            target=target,
+            message="managed restore requires regular persisted config, catalog, and lock authorities",
+            hint="restore the complete control-plane authority before retrying",
+        )
+    try:
+        config_entry = entries[".standards/config.toml"]
+        catalog_entry = entries[".standards/catalog.toml"]
+        lock_entry = entries[".standards/lock.toml"]
+        if (
+            config_entry.content is None
+            or catalog_entry.content is None
+            or lock_entry.content is None
+        ):
+            raise ControlPlaneError("persisted restore authority has no readable content")
+        expected_catalog = (
+            request.catalog_refresh.committed
+            if request.catalog_refresh is not None
+            else request.resolution.catalog
+        )
+        if (
+            parse_config(config_entry.content) != request.resolution.desired
+            or parse_catalog(catalog_entry.content) != expected_catalog
+            or parse_lock(lock_entry.content) != request.resolution.previous_lock
+        ):
+            raise ControlPlaneError("persisted restore authority differs from planner inputs")
+    except ControlPlaneError, ValueError:
+        return _restore_refusal(
+            "CP-RESTORE-AUTHORITY",
+            target=target,
+            message="persisted restore authority does not match the reviewed planner state",
+            hint="rebuild the preview from the current config, catalog, and lock",
+        )
+    return (
+        snapshot,
+        tuple(
+            TargetPrecondition(entry.path.original, entry.precondition_digest.value)
+            for entry in snapshot.entries
+        ),
+    )
+
+
+def plan_managed_restore(request: PlannerRequest, target: str) -> ManagedRestorePlan:
+    """Preview exact restoration of one lock-backed, exclusively managed whole file."""
+    try:
+        if glob.has_magic(target):
+            raise ValueError("glob syntax is not accepted")
+        relative = SafeRelativePath.parse(target)
+    except ValueError:
+        return _restore_refusal(
+            "CP-RESTORE-PATH",
+            target="",
+            message="managed restore requires one canonical repository-relative file path",
+            hint="supply one declared path without glob, absolute, or traversal syntax",
+        )
+
+    authority = _restore_authority_snapshot(request, relative.original)
+    if isinstance(authority, ManagedRestorePlan):
+        return authority
+    _authority_snapshot, authority_preconditions = authority
+
+    parent = request.repo / relative.normalized.parent
+    try:
+        parent_metadata = parent.lstat()
+    except OSError:
+        return _restore_refusal(
+            "CP-RESTORE-PATH",
+            target=relative.original,
+            message="managed restore target parent is not an existing directory",
+            hint="create or restore the declared parent through its owning workflow before retrying",
+        )
+    if not stat.S_ISDIR(parent_metadata.st_mode):
+        return _restore_refusal(
+            "CP-RESTORE-PATH",
+            target=relative.original,
+            message="managed restore target parent is not an existing safe directory",
+            hint="replace the unsafe parent through its owning workflow before retrying",
+        )
+
+    reconciliation = plan_reconciliation(request)
+    candidates = [
+        item for item in reconciliation.restore_targets if item.target == relative.original
+    ]
+    if len(candidates) != 1:
+        return _restore_refusal(
+            "CP-RESTORE-OWNERSHIP",
+            target=relative.original,
+            message="target is not one unambiguous exclusively managed whole-file declaration",
+            hint="no destructive action is authorized for partial, shared, or consumer-owned content",
+        )
+    candidate = candidates[0]
+    locked = [item for item in request.resolution.previous_lock.artifacts if item.path == relative]
+    if len(locked) != 1:
+        return _restore_refusal(
+            "CP-RESTORE-LOCK",
+            target=relative.original,
+            message="target has no single authoritative lock entry",
+            hint="pre-adoption targets cannot use restore; resolve ownership and reconcile first",
+            standard_id=candidate.standard_id,
+            version=candidate.version,
+        )
+    lock = locked[0]
+    if (
+        lock.adapter is not AdapterKind.WHOLE_FILE
+        or lock.scope != "$file"
+        or lock.policy is not ArtifactPolicy.MANAGED
+        or lock.owners != (candidate.standard_id,)
+        or lock.shared_identity is not None
+    ):
+        return _restore_refusal(
+            "CP-RESTORE-OWNERSHIP",
+            target=relative.original,
+            message="lock entry does not prove exclusive managed whole-file ownership",
+            hint="no destructive action is authorized for partial, shared, or create-only content",
+            standard_id=candidate.standard_id,
+            version=candidate.version,
+        )
+
+    current = RepositorySnapshot.capture(request.repo, (relative,)).entry(relative)
+    if current.kind not in {EntryKind.MISSING, EntryKind.REGULAR}:
+        return _restore_refusal(
+            "CP-RESTORE-PATH",
+            target=relative.original,
+            message="managed restore target is neither absent nor a regular file",
+            hint="replace the unsafe path with an absent or regular declared target",
+            standard_id=candidate.standard_id,
+            version=candidate.version,
+        )
+    current_state = (
+        "absent"
+        if current.kind is EntryKind.MISSING
+        else cast(Sha256Digest, current.content_digest).value
+    )
+    if current.kind is EntryKind.MISSING:
+        action: Literal["overwrite", "recreate", "noop"] = "recreate"
+    elif current_state == candidate.digest:
+        action = "noop"
+    else:
+        action = "overwrite"
+    preview = ManagedRestorePreview(
+        target=relative.original,
+        owner=candidate.standard_id,
+        current_state=current_state,
+        lock_digest=lock.content_digest.value,
+        desired_digest=candidate.digest,
+        action=action,
+        apply_command=(
+            "project-standards reconcile --restore-managed "
+            f"{shlex.quote(relative.original)} --apply"
+        ),
+    )
+    return ManagedRestorePlan(
+        applicable=True,
+        preview=preview,
+        findings=(),
+        target_precondition_digest=current.precondition_digest.value,
+        desired_content=candidate.content,
+        desired_mode=candidate.mode,
+        authority_preconditions=authority_preconditions,
     )
