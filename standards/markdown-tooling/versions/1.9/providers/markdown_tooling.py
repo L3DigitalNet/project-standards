@@ -63,6 +63,7 @@ def _glob(value: object, *, name: str, role: str) -> str:
         or value[-1].isspace()
         or "`" in value
         or any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
+        or any(character in "\u0085\u2028\u2029" for character in value)
     ):
         raise ValueError(f"{name} must contain a safe {role} glob")
     return value
@@ -95,23 +96,44 @@ def _yaml_scalar(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
 
-def _lint_caller(config: Mapping[str, object]) -> str:
+def _prettier_print_width(resources: Mapping[str, bytes]) -> int:
+    try:
+        config = json.loads(resources["prettier-source"])
+        print_width = config["printWidth"]
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("prettier resource must declare printWidth") from exc
+    if not isinstance(print_width, int) or isinstance(print_width, bool) or print_width < 1:
+        raise ValueError("prettier resource must declare a positive printWidth")
+    return print_width
+
+
+def _caller_input_lines(name: str, values: Sequence[str], *, print_width: int) -> list[str]:
+    scalar = _yaml_scalar("\n".join(values))
+    prefix = f"      {name}: "
+    if not any('"' in value for value in values) and len(prefix) + len(scalar) <= print_width:
+        return [f"{prefix}{scalar}"]
+    return [f"      {name}: |-", *(f"        {value}" for value in values)]
+
+
+def _lint_caller(config: Mapping[str, object], *, print_width: int) -> str:
     globs = _globs(config, "markdown_globs")
     globs.extend(f"!{value}" for value in _exclusion_globs(config, "lint"))
     lines = ["name: Lint Markdown", "", *_triggers(_automatic(config, "lint")), "", "jobs:"]
     lines.extend(
         [
             "  lint-markdown:",
+            "    permissions:",
+            "      contents: read",
             "    uses: L3DigitalNet/project-standards/.github/workflows/lint-markdown.yml@v5",
             "    with:",
             f"      markdownlint: {'true' if config.get('lint') is True else 'false'}",
-            f"      globs: {_yaml_scalar(chr(10).join(globs))}",
         ]
     )
+    lines.extend(_caller_input_lines("globs", globs, print_width=print_width))
     return "\n".join(lines) + "\n"
 
 
-def _format_caller(config: Mapping[str, object]) -> str:
+def _format_caller(config: Mapping[str, object], *, print_width: int) -> str:
     markdown = _globs(config, "markdown_globs")
     structured = _globs(config, "config_globs")
     globs = [*markdown, *structured]
@@ -120,13 +142,15 @@ def _format_caller(config: Mapping[str, object]) -> str:
     lines.extend(
         [
             "  format:",
+            "    permissions:",
+            "      contents: read",
             "    uses: L3DigitalNet/project-standards/.github/workflows/format.yml@v5",
             "    with:",
             f"      prettier: {'true' if config.get('format') is True else 'false'}",
-            f"      globs: {_yaml_scalar(chr(10).join(globs))}",
-            f"      exclusions: {_yaml_scalar(chr(10).join(exclusions))}",
         ]
     )
+    lines.extend(_caller_input_lines("globs", globs, print_width=print_width))
+    lines.extend(_caller_input_lines("exclusions", exclusions, print_width=print_width))
     return "\n".join(lines) + "\n"
 
 
@@ -138,7 +162,12 @@ def run_render_lint(
     config = _config(request)
     if config.get("workflow_mode") == "self-hosted":
         return {"content": resources["self-host-lint-workflow"].decode()}
-    return {"content": _lint_caller(config)}
+    return {
+        "content": _lint_caller(
+            config,
+            print_width=_prettier_print_width(resources),
+        )
+    }
 
 
 def run_render_format(
@@ -149,7 +178,12 @@ def run_render_format(
     config = _config(request)
     if config.get("workflow_mode") == "self-hosted":
         return {"content": resources["self-host-format-workflow"].decode()}
-    return {"content": _format_caller(config)}
+    return {
+        "content": _format_caller(
+            config,
+            print_width=_prettier_print_width(resources),
+        )
+    }
 
 
 _EDITORCONFIG_VALUES = {
@@ -293,12 +327,22 @@ def _verify(
     elif tool == "lint":
         expected = {
             ".markdownlint.json": _digest(resources["markdownlint-source"]),
-            ".github/workflows/lint-markdown.yml": _digest(_lint_caller(config).encode()),
+            ".github/workflows/lint-markdown.yml": _digest(
+                _lint_caller(
+                    config,
+                    print_width=_prettier_print_width(resources),
+                ).encode()
+            ),
         }
     else:
         expected = {
             ".prettierrc.json": _digest(resources["prettier-source"]),
-            ".github/workflows/format.yml": _digest(_format_caller(config).encode()),
+            ".github/workflows/format.yml": _digest(
+                _format_caller(
+                    config,
+                    print_width=_prettier_print_width(resources),
+                ).encode()
+            ),
         }
     if config.get(f"{tool}_workflow_ownership") == "consumer-owned":
         workflow_name = "lint-markdown" if tool == "lint" else "format"

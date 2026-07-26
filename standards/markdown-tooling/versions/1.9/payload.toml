@@ -43,7 +43,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:e849af8e21a73256457ed65a0f187df7d5df9eca7dcfd29f9fae56bc86de5976"
+digest = "sha256:6cbb9b12a2a66ec1ef9aba95bcbe27755412d459724995f5d91f6be5e4d03442"
 
 [[resources]]
 id = "markdownlint-source"
@@ -106,7 +106,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/markdown_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:00e08947d6b6e5a81a3cb02340cc68529fa22508acd28042ea025e222bca442e"
+digest = "sha256:8de28dd7a67e859a69074ee084d31d379a1ac566a9fb430281042441a7a66202"
 
 [[resources]]
 id = "provider-input"
@@ -361,7 +361,7 @@ effect = "content"
 entrypoint = "payload:provider-code#run_render_lint"
 input_schema = "provider-input"
 output_schema = "provider-content"
-resources = ["self-host-lint-workflow"]
+resources = ["prettier-source", "self-host-lint-workflow"]
 
 [[providers]]
 id = "render-format-caller"
@@ -372,7 +372,7 @@ effect = "content"
 entrypoint = "payload:provider-code#run_render_format"
 input_schema = "provider-input"
 output_schema = "provider-content"
-resources = ["self-host-format-workflow"]
+resources = ["prettier-source", "self-host-format-workflow"]
 
 [[providers]]
 id = "render-semantic"
@@ -394,7 +394,7 @@ effect = "findings"
 entrypoint = "payload:provider-code#run_verify_lint"
 input_schema = "provider-input"
 output_schema = "provider-findings"
-resources = ["markdownlint-source", "self-host-lint-workflow"]
+resources = ["markdownlint-source", "prettier-source", "self-host-lint-workflow"]
 
 [[providers]]
 id = "verify-format"

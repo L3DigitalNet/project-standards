@@ -202,12 +202,17 @@ def test_t9_no_divergence_guard__nested_reinclude__matches_pinned_dialects(
 
 
 @pytest.mark.parametrize("exclusion", ["payload", "payload/", "payload/**", r"payload\**"])
-def test_t9_successor_rendering__characterized_exclusion__matches_exact_1_8(
+def test_t9_successor_rendering__characterized_exclusion__matches_1_8_inputs(
     exclusion: str,
 ) -> None:
     """TC-T9-002: no reproduced divergence means no provider normalization."""
-    for provider_id in ("render-lint-caller", "render-format-caller"):
-        assert _render(_V19, provider_id, exclusion) == _render(_V18, provider_id, exclusion)
+    for provider_id, job in (
+        ("render-lint-caller", "lint-markdown"),
+        ("render-format-caller", "format"),
+    ):
+        successor = _caller_inputs(_render(_V19, provider_id, exclusion), job)
+        predecessor = _caller_inputs(_render(_V18, provider_id, exclusion), job)
+        assert successor == predecessor
 
 
 def test_t9_successor_staging__family_visible_catalog_hidden_and_predecessor_immutable() -> None:
@@ -239,7 +244,7 @@ def test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged(
     v18_caller = _render(_V18, "render-format-caller", "payload/**")
     v19_caller = _render(_V19, "render-format-caller", "payload/**")
     assert "@v5" in v18_caller
-    assert v19_caller == v18_caller
+    assert _caller_inputs(v19_caller, "format") == _caller_inputs(v18_caller, "format")
 
     v18_path = tmp_path / "v18-format.caller.yml"
     v18_path.write_text(v18_caller, encoding="utf-8")
