@@ -53,6 +53,19 @@ def _legacy_repo(root: Path, *, extra_yaml: str = "") -> Path:
     return repo
 
 
+def _tree_snapshot(root: Path) -> dict[str, tuple[str, bytes]]:
+    snapshot: dict[str, tuple[str, bytes]] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            snapshot[relative] = ("symlink", path.readlink().as_posix().encode())
+        elif path.is_dir():
+            snapshot[relative] = ("directory", b"")
+        else:
+            snapshot[relative] = ("file", path.read_bytes())
+    return snapshot
+
+
 def _assert_busy_result(
     result: int,
     out: str,
@@ -813,6 +826,78 @@ def test_reconcile_json_clean_plan_dirty_apply_and_fixed_point(
     assert run(["--repo", str(repo), "--check", "--json"], distribution=distribution) == 0
     fixed = capsys.readouterr().out
     assert '"drift": false' in fixed
+
+
+@pytest.mark.parametrize("json_mode", [False, True], ids=["human", "json"])
+def test_reconcile_apply_error_plan_never_enters_executor_or_mutates_tree(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    json_mode: bool,
+) -> None:
+    from project_standards.control_plane.planner import (
+        PlannerRequest,
+        plan_reconciliation,
+    )
+    from tests.control_plane.planner_helpers import resolution_request, write_payload
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    (repo / "conflict.txt").write_bytes(b"consumer\n")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {"id": "safe", "target": "safe.txt", "content": b"managed\n"},
+            {"id": "conflict", "target": "conflict.txt", "content": b"managed\n"},
+        ],
+    )
+    resolution = resolution_request((payload,))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    plan = plan_reconciliation(planner)
+    assert plan.actions
+    assert not plan.applicable
+    assert any(finding.severity == "error" for finding in plan.findings)
+
+    def selected_planner(*_args: object, **_kwargs: object) -> PlannerRequest:
+        return planner
+
+    executor_calls = 0
+
+    def counted_apply(_request: ApplyRequest) -> ApplyResult:
+        nonlocal executor_calls
+        executor_calls += 1
+        return ApplyResult(False, (), False, "UNEXPECTED")
+
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.build_planner_request",
+        selected_planner,
+    )
+    monkeypatch.setattr(
+        "project_standards.control_plane.cli.apply_reconciliation",
+        counted_apply,
+    )
+    before = _tree_snapshot(repo)
+    arguments = ["--repo", str(repo), "--apply"]
+    if json_mode:
+        arguments.append("--json")
+
+    assert run(arguments, distribution=distribution) == 1
+
+    captured = capsys.readouterr()
+    assert executor_calls == 0
+    assert _tree_snapshot(repo) == before
+    if json_mode:
+        result = json.loads(captured.out)
+        assert result["ok"] is False
+        assert result["mode"] == "apply"
+        assert any(finding["severity"] == "error" for finding in result["plan"]["findings"])
+        assert captured.err == ""
+    else:
+        assert "safe.txt" in captured.out
+        assert "ERROR CP-CONSUMER-CONFLICT conflict.txt" in captured.err
 
 
 def test_reconcile_candidate_requires_matching_allow_major(

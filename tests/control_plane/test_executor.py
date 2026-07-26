@@ -516,6 +516,36 @@ def test_verification_error_keeps_prior_lock_after_artifacts_publish(tmp_path: P
     assert (repo / ".standards/lock.toml").read_bytes() == previous
 
 
+def test_warning_only_conflict_free_plan_retains_apply_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, planner, plan = _fixture(tmp_path)
+    warning = ControlFinding(
+        code="DEMO-WARNING",
+        severity="warning",
+        standard_id="demo",
+        version="1.0",
+        path="alpha.txt",
+        identity="$file",
+        message="review generated content",
+        hint="no action is required",
+    )
+    warning_plan = replace(plan, applicable=True, findings=(warning,))
+
+    def current_plan(_request: PlannerRequest) -> ReconciliationPlan:
+        return warning_plan
+
+    monkeypatch.setattr(executor, "plan_reconciliation", current_plan)
+
+    result = _apply(planner, warning_plan)
+
+    assert result.success
+    assert result.applied_action_ids == ("alpha.txt", "nested/beta.txt")
+    assert (repo / "alpha.txt").read_bytes() == b"alpha\n"
+    assert (repo / "nested/beta.txt").read_bytes() == b"beta\n"
+
+
 def test_executor_holds_exclusive_lock_through_verification(tmp_path: Path) -> None:
     repo, planner, plan = _fixture(tmp_path, verify=True)
 
