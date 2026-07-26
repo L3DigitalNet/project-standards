@@ -172,6 +172,11 @@ def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> 
     before = (
         b'model = "consumer"\n\n'
         b"[[hooks.SessionStart]]\n"
+        b'name = "consumer-default"\n'
+        b"[[hooks.SessionStart.hooks]]\n"
+        b'type = "command"\n'
+        b'command = "echo default"\n\n'
+        b"[[hooks.SessionStart]]\n"
         b'matcher = "consumer-event"\n'
         b"[[hooks.SessionStart.hooks]]\n"
         b'type = "command"\n'
@@ -194,10 +199,12 @@ def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> 
     )
 
     parsed = tomllib.loads(created.decode())
-    assert [entry["matcher"] for entry in parsed["hooks"]["SessionStart"]] == [
+    assert [entry.get("matcher") for entry in parsed["hooks"]["SessionStart"]] == [
+        None,
         "consumer-event",
         "startup|resume|clear|compact",
     ]
+    assert b'command = "echo default"' in created
     assert b'command = "echo consumer"' in created
     assert _unit(adapter, created, scope).value == desired_unit.value
 
@@ -207,6 +214,7 @@ def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> 
         adapter.inspect(created, (scope,)),
         (UnitChange(ActionKind.UPDATE, scope, updated_unit.raw, updated_unit.value),),
     )
+    assert b'command = "echo default"' in updated
     assert b'command = "echo consumer"' in updated
     assert b'command = "run updated"' in updated
 
@@ -216,9 +224,13 @@ def test_toml_keyed_set_owns_one_array_table_entry_and_preserves_consumers() -> 
     )
     assert tomllib.loads(removed.decode())["hooks"]["SessionStart"] == [
         {
+            "name": "consumer-default",
+            "hooks": [{"type": "command", "command": "echo default"}],
+        },
+        {
             "matcher": "consumer-event",
             "hooks": [{"type": "command", "command": "echo consumer"}],
-        }
+        },
     ]
     assert b"run updated" not in removed
 
@@ -230,6 +242,16 @@ def test_toml_keyed_set_rejects_duplicate_identity() -> None:
 
     with pytest.raises(ControlPlaneError, match="duplicate keyed-set identity"):
         TomlAdapter().inspect(content, ("keyed-set:/hooks/SessionStart#matcher=owned",))
+
+
+def test_toml_keyed_set__non_table_entry__raises_control_plane_error() -> None:
+    content = b'hooks.SessionStart = ["not-a-table"]\n'
+
+    with pytest.raises(ControlPlaneError, match="array must contain tables"):
+        TomlAdapter().inspect(
+            content,
+            ("keyed-set:/hooks/SessionStart#matcher=owned",),
+        )
 
 
 def test_toml_table_update_preserves_unowned_bytes_and_reaches_fixed_point() -> None:

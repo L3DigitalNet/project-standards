@@ -353,7 +353,7 @@ def _keyed_values(root: object, spec: ScopeSpec) -> tuple[list[object], int | No
             raise ControlPlaneError("TOML keyed-set array must contain tables")
         table = cast("dict[str, object]", item)
         if identity_key not in table:
-            raise ControlPlaneError("TOML keyed-set entry is missing its identity key")
+            continue
         if table[identity_key] == spec.identity:
             matches.append(index)
     if len(matches) > 1:

@@ -1043,6 +1043,63 @@ harnesses = {harnesses_toml}
     assert (repo / "CLAUDE.md").exists() is ("claude-code" in harnesses)
 
 
+def test_agent_handoff_real_reconcile__matcherless_codex_hook__preserves_hook_and_converges(
+    tmp_path: Path,
+) -> None:
+    distribution = _installed_distribution(tmp_path)
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    codex_path = repo / ".codex/config.toml"
+    codex_path.parent.mkdir(parents=True)
+    consumer_hook = """[[hooks.SessionStart]]
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "echo consumer"
+"""
+    codex_path.write_text(
+        f'model = "consumer-model"\n\n{consumer_hook}',
+        encoding="utf-8",
+    )
+    (repo / ".standards/config.toml").write_text(
+        """[project_standards]
+schema_version = "1.0"
+catalog = "5"
+
+[standards.agent-handoff]
+enabled = true
+version = "latest"
+
+[standards.agent-handoff.config]
+contract_version = "1.1"
+startup = "automatic"
+harnesses = ["codex"]
+""",
+        encoding="utf-8",
+    )
+
+    request = build_planner_request(repo, distribution, frozenset())
+    plan = plan_reconciliation(request)
+    assert plan.applicable, plan.findings
+    result = apply_reconciliation(ApplyRequest(request, plan))
+    assert result.success, result
+
+    codex = codex_path.read_text(encoding="utf-8")
+    assert consumer_hook in codex
+    parsed = tomllib.loads(codex)
+    hooks = parsed["hooks"]["SessionStart"]
+    managed = [hook for hook in hooks if hook.get("matcher") == "startup|resume|clear|compact"]
+    assert len(managed) == 1
+    assert "session_start.py" in managed[0]["hooks"][0]["command"]
+
+    second = plan_reconciliation(build_planner_request(repo, distribution, frozenset()))
+    assert second.applicable, second.findings
+    assert not any(
+        action.kind in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in second.actions
+    )
+
+
 def test_agent_handoff_profile_transition_prunes_package_created_containers(
     tmp_path: Path,
 ) -> None:
