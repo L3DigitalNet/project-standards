@@ -1,0 +1,1 @@
+../../../../../../../standards/markdown-frontmatter/versions/1.6/skills/markdown-frontmatter/SKILL.md
