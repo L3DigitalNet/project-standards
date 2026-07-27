@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import suppress
 from pathlib import Path
 from typing import cast
@@ -24,6 +24,10 @@ from project_standards.control_plane.codec import (
     semantic_digest,
 )
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
+from project_standards.control_plane.distribution import (
+    InstalledDistribution,
+    resolution_payloads,
+)
 from project_standards.control_plane.locking import (
     LockedControlDirectory,
     LockMode,
@@ -31,10 +35,13 @@ from project_standards.control_plane.locking import (
     reserved_temporary_name,
 )
 from project_standards.control_plane.models import (
+    AppliedPackage,
     CentralLock,
     ConsumerCatalog,
     DesiredConfig,
 )
+from project_standards.control_plane.resolution import ResolutionPayload
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId
 from project_standards.package_contract.paths import PackageVersion
 from project_standards.package_contract.payload import JsonValue
@@ -372,9 +379,73 @@ def _config_paths(
     return paths
 
 
-def standard_views(repo: Path) -> list[dict[str, object]]:
+def _applied_option_schemas(
+    config: DesiredConfig,
+    catalog: ConsumerCatalog,
+    lock: CentralLock,
+    distribution: InstalledDistribution | None,
+) -> dict[tuple[str, str], ResolutionPayload]:
+    """Return installed payload facts for resolving applied packages' effective options.
+
+    Loading the wheel is skipped entirely when nothing is applied, so the common
+    inspection and edit paths on an unreconciled repository stay free of payload
+    integrity verification. An installation that cannot be verified degrades to an
+    empty mapping rather than failing inspection; every caller then falls back to
+    the as-authored digest.
+    """
+    if not lock.standards:
+        return {}
+    try:
+        selected = distribution or InstalledDistribution.current()
+        installed = selected.load_catalog(
+            config.project_standards.catalog,
+            recorded_release=catalog.project_standards.release,
+        )
+    except PackageContractError, OSError, ValueError:
+        return {}
+    return {
+        (payload.standard_id, payload.version.value): payload
+        for payload in resolution_payloads(installed)
+    }
+
+
+def _package_config_digest(
+    standard_id: str,
+    package_config: dict[str, JsonValue],
+    applied: AppliedPackage | None,
+    schemas: Mapping[tuple[str, str], ResolutionPayload],
+) -> str:
+    """Digest package options the way the lock's resolution digested them.
+
+    The lock authenticates the schema-resolved effective configuration
+    (`resolve_packages` in resolution.py), so reporting the raw as-authored
+    configuration made `standards show` contradict the lock whenever a schema
+    supplied defaults. Packages the lock does not authenticate - disabled, never
+    reconciled, or applied from a payload this installation cannot reproduce
+    byte-for-byte - keep the as-authored digest: the lock records no effective
+    digest for them, so no comparison can be contradicted.
+    """
+    authored = semantic_digest(cast(JsonValue, package_config)).value
+    if applied is None:
+        return authored
+    payload = schemas.get((standard_id, applied.resolved.value))
+    if payload is None or payload.payload_digest != applied.payload_digest:
+        return authored
+    try:
+        effective = payload.option_schema.resolve_options(package_config)
+    except PackageContractError:
+        return authored
+    return semantic_digest(cast(JsonValue, effective)).value
+
+
+def standard_views(
+    repo: Path,
+    *,
+    distribution: InstalledDistribution | None = None,
+) -> list[dict[str, object]]:
     """Return deterministic JSON-safe catalog, desired, and applied package facts."""
     config, catalog, lock = load_control_state(repo)
+    schemas = _applied_option_schemas(config, catalog, lock, distribution)
     views: list[dict[str, object]] = []
     for standard_id, standard in catalog.standards.items():
         desired = config.standards.get(standard_id)
@@ -402,7 +473,12 @@ def standard_views(repo: Path) -> list[dict[str, object]]:
                 "requested": requested,
                 "resolved": applied.resolved.value if applied is not None else None,
                 "config_paths": _config_paths(package_config),
-                "config_digest": semantic_digest(cast(JsonValue, package_config)).value,
+                "config_digest": _package_config_digest(
+                    standard_id,
+                    package_config,
+                    applied,
+                    schemas,
+                ),
             }
         )
     return views

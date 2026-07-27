@@ -7,22 +7,34 @@ from typing import cast
 import pytest
 
 from project_standards.control_plane.adapters.toml import scan_toml_statements
+from project_standards.control_plane.bootstrap import initialize_control_plane
 from project_standards.control_plane.codec import (
     bind_catalog_digest,
+    parse_catalog,
     parse_config,
+    parse_lock,
     render_catalog,
     render_lock,
     semantic_digest,
 )
 from project_standards.control_plane.config_edit import (
     set_standard_enabled,
+    set_standard_selection,
     set_standard_version,
+    standard_views,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.distribution import (
+    InstalledDistribution,
+    declared_transitions,
+    resolution_payloads,
+)
 from project_standards.control_plane.locking import LockMode, control_plane_lock
-from project_standards.control_plane.models import CentralLock, ConsumerCatalog
+from project_standards.control_plane.models import AppliedPackage, CentralLock, ConsumerCatalog
+from project_standards.control_plane.resolution import ResolutionRequest, resolve_packages
 from project_standards.package_contract.payload import JsonValue
 from project_standards.standards_graph.cli import run
+from tests.control_plane.helpers import installed_distribution
 
 _DIGEST = f"sha256:{'a' * 64}"
 
@@ -338,6 +350,65 @@ def test_standards_list_and_show_include_catalog_desired_and_applied_state(
     ]
     assert shown["standard"]["config_digest"].startswith("sha256:")
     assert "config" not in shown["standard"]
+
+
+def _apply_resolution(repo: Path, distribution: InstalledDistribution) -> AppliedPackage:
+    """Write the lock the authoritative resolver would produce and return alpha's facts."""
+    config = parse_config((repo / ".standards/config.toml").read_bytes())
+    catalog = parse_catalog((repo / ".standards/catalog.toml").read_bytes())
+    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    installed = distribution.load_catalog(config.project_standards.catalog)
+    resolution = resolve_packages(
+        ResolutionRequest(
+            desired=config,
+            catalog=catalog,
+            previous_lock=lock,
+            allowed_majors=frozenset(),
+            payloads=resolution_payloads(installed),
+            transition_paths=declared_transitions(installed),
+        )
+    )
+    resolved = next(item for item in resolution.packages if item.standard_id == "alpha")
+    updated = CentralLock.model_validate(
+        {
+            **lock.model_dump(mode="json"),
+            "standards": {"alpha": resolved.applied.model_dump(mode="json")},
+        }
+    )
+    (repo / ".standards/lock.toml").write_bytes(render_lock(updated))
+    return resolved.applied
+
+
+def test_standard_view_config_digest_matches_the_lock_effective_config_digest(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    # alpha 2.0 is the only fixture payload whose option schema contributes a default,
+    # so its as-authored and schema-resolved configurations digest differently.
+    set_standard_selection(repo, "alpha", enabled=True, version="2.0")
+    applied = _apply_resolution(repo, distribution)
+
+    views = standard_views(repo, distribution=distribution)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["resolved"] == "2.0"
+    assert view["config_digest"] == applied.effective_config_digest.value
+    assert view["config_digest"] != semantic_digest(cast(JsonValue, {})).value
+
+
+def test_standard_view_config_digest__no_applied_payload__reports_authored_config(
+    tmp_path: Path,
+) -> None:
+    _write_control_plane(tmp_path)
+    authored = parse_config(_PHYSICAL_CONFIG.encode()).standards["alpha"].config
+
+    views = standard_views(tmp_path)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
 
 
 def test_standards_help_advertises_all_desired_state_commands(
