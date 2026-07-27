@@ -14,6 +14,17 @@ A soft-wrapped paragraph split across several source lines to exercise proseWrap
    - nested _italic_ and **bold**
    - `inline code`
 
+<!-- markdownlint-disable MD033 -->
+
+<details>
+<summary>Literal _underscore_ emphasis</summary>
+
+The normal lint recipe must not rewrite _underscored text_.
+
+</details>
+
+<!-- markdownlint-enable MD033 -->
+
 ---
 
 ```python

@@ -22,9 +22,12 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = _REPO_ROOT / ".markdownlint.json"
+SUCCESSOR_CONFIG_PATH = (
+    _REPO_ROOT / "standards/markdown-tooling/versions/1.9/resources/markdownlint.json"
+)
 CLI2_CONFIG_PATH = _REPO_ROOT / ".markdownlint-cli2.jsonc"
 
-# The 13 deliberate deviations from markdownlint's defaults. Every other rule is
+# Deliberate predecessor deviations from markdownlint's defaults. Every other rule is
 # stated at its v0.40.0 default for determinism; these are the values that carry
 # intent and must not silently change. Sources: standards/markdown-tooling/README.md (§7) + the CHANGELOG.
 CUSTOMIZATIONS: dict[str, Any] = {
@@ -42,11 +45,19 @@ CUSTOMIZATIONS: dict[str, Any] = {
     "MD049": {"style": "underscore"},  # align emphasis to Prettier (_italic_)
     "MD050": {"style": "asterisk"},  # align strong to Prettier (**bold**)
 }
+SUCCESSOR_CUSTOMIZATIONS: dict[str, Any] = CUSTOMIZATIONS | {
+    "MD060": False,  # Prettier exclusively owns table layout
+}
 
 
 @pytest.fixture(scope="module")
 def config() -> dict[str, Any]:
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module")
+def successor_config() -> dict[str, Any]:
+    return json.loads(SUCCESSOR_CONFIG_PATH.read_text(encoding="utf-8"))
 
 
 def test_config_is_a_nonempty_json_object(config: dict[str, Any]) -> None:
@@ -79,11 +90,25 @@ def test_customization_present_and_correct(config: dict[str, Any], rule: str, va
     assert config.get(rule) == value
 
 
+@pytest.mark.parametrize("rule,value", sorted(SUCCESSOR_CUSTOMIZATIONS.items()))
+def test_successor_customization_present_and_correct(
+    successor_config: dict[str, Any], rule: str, value: Any
+) -> None:
+    assert successor_config.get(rule) == value
+
+
 def test_config_is_fully_explicit_not_sparse(config: dict[str, Any]) -> None:
     # The whole point of this config is that it's explicit. Guard against an
     # accidental revert to the old 13-override sparse form: v0.40.0 has 53 rules.
     rules = [k for k in config if k.startswith("MD")]
     assert len(rules) == 53, f"expected the full rule set explicitly, found {len(rules)}"
+
+
+def test_successor_config_is_fully_explicit_not_sparse(
+    successor_config: dict[str, Any],
+) -> None:
+    rules = [key for key in successor_config if key.startswith("MD")]
+    assert len(rules) == 53, f"expected the full successor rule set, found {len(rules)}"
 
 
 def test_spec_parser_fixtures_are_excluded_from_repo_markdownlint() -> None:

@@ -19,6 +19,22 @@ def test_shipped_configs_conform() -> None:
     assert check_conformance(_load(".markdownlint.json"), _load(".prettierrc.json")) == []
 
 
+def test_staged_successor_configs_conform() -> None:
+    markdownlint = _load("standards/markdown-tooling/versions/1.9/resources/markdownlint.json")
+    prettier = _load("standards/markdown-tooling/versions/1.9/resources/prettierrc.json")
+    assert check_conformance(markdownlint, prettier, profile="successor") == []
+
+
+def test_staged_successor_rejects_predecessor_table_profile() -> None:
+    markdownlint = _load("standards/markdown-tooling/versions/1.9/resources/markdownlint.json")
+    markdownlint["MD060"] = {"style": "any", "aligned_delimiter": False}
+    prettier = _load("standards/markdown-tooling/versions/1.9/resources/prettierrc.json")
+    assert any(
+        "MD060" in violation
+        for violation in check_conformance(markdownlint, prettier, profile="successor")
+    )
+
+
 def test_tampered_md013_is_caught() -> None:
     ml = _load(".markdownlint.json") | {"MD013": {"line_length": 80}}
     assert any("MD013" in v for v in check_conformance(ml, _load(".prettierrc.json")))

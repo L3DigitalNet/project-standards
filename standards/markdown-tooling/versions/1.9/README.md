@@ -20,23 +20,56 @@ Python formatting, frontmatter semantics, and document identity are outside this
 
 ## Tool contract
 
-The local repair commands are:
-
-```bash
-npx prettier --write .
-npx markdownlint-cli2 --fix "**/*.md"
-```
-
-The corresponding non-mutating checks are:
+Normal verification is non-mutating:
 
 ```bash
 npx prettier --check .
 npx markdownlint-cli2 "**/*.md"
 ```
 
-Repositories may narrow these commands to their package-selected globs. Prettier discovers `.prettierrc.json` while traversing selected paths and normally honors `.gitignore` and `.prettierignore` [S02]. `markdownlint-cli2` discovers `.markdownlint.json`, accepts CLI globs, and applies `--fix` without backups [S03].
+When formatting repair is needed, use Prettier and then repeat both checks:
+
+```bash
+npx prettier --write .
+npx prettier --check .
+npx markdownlint-cli2 "**/*.md"
+```
+
+Repositories may narrow these commands to their package-selected globs. Prettier discovers `.prettierrc.json` while traversing selected paths and normally honors `.gitignore` and `.prettierignore` [S02]. `markdownlint-cli2` discovers `.markdownlint.json`, accepts CLI globs, and supports an explicit in-place repair mode without backups [S03].
 
 Work over an enabled surface is incomplete until its selected checks pass, or the final report identifies the failed check and cause.
+
+For an exceptional region that cannot satisfy a structural rule, use a paired block directive so Prettier cannot detach a one-line suppression from its target:
+
+```markdown
+<!-- markdownlint-disable MD033 -->
+
+<details>
+<summary>Generated details</summary>
+
+Generated content that requires raw HTML.
+
+</details>
+
+<!-- markdownlint-enable MD033 -->
+```
+
+Keep the pair immediately outside the exceptional region and name only the necessary rules.
+
+## Optional autofix recovery
+
+markdownlint autofix is not part of normal verification. Use it only as a bounded recovery operation with a clean starting diff:
+
+```bash
+test -z "$(git status --porcelain)" && npx markdownlint-cli2 --fix "**/*.md"
+git diff --check
+git diff -- .
+npx prettier --write .
+npx prettier --check .
+npx markdownlint-cli2 "**/*.md"
+```
+
+Review the resulting diff before accepting it. The Prettier and markdownlint commands after the diff are mandatory follow-up checks; restore or correct any unintended text change before proceeding.
 
 ## Managed package surface
 
@@ -123,7 +156,7 @@ Important invariants include:
 - MD024 is disabled to support repeated MADR option headings [S09].
 - MD025 uses an empty `front_matter_title` selector so a frontmatter title does not replace the body H1.
 - MD043 stays `true`; an empty `headings` list would mean that no headings are permitted [S08].
-- MD060 accepts Prettier's table alignment instead of imposing a competing layout.
+- MD060 is disabled because Prettier exclusively owns table alignment.
 
 markdownlint diagnoses Markdown in VS Code. The package does not enable markdownlint fix-on-save, so Prettier remains the sole mutation authority [S10], [S11].
 
@@ -167,7 +200,7 @@ Review this standard when Prettier changes Markdown or structured-config behavio
 | --- | --- | --- | --- |
 | S01 | [Prettier options](https://prettier.io/docs/options) | Formatting options including `proseWrap`, indentation, line endings, and overrides | 2026-06-07 |
 | S02 | [Prettier configuration and CLI](https://prettier.io/docs/configuration) | Config discovery, path selection, ignore behavior, and supported configuration names | 2026-06-07 |
-| S03 | [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2) | Config discovery, CLI globs, gitignore behavior, and in-place fixes | 2026-06-07 |
+| S03 | [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2) | Config discovery, CLI globs, gitignore behavior, and explicit in-place repair | 2026-06-07 |
 | S04 | [markdownlint](https://github.com/DavidAnson/markdownlint) | Markdown-only linting and complete rule baseline | 2026-06-07 |
 | S05 | [markdownlint-cli2-action](https://github.com/DavidAnson/markdownlint-cli2-action) | Action inputs and major-tag invocation | 2026-06-07 |
 | S06 | [markdownlint-cli2 action metadata](https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2-action/main/action.yml) | Bundled Node runtime | 2026-06-07 |

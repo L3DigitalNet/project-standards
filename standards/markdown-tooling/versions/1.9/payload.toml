@@ -22,14 +22,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:ff6d788d639c29f61c54afc32da91760a5a3c150f43418a05252b187b407f2fe"
+digest = "sha256:e099c3f03b77ebf00284508bb451fe7398c725e22f334a93dafdb48183b60c47"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:07141f0b0a62b1f4edfe03b22079824996754763db39311958b51436e651a4e2"
+digest = "sha256:c9376a6f002e93bc17b5c2bd979082623e7746f01ab0165a23cacb016a1e42b4"
 
 [[resources]]
 id = "agent-summary"
@@ -50,7 +50,7 @@ id = "markdownlint-source"
 role = "provider-resource"
 path = "resources/markdownlint.json"
 media_type = "application/json"
-digest = "sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"
+digest = "sha256:c6a0217de8adbab6e24038f98577de8fa2f90062b873cc97b6bd2c09f89dba2b"
 
 [[resources]]
 id = "prettier-source"
@@ -140,7 +140,7 @@ digest = "sha256:c6972146efb20ad58a227fac4629dc4784e509ba58c8afc9412bf2013611420
 id = "markdownlint-config"
 target = ".markdownlint.json"
 source = "artifacts/markdownlint.json"
-digest = "sha256:51204b5170e47da3716d3870d36ef1eb4b28a27d7289c65f7f1457943c499793"
+digest = "sha256:c6a0217de8adbab6e24038f98577de8fa2f90062b873cc97b6bd2c09f89dba2b"
 policy = "managed"
 when_any = [{ option = "markdownlint_config_ownership", equals = "managed" }]
 
@@ -429,6 +429,7 @@ mode = "automatic"
 provider = "migrate-legacy"
 reversible = false
 affected = [
+  "artifact:markdownlint-config",
   "contribution:format-caller",
   "contribution:lint-caller",
 ]

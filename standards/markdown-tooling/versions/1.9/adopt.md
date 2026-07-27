@@ -58,6 +58,8 @@ Generic plan, apply, update, and disable behavior is delegated to the unified co
 
 ```bash
 project-standards reconcile --check
+npx prettier --check .
+npx markdownlint-cli2 "**/*.md"
 ```
 
 Run a local tool only when its matching `lint` or `format` option is `true`:
@@ -66,6 +68,10 @@ Run a local tool only when its matching `lint` or `format` option is `true`:
 - For Prettier, pass every selected `markdown_globs` and `config_globs` value and supply each exclusion whose `applies_to` value is `format` or `both` through an additional `--ignore-path` file.
 
 These local commands require the corresponding packages to be installed; the managed reusable lint caller supplies its own action runtime. With `npx --no-install`, install the repository's lockfile-defined Node dependencies first, normally with `npm ci`. The reconciled workflow is the canonical option-aware CI verification.
+
+Normal verification never asks markdownlint to rewrite files. Use Prettier for physical formatting, then repeat both checks. When a bounded exceptional region needs a structural-rule suppression, place paired block `markdownlint-disable` and `markdownlint-enable` directives immediately outside the region and name only the necessary rules. Do not use a one-line suppression that Prettier can detach from its target.
+
+The standard reference's optional recovery recipe is the only documented markdownlint autofix path. It requires a clean starting diff, review of the resulting diff, and mandatory follow-up Prettier and markdownlint checks.
 
 | Finding | Resolution |
 | --- | --- |
