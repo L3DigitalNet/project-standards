@@ -197,7 +197,7 @@ id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:442ff0efb9d8adb5e935326936e9716fd3f6da6b5aac4a270c1d698957e59be4"
+digest = "sha256:3da6364f6d427689a650cc92fb2f6d0f615f3f7cb9258093455ea3d19b11d34c"
 
 [[resources]]
 id = "provider-content"
@@ -225,7 +225,7 @@ id = "provider-migration-report"
 role = "provider-resource"
 path = "schemas/migration-report.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:89c1edb3609ba30576d5bfc373e111741aa9942d03e3c8324a1a92b8a5943c71"
+digest = "sha256:73afd6e1756dd78c6cf56feec76211ed29539e4db0d352d1f3f7230185e4bf3b"
 
 [[artifacts]]
 id = "status"

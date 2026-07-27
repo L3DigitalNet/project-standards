@@ -12,7 +12,7 @@
 	"properties": {
 		"schema_version": { "const": "1.0" },
 		"standard_id": { "const": "agent-handoff" },
-		"version": { "const": "1.4" },
+		"version": { "const": "1.5" },
 		"config": { "type": "object" },
 		"resources": { "type": "object" },
 		"snapshots": { "type": "object" }

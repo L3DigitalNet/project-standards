@@ -16,12 +16,14 @@ _PREDECESSOR = _FAMILY / "versions/1.4"
 _SUCCESSOR = _FAMILY / "versions/1.5"
 _PROJECTION = _ROOT / "src/project_standards/payloads/agent-handoff/1.5"
 _PREDECESSOR_DIGEST = "sha256:17bdc8b25c6cc6ac644057a85f55ed244adf88b58f4ad052d68222d20c24120a"
-_DOCUMENTATION_CHANGES = frozenset(
+_SUCCESSOR_CHANGES = frozenset(
     {
         "README.md",
         "adopt.md",
         "agent-summary.md",
         "payload.toml",
+        "schemas/migration-report.schema.json",
+        "schemas/provider-input.schema.json",
     }
 )
 
@@ -99,6 +101,18 @@ def test_agent_handoff_1_5__locked_agent_targets__have_copyable_tool_exclusions(
     assert "markdownlint-cli2" in adoption
 
 
+def test_agent_handoff_1_5__provider_schemas__bind_the_successor_identity() -> None:
+    provider_input = json.loads(
+        (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
+    )
+    migration_report = json.loads(
+        (_SUCCESSOR / "schemas/migration-report.schema.json").read_text(encoding="utf-8")
+    )
+
+    assert provider_input["properties"]["version"]["const"] == "1.5"
+    assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.5"
+
+
 def test_agent_handoff_1_5__staged_successor__is_complete_uncatalogued_and_immutable() -> None:
     predecessor_manifest = load_payload_manifest(_PREDECESSOR / "payload.toml")
     predecessor_integrity = validate_payload_integrity(_PREDECESSOR, predecessor_manifest)
@@ -115,7 +129,7 @@ def test_agent_handoff_1_5__staged_successor__is_complete_uncatalogued_and_immut
         if path.is_file()
     }
     assert successor_files.keys() == predecessor_files.keys()
-    for relative in predecessor_files.keys() - _DOCUMENTATION_CHANGES:
+    for relative in predecessor_files.keys() - _SUCCESSOR_CHANGES:
         assert successor_files[relative].read_bytes() == predecessor_files[relative].read_bytes()
 
     successor_manifest = load_payload_manifest(_SUCCESSOR / "payload.toml")
