@@ -897,7 +897,13 @@ def test_release_consistency__document_metadata__cannot_classify_current_asserti
 def test_release_consistency__characterized_document_digest__uses_raw_bytes(
     release_fixture: ReleaseConsistencyFixture,
 ) -> None:
-    path = "docs/plans/2026-07-25-v5-adoption-integrity-correction-train-plan.md"
+    # The characterization exemption keys on a path *and* its exact raw bytes, so a
+    # line-ending-only rewrite must fall through to the ordinary fail-closed scan.
+    # Anchor that on a maintained `docs/specs/` document: `docs/plans/` entries are
+    # deleted once complete (AGENTS.md § Structure), so a plan path silently becomes
+    # a FileNotFoundError the next time a train closes — which is exactly what the
+    # original anchor did when the 5.9 close removed it.
+    path = "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md"
     content = (_ROOT / path).read_bytes()
     target = release_fixture.root / path
     target.parent.mkdir(parents=True, exist_ok=True)
