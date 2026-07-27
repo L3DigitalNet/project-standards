@@ -1042,7 +1042,14 @@ def _coverage_findings(
                 path=".project-standards.yml",
                 identity="/standards_version",
                 message="legacy platform version is not recognized",
-                hint='set standards_version to the supported "v3" or "v4" platform tag',
+                # A released repository legitimately omits the key or records a full
+                # tool release, so the hint states both shapes and the normalization
+                # target rather than only naming the accepted tags.
+                hint=(
+                    'set standards_version to the "v3" or "v4" platform tag; a released '
+                    'repository may omit the key or record a full release such as "v4.3.0", '
+                    "and both tags name the same legacy wire format"
+                ),
             )
         )
     recognized = [pointer for pointer, _standard_id, _version in claims]

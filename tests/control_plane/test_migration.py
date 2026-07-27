@@ -1957,6 +1957,37 @@ def test_migration_does_not_bridge_unsafe_whole_file_contribution_claims(
     assert units == ()
 
 
+@pytest.mark.parametrize(
+    "legacy_yaml",
+    [
+        pytest.param("alpha:\n  enabled: true\n", id="absent"),
+        pytest.param(
+            'standards_version: "v4.3.0"\nalpha:\n  enabled: true\n',
+            id="full-release",
+        ),
+    ],
+)
+def test_plan_legacy_migration__unrecognized_platform_version__hints_normalization(
+    tmp_path: Path,
+    legacy_yaml: str,
+) -> None:
+    distribution = installed_distribution(tmp_path)
+    repo = _legacy_repo(tmp_path, legacy_yaml)
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    finding = next(item for item in plan.findings if item.code == "CP-MIGRATION-PLATFORM-VERSION")
+    assert finding.identity == "/standards_version"
+    # The hint must name both released shapes the runbook documents (UPGRADING.md
+    # "Resolve common preview findings"), or a consumer cannot tell which literal
+    # to write or that the two accepted tags are interchangeable.
+    assert '"v3"' in finding.hint
+    assert '"v4"' in finding.hint
+    assert '"v4.3.0"' in finding.hint
+    assert "same legacy wire format" in finding.hint
+
+
 def test_apply_legacy_migration_refuses_nonapplicable_foreign_and_unbound_plans(
     tmp_path: Path,
 ) -> None:
