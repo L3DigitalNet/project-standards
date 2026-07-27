@@ -36,6 +36,7 @@ from project_standards.control_plane.providers import (
     materialize_referenced_input_snapshots,
 )
 from project_standards.control_plane.schemas import MutationPlanSchema
+from project_standards.package_contract.catalog import CatalogRole, load_catalog_source
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
 from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderEffect
 from project_standards.validate_frontmatter import (
@@ -45,6 +46,11 @@ from project_standards.validate_frontmatter import (
 )
 
 _ROOT = Path(__file__).resolve().parents[1]
+_CATALOG_DEFAULT_FRONTMATTER_VERSION = next(
+    entry.version.value
+    for entry in load_catalog_source(_ROOT / "catalogs/5.toml").packages
+    if entry.id == "markdown-frontmatter" and entry.role is CatalogRole.DEFAULT
+)
 _PAYLOAD_DIGEST = f"sha256:{'a' * 64}"
 _EFFECTIVE_CONFIG_DIGEST = f"sha256:{'b' * 64}"
 
@@ -132,11 +138,12 @@ def _write_unified_config(
     return schema_content
 
 
-# FR-013 (5.8.0/T10) advanced the markdown-frontmatter default to 1.5, so a "latest"
-# selector now refreshes to the 1.5 successor; the exact "1.2" pin stays pinned.
+# A "latest" selector refreshes to whatever Catalog 5 currently defaults to, so the
+# expectation is derived rather than pinned: every catalog advance would otherwise
+# re-break this row. The exact "1.2" pin stays pinned.
 @pytest.mark.parametrize(
     ("selector", "resolved"),
-    [("latest", "1.5"), ("1.2", "1.2")],
+    [("latest", _CATALOG_DEFAULT_FRONTMATTER_VERSION), ("1.2", "1.2")],
     ids=["latest-default-refresh", "exact-pin"],
 )
 def test_cli_config_uses_the_committed_applied_package_version(

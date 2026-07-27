@@ -530,11 +530,13 @@ references = [
     "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__normal_documented_commands__never_use_autofix",
     "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__exception_guidance__uses_paired_block_directives",
 ]
-amendments = []
+amendments = [
+    { approved_by = "Project Standards 5.10 catalog activation", date = "2026-07-27", new_digest = "sha256:6e392073f03bf7216d23eca2d89d2ac06cca1dc20d1059a2542fa23ab931da83", new_symbol = "tests/coherence/test_behavioral.py::test_prettier_lint_sequence_is_a_fixed_point", old_digest = "sha256:f1a4e6348d5c6e44014718362bf5a2d20d62a1d248076f233b6961a8b499a887", old_symbol = "tests/coherence/test_behavioral.py::test_prettier_lint_sequence_is_a_fixed_point", reason = "retarget the successor markdownlint rule set from 1.9 to the newly activated 1.10 default; the two rule files are byte-identical, so the proven behavior is unchanged", requirement = "FR-015" },
+]
 
 [[issues.proofs]]
 symbol = "tests/coherence/test_behavioral.py::test_prettier_lint_sequence_is_a_fixed_point"
-digest = "sha256:f1a4e6348d5c6e44014718362bf5a2d20d62a1d248076f233b6961a8b499a887"
+digest = "sha256:6e392073f03bf7216d23eca2d89d2ac06cca1dc20d1059a2542fa23ab931da83"
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__normal_documented_commands__never_use_autofix"

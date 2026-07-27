@@ -610,7 +610,7 @@ def test_python_tooling_1_9__same_change_successor_options__remain_sparse() -> N
 
 
 # TC-T8-004
-def test_python_tooling_1_9__package_registration__activates_1_9_and_retains_1_8() -> None:
+def test_python_tooling_1_9__package_registration__stays_retained_beside_1_8() -> None:
     predecessor = _payload(_V18)
     successor = _payload(_V19)
 
@@ -628,7 +628,9 @@ def test_python_tooling_1_9__package_registration__activates_1_9_and_retains_1_8
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     entries = [entry for entry in catalog["packages"] if entry["id"] == "python-tooling"]
     roles = {entry["version"]: entry["role"] for entry in entries}
-    assert roles[successor.manifest.payload.version.value] == "default"
+    # 5.10 advanced the default to 1.10, so 1.9 joins 1.8 as retained. Both stay
+    # advertised: a superseded payload is never withdrawn from the catalog.
+    assert roles[successor.manifest.payload.version.value] == "retained"
     assert roles[predecessor.manifest.payload.version.value] == "retained"
     generated_catalog = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
     current_version = successor.manifest.payload.version.value

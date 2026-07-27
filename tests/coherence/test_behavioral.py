@@ -14,7 +14,7 @@ _CORPUS = Path(__file__).resolve().parent / "corpus"
 _PRETTIER_CFG = str(_REPO / ".prettierrc.json")
 _MDLINT_CFG = str(_REPO / ".markdownlint.json")
 _SUCCESSOR_MDLINT_CFG = str(
-    _REPO / "standards/markdown-tooling/versions/1.9/resources/markdownlint.json"
+    _REPO / "standards/markdown-tooling/versions/1.10/resources/markdownlint.json"
 )
 # Issue #64's pre-fix rule set (MD060 enabled). Used only to prove the corpus
 # still contains a case that rule actually rejected — a narrower table would let

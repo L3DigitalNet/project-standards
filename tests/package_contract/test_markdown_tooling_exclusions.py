@@ -215,8 +215,8 @@ def test_t9_successor_rendering__characterized_exclusion__matches_1_8_inputs(
         assert successor == predecessor
 
 
-def test_t9_successor_activation__catalog_default_and_predecessor_immutable() -> None:
-    """TC-T9-002: activate consumer 1.9 while preserving released 1.8."""
+def test_t9_successor_retention__catalog_role_and_predecessor_immutable() -> None:
+    """TC-T9-002: 1.9 stays advertised beside released 1.8 after 5.10 advanced the default."""
     family = load_family_manifest(_FAMILY / "standard.toml")
     versions = {entry.version.value: entry for entry in family.versions}
     assert "1.9" in versions
@@ -228,7 +228,7 @@ def test_t9_successor_activation__catalog_default_and_predecessor_immutable() ->
     catalog = load_catalog_source(_ROOT / "catalogs/5.toml")
     markdown_entries = [entry for entry in catalog.packages if entry.id == "markdown-tooling"]
     roles = {entry.version.value: entry.role.value for entry in markdown_entries}
-    assert roles[successor.manifest.payload.version.value] == "default"
+    assert roles[successor.manifest.payload.version.value] == "retained"
     assert roles[_V18.name] == "retained"
 
     predecessor = _payload(_V18)

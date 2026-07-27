@@ -113,7 +113,7 @@ def test_agent_handoff_1_5__provider_schemas__bind_the_successor_identity() -> N
     assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.5"
 
 
-def test_agent_handoff_1_5__activated_successor__is_complete_default_and_immutable() -> None:
+def test_agent_handoff_1_5__retained_predecessor__is_complete_and_immutable() -> None:
     predecessor_manifest = load_payload_manifest(_PREDECESSOR / "payload.toml")
     predecessor_integrity = validate_payload_integrity(_PREDECESSOR, predecessor_manifest)
     assert predecessor_integrity.aggregate_digest.value == _PREDECESSOR_DIGEST
@@ -143,25 +143,29 @@ def test_agent_handoff_1_5__activated_successor__is_complete_default_and_immutab
         migration.to_endpoint.value == "package:1.5" for migration in successor_manifest.migrations
     )
 
+    # 5.10 advanced the default to 1.6. A superseded payload is never withdrawn, so
+    # 1.5 must stay advertised — as `retained`, not as the selectable default. The
+    # activated-default and dogfood-lock assertions live with the current payload in
+    # test_agent_handoff_1_6.py.
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
-    advertised = {
-        package["version"] for package in catalog["packages"] if package["id"] == "agent-handoff"
+    roles = {
+        package["version"]: package["role"]
+        for package in catalog["packages"]
+        if package["id"] == "agent-handoff"
     }
     successor_version = successor_manifest.payload.version.value
-    assert successor_version in advertised
+    assert roles[successor_version] == "retained"
     assert (
         next(
             package
             for package in catalog["packages"]
             if package["id"] == "agent-handoff" and package["role"] == "default"
         )["version"]
-        == successor_version
+        != successor_version
     )
 
     config = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
-    lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     assert config["standards"]["agent-handoff"]["version"] == "latest"
-    assert lock["standards"]["agent-handoff"]["resolved"] == successor_version
 
 
 def test_agent_handoff_1_5__payload_projection__matches_complete_successor() -> None:
