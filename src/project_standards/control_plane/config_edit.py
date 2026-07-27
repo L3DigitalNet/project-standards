@@ -392,6 +392,14 @@ def _applied_option_schemas(
     integrity verification. An installation that cannot be verified degrades to an
     empty mapping rather than failing inspection; every caller then falls back to
     the as-authored digest.
+
+    `resolution_payloads` has to stay inside that boundary: integrity authenticates
+    payload bytes against their recorded digests but never reads them as a schema,
+    so `load_option_schema` can still reject a byte-authentic payload whose option
+    schema is not a valid closed Draft 2020-12 document. Outside the boundary that
+    raised out of `standards show`, turning read-only inspection of a damaged
+    installation into a crash instead of the disclosed authored-fallback that
+    issue #74 exists to report.
     """
     if not lock.standards:
         return {}
@@ -401,12 +409,10 @@ def _applied_option_schemas(
             config.project_standards.catalog,
             recorded_release=catalog.project_standards.release,
         )
+        payloads = resolution_payloads(installed)
     except PackageContractError, OSError, ValueError:
         return {}
-    return {
-        (payload.standard_id, payload.version.value): payload
-        for payload in resolution_payloads(installed)
-    }
+    return {(payload.standard_id, payload.version.value): payload for payload in payloads}
 
 
 ConfigDigestBasis = Literal["effective", "authored-fallback"]

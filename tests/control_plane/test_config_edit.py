@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import cast
 
@@ -26,12 +28,14 @@ from project_standards.control_plane.config_edit import (
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import (
     InstalledDistribution,
+    _load_installed_payload,  # pyright: ignore[reportPrivateUsage]  # projected-layout manifest loader
     declared_transitions,
     resolution_payloads,
 )
 from project_standards.control_plane.locking import LockMode, control_plane_lock
 from project_standards.control_plane.models import AppliedPackage, CentralLock, ConsumerCatalog
 from project_standards.control_plane.resolution import ResolutionRequest, resolve_packages
+from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import JsonValue
 from project_standards.standards_graph.cli import run
 from tests.control_plane.helpers import installed_distribution
@@ -503,6 +507,86 @@ def test_standard_view_config_digest__payload_digest_mismatch__reports_authored_
         }
     )
     (repo / ".standards/lock.toml").write_bytes(render_lock(updated))
+
+    views = standard_views(repo, distribution=distribution)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["config_digest_basis"] == "authored-fallback"
+    assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
+
+
+_DIGEST_LINE = re.compile(r'digest = "sha256:[0-9a-f]{64}"')
+# Byte-valid JSON that integrity cannot object to, but not a closed Draft 2020-12
+# option schema, so only `load_option_schema` rejects it.
+_OPEN_OBJECT_SCHEMA = (
+    b'{"$schema":"https://json-schema.org/draft/2020-12/schema",'
+    b'"type":"object","additionalProperties":true}'
+)
+
+
+def _reseal_installed_payload(package_root: Path, standard_id: str, version: str) -> None:
+    """Re-authenticate an edited installed payload against its family and catalog.
+
+    Rewrites the config-schema resource digest, the payload aggregate, and both
+    recorded copies of that aggregate, so `load_catalog` accepts the edited bytes
+    as genuine. Without this the edit would fail integrity inside the try boundary
+    and never reach the code under test.
+    """
+    payload_dir = package_root / "payloads" / standard_id / version
+    payload_path = payload_dir / "payload.toml"
+    schema_digest = hashlib.sha256((payload_dir / "config.schema.json").read_bytes()).hexdigest()
+    payload_path.write_text(
+        re.sub(
+            r'(path = "config\.schema\.json"\nmedia_type = "[^"]+"\ndigest = ")sha256:[0-9a-f]{64}(")',
+            rf"\g<1>sha256:{schema_digest}\2",
+            payload_path.read_text(encoding="utf-8"),
+        ),
+        encoding="utf-8",
+    )
+    manifest = _load_installed_payload(payload_dir)
+    aggregate = validate_payload_integrity(payload_dir, manifest).aggregate_digest.value
+    for path, anchor in (
+        (
+            package_root / f"families/{standard_id}/standard.toml",
+            f'[[versions]]\nversion = "{version}"',
+        ),
+        (package_root / "catalogs/5.toml", f'id = "{standard_id}"\nversion = "{version}"'),
+    ):
+        text = path.read_text(encoding="utf-8")
+        start = text.index(anchor)
+        path.write_text(
+            text[:start] + _DIGEST_LINE.sub(f'digest = "{aggregate}"', text[start:], count=1),
+            encoding="utf-8",
+        )
+
+
+def test_standard_view_config_digest__unreadable_option_schema__reports_authored_fallback(
+    tmp_path: Path,
+) -> None:
+    """Fallback trigger 4 (#74): the payload authenticates but its option schema does not load.
+
+    Integrity compares bytes against recorded digests and never parses them as a
+    schema, so a resealed payload carrying an open-object option schema loads
+    cleanly and only `resolution_payloads` -> `load_option_schema` rejects it.
+    That call sat outside `_applied_option_schemas`'s degrade boundary, so the
+    PackageContractError escaped and crashed `standards show` instead of
+    disclosing the authored fallback the other three triggers report.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_selection(repo, "alpha", enabled=True, version="2.0")
+    _apply_resolution(repo, distribution)
+    authored = (
+        parse_config((repo / ".standards/config.toml").read_bytes()).standards["alpha"].config
+    )
+
+    schema = distribution.package_root / "payloads/alpha/2.0/config.schema.json"
+    schema.write_bytes(_OPEN_OBJECT_SCHEMA)
+    _reseal_installed_payload(distribution.package_root, "alpha", "2.0")
+    # Precondition: the damaged payload is still byte-authentic to the loader.
+    assert len(distribution.load_catalog("5").payloads) == 5
 
     views = standard_views(repo, distribution=distribution)
 

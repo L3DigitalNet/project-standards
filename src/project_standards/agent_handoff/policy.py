@@ -528,7 +528,14 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                 locus="document structure",
             )
         )
-    changelog = re.search(r"(?im)^#{1,6}\s+changelog\b", text)
+    # Both heading bans read the masked view for the same reason the structure and
+    # rule-summary checks do: a `## Changelog` written inside a fenced example is
+    # example text, not a section, and providers 1.2 onward search their masked
+    # structural view here. `_masked_lines` blanks fenced lines in place, so joining
+    # them keeps one entry per source line and the reported line number still points
+    # at the real document line.
+    masked_text = "\n".join(line.text for line in masked_lines)
+    changelog = re.search(r"(?im)^#{1,6}\s+changelog\b", masked_text)
     if config.forbid_changelog and changelog is not None:
         findings.append(
             _finding(
@@ -536,11 +543,11 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                 severity,
                 "changelog section is not allowed",
                 locus="section heading",
-                line=text.count("\n", 0, changelog.start()) + 1,
+                line=masked_text.count("\n", 0, changelog.start()) + 1,
                 column=1,
             )
         )
-    history = re.search(r"(?im)^#{1,6}\s+(?:history|changelog)\b", text)
+    history = re.search(r"(?im)^#{1,6}\s+(?:history|changelog)\b", masked_text)
     if config.forbid_narrative_history and history is not None:
         findings.append(
             _finding(
@@ -548,7 +555,7 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                 severity,
                 "narrative history section is not allowed",
                 locus="section heading",
-                line=text.count("\n", 0, history.start()) + 1,
+                line=masked_text.count("\n", 0, history.start()) + 1,
                 column=1,
             )
         )

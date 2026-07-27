@@ -864,3 +864,64 @@ def test_apply_refuses_a_deleted_create_only_target_whose_policy_turned_managed(
     assert not result.lock_written
     assert parse_lock((control / "lock.toml").read_bytes()) == installed.next_lock
     assert not (repo / "notes.md").exists()
+
+
+def test_apply_refuses_a_disclaimed_target_that_reappears_before_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A recreated create-only file must still fail CP-VERIFY (issue #70 guard).
+
+    `_disclaimed_targets` licenses skipping a published-target check, but the skip
+    is conditional: the path must actually be missing. Nothing else in the suite
+    exercises that condition, so replacing the missing-kind assertion with an
+    unconditional `continue` stays green while publishing a lock whose recorded
+    absence contradicts the file on disk. The window is real — the consumer
+    restores the file after the plan is re-derived under the control lock and
+    before verification reads the tree — so it is reproduced here by recreating
+    the file at the end of `_publish_targets`, the last step before `_verify`.
+    """
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    resolution = resolution_request((payload,))
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    installed = plan_reconciliation(planner)
+    assert _apply(planner, installed).success
+
+    (repo / "notes.md").unlink()
+    deleted_resolution = resolution_request((payload,), previous_lock=installed.next_lock)
+    deleted_planner = PlannerRequest(repo, deleted_resolution, (payload,))
+    deleted = plan_reconciliation(deleted_planner)
+    assert [item.path.original for item in deleted.next_lock.create_only_absences] == ["notes.md"]
+
+    published = executor._publish_targets  # pyright: ignore[reportPrivateUsage]
+
+    def publish_then_recreate(*args: object, **kwargs: object) -> object:
+        outcome = published(*args, **kwargs)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        (repo / "notes.md").write_bytes(b"recreated by the consumer\n")
+        return outcome
+
+    monkeypatch.setattr(executor, "_publish_targets", publish_then_recreate)
+
+    result = _apply(deleted_planner, deleted)
+
+    assert not result.success
+    assert result.error_code == "CP-VERIFY"
+    assert not result.lock_written
+    # The prior lock survives, so no recorded absence contradicts the live file.
+    assert parse_lock((control / "lock.toml").read_bytes()) == installed.next_lock
+    assert (repo / "notes.md").read_bytes() == b"recreated by the consumer\n"

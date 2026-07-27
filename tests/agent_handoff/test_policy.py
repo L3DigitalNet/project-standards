@@ -211,6 +211,48 @@ def test_require_tables_or_bullets_accepts_unfenced_structure(
     assert not [finding for finding in findings if finding.locus == "document structure"]
 
 
+# `forbid_changelog` is set on deployed.md and `forbid_narrative_history` on
+# STATUS.md, so each rule is exercised through the profile that declares it.
+_FENCED_CHANGELOG = "# Deployed\n\n- Real bullet.\n\n```text\n## Changelog\n```\n"
+_UNFENCED_CHANGELOG = "# Deployed\n\n- Real bullet.\n\n## Changelog\n\n- Entry.\n"
+_FENCED_HISTORY = "# Status\n\n## Current snapshot\n\n- Short.\n\n```text\n## History\n```\n"
+_UNFENCED_HISTORY = "# Status\n\n## Current snapshot\n\n- Short.\n\n## History\n\n- Old.\n"
+
+
+def test_forbid_changelog_ignores_a_fenced_heading(policy: HandoffPolicy) -> None:
+    findings = check_document("docs/handoff/deployed.md", _FENCED_CHANGELOG, policy)
+
+    assert not [finding for finding in findings if "changelog" in finding.message]
+
+
+def test_forbid_changelog_still_flags_an_unfenced_heading(policy: HandoffPolicy) -> None:
+    finding = next(
+        item
+        for item in check_document("docs/handoff/deployed.md", _UNFENCED_CHANGELOG, policy)
+        if "changelog" in item.message
+    )
+
+    assert finding.locus == "section heading"
+    assert finding.line == _UNFENCED_CHANGELOG.splitlines().index("## Changelog") + 1
+
+
+def test_forbid_narrative_history_ignores_a_fenced_heading(policy: HandoffPolicy) -> None:
+    findings = check_document("docs/STATUS.md", _FENCED_HISTORY, policy)
+
+    assert not [finding for finding in findings if "narrative history" in finding.message]
+
+
+def test_forbid_narrative_history_still_flags_an_unfenced_heading(policy: HandoffPolicy) -> None:
+    finding = next(
+        item
+        for item in check_document("docs/STATUS.md", _UNFENCED_HISTORY, policy)
+        if "narrative history" in item.message
+    )
+
+    assert finding.locus == "section heading"
+    assert finding.line == _UNFENCED_HISTORY.splitlines().index("## History") + 1
+
+
 def test_conventions_profile_checks_quick_reference_and_entry_lengths(
     policy: HandoffPolicy,
 ) -> None:
