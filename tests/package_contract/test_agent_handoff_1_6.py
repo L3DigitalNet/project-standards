@@ -3,10 +3,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import tomllib
 from pathlib import Path
 from typing import cast
 
+import pytest
+
+from project_standards.agent_handoff.policy import HandoffPolicy, check_document, load_policy
 from project_standards.control_plane.distribution import InstalledPayload
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.package_contract.family import load_family_manifest
@@ -176,17 +180,25 @@ def test_agent_handoff_1_6__session_caps__scan_table_rows_only(tmp_path: Path) -
 
 def test_agent_handoff_1_6__session_caps__still_report_oversized_rows(tmp_path: Path) -> None:
     headline = " ".join(f"word{index}" for index in range(21))
-    text = f"| 2026-07-09 | {headline} | {'x' * 221} |\n"
+    # A complete outer-pipe table, not a standalone pipe line: the caps must fire
+    # on the oversized data row of a table the header and delimiter really open.
+    text = (
+        "# Sessions\n\n"
+        "| Date | Summary | Evidence |\n"
+        "| --- | --- | --- |\n"
+        f"| 2026-07-09 | {headline} | {'x' * 221} |\n"
+    )
 
     messages = _shape_messages("docs/handoff/sessions/2026-07.md", text, tmp_path)
 
     assert messages == ["row is too long", "headline is too long"]
 
 
-def test_agent_handoff_1_6__entry_findings__name_each_oversized_section(tmp_path: Path) -> None:
+def test_agent_handoff_1_6__entry_findings__redact_each_oversized_section(tmp_path: Path) -> None:
+    secret = "sk-live-consumer-heading"
     text = (
         "## Quick Reference\n\n- Short.\n\n"
-        "## 1. First\n\n" + ("x" * 1300) + "\n\n"
+        f"## 1. {secret}\n\n" + ("x" * 1300) + "\n\n"
         "## 2. Second\n\n- Short enough.\n\n"
         "## 3. Third\n\n" + ("y" * 1400) + "\n"
     )
@@ -194,9 +206,10 @@ def test_agent_handoff_1_6__entry_findings__name_each_oversized_section(tmp_path
     messages = _shape_messages("docs/handoff/conventions.md", text, tmp_path)
 
     assert [message for message in messages if "entry has" in message] == [
-        "section 1. First entry has 1300 chars; max 1200",
-        "section 3. Third entry has 1400 chars; max 1200",
+        "section entry has 1300 chars; max 1200",
+        "section entry has 1400 chars; max 1200",
     ]
+    assert all(secret not in message for message in messages)
 
 
 def test_agent_handoff_1_6__entry_size__excludes_fenced_examples(tmp_path: Path) -> None:
@@ -209,3 +222,131 @@ def test_agent_handoff_1_6__entry_size__excludes_fenced_examples(tmp_path: Path)
 
     assert len(fence) > 1200
     assert _shape_messages("docs/handoff/conventions.md", text, tmp_path) == []
+
+
+def test_agent_handoff_1_6__entry_size__excludes_masked_separator_newlines(
+    tmp_path: Path,
+) -> None:
+    """A masked example must cost nothing, not one newline per masked line."""
+    fence = "```text\n" + ("uv run project-standards validate\n" * 1400) + "```\n"
+    text = (
+        "## Quick Reference\n\n- Short.\n\n"
+        "## 1. Worked example\n\n"
+        "- Run the gate before closeout.\n\n"
+        f"{fence}\n"
+        "- Review the diff.\n"
+    )
+
+    assert len(fence.splitlines()) > 1200
+    messages = _shape_messages("docs/handoff/conventions.md", text, tmp_path)
+
+    assert [message for message in messages if "entry has" in message] == []
+
+
+# Engine/provider masking parity (issue #69 follow-up).
+#
+# The engine enriches every provider AH-SHAPE finding with a structural locus,
+# line, and bounded measure, so a masking divergence between the two silently
+# mislocates or invents diagnostics. Each document below is one reproduced
+# divergence of the pre-fix engine, and each case asserts that both
+# implementations now agree with the CommonMark-correct reading.
+
+_SESSION = "docs/handoff/sessions/2026-07.md"
+_CONVENTIONS = "docs/handoff/conventions.md"
+_LONG_CELL = "x" * 230
+_ENTRY_MESSAGE = re.compile(r"^section entry has (?P<size>[0-9]+) chars; max [0-9]+$")
+
+_E1_PSEUDO_CLOSE_ROW = (
+    f"# Sessions\n\n```text\n```python\n| 2026-07-09 | {_LONG_CELL} | commit |\n```\n"
+)
+_E2_INDENTED_FENCE_ROW = f"# Sessions\n\n    ```\n| 2026-07-09 | {_LONG_CELL} | commit |\n    ```\n"
+_E3_FENCED_HEADING = (
+    "## Quick Reference\n\n- Short.\n\n"
+    "## 1. Real\n\n" + ("x" * 1300) + "\n\n"
+    "```text\n"
+    "## Fake heading\n"
+    "```\n\n" + ("y" * 1300) + "\n"
+)
+_E4_PSEUDO_CLOSE_ENTRY = (
+    "## Quick Reference\n\n- Short.\n\n"
+    "## 1. Worked example\n\n- Run the gate.\n\n"
+    "```text\n"
+    "```python\n" + ("x" * 1300) + "\n"
+    "```\n"
+)
+_E5_INDENTED_FENCE_ENTRY = (
+    "## Quick Reference\n\n- Short.\n\n"
+    "## 1. Worked example\n\n"
+    "    ```\n"
+    "    " + ("x" * 1300) + "\n"
+    "    ```\n"
+)
+
+
+def _policy() -> HandoffPolicy:
+    resource = next(item for item in _successor().manifest.resources if item.id == "policy")
+    return load_policy(_SUCCESSOR / resource.path.normalized)
+
+
+def _engine_signature(path: str, text: str) -> dict[str, object]:
+    findings = check_document(path, text, _policy())
+    return {
+        "entry": [finding.observed for finding in findings if finding.locus == "section entry"],
+        "row": sum(1 for finding in findings if finding.locus == "document row"),
+        "headline": sum(1 for finding in findings if finding.locus == "document headline"),
+    }
+
+
+def _provider_signature(path: str, text: str, repo: Path) -> dict[str, object]:
+    messages = _shape_messages(path, text, repo)
+    matched = [_ENTRY_MESSAGE.fullmatch(message) for message in messages]
+    return {
+        "entry": [int(item.group("size")) for item in matched if item is not None],
+        "row": messages.count("row is too long"),
+        "headline": messages.count("headline is too long"),
+    }
+
+
+@pytest.mark.parametrize(
+    ("path", "text", "expected"),
+    [
+        pytest.param(
+            _SESSION,
+            _E1_PSEUDO_CLOSE_ROW,
+            {"entry": [], "row": 0, "headline": 0},
+            id="E1-info-string-does-not-close-a-fence",
+        ),
+        pytest.param(
+            _SESSION,
+            _E2_INDENTED_FENCE_ROW,
+            {"entry": [], "row": 1, "headline": 0},
+            id="E2-four-space-indent-does-not-open-a-fence",
+        ),
+        pytest.param(
+            _CONVENTIONS,
+            _E3_FENCED_HEADING,
+            {"entry": [2601], "row": 0, "headline": 0},
+            id="E3-fenced-heading-does-not-start-a-section",
+        ),
+        pytest.param(
+            _CONVENTIONS,
+            _E4_PSEUDO_CLOSE_ENTRY,
+            {"entry": [], "row": 0, "headline": 0},
+            id="E4-info-string-does-not-expose-a-fenced-entry",
+        ),
+        pytest.param(
+            _CONVENTIONS,
+            _E5_INDENTED_FENCE_ENTRY,
+            {"entry": [1320], "row": 0, "headline": 0},
+            id="E5-indented-backticks-do-not-mask-an-entry",
+        ),
+    ],
+)
+def test_agent_handoff_1_6__masking__matches_the_engine(
+    tmp_path: Path,
+    path: str,
+    text: str,
+    expected: dict[str, object],
+) -> None:
+    assert _engine_signature(path, text) == expected
+    assert _provider_signature(path, text, tmp_path) == expected

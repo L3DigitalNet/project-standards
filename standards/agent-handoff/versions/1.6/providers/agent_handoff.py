@@ -621,9 +621,11 @@ def _entry_size(lines: list[str]) -> int:
     Fenced examples are exempt from every other shape rule, so charging their
     characters to the entry budget would penalize a rule that shows its command.
     `_masked_structural_view` preserves line length, so masked lines arrive here
-    as whitespace and are neutralized alongside genuinely blank ones.
+    as whitespace and are dropped alongside genuinely blank ones. Dropping them
+    also drops their separator newlines, so a long masked example cannot consume
+    the budget one newline at a time.
     """
-    return len("\n".join(line if line.strip() else "" for line in lines).strip())
+    return len("\n".join(line for line in lines if line.strip()))
 
 
 def _paragraphs(lines: list[str]) -> list[str]:
@@ -738,7 +740,9 @@ def _shape_messages(
                 continue
             size = _entry_size(lines)
             if size > entry_limit:
-                messages.append(f"section {section} entry has {size} chars; max {entry_limit}")
+                # Sizes and limits are bounded measures and may be reported; the
+                # section name is consumer-authored text and must not appear.
+                messages.append(f"section entry has {size} chars; max {entry_limit}")
     row_limit = _integer(rules, "row_max_chars")
     headline_limit = _integer(rules, "headline_max_words")
     if row_limit is not None or headline_limit is not None:

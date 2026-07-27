@@ -190,7 +190,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/agent_handoff.py"
 media_type = "text/x-python"
-digest = "sha256:ede81c99b4677c6df06420ee639d9d5744ea16fb4e9f668d3a7347e9bb444dd2"
+digest = "sha256:3ffda673a5680f2ce092cc20a17809b30f7c0062c123ac6f93442658097c522f"
 
 [[resources]]
 id = "provider-input"

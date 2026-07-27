@@ -172,13 +172,19 @@ def measure_file(path: Path, *, cap: int, target: int) -> SizeResult:
     return measure_bytes(path.read_bytes(), cap=cap, target=target)
 
 
-def _sections(text: str) -> dict[str, _Section]:
+def _sections(lines: tuple[_LocatedLine, ...]) -> dict[str, _Section]:
+    """Group `## ` sections out of the masked structural view.
+
+    The payload provider derives its sections from `_masked_structural_view`, so
+    a `## heading` written inside a fenced example must not invent a section
+    here either. Callers pass `_masked_lines` output for that parity.
+    """
     sections: dict[str, _Section] = {}
     current_name: str | None = None
     current_heading: _LocatedLine | None = None
     current_lines: list[_LocatedLine] = []
-    for number, text_line in enumerate(text.splitlines(), start=1):
-        line = _LocatedLine(number, text_line)
+    for line in lines:
+        text_line = line.text
         if text_line.startswith("## "):
             if current_name is not None and current_heading is not None:
                 sections[current_name] = _Section(
@@ -220,25 +226,38 @@ def _table_lines(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
     return tuple(tables)
 
 
+_FENCE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})")
+_FENCE_CLOSE_RE = re.compile(r"^[ \t]{0,3}(?P<fence>`{3,}|~{3,})[ \t]*$")
+
+
 def _masked_lines(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
     """Blank fenced-code lines while preserving line numbers.
 
-    Mirrors the payload provider's `_masked_structural_view`, which masks fenced
-    content before the shape rules run. Blanking (rather than dropping) keeps the
-    returned numbering aligned with `_sections`, so masked text can be looked up
-    per section line.
+    Mirrors the payload provider's `_masked_structural_view` rule for rule,
+    including its CommonMark fence semantics: an opener may be indented at most
+    three spaces, and only a bare run of at least as many identical fence
+    characters closes it, so neither an info string (```` ```python ````) nor a
+    four-space-indented backtick run changes the fence state. The provider
+    overwrites fenced characters with spaces; blanking is equivalent for every
+    rule that consumes this view and keeps the numbering aligned with
+    `_sections`, so masked text can be looked up per section line.
     """
     masked: list[_LocatedLine] = []
     fence: str | None = None
     for line in lines:
-        stripped = line.text.strip()
-        if fence is None and stripped.startswith(("```", "~~~")):
-            fence = stripped[:3]
-        elif fence is not None and stripped.startswith(fence):
-            masked.append(_LocatedLine(line.number, ""))
-            fence = None
-            continue
-        masked.append(_LocatedLine(line.number, "") if fence is not None else line)
+        hidden = fence is not None
+        if fence is not None:
+            close = _FENCE_CLOSE_RE.match(line.text)
+            if (
+                close is not None
+                and close.group("fence")[0] == fence[0]
+                and len(close.group("fence")) >= len(fence)
+            ):
+                fence = None
+        elif opener := _FENCE_RE.match(line.text):
+            fence = opener.group("fence")
+            hidden = True
+        masked.append(_LocatedLine(line.number, "" if hidden else line.text))
     return tuple(masked)
 
 
@@ -247,10 +266,12 @@ def _entry_size(lines: Iterable[str]) -> int:
 
     Fenced examples are exempt from every other shape rule, so charging their
     characters to the entry budget would penalize a rule that shows its command.
-    The payload provider masks fences to spaces, so whitespace-only lines are
-    neutralized here to keep both implementations byte-for-byte comparable.
+    Dropping the lines outright (rather than blanking them in place) also drops
+    their separator newlines, so a long masked example cannot consume the budget
+    one newline at a time. The payload provider masks fences to spaces and
+    applies the identical rule, keeping both implementations comparable.
     """
-    return len("\n".join(line if line.strip() else "" for line in lines).strip())
+    return len("\n".join(line for line in lines if line.strip()))
 
 
 def _paragraphs(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
@@ -320,10 +341,11 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
     severity: Literal["error", "warning"] = "error" if config.severity == "fatal" else "warning"
     advisory: list[Finding] = []
     findings: list[Finding] = []
-    sections = _sections(text)
     all_lines = tuple(
         _LocatedLine(number, line) for number, line in enumerate(text.splitlines(), start=1)
     )
+    masked_lines = _masked_lines(all_lines)
+    sections = _sections(masked_lines)
     byte_count = len(text.encode())
     line_count = len(all_lines)
 
@@ -536,18 +558,21 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                     )
                 )
     if config.max_entry_chars is not None:
-        masked_text = {line.number: line.text for line in _masked_lines(all_lines)}
         for section in sections.values():
             if section.name == "Quick Reference":
                 continue
-            size = _entry_size(masked_text[line.number] for line in section.lines)
+            # Section lines already come from the masked view, so fenced examples
+            # arrive blank and are discarded by `_entry_size`.
+            size = _entry_size(line.text for line in section.lines)
             if size > config.max_entry_chars:
                 findings.append(
                     _finding(
                         path,
                         severity,
-                        f"section {section.name} entry has {size} chars; "
-                        f"max {config.max_entry_chars}",
+                        # The section name is consumer-authored text; NFR-002 keeps
+                        # every engine message free of it. Line, observed size, and
+                        # limit locate the finding without quoting the document.
+                        f"section entry has {size} chars; max {config.max_entry_chars}",
                         locus="section entry",
                         line=section.heading.number,
                         column=section.heading.column,
@@ -559,7 +584,7 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
         # Row and headline caps describe table rows only; prose below the table is
         # governed by the paragraph and bullet rules. Scanning every line made the
         # session-log caps unsatisfiable for an append-only record (issue #68).
-        for line in _table_lines(_masked_lines(all_lines)):
+        for line in _table_lines(masked_lines):
             stripped = line.text.strip()
             if config.row_max_chars is not None and len(stripped) > config.row_max_chars:
                 findings.append(

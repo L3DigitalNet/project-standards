@@ -153,7 +153,7 @@ def test_conventions_profile_checks_quick_reference_and_entry_lengths(
     assert any("entry has" in message for message in messages)
 
 
-def test_conventions_entry_findings_name_each_oversized_section(policy: HandoffPolicy) -> None:
+def test_conventions_entry_findings_locate_each_oversized_section(policy: HandoffPolicy) -> None:
     text = (
         "## Quick Reference\n\n- Short.\n\n"
         "## 1. First\n\n" + ("x" * 1300) + "\n\n"
@@ -167,15 +167,31 @@ def test_conventions_entry_findings_name_each_oversized_section(policy: HandoffP
         if finding.locus == "section entry"
     ]
 
+    # One redacted finding per oversized section: the heading line and the
+    # observed size, never the consumer-authored section name (NFR-002).
     assert [finding.message for finding in findings] == [
-        "section 1. First entry has 1300 chars; max 1200",
-        "section 3. Third entry has 1400 chars; max 1200",
+        "section entry has 1300 chars; max 1200",
+        "section entry has 1400 chars; max 1200",
     ]
     assert [finding.line for finding in findings] == [
         text.splitlines().index("## 1. First") + 1,
         text.splitlines().index("## 3. Third") + 1,
     ]
     assert [finding.observed for finding in findings] == [1300, 1400]
+
+
+def test_conventions_entry_finding_redacts_the_section_heading(policy: HandoffPolicy) -> None:
+    secret = "sk-live-consumer-heading"
+    text = "## Quick Reference\n\n- Short.\n\n" + f"## 1. {secret}\n\n" + ("x" * 1300) + "\n"
+
+    findings = check_document("docs/handoff/conventions.md", text, policy)
+
+    entry = next(finding for finding in findings if finding.locus == "section entry")
+    assert entry.observed == 1300
+    assert entry.limit == 1200
+    assert entry.line == text.splitlines().index(f"## 1. {secret}") + 1
+    assert all(secret not in finding.message for finding in findings)
+    assert all(secret not in str(finding.to_dict()) for finding in findings)
 
 
 def test_conventions_entry_size_excludes_fenced_examples(policy: HandoffPolicy) -> None:
