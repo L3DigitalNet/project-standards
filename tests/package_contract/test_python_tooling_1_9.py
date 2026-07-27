@@ -16,6 +16,7 @@ from project_standards.control_plane.migration import MigratedPackage
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
+from project_standards.package_contract.paths import PackageVersion
 from project_standards.package_contract.payload import (
     AdapterKind,
     JsonObject,
@@ -51,6 +52,21 @@ def _family_version_roots() -> dict[str, Path]:
     return {
         cast(str, version["version"]): _FAMILY / Path(cast(str, version["payload"])).parent
         for version in versions
+    }
+
+
+def _predecessor_roots() -> dict[str, Path]:
+    """Return only the family versions released before 1.9.
+
+    Successors sort after 1.9 numerically but before it lexicographically
+    ("1.10" < "1.9" as text), so the filter must compare numeric components or a
+    later payload is misread as a predecessor of the version under test.
+    """
+    current = PackageVersion("1.9").sort_key
+    return {
+        version: root
+        for version, root in _family_version_roots().items()
+        if PackageVersion(version).sort_key < current
     }
 
 
@@ -92,6 +108,9 @@ def _qualifies_for_performance_transform(
 
 
 def _qualifying_predecessors() -> set[str]:
+    # Scanning every other indexed version (not only the numeric predecessors) is
+    # deliberate: a successor that reintroduced a qualifying default would then
+    # surface here as an unexpected migration edge instead of passing silently.
     qualifiers: set[str] = set()
     for version, root in _family_version_roots().items():
         if version == "1.9":
@@ -393,9 +412,7 @@ def test_python_tooling_1_9__legacy_v4_migration__preserves_effective_performanc
 
 
 def test_python_tooling_1_9__family_predecessors__directly_declare_qualifying_default() -> None:
-    predecessors = {
-        version: root for version, root in _family_version_roots().items() if version != "1.9"
-    }
+    predecessors = _predecessor_roots()
 
     for root in predecessors.values():
         payload = _payload(root)
