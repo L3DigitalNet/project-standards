@@ -99,7 +99,10 @@ def _check_frontmatter(doc: SpecDocument, reg: Registry) -> list[Finding]:
 def _check_sections(doc: SpecDocument, reg: Registry, structural_body: str) -> list[Finding]:
     out: list[Finding] = []
     for n, ln in doc.sections:
-        if n not in reg.canonical_sections:
+        # The registry governs the top-level ladder; authors own the numbering beneath
+        # it, so a subsection is accepted whenever its top-level parent is canonical.
+        # Same parent-number fallback _check_references applies to § cross-references.
+        if n not in reg.canonical_sections and n.split(".")[0] not in reg.canonical_sections:
             out.append(
                 _f("SV-SECTION", f"§{n} is not in the canonical registry", line=ln, locus=f"§{n}")
             )

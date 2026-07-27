@@ -106,6 +106,53 @@ def test_validate_lines_are_absolute_file_coordinates() -> None:
     assert section.line == 8
 
 
+def _standard_with(anchor: str, addition: str) -> str:
+    source = (_FIX / "valid_standard.md").read_text(encoding="utf-8")
+    assert anchor in source
+    return source.replace(anchor, anchor + addition, 1)
+
+
+@pytest.mark.parametrize(
+    ("anchor", "addition"),
+    [
+        ("## 9. Data Model\n", "\n### 9.1 Lifecycle Receipt\n\nReceipt details.\n"),
+        ("## 9. Data Model\n", "\n### 9.2 Stable Projection\n\nProjection details.\n"),
+        ("## 11. UI Pages / API Endpoints\n", "\n### 11.1 Console Surface\n\nSurface details.\n"),
+    ],
+)
+def test_author_numbered_subsection_under_canonical_parent_passes(
+    anchor: str, addition: str
+) -> None:
+    doc = parse_document("subsections.md", _standard_with(anchor, addition))
+
+    assert validate_document(doc, load_registry()) == []
+
+
+def test_numbered_subsection_under_unknown_parent_is_still_rejected() -> None:
+    doc = parse_document(
+        "unknown-parent.md",
+        "---\nspec_id: SPEC-0001\nprofile: light\nstatus: draft\n---\n"
+        "# Demo\n\n## 999. Unknown\n\n### 999.1 Child\n",
+    )
+
+    loci = {f.locus for f in validate_document(doc, load_registry()) if f.code == "SV-SECTION"}
+
+    assert loci == {"§999", "§999.1"}
+
+
+def test_subsection_acceptance_does_not_mask_top_level_order() -> None:
+    doc = parse_document(
+        "order.md",
+        "---\nspec_id: SPEC-0001\nprofile: light\nstatus: draft\n---\n"
+        "# Demo\n\n## 7. Requirements\n\n### 7.9 Extra\n\n## 1. Purpose\n",
+    )
+
+    codes = {f.code for f in validate_document(doc, load_registry())}
+
+    assert "SV-ORDER" in codes
+    assert "SV-SECTION" not in codes
+
+
 def test_table_finding_structured_and_embedded_lines_are_absolute() -> None:
     source = (_FIX / "bad_table.md").read_text(encoding="utf-8")
     doc = parse_document("bad_table.md", source)
