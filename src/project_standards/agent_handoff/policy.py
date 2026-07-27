@@ -477,22 +477,29 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                     )
                 )
 
-    if config.max_paragraph_chars is not None:
-        for paragraph in _paragraphs(all_lines):
-            observed = len(paragraph.text.strip())
-            if observed > config.max_paragraph_chars:
-                findings.append(
-                    _finding(
-                        path,
-                        severity,
-                        f"paragraph exceeds its configured character limit; max {config.max_paragraph_chars}",
-                        locus="document paragraph",
-                        line=paragraph.number,
-                        column=paragraph.column,
-                        observed=observed,
-                        limit=config.max_paragraph_chars,
-                    )
+    # `shape.defaults` is the schema-level fallback table. The payload provider
+    # resolves this option as document-rule-then-default, so the engine has to as
+    # well: without the fallback a defaults-sourced limit left the engine with
+    # nothing to compare against, and the dual-checked path degraded the provider's
+    # finding to unlocated generic prose (issue #71). `max_bullet_chars` above
+    # already resolves this way; a zero limit is impossible because both fields
+    # are constrained positive.
+    max_paragraph_chars = config.max_paragraph_chars or policy.shape.defaults.max_paragraph_chars
+    for paragraph in _paragraphs(masked_lines):
+        observed = len(paragraph.text.strip())
+        if observed > max_paragraph_chars:
+            findings.append(
+                _finding(
+                    path,
+                    severity,
+                    f"paragraph exceeds its configured character limit; max {max_paragraph_chars}",
+                    locus="document paragraph",
+                    line=paragraph.number,
+                    column=paragraph.column,
+                    observed=observed,
+                    limit=max_paragraph_chars,
                 )
+            )
     if config.require_quick_reference and not any(
         section.casefold() == "quick reference" for section in sections
     ):
@@ -504,7 +511,15 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                 locus="required section",
             )
         )
-    if config.require_tables_or_bullets and not _bullets(all_lines) and not _table_lines(all_lines):
+    # Structure, rule-summary, row, and headline checks all read the masked view:
+    # a bullet or table row that only exists inside a fenced example is example
+    # text, not document structure, and the payload provider scores it that way
+    # (issue #73).
+    if (
+        config.require_tables_or_bullets
+        and not _bullets(masked_lines)
+        and not _table_lines(masked_lines)
+    ):
         findings.append(
             _finding(
                 path,
@@ -538,7 +553,7 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
             )
         )
     if config.max_rule_summary_chars is not None:
-        for line in _table_lines(all_lines):
+        for line in _table_lines(masked_lines):
             cells = [cell.strip() for cell in line.text.strip().strip("|").split("|")]
             if (
                 len(cells) >= 2

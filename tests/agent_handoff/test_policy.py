@@ -140,6 +140,77 @@ def test_todo_required_order_is_fatal(policy: HandoffPolicy) -> None:
     assert all(finding.severity == "error" for finding in findings)
 
 
+# `docs/handoff/deployed.md` declares no `max_paragraph_chars`, so it exercises
+# the `shape.defaults` fallback; `docs/handoff/architecture.md` declares 420 and
+# exercises the explicit entry. Both are advisory profiles.
+_OVER_BOTH_LIMITS = "# Heading\n\n" + ("x" * 430) + "\n"
+
+
+def test_defaults_sourced_paragraph_limit_enriches_like_an_explicit_limit(
+    policy: HandoffPolicy,
+) -> None:
+    defaulted = next(
+        finding
+        for finding in check_document("docs/handoff/deployed.md", _OVER_BOTH_LIMITS, policy)
+        if finding.locus == "document paragraph"
+    )
+    explicit = next(
+        finding
+        for finding in check_document("docs/handoff/architecture.md", _OVER_BOTH_LIMITS, policy)
+        if finding.locus == "document paragraph"
+    )
+
+    assert defaulted.message == "paragraph exceeds its configured character limit; max 360"
+    assert defaulted.limit == 360
+    assert explicit.limit == 420
+    assert (defaulted.line, defaulted.column, defaulted.observed) == (3, 1, 430)
+    assert (defaulted.line, defaulted.column, defaulted.observed) == (
+        explicit.line,
+        explicit.column,
+        explicit.observed,
+    )
+
+
+def test_explicit_paragraph_limit_overrides_the_shape_default(policy: HandoffPolicy) -> None:
+    text = "# Heading\n\n" + ("x" * 400) + "\n"
+
+    findings = check_document("docs/handoff/architecture.md", text, policy)
+
+    assert not [finding for finding in findings if finding.locus == "document paragraph"]
+
+
+def test_paragraph_limit_reads_the_masked_view(policy: HandoffPolicy) -> None:
+    # An info string never closes a fence, so the long line stays example content
+    # and is exempt here exactly as it is for every other masked rule.
+    text = "# Heading\n\n```text\n```python\n" + ("x" * 430) + "\n```\n"
+
+    findings = check_document("docs/handoff/architecture.md", text, policy)
+
+    assert not [finding for finding in findings if finding.locus == "document paragraph"]
+
+
+def test_require_tables_or_bullets_ignores_fenced_structure(policy: HandoffPolicy) -> None:
+    text = "# Deployed\n\n```text\n- Fenced bullet.\n| Component | State |\n```\n"
+
+    findings = check_document("docs/handoff/deployed.md", text, policy)
+
+    assert [finding.message for finding in findings if finding.locus == "document structure"] == [
+        "document requires tables or bullets"
+    ]
+
+
+@pytest.mark.parametrize(
+    "structure",
+    ["- A real bullet.", "| Component | State |"],
+)
+def test_require_tables_or_bullets_accepts_unfenced_structure(
+    policy: HandoffPolicy, structure: str
+) -> None:
+    findings = check_document("docs/handoff/deployed.md", f"# Deployed\n\n{structure}\n", policy)
+
+    assert not [finding for finding in findings if finding.locus == "document structure"]
+
+
 def test_conventions_profile_checks_quick_reference_and_entry_lengths(
     policy: HandoffPolicy,
 ) -> None:
@@ -208,6 +279,36 @@ def test_conventions_entry_size_excludes_fenced_examples(policy: HandoffPolicy) 
     assert not [finding for finding in findings if finding.locus == "section entry"]
 
 
+_OVERLONG_SUMMARY_ROW = f"| 1 | {'x' * 181} |"
+
+
+def test_rule_summary_cap_ignores_fenced_table_rows(policy: HandoffPolicy) -> None:
+    text = (
+        "## Quick Reference\n\n- Short.\n\n"
+        "## 1. Worked example\n\n"
+        f"```text\n{_OVERLONG_SUMMARY_ROW}\n```\n"
+    )
+
+    findings = check_document("docs/handoff/conventions.md", text, policy)
+
+    assert not [finding for finding in findings if finding.locus == "rule summary cell"]
+
+
+def test_rule_summary_cap_still_flags_an_unfenced_table_row(policy: HandoffPolicy) -> None:
+    text = (
+        "## Quick Reference\n\n- Short.\n\n## 1. Worked example\n\n" + _OVERLONG_SUMMARY_ROW + "\n"
+    )
+
+    finding = next(
+        item
+        for item in check_document("docs/handoff/conventions.md", text, policy)
+        if item.locus == "rule summary cell"
+    )
+
+    assert (finding.observed, finding.limit) == (181, 180)
+    assert finding.line == text.splitlines().index(_OVERLONG_SUMMARY_ROW) + 1
+
+
 def test_session_profile_checks_row_and_headline(policy: HandoffPolicy) -> None:
     headline = " ".join(f"word{i}" for i in range(21))
     text = f"| 2026-07-09 | {headline} | {'x' * 221} |\n"
@@ -222,7 +323,10 @@ def test_session_profile_checks_row_and_headline(policy: HandoffPolicy) -> None:
 
 
 def test_session_row_and_headline_caps_skip_non_table_lines(policy: HandoffPolicy) -> None:
-    prose = " ".join(f"word{index}" for index in range(80))
+    # Prose sits above `row_max_chars` (220) but below the `shape.defaults`
+    # paragraph limit (360), so the whole-document assertion below stays about
+    # the row/headline caps and does not also exercise the paragraph rule.
+    prose = " ".join(f"word{index}" for index in range(40))
     text = (
         "# Sessions\n\n"
         "| Date | Summary | Evidence |\n| --- | --- | --- |\n"
@@ -234,7 +338,7 @@ def test_session_row_and_headline_caps_skip_non_table_lines(policy: HandoffPolic
         "```\n"
     )
 
-    assert len(prose) > 220
+    assert 220 < len(prose) <= 360
 
     assert check_document("docs/handoff/sessions/2026-07.md", text, policy) == ()
 
