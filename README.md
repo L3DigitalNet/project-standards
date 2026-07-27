@@ -142,7 +142,7 @@ The version command must report `project-standards 5.9.0`. V5 consumers use one 
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.5
+project-standards standards enable markdown-frontmatter --version 1.6
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -255,6 +255,7 @@ Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/READ
 ```bash
 uv sync --dev                                                # set up the environment
 uv run ruff format --check . && uv run ruff check . && uv run basedpyright
+uv run project-standards standards sync-payload-projection --root . # required before the build
 uv build --wheel --out-dir dist
 python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
 export PYTHONPATH="$PWD/build/wheel-runtime"
@@ -267,6 +268,8 @@ uv run coverage report
 uv run pip-audit
 uv run project-standards validate                              # dogfood: schema, id, and references
 ```
+
+Run `sync-payload-projection` before `uv build --wheel`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
 
 ## License
 

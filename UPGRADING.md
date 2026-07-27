@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for migrating a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-22'
+updated: '2026-07-27'
 tags:
   - 'migration'
   - 'upgrade'
