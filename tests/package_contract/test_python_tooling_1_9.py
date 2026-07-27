@@ -593,7 +593,7 @@ def test_python_tooling_1_9__same_change_successor_options__remain_sparse() -> N
 
 
 # TC-T8-004
-def test_python_tooling_1_9__package_registration__preserves_1_8_and_root_default() -> None:
+def test_python_tooling_1_9__package_registration__activates_1_9_and_retains_1_8() -> None:
     predecessor = _payload(_V18)
     successor = _payload(_V19)
 
@@ -610,13 +610,15 @@ def test_python_tooling_1_9__package_registration__preserves_1_8_and_root_defaul
     assert successor.integrity.aggregate_digest.value in family
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     entries = [entry for entry in catalog["packages"] if entry["id"] == "python-tooling"]
-    assert [entry["version"] for entry in entries if entry["role"] == "default"] == ["1.8"]
-    assert "1.9" not in {entry["version"] for entry in entries}
+    roles = {entry["version"]: entry["role"] for entry in entries}
+    assert roles[successor.manifest.payload.version.value] == "default"
+    assert roles[predecessor.manifest.payload.version.value] == "retained"
     generated_catalog = (_ROOT / "standards/catalog.md").read_text(encoding="utf-8")
+    current_version = successor.manifest.payload.version.value
     assert (
         generated_catalog.count(
-            "| [`python-tooling`](python-tooling/README.md) | active | 1.9 | "
-            "unadvertised | consumer |"
+            "| [`python-tooling`](python-tooling/README.md) | active | "
+            f"{current_version} | {roles[current_version]} | consumer |"
         )
         == 1
     )

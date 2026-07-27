@@ -13,12 +13,12 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.1 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.2 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.3 | retained | consumer | 29 | 8 | 18 |
-| [`agent-handoff`](agent-handoff/README.md) | active | 1.4 | default | consumer | 29 | 8 | 18 |
-| [`agent-handoff`](agent-handoff/README.md) | active | 1.5 | unadvertised | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.4 | retained | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.5 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.2 | retained | consumer | 13 | 3 | 1 |
-| [`cli-documentation`](cli-documentation/README.md) | active | 1.3 | default | consumer | 13 | 3 | 1 |
-| [`cli-documentation`](cli-documentation/README.md) | active | 1.4 | unadvertised | consumer | 14 | 4 | 1 |
+| [`cli-documentation`](cli-documentation/README.md) | active | 1.3 | retained | consumer | 13 | 3 | 1 |
+| [`cli-documentation`](cli-documentation/README.md) | active | 1.4 | default | consumer | 14 | 4 | 1 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.2 | retained | consumer | 29 | 5 | 8 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |
@@ -29,8 +29,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.5 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.6 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.7 | retained | consumer | 17 | 6 | 25 |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.8 | default | consumer | 17 | 6 | 25 |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.9 | unadvertised | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.8 | retained | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.9 | default | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.2 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.3 | retained | consumer | 23 | 9 | 1 |
@@ -44,15 +44,15 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`python-tooling`](python-tooling/README.md) | active | 1.5 | retained | consumer | 13 | 3 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.6 | retained | consumer | 13 | 3 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.7 | retained | consumer | 13 | 3 | 63 |
-| [`python-tooling`](python-tooling/README.md) | active | 1.8 | default | consumer | 13 | 3 | 63 |
-| [`python-tooling`](python-tooling/README.md) | active | 1.9 | unadvertised | consumer | 15 | 4 | 63 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.8 | retained | consumer | 13 | 3 | 63 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.9 | default | consumer | 15 | 4 | 63 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.1 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.2 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.3 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.4 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.5 | internal | internal | 12 | 0 | 0 |
-| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.6 | unadvertised | internal | 12 | 0 | 0 |
+| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.6 | internal | internal | 12 | 0 | 0 |
 
 ## Capabilities
 

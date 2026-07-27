@@ -31,6 +31,9 @@ from project_standards.control_plane.planner import plan_reconciliation
 
 _REPO = Path(__file__).resolve().parent.parent
 _BUNDLES = _REPO / "src" / "project_standards" / "bundles"
+_CURRENT_MARKDOWNLINT = (
+    _REPO / "standards/markdown-tooling/versions/1.9/artifacts/markdownlint.json"
+)
 FROZEN_V1_CHECK_DIGEST = "2dd6b7c11db910458add9696ade9b37c9f5ae4e23004da5333b52e3669bd15e5"
 
 
@@ -53,7 +56,6 @@ def use_legacy_adopt_route(monkeypatch: pytest.MonkeyPatch) -> None:
 _DOGFOOD = {
     "_shared/editorconfig": ".editorconfig",
     "_shared/vscode-extensions.json": ".vscode/extensions.json",
-    "markdown-tooling/markdownlint.json": ".markdownlint.json",
     "markdown-tooling/prettierrc.json": ".prettierrc.json",
     # ADR bundle template ↔ its canonical copy under standards/ (guards silent drift —
     # the project-spec templates have the analogous guard in test_spec_packaging.py).
@@ -81,6 +83,7 @@ _DOGFOOD = {
 def test_dogfoodable_templates_match_repo_root_byte_for_byte() -> None:
     for bundle_rel, root_rel in _DOGFOOD.items():
         assert (_BUNDLES / bundle_rel).read_bytes() == (_REPO / root_rel).read_bytes(), bundle_rel
+    assert _CURRENT_MARKDOWNLINT.read_bytes() == (_REPO / ".markdownlint.json").read_bytes()
 
 
 def _sha256(path: Path) -> str:

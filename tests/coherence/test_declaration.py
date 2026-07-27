@@ -16,16 +16,23 @@ def _load(name: str) -> dict[str, Any]:
 
 
 def test_shipped_configs_conform() -> None:
-    assert check_conformance(_load(".markdownlint.json"), _load(".prettierrc.json")) == []
+    assert (
+        check_conformance(
+            _load(".markdownlint.json"),
+            _load(".prettierrc.json"),
+            profile="successor",
+        )
+        == []
+    )
 
 
-def test_staged_successor_configs_conform() -> None:
+def test_activated_successor_configs_conform() -> None:
     markdownlint = _load("standards/markdown-tooling/versions/1.9/resources/markdownlint.json")
     prettier = _load("standards/markdown-tooling/versions/1.9/resources/prettierrc.json")
     assert check_conformance(markdownlint, prettier, profile="successor") == []
 
 
-def test_staged_successor_rejects_predecessor_table_profile() -> None:
+def test_activated_successor_rejects_predecessor_table_profile() -> None:
     markdownlint = _load("standards/markdown-tooling/versions/1.9/resources/markdownlint.json")
     markdownlint["MD060"] = {"style": "any", "aligned_delimiter": False}
     prettier = _load("standards/markdown-tooling/versions/1.9/resources/prettierrc.json")

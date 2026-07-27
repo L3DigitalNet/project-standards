@@ -139,7 +139,7 @@ def test_markdown_tooling_1_9__safety_change__preserves_released_inputs() -> Non
     }
 
 
-def test_markdown_tooling_1_9__successor__remains_staged_and_uncatalogued() -> None:
+def test_markdown_tooling_1_9__successor__is_default_and_retains_predecessor() -> None:
     successor_manifest = load_payload_manifest(_V19 / "payload.toml")
     successor = validate_payload_integrity(_V19, successor_manifest)
     family = load_family_manifest(_FAMILY / "standard.toml")
@@ -151,6 +151,6 @@ def test_markdown_tooling_1_9__successor__remains_staged_and_uncatalogued() -> N
 
     catalog = load_catalog_source(_ROOT / "catalogs/5.toml")
     entries = [entry for entry in catalog.packages if entry.id == "markdown-tooling"]
-    assert all(entry.version.value != "1.9" for entry in entries)
-    default = next(entry for entry in entries if entry.role.value == "default")
-    assert default.version.value == "1.8"
+    roles = {entry.version.value: entry.role.value for entry in entries}
+    assert roles[successor_manifest.payload.version.value] == "default"
+    assert roles[_V18.name] == "retained"

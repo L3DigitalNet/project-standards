@@ -6,13 +6,13 @@ This directory is the durable home for Project Specification Standard documents 
 
 | Specification | Status | Role |
 | --- | --- | --- |
-| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved and locked rev 1.3; Opus spec review converged; complete historical contract | Historical Step 07 contract plus current 5.8.0 successor-state reconciliation |
+| [SPEC-MT01 — Meta-Repository MCP Readiness](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) | approved and locked rev 1.4; Opus spec review converged; complete historical contract | Historical Step 07 contract plus current 5.9.0 successor-state reconciliation |
 | [SPEC-RD01 — MCP Enablement Roadmap](2026-07-07-project-standards-mcp-enablement-roadmap-spec.md) | approved and locked rev 1.5; Opus spec and plan reviews converged | Completed Step 08 documentation gate and Step 09-through-18 sequencing |
-| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | approved and locked rev 1.1; Opus spec review converged; implementation not started | SDK-independent services plus thin local read-only stdio adapter; implementation not started |
+| [SPEC-MS01 — MCP Server Implementation](2026-07-07-project-standards-mcp-server-implementation-spec.md) | approved and locked rev 1.2; Opus spec review converged; implementation not started | SDK-independent services plus thin local read-only stdio adapter; implementation not started |
 | [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.6; implementation complete; retirement pending | V1 baseline plus accepted Catalog 5 package `1.1` supersession and Task 18 retirement gates |
 | [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.13; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
-| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.13; implemented | Immutable family/payload authoring contract; FR-028 checklist interpretation clarified without payload changes |
-| [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.3; Opus review converged; T1-T17 authorized under an MCP-hold exception; release unauthorized | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
+| [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.15; implemented | Immutable family/payload authoring contract including bounded direct package-config transforms |
+| [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.12; Opus review converged; T1-T17 authorized under an MCP-hold exception; release unauthorized | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
 
 ## Future maintained specifications
 

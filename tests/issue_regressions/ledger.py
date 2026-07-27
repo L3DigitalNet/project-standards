@@ -6,6 +6,7 @@ import ast
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,8 @@ from pathlib import Path
 from typing import cast
 
 CLOSED_ISSUES = (3, *range(8, 32))
+CURRENT_TRAIN_ISSUES = (32, *range(35, 50))
+ALL_ISSUES = (*CLOSED_ISSUES, *CURRENT_TRAIN_ISSUES)
 _AMENDMENT_FIELDS = frozenset(
     {
         "approved_by",
@@ -32,6 +35,7 @@ _AMENDMENT_FIELDS = frozenset(
 )
 _ALLOWED_ENVIRONMENTS = frozenset({"source", "baseline-wheel", "candidate-wheel"})
 _SHA256_PREFIX = "sha256:"
+_SEMVER = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", re.ASCII)
 _OUTCOME_CHECKS = frozenset({"format", "installed_workflow", "lint", "reconcile", "validate"})
 _OUTCOME_STATUSES = frozenset({"failed", "passed"})
 _REQUIRED_CONSUMER_OUTCOMES = {
@@ -61,6 +65,7 @@ class IssueRow:
     id: str
     number: int
     rationale: str
+    introduced_release: str
     environments: tuple[str, ...]
     references: tuple[str, ...]
     proofs: tuple[Proof, ...]
@@ -428,6 +433,9 @@ def _parse_issue(table: Mapping[str, object], repo: Path, index: int) -> IssueRo
     issue_id = _string(table, "id", label=label)
     if issue_id != f"GH-{number}":
         raise LedgerError(f"{label}.id must be GH-{number}")
+    introduced_release = _string(table, "introduced_release", label=label)
+    if _SEMVER.fullmatch(introduced_release) is None:
+        raise LedgerError(f"{label}.introduced_release must be canonical SemVer")
     references = _strings(table.get("references"), label=f"{label}.references")
     if not references or len(references) != len(set(references)):
         raise LedgerError(f"{label}.references must be nonempty and unique")
@@ -459,6 +467,7 @@ def _parse_issue(table: Mapping[str, object], repo: Path, index: int) -> IssueRo
         id=issue_id,
         number=number,
         rationale=_string(table, "rationale", label=label),
+        introduced_release=introduced_release,
         environments=environments,
         references=references,
         proofs=tuple(proofs),
@@ -716,11 +725,11 @@ def validate_ledger(
     path: Path,
     repo: Path,
     *,
-    expected_issues: Sequence[int] = CLOSED_ISSUES,
+    expected_issues: Sequence[int] = ALL_ISSUES,
 ) -> Ledger:
     """Load the ledger and fail closed on coverage, reference, or proof drift."""
     raw = _load_toml(path)
-    if raw.get("schema_version") != "1.0":
+    if raw.get("schema_version") != "1.1":
         raise LedgerError("unsupported ledger schema_version")
     issue_tables = _tables(raw.get("issues"), label="issues")
     rows = tuple(_parse_issue(table, repo, index) for index, table in enumerate(issue_tables))
@@ -738,6 +747,20 @@ def validate_ledger(
         raise LedgerError("issue rows must be sorted by number")
     _validate_historical_authority(path, repo, rows, issue_tables)
     return Ledger(issues=rows)
+
+
+def references_for_environment(ledger: Ledger, environment: str) -> tuple[str, ...]:
+    """Return each proof reference applicable to an execution environment once."""
+    if environment not in _ALLOWED_ENVIRONMENTS:
+        raise LedgerError(f"unsupported ledger environment {environment!r}")
+    return tuple(
+        dict.fromkeys(
+            reference
+            for row in ledger.issues
+            if environment in row.environments
+            for reference in row.references
+        )
+    )
 
 
 def require_passed_outcomes(

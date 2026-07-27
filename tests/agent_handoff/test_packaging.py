@@ -97,22 +97,32 @@ def test_consumer_docs_use_real_cli_flags_and_repo_indexes() -> None:
     root_readme = (_REPO / "README.md").read_text(encoding="utf-8")
     standards_index = (_REPO / "standards/README.md").read_text(encoding="utf-8")
     package_readme = (_REPO / "src/project_standards/README.md").read_text(encoding="utf-8")
+    authoring = tomllib.loads(
+        (_REPO / "standards/standard-bundle-authoring/standard.toml").read_text(encoding="utf-8")
+    )
+    authoring_version = authoring["versions"][-1]["version"]
 
     assert "--repository" not in adopt
     assert "--repo ." in adopt
     assert "Agent Handoff Standard" in root_readme
     assert "[agent-handoff/]" in standards_index
     assert "project-standards agent-handoff" in package_readme
-    assert "Standard Bundle Authoring 2.5 workflow" in package_readme
-    assert "versions/2.5/README.md" in package_readme
+    assert f"Standard Bundle Authoring {authoring_version} workflow" in package_readme
+    assert f"versions/{authoring_version}/README.md" in package_readme
 
 
 def test_repository_dogfoods_agent_handoff_v5() -> None:
     config = tomllib.loads((_REPO / ".standards/config.toml").read_text(encoding="utf-8"))
+    catalog = tomllib.loads((_REPO / "catalogs/5.toml").read_text(encoding="utf-8"))
     lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
     claude = (_REPO / ".claude/settings.json").read_text(encoding="utf-8")
     codex = (_REPO / ".codex/config.toml").read_text(encoding="utf-8")
     prettier_ignores = set((_REPO / ".prettierignore").read_text(encoding="utf-8").splitlines())
+    default_version = next(
+        package["version"]
+        for package in catalog["packages"]
+        if package["id"] == "agent-handoff" and package["role"] == "default"
+    )
 
     assert config["standards"]["agent-handoff"] == {
         "enabled": True,
@@ -123,7 +133,7 @@ def test_repository_dogfoods_agent_handoff_v5() -> None:
             "harnesses": ["claude-code", "codex"],
         },
     }
-    assert lock["standards"]["agent-handoff"]["resolved"] == "1.4"
+    assert lock["standards"]["agent-handoff"]["resolved"] == default_version
     assert not (_REPO / ".agents/agent-handoff/manifest.json").exists()
     assert (_REPO / ".agents/hooks/agent-handoff/session_start.py").read_bytes() == (
         _V2_MANAGED / "hook.py"

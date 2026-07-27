@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.issue_regressions import ledger as ledger_module
 from tests.issue_regressions.ledger import (
     CLOSED_ISSUES,
     ConsumerOutcome,
@@ -27,6 +28,19 @@ from tests.issue_regressions.ledger import (
 _ROOT = Path(__file__).resolve().parents[2]
 _LEDGER = Path(__file__).with_name("ledger.toml")
 _BASELINE = Path(__file__).with_name("baseline.toml")
+_INTRODUCED_RELEASES = {
+    3: "4.2.0",
+    8: "5.1.1",
+    **dict.fromkeys(range(9, 12), "5.2.0"),
+    **dict.fromkeys(range(12, 14), "5.3.0"),
+    **dict.fromkeys(range(14, 16), "5.4.0"),
+    **dict.fromkeys(range(16, 20), "5.5.0"),
+    **dict.fromkeys(range(20, 24), "5.6.0"),
+    **dict.fromkeys(range(24, 26), "5.7.0"),
+    **dict.fromkeys(range(26, 32), "5.8.0"),
+    32: "5.9.0",
+    **dict.fromkeys(range(35, 50), "5.9.0"),
+}
 
 
 def _write_proof(repo: Path, body: str = "assert True") -> str:
@@ -38,12 +52,13 @@ def _write_proof(repo: Path, body: str = "assert True") -> str:
 
 def _ledger_text(reference: str, digest: str, *, number: int = 3) -> str:
     return f"""
-schema_version = "1.0"
+schema_version = "1.1"
 
 [[issues]]
 id = "GH-{number}"
 number = {number}
 rationale = "durable behavior contract"
+introduced_release = "5.9.0"
 environments = ["source"]
 references = ["{reference}"]
 amendments = []
@@ -54,10 +69,98 @@ digest = "{digest}"
 """
 
 
+def test_ledger_schema_1_1_loads_canonical_introduced_release(tmp_path: Path) -> None:
+    reference = _write_proof(tmp_path)
+    ledger_path = tmp_path / "ledger.toml"
+    ledger_path.write_text(
+        _ledger_text(reference, symbol_digest(tmp_path, reference)),
+        encoding="utf-8",
+    )
+
+    ledger = validate_ledger(ledger_path, tmp_path, expected_issues=(3,))
+
+    assert ledger.issues[0].introduced_release == "5.9.0"
+
+
+@pytest.mark.parametrize(
+    "introduced_release",
+    [
+        pytest.param(None, id="missing"),
+        pytest.param("1.0", id="missing-patch"),
+        pytest.param("01.0.0", id="leading-zero"),
+        pytest.param("1.0.0-alpha", id="prerelease"),
+        pytest.param(" 1.0.0", id="leading-space"),
+    ],
+)
+def test_ledger_schema_1_1_rejects_noncanonical_introduced_release(
+    tmp_path: Path,
+    introduced_release: str | None,
+) -> None:
+    reference = _write_proof(tmp_path)
+    text = _ledger_text(reference, symbol_digest(tmp_path, reference))
+    if introduced_release is None:
+        text = text.replace('introduced_release = "5.9.0"\n', "")
+    else:
+        text = text.replace("5.9.0", introduced_release)
+    ledger_path = tmp_path / "ledger.toml"
+    ledger_path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(LedgerError, match="introduced_release"):
+        validate_ledger(ledger_path, tmp_path, expected_issues=(3,))
+
+
 def test_seed_ledger_covers_every_closed_issue_and_resolves_every_proof() -> None:
-    ledger = validate_ledger(_LEDGER, _ROOT, expected_issues=CLOSED_ISSUES)
-    assert tuple(row.number for row in ledger.issues) == CLOSED_ISSUES
-    assert all(row.references and row.proofs for row in ledger.issues)
+    ledger = validate_ledger(_LEDGER, _ROOT)
+    seed = tuple(row for row in ledger.issues if "baseline-wheel" in row.environments)
+
+    assert tuple(row.number for row in seed) == CLOSED_ISSUES
+    assert all(row.references and row.proofs for row in seed)
+
+
+def test_candidate_ledger_covers_seed_and_current_train_with_release_history() -> None:
+    ledger = validate_ledger(
+        _LEDGER,
+        _ROOT,
+        expected_issues=ledger_module.ALL_ISSUES,
+    )
+
+    assert tuple(row.number for row in ledger.issues) == ledger_module.ALL_ISSUES
+    assert {row.number: row.introduced_release for row in ledger.issues} == (_INTRODUCED_RELEASES)
+    assert (
+        tuple(row.number for row in ledger.issues if "baseline-wheel" in row.environments)
+        == CLOSED_ISSUES
+    )
+    assert (
+        tuple(
+            row.number for row in ledger.issues if row.number in ledger_module.CURRENT_TRAIN_ISSUES
+        )
+        == ledger_module.CURRENT_TRAIN_ISSUES
+    )
+
+
+def test_environment_references_select_only_applicable_rows() -> None:
+    ledger = validate_ledger(
+        _LEDGER,
+        _ROOT,
+        expected_issues=ledger_module.ALL_ISSUES,
+    )
+
+    baseline = ledger_module.references_for_environment(ledger, "baseline-wheel")
+    candidate = ledger_module.references_for_environment(ledger, "candidate-wheel")
+    source = ledger_module.references_for_environment(ledger, "source")
+
+    assert baseline
+    assert set(baseline) < set(candidate)
+    assert candidate == source
+
+
+def test_committed_source_issue_references_all_pass() -> None:
+    ledger = validate_ledger(_LEDGER, _ROOT)
+    references = ledger_module.references_for_environment(ledger, "source")
+
+    outcomes = run_references(_ROOT, references)
+
+    require_passed_outcomes(references, outcomes)
 
 
 @pytest.mark.parametrize(
@@ -81,7 +184,7 @@ def test_ledger_rejects_missing_duplicate_dangling_and_unexplained_rows(
     if mutation == "missing":
         expected = (3, 8)
     elif mutation == "duplicate":
-        text += _ledger_text(reference, digest).replace('schema_version = "1.0"', "")
+        text += _ledger_text(reference, digest).replace('schema_version = "1.1"', "")
     elif mutation == "dangling":
         text = text.replace("tests/test_proof.py::test_proof", "tests/test_proof.py::missing")
     else:
@@ -423,7 +526,7 @@ def test_predecessor_authority_allows_additions_but_rejects_mutation_or_deletion
 
 
 def test_committed_baseline_authority_matches_v5_8_0_release_and_node_pins() -> None:
-    validate_ledger(_LEDGER, _ROOT, expected_issues=CLOSED_ISSUES)
+    validate_ledger(_LEDGER, _ROOT)
 
     baseline = validate_baseline(_BASELINE, _ROOT)
     assert baseline.release == "5.8.0"

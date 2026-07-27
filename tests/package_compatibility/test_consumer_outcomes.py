@@ -27,6 +27,7 @@ from project_standards.control_plane.config_edit import (
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.planner import plan_reconciliation
+from project_standards.package_contract.catalog import CatalogRole
 from tests.issue_regressions.ledger import ConsumerOutcome, validate_baseline
 from tests.issue_regressions.tool_oracle import (
     format_with_prettier,
@@ -106,6 +107,19 @@ def _materialize_track(
 
     lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
     assert lock.standards[authority.standard_id].resolved.value == expected
+
+
+def _catalog_default_version(
+    distribution: InstalledDistribution,
+    standard_id: str,
+) -> str:
+    defaults = [
+        entry.version.value
+        for entry in distribution.load_catalog("5").source.packages
+        if entry.id == standard_id and entry.role is CatalogRole.DEFAULT
+    ]
+    assert len(defaults) == 1
+    return defaults[0]
 
 
 def _caller_job(path: Path, name: str) -> dict[str, Any]:
@@ -200,9 +214,10 @@ def test_consumer_outcomes__exact_and_default_tracks__match_baseline_authority(
     authority: ConsumerOutcome,
 ) -> None:
     distribution = _active_distribution(source_payload_distribution)
+    latest = _catalog_default_version(distribution, authority.standard_id)
     tracks = (
         ("exact", authority.predecessor, authority.predecessor, authority.exact_checks),
-        ("latest", "latest", authority.latest, authority.latest_checks),
+        ("latest", "latest", latest, authority.latest_checks),
     )
 
     for name, selector, expected, expected_checks in tracks:

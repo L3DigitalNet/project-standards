@@ -82,6 +82,11 @@ def _consumer(
     return repo
 
 
+def _selected_agent_handoff_version(repo: Path) -> str:
+    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    return lock.standards["agent-handoff"].resolved.value
+
+
 def test_unified_validate_uses_selected_provider(
     tmp_path: Path,
     distribution: InstalledDistribution,
@@ -100,7 +105,7 @@ def test_unified_validate_uses_selected_provider(
 
     assert run(["validate", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["standard_version"] == "1.4"
+    assert report["standard_version"] == _selected_agent_handoff_version(repo)
     assert report["findings"] == []
 
 
@@ -109,7 +114,7 @@ def test_selected_predecessor_provider_redacts_and_locates_missing_link(
     distribution: InstalledDistribution,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    repo = _consumer(tmp_path, distribution)
+    repo = _consumer(tmp_path, distribution, version="1.4")
     state = repo / "docs/handoff/state.md"
     secret_target = "docs/sk-live-consumer-secret.md"
     secret_heading = "sk-live-consumer-heading"
@@ -143,7 +148,7 @@ def test_selected_predecessor_provider_enriches_size_measure_and_limit(
     distribution: InstalledDistribution,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    repo = _consumer(tmp_path, distribution)
+    repo = _consumer(tmp_path, distribution, version="1.4")
     (repo / "docs/handoff/state.md").write_text("x" * 2050, encoding="utf-8")
 
     assert run(["size-report", "--repo", str(repo), "--json"], distribution=distribution) == 1
@@ -189,7 +194,7 @@ def test_selected_provider_preserves_structural_fields_in_json_and_text(
         code="AH-SHAPE",
         severity="error",
         standard_id="agent-handoff",
-        version="1.4",
+        version=_selected_agent_handoff_version(repo),
         path="docs/TODO.md",
         identity="shape",
         message="bullet exceeds its configured character limit",
@@ -622,7 +627,7 @@ def test_agent_handoff_1_2_selected_provider_normalizes_link_targets(
     report = json.loads(capsys.readouterr().out)
     references = [item for item in report["findings"] if item["code"] == "AH-REFERENCE-MISSING"]
 
-    assert report["standard_version"] == "1.4"
+    assert report["standard_version"] == _selected_agent_handoff_version(repo)
     assert [(item["path"], item["locus"]) for item in references] == [
         ("docs/handoff/architecture.md", "Markdown link"),
         ("docs/handoff/architecture.md", "Markdown link"),
@@ -663,7 +668,7 @@ def test_unified_legacy_report_serializes_platform_evidence_through_provider(
     assert run(["legacy-report", "--repo", str(repo), "--json"], distribution=distribution) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["findings"][0]["code"] == "AH-LEGACY-ROOT-STATUS"
-    assert report["standard_version"] == "1.4"
+    assert report["standard_version"] == _selected_agent_handoff_version(repo)
 
 
 @pytest.mark.parametrize(

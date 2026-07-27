@@ -85,15 +85,15 @@ ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` �
 
 The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/` layout, Ruff, basedpyright (strict), pytest + coverage (branch), pip-audit, a one-command verification gate, CI, and bounded VS Code / agent-instruction contributions. The V5 package composes these surfaces through the unified executor and preserves explicit repository toolchain intent during migration.
 
-- **Standard:** [`standards/python-tooling/versions/1.8/README.md`](standards/python-tooling/versions/1.8/README.md)
-- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.8/adopt.md)
+- **Standard:** [`standards/python-tooling/versions/1.9/README.md`](standards/python-tooling/versions/1.9/README.md)
+- **Adopt:** [`adopt.md`](standards/python-tooling/versions/1.9/adopt.md)
 
 ### Markdown Tooling Standard
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.8/README.md`](standards/markdown-tooling/versions/1.8/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.8/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.9/README.md`](standards/markdown-tooling/versions/1.9/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.9/adopt.md)
 
 ### Project Specification Standard
 
@@ -106,16 +106,16 @@ Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed I
 
 User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
-- **Standard:** [`standards/cli-documentation/versions/1.3/README.md`](standards/cli-documentation/versions/1.3/README.md)
-- **Templates:** [`templates/`](standards/cli-documentation/versions/1.3/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.3/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.3/adopt.md)
+- **Standard:** [`standards/cli-documentation/versions/1.4/README.md`](standards/cli-documentation/versions/1.4/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/versions/1.4/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.4/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.4/adopt.md)
 
 ### Agent Handoff Standard
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.4/README.md`](standards/agent-handoff/versions/1.4/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.4/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.4/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.4/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.5/README.md`](standards/agent-handoff/versions/1.5/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.5/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.5/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.5/resources/legacy-migration.md)
 
 ### Python Coding Standard (draft)
 
@@ -125,20 +125,20 @@ Code-shape and agent-behavior rules for Python — the reference companion to Py
 
 ### Standard Bundle Authoring Standard (internal/reference)
 
-The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.5`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
+The "standard for standards" — the V2 family/payload/catalog contract every package declares: immutable releases, option schemas, channels, relationships, resources, providers, migrations, semantic ownership, and integrity. **Internal package `2.6`:** its family availability and catalog role are `internal`, so it governs this repository and is not consumer-selectable.
 
-- **Standard:** [`standards/standard-bundle-authoring/versions/2.5/README.md`](standards/standard-bundle-authoring/versions/2.5/README.md)
+- **Standard:** [`standards/standard-bundle-authoring/versions/2.6/README.md`](standards/standard-bundle-authoring/versions/2.6/README.md)
 
 ## Consuming the standards
 
-Project Standards 5.8.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
+Project Standards 5.9.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.8.0"
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.9.0"
 project-standards --version
 ```
 
-The version command must report `project-standards 5.8.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.9.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
@@ -166,11 +166,11 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | --- | --- | --- |
 | Markdown Frontmatter | `1.5` | [`standards/markdown-frontmatter/versions/1.5/adopt.md`](standards/markdown-frontmatter/versions/1.5/adopt.md) |
 | ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
-| Python Tooling | `1.8` | [`standards/python-tooling/versions/1.8/adopt.md`](standards/python-tooling/versions/1.8/adopt.md) |
-| Markdown Tooling | `1.8` | [`standards/markdown-tooling/versions/1.8/adopt.md`](standards/markdown-tooling/versions/1.8/adopt.md) |
+| Python Tooling | `1.9` | [`standards/python-tooling/versions/1.9/adopt.md`](standards/python-tooling/versions/1.9/adopt.md) |
+| Markdown Tooling | `1.9` | [`standards/markdown-tooling/versions/1.9/adopt.md`](standards/markdown-tooling/versions/1.9/adopt.md) |
 | Project Specification | `1.4` | [`standards/project-spec/versions/1.4/adopt.md`](standards/project-spec/versions/1.4/adopt.md) |
-| CLI Documentation | `1.3` | [`standards/cli-documentation/versions/1.3/adopt.md`](standards/cli-documentation/versions/1.3/adopt.md) |
-| Agent Handoff | `1.4` | [`standards/agent-handoff/versions/1.4/adopt.md`](standards/agent-handoff/versions/1.4/adopt.md) |
+| CLI Documentation | `1.4` | [`standards/cli-documentation/versions/1.4/adopt.md`](standards/cli-documentation/versions/1.4/adopt.md) |
+| Agent Handoff | `1.5` | [`standards/agent-handoff/versions/1.5/adopt.md`](standards/agent-handoff/versions/1.5/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 
@@ -183,7 +183,7 @@ The migration removes `.project-standards.yml` only after unified validation and
 
 ### Pin to a release tag, not `main`
 
-Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.8.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
+Reference reusable workflows by **major tag** (`@v5`), never `@main`. For an immutable pin, use a full version (`@v5.9.0`) or a commit SHA. [`UPGRADING.md`](UPGRADING.md) is the v4-to-v5 migration runbook.
 
 #### Reusable workflow inputs
 
@@ -232,7 +232,7 @@ For private standards repos called by private consumers, enable cross-repository
 ```yaml
 repos:
   - repo: https://github.com/L3DigitalNet/project-standards
-    rev: v5.8.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
+    rev: v5.9.0 # pre-commit requires an immutable rev — use a full release tag, not a moving major
     hooks:
       - id: format-frontmatter-check
       - id: validate-id-check

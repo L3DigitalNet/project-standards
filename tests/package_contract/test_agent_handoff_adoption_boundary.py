@@ -113,7 +113,7 @@ def test_agent_handoff_1_5__provider_schemas__bind_the_successor_identity() -> N
     assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.5"
 
 
-def test_agent_handoff_1_5__staged_successor__is_complete_uncatalogued_and_immutable() -> None:
+def test_agent_handoff_1_5__activated_successor__is_complete_default_and_immutable() -> None:
     predecessor_manifest = load_payload_manifest(_PREDECESSOR / "payload.toml")
     predecessor_integrity = validate_payload_integrity(_PREDECESSOR, predecessor_manifest)
     assert predecessor_integrity.aggregate_digest.value == _PREDECESSOR_DIGEST
@@ -147,20 +147,21 @@ def test_agent_handoff_1_5__staged_successor__is_complete_uncatalogued_and_immut
     advertised = {
         package["version"] for package in catalog["packages"] if package["id"] == "agent-handoff"
     }
-    assert "1.5" not in advertised
+    successor_version = successor_manifest.payload.version.value
+    assert successor_version in advertised
     assert (
         next(
             package
             for package in catalog["packages"]
             if package["id"] == "agent-handoff" and package["role"] == "default"
         )["version"]
-        == "1.4"
+        == successor_version
     )
 
     config = tomllib.loads((_ROOT / ".standards/config.toml").read_text(encoding="utf-8"))
     lock = tomllib.loads((_ROOT / ".standards/lock.toml").read_text(encoding="utf-8"))
     assert config["standards"]["agent-handoff"]["version"] == "latest"
-    assert lock["standards"]["agent-handoff"]["resolved"] == "1.4"
+    assert lock["standards"]["agent-handoff"]["resolved"] == successor_version
 
 
 def test_agent_handoff_1_5__payload_projection__matches_complete_successor() -> None:

@@ -1,9 +1,10 @@
-schema_version = "1.0"
+schema_version = "1.1"
 
 [[issues]]
 id = "GH-3"
 number = 3
 rationale = "External-reference validation and formatter-scope authority remain executable."
+introduced_release = "4.2.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = [
     "tests/test_spec_cli.py::test_validate_honors_reference_prefixes",
@@ -23,6 +24,7 @@ digest = "sha256:c0ad87a2ddcc06cacd171442ae9ec45c14906d2e4d3fc9c519799b2016944e0
 id = "GH-8"
 number = 8
 rationale = "The legacy fixture corpus preserves subset-aware namespace and ownership coverage."
+introduced_release = "5.1.1"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_migration.py::test_current_legacy_fixture_corpus_covers_namespaces_and_ownership_states"]
 amendments = []
@@ -35,6 +37,7 @@ digest = "sha256:ec65d6a7021962f193a40e16ada4fa5a7d78f20b960f8397acebf5cd87e3145
 id = "GH-9"
 number = 9
 rationale = "The released V4 platform wire tag remains accepted."
+introduced_release = "5.2.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_migration.py::test_platform_gate_accepts_the_v3_wire_tag_written_by_supported_legacy_clis"]
 amendments = []
@@ -47,6 +50,7 @@ digest = "sha256:d3599937f8d39c6f4096430617f1159f85b8d53504feeb7ff484dd7993d82ca
 id = "GH-10"
 number = 10
 rationale = "Released Markdown Tooling editorconfig bytes retain known migration lineage."
+introduced_release = "5.2.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_released_v4_editorconfig_migrates_and_applies"]
 amendments = []
@@ -59,6 +63,7 @@ digest = "sha256:b8293dc76206cd2ef92b40fd15e754e4d139255da1507b255da1b58ddcc5f0c
 id = "GH-11"
 number = 11
 rationale = "Bounded takeover preserves unrelated consumer editorconfig sections."
+introduced_release = "5.2.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_consumer_editorconfig_sections_survive_takeover"]
 amendments = []
@@ -71,6 +76,7 @@ digest = "sha256:7892710a318ac5100d58bfff7b8df678b902ad0455a96f934c81ff473aeca62
 id = "GH-12"
 number = 12
 rationale = "Consumer-owned Python scripts and Markdown callers relinquish without byte takeover."
+introduced_release = "5.3.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = [
     "tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_customized_check_script_relinquishes_with_script_ownership",
@@ -90,6 +96,7 @@ digest = "sha256:089c6c6783669c56e03412ec9ef354ce3ad0042d26e6d2c08157c91ef8a182a
 id = "GH-13"
 number = 13
 rationale = "Customized CLI Documentation callers retain the consumer-owned escape."
+introduced_release = "5.3.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_cli_documentation_reconstruction.py::test_cli_documentation_customized_workflow_relinquishes_with_consumer_owned"]
 amendments = []
@@ -102,6 +109,7 @@ digest = "sha256:bdba14a67cfd8ebb6e4956c283a55889ac94c9b3bcd90fca74cdf8f41e237d4
 id = "GH-14"
 number = 14
 rationale = "Python Tooling migration preserves consumer checker and pytest table keys."
+introduced_release = "5.4.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_v4_migration_preserves_consumer_checker_and_pytest_keys"]
 amendments = []
@@ -114,6 +122,7 @@ digest = "sha256:b918f18627fe760011a19b9285867146fb96933d2486c54757ed72bc9d081d7
 id = "GH-15"
 number = 15
 rationale = "Managed Markdown instruction blocks remain bounded for strict markdownlint."
+introduced_release = "5.4.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_instructions__singleton_h1__is_markdownlint_bounded"]
 amendments = []
@@ -126,6 +135,7 @@ digest = "sha256:0a5954c431ff98c4b0f442d3721639d0bd31b124ae2ccf25317fa957e7ed709
 id = "GH-16"
 number = 16
 rationale = "A disabled legacy Prettier caller migrates and converges without re-enabling format."
+introduced_release = "5.5.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_tooling_reconstruction.py::test_markdown_tooling_successor_migrates_disabled_format_caller_and_converges"]
 amendments = []
@@ -138,6 +148,7 @@ digest = "sha256:edfcec94afbed82f7291832e4549d937091a6faa29130ad435f51ff6bb4a05d
 id = "GH-17"
 number = 17
 rationale = "A configured empty Project Specification corpus remains a successful no-op."
+introduced_release = "5.5.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_spec_selected_routing.py::test_selected_empty_spec_corpus_reports_human_success_and_skips_provider"]
 amendments = []
@@ -150,6 +161,7 @@ digest = "sha256:f473b553019931717cf8bf98f19a9cbffba7d669759eb87604bf70af9f0fd3b
 id = "GH-18"
 number = 18
 rationale = "Agent Handoff size accounting excludes only authenticated managed envelopes."
+introduced_release = "5.5.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_agent_handoff_reconstruction.py::test_agent_handoff_14_size_uses_exact_consumer_controlled_bytes"]
 amendments = []
@@ -162,6 +174,7 @@ digest = "sha256:694f87fca99b250b2b269a8f5ecfb91bc8ee2973f7dc9e49df14aa7dfa96c57
 id = "GH-19"
 number = 19
 rationale = "Project Specification findings retain absolute file coordinates."
+introduced_release = "5.5.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_spec_cli.py::test_spec_finding_lines_are_absolute_in_human_and_json_output"]
 amendments = []
@@ -174,6 +187,7 @@ digest = "sha256:59596d3b03d8d243a5039981ad11be70f54a64673d2f723258cb21e89a706a6
 id = "GH-20"
 number = 20
 rationale = "Additional Python source roots resolve checker, Ruff, and coverage conflicts."
+introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_successor_resolves_issue_20_conflicts_end_to_end"]
 amendments = []
@@ -186,6 +200,7 @@ digest = "sha256:c3a11325ec3409eabbce2eef6efcbdf9bb30754e1e3b832b5905d5f4c34e742
 id = "GH-21"
 number = 21
 rationale = "Migration guidance truthfully exposes every recognized ordinary option and ownership escape."
+introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/issue_regressions/test_issue_21.py::test_issue_21_package_option_migration_guidance_is_semantically_complete"]
 amendments = []
@@ -198,6 +213,7 @@ digest = "sha256:1ae7af628ed91b1c16076ecdcac81726ccd56a04b239c80de777ff4505db910
 id = "GH-22"
 number = 22
 rationale = "Consumer-conflict findings name the declared governing options."
+introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_planner.py::test_consumer_conflict_finding_lists_declared_governing_options"]
 amendments = []
@@ -210,6 +226,7 @@ digest = "sha256:96062e78d6a45ca8cd1495864f476afe8403c5f924cd7b81cb4cd5cada5cde3
 id = "GH-23"
 number = 23
 rationale = "Migration preview distinguishes applicable and nonapplicable exit outcomes."
+introduced_release = "5.6.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_cli.py::test_init_migration_state_and_nonapplicable_exit_codes"]
 amendments = []
@@ -222,6 +239,7 @@ digest = "sha256:68020b159442597e6768b8c6eaea6e9a90281926897ed15702364b0dd8b2527
 id = "GH-24"
 number = 24
 rationale = "Python Tooling coverage scope follows each declared source root."
+introduced_release = "5.7.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_reconstruction.py::test_python_tooling_17_resolves_issue_24_end_to_end"]
 amendments = []
@@ -234,6 +252,7 @@ digest = "sha256:8107504f6c760a0db9a4ab0c8c53fab3ad17157488540f8f4912307835ad9f8
 id = "GH-25"
 number = 25
 rationale = "Anchored TOML comments survive managed table updates end to end."
+introduced_release = "5.7.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/control_plane/test_end_to_end.py::test_toml_table_update_preserves_annotated_consumer_comments_end_to_end"]
 amendments = []
@@ -246,6 +265,7 @@ digest = "sha256:5810ce20dbcba4211d7fd32ce41a0c7d22ceffcdeb63fd742496cd31d511ca3
 id = "GH-26"
 number = 26
 rationale = "Frontmatter formatter output remains a pinned-Prettier fixed point."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_frontmatter_prettier_parity.py::test_corpus_class_is_prettier_fixed_point"]
 amendments = []
@@ -258,6 +278,7 @@ digest = "sha256:daa4e99d2af1de20616d350d2c83e150814401eef3aa149bafe9faa9fb5c9d5
 id = "GH-27"
 number = 27
 rationale = "Both released Markdown lint byte forms migrate under the 1.8 signature."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_tooling_legacy_forms.py::test_both_byte_forms_migrate_cleanly_on_1_8"]
 amendments = []
@@ -270,6 +291,7 @@ digest = "sha256:c82b3cce1782b6a6812298fd436ffdddaf88ac1eb292a84d37b3e235399965d
 id = "GH-28"
 number = 28
 rationale = "Markdown Frontmatter can relinquish a customized caller as consumer-owned."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_markdown_frontmatter_workflow_ownership.py::test_1_5_consumer_owned_relinquishes_customized_caller"]
 amendments = []
@@ -282,6 +304,7 @@ digest = "sha256:f0d3406bbea7676544e62cbf7bf236c6cbcbdae5b9186bf3a6fb4c59de2a8de
 id = "GH-29"
 number = 29
 rationale = "Explicit formatter mode reports a named file excluded by configuration."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_format_frontmatter.py::test_main_check_named_excluded_file_prints_diagnostic"]
 amendments = []
@@ -294,6 +317,7 @@ digest = "sha256:03c97970de13fbde510939de43138d5af864aeb8e408d71ad49d22c10026f1f
 id = "GH-30"
 number = 30
 rationale = "The legacy-authority note is factual and emitted through real configuration detection."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_frontmatter_unified_config.py::test_emit_legacy_config_warning__real_call__emits_the_legacy_authority_note"]
 amendments = []
@@ -306,6 +330,7 @@ digest = "sha256:afd872a05afeef8d1a82ae749b8d9f2e46a1ac491d56a8172e4d30b804b9337
 id = "GH-31"
 number = 31
 rationale = "Declared pytest collection roots drive every Python Tooling collection surface."
+introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/package_contract/test_python_tooling_test_paths.py::test_test_paths_renders_across_all_four_units"]
 amendments = []
@@ -313,3 +338,303 @@ amendments = []
 [[issues.proofs]]
 symbol = "tests/package_contract/test_python_tooling_test_paths.py::test_test_paths_renders_across_all_four_units"
 digest = "sha256:3b440b85ee81fd3d82147f6c20d90e8051c82439bbae01d2ef0ca69c2ffb9df0"
+
+[[issues]]
+id = "GH-32"
+number = 32
+rationale = "Explicit directories name the unsupported input and each caller's config-driven invocation."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation",
+    "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/test_frontmatter_unified_config.py::test_selected_explicit_directory_reports_originating_config_driven_invocation"
+digest = "sha256:bd048b2fa26761668af4b5235a421bb6e9f3645140809d6ceadba8fd2a69beba"
+
+[[issues.proofs]]
+symbol = "tests/test_frontmatter_unified_config.py::test_adr_only_explicit_directory_reports_top_level_config_driven_invocation"
+digest = "sha256:5f29ba49ee32760b7acc6b48ebaaf2ce66af1a358871613d9670b923c99346f1"
+
+[[issues]]
+id = "GH-35"
+number = 35
+rationale = "Semantic JSON and JSONC composition preserves the pinned formatter fixed point."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/control_plane/test_adapters_jsonc.py::test_json_family_create_preserves_prettier_fixed_point",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/control_plane/test_adapters_jsonc.py::test_json_family_create_preserves_prettier_fixed_point"
+digest = "sha256:e8073da97feff10600a1ebcdb505e72e93843a2c2384da4903b6c359f50463b7"
+
+[[issues]]
+id = "GH-36"
+number = 36
+rationale = "Release-facing versions and package claims remain bound to exact candidate authorities."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_release_consistency.py::test_release_consistency__exact_candidate__passes",
+    "tests/package_contract/test_release_consistency.py::test_release_consistency__known_repository_regressions__reports_four_mismatches",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_release_consistency.py::test_release_consistency__exact_candidate__passes"
+digest = "sha256:708c2a79fd60f7df3c8c80a68483b5aab0092fb4a902cf6312458bc867033db4"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_release_consistency.py::test_release_consistency__known_repository_regressions__reports_four_mismatches"
+digest = "sha256:d5b69d3d6c57649518068c27b8bc71d5a5a8e4a2e31b84a5a58a67ee5240f7dc"
+
+[[issues]]
+id = "GH-37"
+number = 37
+rationale = "Whole-file conflicts provide ownership-safe guidance and exact managed restoration."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile",
+    "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point",
+    "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/control_plane/test_conflict_guidance.py::test_pre_adoption_whole_file__managed_selector__permits_delete_and_reconcile"
+digest = "sha256:d842cddc6d9048cc462ddfd1f2052befcde00293a13c1d2deab24b7257488637"
+
+[[issues.proofs]]
+symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_002_restore_preview_apply_and_fixed_point"
+digest = "sha256:2ebc488614345c623be016ec770b07604e3109cab506a755407afd232c5a61c2"
+
+[[issues.proofs]]
+symbol = "tests/control_plane/test_managed_restore.py::test_tc_t7_003_restore_apply_rejects_stale_preconditions"
+digest = "sha256:886bdb1712b50b9ebe637d2b909a43d1bce0a3795df201ca5b109746d3b3d737"
+
+[[issues]]
+id = "GH-38"
+number = 38
+rationale = "Both Markdown caller workflows grant only the required read permission."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_markdown_tooling_callers.py::test_t10_callers__reusable_jobs__grant_only_job_contents_read",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_callers.py::test_t10_callers__reusable_jobs__grant_only_job_contents_read"
+digest = "sha256:71f2ff1388454301ae1095ef03e6bf91c967219365bfa3bd7dbe0c6799c426ba"
+
+[[issues]]
+id = "GH-39"
+number = 39
+rationale = "Matcher-keyed TOML composition preserves unrelated entries without optional identities."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_agent_handoff_reconstruction.py::test_agent_handoff_real_reconcile__matcherless_codex_hook__preserves_hook_and_converges",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_agent_handoff_reconstruction.py::test_agent_handoff_real_reconcile__matcherless_codex_hook__preserves_hook_and_converges"
+digest = "sha256:bec219d9e1b8621cf36a622f58b4ed7a38c19980df99e886d85086ef6d9266e8"
+
+[[issues]]
+id = "GH-40"
+number = 40
+rationale = "Python Tooling renders bounded additive Ruff and coverage configuration."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__nonempty_additive_lists__render_canonical_native_keys",
+    "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__invalid_additive_lists__name_option",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__nonempty_additive_lists__render_canonical_native_keys"
+digest = "sha256:6fecd91fa66feb776399af9b440f102c2bcdb5e2efce57ad6de0913b8fffbf66"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__invalid_additive_lists__name_option"
+digest = "sha256:47f520ff56e56d4dc59339a919e37c659f1418b0f8cbf47bc53ecb84fb0c4ebb"
+
+[[issues]]
+id = "GH-41"
+number = 41
+rationale = "Python Tooling supports non-installable repositories without removing development tooling."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__backend_none__omits_only_build_system",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__backend_none__omits_only_build_system"
+digest = "sha256:f55bdd94031362bdae5c01e1ebc4978590ca63e57ac964629ab06df98aa7b223"
+
+[[issues]]
+id = "GH-42"
+number = 42
+rationale = "CLI Documentation safely references one consumer-owned multi-CLI usage index."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked",
+    "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index__fresh_custom_input__is_locked_and_linked"
+digest = "sha256:a1eb50fff9bd5e67f4d265af68df1802fb21ed0ffc2ea9bf95ed93e530e69167"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_usage_index_path__unsafe_shape__fails_closed"
+digest = "sha256:d8144211203de43ef99f74ed3671c13159a2c8b2699e1be255f57d9681485dfa"
+
+[[issues]]
+id = "GH-43"
+number = 43
+rationale = "Agent Handoff guidance covers every locked skill and hook exclusion surface."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_agent_handoff_adoption_boundary.py::test_agent_handoff_1_5__locked_agent_targets__have_copyable_tool_exclusions",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_agent_handoff_adoption_boundary.py::test_agent_handoff_1_5__locked_agent_targets__have_copyable_tool_exclusions"
+digest = "sha256:b12449f5bf4cc478c36864e4091b9bf72a1c0648df5458912cc69c844fba77f5"
+
+[[issues]]
+id = "GH-44"
+number = 44
+rationale = "Markdown lint and format behavior converges while autofix remains an explicit recovery path."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/coherence/test_behavioral.py::test_prettier_lint_sequence_is_a_fixed_point",
+    "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__normal_documented_commands__never_use_autofix",
+    "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__exception_guidance__uses_paired_block_directives",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/coherence/test_behavioral.py::test_prettier_lint_sequence_is_a_fixed_point"
+digest = "sha256:f1a4e6348d5c6e44014718362bf5a2d20d62a1d248076f233b6961a8b499a887"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__normal_documented_commands__never_use_autofix"
+digest = "sha256:998cc15e709954df2663028417e0ab144f4155ff59012207a9afdac24acf1d9f"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_lint_format_safety.py::test_markdown_tooling_1_9__exception_guidance__uses_paired_block_directives"
+digest = "sha256:9aea63ef7be60ae6edf653feb3705c0c66a838801c0e0ff4ca597f14764b7751"
+
+[[issues]]
+id = "GH-45"
+number = 45
+rationale = "Agent Handoff findings expose actionable structure and bounds without consumer content."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link",
+    "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_redacts_and_locates_missing_link"
+digest = "sha256:48951040a322971ae696a5bbd479adf568514c91a9264023027b21895c7baa88"
+
+[[issues.proofs]]
+symbol = "tests/agent_handoff/test_selected_routing.py::test_selected_predecessor_provider_enriches_size_measure_and_limit"
+digest = "sha256:7cd373782975544a948a22c388a30c92847b447895c9aa48173a90cfa789db49"
+
+[[issues]]
+id = "GH-46"
+number = 46
+rationale = "Copyable CLI Documentation TOML parses and malformed TOML reports safe coordinates."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_cli_documentation_1_4.py::test_toml_corpus__successor_copyable_fences__all_parse",
+    "tests/control_plane/test_adapters_toml.py::test_toml_adapter__invalid_toml__reports_safe_parser_coordinates_and_cause",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_cli_documentation_1_4.py::test_toml_corpus__successor_copyable_fences__all_parse"
+digest = "sha256:32c2603622ca6db54bc84df4e1d3036655b3a2051c7d3e4b45d4fe7ae47f3ce8"
+
+[[issues.proofs]]
+symbol = "tests/control_plane/test_adapters_toml.py::test_toml_adapter__invalid_toml__reports_safe_parser_coordinates_and_cause"
+digest = "sha256:21564f9afc9e64af214cbcbe7bc05ca295d81a2be8a7a14a92d8835a9d03d86f"
+
+[[issues]]
+id = "GH-47"
+number = 47
+rationale = "Markdown lint and format exclusions select the same non-widened effective corpus."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal",
+    "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal"
+digest = "sha256:13ddc44001d0871d99cc1df998c7fb6eb3792fb184cea08bae2802dd55327601"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged"
+digest = "sha256:754b570c0cce12aa90fc6e33e452c7f87c44d2716e2fa9d19174aa3dfe54e933"
+
+[[issues]]
+id = "GH-48"
+number = 48
+rationale = "Short and long Markdown caller inputs remain Prettier-stable."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_markdown_tooling_callers.py::test_t10_callers__short_and_long_inputs__are_prettier_stable",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_markdown_tooling_callers.py::test_t10_callers__short_and_long_inputs__are_prettier_stable"
+digest = "sha256:2974e850dfe0bd3ba365b48747aed33afd29a5b26968289e4ab0640e8d52fd4a"
+
+[[issues]]
+id = "GH-49"
+number = 49
+rationale = "Fresh Python Tooling disables performance CI while migration preserves prior behavior."
+introduced_release = "5.9.0"
+environments = ["source", "candidate-wheel"]
+references = [
+    "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__fresh_default__omits_performance_ci",
+    "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__package_config_transform__preserves_effective_performance",
+]
+amendments = []
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__fresh_default__omits_performance_ci"
+digest = "sha256:bb93cee23abcdcd1021a3c0d0d2aff5ded14c8f68541568763955c393ed812e5"
+
+[[issues.proofs]]
+symbol = "tests/package_contract/test_python_tooling_1_9.py::test_python_tooling_1_9__package_config_transform__preserves_effective_performance"
+digest = "sha256:ea0365786729d9d5b9a82a5771ed062707512207c955a68bf5eb0056f08bace0"

@@ -18,11 +18,11 @@ def test_markdown_tooling_default_is_1_1_and_1_0_still_known() -> None:
 
 def test_dogfood_config_selects_current_compatibility_successors() -> None:
     config = tomllib.loads((_REPO / ".standards/config.toml").read_text(encoding="utf-8"))
+    catalog = tomllib.loads((_REPO / ".standards/catalog.toml").read_text(encoding="utf-8"))
     lock = tomllib.loads((_REPO / ".standards/lock.toml").read_text(encoding="utf-8"))
 
     assert config["standards"]["markdown-tooling"]["config"]["contract_version"] == "1.1"
-    # The dogfood `.standards/` lock is refreshed at release prep (T12): once the tool
-    # release advanced to 5.8.0 the catalog-refresh guard cleared, the reconcile ran, and
-    # the committed lock now resolves the 5.8.0 Catalog 5 defaults (the 1.8 successors).
-    assert lock["standards"]["markdown-tooling"]["resolved"] == "1.8"
-    assert lock["standards"]["python-tooling"]["resolved"] == "1.8"
+    markdown_default = catalog["standards"]["markdown-tooling"]["default"]
+    python_default = catalog["standards"]["python-tooling"]["default"]
+    assert lock["standards"]["markdown-tooling"]["resolved"] == markdown_default
+    assert lock["standards"]["python-tooling"]["resolved"] == python_default

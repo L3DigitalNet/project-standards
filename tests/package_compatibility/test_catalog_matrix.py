@@ -20,6 +20,10 @@ from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
 from project_standards.control_plane.migration import plan_legacy_migration
 from project_standards.control_plane.planner import plan_reconciliation
+from project_standards.package_contract.catalog import (
+    CatalogRole,
+    load_catalog_source,
+)
 from project_standards.package_contract.family import load_family_manifest
 from project_standards.package_contract.payload import (
     PayloadAvailability,
@@ -51,19 +55,25 @@ _ARTIFACT_STATES = _ROOT / "tests/fixtures/package_compatibility/legacy/artifact
 _ALL_NAMESPACES = (
     _ROOT / "tests/fixtures/package_compatibility/legacy/all-namespaces/.project-standards.yml"
 )
-# Each row is (family, retained predecessor, current default). "latest" must resolve
-# to the default, so these successors track the Catalog 5 default after every advance.
-# FR-013 (5.8.0/T10) advanced three families to correction successors: markdown-tooling
-# and python-tooling to 1.8 (predecessor now the retained 1.7) and markdown-frontmatter
-# to 1.5 (predecessor now the retained 1.4). agent-handoff, cli-documentation, and
-# project-spec did not advance this train, so their retained-to-default rows are unchanged.
-_CORRECTION_TRANSITIONS = (
-    ("agent-handoff", "1.3", "1.4"),
-    ("cli-documentation", "1.2", "1.3"),
-    ("markdown-frontmatter", "1.4", "1.5"),
-    ("markdown-tooling", "1.7", "1.8"),
-    ("project-spec", "1.3", "1.4"),
-    ("python-tooling", "1.7", "1.8"),
+# These exact predecessors are historical correction authorities, not aliases for
+# the immediately previous release. The moving successor is always the active
+# Catalog 5 default so a catalog promotion cannot leave this matrix stale.
+_CORRECTION_PREDECESSORS = (
+    ("agent-handoff", "1.3"),
+    ("cli-documentation", "1.2"),
+    ("markdown-frontmatter", "1.4"),
+    ("markdown-tooling", "1.7"),
+    ("project-spec", "1.3"),
+    ("python-tooling", "1.7"),
+)
+_CATALOG_DEFAULT_VERSIONS = {
+    entry.id: entry.version.value
+    for entry in load_catalog_source(_ROOT / "catalogs/5.toml").packages
+    if entry.role is CatalogRole.DEFAULT
+}
+_CORRECTION_TRANSITIONS = tuple(
+    (standard_id, predecessor, _CATALOG_DEFAULT_VERSIONS[standard_id])
+    for standard_id, predecessor in _CORRECTION_PREDECESSORS
 )
 
 

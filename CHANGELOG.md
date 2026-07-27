@@ -6,8 +6,8 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-22'
-reviewed: '2026-07-22'
+updated: '2026-07-27'
+reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -34,6 +34,30 @@ license: null
 All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [5.9.0] — 2026-07-27
+
+> **Why MINOR:** Catalog 5 adds four backward-compatible consumer successors on their existing major tracks and one additive internal authoring-contract successor. Every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.8.0` classifies the release as minor.
+
+### Added
+
+- **Python Tooling 1.9 expands bounded repository configuration.** Additive Ruff source/exclusion and coverage omission lists render to their native keys, while `build_backend = "none"` omits only the installable-project build system and retains development tooling (issues #40, #41).
+- **Package configuration transforms preserve effective repository gates.** Packages can declare bounded, deterministic direct configuration transforms, with Standard Bundle Authoring 2.6 documenting the contract. Python Tooling 1.9 uses it to carry the existing performance-test gate into the sparse V5 configuration instead of silently dropping it, while fresh adoption retains the successor default (issue #49).
+- **CLI Documentation 1.4 locks usage-index inputs.** The generated usage index records its source identity, rejects unsafe paths, and remains deterministic across fresh adoption and reconciliation (issues #42, #46).
+
+### Fixed
+
+- **Explicit-directory frontmatter validation reports its configuration origin.** Config-driven validation retains the originating invocation context for selected explicit and ADR-only directories instead of reporting them as context-free inputs (issue #32).
+- **Structured adapters preserve supported consumer syntax.** JSON-family rewrites remain a Prettier fixed point, and TOML parse failures report safe parser coordinates without exposing consumer content (issues #35, #46).
+- **Release candidates are checked against their exact catalog and release-facing documentation.** The release-consistency gate rejects stale projections, versions, default-package references, or unclassified current-family references before publication (issue #36).
+- **Managed restore is explicit and fail-closed.** Operators can preview and apply deletion of obsolete package-owned units, while stale preconditions prevent unsafe restoration (issue #37).
+- **Markdown callers retain least privilege and formatting/lint separation.** Reusable jobs grant only required read access, caller templates stay Prettier-stable, Markdown lint commands do not auto-fix, and scoped exceptions use paired directives (issues #38, #44, #47, #48).
+- **Agent Handoff successor behavior remains reconstructable.** Agent target exclusions are copyable, predecessor evidence remains size-bounded and redacted, and matcherless Codex hook configuration survives reconciliation (issues #39, #43, #45).
+
+### Changed
+
+- Catalog 5 promotes Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4 as compatible consumer defaults, and advertises internal Standard Bundle Authoring 2.6. Every predecessor remains available with unchanged bytes and digests.
+- The activated root materializes explicit `MD060: false` and preserves the Python performance CI gate through `/ci/performance = true`.
 
 ## [5.8.0] — 2026-07-22
 

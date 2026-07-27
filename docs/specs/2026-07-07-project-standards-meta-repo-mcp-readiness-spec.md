@@ -45,6 +45,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.4 | 2026-07-27 | Codex | Synchronize current completion-state context with the Project Standards 5.9.0 release candidate and Standard Bundle Authoring 2.6 without changing the accepted readiness contract or evidence. |
 | 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority correction after high-effort Opus review convergence. |
 | 1.2 | 2026-07-24 | Codex | Correct the current Standard Bundle Authoring package authority from 2.2 to 2.5 without changing the accepted historical readiness contract or evidence. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Resolve review advisories by restoring unique section numbering, ordering revision history, and linking the two governing successor specifications. |
@@ -204,11 +205,11 @@ A future MCP server can then be thin:
 3. Use existing provider declarations for validation, fixing, drift, and planning.
 4. Keep tools generic because new standards are added as metadata and plugins, not top-level MCP tools.
 
-#### Completion State (Current as of 2026-07-24)
+#### Completion State (Current as of 2026-07-27)
 
 The readiness goal remains satisfied, but Catalog 5 has evolved beyond the provisional names and layouts used by this implementation contract:
 
-- Project Standards 5.8.0 publishes nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.5.
+- Project Standards 5.8.0 remains the published baseline. The 5.9.0 release candidate carries nine independently versioned package families: seven consumer packages, reference-only Python Coding, and internal Standard Bundle Authoring 2.6.
 - Immutable V2 family and payload manifests now carry exact version, exposure, capability, relationship, provider, resource, media-type, and digest contracts.
 - `InstalledDistribution` is the production package authority; `PackageRepository` is the bounded source validation and test-injection authority.
 - `.standards/config.toml`, `.standards/catalog.toml`, and `.standards/lock.toml` form the unified consumer control plane.

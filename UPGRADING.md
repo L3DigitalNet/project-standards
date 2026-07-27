@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.8.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.9.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.8.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.9.0"
   project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.8.0` before continuing.
+  Confirm that the command reports `project-standards 5.9.0` before continuing.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -107,7 +107,9 @@ Python Tooling 1.5 also narrows checker and pytest ownership to the canonical ke
 
 The current package successors also correct three migration and validation edge cases. Markdown Tooling 1.7 safely adopts an exact released caller whose automatic trigger is disabled. Project Specification 1.4 treats a configured corpus with no matching files as an informational success. Agent Handoff 1.4 excludes only exact central-lock-authenticated managed Markdown envelopes from instruction-file size budgets; malformed, unlocked, or drifted lookalikes still count.
 
-Project Standards 5.8.0 advances three more successors that widen what migrates cleanly. Python Tooling 1.8 adds `pytest.test_paths`, an array of collection roots (unique safe relative paths, default `["tests"]`) that governs the pytest `testpaths`, the checker `include`, the Ruff `src` value, and the VS Code `python.testing.pytestArgs`, but never `coverage.run.source`. A repository whose suite does not live in `tests/` sets it under the `python_tooling` namespace in `.project-standards.yml` to resolve the include/`testpaths` `CP-CONSUMER-CONFLICT` before apply; the conflict now names the governing option instead of `none declared`. Undeclared, every unit renders byte-identically to 1.7. Markdown Tooling 1.8 accepts a `.markdownlint.json` that is byte-for-byte the shipped config re-serialized with literal (non-escaped) UTF-8 punctuation: the proven legacy byte form is parsed-JSON-equal to the shipped resource, so a consumer holding it migrates to managed ownership of the current escaped bytes with no findings on that file instead of blocking as a modified config (`CP-MIGRATION-LEGACY-DIGEST` / `MT-LEGACY-MODIFIED`). Markdown Frontmatter 1.5 adds the `workflow_ownership` escape for `.github/workflows/validate-standards.yml` documented in §3.
+The 5.8.0 release advanced three more successors that widen what migrates cleanly. Python Tooling 1.8 adds `pytest.test_paths`, an array of collection roots (unique safe relative paths, default `["tests"]`) that governs the pytest `testpaths`, the checker `include`, the Ruff `src` value, and the VS Code `python.testing.pytestArgs`, but never `coverage.run.source`. A repository whose suite does not live in `tests/` sets it under the `python_tooling` namespace in `.project-standards.yml` to resolve the include/`testpaths` `CP-CONSUMER-CONFLICT` before apply; the conflict now names the governing option instead of `none declared`. Undeclared, every unit renders byte-identically to 1.7. Markdown Tooling 1.8 accepts a `.markdownlint.json` that is byte-for-byte the shipped config re-serialized with literal (non-escaped) UTF-8 punctuation: the proven legacy byte form is parsed-JSON-equal to the shipped resource, so a consumer holding it migrates to managed ownership of the current escaped bytes with no findings on that file instead of blocking as a modified config (`CP-MIGRATION-LEGACY-DIGEST` / `MT-LEGACY-MODIFIED`). Markdown Frontmatter 1.5 adds the `workflow_ownership` escape for `.github/workflows/validate-standards.yml` documented in §3.
+
+The 5.9.0 release advances the current defaults to Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4. Review their [current adoption guides](standards/README.md) before migration or same-major refresh; retained predecessor behavior above remains historical release guidance.
 
 ## 2. Apply the reviewed migration
 
@@ -226,11 +228,11 @@ An explicit `--config .project-standards.yml` is now a legacy/debug-only path an
 
 ### Frontmatter serialization convergence
 
-Project Standards 5.8.0 converges `format-frontmatter` (the format stage of `fix`) with the Markdown Tooling Prettier configuration on one frontmatter serialization. The formatter now emits each scalar in the minimal-escape quote style — the style that needs no escapes, which is Prettier's resting state under `singleQuote: true` — instead of unconditionally single-quoting and doubling apostrophes (`'Apple''s'`). Both quote forms are accepted: a value already spelled single-quoted, or double-quoted when double is the minimal style for that value, is kept verbatim; only a value in neither form is re-spelled. Legacy single-quoted spellings therefore stay valid forever, and no scalar the 5.7.0 checker accepted is now reported as needing reformatting — an additive, previously-passing-safe widening that exact `markdown-frontmatter@1.4` pins inherit through the shared engine. The one-time effect a consumer sees is that `format-frontmatter` keeps a legacy escaped spelling such as `'Apple''s'` byte-identical, while Prettier performs the one-time normalization to the minimal `"Apple's"` form the next time it rewrites the file — a form `format-frontmatter` now also accepts — so the two companion tools no longer each flag the other's output. A latent corruption where control-character values were re-emitted as literal control bytes is fixed at the same time.
+The 5.8.0 release converged `format-frontmatter` (the format stage of `fix`) with the Markdown Tooling Prettier configuration on one frontmatter serialization. The formatter now emits each scalar in the minimal-escape quote style — the style that needs no escapes, which is Prettier's resting state under `singleQuote: true` — instead of unconditionally single-quoting and doubling apostrophes (`'Apple''s'`). Both quote forms are accepted: a value already spelled single-quoted, or double-quoted when double is the minimal style for that value, is kept verbatim; only a value in neither form is re-spelled. Legacy single-quoted spellings therefore stay valid forever, and no scalar the 5.7.0 checker accepted is now reported as needing reformatting — an additive, previously-passing-safe widening that exact `markdown-frontmatter@1.4` pins inherit through the shared engine. The one-time effect a consumer sees is that `format-frontmatter` keeps a legacy escaped spelling such as `'Apple''s'` byte-identical, while Prettier performs the one-time normalization to the minimal `"Apple's"` form the next time it rewrites the file — a form `format-frontmatter` now also accepts — so the two companion tools no longer each flag the other's output. A latent corruption where control-character values were re-emitted as literal control bytes is fixed at the same time.
 
 ## 5. Re-pin workflows and the tool
 
-Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.8.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
+Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.9.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
 
 Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
 

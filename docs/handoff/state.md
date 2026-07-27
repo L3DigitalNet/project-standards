@@ -2,10 +2,11 @@
 
 ## Current focus
 
-- Project Standards 5.8.0 is published. Closed issues #3 and #8-#31 have no regressions; only #21 lacks a dedicated guard.
+- Project Standards 5.8.0 remains published; the assembled 5.9.0 correction-train candidate is unpublished. T16 Opus review and T17 exact-candidate qualification remain.
+- Catalog 5's candidate defaults are Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4; Standard Bundle Authoring 2.6 is internal. Predecessor bytes remain unchanged.
 - MCP implementation T1 is blocked before CHARACTERIZE on final protocol and stable SDK evidence; its plan owns all pre-T2 gates.
 - MCP hold through T12: defer significant non-MCP features, refactors, standards work, releases, and changes; owner directs exceptions.
-- SPEC-VAIC rev 0.3 and its plan are approved for T1-T17 under the owner-granted MCP exception. Begin T1 with binding task/phase scope checkpoints; T14 carries PA-013; release is unauthorized.
+- SPEC-VAIC rev 0.12 and its 19-task plan are approved for T1-T17 under the owner-granted MCP exception. Release, issue closure, tags, and `main` integration require separate authorization naming the exact T17 commit and artifact digests.
 
 ## Active incidents
 

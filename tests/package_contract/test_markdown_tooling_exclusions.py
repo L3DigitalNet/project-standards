@@ -215,8 +215,8 @@ def test_t9_successor_rendering__characterized_exclusion__matches_1_8_inputs(
         assert successor == predecessor
 
 
-def test_t9_successor_staging__family_visible_catalog_hidden_and_predecessor_immutable() -> None:
-    """TC-T9-002: stage a consumer 1.9 without changing 1.8 or Catalog 5."""
+def test_t9_successor_activation__catalog_default_and_predecessor_immutable() -> None:
+    """TC-T9-002: activate consumer 1.9 while preserving released 1.8."""
     family = load_family_manifest(_FAMILY / "standard.toml")
     versions = {entry.version.value: entry for entry in family.versions}
     assert "1.9" in versions
@@ -227,10 +227,9 @@ def test_t9_successor_staging__family_visible_catalog_hidden_and_predecessor_imm
 
     catalog = load_catalog_source(_ROOT / "catalogs/5.toml")
     markdown_entries = [entry for entry in catalog.packages if entry.id == "markdown-tooling"]
-    assert all(entry.version.value != "1.9" for entry in markdown_entries)
-    assert next(
-        entry for entry in markdown_entries if entry.role.value == "default"
-    ).version.value == ("1.8")
+    roles = {entry.version.value: entry.role.value for entry in markdown_entries}
+    assert roles[successor.manifest.payload.version.value] == "default"
+    assert roles[_V18.name] == "retained"
 
     predecessor = _payload(_V18)
     assert predecessor.integrity.aggregate_digest.value == _V18_AGGREGATE
@@ -257,7 +256,7 @@ def test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged(
 
 
 def test_t9_projection__successor_family_links_cover_every_payload_file() -> None:
-    """TC-T9-002: the staged successor is package-visible from the wheel tree."""
+    """TC-T9-002: the activated successor is package-visible from the wheel tree."""
     projection = _ROOT / "src/project_standards/payloads/markdown-tooling/1.9"
     source_files = {
         path.relative_to(_V19).as_posix(): path.read_bytes()
