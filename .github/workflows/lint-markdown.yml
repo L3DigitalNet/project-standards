@@ -66,8 +66,24 @@ jobs:
       # The action's own `globs` default is the non-recursive `*.{md,markdown}`,
       # so it is passed explicitly. On this repo's push/PR runs `inputs.globs` is
       # empty and the `||` fallback supplies the recursive default.
+      #
+      # Issue #63: markdownlint-cli2 traverses dot directories and `node_modules`,
+      # so the recursive default alone pulls in `.venv/**` and `.pytest_cache/**`
+      # Markdown that Prettier never sees (the format workflow reaches Prettier
+      # through `--ignore-path .gitignore`). markdownlint-cli2 0.23.1 exposes its
+      # `gitignore` switch only through a `.markdownlint-cli2.*` runner config,
+      # which this package does not ship, so parity is restored with trailing
+      # negative globs. They must trail the positive globs: markdownlint-cli2
+      # resolves the list in order, and a leading negation would be undone by the
+      # positive pattern that follows. A repository that must lint one of these
+      # trees owns this workflow (`lint_workflow_ownership = "consumer-owned"`).
       - name: Lint Markdown (markdownlint-cli2)
         uses: DavidAnson/markdownlint-cli2-action@v24
         with:
-          globs: ${{ inputs.globs || '**/*.md' }}
+          globs: |
+            ${{ inputs.globs || '**/*.md' }}
+            !.pytest_cache/**
+            !.ruff_cache/**
+            !.venv/**
+            !node_modules/**
           config: ${{ inputs.config }}

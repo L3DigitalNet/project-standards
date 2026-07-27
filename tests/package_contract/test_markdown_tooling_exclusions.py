@@ -44,7 +44,14 @@ _LINT_WORKFLOW = _ROOT / ".github/workflows/lint-markdown.yml"
 
 _V18_AGGREGATE = "sha256:22ebe7b95ca82daa276746c9bf3f0688d15ce4b47314b7e4abea206df7212783"
 _FORMAT_WORKFLOW_DIGEST = "901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a"
-_LINT_WORKFLOW_DIGEST = "3124debdc76f2c69dce5e24029de4defb424661835ce8ffad45084276782f656"
+# The hosted lint workflow is not frozen forever: it is the self-hosted rendering
+# of the current default markdown-tooling payload, so an activation that changes
+# that resource changes these bytes. 1.10 (issue #63) appended the generated-tree
+# negations, which narrows what every `@v5` caller lints — a loosening, and one a
+# repository escapes with `lint_workflow_ownership = "consumer-owned"`. The digest
+# is pinned so such a change is always a deliberate, reviewed update rather than a
+# silent one; the format workflow above is genuinely unchanged since 1.8.
+_LINT_WORKFLOW_DIGEST = "fdce0f2148fc9dad902b23d1027841e21443668bb062d1f0dc08ceb070172796"
 
 
 def _payload(root: Path) -> InstalledPayload:

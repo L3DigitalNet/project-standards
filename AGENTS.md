@@ -57,6 +57,7 @@ Prettier owns physical formatting and markdownlint owns Markdown structure. Do n
 Enabled checks: format, lint.
 Markdown scope: `**/*.md`.
 Structured-config scope: `**/*.json`, `**/*.jsonc`, `**/*.yml`, `**/*.yaml`.
+Lint additionally skips generated directories: `.pytest_cache/**`, `.ruff_cache/**`, `.venv/**`, `node_modules/**`.
 
 Run the enabled checks before claiming completion.
 <!-- markdownlint-enable MD025 -->
