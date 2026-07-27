@@ -5,6 +5,7 @@
 - Project Standards 5.10.0 is published at `4caeb1046342f14078c5aad61254d5751900511d`; signed `v5.10.0`/`v5` refs and the Latest GitHub release are live.
 - Wheel SHA-256 `c51d1e7829d121dd7eb9aa0c00b393e421835e04e02337c06a15fc7da435c936` and sdist SHA-256 `7b44fdb69673d8e150b9690fe7ce67167b08d3bafc90475252aaa048c9f8bf80` match.
 - All nine release-commit workflow runs passed, including `Check` run `30292732694`.
+- Exact 5.10.0 verification passes 3,828 ordinary tests, 133 compatibility rows, 5 performance tests, and 91% branch coverage, with strict Ruff/BasedPyright, clean dependency audits, and MINOR classification against `v5.9.0`.
 - Issues #50–#54, #56–#61, and #63–#69 are closed with release evidence.
 - #64 was already fixed in Markdown Tooling 1.9 and is now regression-pinned; #67 closed as consumer-owned content with no code change.
 - Issues #55, #62, and #69's configurable-threshold request stay deferred as new capability requests; tracking issues #70–#74 are open.

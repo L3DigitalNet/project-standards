@@ -457,11 +457,11 @@ No new sensitive-data surface is introduced. Diagnostic corrections in FR-003 an
 - [x] The #64 regression fixture (FR-016) is committed and passing.
 - [x] #66's create-only removal guard (FR-017) is committed and passing.
 - [x] Independent review has no unresolved Critical/High finding.
-- [ ] #67 closure evidence is recorded with no code change.
-- [ ] One extracted candidate wheel passes the complete repository gate.
-- [ ] Candidate release classification is MINOR.
-- [ ] Release remains unpublished until explicit owner authorization.
-- [ ] Required documentation and traceability are current.
+- [x] #67 closure evidence is recorded with no code change.
+- [x] One extracted candidate wheel passes the complete repository gate.
+- [x] Candidate release classification is MINOR.
+- [x] Release remains unpublished until explicit owner authorization.
+- [x] Required documentation and traceability are current.
 
 ### 17.2 Test Strategy
 
