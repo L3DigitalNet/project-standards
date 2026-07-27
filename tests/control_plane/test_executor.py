@@ -767,3 +767,100 @@ def test_apply_converges_after_a_create_only_file_is_deleted(tmp_path: Path) -> 
     # Convergence: with the absence recorded, `reconcile --check` no longer
     # reports lock drift for the deletion the consumer already made.
     assert settled.next_lock == written
+
+
+def _empty_managed_fixture(tmp_path: Path) -> tuple[Path, PlannerRequest, ReconciliationPlan]:
+    """Build a managed whole-file artifact whose declared content is zero bytes."""
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[{"id": "marker", "target": "py.typed", "content": b""}],
+    )
+    resolution = resolution_request((payload,))
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    return repo, planner, plan_reconciliation(planner)
+
+
+def test_apply_refuses_an_empty_managed_artifact_that_was_never_written(
+    tmp_path: Path,
+) -> None:
+    """An unwritten managed target must never be locked as live (issue #70 follow-up).
+
+    `_target_action` reads `rendered` for truthiness, so a managed artifact whose
+    declared content is zero bytes (`py.typed`, `.gitkeep`, an empty
+    `__init__.py`) plans NOOP with no after-digest over a missing path — the same
+    public action shape a consumer-deleted create-only unit produces. The lock,
+    however, records it as a live artifact with the empty-string digest. Skipping
+    verification on the action shape alone would publish that false lock and then
+    report `drift: false` forever, so the skip must additionally require the plan
+    to disclaim the path.
+    """
+    repo, planner, plan = _empty_managed_fixture(tmp_path)
+    assert not (repo / "py.typed").exists()
+    assert [unit.path.original for unit in plan.next_lock.artifacts] == ["py.typed"]
+
+    result = _apply(planner, plan)
+
+    assert not result.success
+    assert result.error_code == "CP-VERIFY"
+    assert not result.lock_written
+    assert parse_lock((repo / ".standards/lock.toml").read_bytes()).artifacts == []
+    assert not (repo / "py.typed").exists()
+
+
+def test_apply_refuses_a_deleted_create_only_target_whose_policy_turned_managed(
+    tmp_path: Path,
+) -> None:
+    """A policy flip over a deleted create-only file must not lock a phantom artifact.
+
+    The unit still classifies PRESERVE from the prior lock's create-only policy,
+    so the target keeps the NOOP-over-missing action shape, but the new managed
+    policy stops the planner recording an absence and `_locked_after` writes a
+    live artifact for bytes that are not on disk. Verification has to fail closed
+    here; only a path the plan records as a create-only absence may be skipped.
+    """
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    create_only = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    resolution = resolution_request((create_only,))
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (create_only,))
+    installed = plan_reconciliation(planner)
+    assert _apply(planner, installed).success
+
+    (repo / "notes.md").unlink()
+    managed = write_payload(
+        tmp_path / "managed",
+        "demo",
+        version="1.1",
+        artifacts=[{"id": "notes", "target": "notes.md", "content": b"installed\n"}],
+    )
+    flipped_resolution = resolution_request((managed,), previous_lock=installed.next_lock)
+    flipped_planner = PlannerRequest(repo, flipped_resolution, (managed,))
+    flipped = plan_reconciliation(flipped_planner)
+    assert flipped.next_lock.create_only_absences == []
+    assert [unit.path.original for unit in flipped.next_lock.artifacts] == ["notes.md"]
+
+    result = _apply(flipped_planner, flipped)
+
+    assert not result.success
+    assert result.error_code == "CP-VERIFY"
+    assert not result.lock_written
+    assert parse_lock((control / "lock.toml").read_bytes()) == installed.next_lock
+    assert not (repo / "notes.md").exists()

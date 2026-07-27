@@ -810,22 +810,45 @@ def _verification_snapshot(
     return result
 
 
+def _disclaimed_targets(plan: ReconciliationPlan) -> frozenset[str]:
+    """Return targets the plan asserts do not exist after apply, so none is staged.
+
+    A consumer-deleted create-only unit stages nothing yet still needs a
+    `PlannedTarget`, because `_locked_after` reads that entry to build the
+    `create_only_absences` record (issue #70). Verification must therefore accept
+    a missing path there, but the action shape alone is far too weak a licence:
+    `_target_action` also emits NOOP with no after-digest when a MANAGED artifact
+    declares zero bytes over a missing path (`py.typed`, `.gitkeep`) because it
+    tests `rendered` for truthiness, and when a deleted create-only unit's policy
+    flips to managed. Both of those lock the target as a LIVE artifact, so
+    skipping them would publish a lock claiming bytes that were never written and
+    then report `drift: false` forever — an absorbing false state, strictly worse
+    than the CP-VERIFY these cases fail with today.
+
+    The licence is therefore the lock itself, not the action: skip only a path the
+    plan records as a create-only absence AND does not record as a live artifact.
+    Nothing else may bypass a published-target check. That reading is independent
+    of which policy field classified the unit, so it survives the pending
+    `group.policy` / `previous.policy` correction in `_classify_desired`.
+    """
+    live = {unit.path.original for unit in plan.next_lock.artifacts}
+    absent = {absence.path.original for absence in plan.next_lock.create_only_absences}
+    return frozenset(
+        action.target
+        for action in plan.actions
+        if action.kind is ActionKind.NOOP
+        and action.after_digest is None
+        and action.target in absent
+        and action.target not in live
+    )
+
+
 def _verify_published_targets(repo: Path, plan: ReconciliationPlan) -> None:
     """Recheck every published target against the reviewed virtual tree."""
     paths = tuple(SafeRelativePath.parse(item.target) for item in plan.targets)
     snapshot = RepositorySnapshot.capture(repo, paths)
     removed = {action.target for action in plan.actions if action.kind is ActionKind.REMOVE}
-    # A no-op with no after-digest is `_target_action`'s exact encoding of "the
-    # path is missing and nothing renders" — a consumer-deleted create-only unit
-    # (issue #70). The planner still publishes a PlannedTarget for it because
-    # `_locked_after` reads that entry to build the `create_only_absences` record,
-    # but nothing was staged, so demanding a regular file failed every such apply
-    # with CP-VERIFY and made the drift permanent. Absence is the expected state.
-    unstaged = {
-        action.target
-        for action in plan.actions
-        if action.kind is ActionKind.NOOP and action.after_digest is None
-    }
+    unstaged = _disclaimed_targets(plan)
     for planned in plan.targets:
         entry = snapshot.entry(SafeRelativePath.parse(planned.target))
         if planned.target in removed or planned.target in unstaged:
