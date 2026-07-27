@@ -1,14 +1,22 @@
 """Guard against issue #53: pinned release payloads must not link mutable refs.
 
 A versioned payload under `standards/<family>/versions/<version>/` is byte-frozen
-once released — GitHub's tag/release browsing lets a consumer stay on the exact
-ref they installed, but only if the document itself links repo-relatively. A
-hardcoded `https://github.com/L3DigitalNet/project-standards/blob/(main|v5)/...`
-link always resolves against the CURRENT tip of that branch, so a reader on an
-old pinned release is silently handed documentation, CLI behavior, or a skill
-file that has moved on since the release was cut. That is exactly issue #53:
-markdown-frontmatter 1.2-1.5's `adopt.md` and installed `SKILL.md` hardcoded
-`blob/main`/`blob/v5` links instead of repo-relative ones.
+once released, so every self-referential link in it must resolve to the same
+bytes forever. A hardcoded
+`https://github.com/L3DigitalNet/project-standards/blob/(main|v5)/...` link
+always resolves against the CURRENT tip of that branch or moving major tag, so a
+reader on an old pinned release is silently handed documentation, CLI behavior,
+or a skill file that has moved on since the release was cut. That is exactly
+issue #53: markdown-frontmatter 1.2-1.5's `adopt.md` and installed `SKILL.md`
+hardcoded `blob/main`/`blob/v5` links.
+
+The defect is the MOVING ref, not absoluteness. A repo-relative link is correct
+only for a document that stays inside the repository tree; a document the payload
+INSTALLS into a consumer repository (`.agents/skills/.../SKILL.md`,
+`.standards/packages/.../agent-summary.md`) lands where those relative paths
+resolve to nothing, or worse to the consumer's own files. Those documents must
+use an immutable, version-pinned absolute URL — `blob/vX.Y.Z/...` — which this
+scan therefore permits and the pattern below deliberately does not match.
 
 Scoping rationale (why this is an explicit allowlist, not "newest version only"):
 
@@ -59,8 +67,15 @@ import pytest
 _ROOT = Path(__file__).resolve().parents[2]
 _STANDARDS_ROOT = _ROOT / "standards"
 
+# Moving refs only: `main`, the floating `v5` major tag, and any other branch-like
+# ref that can be repointed. An immutable release tag (`v5.10.0`) is the supported
+# form for installed documents and must not match — the trailing `/` after the
+# alternation is what keeps `blob/v5.10.0/` out of this pattern.
 _MUTABLE_REF_PATTERN = re.compile(
     r"github\.com/L3DigitalNet/project-standards/(?:blob|tree)/(?:main|v5)/"
+)
+_PINNED_REF_PATTERN = re.compile(
+    r"github\.com/L3DigitalNet/project-standards/(?:blob|tree)/v[0-9]+\.[0-9]+\.[0-9]+/"
 )
 
 # Grandfathered released files that already contained the mutable-ref pattern
@@ -223,3 +238,44 @@ def test_mutable_ref_scan_would_have_caught_issue_53() -> None:
     assert violations, "scanner regressed: known-bad 1.5 payload must be flagged"
     assert any(v.startswith("adopt.md:") for v in violations)
     assert any(v.startswith("skills/markdown-frontmatter/SKILL.md:") for v in violations)
+
+
+def test_version_pinned_refs_are_permitted() -> None:
+    """An immutable release tag is the supported form, not a violation.
+
+    A document a payload installs into a consumer repository cannot use a
+    repo-relative link — it lands outside this repository's tree — so it pins an
+    exact release tag instead. The scanner must accept that and still reject the
+    moving forms.
+    """
+    pinned = "https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/x.md"
+    moving = "https://github.com/L3DigitalNet/project-standards/blob/v5/standards/x.md"
+
+    assert _PINNED_REF_PATTERN.search(pinned)
+    assert not _MUTABLE_REF_PATTERN.search(pinned)
+    assert _MUTABLE_REF_PATTERN.search(moving)
+
+
+def test_installed_markdown_frontmatter_docs_pin_an_exact_release_tag() -> None:
+    """The two 1.6 documents that leave this repository must be tag-pinned.
+
+    `payload.toml` relocates them under `.agents/` and `.standards/` in the
+    consumer repository, where `../README.md` resolves to a file that does not
+    exist. Relative links are correct only for the documents that stay in the
+    versioned payload directory, which the sibling assertion covers.
+    """
+    root = _STANDARDS_ROOT / "markdown-frontmatter" / "versions" / "1.6"
+    installed = (
+        root / "artifacts/agent-summary.md",
+        root / "skills/markdown-frontmatter/SKILL.md",
+    )
+
+    for path in installed:
+        text = path.read_text(encoding="utf-8")
+        targets = re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text)
+        assert targets, f"{path} has no links to check"
+        for target in targets:
+            assert _PINNED_REF_PATTERN.search(target), f"{path}: {target} is not tag-pinned"
+    for path in (root / "adopt.md", root / "README.md", root / "structure.md"):
+        for target in re.findall(r"(?<!!)\[[^\]]+\]\((\.\.?/[^)]+)\)", path.read_text("utf-8")):
+            assert (path.parent / target).resolve().exists(), f"{path}: {target} does not resolve"

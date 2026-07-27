@@ -171,6 +171,10 @@ def test_python_tooling_1_10__help_flag__prints_usage_and_runs_nothing(
         pytest.param(["--fix"], id="unsupported-option"),
         pytest.param(["lint"], id="positional"),
         pytest.param(["--", "extra"], id="separator"),
+        # A typo must not be excused by a help flag beside it, and `--` ends
+        # option parsing, so a help flag after it is a positional.
+        pytest.param(["--unknown", "--help"], id="unknown-before-help"),
+        pytest.param(["--", "--help"], id="help-after-separator"),
     ],
 )
 def test_python_tooling_1_10__unknown_argument__fails_without_running_the_gate(

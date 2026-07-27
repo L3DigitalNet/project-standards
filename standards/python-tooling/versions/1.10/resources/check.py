@@ -29,14 +29,31 @@ def run_command(command: Sequence[str]) -> int:
 
 
 def main(argv: Sequence[str]) -> int:
-    """Resolve arguments before any gate command, then stop at the first failure."""
-    if "-h" in argv or "--help" in argv:
-        print(USAGE, end="")
-        return 0
-    if argv:
-        print(f"scripts/check.py: error: unrecognized argument: {argv[0]}", file=sys.stderr)
+    """Resolve arguments before any gate command, then stop at the first failure.
+
+    Only `-h`/`--help` are accepted, and an unrecognized argument outranks them:
+    `check.py --typo --help` must fail rather than print usage and exit 0, or a
+    mistyped CI invocation silently skips the whole gate. A `--` ends option
+    parsing, so it and everything after it are positionals this script never
+    accepts. No gate command runs on any of these paths.
+    """
+    arguments = list(argv)
+    separator = arguments.index("--") if "--" in arguments else len(arguments)
+    unrecognized = next(
+        (
+            argument
+            for index, argument in enumerate(arguments)
+            if index >= separator or argument not in {"-h", "--help"}
+        ),
+        None,
+    )
+    if unrecognized is not None:
+        print(f"scripts/check.py: error: unrecognized argument: {unrecognized}", file=sys.stderr)
         print(USAGE, end="", file=sys.stderr)
         return 2
+    if arguments:
+        print(USAGE, end="")
+        return 0
     for command in COMMANDS:
         if return_code := run_command(command):
             return return_code

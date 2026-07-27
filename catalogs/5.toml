@@ -100,7 +100,7 @@ role = "retained"
 [[packages]]
 id = "markdown-frontmatter"
 version = "1.6"
-digest = "sha256:61743f30ca036fbb9056b02ccd1101e92574dd4a30609fc4079972f893f7e10f"
+digest = "sha256:cf1e2c975d5f139f1b3864090e6fcc0e45dcb895a97dd07113c0eeb7af0d0f32"
 role = "default"
 
 [[packages]]
@@ -154,7 +154,7 @@ role = "retained"
 [[packages]]
 id = "markdown-tooling"
 version = "1.10"
-digest = "sha256:b5e6f9e110f4582ee06ee698aa51d7b5ff9d13863676add259d40b5c99b41daf"
+digest = "sha256:db6b97d120ac9f31ab589c2d48926acb5713b840738dd13b6460d34632e4fc9b"
 role = "default"
 
 [[packages]]
@@ -250,7 +250,7 @@ role = "retained"
 [[packages]]
 id = "python-tooling"
 version = "1.10"
-digest = "sha256:e9fd86e4b28bf04f079c7b623464460897f7937ee250a9993c7059192deae4fb"
+digest = "sha256:1f397497be8e925d79f46003d7297813a7d02ea7ff0112cf523354e0a4300398"
 role = "default"
 
 [[packages]]

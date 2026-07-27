@@ -1,6 +1,6 @@
 # Markdown Frontmatter Standard: Agent Summary
 
-The canonical [Markdown Frontmatter 1.6 standard](../README.md) is authoritative and wins if this summary conflicts with it.
+The canonical [Markdown Frontmatter 1.6 standard](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/README.md) is authoritative and wins if this summary conflicts with it.
 
 Lifecycle: active. Package: `markdown-frontmatter@1.6`.
 
@@ -33,4 +33,4 @@ This standard governs metadata, not Markdown body formatting. Markdown Tooling i
 
 ## Canonical resources
 
-Use the [versioned package documentation](..) for complete requirements.
+Use the [versioned package documentation](https://github.com/L3DigitalNet/project-standards/tree/v5.10.0/standards/markdown-frontmatter/versions/1.6) for complete requirements.

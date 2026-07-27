@@ -457,9 +457,10 @@ affected = [
 
 [[migrations]]
 # 5.8.0 FR-005 / issue #27 widened the legacy-acceptance envelope for
-# .markdownlint.json. A consumer on package:1.7 already holds the managed escaped
-# bytes, so the direct successor edge re-verifies that artifact; the literal byte
-# form arrives through the legacy path below.
+# .markdownlint.json, so this edge re-verifies that artifact; the literal byte
+# form arrives through the legacy path below. A package:1.7 consumer also crosses
+# every later delta, so the inventory is the union with the 1.8 edge — declaring
+# only the artifact understated the real rendered delta.
 id = "markdown-tooling-1-7-to-1-10"
 from = "package:1.7"
 to = "package:1.10"
@@ -468,6 +469,10 @@ provider = "migrate-legacy"
 reversible = false
 affected = [
   "artifact:markdownlint-config",
+  "contribution:agents-instructions",
+  "contribution:claude-instructions",
+  "contribution:format-caller",
+  "contribution:lint-caller",
 ]
 
 [[migrations]]

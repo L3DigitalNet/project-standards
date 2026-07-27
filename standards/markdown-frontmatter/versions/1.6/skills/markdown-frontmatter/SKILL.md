@@ -12,7 +12,7 @@ metadata:
 
 ## Overview
 
-Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](../../README.md).
+Author and fix YAML frontmatter for **managed Markdown documents** under the [project-standards Markdown Frontmatter Standard](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/README.md).
 
 This skill ships with the standard package and is installed repo-local at `.agents/skills/markdown-frontmatter` when a repository adopts the standard. That path is deliberate: both Claude Code and Codex CLI can discover it without a global skill owner.
 
@@ -169,8 +169,8 @@ To check or repair a single file's id: `validate-id <file>` (add `--fix` to rewr
 
 ## Authoritative references
 
-- [Standard README](../../README.md) — overview and adoption surface.
-- [Structure Requirements](../../structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
-- [Field Values](../../field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
-- [Adoption guide](../../adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
+- [Standard README](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/README.md) — overview and adoption surface.
+- [Structure Requirements](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/structure.md) — hard fields, key order, scalar/list rules, IDs, and validation.
+- [Field Values](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/field-values.md) — lifecycle, ownership, canonical tags, aliases, relationships, sources, and extensions.
+- [Adoption guide](https://github.com/L3DigitalNet/project-standards/blob/v5.10.0/standards/markdown-frontmatter/versions/1.6/adopt.md) — unified config, CI workflow, repo-local skill install, and compliance procedure.
 - `standards/markdown-frontmatter/versions/1.6/schemas/markdown-frontmatter.schema.json` (in project-standards) — the selected package contract; wins on any conflict.

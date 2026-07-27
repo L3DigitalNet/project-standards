@@ -71,14 +71,14 @@ id = "check-script-source"
 role = "provider-resource"
 path = "resources/check.py"
 media_type = "text/x-python"
-digest = "sha256:757144c0e84382b3dfb9f3d966ee84a635abf5fab66b15166bd597507573666f"
+digest = "sha256:cb5b4105b9125a7d40f2e5d9d1e557e9a4d5eddb416909c33a661c8e8e32ece4"
 
 [[resources]]
 id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:f61f0965728bc6c574a26d9858ef67dc68edcce77665a33e3f732a71e5fca39c"
+digest = "sha256:115317a1a7898410bb1afe89c9aa4c7b92ba0502fe8eb8363f0a592ce42fc866"
 
 [[resources]]
 id = "config-transform-input"
