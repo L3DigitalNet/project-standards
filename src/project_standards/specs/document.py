@@ -30,6 +30,14 @@ from project_standards.specs.registry import (
 )
 
 _DEFINED_NUM = re.compile(r"([0-9]+(?:\.[0-9]+)*)")
+# ID_TOKEN matches the innermost `letters-digits` run, so a compound external id like
+# SA-NEW-001 tokenizes as NEW-001 and the outer namespace never suppresses it. Anchored
+# at \Z (not $, which would also match before a trailing newline and let a prefix on the
+# previous line claim this token) against the few characters preceding a match.
+_COMPOUND_HEAD = re.compile(r"(?:^|[^0-9A-Za-z_])([A-Z]{1,4})-\Z")
+# Widest text _COMPOUND_HEAD can consume: one boundary character, four letters, one dash.
+# A longer run of letters is not a legal prefix, so the truncated window must not match.
+_COMPOUND_HEAD_WINDOW = 6
 
 
 class SpecParseError(ValueError):
@@ -91,10 +99,16 @@ def parse_document(
     anchors = anchor_headings(structural_body)
     scalars = _scalar_frontmatter(fm)
     nl_offsets = [i for i, ch in enumerate(body) if ch == "\n"]
+    declared = declared_prefixes(structural_body)
+    # Namespaces this spec knows about, and so may head a compound id.
+    known = BUILTIN_REFERENCE_PREFIXES | reference_prefixes | frozenset(declared)
     used: dict[str, list[tuple[str, int]]] = {}
     for m in ID_TOKEN.finditer(structural_body):
         pfx = m.group(1)
         if pfx in NOT_AN_ID or pfx in BUILTIN_REFERENCE_PREFIXES or pfx in reference_prefixes:
+            continue
+        window = structural_body[max(0, m.start() - _COMPOUND_HEAD_WINDOW) : m.start()]
+        if (head := _COMPOUND_HEAD.search(window)) and head.group(1) in known:
             continue
         # Version/SPDX shape: digits immediately followed by ".<digit>" (MPL-2.0, FR-1.2).
         # A real id at a sentence end (FR-007.) is "."+space, never "."+digit, so it survives.
@@ -103,7 +117,6 @@ def parse_document(
             continue
         line = bisect.bisect_left(nl_offsets, m.start()) + 1
         used.setdefault(pfx, []).append((f"{pfx}-{m.group(2)}", line))
-    declared = declared_prefixes(structural_body)
     return SpecDocument(
         path=path,
         profile=scalars.get("profile"),

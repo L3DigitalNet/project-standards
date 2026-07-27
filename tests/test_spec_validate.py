@@ -175,6 +175,51 @@ def test_undeclared_message_names_appendix_a_and_reference_prefixes() -> None:
     assert "not a canonical spec-local prefix" not in undeclared[0].message
 
 
+def _undeclared_loci(
+    text: str, reference_prefixes: frozenset[str] = frozenset()
+) -> set[str | None]:
+    doc = parse_document("compound.md", text, reference_prefixes)
+    return {
+        f.locus for f in validate_document(doc, load_registry()) if f.code == "SV-ID-UNDECLARED"
+    }
+
+
+_COMPOUND = "---\nspec_id: SPEC-0001\n---\nThe second review resolved SA-NEW-001.\n"
+
+
+def test_compound_id_under_configured_reference_prefix_is_not_undeclared() -> None:
+    assert _undeclared_loci(_COMPOUND, frozenset({"SA"})) == set()
+
+
+def test_compound_id_under_unconfigured_prefix_still_reports_inner_prefix() -> None:
+    assert _undeclared_loci(_COMPOUND) == {"NEW-"}
+
+
+def test_compound_id_under_appendix_a_declared_prefix_is_not_undeclared() -> None:
+    text = (
+        "---\nspec_id: SPEC-0001\n---\n"
+        "Superseded by FR-NEW-001.\n\n"
+        "## Appendix A: ID Conventions\n\n"
+        "| Prefix | Meaning | Defined In |\n"
+        "| --- | --- | --- |\n"
+        "| `FR-` | Functional requirement | 7.1 |\n"
+    )
+
+    assert _undeclared_loci(text) == set()
+
+
+def test_plain_id_after_a_lowercase_hyphenated_word_is_still_checked() -> None:
+    # Guard against the compound rule swallowing ordinary hyphenated prose.
+    assert _undeclared_loci("---\nspec_id: SPEC-0001\n---\nSee the non-FR-001 case.\n") == {"FR-"}
+
+
+def test_compound_head_longer_than_a_prefix_does_not_suppress_the_inner_id() -> None:
+    # WXYZAB- is not a legal 1-4 letter prefix, so it cannot classify NEW-001.
+    text = "---\nspec_id: SPEC-0001\n---\nRef WXYZAB-NEW-001 here.\n"
+
+    assert _undeclared_loci(text, frozenset({"SA"})) == {"NEW-"}
+
+
 def test_shipped_dogfood_example_validates_and_lints_clean() -> None:
     """standards/project-spec/examples/spec.example.md is this standard's shipped worked
     example (see standards/project-spec/README.md §2 Scope) — it is excluded from the
