@@ -30,6 +30,8 @@ Review [adopt.md](adopt.md) before applying. Commit unified config, catalog, loc
 
 The immutable 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, and 1.8 READMEs contain wording written before the atomic Catalog 5 and Project Standards v5.0.0 release. Treat their statement that the V1 root remains authoritative until that release as release-time history. Catalog 5 now selects `python-tooling@1.9`; the immutable payload bytes remain unchanged.
 
+The immutable 1.1 through 1.9 READMEs name Python Coding 0.5 as the reference-only companion. That literal was written before Python Coding 0.6 shipped and was never refreshed in the released payloads. The current companion is Python Coding 0.6; treat the earlier literal as release-time history, not as a statement that 0.5 is the compatible version. Python Tooling 1.10 names 0.6 directly.
+
 In the immutable 1.4 README, the statement that a modified `scripts/check.py` remains blocking applies only while `script_ownership = "managed"`. Setting `script_ownership = "consumer-owned"` preserves the customized script and leaves it outside reconciliation, verification, and lock state. `.python-version` and modified managed outputs retain the stated blocking behavior.
 
 ## Legacy boundary
