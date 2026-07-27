@@ -98,11 +98,20 @@ def _check_frontmatter(doc: SpecDocument, reg: Registry) -> list[Finding]:
 
 def _check_sections(doc: SpecDocument, reg: Registry, structural_body: str) -> list[Finding]:
     out: list[Finding] = []
+    heading_tops = {n for n, _ in doc.sections if "." not in n}
     for n, ln in doc.sections:
+        parent = n.split(".")[0]
         # The registry governs the top-level ladder; authors own the numbering beneath
-        # it, so a subsection is accepted whenever its top-level parent is canonical.
-        # Same parent-number fallback _check_references applies to § cross-references.
-        if n not in reg.canonical_sections and n.split(".")[0] not in reg.canonical_sections:
+        # it, so a subsection is accepted when its top-level parent is canonical *and*
+        # actually heads the document. An orphan `### 9.1` under a §9 that is absent —
+        # even one an omission note covers — is a numbering error, not author-owned
+        # structure, as is a rogue `## 9.1` with no `## 9.`. Cross-references in
+        # _check_references keep the looser parent-number fallback: they cite sections
+        # of other documents, which this document cannot be expected to contain.
+        canonical = n in reg.canonical_sections or (
+            parent != n and parent in reg.canonical_sections and parent in heading_tops
+        )
+        if not canonical:
             out.append(
                 _f("SV-SECTION", f"§{n} is not in the canonical registry", line=ln, locus=f"§{n}")
             )

@@ -100,8 +100,11 @@ def parse_document(
     scalars = _scalar_frontmatter(fm)
     nl_offsets = [i for i, ch in enumerate(body) if ch == "\n"]
     declared = declared_prefixes(structural_body)
-    # Namespaces this spec knows about, and so may head a compound id.
-    known = BUILTIN_REFERENCE_PREFIXES | reference_prefixes | frozenset(declared)
+    # Only *external* namespaces may head a compound id. Appendix-A-declared
+    # prefixes name this spec's own ID space, so admitting them here let
+    # `FR-NFR-01` and `FR-ERR-1234` pose as external citations and skip the
+    # local width and declaration checks they exist to fail.
+    known = BUILTIN_REFERENCE_PREFIXES | reference_prefixes
     used: dict[str, list[tuple[str, int]]] = {}
     for m in ID_TOKEN.finditer(structural_body):
         pfx = m.group(1)

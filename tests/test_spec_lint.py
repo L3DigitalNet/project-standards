@@ -125,6 +125,9 @@ def _placeholder_lines(body: str) -> list[int | None]:
         "See the docs (<https://docs.python.org/3/library/typing.html#typing.get_args>).",
         "Contact <mailto:user@example.com> for access.",
         "Contact <user@example.com> for access.",
+        # A double-backtick span may nest a single-backtick run; CommonMark closes
+        # it on the next run of the same length, so the whole span is notation.
+        "Nested notation is ``x` <t> `y`` in one span.",
     ],
 )
 def test_inline_code_and_autolinks_are_not_placeholders(line: str) -> None:
@@ -142,6 +145,12 @@ def test_inline_code_and_autolinks_are_not_placeholders(line: str) -> None:
         # holds nothing but an angle group stays a template field, not notation.
         "This project provides `<capability>` for `<user/system>`.",
         "| 0.1 | `<YYYY-MM-DD>` | `<author>` | Initial draft |",
+        # An opening run with no equal-length closer is literal text, so it cannot
+        # hide a real placeholder behind a malformed span.
+        "Set ``x <path>` y` before running.",
+        # GFM renders these as literal text, not links, so they are placeholders.
+        "Owner is <owner@>.",
+        "Owner is <user@@example.com>.",
     ],
 )
 def test_real_placeholders_are_still_flagged(line: str) -> None:

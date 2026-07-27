@@ -16,7 +16,7 @@ from project_standards.specs.registry import (
 )
 
 _ANGLE = re.compile(r"<[^>\n]+>")
-_INLINE_CODE = re.compile(r"`+[^`]*`+")
+_BACKTICK_RUN = re.compile(r"`+")
 # A code span that is nothing but one angle group is how the shipped templates write
 # their own fields (`<capability>`, `<owner>`), so it stays visible to the scan;
 # blanket-masking inline code would silence this rule on an entirely unfilled template.
@@ -24,19 +24,58 @@ _INLINE_CODE = re.compile(r"`+[^`]*`+")
 # metavariable (`test_<unit>_<scenario>`) or generic call shape (`_Probe(<base>)`).
 _CODE_FIELD = re.compile(r"`+\s*<[^<>\n]+>\s*`+")
 # GFM autolinks are valid Markdown, and are the fix markdownlint's MD034 prescribes for
-# a bare URL; flagging them would put the two managed linters in direct conflict.
-_AUTOLINK = re.compile(r"<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:|[^<>\s@]+@)[^<>\s]*>")
+# a bare URL; flagging them would put the two managed linters in direct conflict. The
+# email alternative follows GFM's own grammar rather than "anything with an @": a
+# permissive form let `<owner@>` and `<user@@example.com>` — which GFM renders as
+# literal text, so they are unfilled placeholders — pass as links (issue #65 follow-up).
+_URI_AUTOLINK = r"[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*"
+_EMAIL_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+_EMAIL_AUTOLINK = rf"[A-Za-z0-9.!#$%&'*+/=?^_`{{|}}~-]+@{_EMAIL_LABEL}(?:\.{_EMAIL_LABEL})*"
+_AUTOLINK = re.compile(rf"<(?:{_URI_AUTOLINK}|{_EMAIL_AUTOLINK})>")
 _GUIDANCE = "> **Template instructions"
+
+
+def _mask_code_spans(line: str) -> str:
+    """Mask inline code spans with CommonMark backtick-run pairing.
+
+    A span opens with a run of N backticks and closes with the next run of
+    exactly N; a run with no such closer is literal text. Greedy `` `+[^`]*`+ ``
+    matching instead split a span that nests a shorter run (```` ``x` <t> `y`` ````
+    read as two spans) and fused unbalanced runs into one (```` ``x <t>` y` ````),
+    flipping this rule's verdict either way. Masking to spaces rather than
+    deleting keeps offsets, so a removed span cannot join the text on either side
+    of it into an angle pair that was never written. Spans are line-scoped, since
+    the whole rule is: a span wrapped across a newline is out of scope.
+    """
+    runs = [(match.start(), match.end()) for match in _BACKTICK_RUN.finditer(line)]
+    parts: list[str] = []
+    cursor = 0
+    index = 0
+    while index < len(runs):
+        start, end = runs[index]
+        closer = next(
+            (
+                candidate
+                for candidate in range(index + 1, len(runs))
+                if runs[candidate][1] - runs[candidate][0] == end - start
+            ),
+            None,
+        )
+        if closer is None:
+            index += 1
+            continue
+        span = line[start : runs[closer][1]]
+        parts.append(line[cursor:start])
+        parts.append(span if _CODE_FIELD.fullmatch(span) else " " * len(span))
+        cursor = runs[closer][1]
+        index = closer + 1
+    parts.append(line[cursor:])
+    return "".join(parts)
 
 
 def _placeholder_angles(line: str) -> bool:
     """Report whether a line holds an angle pair that is neither notation nor a link."""
-    # Masked to spaces, not deleted, so a removed span cannot join the text on either
-    # side of it into an angle pair that was never written.
-    visible = _INLINE_CODE.sub(
-        lambda m: m.group(0) if _CODE_FIELD.fullmatch(m.group(0)) else " " * len(m.group(0)),
-        line,
-    )
+    visible = _mask_code_spans(line)
     return any(not _AUTOLINK.fullmatch(m.group(0)) for m in _ANGLE.finditer(visible))
 
 

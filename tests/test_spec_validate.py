@@ -140,6 +140,37 @@ def test_numbered_subsection_under_unknown_parent_is_still_rejected() -> None:
     assert loci == {"§999", "§999.1"}
 
 
+def test_orphan_subsection_under_an_omitted_parent_is_rejected() -> None:
+    """An omission note excuses the missing §9, not a §9.1 that outlives it."""
+    source = (_FIX / "valid_standard.md").read_text(encoding="utf-8")
+    assert "## 9. Data Model\n" in source
+    start = source.index("## 9. Data Model\n")
+    end = source.index("## 10.", start)
+    omitted = (
+        source[:start]
+        + "> §9 is intentionally omitted.\n\n"
+        + "### 9.1 Lifecycle Receipt\n\nReceipt details.\n\n"
+        + source[end:]
+    )
+
+    findings = validate_document(parse_document("orphan.md", omitted), load_registry())
+
+    assert {f.locus for f in findings if f.code == "SV-SECTION"} == {"§9.1"}
+    assert "SV-GAP" not in {f.code for f in findings}
+
+
+def test_rogue_top_level_subsection_without_its_parent_is_rejected() -> None:
+    doc = parse_document(
+        "rogue.md",
+        "---\nspec_id: SPEC-0001\nprofile: light\nstatus: draft\n---\n"
+        "# Demo\n\n## 7. Requirements\n\n## 9.1 Orphan\n",
+    )
+
+    loci = {f.locus for f in validate_document(doc, load_registry()) if f.code == "SV-SECTION"}
+
+    assert loci == {"§9.1"}
+
+
 def test_subsection_acceptance_does_not_mask_top_level_order() -> None:
     doc = parse_document(
         "order.md",
@@ -195,7 +226,13 @@ def test_compound_id_under_unconfigured_prefix_still_reports_inner_prefix() -> N
     assert _undeclared_loci(_COMPOUND) == {"NEW-"}
 
 
-def test_compound_id_under_appendix_a_declared_prefix_is_not_undeclared() -> None:
+def test_compound_id_under_appendix_a_declared_prefix_still_reports_inner_prefix() -> None:
+    """A locally declared prefix is not an external namespace.
+
+    Suppressing on Appendix A let a spec's own prefix head a compound id, which
+    hid malformed local ids behind it (issue #59 follow-up). Only the built-in
+    and configured reference prefixes classify a compound head.
+    """
     text = (
         "---\nspec_id: SPEC-0001\n---\n"
         "Superseded by FR-NEW-001.\n\n"
@@ -205,7 +242,26 @@ def test_compound_id_under_appendix_a_declared_prefix_is_not_undeclared() -> Non
         "| `FR-` | Functional requirement | 7.1 |\n"
     )
 
-    assert _undeclared_loci(text) == set()
+    assert _undeclared_loci(text) == {"NEW-"}
+
+
+@pytest.mark.parametrize(
+    ("body", "bad_id"),
+    [("The FR-NFR-01 case.", "NFR-01"), ("The FR-ERR-1234 case.", "ERR-1234")],
+)
+def test_declared_head_does_not_hide_a_malformed_local_id(body: str, bad_id: str) -> None:
+    text = (
+        "---\nspec_id: SPEC-0001\n---\n"
+        f"{body}\n\n"
+        "## Appendix A: ID Conventions\n\n"
+        "| Prefix | Meaning | Defined In |\n"
+        "| --- | --- | --- |\n"
+        "| `FR-` | Functional requirement | 7.1 |\n"
+    )
+
+    findings = validate_document(parse_document("compound.md", text), load_registry())
+
+    assert bad_id in {f.locus for f in findings if f.code == "SV-ID-FMT"}
 
 
 def test_plain_id_after_a_lowercase_hyphenated_word_is_still_checked() -> None:
