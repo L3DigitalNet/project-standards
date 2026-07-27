@@ -34,8 +34,12 @@ related:
 | 0.1 | 2026-07-26 | Codex with owner-directed regression audit | Initial specification for issues #32 and #35-#49, including the verified 5.8.0 closed-issue baseline and permanent regression-proof requirement. |
 | 0.2 | 2026-07-26 | Codex with Opus specification review | Resolve round-1 review findings: bound immutable TOML-guide scope, separate payload-byte and outcome compatibility, define shared path classification, make the regression ledger evolvable, correct release authorities, version diagnostic schemas, complete migration/config semantics, and require direct spec-plan traceability. |
 | 0.3 | 2026-07-26 | Codex with Opus specification review | Resolve round-2 review findings: qualify the release commit after all byte-changing release preparation, update the Markdown split-ownership declaration with MD060, protect exact and default-track consumers, and preserve historical release references and lint scope. |
+| 0.4 | 2026-07-26 | Codex with owner-selected Option 1 | Add one explicitly opted-in, generic package-configuration transform for direct automatic package upgrades after implementation proved that legacy migration providers do not run during unified 1.8-to-1.9 reconciliation; retain all release, predecessor-immutability, and non-goal boundaries. |
+| 0.5 | 2026-07-26 | Codex with Opus specification review | Resolve Option 1 review findings: preserve same-change successor options, distinguish source-effective config from behavior, prohibit all raw-value disclosure, use one family-indexed predecessor authority, and bind typed transform evidence to reconciliation-plan schema 1.3. |
+| 0.6 | 2026-07-26 | Codex with Opus specification review and implementation-feasibility audit | Bound source projection to direct object properties and enum expansion; clarify schema-version staging, retry idempotence, ordinary consumer-error routing, target-only-leaf deferral, and direct-edge graph characterization. |
+| 0.7 | 2026-07-26 | Codex with Opus specification review | Reject declarations whose schema evolution exceeds the bounded projection profile, unify unsupported-projection diagnostics, and require explicit projection acceptance evidence. |
 
-**Spec lifecycle:** The owner approved rev 0.3 and its governing plan on 2026-07-26 and granted the required exception to the MCP change hold for implementation through T17. This document is now change-controlled: implementation deviations belong in the [Deviations Log](#deviations-log), and scope-affecting edits require a new revision and renewed owner approval. Publication and issue closure remain separately unauthorized.
+**Spec lifecycle:** The owner approved rev 0.4's Option 1 scope and authorized autonomous specification/plan convergence, including review-driven corrections recorded in rev 0.5-rev 0.7, on 2026-07-26. The governing plan amendment and its independent review must converge before T19 GREEN. This document remains change-controlled: implementation deviations belong in the [Deviations Log](#deviations-log), and further scope-affecting edits outside that authorized convergence require a new revision and renewed owner approval. Publication and issue closure remain separately unauthorized.
 
 ---
 
@@ -59,7 +63,7 @@ The intended result is one internally phased, owner-approved correction train. I
 - TOML keyed-set matching that preserves valid entries without the optional identity field.
 - Precise, structured, content-redacted TOML and Agent Handoff diagnostics.
 - Immutable successor payloads for Python Tooling, Markdown Tooling, Agent Handoff, and CLI Documentation.
-- Python Tooling additive configuration, non-installable repository mode, and safe fresh performance-test defaults with behavior-preserving migration.
+- Python Tooling additive configuration, non-installable repository mode, and safe fresh performance-test defaults with behavior-preserving migration through a generic, explicitly opted-in direct package-upgrade configuration transform.
 - Markdown Tooling exclusion parity, workflow permissions, caller formatting, lint/format convergence, and safe autofix guidance.
 - Agent Handoff exclusion guidance for independently managed `.agents/` files.
 - Valid CLI Documentation adoption TOML and one optional consumer-owned multi-CLI usage index.
@@ -76,6 +80,7 @@ The intended result is one internally phased, owner-approved correction train. I
 | NG-004 | Silently treat explicit pytest performance selection with no matching tests as success. | Pytest exit code 5 remains meaningful when the consumer explicitly enables the gate. |
 | NG-005 | Generate one CLI usage artifact or CI matrix per command. | #42 requires multi-CLI navigation, not multiplied generated ownership. |
 | NG-006 | Publish a release or close issues without explicit owner authorization. | These are externally visible, difficult-to-reverse operations outside implementation authority. |
+| NG-007 | Add package-ID-specific upgrade logic, an arbitrary patch language, automatic execution of historical migration providers, multi-hop transform planning, or a new upgrade CLI. | FR-017 needs one generic direct-edge provider contract inside the existing reconciliation path, not another configuration or migration subsystem. |
 
 ### 2.3 Won't Have in v1 (deferred — not never)
 
@@ -86,6 +91,8 @@ The intended result is one internally phased, owner-approved correction train. I
 | WH-003 | Generated multi-CLI artifacts and command matrices. | A referenced consumer-owned index satisfies the current navigation need. | A consumer demonstrates a need for independently generated artifact identities. |
 | WH-004 | Automatic configuration of every third-party tool that scans `.agents/`. | The standard cannot safely own unknown tools' configuration. | A concrete provider and ownership boundary are approved. |
 | WH-005 | A new property-testing dependency. | Generated pytest parametrization can cover the bounded input domains. | The owner approves a dependency proposal supported by a coverage gap. |
+| WH-006 | Compose more than one package-configuration transform in one reconciliation plan. | FR-017 requires one transitioning package; defining cross-package transform ordering and merge semantics would enlarge the transaction contract. | A second package requires a transform and a separately approved composition contract. |
+| WH-007 | Declare a transform on an edge that introduces a target-only leaf or widens a shared value space outside direct scalar-enum expansion, including rename, relocation, collection-member change, range change, or type change. | FR-021's bounded projection and introduced-leaf source validity make config-first publication resumable without a general schema evaluator; unsupported schema evolution requires a different staging or ordering contract. | A successor requires such a change and an approved design defines resumable staging without a general patch engine. |
 
 ### 2.4 Boundaries
 
@@ -120,9 +127,11 @@ GitHub numbers #1, #2, #4-#7, #33, and #34 are pull requests rather than issue r
 
 Issue #21's shipped guidance is correct, but the audit needed five semantic assertions outside the committed test suite. CLI Documentation 1.1, 1.2, and 1.3 also remain byte-immutable with the invalid `command_name = null` example reported by #46; the 1.4 successor is the correction path, not an edit to those retained versions. The Node dependency audit reports a development-only `markdownlint-cli2` to `js-yaml` advisory chain; production dependencies are clean. This train must keep the pinned local/CI Markdown toolchain stable and must not expand into dependency remediation without separate approval.
 
+Implementation characterization additionally proved that current package-to-package migration declarations authorize version transitions but do not invoke their providers during ordinary unified reconciliation. Target resolution therefore applied Python Tooling 1.9 defaults directly to unchanged sparse 1.8 desired config. The existing direct provider test proved the value formula only for legacy V4 input and could not satisfy FR-017's real initialized 1.8-to-1.9 lifecycle.
+
 ### 3.2 Target State
 
-All sixteen open issues have test-first corrections at their proper authority boundary. Engine fixes apply consistently across packages. Package-specific changes exist only in immutable successor payloads with explicit migrations and unchanged predecessor bytes. Fresh adoption and supported migration converge under the pinned formatter, linter, package, and reconciliation contracts.
+All sixteen open issues have test-first corrections at their proper authority boundary. Engine fixes apply consistently across packages. Package-specific changes exist only in immutable successor payloads with explicit migrations and unchanged predecessor bytes. A direct automatic package migration may opt in one target-payload provider to transform only that package's desired configuration before target-schema resolution; fresh adoption and non-opted transitions remain unchanged. Fresh adoption and supported migration converge under the pinned formatter, linter, package, and reconciliation contracts.
 
 The repository contains a machine-checkable issue regression ledger. Every regression-bearing issue maps to one or more stable contract IDs backed by automated tests or semantic assertions, and issue #21 has a permanent committed guard. The ledger is seeded with the audited closed issues, gains #32 and #35-#49 before those issues may close, and passes against the 5.8.0 baseline where applicable and the exact candidate wheel before release authorization.
 
@@ -149,6 +158,7 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 | C-006 | The current pinned Markdown dependency advisory is not remediated in this train unless separately authorized. | Scope control and the verified local/CI parity contract. |
 | C-007 | No fix may weaken, delete, skip, or expected-fail an existing regression merely to make the candidate pass; behavior-preserving retargeting follows DR-002's reviewed amendment procedure. | Owner-directed closed-issue regression requirement. |
 | C-008 | The governing plan shall name this specification in `spec_ref`, reuse its FR/NFR/IR/DR IDs directly, and provide total bidirectional requirement-to-task/test traceability before owner approval. | D-002 and the plan-authoring contract. |
+| C-009 | Package-configuration transforms are explicit opt-ins on direct automatic package-to-package migrations whose source/target schema evolution passes FR-021's bounded declaration-eligibility profile, execute read-only through the existing trusted payload-provider boundary, affect only declared JSON-pointer leaves in the transitioning package's config, introduce only leaves valid under both source and target schemas, and become ordinary digest-preconditioned reconciliation actions. One plan may contain at most one transform. | Owner-selected Option 1, ADR 0023, and ADR 0024. |
 
 ---
 
@@ -156,8 +166,8 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 
 | ID | Goal | Success Signal | Achieved By |
 | --- | --- | --- | --- |
-| G-001 | Correct all reported adoption and upgrade integrity failures at the owning boundary. | Each open issue has a focused failing regression followed by passing candidate evidence. | FR-001-FR-018, NFR-001-NFR-003 |
-| G-002 | Preserve released consumers and all previously closed issue behavior. | Predecessor payload digests are unchanged, no prior pass becomes a failure, and the issue regression ledger passes in every applicable environment. | FR-019, NFR-004, NFR-005, NFR-008, DR-002 |
+| G-001 | Correct all reported adoption and upgrade integrity failures at the owning boundary. | Each open issue has a focused failing regression followed by passing candidate evidence. | FR-001-FR-018, FR-021, IR-005, NFR-001-NFR-003 |
+| G-002 | Preserve released consumers and all previously closed issue behavior. | Predecessor payload digests are unchanged, no prior pass becomes a failure or silently loses an effective gate, and the issue regression ledger passes in every applicable environment. | FR-019, FR-021, NFR-004, NFR-005, NFR-008, DR-002 |
 | G-003 | Produce one reviewable, releasable but unpublished candidate. | One extracted candidate wheel passes the complete gate and Opus has no unresolved blocker. | NFR-006, NFR-007 |
 | G-004 | Keep authorization and program boundaries explicit. | No implementation starts without plan approval/MCP-hold exception and no release mutation occurs without separate authorization. | FR-020, C-004, C-005, OQ-001, OQ-003 |
 
@@ -178,6 +188,9 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 | Pre-adoption target | A declared managed whole-file destination not yet owned by the current lock. | It cannot use lock-backed restoration. |
 | Restore preview | A non-mutating description of one exact managed target's current, locked, and desired digests and proposed action. | It is not general reconcile planning or `--repair-state`. |
 | Successor payload | A new immutable package version that preserves its predecessor while changing behavior or guidance. | Released predecessor directories are never edited. |
+| Source-effective config | The values the applied source package resolves from the bounded source-declared projection of target-valid raw desired config. | Projection recurses only through direct object `properties`, omits target-only keys and direct target-only enum scalars, and otherwise preserves values atomically; unsupported source-invalid arrays, references, combinators, ranges, or types fail closed rather than expanding projection semantics. |
+| Source-effective behavior | The artifacts and gates the source payload would render from source-effective config. | This is not identical to every resolved option value: a disabled feature may make a latent option value behaviorally inert. |
+| Package-configuration transform | An explicitly opted-in provider invocation on one direct automatic package-version edge that may add or replace only declared JSON-pointer leaves needed to preserve source-effective behavior and whose introduced leaves are valid under both source and target schemas before artifact resolution. | It is idempotent on its own output and is not legacy-authority migration, fresh-adoption defaulting, a general patch language, or package-specific control-plane logic. |
 
 ---
 
@@ -203,10 +216,11 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 | FR-014 | Every copyable TOML fence in CLI Documentation 1.4 and every candidate-default adoption guide changed by this train shall parse as TOML. | #46 documents `command_name = null` in released CLI Documentation 1.1-1.3, whose bytes cannot change. | A corpus test parses all `toml` fences in the defined successor/default scope; every illustrative fragment present in those successor guides, including copied-forward fragments, uses a non-`toml` fence or an explicit non-copyable marker when it is not valid TOML; retained 1.1-1.3 guides remain byte-identical and are asserted as known historical limitations, not silently excluded by editing them. | Must |
 | FR-015 | Markdown Tooling shall make configured exclusions select the same intended effective file set for pinned lint and format commands without widening an existing lint corpus. | #47 reports lint-only protection from `dir/**`. | Characterization covers `dir`, `dir/`, `dir/**`, nested files, supported negation, and platform separators; declared Markdown Tooling exclusions remain the selection authority; both commands honor them by narrowing the format-selected set to the lint-selected set, never by expanding lint scope. Any characterization that requires a lint-scope expansion follows AW-004 before GREEN. | Must |
 | FR-016 | The Markdown Tooling successor shall render long glob and exclusion inputs as Prettier-stable caller YAML. | #48 reports callers that fail the format gate they install. | Both managed callers pass pinned Prettier before and after repeated reconcile for short and long inputs. | Must |
-| FR-017 | Fresh Python Tooling successor adoption shall default performance CI off while migration from 1.8 preserves every prior effective state explicitly. | #49 reports fresh repositories failing with pytest exit 5. | Fresh 1.9 default is false; 1.8 with absent `ci` or absent `performance` while CI is enabled migrates to explicit true; explicit false remains false; `ci.enabled = false` remains disabled without re-enabling performance; explicit true with no matching tests retains exit 5. | Must |
+| FR-017 | Fresh Python Tooling successor adoption shall default performance CI off while generic direct package-configuration transforms from every qualifying family-indexed predecessor preserve prior effective performance behavior explicitly. | #49 reports fresh repositories failing with pytest exit 5, while ordinary unified upgrades do not execute legacy migration providers and a `latest` consumer may skip directly from any family-indexed predecessor to 1.9. | A qualifying predecessor is a Python Tooling version named by the family manifest whose schema declares `ci.performance` with default true. Fresh 1.9 default is false and invokes no transform. For every qualifying predecessor, the 1.9 payload declares a direct opted-in edge limited to `/ci/performance`: absent `ci` or absent `performance` while CI is enabled materializes `ci.performance = true`; explicit true/false is unchanged; when `ci.enabled = false`, the transform leaves `ci.enabled` unchanged and materializes `ci.performance = false`, intentionally changing the latent source-resolved option while preserving source-effective behavior because the disabled lane renders no performance gate. A family-indexed version whose schema defaults this option false or does not declare it receives no FR-017 edge. No unrelated or target-default key is materialized. Explicit true with no matching tests retains exit 5. | Must |
 | FR-018 | TOML parse diagnostics shall include parser-derived line and column while preserving the original exception as the cause. | #46 exposed an invalid example and insufficient structural location. | Text and JSON diagnostics report bounded line/column for invalid TOML and satisfy NFR-002. | Must |
 | FR-019 | Package behavior changes shall ship through immutable successors and shall activate as defaults only after schema, provider, migration, package, graph, projection, and cross-package validation passes. | Released payloads are immutable and the four successors interact. | Predecessor directories are byte-identical; successor manifests and migrations validate; activation occurs together after all package proofs pass. | Must |
 | FR-020 | The release workflow shall stop before publication and issue closure until the owner authorizes the exact qualified candidate. | Release mutation is externally visible and separately authorized. | Before authorization, no tag/release/issue state changes; after authorization, evidence binds tag, artifacts, hosted checks, issue closures, and branch parity to the candidate digest. | Must |
+| FR-021 | The control plane shall execute a package-configuration transform only when the selected target payload explicitly opts in its provider and changed-pointer allowlist on the direct automatic transition from the lock's exact applied package version. | Package transition metadata alone cannot preserve sparse desired configuration when successor defaults change, while implicitly activating historical providers or materializing complete target defaults would change unrelated migrations and future default behavior. | Package validation first rejects a transform declaration unless every source-declared schema node reachable through direct object `properties` retains the same validation keywords in the target, except that target-added properties and direct scalar-enum supersets are allowed and default/annotation changes are allowed only at declared changed pointers. This declaration-eligibility check defers array-member, range, type, reference/combinator, rename/relocation, and other unsupported widening under WH-007 before any consumer encounters the edge. For an eligible edge, the engine first validates unchanged raw package config against the target schema, then, before target artifact resolution, builds a bounded source projection: recurse only when both schemas directly declare object `properties`; omit target-only keys; omit an entire common scalar leaf only when the target's direct `enum` admits it and the source's direct `enum` does not, allowing source resolution to supply the source default; otherwise preserve the value atomically. Collections are never projected per element. The engine validates and resolves the projection as source-effective config and invokes exactly one identity-bound target provider with unchanged raw config and source-effective config. It accepts only invocation-bound same-package/source/target output with no legacy claims whose semantic diff from raw config is a subset of the declaration's nonempty JSON-pointer allowlist, whose unchanged fields remain byte-equivalent after lexical materialization, whose changed leaves are admitted by both source and target schemas, whose complete output validates against the target schema, whose bounded source projection validates against the source schema, and which is idempotent when invoked again on its own output. The transform shall introduce no source-schema invalidity and only the minimum explicit leaves required to preserve source-effective behavior; it shall not reject pre-existing target-only options or materialize unrelated target defaults. A resolved leaf may differ from the source-resolved value only when source-rendered artifacts and gates prove no observable behavior change, as in FR-017's disabled-CI state. Fresh adoption, same-version selection, non-opted edges, manual edges, and indirect/multi-hop paths do not invoke the transform. Existing package evidence with no exact authoritative applied version, including inferred-only evidence, fails closed through the existing recovery authority rather than being treated as fresh. More than one applicable transform in a plan, or any malformed, conflicting, failing, non-idempotent, introduced-source-invalid, target-invalid, or inapplicable transform, fails before writes. | Must |
 
 ### 7.2 Non-Functional Requirements
 
@@ -229,7 +243,8 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 | IR-001 | Frontmatter explicit-path CLIs | Shared directory classification shall preserve each caller's existing usage/input exit class and identify its supported bare/config-driven invocation. | No caller walks the directory; config-only callers do not gain a positional surface. | Enumerated call-site stderr/exit assertions plus #29 named-file regressions. |
 | IR-002 | Reconcile restore CLI | Restoration shall use `reconcile --restore-managed PATH` for preview and add `--apply` only as explicit confirmation. | `PATH` is one repository-contained regular-file path, never a glob/directory; mode is mutually exclusive with `--check`, `--repair-state`, `--allow-major`, and ordinary unqualified apply. | Parser, preview, apply, race, path, ownership, digest, missing, and symlink tests. |
 | IR-003 | CLI Documentation config | The optional usage-index setting shall be a repository-relative path to a consumer-owned regular file. | Absent preserves 1.3 output; present contributes a referenced navigation link without transferring ownership. | Schema/provider/transition/security matrix. |
-| IR-004 | Structured findings | TOML and Agent Handoff JSON findings shall carry optional typed structural fields rather than requiring consumers to parse message text. | Fields include applicable `path`, `line`, `column`, `locus`, `observed`, and `limit`; text rendering is derived from the same model. The reconciliation-plan schema advances additively from 1.1 to 1.2 and the Agent Handoff JSON envelope from 1.0 to 1.1; generated schemas retain `additionalProperties: false`, document optionality, and match exact output versions. | Generated `src/project_standards/schemas/reconciliation-plan.schema.json`, Agent Handoff envelope snapshots, prior-version rejection/recognition, text/JSON parity, release classification, and NFR-002 adversarial tests. |
+| IR-004 | Structured findings | TOML and Agent Handoff JSON findings shall carry optional typed structural fields rather than requiring consumers to parse message text. | Fields include applicable `path`, `line`, `column`, `locus`, `observed`, and `limit`; text rendering is derived from the same model. T5 advances reconciliation-plan schema additively from 1.1 to the intra-candidate 1.2 intermediate, and the Agent Handoff JSON envelope from 1.0 to 1.1; generated schemas retain `additionalProperties: false`, document optionality, and match the output version at that task checkpoint. IR-005 later owns the candidate's final reconciliation-plan 1.3. | Generated `src/project_standards/schemas/reconciliation-plan.schema.json`, Agent Handoff envelope snapshots, prior-version rejection/recognition, text/JSON parity, release classification, and NFR-002 adversarial tests. |
+| IR-005 | Package-configuration transform planning | Preview shall expose the selected transform identity, declared and changed config pointers, and a digest-bound `.standards/config.toml` action without any raw scalar value; `reconcile --check` shall report pending transform drift and return the ordinary nonzero drift exit; apply shall re-plan under the ordinary writer lock and reject a stale config precondition before publishing any action. | Reconciliation-plan schema advances additively from the intra-candidate 1.2 to the candidate-emitted 1.3 with a typed `configuration_transforms` field; decoders explicitly recognize 1.1 and 1.2 as prior versions and reject unsupported versions. The existing provider runner is the only executable boundary; input and output are closed and invocation-bound, changed-pointer allowlisted, introduced-leaf dual-schema-valid, target-valid, and idempotent. Ordinary reconcile apply may write the consumer-owned desired-state file only for an opted-in edge. The single config action preserves unrelated lexical bytes and publishes before dependent artifact and lock actions; transform-introduced source validity and idempotence make an interrupted prefix introduce no new invalidity under the prior lock and safe to resume. No new command or direct pre-planning config edit exists. | Generic provider-contract, exact pointer-diff/minimality, typed preview/check/apply, stale-config, missing-applied-version, multi-transform rejection, injected-fault/resume, CLI/programmatic parity, and second-pass fixed-point tests. |
 
 ### 7.4 Data Requirements
 
@@ -244,9 +259,9 @@ One candidate wheel passes all required gates. Independent Opus review has no un
 
 ### 8.1 Architecture Summary
 
-The train extends the existing control-plane and immutable-package architecture rather than creating a parallel mechanism. Engine-level input classification, structured adapters, diagnostics, planning, and execution stay in `src/project_standards/`. External formatter/linter behavior is observed through shared test oracles derived from repository lockfiles; no production dependency on Prettier or markdownlint is added.
+The train extends the existing control-plane and immutable-package architecture rather than creating a parallel mechanism. Engine-level input classification, structured adapters, diagnostics, planning, execution, and opted-in direct package-configuration transforms stay in `src/project_standards/`. External formatter/linter behavior is observed through shared test oracles derived from repository lockfiles; no production dependency on Prettier or markdownlint is added.
 
-Package-specific behavior is copied forward from released predecessors into new immutable payload versions. Providers and schemas render new options, explicit migrations preserve prior effective behavior, and family indexes select successors only after package validation. Release consistency is checked against the exact candidate commit and generated catalog rather than maintained as another independent version list.
+Package-specific behavior is copied forward from released predecessors into new immutable payload versions. Providers and schemas render new options. An opted-in target provider may transform its own config across one declared direct automatic edge before target-schema resolution; the generic planner validates and materializes the result without knowing the package ID. Family indexes select successors only after package validation. Release consistency is checked against the exact candidate commit and generated catalog rather than maintained as another independent version list.
 
 The regression ledger forms an acceptance boundary around released behavior. Stable regression IDs point to existing tests where they already prove an issue and to narrow semantic guards where proof is missing. Seed rows execute against the published baseline before RED work and all applicable rows execute against the candidate. The ledger grows before later issues close and records reviewed retargeting without coupling its contract identity to a pytest node name.
 
@@ -282,6 +297,7 @@ flowchart LR
 | Structured adapters | Compose JSON/JSONC and keyed TOML while preserving ownership and consumer content. | Planner adapter contract | Physical-format fixed point is tested with pinned external tools. |
 | Planner/executor | Gate erroneous plans and restore one exact managed target safely. | `reconcile`, typed plan/action models | Ordinary apply and restore mode stay distinct. |
 | Diagnostic model | Carry safe structural location and measure data through text/JSON renderers. | CLI and Agent Handoff validators | NFR-002 is the shared disclosure boundary. |
+| Package-config transform planner | Detect one opted-in direct applied-to-selected version edge, resolve source-effective config, invoke the bound target provider, validate target config, and plan its lexical authority-file update. | Package contract, resolution, provider runner, planner, TOML config adapter | Fresh and non-opted selection bypass the transform; no package ID is embedded in engine code. |
 | Successor packages | Provide new configuration, generated artifacts, adoption guidance, and migrations. | V2 family manifests, schemas, providers | Released predecessors remain immutable. |
 | Regression contract | Map closed issues to executable stable proof. | Pytest/contract assertions | Executes against baseline and candidate environments; reference retargeting follows DR-002. |
 | Markdown split-ownership declaration | Assert one physical-layout authority per concern while preserving historical observed-consumer contracts. | `tests/coherence/declaration.py`, `tests/coherence/test_declaration.py`, observed-consumer fixtures | FR-012 updates the table-layout assertion in the same change; the #27 literal fixture remains unchanged. |
@@ -298,6 +314,7 @@ flowchart LR
 | D-005 | Disable Markdown table-layout lint overlap in the successor and retain Prettier as physical-format authority. | One physical-layout authority is required for a fixed point. | Teaching two formatters to converge was rejected as brittle. | Adopted Markdown Tooling contract |
 | D-006 | Use one referenced consumer-owned usage index for multi-CLI navigation. | It adds navigation without multiplying generated artifacts and ownership identities. | One generated artifact per CLI was deferred. | Existing CLI Documentation ownership model |
 | D-007 | Maintain a committed issue-to-proof map. | A passing one-time audit does not prevent future regression, as the issue #21 guard gap demonstrates. | Chat-only and ephemeral audit ledgers were rejected as non-durable. | Owner direction |
+| D-008 | Use one generic, explicit provider opt-in for direct package-version configuration transforms inside ordinary reconciliation. | The package boundary owns upgrade semantics, while the planner already owns preview, preconditions, artifact resolution, and lock convergence. | A Python-specific CLI bridge was rejected as bypassable and non-generic; implicit execution of all historical migration providers was rejected as unsafe; a new patch language was rejected as unnecessary. | Owner-selected Option 1, ADR 0023, ADR 0024 |
 
 ### 8.5 Design Constraints
 
@@ -307,6 +324,7 @@ flowchart LR
 - Keep formatter/linter subprocess oracles test-only.
 - Keep restore target resolution repository-contained and no-follow.
 - Never include raw consumer content in structured diagnostics or restore evidence.
+- Never branch on a package ID in configuration-transform engine code or invoke a transform without an exact applied-source/direct-selected-target opt-in.
 - Do not modify the active MCP specifications or implementation plan through this train.
 - Do not change Node dependencies solely to remediate the current development-only audit advisory.
 
@@ -316,10 +334,11 @@ flowchart LR
 
 ## 9. Data Model
 
-No new persistent runtime datastore is introduced. Two repository-level data contracts are relevant:
+No new persistent runtime datastore is introduced. Three repository-level data contracts are relevant:
 
 1. **Restore preview model.** Natural identity is the repository-relative target path plus package/artifact owner identity. Required fields are current state (`digest` or `absent`), lock digest, desired digest, action (`overwrite`, `recreate`, or `noop`), and exact apply command. Apply consumes the preview as a compare-and-swap precondition and records only digests or `absent`.
 2. **Issue regression ledger.** Natural identity is a stable regression ID associated with one GitHub issue contract. Each row identifies issue number, behavior protected, executable test/assertion references, source/baseline-wheel/candidate-wheel applicability, introduced release, and amendment history. The committed ledger, not live GitHub, is normal-test authority. Before release closeout, the live issue set is compared read-only with the ledger and every closing issue must already have a row. Duplicate identities, missing references, unexplained issue records, and non-executable references are validation failures.
+3. **Package-configuration transform contract.** Natural identity is the package ID plus exact source version, target version, provider ID, and nonempty JSON-pointer allowlist declared on one direct automatic edge. Closed provider input contains those identities, selector, unchanged raw package config, and source-effective config resolved from the source-declared projection. Closed output contains minimally changed config; the engine binds it to the invocation's package/source/target/provider identity and rejects legacy claims. The engine requires the semantic diff to remain within the declared pointers, requires each introduced leaf to be admitted by both schemas and the complete output by the target schema, and proves idempotence by recomputing the bounded source projection and source-effective config from the candidate output, then reinvoking the provider with that output as raw config. Public typed plan evidence records transform identity, declared/changed pointers, and pre/post config digests, never raw scalar values. The single planned authority-file action preserves unrelated lexical bytes and the next lock binds the transformed desired-config digest.
 
 Package schema additions remain within their successor payloads. Python Tooling adds closed arrays plus the `none` build-backend choice and corrected fresh performance default. CLI Documentation adds one optional repository-relative usage-index path. Typed diagnostics add optional structural fields without changing consumer content storage.
 
@@ -333,8 +352,8 @@ Package schema additions remain within their successor payloads. Python Tooling 
 2. Resolve the exact 5.8.0 baseline wheel and execute the seed rows in the committed issue regression ledger before any RED change.
 3. Stop if any closed issue is regressed, any map entry is missing, or the baseline environment is not exact.
 4. Establish pinned external-tool oracles and implement each engine correction through RED-GREEN-REFACTOR.
-5. Create immutable successor payloads and migrations; never edit released predecessors.
-6. Run package-local and cross-package fresh/migration/fixed-point proofs.
+5. Create immutable successor payloads and migrations; declare a direct package-configuration transform only when an effective-default change requires it; never edit released predecessors.
+6. Resolve and plan any opted-in transform before target-schema artifact resolution, then run package-local and cross-package fresh/migration/fixed-point proofs.
 7. Activate all validated successors, complete `meta/versioning.md` candidate-assembly requirements 3-6 as applicable, and run release-consistency checks against the resulting release commit.
 8. Build one wheel from that exact release commit, record its digest, extract it, and run every installed-authority gate against those exact bytes.
 9. Execute every applicable seed and current-train regression-ledger row against the candidate.
@@ -367,6 +386,10 @@ Package schema additions remain within their successor payloads. Python Tooling 
 | EC-008 | A diagnostic value contains secret-like text or newlines. | Report safe location/measure metadata only. |
 | EC-009 | An issue maps only to an ad hoc command or prose inspection. | Reject the regression ledger until committed executable proof exists. |
 | EC-010 | A current-train issue is ready to close but has no committed regression-ledger row. | Block closure until the row and candidate proof are committed and reviewed. |
+| EC-011 | A package is freshly selected, remains on the same version, or changes across a non-opted, manual, or indirect edge. | Do not invoke a package-configuration transform; preserve existing resolution and transition behavior. |
+| EC-012 | Apply is interrupted after publishing transformed config but before artifacts or lock. | The published prefix introduces no source-schema invalidity; a fresh preview reconstructs the source-declared projection of the published config, re-invokes the idempotent transform, produces no further config diff, plans the remaining work, and apply converges. Pre-existing target-only options remain target-owned and do not block retry. After the target lock is current, no transform runs. |
+| EC-013 | Existing package artifacts or lock recovery evidence exists, but no exact authoritative applied source version is available, including inferred-only evidence. | Fail closed with the existing repair-state/recovery guidance; do not classify the package as a fresh adoption and do not guess a transform source. |
+| EC-014 | Two selected package edges opt in configuration transforms during one reconciliation. | Fail planning before either provider publishes or any file changes; WH-006 requires a separately approved composition contract. |
 
 ### 10.4 State Transitions
 
@@ -391,7 +414,7 @@ planned
 
 ## 11. UI Pages / API Endpoints
 
-No UI or HTTP API is introduced. The affected machine/user-facing surfaces are the CLIs and files specified in IR-001 through IR-004, successor package configuration schemas, generated workflow callers, adoption guides, and release-facing documents.
+No UI or HTTP API is introduced. The affected machine/user-facing surfaces are the CLIs and files specified in IR-001 through IR-005, successor package configuration schemas, generated workflow callers, adoption guides, and release-facing documents.
 
 ---
 
@@ -408,14 +431,15 @@ No UI or HTTP API is introduced. The affected machine/user-facing surfaces are t
 | ERR-005 | Candidate predecessor bytes differ. | Block activation and release preparation. | Remove the released-payload edit and implement through a successor. |
 | ERR-006 | Candidate gate or closed-issue map fails. | Reject the candidate; do not request release authorization. | Return to the owning RED/GREEN task and rebuild a new candidate. |
 | ERR-007 | Opus reports unresolved Critical/High findings. | Block candidate qualification. | Disposition and correct the finding, then rerun the applicable lineage. |
+| ERR-008 | A selected package-config transform is absent, ambiguous, identity-mismatched, failing, non-idempotent, outside its pointer allowlist, introduces source-invalid output, returns target-invalid output, is based on an unknown applied version, collides with another transform, or is based on stale config bytes. | Planning or apply fails closed before publishing config, dependent artifacts, or lock changes; public evidence remains content-redacted. Raw target-validation failures use the ordinary configuration diagnostic and remedy. Unsupported schema evolution rejects the package declaration during package validation under FR-021 and WH-007, before consumer reconciliation. | Correct the declaration/provider, fix the named consumer option, use the existing recovery authority, or re-preview the current config as indicated, then retry ordinary reconcile. |
 
 ### 12.2 Retry and Idempotency
 
-Read-only issue refresh, validation, regression-map execution, formatter/linter oracles, and candidate gates may be rerun after the environment is re-established. Reconciliation and migration fixtures must reach the same second-pass fixed point. Restore apply is not retried from stale evidence; a failure requires a new preview. Publication is never retried automatically because it mutates hosted state and may duplicate external effects.
+Read-only issue refresh, validation, regression-map execution, formatter/linter oracles, and candidate gates may be rerun after the environment is re-established. Reconciliation, package-configuration transforms, and migration fixtures must reach the same second-pass fixed point. Every transform is idempotent on its target-valid output and introduces only leaves valid under the source schema. A stale transform/config precondition requires a fresh preview; an interrupted config-first publication re-enters the same direct edge, reconstructs source-effective config while retaining target-only raw options, produces no further config diff, and resumes remaining ordinary reconciliation. Restore apply is not retried from stale evidence; a failure requires a new preview. Publication is never retried automatically because it mutates hosted state and may duplicate external effects.
 
 ### 12.3 Rollback / Recovery
 
-Engine and successor work remains ordinary version-controlled source until release. A failed candidate is abandoned by correcting forward on the implementation branch; released predecessor payloads provide the compatibility anchor. Restore-mode writes reuse the existing atomic write/rollback boundary and validate compare-and-swap preconditions immediately before mutation. Release rollback follows `meta/versioning.md` and requires owner direction; this specification does not authorize tag or asset deletion.
+Engine and successor work remains ordinary version-controlled source until release. A failed candidate is abandoned by correcting forward on the implementation branch; released predecessor payloads provide the compatibility anchor. Package-config actions and restore-mode writes reuse the existing atomic file and compare-and-swap boundaries. A transform action publishes target-valid, idempotent, allowlisted config before dependent artifacts and lock. Each introduced leaf is source-valid, so an interrupted prefix introduces no new invalidity under the prior package; pre-existing target-only options remain outside source-effective projection and a fresh plan can safely resume. A fault-injected provider that changes a target-only key must be rejected before publication. This train does not redesign reconciliation into a crash-atomic multi-file transaction. Release rollback follows `meta/versioning.md` and requires owner direction; this specification does not authorize tag or asset deletion.
 
 ---
 
@@ -444,13 +468,14 @@ Consumer repository values, source lines, hook commands, paths outside the repos
 | Malicious or accidental path escape during restore | Repository containment, exact regular-file target, no glob/directory, no-follow checks, and pre-apply revalidation. |
 | Time-of-check/time-of-use overwrite | Current/absent, lock, and desired compare-and-swap preconditions. |
 | Secret leakage through richer diagnostics | Typed allowlisted structural fields plus adversarial non-disclosure tests. |
+| Malicious or misbound package-config transform | Explicit direct-edge opt-in, existing trusted provider isolation, closed identity-bound input/output, target-schema validation, config CAS, and no raw values in public evidence. |
 | Regression hidden by skipped/weakened tests | Exact closed-issue map, executable-reference validation, and C-007. |
 | Wrong artifact accepted | One recorded candidate digest and extracted-wheel binding for every installed-authority gate. |
 | Unauthorized hosted mutation | Separate explicit implementation and release authorization gates. |
 
 ### 13.6 Hardening Checklist
 
-- [x] Input validation — IR-001 through IR-004 and DR-001.
+- [x] Input validation — IR-001 through IR-005 and DR-001.
 - [x] Output encoding — existing CLI JSON/text encoders plus NFR-002.
 - [x] Secrets excluded from source/logs — §13.3 and NFR-002.
 - [x] Least privilege — FR-006 and §13.2.
@@ -466,13 +491,16 @@ Consumer repository values, source lines, hook commands, paths outside the repos
 
 ### 17.1 Definition of Done
 
-- [x] Owner has approved this specification and the governing implementation plan.
+- [ ] The rev 0.7 specification and governing plan amendment have converged through independent review.
 - [x] Owner has granted an explicit exception to the MCP hold before implementation.
 - [ ] Every Must requirement has focused passing evidence.
 - [ ] The exact baseline passes every applicable seed ledger row and the candidate passes every applicable seed/current-train row.
 - [ ] Issue #21 has a dedicated committed semantic documentation guard.
 - [ ] No released predecessor payload byte changed.
 - [ ] Fresh and migrated successor matrices pass under pinned tools.
+- [ ] Fresh selection invokes no package-config transform; every qualifying family-indexed Python Tooling predecessor and every FR-017 state previews, applies, and reaches a second-pass fixed point through its direct generic edge.
+- [ ] Exact pointer minimality, introduced-leaf dual-schema validity, same-change target-only options, provider idempotence, stale config, missing/inferred applied-version authority, multiple-transform rejection, provider failure, invalid output, and an injected post-config-publication fault fail or resume exactly as IR-005 requires.
+- [ ] Bounded source config projection proves direct-property recursion, whole-leaf direct-enum omission with source-default resolution, no per-element collection filtering, declaration-time rejection of unsupported schema widening, and recomputed-output idempotence.
 - [ ] One extracted candidate wheel passes the complete repository gate.
 - [ ] Verified Opus review has no unresolved Critical/High finding.
 - [ ] Candidate release classification is accepted.
@@ -511,10 +539,11 @@ Consumer repository values, source lines, hook commands, paths outside the repos
 | FR-014 | CLI Documentation 1.4/candidate-default TOML corpus plus immutable 1.1-1.3 known-limitation digests | Planned |
 | FR-015 | Pinned lint/format effective-file-set matrix proving exclusions narrow format scope without widening lint scope | Planned |
 | FR-016 | Long caller YAML pinned-Prettier and repeated-reconcile tests | Planned |
-| FR-017 | Four-state 1.8 migration matrix, fresh default, and explicit exit-5 integration | Planned |
+| FR-017 | Family-derived qualifying-predecessor and five-state 1.x-to-1.9 preview/apply/fixed-point matrix with exact `/ci/performance` diffs, fresh engine default, source-rendered behavior equivalence, and explicit exit-5 integration | Planned |
 | FR-018, IR-004 | TOML line/column, exception chaining, renderer parity, and redaction | Planned |
 | FR-019, NFR-004 | Successor package/graph/schema/projection/migration matrix and all-predecessor digest ledger | Planned |
 | FR-020 | Authorization, tag/release, hosted parity, issue evidence, and branch parity checks | Planned |
+| FR-021, IR-005 | Generic transform opt-in/identity/pointer/introduced-leaf dual-schema/idempotence contract; bounded source config projection with direct-property recursion, whole-leaf direct-enum omission/source-default resolution, no per-element filtering, declaration-time unsupported-widening rejection, and recomputed-output idempotence; typed value-redacted preview/check/apply and programmatic parity; same-change target-only-option success; default-freezing rejection; stale/unknown/inferred config authority; multi-transform rejection; provider failure/invalid output; config-first fault/resume; non-opted/fresh bypass; and source/extracted-wheel fixed point | Planned |
 | NFR-002 | Adversarial secret-like scalar/content non-disclosure corpus | Planned |
 | NFR-003 | Error-bearing apply tree snapshot/non-entry tests and warning-only compatibility | Planned |
 | NFR-005, DR-002 | Evolvable issue ledger, stable regression IDs, executable references, amendment checks, baseline/candidate runs, dedicated #21 guard, and pre-closure current-train rows | Planned |
@@ -536,6 +565,7 @@ The deliverable is the `project-standards` Python distribution with embedded imm
 Configuration changes are limited to successor package schemas:
 
 - Python Tooling closed Ruff/coverage lists, `build_backend = "none"`, and corrected fresh `ci.performance` default;
+- one Python Tooling 1.9 provider is opted in by a direct automatic edge from every qualifying family-indexed predecessor to materialize only `/ci/performance` through the generic control plane; family-indexed versions that default the option false or do not declare it receive no FR-017 edge;
 - CLI Documentation optional repository-relative usage-index path;
 - Markdown and Agent Handoff changes expressed through their existing provider/configuration authorities.
 
@@ -596,9 +626,9 @@ The train's operational evidence is deterministic command output and durable rep
 
 ### MS-2 — Immutable Successor Packages
 
-- **Requirements:** FR-006, FR-008-FR-012, FR-014-FR-017, FR-019, IR-003, NFR-004, NFR-008.
-- **Deliverables:** Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, CLI Documentation 1.4, schemas, providers, migrations, docs, tests, and the FR-012 split-ownership declaration update with the #27 literal fixture unchanged.
-- **Exit criteria:** package-local tests pass; predecessor bytes are unchanged; successors are not yet activated until integration proof.
+- **Requirements:** FR-006, FR-008-FR-012, FR-014-FR-017, FR-019, FR-021, IR-003, IR-005, NFR-004, NFR-008.
+- **Deliverables:** Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, CLI Documentation 1.4, schemas, providers, migrations, the generic direct-edge package-config transform path, docs, tests, and the FR-012 split-ownership declaration update with the #27 literal fixture unchanged.
+- **Exit criteria:** package-local tests pass; the generic transform lifecycle and source/wheel parity pass; predecessor bytes are unchanged; successors are not yet activated until integration proof.
 
 ### MS-3 — Integration and Candidate
 
@@ -628,7 +658,7 @@ The train's operational evidence is deterministic command output and durable rep
 
 | ID | Question | Current Assumption | Blocking? | Owner | Resolve By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Does the owner approve the converged specification/plan and grant an exception to the MCP hold? | Approved for implementation through T17 on 2026-07-26; release remains separately gated. | Yes, before MS-1 or successor work | Owner | Before implementation | Resolved |
+| OQ-001 | Does the owner approve the converged specification/plan and grant an exception to the MCP hold? | The owner selected rev 0.4 Option 1 and authorized autonomous convergence through rev 0.5-rev 0.7 review corrections; the amended plan and independent reviews must pass before T19 GREEN; release remains separately gated. | Yes, before T19 GREEN | Owner and implementer | Before T19 GREEN | In progress |
 | OQ-002 | Does pinned-tool characterization reproduce #47's reported `dir/**` divergence exactly? | Characterize first; apply no speculative normalization. | Yes, before FR-015 GREEN | Implementer | MS-2 characterization | Open |
 | OQ-003 | Does the owner authorize publication of the exact qualified candidate? | The candidate remains unpublished and issues remain open. | Yes, before MS-4 | Owner | After MS-3 evidence | Open |
 

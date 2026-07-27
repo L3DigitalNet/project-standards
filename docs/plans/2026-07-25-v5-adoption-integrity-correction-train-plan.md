@@ -15,7 +15,7 @@ test_framework: pytest
 
 # V5 Adoption Integrity Correction Train Implementation Plan
 
-> **This file is definition, not state.** The owner approved this implementation contract and granted the required MCP-hold exception for T1-T17 on 2026-07-26. Live progress belongs under `.project-pipeline/2026-07-25-v5-adoption-integrity-correction-train/`. T18 remains blocked on separate authorization for the exact qualified candidate.
+> **This file is definition, not state.** The owner approved the original implementation contract for T1-T17 on 2026-07-26, selected SPEC-VAIC rev 0.4 Option 1, and authorized autonomous convergence through the rev 0.5-rev 0.7 review corrections and appended T19. T19 may not enter GREEN until this amendment and its independent reviews converge. Live progress belongs under `.project-pipeline/2026-07-25-v5-adoption-integrity-correction-train/`. T18 remains blocked on separate authorization for the exact qualified candidate.
 
 ## 1. Objective
 
@@ -23,7 +23,7 @@ Close GitHub issues #32 and #35-#49 in one internally phased correction train th
 
 - repairs engine-level diagnostics, composition, reconciliation, and recovery behavior;
 - publishes immutable successor payloads for Python Tooling, Markdown Tooling, Agent Handoff, and CLI Documentation;
-- preserves existing adopters through explicit migrations and unchanged predecessor bytes;
+- preserves existing adopters through explicit migrations, one generic direct-edge package-configuration transform, and unchanged predecessor bytes;
 - proves formatter, linter, package, migration, and release fixed points against one exact candidate wheel; and
 - stops before implementation, release, or issue closure wherever human authorization is required.
 
@@ -31,7 +31,7 @@ Close GitHub issues #32 and #35-#49 in one internally phased correction train th
 
 1. This plan may be reviewed and edited while the MCP change hold remains active.
 2. The durable 2026-07-26 closed-issue regression audit establishes SPEC-VAIC's pre-authorization `baseline_verified` state. T1 is the first authorized implementation task: it converts that proof into a committed ledger and reruns it before any current-train RED work.
-3. The owner approved SPEC-VAIC and this plan and granted the MCP-hold exception for T1-T17 on 2026-07-26; the authorization is recorded in the durable handoff.
+3. The owner approved SPEC-VAIC rev 0.4 Option 1 and authorized autonomous convergence of the bounded T19 amendment, including rev 0.5-rev 0.7 review corrections, on 2026-07-26. T19 GREEN requires passing amended spec/plan validation and converged independent reviews; all prior T1-T17 authorization remains unchanged.
 4. T18 additionally requires explicit release authorization after the complete candidate and Opus audit evidence are available.
 5. No task may edit an immutable released payload. Package behavior changes ship only in successor payloads.
 6. A newly discovered material requirement, incompatible issue expectation, package-boundary change, new payload, or expanded task change surface returns first to SPEC-VAIC and then to this master plan; both artifacts require renewed review and owner approval before the affected GREEN step continues. Pure evidence-pointer or wording corrections that do not change scope, behavior, or authorization may be synchronized without reopening approval.
@@ -49,6 +49,7 @@ Close GitHub issues #32 and #35-#49 in one internally phased correction train th
 - TOML keyed-set handling for valid entries that omit an optional identity key.
 - Structured, precise, redacted TOML and Agent Handoff diagnostics.
 - Python Tooling configuration extensions, non-installable project mode, and safe performance-test defaults.
+- One explicit, generic package-configuration transform contract for direct automatic package upgrades, instantiated only by Python Tooling predecessor-to-1.9 edges in this train.
 - Markdown Tooling exclusion, caller, permission, Prettier, markdownlint, and autofix safety.
 - Agent Handoff adoption guidance for independently managed `.agents/` files.
 - CLI Documentation valid adoption TOML and an optional multi-CLI usage-index input.
@@ -65,13 +66,16 @@ Close GitHub issues #32 and #35-#49 in one internally phased correction train th
 - Multiple generated CLI usage artifacts or a generated multi-command CI matrix.
 - Adding Hypothesis solely for this train; existing parametrization and generated fixtures supply property-style coverage.
 - Remediating the development-only `markdownlint-cli2` to `js-yaml` advisory chain or changing Node dependency pins solely for that advisory (SPEC-VAIC C-006).
+- Package-ID-specific engine logic, implicit historical-provider execution, an arbitrary patch/expression language, multi-hop transforms, composition of multiple transforms in one plan, a new upgrade CLI, or multi-file transaction redesign.
 - MCP implementation, publication without explicit authorization, or drive-by work outside the listed issues.
 
 ### 3.3 Compatibility Rules
 
 - Python Tooling 1.8, Markdown Tooling 1.8, Agent Handoff 1.4, and CLI Documentation 1.3 remain byte-identical.
 - Fresh successor adopters receive corrected defaults.
-- Existing Python Tooling 1.8 adopters migrating to 1.9 receive an explicit `ci.performance = true` value so migration preserves their effective behavior.
+- Every qualifying family-indexed Python Tooling predecessor whose schema declares `ci.performance` with default true has a direct opted-in edge to 1.9; enabled CI materializes the prior effective value, disabled CI materializes false, and explicit true/false remains unchanged. Family-indexed versions that default it false or do not declare it receive no FR-017 edge.
+- The transform changes only declared `/ci/performance`; its introduced leaf is valid under both predecessor and 1.9 schemas, the complete result is 1.9-valid, the provider is idempotent, and unrelated target defaults are never materialized.
+- Successor-only options added in the same desired-config change remain available to target validation and do not have to validate against the predecessor schema.
 - Omitted successor-only options render no extra configuration, preserving the predecessor default projection except for deliberately corrected defaults.
 - Existing consumer-owned content and valid unkeyed TOML entries remain preserved.
 - Exact-version and `version = "latest"` consumers that pass under 5.8.0 remain passing after migration to the candidate.
@@ -99,23 +103,25 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 | FR-014 | #46 | T13 | TC-T13-001 |
 | FR-015 | #47 | T1, T9, T15 | TC-T1-002, TC-T9-001, TC-T9-002, TC-T15-003 |
 | FR-016 | #48 | T10 | TC-T10-002 |
-| FR-017 | #49 | T8 | TC-T8-003, TC-T8-004 |
+| FR-017 | #49 | T8, T19 | TC-T8-003, TC-T8-004, TC-T19-001, TC-T19-002, TC-T19-003 |
 | FR-018 | #46 | T5 | TC-T5-001, TC-T5-003 |
-| FR-019 | Release/package contract | T8-T15 | TC-T8-004, TC-T9-002, TC-T10-002, TC-T11-002, TC-T12-001, TC-T13-002, TC-T14-002, TC-T15-001, TC-T15-002 |
+| FR-019 | Release/package contract | T8-T15, T19 | TC-T8-004, TC-T9-002, TC-T10-002, TC-T11-002, TC-T12-001, TC-T13-002, TC-T14-002, TC-T15-001, TC-T15-002, TC-T19-003 |
 | FR-020 | Owner/release contract | T17, T18 | TC-T17-002, TC-T18-001, TC-T18-002 |
+| FR-021 | Generic package-config transform | T19, T15, T17 | TC-T19-001, TC-T19-002, TC-T19-003, TC-T15-001, TC-T17-002 |
 | NFR-001 | Pinned-tool fixed point | T1, T3, T9-T11, T15 | TC-T1-001, TC-T3-001, TC-T9-001, TC-T10-002, TC-T11-001, TC-T15-001 |
-| NFR-002 | Diagnostic non-disclosure | T5, T7 | TC-T5-001, TC-T5-002, TC-T5-003, TC-T7-003 |
+| NFR-002 | Diagnostic non-disclosure | T5, T7, T19 | TC-T5-001, TC-T5-002, TC-T5-003, TC-T7-003, TC-T19-002 |
 | NFR-003 | Atomic error behavior | T6 | TC-T6-001, TC-T6-002 |
-| NFR-004 | Released payload immutability | T1, T8-T13, T15, T17 | TC-T1-005, TC-T8-004, TC-T9-002, TC-T10-002, TC-T11-002, TC-T12-001, TC-T13-002, TC-T15-002, TC-T17-002 |
+| NFR-004 | Released payload immutability | T1, T8-T13, T15, T17, T19 | TC-T1-005, TC-T8-004, TC-T9-002, TC-T10-002, TC-T11-002, TC-T12-001, TC-T13-002, TC-T15-002, TC-T17-002, TC-T19-003 |
 | NFR-005 | Issue regression safety | T1, T15, T17, T18 | TC-T1-003, TC-T15-004, TC-T17-002, TC-T18-002 |
 | NFR-006 | Exact-candidate release quality | T17, T18 | TC-T17-001, TC-T17-002, TC-T18-001 |
 | NFR-007 | Opus candidate review | T16, T17, T18 | TC-T16-001, TC-T17-002, TC-T18-002 |
-| NFR-008 | Consumer outcome compatibility | T1, T3, T4, T9, T15, T17 | TC-T1-004, TC-T3-002, TC-T4-001, TC-T9-001, TC-T15-003, TC-T17-002 |
+| NFR-008 | Consumer outcome compatibility | T1, T3, T4, T9, T19, T15, T17 | TC-T1-004, TC-T3-002, TC-T4-001, TC-T9-001, TC-T19-003, TC-T15-003, TC-T17-002 |
 | NFR-009 | Release classification | T1, T14, T17 | TC-T1-004, TC-T14-002, TC-T17-002 |
 | IR-001 | Explicit-path CLI contract | T2 | TC-T2-001 |
 | IR-002 | Managed-restore CLI contract | T7 | TC-T7-002, TC-T7-003 |
 | IR-003 | Usage-index configuration | T13 | TC-T13-002 |
-| IR-004 | Versioned structured findings and release classification | T5, T14, T17 | TC-T5-001, TC-T5-002, TC-T14-002, TC-T17-002 |
+| IR-004 | Versioned structured findings and release classification | T5, T14, T17, T19 | TC-T5-001, TC-T5-002, TC-T14-002, TC-T17-002, TC-T19-002 |
+| IR-005 | Package-config transform preview/check/apply | T19, T15, T17 | TC-T19-002, TC-T19-003, TC-T15-001, TC-T17-002 |
 | DR-001 | Restore preview/apply state | T7 | TC-T7-002, TC-T7-003 |
 | DR-002 | Evolvable issue ledger | T1, T15, T17, T18 | TC-T1-003, TC-T15-004, TC-T17-002, TC-T18-002 |
 
@@ -126,11 +132,12 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 | C-001 | P2 edits only new successor paths; T1 captures and T15/T17 compare every released predecessor digest. | TC-T1-005, TC-T15-002, TC-T17-002 |
 | C-002 | T1 baseline and T15/T17 candidate installed-authority gates put one exact extracted wheel first on `PYTHONPATH`. | TC-T1-003, TC-T15-001, TC-T17-001 |
 | C-003 | Task-local gates and §11 preserve Ruff, BasedPyright, pytest/coverage, pip-audit, package, Node, coherence, and managed-document authorities. | T1-T17 Verify Task steps; TC-T17-001 |
-| C-004 | The durable audit/plan may proceed; no T1 RED/GREEN begins without the recorded MCP-hold exception. | §2 gates; OQ-001 |
+| C-004 | The owner-granted MCP-hold exception authorizes T1-T17 and bounded T19 implementation; further scope expansion returns to the owner. | §2 gates; OQ-001 |
 | C-005 | T17 stops unpublished; T18 starts only with authorization naming the exact commit and artifact digests. | TC-T17-002, TC-T18-001 |
 | C-006 | `package.json` and `package-lock.json` dependency pins remain byte-identical to v5.8.0 unless the owner separately authorizes a scope change. | TC-T1-006, TC-T17-002 |
 | C-007 | Outcome-aware ledger execution and canonical proof-symbol digests reject missing, skipped, xfailed, xpassed, errored, deleted, or changed proof outside DR-002. | TC-T1-003, TC-T15-004, TC-T17-002 |
 | C-008 | `spec_ref`, direct IDs, §4/§7/Appendix B transpose checks, plan validation, and verified Opus plan review block approval on drift. | plan validator plus Opus plan result |
+| C-009 | T19 permits only explicit direct automatic-edge opt-in whose schema evolution passes the bounded declaration-eligibility profile, one provider and one plan transform, declared pointer diffs, introduced-leaf dual-schema validity, target validity, idempotence, ordinary plan/apply preconditions, and no package-ID branch. | TC-T19-001, TC-T19-002, TC-T19-003, TC-T17-002 plus T19 scope logs |
 
 ## 5. Architecture and Expected Change Surface
 
@@ -139,7 +146,8 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 | Frontmatter CLI | `src/project_standards/cli.py`, `frontmatter_commands.py`, `format_frontmatter.py`, `validate_frontmatter.py`, `validate_id.py`, explicit caller tests | Shared explicit-path classification; caller-specific unsupported-directory diagnostics. |
 | Structured adapters | `src/project_standards/control_plane/adapters/jsonc.py`, `toml.py`, adapter tests | Preserve semantic ownership and unrelated bytes while satisfying declared fixed points. |
 | Reconcile planning/execution | `src/project_standards/control_plane/{planner,executor,cli}.py`, tests | Error findings block all apply; restore is exact, explicit, and preconditioned. |
-| Diagnostics | control-plane finding/codec/schema source, `src/project_standards/agent_handoff/`, generated schemas, tests | Structured locations and bounded measures under a shared redaction rule; reconciliation-plan 1.2 and Agent Handoff envelope 1.1. |
+| Package-config transform | `src/project_standards/package_contract/payload.py`, generated standard-payload schema, `src/project_standards/control_plane/{resolution,planner,schemas,config_edit}.py`, bounded nested-inline support in `control_plane/adapters/toml.py`, generated reconciliation-plan schema 1.3, `codec.py` only if required to reuse the canonical TOML scalar renderer, focused package/control-plane/compatibility tests | One explicitly opted-in direct-edge provider; pointer-limited, introduced-leaf dual-schema-valid, target-valid, idempotent config action with typed value-redacted evidence inside ordinary planning. No CLI, executor, lock-schema, or package-ID-specific branch. |
+| Diagnostics | control-plane finding/codec/schema source, `src/project_standards/agent_handoff/`, generated schemas, tests | Structured locations and bounded measures under a shared redaction rule; reconciliation-plan 1.2 at T5 and candidate-emitted 1.3 at T19, plus Agent Handoff envelope 1.1. |
 | Python Tooling successor | `standards/python-tooling/versions/1.9/`, family manifest, schemas, providers, migration/tests | Additive configuration, non-installable mode, corrected fresh default, behavior-preserving migration. |
 | Markdown Tooling successor | `standards/markdown-tooling/versions/1.9/`, family manifest, providers, docs/tests | Pinned-tool file-set and fixed-point convergence. |
 | Shared Markdown reusable workflows | `.github/workflows/format.yml`, `.github/workflows/lint-markdown.yml`, workflow/caller integration tests | Shared by every released Markdown Tooling version through `@v5`; unchanged by default. Any required edit invokes SPEC-VAIC AW-004 owner disposition before GREEN. |
@@ -150,7 +158,7 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 | Release consistency | release/package validation source and tests; root `README.md`, `UPGRADING.md`; `standards/README.md`; every mutable family-level `standards/{family}/*.md` document | Every family version reference equals its candidate-catalog default or carries an asserted historical classification; candidate commit, catalog, defaults, links, commands, and prose agree before tag. |
 | Projection and release | `.standards/config.toml`, `standards/catalog.md`, packaged catalog/payload projections, changelog/status/handoff | Each P2 owner regenerates its staged-successor surfaces; successors activate together only after all earlier tasks pass. |
 
-**Successor staging rule:** T8, T9/T11, T12, and T13 create complete consumer payloads, including their adoption guides, with `availability = "consumer"` and add each version to its family `standard.toml`, but do not add those versions to canonical `catalogs/5.toml`. Each owning P2 task that creates or changes staged-successor bytes regenerates the family-manifest aggregate digest, the corresponding packaged payload projection, and `standards/catalog.md`; the new catalog row remains `unadvertised`, and later byte changes alter that row only when its rendered resource/provider/output counts change. Package, integrity, graph, schema, provider-unit, documentation, rendered-catalog, and payload-projection gates cover the family-indexed staged payloads directly, while resolution cannot select an uncatalogued version and this repository's `version = "latest"` selectors remain on the released defaults. After the final owning P2 task finishes, those successor bytes/digests are final. T15 solely owns canonical catalog activation: it changes the four prior defaults to retained, adds the four already-validated successors as defaults without changing payload/family bytes, regenerates the resulting catalog projections and `standards/catalog.md` role column, verifies the unchanged payload projection, and reruns every package/provider/migration/integration gate. Released predecessor bytes never change.
+**Successor staging rule:** T8, T9/T11, T12, and T13 create complete consumer payloads, including their adoption guides, with `availability = "consumer"` and add each version to its family `standard.toml`, but do not add those versions to canonical `catalogs/5.toml`. T8 owns Python Tooling 1.9's fresh default and package features; T19 solely adds its generic-transform provider/declarations and the required family/projection digest consequences after the engine contract exists. Each owning P2 task that creates or changes staged-successor bytes regenerates the family-manifest aggregate digest, the corresponding packaged payload projection, and `standards/catalog.md`; the new catalog row remains `unadvertised`, and later byte changes alter that row only when its rendered resource/provider/output counts change. Package, integrity, graph, schema, provider-unit, documentation, rendered-catalog, and payload-projection gates cover the family-indexed staged payloads directly, while resolution cannot select an uncatalogued version and this repository's `version = "latest"` selectors remain on the released defaults. After T19 and the final owning P2 task finish, those successor bytes/digests are final. T15 solely owns canonical catalog activation: it changes the four prior defaults to retained, adds the four already-validated successors as defaults without changing payload/family bytes, regenerates the resulting catalog projections and `standards/catalog.md` role column, verifies the unchanged payload projection, and reruns every package/provider/migration/integration gate. Released predecessor bytes never change.
 
 ## 6. Test Strategy
 
@@ -162,6 +170,7 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 - Atomicity invariant: an error-bearing reconciliation plan produces no filesystem mutation and a nonzero result, regardless of `--apply`.
 - Restore invariant: preview is non-mutating; apply succeeds only for one exact exclusively managed whole-file target whose current/lock/desired digests still match the preview preconditions.
 - Migration invariant: migrating a current exact payload preserves effective prior behavior unless the issue explicitly requires a corrected migration outcome.
+- Package-config transform invariant: only an exact applied-source/direct-selected-target opt-in runs; source validation precedes provider execution; the declared pointer allowlist is nonempty and the semantic diff is a possibly empty subset of it; explicit true/false and every second invocation require an empty diff; output validates under source and target schemas and is idempotent; preview/check never writes; apply publishes one lexical config action before dependent artifacts/lock; stale or unknown authority and multiple transforms fail before writes.
 - Regression invariant: the exact 5.8.0 wheel passes every applicable committed seed-ledger row before current-train RED; the candidate passes every applicable seed/current-train row before release authorization.
 - Anti-weakening invariant: each row declares exact pytest nodes or semantic assertions plus canonical AST/source digests for every proof function/helper/fixture symbol on which it relies. The outcome runner requires every mapped proof to report `passed`; missing, skipped, xfailed, xpassed, failed, or errored outcomes fail. Any proof-symbol digest change requires the complete DR-002 amendment record and same-behavior baseline/candidate evidence.
 - Consumer-outcome invariant: exact-version and `latest` fixtures are compared from 5.8.0 through candidate migration, and no validation, lint, format, reconcile, or installed-workflow result may move from pass to fail.
@@ -169,7 +178,7 @@ SPEC-VAIC is the requirement authority. This plan uses its IDs directly; it does
 
 ### 6.1 Scope Verification Checkpoints
 
-Each T1-T17 checklist must record a task base commit and the task's declared requirements, acceptance tests, and expected paths before any task edit. The executor then performs these checkpoints:
+Each T1-T17 and T19 checklist must record a task base commit and the task's declared requirements, acceptance tests, and expected paths before any task edit. The executor then performs these checkpoints:
 
 1. **Task start:** compare the clean working tree and intended paths with the task definition. Record the base commit and allowed change surface in the task log. Mechanically required generated outputs or cross-file contract counterparts are allowed only when named before editing.
 2. **Before GREEN:** inspect `git diff --name-status "$TASK_BASE"` and `git diff --stat "$TASK_BASE"`. The RED diff may contain only focused tests, fixtures, and ephemeral evidence needed to prove the task's specified behavior. Production changes or unrelated cleanup at this checkpoint are a hard stop.
@@ -204,10 +213,11 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 | T12 | Build Agent Handoff 1.5 adoption boundary | P2 | T5 | FR-011, FR-019, NFR-004 |
 | T13 | Build CLI Documentation 1.4 | P2 | T5 | FR-010, FR-014, FR-019, IR-003, NFR-004 |
 | T14 | Add candidate-bound release consistency | P3 | T8-T13 | FR-003, FR-019, NFR-009, IR-004 |
-| T15 | Activate successors and prove migrations | P3 | T2-T14 | FR-012, FR-015, FR-019, NFR-001, NFR-004, NFR-005, NFR-008, DR-002 |
+| T15 | Activate successors and prove migrations | P3 | T2-T14, T19 | FR-012, FR-015, FR-019, FR-021, NFR-001, NFR-004, NFR-005, NFR-008, IR-005, DR-002 |
 | T16 | Run blocking Opus candidate audit | P3 | T15 | NFR-007 |
-| T17 | Qualify the unchanged exact release commit | P3 | T16 | FR-003, FR-020, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, DR-002 |
+| T17 | Qualify the unchanged exact release commit | P3 | T16 | FR-003, FR-020, FR-021, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, IR-005, DR-002 |
 | T18 | Publish and close issues after authorization | P4 | T17 | FR-020, NFR-005, NFR-006, NFR-007, DR-002 |
+| T19 | Add generic direct package-config transforms | P2/P3 prerequisite | T5, T8 | FR-017, FR-019, FR-021, NFR-002, NFR-004, NFR-008, IR-004, IR-005 |
 
 ## 8. Implementation Tasks
 
@@ -272,7 +282,7 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 
 - **goal:** Add actionable locations and measures to TOML and Agent Handoff diagnostics under one no-content-leak contract. · **phase:** P1 · **depends_on:** [T1] · **requirements:** [FR-013, FR-018, NFR-002, IR-004] · **priority:** must
 - **files:** control-plane finding/codec/model/schema source, `src/project_standards/agent_handoff/`, generated reconciliation/Agent Handoff schemas and snapshots, CLI/provider/model tests
-- **acceptance:** TOML parse errors include parser-derived safe line/column and retain the original exception cause; handoff findings include root-relative path, structural locus, line when known, observed measure, and limit; JSON/text renderings agree; reconciliation-plan schema advances from 1.1 to 1.2 and Agent Handoff envelope from 1.0 to 1.1 with closed additive schemas; prior/current version recognition is explicit; secret-like scalar values and raw consumer lines never appear (TC-T5-001, TC-T5-002, TC-T5-003).
+- **acceptance:** TOML parse errors include parser-derived safe line/column and retain the original exception cause; handoff findings include root-relative path, structural locus, line when known, observed measure, and limit; JSON/text renderings agree; reconciliation-plan schema advances from 1.1 to the intra-candidate 1.2 checkpoint and Agent Handoff envelope from 1.0 to 1.1 with closed additive schemas; T19 later owns candidate-emitted reconciliation-plan 1.3, with 1.1/1.2 explicit prior recognition; secret-like scalar values and raw consumer lines never appear (TC-T5-001, TC-T5-002, TC-T5-003).
 - **sub-tasks:**
   - **T5.0 CHARACTERIZE** — inventory diagnostic construction/rendering and classify safe structural fields versus forbidden content.
   - **T5.1 RED** — add exact location/measure, schema/envelope version, prior-version recognition/rejection, exception-chaining, renderer-parity, and adversarial secret-redaction regressions.
@@ -314,15 +324,15 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 
 #### T8: Build Python Tooling 1.9
 
-- **goal:** Add requested closed configuration, non-installable mode, and safe fresh performance defaults with migration preservation. · **phase:** P2 · **depends_on:** [T1] · **requirements:** [FR-008, FR-009, FR-017, FR-019, NFR-004] · **priority:** must
+- **goal:** Add requested closed configuration, non-installable mode, and the safe fresh performance default while staging the package surface T19 will bind to generic upgrade preservation. · **phase:** P2 · **depends_on:** [T1] · **requirements:** [FR-008, FR-009, FR-017, FR-019, NFR-004] · **priority:** must
 - **files:** new `standards/python-tooling/versions/1.9/`, family manifest, provider/schema/migration/tests, `standards/catalog.md`, and the new packaged payload projection; no canonical source-catalog edit
-- **interface/data:** add empty-default closed lists for Ruff `extend_include`, `extend_select`, `extend_ignore`, and coverage `omit`; explicit `extend_ignore` may suppress a baseline-selected rule as reviewed consumer intent; add `build_backend = "none"`; make fresh 1.9 `ci.performance = false`. Migrate absent `ci` and absent `performance` under enabled CI to explicit true, preserve explicit true/false, and keep `ci.enabled = false` disabled without re-enabling performance. Explicit true with no performance tests continues to expose pytest exit 5.
-- **acceptance:** unique nonempty option combinations render canonical native tables and invalid/empty entries name their governing option; empty lists render no bytes; backend none omits only `[build-system]`; fresh default omits performance CI; the four-state migration matrix preserves prior effective behavior; the complete consumer payload is family-indexed but absent from the canonical catalog, passes package/graph/schema/rendered-catalog/payload-projection/provider-unit gates with its adoption guide intact, adds exactly one `unadvertised` generated-catalog row and its packaged payload projection, and leaves root `latest` on Python Tooling 1.8; predecessor payload bytes remain unchanged (TC-T8-001 through TC-T8-004).
+- **interface/data:** add empty-default closed lists for Ruff `extend_include`, `extend_select`, `extend_ignore`, and coverage `omit`; explicit `extend_ignore` may suppress a baseline-selected rule as reviewed consumer intent; add `build_backend = "none"`; make fresh 1.9 `ci.performance = false`. Preserve existing V4 legacy migration behavior. T19, not T8, adds the new package-to-package transform declaration/provider contract and real initialized-upgrade lifecycle. Explicit true with no performance tests continues to expose pytest exit 5.
+- **acceptance:** unique nonempty option combinations render canonical native tables and invalid/empty entries name their governing option; empty lists render no bytes; backend none omits only `[build-system]`; fresh default omits performance CI; direct legacy-provider unit tests remain corroborating evidence but are not counted as unified package-upgrade proof; the complete consumer payload is family-indexed but absent from the canonical catalog, passes package/graph/schema/rendered-catalog/payload-projection/provider-unit gates with its adoption guide intact, adds exactly one `unadvertised` generated-catalog row and its packaged payload projection, and leaves root `latest` on Python Tooling 1.8; predecessor payload bytes remain unchanged (TC-T8-001 through TC-T8-004).
 - **sub-tasks:**
   - **T8.0 CHARACTERIZE** — pin 1.8 defaults, bytes, provider output, and migration mechanics.
-  - **T8.1 RED** — add schema/provider/fresh-adoption/package regressions for every option and combination, explicit baseline-rule suppression, and all absent/true/false/CI-disabled migration states.
+  - **T8.1 RED** — add schema/provider/fresh-adoption/package regressions for every option and combination, explicit baseline-rule suppression, fresh false, explicit true exit 5, and retained V4 migration behavior; do not simulate a unified package upgrade by calling the legacy provider directly.
   - **T8.2 Verify RED** — confirm tests target absent 1.9 behavior while 1.8 characterization stays green.
-  - **T8.3 GREEN** — create the complete uncatalogued consumer 1.9 payload/provider/schema/adoption guide and explicit preservation migration with family registration; regenerate its packaged payload projection and `standards/catalog.md` `unadvertised` row; record the final successor digest. T15 owns only canonical catalog/default activation.
+  - **T8.3 GREEN** — create the complete uncatalogued consumer 1.9 payload/provider/schema/adoption guide with family registration and retained V4 migration; regenerate its packaged payload projection and `standards/catalog.md` `unadvertised` row; record the staged successor digest. T19 owns the later config-transform provider/declaration and final digest; T15 owns only canonical catalog/default activation.
   - **T8.4 Verify GREEN** — run Python Tooling package/provider/migration and pinned TOML checks.
   - **T8.5 REFACTOR** — derive rendered lists/defaults from typed config and avoid parallel ownership.
   - **T8.6 Verify Task** — run package tests, graph/schema/rendered-catalog/payload-projection checks, Ruff, and BasedPyright; commit with IDs.
@@ -414,9 +424,9 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 
 #### T15: Activate successors and prove migrations
 
-- **goal:** Select the four successors together, complete the release commit bytes, and prove package, migration, issue-ledger, and consumer-outcome compatibility before Opus review. · **phase:** P3 · **depends_on:** [T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14] · **requirements:** [FR-012, FR-015, FR-019, NFR-001, NFR-004, NFR-005, NFR-008, DR-002] · **priority:** must
+- **goal:** Select the four successors together, complete the release commit bytes, and prove package, transform, migration, issue-ledger, and consumer-outcome compatibility before Opus review. · **phase:** P3 · **depends_on:** [T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T19] · **requirements:** [FR-012, FR-015, FR-019, FR-021, NFR-001, NFR-004, NFR-005, NFR-008, IR-005, DR-002] · **priority:** must
 - **files:** family manifests, `.standards/config.toml`, canonical and generated catalog/projection artifacts including `standards/catalog.md`, `pyproject.toml`, `uv.lock`, `CHANGELOG.md`, root `README.md`, `UPGRADING.md`, `standards/README.md`, affected current-reference family-level Markdown documents including each successor family's `README.md`, `adopt.md`, and `agent-summary.md`, status/handoff candidate-preparation state, current-train ledger rows, cross-package/migration/coherence/outcome tests, and catalog-identity fixtures including `tests/package_contract/test_current_catalog_activation.py`
-- **acceptance:** defaults select Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4; the standards index and all affected current-reference family-level Markdown documents name those defaults and carry matching versioned links and enable commands where applicable, while every other direct family-level version reference retains an asserted historical classification; expectations derive from the candidate catalog; `standards/catalog.md` changes the staged successor rows from `unadvertised` to `default` and the predecessor rows from `default` to `retained`; after pre-GREEN analysis supports MINOR, the release commit carries version 5.9.0, regenerated `uv.lock`, dated changelog, release-current documentation, and classified historical references; `main` is an ancestor and the commit is fast-forwardable without tree change; every predecessor digest is unchanged; fresh/all-predecessor migration matrices, an unmigrated exact Markdown Tooling 1.8 `@v5` workflow fixture, and `latest` outcome matrices converge without pass-to-fail results; catalog-identity fixtures derive package counts, versions, digests, roles, and migration predecessors from family/catalog/migration authorities rather than literals; the activated root uses explicit `MD060: false`, coherence stays green, and the #27 literal fixture is unchanged; every current-train issue has a committed executable ledger row; a preliminary wheel/sdist digest and complete candidate gate supply exact evidence for T16 (TC-T15-001 through TC-T15-004).
+- **acceptance:** defaults select Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4; the standards index and all affected current-reference family-level Markdown documents name those defaults and carry matching versioned links and enable commands where applicable, while every other direct family-level version reference retains an asserted historical classification; expectations derive from the candidate catalog; `standards/catalog.md` changes the staged successor rows from `unadvertised` to `default` and the predecessor rows from `default` to `retained`; after pre-GREEN analysis supports MINOR, the release commit carries version 5.9.0, regenerated `uv.lock`, dated changelog, release-current documentation, and classified historical references; `main` is an ancestor and the commit is fast-forwardable without tree change; every predecessor digest is unchanged; fresh/all-predecessor migration matrices include T19's direct Python transforms and detect loss of an effective gate as incompatibility, an unmigrated exact Markdown Tooling 1.8 `@v5` workflow fixture and `latest` outcome matrices converge without pass-to-fail results; catalog-identity fixtures derive package counts, versions, digests, roles, and migration predecessors from family/catalog/migration authorities rather than literals; the activated root uses explicit `MD060: false`, coherence stays green, and the #27 literal fixture is unchanged; every current-train issue has a committed executable ledger row; a preliminary wheel/sdist digest and complete candidate gate supply exact evidence for T16 (TC-T15-001 through TC-T15-004).
 - **sub-tasks:**
   - **T15.1 RED** — add exact default-selection, candidate-derived standards index plus complete direct family-level current/historical reference consistency, generated-catalog role transition, predecessor-digest, fresh-adoption, all-predecessor migration, repeated-reconcile, exact-selection/`latest` pass-fail, activated coherence, current-train ledger completeness, release-byte, ancestry/fast-forward, and catalog-identity derivation cases.
   - **T15.2 Verify RED** — confirm all four family-indexed consumer successors, with complete adoption guides, pass package/integrity/graph/schema/provider-unit/rendered-catalog/payload-projection gates while canonical catalogs omit them and root `latest` still resolves 1.8/1.8/1.4/1.3; prove final activation is one indivisible catalog-only four-package transition.
@@ -440,7 +450,7 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 
 #### T17: Qualify the exact release commit and stop unpublished
 
-- **goal:** Replay the authoritative gate against the unchanged Opus-reviewed release commit and prove its exact artifact bytes without publishing or changing tracked files. · **phase:** P3 · **depends_on:** [T16] · **requirements:** [FR-003, FR-020, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, DR-002] · **priority:** must
+- **goal:** Replay the authoritative gate against the unchanged Opus-reviewed release commit and prove its exact artifact bytes without publishing or changing tracked files. · **phase:** P3 · **depends_on:** [T16] · **requirements:** [FR-003, FR-020, FR-021, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, IR-005, DR-002] · **priority:** must
 - **files:** ignored/ephemeral candidate gate logs and artifact staging only; the tracked release commit assembled in T15 must not change
 - **acceptance:** HEAD equals the Opus-reviewed release commit; `main` remains its ancestor and landing is fast-forwardable; rebuilding produces the same wheel/sdist digests reviewed in T16; one extracted wheel supplies all installed-authority package/control-plane/coherence/handoff tests with its path first on `PYTHONPATH`; the complete static/test/compatibility/performance/audit/package/graph/schema/projection/coherence/docs/handoff gate passes; exact/default-track and full outcome-aware seed/current-train ledgers pass; predecessor digests match the T1 v5.8.0 authority; Node dependency pins match the T1 baseline; release consistency and `packages check-release --baseline v5.8.0` report the exact candidate/MINOR result including IR-004 schema changes; `git status --porcelain` is empty, HEAD matches the recorded T15/T16 commit, and no tag, release, issue, or hosted state changed (TC-T17-001, TC-T17-002).
 - **sub-tasks:**
@@ -459,6 +469,7 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 - **files:** final release publication metadata plus status/deployed/handoff/session records; no new version bump
 - **preconditions:** explicit owner release authorization naming the T17 commit and wheel/sdist digests; no unresolved Critical/High Opus finding; T17 exact commit/digests unchanged; the live issue set matches committed ledger rows for every issue proposed for closure.
 - **acceptance:** the exact release commit lands on `main` unchanged and without a merge-generated tree/commit substitution; signed immutable and moving-major tags identify that commit; hosted workflows are green; downloaded wheel/sdist match qualified digests/content; #32 and #35-#49 each receive exact closing evidence and close only when their committed row and acceptance are proven; a subsequent closeout commit may update status/deployed/handoff without altering the tagged/released bytes; required main/testing parity follows release policy (TC-T18-001, TC-T18-002).
+- **failure handling:** stop after any failed external step and record the exact partial hosted state before further mutation. No issue closes until hosted workflows and downloaded-artifact parity are both proven. Tag, release, or asset remediation requires owner direction under `meta/versioning.md`; never delete or move immutable release state as an autonomous workaround.
 - **sub-tasks:**
   - **T18.1 RED** — verify authorization, candidate identity/digests, live-to-ledger issue parity, and unchanged fast-forward landing; any absence or mismatch is a hard stop.
   - **T18.2 Verify RED** — confirm release/issue operations cannot begin from an unauthorized, changed, non-fast-forward, or ledger-incomplete candidate.
@@ -467,16 +478,35 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
   - **T18.5 REFACTOR** — reconcile final changelog/status/deployed/handoff truth without altering released bytes.
   - **T18.6 Verify Task** — run final handoff/docs checks, commit/push authorized closeout, prove clean worktree and remote parity, then close the master plan.
 
+### Appended P2/P3 Prerequisite
+
+#### T19: Add generic direct package-config transforms
+
+- **goal:** Add the minimum generic, explicitly opted-in direct package-upgrade configuration transform and use it to preserve Python Tooling's effective performance lane from every qualifying family-indexed predecessor into 1.9. · **phase:** P2/P3 prerequisite · **depends_on:** [T5, T8] · **requirements:** [FR-017, FR-019, FR-021, NFR-002, NFR-004, NFR-008, IR-004, IR-005] · **priority:** must
+- **files:** `src/project_standards/package_contract/payload.py`; generated `src/project_standards/schemas/standard-payload.schema.json`; `src/project_standards/control_plane/resolution.py`, `planner.py`, `schemas.py`, `config_edit.py`, and bounded nested-inline-leaf support in `adapters/toml.py`; generated `src/project_standards/schemas/reconciliation-plan.schema.json`; `codec.py` only if required to reuse the canonical TOML scalar renderer; Python Tooling 1.9 `payload.toml`, provider, family digest, packaged projection, and generated catalog counterpart; focused payload/schema/provider/planner/config-edit tests, new `tests/control_plane/test_package_config_upgrade.py`, Python Tooling 1.9 contract tests, and one package-compatibility lifecycle test. `cli.py`, `executor.py`, lock schemas, catalog policy, released payloads, dependencies, release files, and other package providers are excluded.
+- **interface/data:** add one default-absent configuration-transform JSON-pointer allowlist to an automatic direct package-to-package migration that uses its existing provider binding. Package validation rejects the declaration unless shared direct-property schema nodes retain the same validation keywords, allowing target-added properties, direct scalar-enum supersets, and default/annotation differences only at changed pointers; other widening remains WH-007. Planner first proves unchanged raw config target-valid, then builds the bounded source projection: recurse through direct object `properties`, omit target-only keys and direct target-only enum scalars as whole leaves, never filter collections per element, and preserve other values atomically. It resolves source-effective config through the existing full validator/default resolver, invokes one target provider through the existing runner, binds output to the invocation identity/no-legacy-claims, confines the semantic diff to declared pointers, requires introduced leaves under both schemas, complete output under the target schema, output projection under the source schema, and provider idempotence. Typed value-redacted transform evidence advances reconciliation-plan schema 1.2 to 1.3. Preview and `--check` are read-only; check reports ordinary drift. Apply re-plans under the ordinary writer lock and publishes one lexical config action before dependent artifacts and lock. Existing package evidence without an exact authoritative applied version, including inferred-only evidence, and more than one applicable transform fail closed.
+- **acceptance:** synthetic generic fixtures prove valid opt-in, missing/wrong provider and invalid edge rejection, exact pointer minimality with legitimate empty diffs, complete-default/target-only-key-change rejection, bounded direct-property/direct-enum projection, whole-leaf omission with source-default resolution, no per-element filtering, declaration-time rejection of array/reference/combinator/range/type/rename/relocation widening, source/target validation, same-change successor-only key and enum success, provider identity/failure/invalid-output rejection, provider idempotence using a source projection recomputed from candidate output, typed no-value preview/check/apply and direct programmatic parity, stale-config CAS, unknown/inferred applied-version recovery guidance, multiple-transform rejection, config-first order, post-config-publication fault/resume, and second-pass fixed point. The candidate emits reconciliation-plan schema 1.3; decoders recognize 1.1 and 1.2 as prior versions and reject unsupported versions. A raw target-invalid consumer value on an opted-in edge uses the existing ordinary configuration diagnostic and remedy, not a transform finding. Fresh adoption, same-version selection, non-opted direct edges, manual edges, and indirect/multi-hop paths each prove no transform invocation. Lexical tests cover nested inline, dotted, and table forms without unrelated-byte normalization. Python Tooling tests derive the qualifying predecessor set from the family manifest and source schemas, require each member and only each member to have a direct 1.9 edge limited to `/ci/performance`, require package graph and declaration-eligibility validation to admit that exact edge set, and compare source-rendered artifacts/gates before and after: fresh 1.9 stays false and invokes no transform; enabled absent states materialize true; explicit true/false is unchanged; disabled CI materializes false without changing enabled or rendered behavior; same-change `build_backend = "none"` and new Ruff/coverage options remain unchanged; unrelated config bytes and target defaults remain absent; explicit true retains pytest exit 5. One source/extracted-wheel case proves identical preview, final config, artifacts, lock, and fixed point (TC-T19-001 through TC-T19-003).
+- **scope checkpoints:** before RED, record the exact base, listed production/tests, C-009 invariants, and excluded paths. Before GREEN and before Verify Task, inspect name-status/stat/full diff against that allowlist; reject any package-ID branch, second transform composition, new CLI/provider operation, arbitrary patch language, multi-hop execution, whole-file normalization, transaction redesign, dependency, released-payload edit, or unrelated refactor. Generated schema/projection/catalog/family counterparts are allowed only when directly caused by the declared contract or Python Tooling 1.9 bytes.
+- **sub-tasks:**
+  - **T19.0 CHARACTERIZE** — verify T5's reconciliation-plan 1.2 and shared redaction projection as prerequisites; prove current direct version declarations lose providers during resolution and the staged V4 test bypasses unified upgrade; derive the qualifying Python predecessor set; confirm package graph and bounded declaration-eligibility validation admit the exact direct incoming edge set; and identify the existing `ControlAction`/`PlannedTarget`, executor tuple-order publication and writer-lock re-plan, and ordinary CLI drift path that carry the config action without `executor.py` or `cli.py` changes. Reproduce nested-inline TOML leaf limitations and current absence of typed config evidence. If any qualifying predecessor fails graph or declaration eligibility, stop before T19 RED and return to SPEC-VAIC under AW-005; do not narrow the set or substitute multi-hop behavior.
+  - **T19.1 RED** — add the exact generic declaration/provider/lifecycle, target-only same-change options, typed evidence, lexical config, and Python qualifying-predecessor/five-state/source-wheel tests in the acceptance matrix; keep legacy migration suites unchanged.
+  - **T19.2 Verify RED** — confirm failures identify the absent opt-in contract and engine lifecycle, while fresh 1.9, predecessor bytes, and unrelated transitions stay green.
+  - **T19.3 GREEN** — implement only the declaration parser/schema, target-admissibility plus bounded direct-property/direct-enum source projection before artifact resolution, existing-provider invocation, pointer/introduced-leaf-schema/target/idempotence validation, typed value-redacted evidence, bounded lexical config plan action, Python Tooling 1.9 provider/direct declarations, and caused generated counterparts.
+  - **T19.4 Verify GREEN** — run focused package/control-plane/compatibility tests, injected fault/resume, CLI/programmatic parity, and repeated fixed-point checks.
+  - **T19.5 REFACTOR** — share only existing schema resolution and TOML rendering primitives inside the verified surface; do not introduce a general patch language, multi-transform compositor, or new transaction abstraction.
+  - **T19.6 Verify Task** — repeat scope review; run Ruff, BasedPyright, package/graph/schema/projection/catalog gates, focused and complete required tests, and one exact extracted-wheel source/parity gate; commit with IDs and block T15 until green.
+
 ## 9. Integration, Risks, and Decisions
 
 ### 9.1 Integration Sequence
 
 1. Establish shared external-tool oracles, then fix independent engine defects.
 2. Build each immutable successor from its released predecessor.
-3. Add the candidate-bound release gate.
-4. Activate successors together; complete version/lock/changelog/release-document bytes; run cross-package, regression-ledger, exact/default-track, and preliminary full candidate gates.
-5. Obtain a blocking Opus audit bound to the exact assembled release commit and artifact digests.
-6. Rebuild and qualify the unchanged commit and artifacts, then stop unpublished for release authorization.
+3. Complete T19's generic direct-edge transform and seal Python Tooling 1.9 bytes before activation.
+4. Add the candidate-bound release gate.
+5. Activate successors together; complete version/lock/changelog/release-document bytes; run cross-package, regression-ledger, exact/default-track, and preliminary full candidate gates.
+6. Obtain a blocking Opus audit bound to the exact assembled release commit and artifact digests.
+7. Rebuild and qualify the unchanged commit and artifacts, then stop unpublished for release authorization.
 
 ### 9.2 Risks
 
@@ -485,7 +515,7 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 | R-001 | #47 does not reproduce under pinned tools. | med | T9 characterizes actual selected files and adds a guard; no speculative normalization. | T9 |
 | R-002 | Context-aware JSON formatting rewrites consumer bytes. | high | Lexical splice remains authoritative; property-style preservation cases bound the change. | T3 |
 | R-003 | Restore becomes an unsafe generic repair path. | high | Exact declared target, exclusive whole-file ownership, preview, digests, containment, and mutual exclusion. | T7 |
-| R-004 | Fresh performance default changes migrated behavior. | high | Migration materializes explicit true; explicit true retains pytest exit 5. | T8 |
+| R-004 | Fresh performance default changes migrated behavior. | high | T19 derives every predecessor edge, limits changes to `/ci/performance`, and proves all effective states; explicit true retains pytest exit 5. | T8, T19 |
 | R-005 | Diagnostic precision leaks consumer secrets. | high | Shared structural redaction schema and adversarial secret fixtures. | T5 |
 | R-006 | Release docs drift after candidate validation. | high | Gate runs at exact final candidate commit immediately before tag and again in T17/T18. | T14, T17, T18 |
 | R-007 | Correction train conflicts with the MCP hold. | high | No T1 execution without explicit owner exception; release has a second authorization gate. | Owner |
@@ -493,6 +523,7 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 | R-009 | Landing or closeout changes the qualified release tree. | high | T15 ancestry proof, T17 clean unchanged commit, T18 unchanged landing, and automatic rebuild/re-review/reauthorization on any mismatch. | T15-T18 |
 | R-010 | Markdown ownership assertion turns red between successor creation and activation. | high | T11 tests predecessor style-any and successor explicit-false forms; T15 activates and rechecks without changing the #27 fixture. | T11, T15 |
 | R-011 | A shared `@v5` reusable-workflow edit regresses released Markdown Tooling selections. | high | T9 characterizes provider, workflow-input, shell/cwd, and tool-dialect causes; workflows stay unchanged unless AW-004 is explicitly dispositioned; NFR-008 retains an unmigrated 1.8 fixture. | T9, T15, Owner |
+| R-012 | A generic transform freezes unrelated defaults, introduces predecessor-invalid config, rejects valid same-change successor options, or cannot resume after interruption. | high | Pointer allowlist, exact minimality, source-declared projection, introduced-leaf dual-schema validity, target validation, provider idempotence, config-first fault/resume, same-change target-only success, and default-freezing rejection are T19 exit conditions. | T19 |
 
 ### 9.3 Governing Design Decisions
 
@@ -505,12 +536,13 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 | D-005 | Markdown Tooling 1.9 renders explicit `MD060: false`; T11 keeps predecessor and successor coherence states valid with Prettier as table-layout authority. |
 | D-006 | CLI Documentation references one consumer-owned usage index rather than generating multiple CLI artifacts. |
 | D-007 | The committed issue-to-proof ledger, not chat or live GitHub during normal tests, is the durable regression authority. |
+| D-008 | T19 uses one generic explicit direct-edge provider opt-in inside ordinary reconciliation; Python-specific core logic, implicit historical providers, a patch language, multi-hop execution, and multi-transform composition are prohibited. |
 
 ## 10. Open Questions
 
 | ID | Question | Blocking? | Owner | Current assumption |
 | --- | --- | --- | --- | --- |
-| OQ-001 | Does the owner approve this plan and grant an exception to the MCP hold? | yes before T1 | Owner | Yes; approved for T1-T17 on 2026-07-26. |
+| OQ-001 | Has the owner granted the MCP-hold exception for this train and bounded T19? | no; resolved | Owner and implementer | Yes. Option 1 and autonomous convergence are authorized; amended spec/plan validation and independent reviews remain T19 pre-GREEN quality gates, not new owner-approval gates. |
 | OQ-002 | Does refreshed pinned-tool evidence confirm #47’s exact `dir/**` divergence? | yes at T9 GREEN | Implementer | Characterize first; do not pre-commit to normalization. |
 | OQ-003 | Does the owner authorize the exact T17 candidate for release? | yes before T18 | Owner | No; T17 stops unpublished. |
 
@@ -550,13 +582,14 @@ An unplanned path, behavior, dependency, cleanup, or generalized mechanism stops
 - `uv run project-standards agent-handoff size-report --repo .`
 - `uv run project-standards agent-handoff shape-check --repo .`
 - `git diff --check`
-- For every T1-T17 commit, verify the recorded task base, allowed change surface, pre-GREEN scope result, pre-Verify-Task scope result, and any generated/cross-file counterpart justification are present in the ephemeral evidence.
+- For every T1-T17 and T19 commit, verify the recorded task base, allowed change surface, pre-GREEN scope result, pre-Verify-Task scope result, and any generated/cross-file counterpart justification are present in the ephemeral evidence.
 - At each phase boundary, verify the completed task commits remain within SPEC-VAIC scope, constraints, and non-goals; unresolved scope exceptions block the next phase.
 - Require `git status --porcelain` to produce no output.
 - Compare `git rev-parse HEAD` with the exact T15/T16 recorded release commit.
 - Audit every SPEC-VAIC FR/NFR/IR/DR and TC row bidirectionally against exact passing evidence; any missing Must evidence blocks T17.
 - Run every applicable committed seed/current-train ledger row against its declared exact environment; compare the live issue set read-only only at release closeout.
 - Replay the exact-selection and `version = "latest"` outcome matrices and prove neither lint nor format scope widened for existing corpora.
+- Replay family-derived qualifying Python Tooling predecessor-to-1.9 transforms through source and extracted wheel; assert exact `/ci/performance` diffs, fresh bypass, introduced-leaf dual-schema validity, same-change successor-option success, idempotent fault recovery, unchanged unrelated config, and no effective-gate loss.
 - Confirm predecessor payload digests match the T1 v5.8.0 tag/published-wheel ledger even if working-tree family/catalog digests were changed self-consistently.
 - Confirm `package.json` and `package-lock.json` dependency pins match the T1/v5.8.0 baseline.
 - Confirm `main` is an ancestor of the exact clean release commit, its wheel/sdist digests match T16 evidence, and it can land unchanged.
@@ -581,6 +614,8 @@ Teardown after authorized T18: harvest durable decisions into this section and h
 | Managed restore | absent | exact `--restore-managed PATH` preview/apply | Additive, explicit, fail-closed. |
 | Finding/parse diagnostic | message-heavy | optional structural line/column/locus/measure/limit | Additive fields; renderers remain compatible. |
 | Python Tooling config | 1.8 closed schema | 1.9 additive options, backend none, fresh performance false | 1.8 immutable; migration preserves true. |
+| Package migration declaration | automatic edge metadata; unified resolution does not invoke package-version providers | direct automatic edge may opt in one provider plus changed-pointer allowlist | Default absent; non-opted and legacy behavior unchanged. |
+| Reconcile config action | config changes are not part of package-version reconcile planning | one pointer-limited, introduced-leaf dual-schema-valid, target-valid, idempotent lexical `.standards/config.toml` action with typed value-redacted plan evidence | Preview/check read-only; apply uses existing lock/re-plan/CAS and resumable config-first ordering. |
 | Markdown Tooling config | 1.8 | 1.9 convergent file-set/caller/lint contract | 1.8 immutable. |
 | Agent Handoff package | 1.4 | 1.5 exclusion/adoption guidance | 1.4 immutable. |
 | CLI Documentation config | 1.3 single generated usage | 1.4 optional referenced usage index | Default remains single generated usage. |
@@ -612,7 +647,7 @@ Teardown after authorized T18: harvest durable decisions into this section and h
 | TC-T8-001 | FR-008 | T8 | Ruff/coverage option schema, canonical rendering, validation, and explicit rule suppression | contract |
 | TC-T8-002 | FR-009 | T8 | Backend none omits build-system and retains development tooling | regression |
 | TC-T8-003 | FR-017 | T8 | Fresh default false and explicit true exit-5 behavior | integration |
-| TC-T8-004 | FR-017, FR-019, NFR-004 | T8 | Uncatalogued-stage resolution, four-state 1.8-to-1.9 matrix, and immutable 1.8 bytes | migration |
+| TC-T8-004 | FR-017, FR-019, NFR-004 | T8 | Uncatalogued-stage package/fresh-default surface, retained V4 migration behavior, and immutable 1.8 bytes; no claim of unified package-upgrade proof | migration/package |
 | TC-T9-001 | FR-015, NFR-001, NFR-008 | T9 | Provider/workflow/shell/tool causal matrix plus unmigrated 1.8 `@v5` outcomes and no scope widening | integration |
 | TC-T9-002 | FR-015, FR-019, NFR-004 | T9 | Non-widening normalization or no-divergence guard plus Markdown Tooling 1.8 digest | contract |
 | TC-T10-001 | FR-006 | T10 | Both caller permissions and reusable-workflow compatibility | contract |
@@ -625,15 +660,18 @@ Teardown after authorized T18: harvest durable decisions into this section and h
 | TC-T13-002 | FR-010, FR-019, IR-003, NFR-004 | T13 | Usage-index default/path/transition/security matrix and CLI Documentation 1.3 digest | contract |
 | TC-T14-001 | FR-003 | T14 | Stale/misclassified project/package/default/current-link fixture failures | release |
 | TC-T14-002 | FR-003, FR-019, NFR-009, IR-004 | T14 | Exact candidate fixture, idempotent projection, historical carve-outs, IR-004 classification, and SBA 2.5 guard | release |
-| TC-T15-001 | FR-012, FR-019, NFR-001 | T15 | Catalog-only four-successor activation, defaults, migrations, coherence, and fixed point | integration |
+| TC-T15-001 | FR-012, FR-019, FR-021, NFR-001, IR-005 | T15 | Catalog-only four-successor activation, defaults, generic transforms, migrations, coherence, and fixed point | integration |
 | TC-T15-002 | FR-019, NFR-004 | T15 | Every predecessor digest and release-commit package projection | compatibility |
 | TC-T15-003 | FR-015, NFR-008 | T15 | Unmigrated exact-1.8 and migrated-`latest` outcome matrix with no lint/format widening | compatibility |
 | TC-T15-004 | NFR-005, DR-002 | T15 | Complete executable current-train ledger rows before candidate review | regression/audit |
 | TC-T16-001 | NFR-007 | T16 | Verified exact-commit/artifact Opus review and Critical/High dispositions | adversarial review |
 | TC-T17-001 | NFR-006 | T17 | Reproducible wheel/sdist and one extracted-wheel complete local gate | release candidate |
-| TC-T17-002 | FR-003, FR-020, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, DR-002, C-006, C-007 | T17 | Exact clean commit, classification, Node/payload baselines, outcome-aware ledgers, compatibility, Opus, ancestry, and unpublished checks | audit |
+| TC-T17-002 | FR-003, FR-020, FR-021, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, IR-004, IR-005, DR-002, C-006, C-007, C-009 | T17 | Exact clean commit, classification, Node/payload baselines, transform lifecycle, outcome-aware ledgers, compatibility, Opus, ancestry, and unpublished checks | audit |
 | TC-T18-001 | FR-020, NFR-006 | T18 | Explicit authorization, unchanged landing, signed tags/release, hosted workflows, artifact parity | release |
 | TC-T18-002 | FR-020, NFR-005, NFR-007, DR-002 | T18 | Live-to-ledger issue parity, per-issue evidence, Opus blockers, closeout, and branch parity | closeout |
+| TC-T19-001 | FR-017, FR-021, C-009 | T19 | Opt-in/direct-automatic/provider/pointer schema contract; bounded direct-property/direct-enum source projection, whole-leaf omission/source-default resolution, no per-element filtering, and declaration-time unsupported-widening rejection; introduced-leaf source/target validity; ordinary ERR-008 routing for raw target-invalid consumer config; target-only/default-freezing change rejection; non-idempotent and multi-transform rejection; fresh, same-version, non-opted, manual, and indirect/multi-hop bypass | contract/security |
+| TC-T19-002 | FR-017, FR-021, NFR-002, IR-004, IR-005 | T19 | Typed value-redacted preview/check/apply/programmatic lifecycle; candidate schema 1.3 emission, 1.1/1.2 prior recognition, and unsupported-version rejection; exact possibly-empty pointer diff; inline/dotted/table lexical preservation; config-first order; stale/unknown/inferred authority; provider failure/invalid output; fault/resume; and second-pass fixed point | integration/recovery |
+| TC-T19-003 | FR-017, FR-019, FR-021, NFR-004, NFR-008, IR-005 | T19 | Family-derived qualifying-predecessor/five-state/fresh-bypass matrix, same-change successor-only key/enum success, source-rendered behavior equivalence, and source/extracted-wheel equivalent config/artifacts/lock/fixed point | compatibility |
 
 ## Appendix C. Deferred Work
 
@@ -644,3 +682,4 @@ Teardown after authorized T18: harvest durable decisions into this section and h
 | Hypothesis dependency | Existing generated parametrization is sufficient for this correction train. | Owner-approved testing dependency proposal. |
 | Generated multi-CLI artifacts/CI | #42 can be satisfied by a referenced consumer-owned index. | Concrete need for multiple generated artifact identities. |
 | Automatic third-party `.agents/` exclusion detection | Documentation plus current Python Tooling defaults address #43. | Evidence that a managed provider can safely own another tool’s config. |
+| Multiple package-config transforms in one plan | FR-017 needs one package; ordering/merge semantics would enlarge the transaction contract. | A second package requires an opted-in transform and an approved composition design. |
