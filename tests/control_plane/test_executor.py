@@ -715,3 +715,55 @@ def test_low_level_staged_write_failure_cleans_up_and_returns_result(
     assert not result.success
     assert result.error_code == "CP-APPLY-STAGE"
     assert not list(repo.rglob(".project-standards-*.tmp"))
+
+
+def test_apply_converges_after_a_create_only_file_is_deleted(tmp_path: Path) -> None:
+    """Applying a consumer-deleted create-only artifact records its absence (issue #70).
+
+    Nothing is staged for the deleted target, but the planner still publishes it
+    as a `PlannedTarget` because `_locked_after` reads that entry to build the
+    `create_only_absences` record. Post-apply verification must therefore accept
+    an unpublished no-op over a missing path; treating it as a changed published
+    target failed every apply with `CP-VERIFY` and left the drift permanent.
+    """
+    repo = tmp_path / "repo"
+    control = repo / ".standards"
+    control.mkdir(parents=True)
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    resolution = resolution_request((payload,))
+    (control / "lock.toml").write_bytes(render_lock(resolution.previous_lock))
+    planner = PlannerRequest(repo, resolution, (payload,))
+    installed = plan_reconciliation(planner)
+    assert _apply(planner, installed).success
+
+    (repo / "notes.md").unlink()
+    deleted_resolution = resolution_request((payload,), previous_lock=installed.next_lock)
+    deleted_planner = PlannerRequest(repo, deleted_resolution, (payload,))
+    deleted = plan_reconciliation(deleted_planner)
+
+    result = _apply(deleted_planner, deleted)
+
+    assert result.success, result.error_code
+    assert result.lock_written
+    written = parse_lock((control / "lock.toml").read_bytes())
+    assert [item.path.original for item in written.create_only_absences] == ["notes.md"]
+    assert written.artifacts == []
+    assert not (repo / "notes.md").exists()
+
+    settled_resolution = resolution_request((payload,), previous_lock=written)
+    settled = plan_reconciliation(PlannerRequest(repo, settled_resolution, (payload,)))
+
+    # Convergence: with the absence recorded, `reconcile --check` no longer
+    # reports lock drift for the deletion the consumer already made.
+    assert settled.next_lock == written

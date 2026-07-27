@@ -6,6 +6,7 @@ import random
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -421,6 +422,103 @@ def test_truncated_create_only_file_is_preserved_not_removed(tmp_path: Path) -> 
     assert all(action.kind is not ActionKind.REMOVE for action in plan.actions)
     # `reconcile --check` reports drift from a mutating action or a lock change;
     # a preserved truncation is neither.
+    assert plan.next_lock == lock
+
+
+def _absence_findings(plan: ReconciliationPlan) -> tuple[ControlFinding, ...]:
+    return tuple(finding for finding in plan.findings if finding.code == "CP-CREATE-ONLY-ABSENT")
+
+
+def test_deleted_create_only_file_reports_a_named_absence_finding(tmp_path: Path) -> None:
+    """A consumer-deleted create-only artifact explains its own drift (issue #70).
+
+    Deleting the file leaves no semantic unit to plan, so reconciliation emits no
+    mutating action and the only remaining drift signal is `next_lock !=
+    previous_lock`. Before this finding an operator saw a bare `drift: true` with
+    nothing to apply and had to diff the lock's `create_only_absences` partition
+    by hand. The finding rides `plan.findings`, which is what the `--json`
+    summary publishes, so the deletion is named in the summary itself.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    path = repo / "notes.md"
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    initial = plan_reconciliation(_request(repo, (payload,)))
+    path.write_bytes(initial.proposed_content("notes.md"))
+    lock = initial.next_lock
+    path.unlink()
+
+    deleted = plan_reconciliation(_request(repo, (payload,), lock=lock))
+
+    assert deleted.applicable
+    assert all(
+        action.kind not in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in deleted.actions
+    )
+    assert deleted.next_lock != lock
+    absences = _absence_findings(deleted)
+    assert len(absences) == 1
+    finding = absences[0]
+    assert finding.severity == "warning"
+    assert finding.path == "notes.md"
+    assert finding.standard_id == "demo"
+    assert "create-only" in finding.message
+    assert [item.path.original for item in deleted.next_lock.create_only_absences] == ["notes.md"]
+    published = cast("list[dict[str, JsonValue]]", deleted.to_jsonable()["findings"])
+    assert {"CP-CREATE-ONLY-ABSENT"} & {str(item["code"]) for item in published}
+
+    settled = plan_reconciliation(_request(repo, (payload,), lock=deleted.next_lock))
+
+    # Once the absence is locked the deletion is steady state, not drift, so the
+    # finding disappears instead of warning on every future check.
+    assert settled.next_lock == deleted.next_lock
+    assert _absence_findings(settled) == ()
+
+
+def test_truncated_create_only_file_reports_no_absence_finding(tmp_path: Path) -> None:
+    """The #66 truncation neighbor stays silent: zero bytes are not an absence.
+
+    A zero-byte create-only file still holds a `$file` unit, so it is preserved
+    with no drift and must not acquire the issue #70 absence finding — otherwise
+    every `end-of-file-fixer` run would report a deletion that never happened.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    path = repo / "notes.md"
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    initial = plan_reconciliation(_request(repo, (payload,)))
+    path.write_bytes(initial.proposed_content("notes.md"))
+    lock = initial.next_lock
+    path.write_bytes(b"")
+
+    plan = plan_reconciliation(_request(repo, (payload,), lock=lock))
+
+    assert plan.findings == ()
+    assert _absence_findings(plan) == ()
+    assert _action(plan, "notes.md").kind is ActionKind.PRESERVE
+    assert all(action.kind is not ActionKind.REMOVE for action in plan.actions)
     assert plan.next_lock == lock
 
 

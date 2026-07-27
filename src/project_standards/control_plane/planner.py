@@ -1497,6 +1497,50 @@ def _container_is_package_empty(
     return False
 
 
+def _is_newly_absent_create_only(
+    group: _DesiredGroup,
+    planned: PlannedUnit,
+    current: AdapterUnit | None,
+    prior_absences: frozenset[_OwnedNaturalKey],
+) -> bool:
+    """Detect a create-only unit the consumer deleted since the previous lock.
+
+    A deleted unit is invisible to the action list: it plans PRESERVE, renders
+    nothing, and leaves `create_only_absences` as the sole evidence (issue #70).
+    Absence is `current is None` — the unit is gone from its container, or the
+    whole-file target does not exist. It is deliberately NOT "renders empty":
+    an existing zero-byte create-only file still carries a `$file` unit and must
+    stay silent, which is the #66 truncation neighbor. Keys already recorded as
+    absent are steady state, not drift, so they report nothing.
+    """
+    return (
+        group.policy is ArtifactPolicy.CREATE_ONLY
+        and planned.kind is ActionKind.PRESERVE
+        and current is None
+        and _group_natural_key(group) not in prior_absences
+    )
+
+
+def _create_only_absence_finding(group: _DesiredGroup) -> ControlFinding:
+    """Explain create-only lock drift that no planned action can account for."""
+    return ControlFinding(
+        code="CP-CREATE-ONLY-ABSENT",
+        severity="warning",
+        standard_id=group.owners[0],
+        version=group.versions[0][1],
+        path=group.target.original,
+        identity=group.scope,
+        message=(
+            "create-only unit is absent from the repository; reconciliation records "
+            "the removal in the lock and never recreates it"
+        ),
+        hint=(
+            "run reconcile --apply to record the absence, or restore the unit to "
+            "return it to the lock's live artifacts"
+        ),
+    )
+
+
 def _render_targets(
     *,
     snapshot: RepositorySnapshot,
@@ -1518,6 +1562,9 @@ def _render_targets(
     previous_by_target: dict[str, list[LockedUnit]] = defaultdict(list)
     for previous in previous_lock.artifacts:
         previous_by_target[previous.path.original].append(previous)
+    prior_absences = frozenset(
+        absence.natural_key for absence in previous_lock.create_only_absences
+    )
     actions: list[ControlAction] = []
     unit_plans: list[PlannedUnit] = []
     findings: list[ControlFinding] = []
@@ -1572,10 +1619,12 @@ def _render_targets(
         desired_map = {(item.adapter, item.scope): item for item in desired}
         target_units: list[PlannedUnit] = []
         target_findings: list[ControlFinding] = []
+        newly_absent: list[_DesiredGroup] = []
         for group in desired:
+            current_unit = current_units.get(group.scope)
             planned, finding = _classify_desired(
                 group,
-                current_units.get(group.scope),
+                current_unit,
                 previous_map.get((group.adapter, group.scope)),
                 entry,
                 preserve_absence=_group_natural_key(group) in retained_absence_keys,
@@ -1584,6 +1633,13 @@ def _render_targets(
                 target_findings.append(finding)
             elif planned is not None:
                 target_units.append(planned)
+                if _is_newly_absent_create_only(
+                    group,
+                    planned,
+                    current_unit,
+                    prior_absences,
+                ):
+                    newly_absent.append(group)
         for locked in previous:
             if (locked.adapter, locked.scope) in desired_map:
                 continue
@@ -1608,6 +1664,7 @@ def _render_targets(
         if target_findings:
             findings.extend(target_findings)
             continue
+        findings.extend(_create_only_absence_finding(group) for group in newly_absent)
         platform_created_container = bool(previous) and all(
             item.created_container for item in previous
         )

@@ -815,9 +815,20 @@ def _verify_published_targets(repo: Path, plan: ReconciliationPlan) -> None:
     paths = tuple(SafeRelativePath.parse(item.target) for item in plan.targets)
     snapshot = RepositorySnapshot.capture(repo, paths)
     removed = {action.target for action in plan.actions if action.kind is ActionKind.REMOVE}
+    # A no-op with no after-digest is `_target_action`'s exact encoding of "the
+    # path is missing and nothing renders" — a consumer-deleted create-only unit
+    # (issue #70). The planner still publishes a PlannedTarget for it because
+    # `_locked_after` reads that entry to build the `create_only_absences` record,
+    # but nothing was staged, so demanding a regular file failed every such apply
+    # with CP-VERIFY and made the drift permanent. Absence is the expected state.
+    unstaged = {
+        action.target
+        for action in plan.actions
+        if action.kind is ActionKind.NOOP and action.after_digest is None
+    }
     for planned in plan.targets:
         entry = snapshot.entry(SafeRelativePath.parse(planned.target))
-        if planned.target in removed:
+        if planned.target in removed or planned.target in unstaged:
             if entry.kind is not EntryKind.MISSING:
                 raise _ApplyFailure("CP-VERIFY", "published removal changed before verification")
             continue
