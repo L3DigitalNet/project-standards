@@ -38,10 +38,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
-- [ ] Execute the approved V5 adoption integrity correction train for issues #32 and #35-#49 through the qualified-candidate gate.
-
-  The owner approved SPEC-VAIC rev 0.12 and its 19-task plan and granted the MCP-hold exception for T1-T17 on 2026-07-26. T1-T15 and T19 are implemented; T16 Opus review and T17 exact-candidate qualification remain. Publication and issue closure require separate authorization naming the qualified commit and artifact digests.
-
 ### Future programs
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.

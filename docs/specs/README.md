@@ -12,7 +12,7 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-DPEY — Agent Handoff Standard Package](2026-07-09-agent-handoff-standard-package.md) | approved rev 0.8; implementation complete; retirement pending | V1 baseline plus accepted Catalog 5 package `1.1` supersession and Task 18 retirement gates |
 | [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.15; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
 | [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.15; implemented | Immutable family/payload authoring contract including bounded direct package-config transforms |
-| [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.12; Opus review converged; T1-T17 authorized under an MCP-hold exception; release unauthorized | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
+| [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.12; implemented and released in 5.9.0 | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
 
 ## Future maintained specifications
 
