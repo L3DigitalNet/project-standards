@@ -1,8 +1,8 @@
 [project_standards]
 schema_version = "1.0"
 catalog = "5"
-release = "5.10.0"
-digest = "sha256:0adeeb92b6475334c861efe73df455f96051d6227f126ea5a8bb522824f3dffe"
+release = "5.11.0"
+digest = "sha256:bd64dff42d4f4f5bd647278fbe2937572455e52f1cad79b81698f82ebff17337"
 
 [standards.alpha]
 status = "active"

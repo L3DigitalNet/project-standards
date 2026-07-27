@@ -30,14 +30,14 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.10.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.11.0:
 
   ```bash
-  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.10.0"
+  uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.11.0"
   project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.10.0` before continuing.
+  Confirm that the command reports `project-standards 5.11.0` before continuing.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.
@@ -112,6 +112,8 @@ The 5.8.0 release advanced three more successors that widen what migrates cleanl
 The 5.9.0 release advances the current defaults to Python Tooling 1.9, Markdown Tooling 1.9, Agent Handoff 1.5, and CLI Documentation 1.4.
 
 The 5.10.0 release advances the current defaults again, to Python Tooling 1.10, Markdown Tooling 1.10, Agent Handoff 1.6, and Markdown Frontmatter 1.6; CLI Documentation stays at 1.4. Markdown Tooling 1.10 adds `lint_generated_exclusions` (default `true`), which appends `.pytest_cache/**`, `.ruff_cache/**`, `.venv/**`, and `node_modules/**` as negative lint globs after any consumer-declared positive glob; set it to `false` under the `markdown_tooling` namespace to keep the 1.9 lint scope byte-for-byte. Python Tooling 1.10's `scripts/check.py` rejects an unrecognized argument even alongside `--help`, so a CI step that passed a typo and exited `0` will now fail. Removing the retired `.mypy_cache` exclusion during the Python Tooling 1.9 to 1.10 upgrade can leave one whitespace-only line in `.vscode/settings.json`; if a Prettier gate flags the file, run Prettier on it once — reconciliation stays drift-free either way. Review their [current adoption guides](standards/README.md) before migration or same-major refresh; retained predecessor behavior above remains historical release guidance.
+
+The 5.11.0 release advances the current defaults to ADR 1.3, CLI Documentation 1.5, and Project Spec 1.5; Python Tooling stays at 1.10, Markdown Tooling at 1.10, Agent Handoff at 1.6, and Markdown Frontmatter at 1.6. All three successors change documentation links only, with no option, contribution, or output change, so a consumer already reconciled at ADR 1.2, CLI Documentation 1.4, or Project Spec 1.4 needs no migration work for them. One engine change does affect this stage: the Agent Handoff shape checks now fall back to `shape.defaults.max_paragraph_chars` (360 characters in the shipped policy) for a document that declares no limit of its own. The pre-apply `agent-handoff shape-check` run below has no payload provider to defer to, so a long paragraph that passed silently under 5.10.0 can report a finding, and in a document configured at fatal severity — `docs/TODO.md` in the shipped policy — it blocks. Shorten the paragraph, or declare that document's own `max_paragraph_chars`.
 
 ## 2. Apply the reviewed migration
 
@@ -236,7 +238,7 @@ The 5.8.0 release converged `format-frontmatter` (the format stage of `fix`) wit
 
 ## 5. Re-pin workflows and the tool
 
-Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.10.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
+Pin reusable workflows and the installed CLI to the same v5 release line. Use `@v5` for compatible updates or `@v5.11.0`/a commit SHA for an immutable pin. Never mix a v5 workflow with a v4 `standards-ref`.
 
 Self-hosted package workflow mode removes the remote reusable-workflow dependency for Markdown Tooling or Project Specification, but the repository must then commit the package-managed self-hosted workflow bytes.
 
