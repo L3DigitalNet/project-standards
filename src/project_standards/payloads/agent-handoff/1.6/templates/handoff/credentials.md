@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.6/templates/handoff/credentials.md
