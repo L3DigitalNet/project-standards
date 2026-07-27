@@ -13,6 +13,7 @@ This directory is the durable home for Project Specification Standard documents 
 | [SPEC-CP01 — Consumer Standards Control Plane](2026-07-10-consumer-standards-control-plane-spec.md) | approved rev 0.15; implemented | Catalog/config/lock/reconciliation control plane; declared-path provider correction, root dogfood, and FR-037/FR-038 evidence pass |
 | [SPEC-BA02 — Standard Bundle Authoring V2](2026-07-10-standard-bundle-authoring-v2-spec.md) | approved rev 0.15; implemented | Immutable family/payload authoring contract including bounded direct package-config transforms |
 | [SPEC-VAIC — V5 Adoption Integrity Correction Train](2026-07-26-v5-adoption-integrity-correction-train-spec.md) | approved rev 0.12; implemented and released in 5.9.0 | Issues #32 and #35-#49, immutable successors, exact-candidate qualification, and closed-issue regression preservation |
+| [SPEC-VFCT — V5 Validation Fidelity Correction Train](2026-07-27-v5-validation-fidelity-correction-train-spec.md) | draft rev 0.1; pending owner review | Issues #50-#69: shared spec-engine and `standards show` loosening fixes, four new successor payloads, and the Catalog 5 default advance toward v5.10.0 |
 
 ## Future maintained specifications
 
