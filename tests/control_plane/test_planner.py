@@ -379,6 +379,51 @@ def test_edited_create_only_file_is_preserved_on_reapply_and_disable(
         assert plan.next_lock == lock
 
 
+def test_truncated_create_only_file_is_preserved_not_removed(tmp_path: Path) -> None:
+    """A create-only artifact emptied by its consumer stays preserved (issue #66).
+
+    Whole-file PRESERVE renders the current bytes, so a zero-byte target renders
+    b"" exactly like a removal does. Planning must read the unit action, not the
+    rendered length, or `reconcile --apply` deletes the consumer's file.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    path = repo / "notes.md"
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    initial = plan_reconciliation(_request(repo, (payload,)))
+    path.write_bytes(initial.proposed_content("notes.md"))
+    path.write_bytes(b"")
+    lock = initial.next_lock
+
+    plan = plan_reconciliation(
+        PlannerRequest(
+            repo=repo,
+            resolution=resolution_request((payload,), previous_lock=lock),
+            payloads=(payload,),
+        )
+    )
+
+    assert plan.applicable
+    assert plan.findings == ()
+    assert _action(plan, "notes.md").kind is ActionKind.PRESERVE
+    assert plan.proposed_content("notes.md") == b""
+    assert all(action.kind is not ActionKind.REMOVE for action in plan.actions)
+    # `reconcile --check` reports drift from a mutating action or a lock change;
+    # a preserved truncation is neither.
+    assert plan.next_lock == lock
+
+
 def test_preexisting_create_only_file_is_preserved_without_a_lock(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()

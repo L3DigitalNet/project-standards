@@ -1392,7 +1392,15 @@ def _target_action(
     if entry.kind is EntryKind.MISSING:
         kind = ActionKind.CREATE if rendered else ActionKind.NOOP
     elif remove_container or (
-        adapter is AdapterKind.WHOLE_FILE and rendered == b"" and entry.kind is EntryKind.REGULAR
+        adapter is AdapterKind.WHOLE_FILE
+        and rendered == b""
+        and entry.kind is EntryKind.REGULAR
+        # The whole-file adapter renders b"" for a genuine REMOVE and, equally, for
+        # a non-mutating PRESERVE/NOOP over a file that is already empty — a
+        # create-only artifact whose consumer bytes were truncated to zero. Empty
+        # output alone is therefore not evidence of removal; only the unit action
+        # is (issue #66 deleted preserved consumer files without it).
+        and any(unit.kind is ActionKind.REMOVE for unit in units)
     ):
         kind = ActionKind.REMOVE
     elif entry.content == rendered:
