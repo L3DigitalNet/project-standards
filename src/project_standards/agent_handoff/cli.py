@@ -329,6 +329,8 @@ def _predecessor_shape_locus(message: str) -> str:
         ("narrative history", "section heading"),
         ("rule summary", "rule summary cell"),
         ("rule entry", "section entry"),
+        # 1.6 and later name the section and its size instead of aggregating.
+        ("entry has", "section entry"),
         ("row is too long", "document row"),
         ("headline is too long", "document headline"),
         ("blocked phrase:", "blocked phrase"),

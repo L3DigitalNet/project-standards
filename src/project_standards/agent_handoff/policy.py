@@ -5,6 +5,7 @@ from __future__ import annotations
 import fnmatch
 import re
 import tomllib
+from collections.abc import Iterable
 from dataclasses import dataclass
 from glob import has_magic
 from pathlib import Path
@@ -217,6 +218,39 @@ def _table_lines(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
             continue
         tables.append(line)
     return tuple(tables)
+
+
+def _masked_lines(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
+    """Blank fenced-code lines while preserving line numbers.
+
+    Mirrors the payload provider's `_masked_structural_view`, which masks fenced
+    content before the shape rules run. Blanking (rather than dropping) keeps the
+    returned numbering aligned with `_sections`, so masked text can be looked up
+    per section line.
+    """
+    masked: list[_LocatedLine] = []
+    fence: str | None = None
+    for line in lines:
+        stripped = line.text.strip()
+        if fence is None and stripped.startswith(("```", "~~~")):
+            fence = stripped[:3]
+        elif fence is not None and stripped.startswith(fence):
+            masked.append(_LocatedLine(line.number, ""))
+            fence = None
+            continue
+        masked.append(_LocatedLine(line.number, "") if fence is not None else line)
+    return tuple(masked)
+
+
+def _entry_size(lines: Iterable[str]) -> int:
+    """Measure a section entry, discarding blank and fence-masked lines.
+
+    Fenced examples are exempt from every other shape rule, so charging their
+    characters to the entry budget would penalize a rule that shows its command.
+    The payload provider masks fences to spaces, so whitespace-only lines are
+    neutralized here to keep both implementations byte-for-byte comparable.
+    """
+    return len("\n".join(line if line.strip() else "" for line in lines).strip())
 
 
 def _paragraphs(lines: tuple[_LocatedLine, ...]) -> tuple[_LocatedLine, ...]:
@@ -502,16 +536,18 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                     )
                 )
     if config.max_entry_chars is not None:
+        masked_text = {line.number: line.text for line in _masked_lines(all_lines)}
         for section in sections.values():
             if section.name == "Quick Reference":
                 continue
-            size = len("\n".join(line.text for line in section.lines).strip())
+            size = _entry_size(masked_text[line.number] for line in section.lines)
             if size > config.max_entry_chars:
                 findings.append(
                     _finding(
                         path,
                         severity,
-                        f"entry has too many characters; max {config.max_entry_chars}",
+                        f"section {section.name} entry has {size} chars; "
+                        f"max {config.max_entry_chars}",
                         locus="section entry",
                         line=section.heading.number,
                         column=section.heading.column,
@@ -520,10 +556,11 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
                     )
                 )
     if config.row_max_chars is not None or config.headline_max_words is not None:
-        for line in all_lines:
+        # Row and headline caps describe table rows only; prose below the table is
+        # governed by the paragraph and bullet rules. Scanning every line made the
+        # session-log caps unsatisfiable for an append-only record (issue #68).
+        for line in _table_lines(_masked_lines(all_lines)):
             stripped = line.text.strip()
-            if not stripped:
-                continue
             if config.row_max_chars is not None and len(stripped) > config.row_max_chars:
                 findings.append(
                     _finding(

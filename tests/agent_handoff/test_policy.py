@@ -153,6 +153,45 @@ def test_conventions_profile_checks_quick_reference_and_entry_lengths(
     assert any("entry has" in message for message in messages)
 
 
+def test_conventions_entry_findings_name_each_oversized_section(policy: HandoffPolicy) -> None:
+    text = (
+        "## Quick Reference\n\n- Short.\n\n"
+        "## 1. First\n\n" + ("x" * 1300) + "\n\n"
+        "## 2. Second\n\n- Short enough.\n\n"
+        "## 3. Third\n\n" + ("y" * 1400) + "\n"
+    )
+
+    findings = [
+        finding
+        for finding in check_document("docs/handoff/conventions.md", text, policy)
+        if finding.locus == "section entry"
+    ]
+
+    assert [finding.message for finding in findings] == [
+        "section 1. First entry has 1300 chars; max 1200",
+        "section 3. Third entry has 1400 chars; max 1200",
+    ]
+    assert [finding.line for finding in findings] == [
+        text.splitlines().index("## 1. First") + 1,
+        text.splitlines().index("## 3. Third") + 1,
+    ]
+    assert [finding.observed for finding in findings] == [1300, 1400]
+
+
+def test_conventions_entry_size_excludes_fenced_examples(policy: HandoffPolicy) -> None:
+    fence = "```bash\n" + ("uv run project-standards validate\n" * 60) + "```\n"
+    text = (
+        "## Quick Reference\n\n- Short.\n\n"
+        "## 1. Worked example\n\n- Run the gate before closeout.\n\n"
+        f"{fence}\n- Review the diff.\n"
+    )
+
+    findings = check_document("docs/handoff/conventions.md", text, policy)
+
+    assert len(fence) > 1200
+    assert not [finding for finding in findings if finding.locus == "section entry"]
+
+
 def test_session_profile_checks_row_and_headline(policy: HandoffPolicy) -> None:
     headline = " ".join(f"word{i}" for i in range(21))
     text = f"| 2026-07-09 | {headline} | {'x' * 221} |\n"
@@ -164,6 +203,24 @@ def test_session_profile_checks_row_and_headline(policy: HandoffPolicy) -> None:
 
     assert any("row has" in message for message in messages)
     assert any("headline has" in message for message in messages)
+
+
+def test_session_row_and_headline_caps_skip_non_table_lines(policy: HandoffPolicy) -> None:
+    prose = " ".join(f"word{index}" for index in range(80))
+    text = (
+        "# Sessions\n\n"
+        "| Date | Summary | Evidence |\n| --- | --- | --- |\n"
+        "| 2026-07-09 | Short row. | commit |\n\n"
+        f"{prose}\n\n"
+        f"- {prose}\n\n"
+        "```text\n"
+        f"| 2026-07-09 | {prose} | commit |\n"
+        "```\n"
+    )
+
+    assert len(prose) > 220
+
+    assert check_document("docs/handoff/sessions/2026-07.md", text, policy) == ()
 
 
 def test_bug_profile_missing_lesson_is_advisory(policy: HandoffPolicy) -> None:
