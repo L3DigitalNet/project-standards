@@ -1979,13 +1979,17 @@ def test_plan_legacy_migration__unrecognized_platform_version__hints_normalizati
     assert not plan.applicable
     finding = next(item for item in plan.findings if item.code == "CP-MIGRATION-PLATFORM-VERSION")
     assert finding.identity == "/standards_version"
-    # The hint must name both released shapes the runbook documents (UPGRADING.md
-    # "Resolve common preview findings"), or a consumer cannot tell which literal
-    # to write or that the two accepted tags are interchangeable.
+    # The hint must name both released shapes the runbook documents, or a consumer
+    # cannot tell which literal to write or that the two accepted tags are
+    # interchangeable. Issue #52 additionally requires the recommended literal and
+    # the runbook section by name, so the finding is actionable on its own.
     assert '"v3"' in finding.hint
-    assert '"v4"' in finding.hint
+    assert 'recommended "v4"' in finding.hint
     assert '"v4.3.0"' in finding.hint
     assert "same legacy wire format" in finding.hint
+    assert '"Resolve common preview findings" section of UPGRADING.md' in finding.hint
+    runbook = (Path(__file__).resolve().parents[2] / "UPGRADING.md").read_text(encoding="utf-8")
+    assert "\n### Resolve common preview findings\n" in runbook
 
 
 def test_apply_legacy_migration_refuses_nonapplicable_foreign_and_unbound_plans(

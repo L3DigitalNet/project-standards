@@ -1044,11 +1044,14 @@ def _coverage_findings(
                 message="legacy platform version is not recognized",
                 # A released repository legitimately omits the key or records a full
                 # tool release, so the hint states both shapes and the normalization
-                # target rather than only naming the accepted tags.
+                # target rather than only naming the accepted tags. It also names the
+                # recommended literal and the runbook section that walks the fix, so
+                # the finding is actionable without reading the source (issue #52).
                 hint=(
-                    'set standards_version to the "v3" or "v4" platform tag; a released '
-                    'repository may omit the key or record a full release such as "v4.3.0", '
-                    "and both tags name the same legacy wire format"
+                    'set standards_version to the recommended "v4" platform tag ("v3" is '
+                    "equally accepted); a released repository may omit the key or record a "
+                    'full release such as "v4.3.0", and both tags name the same legacy wire '
+                    'format; see the "Resolve common preview findings" section of UPGRADING.md'
                 ),
             )
         )
