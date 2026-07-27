@@ -75,9 +75,9 @@ The standard defines **eleven required fields** plus a recommended optional set.
 
 Architecture Decision Records capture significant, hard-to-reverse decisions, using the [MADR](https://adr.github.io/madr/) format on top of the frontmatter profile above.
 
-- **Standard:** [`standards/adr/versions/1.2/README.md`](standards/adr/versions/1.2/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
-- **Templates:** [`templates/adr.md`](standards/adr/versions/1.2/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
-- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.2/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.2/adopt.md).
+- **Standard:** [`standards/adr/versions/1.3/README.md`](standards/adr/versions/1.3/README.md) — when to write an ADR, MADR body structure, the MADR→canonical field/status mappings, ID/filename and `docs/adr/` conventions, and the supersession workflow.
+- **Templates:** [`templates/adr.md`](standards/adr/versions/1.3/templates/adr.md) (full) plus `adr-minimal.md`, `adr-bare.md`, and `adr-bare-minimal.md`.
+- **Example:** [`examples/adr.example.md`](standards/adr/versions/1.3/examples/adr.example.md). · **Adopt:** [`adopt.md`](standards/adr/versions/1.3/adopt.md).
 
 ADRs use `doc_type: adr` with kebab IDs like `adr-0001-repo-name-short-title` — the **`id`** embeds the repo-name for cross-repo uniqueness, while the **filename** omits it (`adr-0001-short-title.md`). ADR-specific roles (`decision_makers`, `consulted`, `informed`) live under the `project` extension namespace, keeping the universal vocabulary small.
 
@@ -99,15 +99,15 @@ The recommended linting/formatting tools and settings for Markdown and the struc
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.4/README.md`](standards/project-spec/versions/1.4/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.4/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.4/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.4/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.5/README.md`](standards/project-spec/versions/1.5/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.5/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.5/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.5/adopt.md)
 
 ### CLI Documentation Standard
 
 User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
-- **Standard:** [`standards/cli-documentation/versions/1.4/README.md`](standards/cli-documentation/versions/1.4/README.md)
-- **Templates:** [`templates/`](standards/cli-documentation/versions/1.4/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.4/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.4/adopt.md)
+- **Standard:** [`standards/cli-documentation/versions/1.5/README.md`](standards/cli-documentation/versions/1.5/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/versions/1.5/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.5/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.5/adopt.md)
 
 ### Agent Handoff Standard
 
@@ -165,11 +165,11 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
 | Markdown Frontmatter | `1.6` | [`standards/markdown-frontmatter/versions/1.6/adopt.md`](standards/markdown-frontmatter/versions/1.6/adopt.md) |
-| ADR | `1.2` | [`standards/adr/versions/1.2/adopt.md`](standards/adr/versions/1.2/adopt.md) |
+| ADR | `1.3` | [`standards/adr/versions/1.3/adopt.md`](standards/adr/versions/1.3/adopt.md) |
 | Python Tooling | `1.10` | [`standards/python-tooling/versions/1.10/adopt.md`](standards/python-tooling/versions/1.10/adopt.md) |
 | Markdown Tooling | `1.10` | [`standards/markdown-tooling/versions/1.10/adopt.md`](standards/markdown-tooling/versions/1.10/adopt.md) |
-| Project Specification | `1.4` | [`standards/project-spec/versions/1.4/adopt.md`](standards/project-spec/versions/1.4/adopt.md) |
-| CLI Documentation | `1.4` | [`standards/cli-documentation/versions/1.4/adopt.md`](standards/cli-documentation/versions/1.4/adopt.md) |
+| Project Specification | `1.5` | [`standards/project-spec/versions/1.5/adopt.md`](standards/project-spec/versions/1.5/adopt.md) |
+| CLI Documentation | `1.5` | [`standards/cli-documentation/versions/1.5/adopt.md`](standards/cli-documentation/versions/1.5/adopt.md) |
 | Agent Handoff | `1.6` | [`standards/agent-handoff/versions/1.6/adopt.md`](standards/agent-handoff/versions/1.6/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:

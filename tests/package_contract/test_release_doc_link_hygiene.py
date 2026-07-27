@@ -27,21 +27,25 @@ A blanket "no version anywhere may contain this pattern" assertion therefore
 cannot pass at HEAD: `standards/adr/versions/{1.1,1.2}`,
 `standards/cli-documentation/versions/{1.1..1.4}`, and
 `standards/project-spec/versions/{1.1..1.4}` independently ship the same
-mutable-ref pattern and are unrelated to #53's fix. A narrower "only the
-CURRENT/NEWEST version of each family must be clean" rule *also* fails at HEAD
-for those three families, because their newest version IS the still-unfixed
-offender (no corrective version has been authored for them yet). Neither rule
-is available without either fixing unrelated families (scope creep well beyond
-#53) or silently ignoring a whole family's newest version forever.
+mutable-ref pattern and are unrelated to #53's fix. Issue #72 later gave those
+three families their own corrective successors (`adr/versions/1.3`,
+`cli-documentation/versions/1.5`, `project-spec/versions/1.5`), which is what a
+fix can do: the offending released bytes stay on disk and stay allowlisted
+forever, because they are immutable. Neither rule is available without either
+fixing unrelated families (scope creep well beyond #53) or silently ignoring a
+whole family's newest version forever.
 
 The chosen rule instead scans every file in every version of every family and
 fails on any match, *except* two grandfathered exclusions:
 
 1. A fixed, explicit, path-level allowlist of the specific already-released
    files enumerated below — added exactly once, for the state that already
-   existed before this test was written. It must never grow; a corrective new
-   version (as this fix did for markdown-frontmatter) is the only legitimate
-   way to make a family disappear from it.
+   existed before this test was written. It must never grow. It does not shrink
+   when a family is fixed either: a corrective new version (markdown-frontmatter
+   1.6 for #53; adr 1.3, cli-documentation 1.5, and project-spec 1.5 for #72)
+   leaves the released offenders byte-frozen on disk, so their entries stay and
+   `test_allowlist_has_no_stale_entries` keeps proving they still reproduce.
+   An entry may only be deleted if the released file itself ceases to exist.
 2. Any resource a version's own `payload.toml` declares with
    `role = "legacy-reference"` — a deliberate byte-for-byte historical snapshot
    of a pre-V5 artifact kept for `[[legacy_signatures]].known_content_digests`
@@ -80,9 +84,10 @@ _PINNED_REF_PATTERN = re.compile(
 
 # Grandfathered released files that already contained the mutable-ref pattern
 # before this test existed (issue #53 triage sweep, 2026-07-27). Every entry is
-# `family/versions/version/relative-path`. This set may only shrink — when a
-# family gets its own corrective new version (as markdown-frontmatter 1.6 does
-# here), remove that family's entries; never add a new one for a fresh bug.
+# `family/versions/version/relative-path`. This set is frozen: never add an entry
+# for a fresh bug, and do not delete one when a family is fixed — the corrective
+# successor is a NEW version directory, and the released offender it supersedes
+# keeps shipping the pattern verbatim because its bytes cannot change.
 _RELEASED_MUTABLE_REF_ALLOWLIST = frozenset(
     {
         "adr/versions/1.1/README.md",
@@ -279,3 +284,30 @@ def test_installed_markdown_frontmatter_docs_pin_an_exact_release_tag() -> None:
     for path in (root / "adopt.md", root / "README.md", root / "structure.md"):
         for target in re.findall(r"(?<!!)\[[^\]]+\]\((\.\.?/[^)]+)\)", path.read_text("utf-8")):
             assert (path.parent / target).resolve().exists(), f"{path}: {target} does not resolve"
+
+
+@pytest.mark.parametrize(
+    ("family", "version"),
+    [("adr", "1.3"), ("cli-documentation", "1.5"), ("project-spec", "1.5")],
+    ids=lambda value: str(value),
+)
+def test_issue_72_corrective_versions_resolve_their_relative_links(
+    family: str, version: str
+) -> None:
+    """Every rewritten link in a #72 successor must hit a real repository path.
+
+    These three families were fixed the same way #53 fixed markdown-frontmatter,
+    but none of their flagged documents is installed into a consumer repository
+    (their `payload.toml`s declare only in-tree resources for those paths), so
+    all rewrites are repo-relative rather than tag-pinned. A relative link is
+    only correct if it resolves, and a wrong `../` depth is silent on GitHub —
+    hence this assertion rather than trusting the mutable-ref scan alone.
+    """
+    root = _STANDARDS_ROOT / family / "versions" / version
+    checked = 0
+    for path in sorted(root.rglob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        for target in re.findall(r"(?<!!)\[[^\]]+\]\((\.\.?/[^)#]+)(?:#[^)]*)?\)", text):
+            checked += 1
+            assert (path.parent / target).resolve().exists(), f"{path}: {target} does not resolve"
+    assert checked, f"{family}@{version} has no relative links to check"

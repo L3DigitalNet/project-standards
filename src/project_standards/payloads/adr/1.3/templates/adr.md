@@ -1,0 +1,1 @@
+../../../../../../standards/adr/versions/1.3/templates/adr.md

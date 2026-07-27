@@ -266,14 +266,14 @@ def test_usage_index_path__unsafe_shape__fails_closed(
         plan_reconciliation(request)
 
 
-def test_cli_docs_1_4__family_registration__matches_staging_or_activation() -> None:
+def test_cli_docs_1_4__family_registration__stays_retained_beside_1_3() -> None:
     family = tomllib.loads((_FAMILY / "standard.toml").read_text())
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text())
 
     assert "1.4" in {entry["version"] for entry in family["versions"]}
     entries = [entry for entry in catalog["packages"] if entry["id"] == "cli-documentation"]
-    successor = next((entry for entry in entries if entry["version"] == "1.4"), None)
-    if successor is None:
-        assert [entry["version"] for entry in entries if entry["role"] == "default"] == ["1.3"]
-    else:
-        assert successor["role"] == "default"
+    roles = {entry["version"]: entry["role"] for entry in entries}
+    # Issue #72 advanced the default to the corrective 1.5 payload, so 1.4 joins
+    # 1.3 as retained. A superseded payload is never withdrawn from the catalog.
+    assert roles["1.4"] == "retained"
+    assert roles["1.3"] == "retained"
