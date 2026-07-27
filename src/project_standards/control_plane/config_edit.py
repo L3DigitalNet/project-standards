@@ -7,7 +7,7 @@ import os
 from collections.abc import Callable, Mapping
 from contextlib import suppress
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -409,12 +409,15 @@ def _applied_option_schemas(
     }
 
 
+ConfigDigestBasis = Literal["effective", "authored-fallback"]
+
+
 def _package_config_digest(
     standard_id: str,
     package_config: dict[str, JsonValue],
     applied: AppliedPackage | None,
     schemas: Mapping[tuple[str, str], ResolutionPayload],
-) -> str:
+) -> tuple[str, ConfigDigestBasis]:
     """Digest package options the way the lock's resolution digested them.
 
     The lock authenticates the schema-resolved effective configuration
@@ -424,18 +427,23 @@ def _package_config_digest(
     reconciled, or applied from a payload this installation cannot reproduce
     byte-for-byte - keep the as-authored digest: the lock records no effective
     digest for them, so no comparison can be contradicted.
+
+    The returned basis makes that fallback self-disclosing (issue #74): an
+    "authored-fallback" digest reads identically to a coincidentally-matching
+    "effective" one, so callers need the explicit marker to tell verified
+    resolution apart from an unverifiable escape.
     """
     authored = semantic_digest(cast(JsonValue, package_config)).value
     if applied is None:
-        return authored
+        return authored, "authored-fallback"
     payload = schemas.get((standard_id, applied.resolved.value))
     if payload is None or payload.payload_digest != applied.payload_digest:
-        return authored
+        return authored, "authored-fallback"
     try:
         effective = payload.option_schema.resolve_options(package_config)
     except PackageContractError:
-        return authored
-    return semantic_digest(cast(JsonValue, effective)).value
+        return authored, "authored-fallback"
+    return semantic_digest(cast(JsonValue, effective)).value, "effective"
 
 
 def standard_views(
@@ -460,6 +468,12 @@ def standard_views(
                 desired.version if isinstance(desired.version, str) else desired.version.value
             )
         package_config = desired.config if desired is not None else {}
+        config_digest, config_digest_basis = _package_config_digest(
+            standard_id,
+            package_config,
+            applied,
+            schemas,
+        )
         views.append(
             {
                 "id": standard_id,
@@ -473,12 +487,8 @@ def standard_views(
                 "requested": requested,
                 "resolved": applied.resolved.value if applied is not None else None,
                 "config_paths": _config_paths(package_config),
-                "config_digest": _package_config_digest(
-                    standard_id,
-                    package_config,
-                    applied,
-                    schemas,
-                ),
+                "config_digest": config_digest,
+                "config_digest_basis": config_digest_basis,
             }
         )
     return views

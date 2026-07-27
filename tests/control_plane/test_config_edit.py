@@ -349,6 +349,7 @@ def test_standards_list_and_show_include_catalog_desired_and_applied_state(
         "nested.mode",
     ]
     assert shown["standard"]["config_digest"].startswith("sha256:")
+    assert shown["standard"]["config_digest_basis"] == "authored-fallback"
     assert "config" not in shown["standard"]
 
 
@@ -397,6 +398,7 @@ def test_standard_view_config_digest_matches_the_lock_effective_config_digest(
     assert view["resolved"] == "2.0"
     assert view["config_digest"] == applied.effective_config_digest.value
     assert view["config_digest"] != semantic_digest(cast(JsonValue, {})).value
+    assert view["config_digest_basis"] == "effective"
 
 
 def test_standard_view_config_digest__no_applied_payload__reports_authored_config(
@@ -408,6 +410,104 @@ def test_standard_view_config_digest__no_applied_payload__reports_authored_confi
     views = standard_views(tmp_path)
 
     view = next(item for item in views if item["id"] == "alpha")
+    assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
+    assert view["config_digest_basis"] == "authored-fallback"
+
+
+def test_standard_view_config_digest__catalog_unverifiable__reports_authored_fallback(
+    tmp_path: Path,
+) -> None:
+    """Fallback trigger 1 (#74): the installation cannot be verified when re-loaded."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_selection(repo, "alpha", enabled=True, version="2.0")
+    _apply_resolution(repo, distribution)
+    authored = (
+        parse_config((repo / ".standards/config.toml").read_bytes()).standards["alpha"].config
+    )
+
+    # The lock already recorded a resolution, but the installed catalog projection
+    # `standards show` reloads to verify it is now unavailable, so InstalledDistribution
+    # .load_catalog raises PackageContractError and _applied_option_schemas degrades to {}.
+    (distribution.package_root / "catalogs" / "5.toml").unlink()
+
+    views = standard_views(repo, distribution=distribution)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["config_digest_basis"] == "authored-fallback"
+    assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
+
+
+def test_standard_view_config_digest__resolved_version_missing_from_schema__reports_authored_fallback(
+    tmp_path: Path,
+) -> None:
+    """Fallback trigger 2 (#74): the resolved payload's version has no matching schema entry."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_selection(repo, "alpha", enabled=True, version="2.0")
+    applied = _apply_resolution(repo, distribution)
+    authored = (
+        parse_config((repo / ".standards/config.toml").read_bytes()).standards["alpha"].config
+    )
+
+    # Record a resolved version the installed catalog's schema mapping has no entry for, as
+    # if the lock outlived a payload version this installation no longer carries.
+    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    stale_version = AppliedPackage.model_validate(
+        {**applied.model_dump(mode="json"), "resolved": "9.9"}
+    )
+    updated = CentralLock.model_validate(
+        {
+            **lock.model_dump(mode="json"),
+            "standards": {"alpha": stale_version.model_dump(mode="json")},
+        }
+    )
+    (repo / ".standards/lock.toml").write_bytes(render_lock(updated))
+
+    views = standard_views(repo, distribution=distribution)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["resolved"] == "9.9"
+    assert view["config_digest_basis"] == "authored-fallback"
+    assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
+
+
+def test_standard_view_config_digest__payload_digest_mismatch__reports_authored_fallback(
+    tmp_path: Path,
+) -> None:
+    """Fallback trigger 3 (#74): payload.payload_digest != applied.payload_digest."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    distribution = installed_distribution(tmp_path)
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_selection(repo, "alpha", enabled=True, version="2.0")
+    applied = _apply_resolution(repo, distribution)
+    authored = (
+        parse_config((repo / ".standards/config.toml").read_bytes()).standards["alpha"].config
+    )
+
+    # Record a payload digest the installation's schema mapping does not reproduce, as if
+    # the applied package had been resolved against payload bytes this installation lost.
+    lock = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    mismatched = AppliedPackage.model_validate(
+        {**applied.model_dump(mode="json"), "payload_digest": _DIGEST}
+    )
+    updated = CentralLock.model_validate(
+        {
+            **lock.model_dump(mode="json"),
+            "standards": {"alpha": mismatched.model_dump(mode="json")},
+        }
+    )
+    (repo / ".standards/lock.toml").write_bytes(render_lock(updated))
+
+    views = standard_views(repo, distribution=distribution)
+
+    view = next(item for item in views if item["id"] == "alpha")
+    assert view["config_digest_basis"] == "authored-fallback"
     assert view["config_digest"] == semantic_digest(cast(JsonValue, authored)).value
 
 
