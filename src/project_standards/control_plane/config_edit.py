@@ -11,7 +11,9 @@ from typing import cast
 
 from pydantic import TypeAdapter, ValidationError
 
+from project_standards.control_plane.adapters.base import UnitChange
 from project_standards.control_plane.adapters.toml import (
+    TomlAdapter,
     TomlStatement,
     scan_toml_statements,
 )
@@ -21,7 +23,7 @@ from project_standards.control_plane.codec import (
     parse_lock,
     semantic_digest,
 )
-from project_standards.control_plane.diagnostics import ControlPlaneError
+from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
 from project_standards.control_plane.locking import (
     LockedControlDirectory,
     LockMode,
@@ -111,6 +113,109 @@ def _replace_values(
     ):
         updated = _replace_value(updated, statement, value)
     return updated
+
+
+def _changed_config_leaves(
+    before: JsonValue,
+    after: JsonValue,
+    prefix: tuple[str, ...] = (),
+) -> list[tuple[tuple[str, ...], bool, JsonValue]]:
+    if isinstance(before, dict) and isinstance(after, dict):
+        removed = set(before) - set(after)
+        if removed:
+            raise ControlPlaneError("configuration transform cannot remove a package option")
+        changes: list[tuple[tuple[str, ...], bool, JsonValue]] = []
+        for key, value in after.items():
+            if key not in before:
+                if isinstance(value, dict):
+                    changes.extend(_changed_config_leaves({}, value, (*prefix, key)))
+                else:
+                    changes.append(((*prefix, key), False, value))
+            else:
+                changes.extend(_changed_config_leaves(before[key], value, (*prefix, key)))
+        return changes
+    if semantic_digest(before) == semantic_digest(after):
+        return []
+    return [(prefix, True, after)]
+
+
+def _toml_scalar(value: JsonValue) -> bytes:
+    if value is None or isinstance(value, (dict, list)):
+        raise ControlPlaneError("configuration transform must change a TOML scalar leaf")
+    rendered = json.dumps(value, ensure_ascii=False, allow_nan=False)
+    return rendered.encode()
+
+
+def _json_pointer(path: tuple[str, ...]) -> str:
+    return "/" + "/".join(component.replace("~", "~0").replace("/", "~1") for component in path)
+
+
+def changed_package_config_pointers(
+    before: dict[str, JsonValue],
+    after: dict[str, JsonValue],
+) -> tuple[str, ...]:
+    """Return canonical changed leaf pointers, rejecting removals."""
+    return tuple(
+        sorted(
+            (
+                _json_pointer(path)
+                for path, _present, _value in _changed_config_leaves(before, after)
+            ),
+            key=str.encode,
+        )
+    )
+
+
+def render_package_config_transform(
+    original: bytes,
+    standard_id: str,
+    transformed_config: dict[str, JsonValue],
+    declared_pointers: tuple[str, ...],
+) -> bytes:
+    """Render one allowlisted package-config leaf diff without normalizing the file."""
+    normalized_id = _standard_id(standard_id)
+    desired = parse_config(original)
+    package = desired.standards.get(normalized_id)
+    if package is None:
+        raise ControlPlaneError("configuration transform package is absent from desired state")
+    changes = sorted(
+        _changed_config_leaves(package.config, transformed_config),
+        key=lambda item: _json_pointer(item[0]).encode(),
+    )
+    declared = set(declared_pointers)
+    pointers = set(changed_package_config_pointers(package.config, transformed_config))
+    if not pointers.issubset(declared):
+        raise ControlPlaneError("configuration transform changed an undeclared option")
+    base = ("standards", normalized_id, "config")
+    unit_changes = tuple(
+        UnitChange(
+            kind=ActionKind.UPDATE if present else ActionKind.CREATE,
+            scope="key:" + _json_pointer((*base, *path)),
+            content=_toml_scalar(value),
+            value=value,
+        )
+        for path, present, value in changes
+    )
+    adapter = TomlAdapter()
+    rendered = original
+    for change in unit_changes:
+        state = adapter.inspect(rendered, (change.scope,))
+        rendered = adapter.render(state, (change,))
+    parsed = parse_config(rendered)
+    expected_package = package.model_copy(update={"config": transformed_config})
+    expected = desired.model_copy(
+        update={
+            "standards": {
+                **desired.standards,
+                normalized_id: expected_package,
+            }
+        }
+    )
+    parsed_json = cast(JsonValue, parsed.model_dump(mode="json"))
+    expected_json = cast(JsonValue, expected.model_dump(mode="json"))
+    if semantic_digest(parsed_json) != semantic_digest(expected_json):
+        raise ControlPlaneError("configuration transform changed unrelated desired state")
+    return rendered
 
 
 def _atomic_replace_config(

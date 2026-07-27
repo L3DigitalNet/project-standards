@@ -78,7 +78,21 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:9a3c8cffb3d4503edaca671f2fca297d88c59dce02d731a3545e4dce147273b4"
+digest = "sha256:24a0ca172daf1b4a067b77e9ad35088d7f53ecbcfb9942ba2cf22e562346c916"
+
+[[resources]]
+id = "config-transform-input"
+role = "provider-resource"
+path = "schemas/config-transform-input.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:f590bf7925addd2c992b22550e3e952039a9ac8b5f08af56542a205857778054"
+
+[[resources]]
+id = "config-transform-report"
+role = "provider-resource"
+path = "schemas/config-transform-report.schema.json"
+media_type = "application/schema+json"
+digest = "sha256:c8bd5eeabbc61c30862b9366b06d07a8a9e65eefa7eaec505ec4c6bfdb38bd98"
 
 [[resources]]
 id = "provider-input"
@@ -695,8 +709,107 @@ input_schema = "provider-input"
 output_schema = "provider-migration-report"
 resources = []
 
+[[providers]]
+id = "migrate-config"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#run_migrate_config"
+input_schema = "config-transform-input"
+output_schema = "config-transform-report"
+resources = []
+
 [[legacy_states]]
 id = "v4-python-tooling"
+
+[[migrations]]
+id = "python-tooling-1-1-to-1-9"
+from = "package:1.1"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-2-to-1-9"
+from = "package:1.2"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-3-to-1-9"
+from = "package:1.3"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-4-to-1-9"
+from = "package:1.4"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-5-to-1-9"
+from = "package:1.5"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-6-to-1-9"
+from = "package:1.6"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-7-to-1-9"
+from = "package:1.7"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
+
+[[migrations]]
+id = "python-tooling-1-8-to-1-9"
+from = "package:1.8"
+to = "package:1.9"
+mode = "automatic"
+provider = "migrate-config"
+reversible = false
+affected = ["config:*"]
+signatures = []
+configuration_transform = ["/ci/performance"]
 
 [[migrations]]
 id = "legacy-v4-to-1-9"

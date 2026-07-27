@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import copy
 import re
 from collections import defaultdict, deque
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import cast
+from typing import Protocol, cast
+
+from jsonschema import Draft202012Validator
+from referencing.exceptions import Unresolvable
 
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import (
@@ -38,6 +43,12 @@ _TOOL_RELEASE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$",
     re.ASCII,
 )
+
+
+class _SchemaValidator(Protocol):
+    def iter_errors(self, instance: JsonValue) -> Iterator[object]: ...
+
+    def evolve(self, **changes: object) -> _SchemaValidator: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +138,119 @@ class ResolutionResult:
 
     packages: tuple[ResolvedPackage, ...]
     track_transitions: tuple[AcceptedTrackTransition, ...]
+
+
+def _direct_properties(schema: JsonObject) -> dict[str, JsonObject]:
+    raw = schema.get("properties")
+    if not isinstance(raw, dict):
+        return {}
+    return {key: cast(JsonObject, value) for key, value in raw.items() if isinstance(value, dict)}
+
+
+def _source_projection(
+    value: JsonObject,
+    source_schema: JsonObject,
+    target_schema: JsonObject,
+    source_validator: _SchemaValidator,
+) -> JsonObject:
+    source_properties = _direct_properties(source_schema)
+    target_properties = _direct_properties(target_schema)
+    projected: JsonObject = {}
+    for key, child in value.items():
+        source_child = source_properties.get(key)
+        target_child = target_properties.get(key)
+        if source_child is None or target_child is None:
+            continue
+        if (
+            source_child.get("type") == "object"
+            and target_child.get("type") == "object"
+            and isinstance(child, dict)
+        ):
+            projected[key] = _source_projection(
+                cast(JsonObject, child),
+                source_child,
+                target_child,
+                source_validator,
+            )
+            continue
+        try:
+            invalid = next(
+                source_validator.evolve(schema=source_child).iter_errors(child),
+                None,
+            )
+        except Unresolvable as exc:
+            raise PackageContractError(
+                "source config projection cannot resolve an atomic option schema"
+            ) from exc
+        if invalid is not None:
+            continue
+        projected[key] = copy.deepcopy(child)
+    return projected
+
+
+def project_source_effective_config(
+    raw_config: JsonObject,
+    source_schema: PackageOptionSchema,
+    target_schema: PackageOptionSchema,
+) -> JsonObject:
+    """Resolve the source-effective view of target-admissible raw options.
+
+    Projection recurses only through shared direct objects. Every other value is
+    atomic: preserve it when source-valid or omit the whole key so source defaults
+    can resolve, without filtering collection members.
+    """
+    target_schema.resolve_options(raw_config)
+    source_validator = cast(
+        "_SchemaValidator",
+        Draft202012Validator(source_schema.document),
+    )
+    projected = _source_projection(
+        raw_config,
+        source_schema.document,
+        target_schema.document,
+        source_validator,
+    )
+    return source_schema.resolve_options(projected)
+
+
+def validate_source_transform_values(
+    transformed_config: JsonObject,
+    changed_pointers: tuple[str, ...],
+    source_schema: PackageOptionSchema,
+) -> None:
+    """Require every provider-changed leaf value to remain source-admissible."""
+    source_validator = cast(
+        "_SchemaValidator",
+        Draft202012Validator(source_schema.document),
+    )
+    for pointer in changed_pointers:
+        tokens = tuple(
+            token.replace("~1", "/").replace("~0", "~") for token in pointer.split("/")[1:]
+        )
+        value: JsonValue = transformed_config
+        schema: JsonObject = source_schema.document
+        for token in tokens:
+            properties = _direct_properties(schema)
+            child_schema = properties.get(token)
+            if child_schema is None or not isinstance(value, dict) or token not in value:
+                raise PackageContractError(
+                    "configuration transform changed leaf is absent from the source schema"
+                )
+            schema = child_schema
+            value = value[token]
+        try:
+            invalid = next(
+                source_validator.evolve(schema=schema).iter_errors(value),
+                None,
+            )
+        except Unresolvable as exc:
+            raise PackageContractError(
+                "configuration transform cannot resolve a changed source leaf schema"
+            ) from exc
+        if invalid is not None:
+            raise PackageContractError(
+                "configuration transform changed leaf is invalid under the source schema"
+            )
 
 
 def _release_tuple(value: str) -> tuple[int, int, int]:

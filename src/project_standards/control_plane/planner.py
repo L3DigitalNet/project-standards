@@ -48,6 +48,10 @@ from project_standards.control_plane.codec import (
     render_catalog,
     semantic_digest,
 )
+from project_standards.control_plane.config_edit import (
+    changed_package_config_pointers,
+    render_package_config_transform,
+)
 from project_standards.control_plane.diagnostics import (
     ActionKind,
     ControlAction,
@@ -82,13 +86,16 @@ from project_standards.control_plane.resolution import (
     ResolvedPackage,
     TrackTransitionKind,
     has_declared_transition_path,
+    project_source_effective_config,
     resolve_packages,
+    validate_source_transform_values,
 )
 from project_standards.control_plane.snapshot import (
     EntryKind,
     RepositorySnapshot,
     SnapshotEntry,
 )
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import (
     PackageVersion,
     SafeRelativePath,
@@ -100,6 +107,8 @@ from project_standards.package_contract.payload import (
     ContributionDeclaration,
     JsonObject,
     JsonValue,
+    MigrationDeclaration,
+    PackageOptionSchema,
     ProviderEffect,
     ProviderKind,
     ProviderOperation,
@@ -107,6 +116,7 @@ from project_standards.package_contract.payload import (
     SharedIdentity,
     WholeArtifactDeclaration,
     contributions_overlap,
+    validate_configuration_transform_eligibility,
 )
 
 type ProviderRunner = Callable[[ProviderInvocation], ProviderResult]
@@ -175,6 +185,31 @@ class ProviderNotice:
     version: str
     provider_id: str
     message: str
+
+
+@dataclass(frozen=True, slots=True)
+class ConfigurationTransformEvidence:
+    """Identify one config transform using only pointers, identities, and digests."""
+
+    standard_id: str
+    migration_id: str
+    source: str
+    target: str
+    provider_id: str
+    declared_pointers: tuple[str, ...]
+    changed_pointers: tuple[str, ...]
+    before_digest: str
+    after_digest: str
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedConfigurationTransform:
+    """Retain semantic transform output needed for one lexical config action."""
+
+    declaration: MigrationDeclaration
+    evidence: ConfigurationTransformEvidence
+    before: JsonObject = field(repr=False)
+    after: JsonObject = field(repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,6 +286,7 @@ class ReconciliationPlan:
     namespace_prunes: tuple[str, ...]
     catalog_refresh: CatalogRefreshPlan | None
     next_lock: CentralLock
+    configuration_transforms: tuple[ConfigurationTransformEvidence, ...] = ()
     # Restore candidates remain executor-private because provider-rendered bytes
     # must never enter ordinary text or JSON reconciliation evidence.
     restore_targets: tuple[_ManagedWholeFileTarget, ...] = ()
@@ -277,9 +313,13 @@ class ReconciliationPlan:
         transitions = [_transition_json(item) for item in self.resolution.track_transitions]
         public_lock = cast(JsonValue, self.next_lock.model_dump(mode="json"))
         return {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "applicable": self.applicable,
             "actions": cast(JsonValue, actions_to_jsonable(self.actions)),
+            "configuration_transforms": cast(
+                JsonValue,
+                [asdict(item) for item in self.configuration_transforms],
+            ),
             "units": cast(
                 JsonValue,
                 [
@@ -1938,6 +1978,260 @@ def _next_lock(
     )
 
 
+def _resolution_schema_map(
+    request: ResolutionRequest,
+) -> dict[tuple[str, str], PackageOptionSchema]:
+    return {
+        (payload.standard_id, payload.version.value): payload.option_schema
+        for payload in request.payloads
+    }
+
+
+def _transform_invocation(
+    *,
+    request: PlannerRequest,
+    payload: InstalledPayload,
+    declaration: MigrationDeclaration,
+    effective_config: JsonObject,
+    raw_config: JsonObject,
+    selector: str,
+) -> ProviderResult:
+    provider_id = declaration.provider
+    source = declaration.from_endpoint.package_version
+    target = declaration.to_endpoint.package_version
+    pointers = declaration.configuration_transform
+    if provider_id is None or source is None or target is None or pointers is None:
+        raise ControlPlaneError("configuration transform declaration is incomplete")
+    runner = request.provider_runner or invoke_provider
+    return runner(
+        ProviderInvocation(
+            repo=request.repo,
+            payload=payload,
+            standard_id=payload.manifest.payload.standard,
+            version=target,
+            provider_id=provider_id,
+            operation=ProviderOperation.MIGRATE,
+            effective_config=effective_config,
+            snapshots={
+                "configuration_transform": {
+                    "migration_id": declaration.id,
+                    "source": declaration.from_endpoint.value,
+                    "target": declaration.to_endpoint.value,
+                    "provider_id": provider_id,
+                    "selector": selector,
+                    "raw_config": raw_config,
+                    "declared_pointers": list(pointers),
+                }
+            },
+        )
+    )
+
+
+def _configuration_transform_output(
+    result: ProviderResult,
+    *,
+    standard_id: str,
+    target: PackageVersion,
+    selector: object,
+) -> tuple[JsonObject, tuple[str, ...]]:
+    report = result.migration_report
+    if result.effect is not ProviderEffect.MIGRATION_REPORT or report is None:
+        raise ControlPlaneError("configuration transform provider returned the wrong effect")
+    if report.claims or report.findings:
+        raise ControlPlaneError("configuration transform provider returned legacy evidence")
+    if (
+        report.package.standard_id != standard_id
+        or report.package.version != target
+        or report.package.selector != selector
+    ):
+        raise ControlPlaneError("configuration transform provider output identity is inconsistent")
+    return report.package.config, report.package.recognized_settings
+
+
+def _config_pointer_is_present(config: JsonObject, pointer: str) -> bool:
+    current: JsonValue = config
+    for token in pointer.split("/")[1:]:
+        decoded = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(current, dict) or decoded not in current:
+            return False
+        current = current[decoded]
+    return True
+
+
+def _prepare_configuration_transform(
+    request: PlannerRequest,
+    resolution: ResolutionResult,
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+) -> tuple[PlannerRequest, ResolutionResult, _PreparedConfigurationTransform | None]:
+    candidates: list[
+        tuple[ResolvedPackage, InstalledPayload, InstalledPayload, MigrationDeclaration]
+    ] = []
+    for package in resolution.packages:
+        previous = request.resolution.previous_lock.standards.get(package.standard_id)
+        target_payload = payloads[(package.standard_id, package.applied.resolved.value)]
+        transform_declarations = tuple(
+            migration
+            for migration in target_payload.manifest.migrations
+            if migration.configuration_transform is not None
+        )
+        if previous is None:
+            lock = request.resolution.previous_lock
+            has_inferred_evidence = any(
+                package.standard_id in record.owners
+                for record in (*lock.artifacts, *lock.create_only_absences)
+            ) or any(item.standard_id == package.standard_id for item in lock.referenced_inputs)
+            if transform_declarations and has_inferred_evidence:
+                raise ControlPlaneError(
+                    "configuration transform requires exact authoritative applied package evidence"
+                )
+            continue
+        if previous.resolved == package.applied.resolved:
+            continue
+        matches = [
+            migration
+            for migration in transform_declarations
+            if migration.from_endpoint.package_version == previous.resolved
+            and migration.to_endpoint.package_version == package.applied.resolved
+        ]
+        if not matches:
+            continue
+        source_payload = payloads.get((package.standard_id, previous.resolved.value))
+        if (
+            source_payload is None
+            or source_payload.integrity.aggregate_digest != previous.payload_digest
+        ):
+            raise ControlPlaneError(
+                "configuration transform requires exact authoritative applied package evidence"
+            )
+        candidates.extend(
+            (package, source_payload, target_payload, migration) for migration in matches
+        )
+    if not candidates:
+        return request, resolution, None
+    if len(candidates) != 1:
+        raise ControlPlaneError("reconciliation contains more than one applicable config transform")
+
+    package, source_payload, target_payload, declaration = candidates[0]
+    standard_id = package.standard_id
+    desired_package = request.resolution.desired.standards[standard_id]
+    raw_config = desired_package.config
+    schemas = _resolution_schema_map(request.resolution)
+    source_schema = schemas.get((standard_id, source_payload.manifest.payload.version.value))
+    target_schema = schemas.get((standard_id, target_payload.manifest.payload.version.value))
+
+    if not isinstance(source_schema, PackageOptionSchema) or not isinstance(
+        target_schema, PackageOptionSchema
+    ):
+        raise ControlPlaneError("configuration transform schemas are unavailable")
+    pointers = tuple(declaration.configuration_transform or ())
+    validate_configuration_transform_eligibility(source_schema, target_schema, pointers)
+    try:
+        source_effective = project_source_effective_config(
+            raw_config,
+            source_schema,
+            target_schema,
+        )
+    except PackageContractError as exc:
+        raise ControlPlaneError(
+            "package config cannot be projected to the applied source; "
+            "reconcile the package upgrade first, then adopt the successor-only value"
+        ) from exc
+    selector = (
+        desired_package.version.value
+        if isinstance(desired_package.version, PackageVersion)
+        else desired_package.version
+    )
+    first = _transform_invocation(
+        request=request,
+        payload=target_payload,
+        declaration=declaration,
+        effective_config=source_effective,
+        raw_config=raw_config,
+        selector=selector,
+    )
+    transformed, recognized = _configuration_transform_output(
+        first,
+        standard_id=standard_id,
+        target=package.applied.resolved,
+        selector=desired_package.version,
+    )
+    changed = changed_package_config_pointers(raw_config, transformed)
+    explicit_pointers = {
+        pointer for pointer in pointers if _config_pointer_is_present(raw_config, pointer)
+    }
+    if explicit_pointers.intersection(changed):
+        raise ControlPlaneError("configuration transform changed an explicit consumer option")
+    if not set(changed).issubset(pointers) or tuple(recognized) != changed:
+        raise ControlPlaneError(
+            "configuration transform provider changed options outside its declaration"
+        )
+    target_schema.resolve_options(transformed)
+    validate_source_transform_values(transformed, changed, source_schema)
+    try:
+        candidate_source_effective = project_source_effective_config(
+            transformed,
+            source_schema,
+            target_schema,
+        )
+    except PackageContractError as exc:
+        raise ControlPlaneError(
+            "package config cannot be projected to the applied source; "
+            "reconcile the package upgrade first, then adopt the successor-only value"
+        ) from exc
+    second = _transform_invocation(
+        request=request,
+        payload=target_payload,
+        declaration=declaration,
+        effective_config=candidate_source_effective,
+        raw_config=transformed,
+        selector=selector,
+    )
+    repeated, repeated_recognized = _configuration_transform_output(
+        second,
+        standard_id=standard_id,
+        target=package.applied.resolved,
+        selector=desired_package.version,
+    )
+    repeated_json = cast(JsonValue, repeated)
+    transformed_json = cast(JsonValue, transformed)
+    if semantic_digest(repeated_json) != semantic_digest(transformed_json) or repeated_recognized:
+        raise ControlPlaneError("configuration transform provider is not idempotent")
+
+    transformed_package = desired_package.model_copy(update={"config": transformed})
+    transformed_desired = request.resolution.desired.model_copy(
+        update={
+            "standards": {
+                **request.resolution.desired.standards,
+                standard_id: transformed_package,
+            }
+        }
+    )
+    transformed_resolution_request = replace(request.resolution, desired=transformed_desired)
+    transformed_request = replace(request, resolution=transformed_resolution_request)
+    transformed_resolution = resolve_packages(transformed_resolution_request)
+    evidence = ConfigurationTransformEvidence(
+        standard_id=standard_id,
+        migration_id=declaration.id,
+        source=source_payload.manifest.payload.version.value,
+        target=target_payload.manifest.payload.version.value,
+        provider_id=declaration.provider or "",
+        declared_pointers=pointers,
+        changed_pointers=changed,
+        before_digest=semantic_digest(cast(JsonValue, raw_config)).value,
+        after_digest=semantic_digest(cast(JsonValue, transformed)).value,
+    )
+    return (
+        transformed_request,
+        transformed_resolution,
+        _PreparedConfigurationTransform(
+            declaration,
+            evidence,
+            raw_config,
+            transformed,
+        ),
+    )
+
+
 def _catalog_refresh_target(
     refresh: CatalogRefreshPlan,
     snapshot: RepositorySnapshot,
@@ -1981,10 +2275,23 @@ def _catalog_refresh_target(
 
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
+    original_request = request
     resolution = resolve_packages(request.resolution)
     payloads = _payload_map(request.payloads)
+    request, resolution, prepared_transform = _prepare_configuration_transform(
+        request,
+        resolution,
+        payloads,
+    )
     selected = _selected_payloads(resolution, payloads)
     paths = _target_paths(selected, request.resolution.previous_lock)
+    if prepared_transform is not None:
+        paths = tuple(
+            sorted(
+                (*paths, SafeRelativePath.parse(".standards/config.toml")),
+                key=lambda item: item.original.encode("utf-8"),
+            )
+        )
     if request.catalog_refresh is not None and request.catalog_refresh.changed:
         paths = tuple(
             sorted(
@@ -2030,6 +2337,49 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
                 for entry in snapshot.entries
             ),
         )
+    config_action: ControlAction | None = None
+    config_target: PlannedTarget | None = None
+    if prepared_transform is not None:
+        config_path = SafeRelativePath.parse(".standards/config.toml")
+        config_entry = snapshot.entry(config_path)
+        if config_entry.kind is not EntryKind.REGULAR or config_entry.content is None:
+            raise ControlPlaneError(
+                "configuration transform requires a regular persisted desired config"
+            )
+        if parse_config(config_entry.content) != original_request.resolution.desired:
+            raise ControlPlaneError(
+                "persisted desired config differs from the planner transform input"
+            )
+        rendered_config = render_package_config_transform(
+            config_entry.content,
+            prepared_transform.evidence.standard_id,
+            prepared_transform.after,
+            prepared_transform.evidence.declared_pointers,
+        )
+        if rendered_config != config_entry.content:
+            config_action = ControlAction(
+                kind=ActionKind.UPDATE,
+                target=config_path.original,
+                adapter=AdapterKind.TOML.value,
+                scope=(f"table:/standards/{prepared_transform.evidence.standard_id}/config"),
+                standard_id=prepared_transform.evidence.standard_id,
+                summary=(
+                    "materialize declared package configuration transform "
+                    f"{prepared_transform.evidence.migration_id}"
+                ),
+                before_digest=config_entry.content_digest.value
+                if config_entry.content_digest is not None
+                else None,
+                after_digest=content_digest(rendered_config).value,
+                before_mode=config_entry.mode,
+                after_mode=config_entry.mode,
+                content=rendered_config,
+            )
+            config_target = PlannedTarget(
+                config_path.original,
+                rendered_config,
+                config_entry.mode,
+            )
     referenced_inputs = _referenced_inputs(request, selected)
     notices: list[ProviderNotice] = []
     intents = _desired_intents(
@@ -2122,6 +2472,9 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         )
     else:
         next_lock = request.resolution.previous_lock
+    if config_action is not None and config_target is not None:
+        actions = (config_action, *actions)
+        targets = (config_target, *targets)
     return ReconciliationPlan(
         applicable=applicable,
         actions=actions,
@@ -2143,6 +2496,9 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         namespace_prunes=namespace_prunes,
         catalog_refresh=request.catalog_refresh,
         next_lock=next_lock,
+        configuration_transforms=(
+            (prepared_transform.evidence,) if prepared_transform is not None else ()
+        ),
         restore_targets=restore_targets,
     )
 

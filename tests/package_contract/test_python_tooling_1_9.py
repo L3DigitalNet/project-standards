@@ -12,16 +12,19 @@ import pytest
 
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledPayload
+from project_standards.control_plane.migration import MigratedPackage
 from project_standards.control_plane.providers import ProviderInvocation, invoke_provider
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import (
     AdapterKind,
     JsonObject,
+    MigrationMode,
     ProviderEffect,
     ProviderOperation,
     load_option_schema,
     load_payload_manifest,
+    validate_configuration_transform_eligibility,
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -40,6 +43,106 @@ def _options(**overrides: object) -> JsonObject:
     payload = _payload(_V19)
     schema = load_option_schema(_V19, payload.manifest)
     return schema.resolve_options(cast("JsonObject", overrides))
+
+
+def _family_version_roots() -> dict[str, Path]:
+    family = tomllib.loads((_FAMILY / "standard.toml").read_text(encoding="utf-8"))
+    versions = cast("list[dict[str, object]]", family["versions"])
+    return {
+        cast(str, version["version"]): _FAMILY / Path(cast(str, version["payload"])).parent
+        for version in versions
+    }
+
+
+def _direct_performance_declaration(document: JsonObject) -> JsonObject | None:
+    properties = document.get("properties")
+    if not isinstance(properties, dict):
+        raise AssertionError("performance declaration is underivable")
+    ci = properties.get("ci")
+    if ci is None:
+        return None
+    if not isinstance(ci, dict):
+        raise AssertionError("performance declaration is underivable")
+    ci_properties = ci.get("properties")
+    if not isinstance(ci_properties, dict):
+        raise AssertionError("performance declaration is underivable")
+    performance = ci_properties.get("performance")
+    if performance is None:
+        return None
+    if not isinstance(performance, dict):
+        raise AssertionError("performance declaration is underivable")
+    return performance
+
+
+def _qualifies_for_performance_transform(
+    document: JsonObject,
+    resolved_empty: JsonObject | None,
+) -> bool:
+    if _direct_performance_declaration(document) is None:
+        return False
+    if resolved_empty is None:
+        raise AssertionError("resolved empty performance value is underivable")
+    ci = resolved_empty.get("ci")
+    if not isinstance(ci, dict) or "performance" not in ci:
+        raise AssertionError("resolved empty performance value is absent")
+    performance = ci["performance"]
+    if not isinstance(performance, bool):
+        raise AssertionError("resolved empty performance value is not boolean")
+    return performance
+
+
+def _qualifying_predecessors() -> set[str]:
+    qualifiers: set[str] = set()
+    for version, root in _family_version_roots().items():
+        if version == "1.9":
+            continue
+        payload = _payload(root)
+        schema = load_option_schema(root, payload.manifest)
+        if _qualifies_for_performance_transform(
+            schema.document,
+            schema.resolve_options({}),
+        ):
+            qualifiers.add(version)
+    return qualifiers
+
+
+def _source_options(version: str, config: JsonObject) -> JsonObject:
+    root = _family_version_roots()[version]
+    payload = _payload(root)
+    schema = load_option_schema(root, payload.manifest)
+    return schema.resolve_options(config)
+
+
+def _migrate_config(
+    source_version: str,
+    config: JsonObject,
+    source_effective: JsonObject,
+) -> MigratedPackage:
+    payload = _payload(_V19)
+    result = invoke_provider(
+        ProviderInvocation(
+            repo=_V19,
+            payload=payload,
+            standard_id="python-tooling",
+            version=payload.manifest.payload.version,
+            provider_id="migrate-config",
+            operation=ProviderOperation.MIGRATE,
+            effective_config=source_effective,
+            snapshots={
+                "configuration_transform": {
+                    "migration_id": (f"python-tooling-{source_version.replace('.', '-')}-to-1-9"),
+                    "source": f"package:{source_version}",
+                    "target": "package:1.9",
+                    "provider_id": "migrate-config",
+                    "selector": "latest",
+                    "raw_config": config,
+                    "declared_pointers": ["/ci/performance"],
+                }
+            },
+        )
+    )
+    assert result.migration_report is not None
+    return result.migration_report.package
 
 
 def _render(
@@ -289,6 +392,206 @@ def test_python_tooling_1_9__legacy_v4_migration__preserves_effective_performanc
     assert cast("JsonObject", _options(**migrated)["ci"]) == expected
 
 
+def test_python_tooling_1_9__family_predecessors__directly_declare_qualifying_default() -> None:
+    predecessors = {
+        version: root for version, root in _family_version_roots().items() if version != "1.9"
+    }
+
+    for root in predecessors.values():
+        payload = _payload(root)
+        schema = load_option_schema(root, payload.manifest)
+        declaration = _direct_performance_declaration(schema.document)
+        assert declaration is not None
+        assert declaration.get("type") == "boolean"
+        assert declaration.get("default") is True
+
+    assert _qualifying_predecessors() == set(predecessors)
+
+
+def test_performance_transform_classifier__undeclared_option__does_not_qualify() -> None:
+    document: JsonObject = {
+        "properties": {
+            "ci": {
+                "type": "object",
+                "properties": {},
+            }
+        }
+    }
+
+    assert not _qualifies_for_performance_transform(document, {})
+
+
+def test_performance_transform_classifier__resolved_false__does_not_qualify() -> None:
+    document: JsonObject = {
+        "properties": {
+            "ci": {
+                "type": "object",
+                "properties": {
+                    "performance": {
+                        "type": "boolean",
+                        "default": False,
+                    }
+                },
+            }
+        }
+    }
+
+    assert not _qualifies_for_performance_transform(
+        document,
+        {"ci": {"performance": False}},
+    )
+
+
+@pytest.mark.parametrize(
+    ("resolved_empty", "message"),
+    [
+        pytest.param({}, "absent", id="absent"),
+        pytest.param(
+            {"ci": {"performance": "true"}},
+            "not boolean",
+            id="nonboolean",
+        ),
+        pytest.param(None, "underivable", id="underivable"),
+    ],
+)
+def test_performance_transform_classifier__invalid_resolved_value__stops_characterization(
+    resolved_empty: JsonObject | None,
+    message: str,
+) -> None:
+    document: JsonObject = {
+        "properties": {
+            "ci": {
+                "type": "object",
+                "properties": {
+                    "performance": {
+                        "type": "boolean",
+                        "default": True,
+                    }
+                },
+            }
+        }
+    }
+
+    with pytest.raises(AssertionError, match=message):
+        _qualifies_for_performance_transform(document, resolved_empty)
+
+
+def test_python_tooling_1_9__qualifying_predecessors__declare_exact_transform_edges() -> None:
+    successor = _payload(_V19)
+    qualifiers = _qualifying_predecessors()
+    target_schema = load_option_schema(_V19, successor.manifest)
+    transforms = [
+        migration
+        for migration in successor.manifest.migrations
+        if migration.to_endpoint.package_version == successor.manifest.payload.version
+        and migration.configuration_transform is not None
+    ]
+
+    actual_sources: set[str] = set()
+    for migration in transforms:
+        source_version = migration.from_endpoint.package_version
+        assert source_version is not None
+        actual_sources.add(source_version.value)
+    assert actual_sources == qualifiers
+    assert len(transforms) == len(qualifiers)
+    for source in qualifiers:
+        source_root = _family_version_roots()[source]
+        source_payload = _payload(source_root)
+        validate_configuration_transform_eligibility(
+            load_option_schema(source_root, source_payload.manifest),
+            target_schema,
+            ("/ci/performance",),
+        )
+        matching = [
+            migration
+            for migration in transforms
+            if migration.from_endpoint.package_version is not None
+            and migration.from_endpoint.package_version.value == source
+        ]
+        assert len(matching) == 1, source
+        migration = matching[0]
+        assert migration.mode is MigrationMode.AUTOMATIC
+        assert migration.provider == "migrate-config"
+        assert migration.configuration_transform == ["/ci/performance"]
+
+
+@pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        pytest.param({}, {"ci": {"performance": True}}, id="ci-absent"),
+        pytest.param(
+            {"ci": {"enabled": True}},
+            {"ci": {"enabled": True, "performance": True}},
+            id="performance-absent",
+        ),
+        pytest.param(
+            {"ci": {"enabled": True, "performance": True}},
+            {"ci": {"enabled": True, "performance": True}},
+            id="performance-true",
+        ),
+        pytest.param(
+            {"ci": {"enabled": True, "performance": False}},
+            {"ci": {"enabled": True, "performance": False}},
+            id="performance-false",
+        ),
+        pytest.param(
+            {"ci": {"enabled": False}},
+            {"ci": {"enabled": False}},
+            id="ci-disabled",
+        ),
+    ],
+)
+def test_python_tooling_1_9__package_config_transform__preserves_effective_performance(
+    config: JsonObject,
+    expected: JsonObject,
+) -> None:
+    for source in sorted(_qualifying_predecessors()):
+        migrated = _migrate_config(source, config, _source_options(source, config))
+        assert migrated.config == expected, source
+        assert migrated.recognized_settings == (
+            ("/ci/performance",) if config in ({}, {"ci": {"enabled": True}}) else ()
+        )
+
+
+def test_python_tooling_1_9__source_invalid_newer_atomic_value__is_preserved() -> None:
+    raw: JsonObject = {
+        "additional_source_roots": [{"path": "src"}],
+        "ci": {"enabled": True},
+    }
+    source_effective = _source_options("1.6", {"ci": {"enabled": True}})
+
+    migrated = _migrate_config("1.6", raw, source_effective)
+
+    assert migrated.config == {
+        "additional_source_roots": [{"path": "src"}],
+        "ci": {"enabled": True, "performance": True},
+    }
+    assert source_effective["additional_source_roots"] == []
+    assert migrated.recognized_settings == ("/ci/performance",)
+
+
+def test_python_tooling_1_9__same_change_successor_options__remain_sparse() -> None:
+    raw: JsonObject = {
+        "build_backend": "none",
+        "ruff": {
+            "extend_include": ["tools/**/*.py"],
+            "extend_select": ["D"],
+            "extend_ignore": ["B"],
+        },
+        "coverage": {"omit": ["src/generated/*"]},
+        "ci": {"enabled": True},
+    }
+    source_effective = _source_options("1.8", {"ci": {"enabled": True}})
+
+    migrated = _migrate_config("1.8", raw, source_effective)
+
+    assert migrated.config == {
+        **raw,
+        "ci": {"enabled": True, "performance": True},
+    }
+    assert migrated.recognized_settings == ("/ci/performance",)
+
+
 # TC-T8-004
 def test_python_tooling_1_9__package_registration__preserves_1_8_and_root_default() -> None:
     predecessor = _payload(_V18)
@@ -297,7 +600,11 @@ def test_python_tooling_1_9__package_registration__preserves_1_8_and_root_defaul
     assert predecessor.integrity.aggregate_digest.value == _V18_RELEASED_DIGEST
     assert successor.manifest.payload.version.value == "1.9"
     migrations = {migration.id for migration in successor.manifest.migrations}
-    assert migrations == {"legacy-v4-to-1-9"}
+    expected_transforms = {
+        f"python-tooling-{version.replace('.', '-')}-to-1-9"
+        for version in _qualifying_predecessors()
+    }
+    assert migrations == {"legacy-v4-to-1-9", *expected_transforms}
     family = (_FAMILY / "standard.toml").read_text(encoding="utf-8")
     assert 'version = "1.9"' in family
     assert successor.integrity.aggregate_digest.value in family

@@ -55,6 +55,8 @@ class _SchemaValidationError(Protocol):
 class _SchemaValidator(Protocol):
     def iter_errors(self, instance: JsonValue) -> Iterator[_SchemaValidationError]: ...
 
+    def is_valid(self, instance: JsonValue) -> bool: ...
+
     def evolve(self, **changes: object) -> _SchemaValidator: ...
 
 
@@ -76,6 +78,10 @@ OptionName = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9]*(?:_[a-z0
 OptionPointer = Annotated[
     str,
     StringConstraints(pattern=r"^(?:/[a-z][a-z0-9]*(?:_[a-z0-9]+)*){2,}$"),
+]
+ConfigJsonPointer = Annotated[
+    str,
+    StringConstraints(pattern=r"^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$"),
 ]
 AffectedIdentity = Annotated[
     str,
@@ -576,11 +582,35 @@ class MigrationDeclaration(StrictModel):
     reversible: bool
     affected: list[AffectedIdentity] = Field(min_length=1)
     signatures: list[ResourceId] = Field(default_factory=list)
+    configuration_transform: list[ConfigJsonPointer] | None = Field(
+        default=None,
+        min_length=1,
+    )
 
     @field_validator("affected", "signatures")
     @classmethod
     def _unique_sorted_references(cls, value: list[str]) -> list[str]:
         return _sorted_unique(value, kind="migration reference")
+
+    @field_validator("configuration_transform")
+    @classmethod
+    def _canonical_transform_pointers(
+        cls,
+        value: list[str] | None,
+    ) -> list[str] | None:
+        if value is None:
+            return None
+        pointers = _sorted_unique(
+            [validate_json_pointer(pointer) for pointer in value],
+            kind="configuration transform pointer",
+        )
+        if any(
+            right.startswith(f"{left}/")
+            for index, left in enumerate(pointers)
+            for right in pointers[index + 1 :]
+        ):
+            raise ValueError("configuration transform pointers must name disjoint leaves")
+        return pointers
 
     @model_validator(mode="after")
     def _mode_contract(self) -> MigrationDeclaration:
@@ -591,6 +621,17 @@ class MigrationDeclaration(StrictModel):
                 raise ValueError("automatic migration requires only a provider")
         elif self.instructions is None or self.provider is not None:
             raise ValueError("manual migration requires only instructions")
+        if self.configuration_transform is not None:
+            if (
+                self.mode is not MigrationMode.AUTOMATIC
+                or self.from_endpoint.package_version is None
+                or self.to_endpoint.package_version is None
+            ):
+                raise ValueError(
+                    "configuration transform requires an automatic package-to-package migration"
+                )
+            if "config:*" not in self.affected:
+                raise ValueError("configuration transform must declare config:* as affected")
         return self
 
 
@@ -916,6 +957,13 @@ class PayloadManifest(StrictModel):
             endpoints = (migration.from_endpoint, migration.to_endpoint)
             if not any(endpoint.package_version == self.payload.version for endpoint in endpoints):
                 raise ValueError("migration must connect to the containing payload version")
+            if (
+                migration.configuration_transform is not None
+                and migration.to_endpoint.package_version != self.payload.version
+            ):
+                raise ValueError(
+                    "configuration transform must target the containing payload version"
+                )
             for endpoint in endpoints:
                 if endpoint.legacy_state is None:
                     continue
@@ -971,6 +1019,36 @@ def load_payload_manifest(path: Path) -> PayloadManifest:
         raise PackageContractError("payload standard identity does not match its family directory")
     if manifest.payload.version.value != version_dir.name:
         raise PackageContractError("payload version does not match its version directory")
+    target_schema: PackageOptionSchema | None = None
+    for migration in manifest.migrations:
+        pointers = migration.configuration_transform
+        source_version = migration.from_endpoint.package_version
+        if pointers is None or source_version is None:
+            continue
+        source_dir = versions_dir / source_version.value
+        source_path = source_dir / "payload.toml"
+        try:
+            source_raw = tomllib.loads(source_path.read_text(encoding="utf-8"))
+            source_manifest = PayloadManifest.model_validate(source_raw)
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValidationError) as exc:
+            raise PackageContractError(
+                "configuration transform source payload could not be loaded"
+            ) from exc
+        if (
+            source_manifest.payload.standard != manifest.payload.standard
+            or source_manifest.payload.version != source_version
+        ):
+            raise PackageContractError(
+                "configuration transform source payload identity is inconsistent"
+            )
+        source_schema = load_option_schema(source_dir, source_manifest)
+        if target_schema is None:
+            target_schema = load_option_schema(version_dir, manifest)
+        validate_configuration_transform_eligibility(
+            source_schema,
+            target_schema,
+            tuple(pointers),
+        )
     return manifest
 
 
@@ -1162,6 +1240,131 @@ class PackageOptionSchema:
             location = _schema_error_location(errors[0].path)
             raise PackageContractError(f"package options violate schema at {location}")
         return effective
+
+
+_SCHEMA_ANNOTATIONS = frozenset(
+    {
+        "$comment",
+        "deprecated",
+        "description",
+        "examples",
+        "readOnly",
+        "title",
+        "writeOnly",
+    }
+)
+_INDIRECT_SCHEMA_KEYWORDS = frozenset(
+    {
+        "$dynamicRef",
+        "$ref",
+        "allOf",
+        "anyOf",
+        "dependentSchemas",
+        "else",
+        "if",
+        "not",
+        "oneOf",
+        "then",
+    }
+)
+_SCALAR_SCHEMA_TYPES = frozenset({"boolean", "integer", "null", "number", "string"})
+
+
+def _pointer_tokens(pointer: str) -> tuple[str, ...]:
+    return tuple(token.replace("~1", "/").replace("~0", "~") for token in pointer.split("/")[1:])
+
+
+def _transform_leaf_core(schema: Mapping[str, JsonValue]) -> JsonObject:
+    omitted = {"default", "enum"} | _SCHEMA_ANNOTATIONS
+    return {key: copy.deepcopy(value) for key, value in schema.items() if key not in omitted}
+
+
+def _validate_transform_ancestor(
+    source: Mapping[str, JsonValue],
+    target: Mapping[str, JsonValue],
+    token: str,
+) -> None:
+    if source.get("type") != "object" or target.get("type") != "object":
+        raise PackageContractError(
+            "configuration transform pointer must traverse direct object properties"
+        )
+    source_required = source.get("required", [])
+    target_required = target.get("required", [])
+    if not isinstance(source_required, list) or not isinstance(target_required, list):
+        raise PackageContractError("configuration transform ancestor has invalid required entries")
+    if (token in source_required) != (token in target_required):
+        raise PackageContractError(
+            "configuration transform pointer changes required-property behavior"
+        )
+
+
+def _is_scalar_schema_type(value: JsonValue | None) -> bool:
+    if isinstance(value, str):
+        return value in _SCALAR_SCHEMA_TYPES
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and item in _SCALAR_SCHEMA_TYPES for item in value)
+    )
+
+
+def _validate_transform_leaf(
+    source: Mapping[str, JsonValue],
+    target: Mapping[str, JsonValue],
+) -> None:
+    if not _is_scalar_schema_type(source.get("type")) or not _is_scalar_schema_type(
+        target.get("type")
+    ):
+        raise PackageContractError("configuration transform pointer must name a scalar leaf")
+    if _INDIRECT_SCHEMA_KEYWORDS.intersection(source) or _INDIRECT_SCHEMA_KEYWORDS.intersection(
+        target
+    ):
+        raise PackageContractError(
+            "configuration transform pointer must not name a reference or combinator"
+        )
+    if _transform_leaf_core(source) != _transform_leaf_core(target):
+        raise PackageContractError(
+            "configuration transform pointer changes an unsupported validation keyword"
+        )
+    source_enum = source.get("enum")
+    target_enum = target.get("enum")
+    if source_enum is None and target_enum is None:
+        return
+    if source_enum is None or not isinstance(source_enum, list):
+        raise PackageContractError("configuration transform pointer has unsupported enum evolution")
+    if target_enum is None:
+        return
+    if not isinstance(target_enum, list):
+        raise PackageContractError("configuration transform pointer has unsupported enum evolution")
+    target_enum_validator = cast("_SchemaValidator", Draft202012Validator({"enum": target_enum}))
+    if not all(target_enum_validator.is_valid(value) for value in source_enum):
+        raise PackageContractError("configuration transform pointer narrows its scalar enum")
+
+
+def validate_configuration_transform_eligibility(
+    source: PackageOptionSchema,
+    target: PackageOptionSchema,
+    declared_pointers: tuple[str, ...],
+) -> None:
+    """Validate only the declared direct-property paths that a transform may change."""
+    if source.standard_id != target.standard_id:
+        raise PackageContractError("configuration transform schemas identify different packages")
+    pointers = tuple(_pointer_tokens(validate_json_pointer(item)) for item in declared_pointers)
+    for pointer in pointers:
+        source_node: Mapping[str, JsonValue] = source.document
+        target_node: Mapping[str, JsonValue] = target.document
+        for index, token in enumerate(pointer):
+            _validate_transform_ancestor(source_node, target_node, token)
+            source_child = _object_properties(source_node).get(token)
+            target_child = _object_properties(target_node).get(token)
+            if not isinstance(source_child, dict) or not isinstance(target_child, dict):
+                raise PackageContractError(
+                    "configuration transform pointer must name a shared direct property"
+                )
+            source_node = source_child
+            target_node = target_child
+            if index == len(pointer) - 1:
+                _validate_transform_leaf(source_node, target_node)
 
 
 def load_option_schema(

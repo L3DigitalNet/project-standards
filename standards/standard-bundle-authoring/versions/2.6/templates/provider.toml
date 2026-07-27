@@ -1,0 +1,32 @@
+# Append to payload.toml and declare each named implementation/schema resource.
+[[providers]]
+id = "render-example"
+operation = "render"
+kind = "python"
+phase = "plan"
+effect = "content"
+entrypoint = "payload:provider-code#render"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["provider-code"]
+
+# Migration providers return the control-plane migration-report schema.
+[[providers]]
+id = "migrate-v1"
+operation = "migrate"
+kind = "python"
+phase = "plan"
+effect = "migration-report"
+entrypoint = "payload:provider-code#migrate"
+input_schema = "provider-input"
+output_schema = "provider-output"
+resources = ["provider-code"]
+
+# Documentation-only providers declare no entrypoint or schemas.
+[[providers]]
+id = "review-example"
+operation = "semantic-review"
+kind = "documentation-only"
+phase = "validate"
+effect = "findings"
+resources = []

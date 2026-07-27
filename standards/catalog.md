@@ -45,13 +45,14 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`python-tooling`](python-tooling/README.md) | active | 1.6 | retained | consumer | 13 | 3 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.7 | retained | consumer | 13 | 3 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.8 | default | consumer | 13 | 3 | 63 |
-| [`python-tooling`](python-tooling/README.md) | active | 1.9 | unadvertised | consumer | 13 | 3 | 63 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.9 | unadvertised | consumer | 15 | 4 | 63 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.1 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.2 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.3 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.4 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.5 | internal | internal | 12 | 0 | 0 |
+| [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.6 | unadvertised | internal | 12 | 0 | 0 |
 
 ## Capabilities
 
@@ -101,6 +102,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `standard-bundle-authoring@2.3` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 | `standard-bundle-authoring@2.4` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 | `standard-bundle-authoring@2.5` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
+| `standard-bundle-authoring@2.6` | `standard-bundle-authoring.v2` | `project-standards.package-contract` |
 
 ## Relationship catalog
 
@@ -831,6 +833,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.9` | `check-workflow-source` | `provider-resource` | `standards://python-tooling/1.9/check-workflow-source` | `resources/check.yml` |
 | `python-tooling@1.9` | `check-script-source` | `provider-resource` | `standards://python-tooling/1.9/check-script-source` | `resources/check.py` |
 | `python-tooling@1.9` | `provider-code` | `provider-resource` | `standards://python-tooling/1.9/provider-code` | `providers/python_tooling.py` |
+| `python-tooling@1.9` | `config-transform-input` | `provider-resource` | `standards://python-tooling/1.9/config-transform-input` | `schemas/config-transform-input.schema.json` |
+| `python-tooling@1.9` | `config-transform-report` | `provider-resource` | `standards://python-tooling/1.9/config-transform-report` | `schemas/config-transform-report.schema.json` |
 | `python-tooling@1.9` | `provider-input` | `provider-resource` | `standards://python-tooling/1.9/provider-input` | `schemas/provider-input.schema.json` |
 | `python-tooling@1.9` | `provider-content` | `provider-resource` | `standards://python-tooling/1.9/provider-content` | `schemas/content.schema.json` |
 | `python-tooling@1.9` | `provider-findings` | `provider-resource` | `standards://python-tooling/1.9/provider-findings` | `schemas/findings.schema.json` |
@@ -907,6 +911,18 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `standard-bundle-authoring@2.5` | `extension-template` | `extension-template` | `standards://standard-bundle-authoring/2.5/extension-template` | `templates/extension.toml` |
 | `standard-bundle-authoring@2.5` | `migration-template` | `migration-template` | `standards://standard-bundle-authoring/2.5/migration-template` | `templates/migration.toml` |
 | `standard-bundle-authoring@2.5` | `legacy-signature-template` | `legacy-signature-template` | `standards://standard-bundle-authoring/2.5/legacy-signature-template` | `templates/legacy-signature.toml` |
+| `standard-bundle-authoring@2.6` | `readme` | `canonical-standard` | `standards://standard-bundle-authoring/2.6/readme` | `README.md` |
+| `standard-bundle-authoring@2.6` | `agent-summary` | `agent-summary` | `standards://standard-bundle-authoring/2.6/agent-summary` | `agent-summary.md` |
+| `standard-bundle-authoring@2.6` | `config-schema` | `config-schema` | `standards://standard-bundle-authoring/2.6/config-schema` | `config.schema.json` |
+| `standard-bundle-authoring@2.6` | `family-template` | `family-template` | `standards://standard-bundle-authoring/2.6/family-template` | `templates/standard.toml` |
+| `standard-bundle-authoring@2.6` | `payload-template` | `payload-template` | `standards://standard-bundle-authoring/2.6/payload-template` | `templates/payload.toml` |
+| `standard-bundle-authoring@2.6` | `option-schema-template` | `option-schema-template` | `standards://standard-bundle-authoring/2.6/option-schema-template` | `templates/config.schema.json` |
+| `standard-bundle-authoring@2.6` | `catalog-template` | `catalog-template` | `standards://standard-bundle-authoring/2.6/catalog-template` | `templates/catalog.toml` |
+| `standard-bundle-authoring@2.6` | `provider-template` | `provider-template` | `standards://standard-bundle-authoring/2.6/provider-template` | `templates/provider.toml` |
+| `standard-bundle-authoring@2.6` | `contribution-template` | `contribution-template` | `standards://standard-bundle-authoring/2.6/contribution-template` | `templates/contribution.toml` |
+| `standard-bundle-authoring@2.6` | `extension-template` | `extension-template` | `standards://standard-bundle-authoring/2.6/extension-template` | `templates/extension.toml` |
+| `standard-bundle-authoring@2.6` | `migration-template` | `migration-template` | `standards://standard-bundle-authoring/2.6/migration-template` | `templates/migration.toml` |
+| `standard-bundle-authoring@2.6` | `legacy-signature-template` | `legacy-signature-template` | `standards://standard-bundle-authoring/2.6/legacy-signature-template` | `templates/legacy-signature.toml` |
 
 ## Providers
 
@@ -1102,6 +1118,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.9` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
 | `python-tooling@1.9` | `verify-toolchain` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `python-tooling@1.9` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `python-tooling@1.9` | `migrate-config` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate_config` |
 
 ## Managed outputs
 

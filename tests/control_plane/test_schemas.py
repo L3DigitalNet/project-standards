@@ -225,7 +225,7 @@ def test_mutation_plan_rejects_incomplete_or_unbounded_actions(
         )
 
 
-def test_reconciliation_finding_schema__structural_diagnostics__is_closed_version_1_2() -> None:
+def test_reconciliation_finding_schema__transform_evidence__is_closed_version_1_3() -> None:
     document = control_plane_schema_documents()["reconciliation-plan.schema.json"]
     definitions = cast("dict[str, object]", document["$defs"])
     finding = cast("dict[str, object]", definitions["PublicFindingSchema"])
@@ -256,14 +256,15 @@ def test_reconciliation_finding_schema__structural_diagnostics__is_closed_versio
     }
     top_properties = cast("dict[str, object]", document["properties"])
     schema_version = cast("dict[str, object]", top_properties["schema_version"])
-    assert schema_version["const"] == "1.2"
+    assert schema_version["enum"] == ["1.1", "1.2", "1.3"]
+    assert "configuration_transforms" in top_properties
 
 
-def test_reconciliation_plan_model__version_1_2_diagnostics__accepts_only_closed_current_shape() -> (
+def test_reconciliation_plan_model__version_1_3_evidence__accepts_only_closed_current_shape() -> (
     None
 ):
     document: dict[str, object] = {
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "applicable": False,
         "findings": [
             {
@@ -283,6 +284,19 @@ def test_reconciliation_plan_model__version_1_2_diagnostics__accepts_only_closed
             }
         ],
         "actions": [],
+        "configuration_transforms": [
+            {
+                "standard_id": "demo",
+                "migration_id": "demo-1-0-to-1-1",
+                "source": "1.0",
+                "target": "1.1",
+                "provider_id": "migrate-config",
+                "declared_pointers": ["/ci/performance"],
+                "changed_pointers": ["/ci/performance"],
+                "before_digest": f"sha256:{'c' * 64}",
+                "after_digest": f"sha256:{'d' * 64}",
+            }
+        ],
         "proposed_lock": {
             "project_standards": {
                 "schema_version": "1.1",
@@ -296,14 +310,22 @@ def test_reconciliation_plan_model__version_1_2_diagnostics__accepts_only_closed
 
     parsed = ReconciliationPlanSchema.model_validate(document)
 
-    assert parsed.schema_version == "1.2"
+    assert parsed.schema_version == "1.3"
+    assert parsed.configuration_transforms[0].changed_pointers == ["/ci/performance"]
     assert parsed.findings[0].column == 9
     assert parsed.findings[0].observed == 191
     assert parsed.findings[0].limit == 160
 
-    prior = {**document, "schema_version": "1.1"}
+    for prior_version in ("1.1", "1.2"):
+        prior: dict[str, object] = {
+            **document,
+            "schema_version": prior_version,
+            "configuration_transforms": [],
+        }
+        assert ReconciliationPlanSchema.model_validate(prior).schema_version == prior_version
+
     with pytest.raises(ValidationError):
-        ReconciliationPlanSchema.model_validate(prior)
+        ReconciliationPlanSchema.model_validate({**document, "schema_version": "1.4"})
 
     top_level_extra = {**document, "consumer_content": "must-not-be-accepted"}
     with pytest.raises(ValidationError):
@@ -313,3 +335,15 @@ def test_reconciliation_plan_model__version_1_2_diagnostics__accepts_only_closed
     finding_extra = {**finding, "source_line": "must-not-be-accepted"}
     with pytest.raises(ValidationError):
         ReconciliationPlanSchema.model_validate({**document, "findings": [finding_extra]})
+
+    transform = cast(
+        "dict[str, object]",
+        cast("list[object]", document["configuration_transforms"])[0],
+    )
+    with pytest.raises(ValidationError):
+        ReconciliationPlanSchema.model_validate(
+            {
+                **document,
+                "configuration_transforms": [{**transform, "before_value": "must-not-be-accepted"}],
+            }
+        )

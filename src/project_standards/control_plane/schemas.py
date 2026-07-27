@@ -33,6 +33,7 @@ from project_standards.package_contract.paths import (
 )
 from project_standards.package_contract.payload import (
     AdapterKind,
+    ConfigJsonPointer,
     JsonValue,
     PosixMode,
     ProviderOperation,
@@ -166,6 +167,20 @@ class PublicActionSchema(StrictModel):
     after_mode: PosixMode | None = None
 
 
+class PublicConfigurationTransformSchema(StrictModel):
+    """Value-redacted identity and digest evidence for one package config transform."""
+
+    standard_id: KebabId
+    migration_id: ResourceId
+    source: PackageVersion
+    target: PackageVersion
+    provider_id: ResourceId
+    declared_pointers: list[ConfigJsonPointer] = Field(min_length=1)
+    changed_pointers: list[ConfigJsonPointer] = Field(default_factory=list)
+    before_digest: Sha256Digest
+    after_digest: Sha256Digest
+
+
 class PublicPlannedUnitSchema(StrictModel):
     """One public semantic-unit transition with package provenance."""
 
@@ -257,9 +272,10 @@ class PublicCatalogRefreshSchema(StrictModel):
 class ReconciliationPlanSchema(StrictModel):
     """Stable JSON surface for a complete reconciliation preview."""
 
-    schema_version: Literal["1.2"]
+    schema_version: Literal["1.1", "1.2", "1.3"]
     applicable: bool
     actions: list[PublicActionSchema] = Field(default_factory=list)
+    configuration_transforms: list[PublicConfigurationTransformSchema] = Field(default_factory=list)
     units: list[PublicPlannedUnitSchema] = Field(default_factory=list)
     findings: list[PublicFindingSchema] = Field(default_factory=list)
     preconditions: list[PublicTargetPreconditionSchema] = Field(default_factory=list)

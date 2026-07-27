@@ -10,6 +10,8 @@ from pydantic import ValidationError
 
 from project_standards.package_contract import PackageContractError
 from project_standards.package_contract.payload import (
+    JsonObject,
+    JsonValue,
     LegacySignatureDeclaration,
     MigrationDeclaration,
     MigrationEndpoint,
@@ -17,6 +19,7 @@ from project_standards.package_contract.payload import (
     PayloadManifest,
     ProviderDeclaration,
     load_option_schema,
+    validate_configuration_transform_eligibility,
 )
 
 _PAYLOAD_PATH = (
@@ -281,6 +284,403 @@ def test_migration_endpoint_accepts_typed_package_and_legacy_states() -> None:
 def test_migration_endpoint_rejects_unknown_or_noncanonical_forms(value: str) -> None:
     with pytest.raises(ValueError):
         MigrationEndpoint(value)
+
+
+def _package_config_transform_migration(
+    **overrides: object,
+) -> dict[str, object]:
+    migration: dict[str, object] = {
+        "id": "1-1-to-1-2",
+        "from": "package:1.1",
+        "to": "package:1.2",
+        "mode": "automatic",
+        "provider": "migrate-config",
+        "reversible": True,
+        "affected": ["config:*"],
+    }
+    migration.update(overrides)
+    return migration
+
+
+def test_configuration_transform__absent__preserves_existing_migration_contract() -> None:
+    migration = MigrationDeclaration.model_validate(_package_config_transform_migration())
+
+    assert migration.configuration_transform is None
+
+
+def test_configuration_transform__nonempty_pointer_allowlist__is_accepted() -> None:
+    migration = MigrationDeclaration.model_validate(
+        _package_config_transform_migration(
+            configuration_transform=["/ci/performance"],
+        )
+    )
+
+    assert migration.configuration_transform == ["/ci/performance"]
+
+
+@pytest.mark.parametrize(
+    "migration",
+    [
+        pytest.param(
+            _package_config_transform_migration(configuration_transform=[]),
+            id="empty-allowlist",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                configuration_transform=["/ci/performance", "/ci/performance"],
+            ),
+            id="duplicate-pointer",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                configuration_transform=["/ci", "/ci/performance"],
+            ),
+            id="overlapping-pointers",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                configuration_transform=["ci/performance"],
+            ),
+            id="noncanonical-pointer",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                mode="manual",
+                provider=None,
+                instructions="migrations/manual.md",
+                configuration_transform=["/ci/performance"],
+            ),
+            id="manual-edge",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                **{
+                    "from": "legacy:v4-demo",
+                    "configuration_transform": ["/ci/performance"],
+                }
+            ),
+            id="legacy-edge",
+        ),
+        pytest.param(
+            _package_config_transform_migration(
+                affected=["artifact:workflow"],
+                configuration_transform=["/ci/performance"],
+            ),
+            id="missing-config-effect",
+        ),
+    ],
+)
+def test_configuration_transform__invalid_declaration_shape__is_rejected(
+    migration: dict[str, object],
+) -> None:
+    with pytest.raises(ValidationError) as caught:
+        MigrationDeclaration.model_validate(migration)
+
+    assert all(error["type"] != "extra_forbidden" for error in caught.value.errors())
+
+
+def _transform_schema(
+    properties: dict[str, JsonValue],
+    *,
+    required: list[str] | None = None,
+) -> PackageOptionSchema:
+    document = cast(
+        JsonObject,
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": False,
+            "properties": properties,
+        },
+    )
+    if required is not None:
+        document["required"] = cast("JsonValue", required)
+    return PackageOptionSchema(
+        standard_id="demo",
+        raw_bytes=b"{}",
+        document=document,
+    )
+
+
+def test_configuration_transform__bounded_schema_evolution__is_eligible() -> None:
+    source = _transform_schema(
+        {
+            "mode": {"type": "string", "enum": ["stable"], "default": "stable"},
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean", "default": True},
+                },
+                "default": {"performance": True},
+            },
+        }
+    )
+    target = _transform_schema(
+        {
+            "mode": {
+                "type": "string",
+                "enum": ["stable", "turbo"],
+                "default": "stable",
+            },
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean", "default": False},
+                    "retry_budget": {"type": "integer", "default": 0},
+                },
+                "default": {"performance": False, "retry_budget": 0},
+            },
+        }
+    )
+
+    validate_configuration_transform_eligibility(
+        source,
+        target,
+        ("/ci/performance",),
+    )
+
+
+def test_configuration_transform__unrelated_schema_evolution__is_eligible() -> None:
+    source = _transform_schema(
+        {
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean", "default": True},
+                },
+            },
+            "additional_source_roots": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+            },
+        }
+    )
+    target = _transform_schema(
+        {
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean", "default": False},
+                },
+            },
+            "additional_source_roots": {
+                "type": "array",
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {"path": {"type": "string"}},
+                            "required": ["path"],
+                        },
+                    ]
+                },
+                "default": [],
+            },
+        }
+    )
+
+    validate_configuration_transform_eligibility(
+        source,
+        target,
+        ("/ci/performance",),
+    )
+
+
+def test_configuration_transform__nullable_scalar_leaf__is_eligible() -> None:
+    source = _transform_schema({"value": {"type": ["string", "null"], "default": None}})
+    target = _transform_schema({"value": {"type": ["string", "null"], "default": "stable"}})
+
+    validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+def test_configuration_transform__scalar_enum_superset__is_eligible() -> None:
+    source = _transform_schema(
+        {"value": {"type": "string", "enum": ["stable"], "default": "stable"}}
+    )
+    target = _transform_schema(
+        {
+            "value": {
+                "type": "string",
+                "enum": ["stable", "turbo"],
+                "default": "turbo",
+            }
+        }
+    )
+
+    validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+def test_configuration_transform__removed_scalar_enum_is_eligible() -> None:
+    source = _transform_schema(
+        {"value": {"type": "string", "enum": ["stable"], "default": "stable"}}
+    )
+    target = _transform_schema({"value": {"type": "string", "default": "stable"}})
+
+    validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+def test_configuration_transform__numeric_enum_equivalence__is_eligible() -> None:
+    source = _transform_schema({"value": {"type": "number", "enum": [1]}})
+    target = _transform_schema({"value": {"type": "number", "enum": [1.0, 2]}})
+
+    validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+def test_configuration_transform__boolean_and_number_enum_values__remain_distinct() -> None:
+    source = _transform_schema({"value": {"type": ["boolean", "number"], "enum": [True]}})
+    target = _transform_schema({"value": {"type": ["boolean", "number"], "enum": [1]}})
+
+    with pytest.raises(PackageContractError, match="narrows"):
+        validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+@pytest.mark.parametrize(
+    ("source_property", "target_property", "pointer"),
+    [
+        pytest.param(
+            {"type": "integer", "minimum": 0},
+            {"type": "integer", "minimum": -1},
+            "/value",
+            id="range-widening",
+        ),
+        pytest.param(
+            {"type": "string"},
+            {"type": "integer"},
+            "/value",
+            id="type-change",
+        ),
+        pytest.param(
+            {"type": "array", "items": {"enum": ["stable"]}},
+            {"type": "array", "items": {"enum": ["stable", "turbo"]}},
+            "/value",
+            id="array-member-widening",
+        ),
+        pytest.param(
+            {"type": "string", "enum": ["stable", "turbo"]},
+            {"type": "string", "enum": ["stable"]},
+            "/value",
+            id="enum-narrowing",
+        ),
+        pytest.param(
+            {"type": "string"},
+            {"type": "string", "oneOf": [{"const": "stable"}]},
+            "/value",
+            id="leaf-combinator",
+        ),
+        pytest.param(
+            {"type": "string", "$ref": "#/$defs/value"},
+            {"type": "string", "$ref": "#/$defs/value"},
+            "/value",
+            id="leaf-reference",
+        ),
+    ],
+)
+def test_configuration_transform__unsupported_schema_evolution__is_rejected(
+    source_property: JsonObject,
+    target_property: JsonObject,
+    pointer: str,
+) -> None:
+    source = _transform_schema({"value": source_property})
+    target = _transform_schema({"value": target_property})
+
+    with pytest.raises(PackageContractError, match="configuration transform"):
+        validate_configuration_transform_eligibility(source, target, (pointer,))
+
+
+@pytest.mark.parametrize(
+    ("source_required", "target_required"),
+    [
+        pytest.param(["ci"], [], id="required-to-optional"),
+        pytest.param([], ["ci"], id="optional-to-required"),
+    ],
+)
+def test_configuration_transform__ancestor_requiredness_change__is_rejected(
+    source_required: list[str],
+    target_required: list[str],
+) -> None:
+    nested_property: JsonObject = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"performance": {"type": "boolean"}},
+    }
+    source = _transform_schema({"ci": nested_property}, required=source_required)
+    target = _transform_schema({"ci": nested_property}, required=target_required)
+
+    with pytest.raises(PackageContractError, match="required-property"):
+        validate_configuration_transform_eligibility(
+            source,
+            target,
+            ("/ci/performance",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("source_properties", "target_properties"),
+    [
+        pytest.param(
+            {"value": {"type": "string"}},
+            {"renamed": {"type": "string"}},
+            id="renamed",
+        ),
+        pytest.param(
+            {"other": {"type": "string"}},
+            {"value": {"type": "string"}},
+            id="target-only",
+        ),
+    ],
+)
+def test_configuration_transform__missing_direct_leaf__is_rejected(
+    source_properties: dict[str, JsonValue],
+    target_properties: dict[str, JsonValue],
+) -> None:
+    source = _transform_schema(source_properties)
+    target = _transform_schema(target_properties)
+
+    with pytest.raises(PackageContractError, match="shared direct property"):
+        validate_configuration_transform_eligibility(source, target, ("/value",))
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        pytest.param(None, id="undeclared-provider"),
+        pytest.param(
+            _provider(provider_id="migrate-config"),
+            id="wrong-operation-and-effect",
+        ),
+    ],
+)
+def test_configuration_transform__invalid_provider_binding__is_rejected(
+    provider: dict[str, object] | None,
+) -> None:
+    data = _payload_data()
+    if provider is not None:
+        for resource_id, path in (
+            ("provider-code", "providers/migrate.py"),
+            ("provider-input", "schemas/provider-input.json"),
+            ("provider-output", "schemas/provider-output.json"),
+            ("provider-data", "resources/provider-data.json"),
+        ):
+            _add_resource(data, resource_id, path)
+        data["providers"] = [provider]
+    data["migrations"] = [
+        _package_config_transform_migration(
+            configuration_transform=["/ci/performance"],
+        )
+    ]
+
+    with pytest.raises(
+        ValidationError,
+        match="automatic migration must identify a migrate provider",
+    ):
+        PayloadManifest.model_validate(data)
 
 
 def test_automatic_migration_declares_provider_effects_and_exact_legacy_signature() -> None:

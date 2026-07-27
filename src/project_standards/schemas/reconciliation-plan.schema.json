@@ -607,6 +607,76 @@
       "title": "PublicCatalogSelectionChangeSchema",
       "type": "object"
     },
+    "PublicConfigurationTransformSchema": {
+      "additionalProperties": false,
+      "description": "Value-redacted identity and digest evidence for one package config transform.",
+      "properties": {
+        "after_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "After Digest",
+          "type": "string"
+        },
+        "before_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Before Digest",
+          "type": "string"
+        },
+        "changed_pointers": {
+          "items": {
+            "pattern": "^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$",
+            "type": "string"
+          },
+          "title": "Changed Pointers",
+          "type": "array"
+        },
+        "declared_pointers": {
+          "items": {
+            "pattern": "^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Declared Pointers",
+          "type": "array"
+        },
+        "migration_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Migration Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "source": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Source",
+          "type": "string"
+        },
+        "standard_id": {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Standard Id",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "standard_id",
+        "migration_id",
+        "source",
+        "target",
+        "provider_id",
+        "declared_pointers",
+        "before_digest",
+        "after_digest"
+      ],
+      "title": "PublicConfigurationTransformSchema",
+      "type": "object"
+    },
     "PublicFindingSchema": {
       "additionalProperties": false,
       "description": "Content-safe finding fields included in public reconciliation output.",
@@ -1153,6 +1223,13 @@
       ],
       "default": null
     },
+    "configuration_transforms": {
+      "items": {
+        "$ref": "#/$defs/PublicConfigurationTransformSchema"
+      },
+      "title": "Configuration Transforms",
+      "type": "array"
+    },
     "findings": {
       "items": {
         "$ref": "#/$defs/PublicFindingSchema"
@@ -1199,7 +1276,11 @@
       "$ref": "#/$defs/PublicResolutionSchema"
     },
     "schema_version": {
-      "const": "1.2",
+      "enum": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ],
       "title": "Schema Version",
       "type": "string"
     },

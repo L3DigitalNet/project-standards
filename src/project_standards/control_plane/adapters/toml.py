@@ -60,6 +60,13 @@ class ScopeSpec:
     identity: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class _InlineEntry:
+    key: tuple[str, ...]
+    value_start: int
+    value_end: int
+
+
 def _logical_spans(text: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     start = 0
@@ -415,6 +422,201 @@ def _assignment(
     return matches[0] if matches else None
 
 
+def _top_level_segments(text: str, start: int, end: int) -> list[tuple[int, int]]:
+    segments: list[tuple[int, int]] = []
+    segment_start = start
+    depth = 0
+    delimiter: str | None = None
+    index = start
+    while index < end:
+        character = text[index]
+        if delimiter is not None:
+            if character == delimiter:
+                delimiter = None
+            elif delimiter == '"' and character == "\\":
+                index += 1
+        elif character in {'"', "'"}:
+            delimiter = character
+        elif character in "[{":
+            depth += 1
+        elif character in "]}":
+            depth -= 1
+        elif character == "," and depth == 0:
+            segments.append((segment_start, index))
+            segment_start = index + 1
+        index += 1
+    segments.append((segment_start, end))
+    return segments
+
+
+def _top_level_separator(text: str, start: int, end: int) -> int | None:
+    depth = 0
+    delimiter: str | None = None
+    index = start
+    while index < end:
+        character = text[index]
+        if delimiter is not None:
+            if character == delimiter:
+                delimiter = None
+            elif delimiter == '"' and character == "\\":
+                index += 1
+        elif character in {'"', "'"}:
+            delimiter = character
+        elif character in "[{":
+            depth += 1
+        elif character in "]}":
+            depth -= 1
+        elif character == "=" and depth == 0:
+            return index
+        index += 1
+    return None
+
+
+def _inline_entries(text: str, start: int, end: int) -> tuple[_InlineEntry, ...]:
+    left = start
+    right = end
+    while left < right and text[left].isspace():
+        left += 1
+    while right > left and text[right - 1].isspace():
+        right -= 1
+    if right - left < 2 or text[left] != "{" or text[right - 1] != "}":
+        raise ControlPlaneError("selected TOML key is not inside an inline table")
+    entries: list[_InlineEntry] = []
+    for segment_start, segment_end in _top_level_segments(text, left + 1, right - 1):
+        separator = _top_level_separator(text, segment_start, segment_end)
+        if separator is None:
+            if text[segment_start:segment_end].strip():
+                raise ControlPlaneError("inline TOML table cannot be indexed safely")
+            continue
+        key_text = text[segment_start:separator].strip()
+        value_start = separator + 1
+        while value_start < segment_end and text[value_start].isspace():
+            value_start += 1
+        value_end = segment_end
+        while value_end > value_start and text[value_end - 1].isspace():
+            value_end -= 1
+        entries.append(_InlineEntry(_key_path(key_text), value_start, value_end))
+    return tuple(entries)
+
+
+def _inline_leaf_span(
+    text: str,
+    start: int,
+    end: int,
+    path: tuple[str, ...],
+) -> tuple[int, int] | None:
+    for entry in _inline_entries(text, start, end):
+        if not _is_prefix(entry.key, path):
+            continue
+        if entry.key == path:
+            return entry.value_start, entry.value_end
+        return _inline_leaf_span(
+            text,
+            entry.value_start,
+            entry.value_end,
+            path[len(entry.key) :],
+        )
+    return None
+
+
+def _inline_insertion_point(
+    text: str,
+    start: int,
+    end: int,
+    parent: tuple[str, ...],
+) -> tuple[int, bool] | None:
+    entries = _inline_entries(text, start, end)
+    if not parent:
+        closing = end
+        while closing > start and text[closing - 1].isspace():
+            closing -= 1
+        if closing <= start or text[closing - 1] != "}":
+            raise ControlPlaneError("inline TOML table cannot be extended safely")
+        return closing - 1, bool(entries)
+    for entry in entries:
+        if not _is_prefix(entry.key, parent):
+            continue
+        if entry.key == parent:
+            return _inline_insertion_point(
+                text,
+                entry.value_start,
+                entry.value_end,
+                (),
+            )
+        return _inline_insertion_point(
+            text,
+            entry.value_start,
+            entry.value_end,
+            parent[len(entry.key) :],
+        )
+    return None
+
+
+def _inline_creation_point(
+    text: str,
+    start: int,
+    end: int,
+    parent: tuple[str, ...],
+) -> tuple[int, bool, tuple[str, ...], bool]:
+    entries = _inline_entries(text, start, end)
+    if not parent:
+        insertion = _inline_insertion_point(text, start, end, ())
+        assert insertion is not None
+        return insertion[0], insertion[1], (), False
+    for entry in entries:
+        if not _is_prefix(entry.key, parent):
+            if entry.key and parent[0] == entry.key[0]:
+                insertion = _inline_insertion_point(text, start, end, ())
+                assert insertion is not None
+                return insertion[0], insertion[1], parent, True
+            continue
+        if entry.key == parent:
+            return _inline_creation_point(
+                text,
+                entry.value_start,
+                entry.value_end,
+                (),
+            )
+        return _inline_creation_point(
+            text,
+            entry.value_start,
+            entry.value_end,
+            parent[len(entry.key) :],
+        )
+    insertion = _inline_insertion_point(text, start, end, ())
+    assert insertion is not None
+    return insertion[0], insertion[1], parent, False
+
+
+def _nested_inline_assignment(
+    missing_parent: tuple[str, ...],
+    leaf: str,
+    fragment: str,
+) -> str:
+    rendered = f"{_canonical_key(leaf)} = {fragment}"
+    for key in reversed(missing_parent):
+        rendered = f"{_canonical_key(key)} = {{ {rendered} }}"
+    return rendered
+
+
+def _inline_assignment(
+    text: str,
+    statements: tuple[TomlStatement, ...],
+    path: tuple[str, ...],
+) -> tuple[TomlStatement, tuple[str, ...]] | None:
+    candidates: list[tuple[TomlStatement, tuple[str, ...]]] = []
+    for statement in statements:
+        full_key = _full_key(statement)
+        if full_key is None or full_key == path or not _is_prefix(full_key, path):
+            continue
+        value = text[statement.value_start : statement.value_end].lstrip()
+        if value.startswith("{"):
+            candidates.append((statement, path[len(full_key) :]))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: len(_full_key(item[0]) or ()))
+
+
 def _table_statements(
     statements: tuple[TomlStatement, ...],
     path: tuple[str, ...],
@@ -481,8 +683,22 @@ def _unit_for_scope(
     if spec.kind == "key":
         statement = _assignment(statements, spec.path)
         if statement is None:
-            raise ControlPlaneError("selected TOML key is not independently addressable")
-        raw = text[statement.value_start : statement.value_end].encode()
+            inline = _inline_assignment(text, statements, spec.path)
+            span = (
+                None
+                if inline is None
+                else _inline_leaf_span(
+                    text,
+                    inline[0].value_start,
+                    inline[0].value_end,
+                    inline[1],
+                )
+            )
+            if span is None:
+                raise ControlPlaneError("selected TOML key is not independently addressable")
+            raw = text[span[0] : span[1]].encode()
+        else:
+            raw = text[statement.value_start : statement.value_end].encode()
     else:
         if not isinstance(value, dict):
             raise ControlPlaneError("selected TOML table scope does not name a table")
@@ -785,6 +1001,32 @@ def _append_tables(text: str, tables: list[tuple[str, str]], newline: str) -> st
     return updated
 
 
+def _dotted_key_insertion(
+    text: str,
+    statements: tuple[TomlStatement, ...],
+    path: tuple[str, ...],
+    fragment: str,
+) -> tuple[int, int, str] | None:
+    siblings = [
+        statement
+        for statement in statements
+        if statement.kind == "assignment"
+        and (full_key := _full_key(statement)) is not None
+        and full_key[:-1] == path[:-1]
+        and len(statement.key or ()) > 1
+    ]
+    if not siblings:
+        return None
+    anchor = max(siblings, key=lambda statement: statement.source_end)
+    relative = path[len(anchor.table) :]
+    newline = _newline(text)
+    return (
+        anchor.source_end,
+        anchor.source_end,
+        f"{_canonical_path(relative)} = {fragment}{newline}",
+    )
+
+
 class TomlAdapter:
     """Compose selected TOML keys and tables through bounded source splices."""
 
@@ -883,7 +1125,46 @@ class TomlAdapter:
                 if current is not _MISSING:
                     raise ControlPlaneError("TOML creation scope already exists")
                 if spec.kind == "key":
-                    new_keys.append((spec.path, fragment))
+                    inline = _inline_assignment(text, statements, spec.path)
+                    insertion = (
+                        None
+                        if inline is None
+                        else _inline_creation_point(
+                            text,
+                            inline[0].value_start,
+                            inline[0].value_end,
+                            inline[1][:-1],
+                        )
+                    )
+                    if insertion is not None:
+                        separator = ", " if insertion[1] else " "
+                        assignment = (
+                            f"{_canonical_path((*insertion[2], spec.path[-1]))} = {fragment}"
+                            if insertion[3]
+                            else _nested_inline_assignment(
+                                insertion[2],
+                                spec.path[-1],
+                                fragment,
+                            )
+                        )
+                        edits.append(
+                            (
+                                insertion[0],
+                                insertion[0],
+                                separator + assignment,
+                            )
+                        )
+                    elif (
+                        dotted := _dotted_key_insertion(
+                            text,
+                            statements,
+                            spec.path,
+                            fragment,
+                        )
+                    ) is not None:
+                        edits.append(dotted)
+                    else:
+                        new_keys.append((spec.path, fragment))
                 else:
                     new_tables.append((change.scope, fragment))
                 continue
@@ -896,17 +1177,33 @@ class TomlAdapter:
             if spec.kind == "key":
                 statement = _assignment(statements, spec.path)
                 if statement is None:
-                    raise ControlPlaneError("TOML update scope is not independently addressable")
-                interior = _preserved_comment_lines(
-                    text[statement.value_start : statement.value_end]
-                )
-                if interior:
-                    newline = _newline(text)
-                    line_start = text.rfind("\n", 0, statement.start) + 1
-                    indent = text[line_start : statement.start]
-                    block = "".join(f"{indent}{line}{newline}" for line in interior)
-                    edits.append((line_start, line_start, block))
-                edits.append((statement.value_start, statement.value_end, fragment))
+                    inline = _inline_assignment(text, statements, spec.path)
+                    span = (
+                        None
+                        if inline is None
+                        else _inline_leaf_span(
+                            text,
+                            inline[0].value_start,
+                            inline[0].value_end,
+                            inline[1],
+                        )
+                    )
+                    if span is None:
+                        raise ControlPlaneError(
+                            "TOML update scope is not independently addressable"
+                        )
+                    edits.append((span[0], span[1], fragment))
+                else:
+                    interior = _preserved_comment_lines(
+                        text[statement.value_start : statement.value_end]
+                    )
+                    if interior:
+                        newline = _newline(text)
+                        line_start = text.rfind("\n", 0, statement.start) + 1
+                        indent = text[line_start : statement.start]
+                        block = "".join(f"{indent}{line}{newline}" for line in interior)
+                        edits.append((line_start, line_start, block))
+                    edits.append((statement.value_start, statement.value_end, fragment))
             elif spec.kind == "keyed-set":
                 assert match is not None
                 selected = _keyed_entry_statements(statements, spec.path, match)

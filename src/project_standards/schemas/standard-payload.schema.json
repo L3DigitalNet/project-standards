@@ -446,6 +446,23 @@
           "title": "Affected",
           "type": "array"
         },
+        "configuration_transform": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^/(?:[^~/]|~[01])*(?:/(?:[^~/]|~[01])*)*$",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Transform"
+        },
         "from": {
           "pattern": "^(?:package:(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)|legacy:([a-z0-9]+(?:-[a-z0-9]+)*))$",
           "title": "From",

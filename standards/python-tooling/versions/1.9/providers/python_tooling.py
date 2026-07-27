@@ -798,6 +798,55 @@ _BOUNDED_TAKEOVER_SIGNATURES = {
 }
 
 
+def run_migrate_config(
+    request: Mapping[str, object],
+    _resources: Mapping[str, bytes],
+) -> dict[str, object]:
+    """Preserve the effective performance lane across the 1.9 default change."""
+    snapshots = _table(request.get("snapshots"), name="snapshots")
+    transform = _table(
+        snapshots.get("configuration_transform"),
+        name="snapshots.configuration_transform",
+    )
+    raw_config = _table(
+        transform.get("raw_config"),
+        name="snapshots.configuration_transform.raw_config",
+    )
+    copied = _json_value(raw_config)
+    if not isinstance(copied, dict):
+        raise ValueError("configuration transform raw config must be an object")
+    config = cast("dict[str, object]", copied)
+
+    effective_ci = _section(_config(request), "ci")
+    enabled = effective_ci.get("enabled")
+    performance = effective_ci.get("performance")
+    if not isinstance(enabled, bool) or not isinstance(performance, bool):
+        raise ValueError("config.ci values must be booleans")
+
+    recognized: list[str] = []
+    raw_ci = config.get("ci")
+    if raw_ci is not None and not isinstance(raw_ci, dict):
+        raise ValueError("raw config.ci must be an object")
+    if enabled and performance and (raw_ci is None or "performance" not in raw_ci):
+        ci: dict[str, object] = {} if raw_ci is None else cast("dict[str, object]", raw_ci)
+        ci["performance"] = True
+        config["ci"] = ci
+        recognized.append("/ci/performance")
+
+    return {
+        "schema_version": "1.0",
+        "package": {
+            "standard_id": "python-tooling",
+            "version": "1.9",
+            "selector": transform.get("selector"),
+            "config": config,
+            "recognized_settings": recognized,
+        },
+        "claims": [],
+        "findings": [],
+    }
+
+
 def run_migrate(
     request: Mapping[str, object],
     _resources: Mapping[str, bytes],

@@ -18,10 +18,13 @@ from project_standards.control_plane.resolution import (
     ResolutionPayload,
     ResolutionRequest,
     TrackTransitionKind,
+    project_source_effective_config,
     resolve_packages,
+    validate_source_transform_values,
 )
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.paths import PackageVersion
-from project_standards.package_contract.payload import PackageOptionSchema
+from project_standards.package_contract.payload import JsonValue, PackageOptionSchema
 
 _DIGEST_A = f"sha256:{'a' * 64}"
 _DIGEST_B = f"sha256:{'b' * 64}"
@@ -47,6 +50,19 @@ def _option_schema(
                 },
                 "mode": {"type": "string", "enum": ["strict", "relaxed"]},
             },
+        },
+    )
+
+
+def _projection_schema(properties: dict[str, JsonValue]) -> PackageOptionSchema:
+    return PackageOptionSchema(
+        standard_id="demo",
+        raw_bytes=b"{}",
+        document={
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": False,
+            "properties": properties,
         },
     )
 
@@ -601,6 +617,218 @@ def test_invalid_selected_payload_options_fail_without_echoing_values() -> None:
         resolve_packages(_request(desired=_desired(config={"mode": "private-value"})))
 
     assert "private-value" not in str(exc_info.value)
+
+
+def test_project_source_effective_config__direct_objects__recurse_before_defaults() -> None:
+    source = _projection_schema(
+        {
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean"},
+                    "mode": {"type": "string", "default": "stable"},
+                },
+            }
+        }
+    )
+    target = _projection_schema(
+        {
+            "ci": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "performance": {"type": "boolean"},
+                    "mode": {"type": "string", "default": "stable"},
+                    "retry_budget": {"type": "integer"},
+                },
+            }
+        }
+    )
+
+    assert project_source_effective_config(
+        {"ci": {"performance": False, "retry_budget": 2}},
+        source,
+        target,
+    ) == {"ci": {"performance": False, "mode": "stable"}}
+
+
+def test_project_source_effective_config__target_only_root_key__omits_key() -> None:
+    source = _projection_schema({"mode": {"type": "string"}})
+    target = _projection_schema(
+        {
+            "mode": {"type": "string"},
+            "successor_option": {"type": "boolean"},
+        }
+    )
+
+    assert project_source_effective_config(
+        {"mode": "stable", "successor_option": True},
+        source,
+        target,
+    ) == {"mode": "stable"}
+
+
+def test_project_source_effective_config__target_only_enum_scalar__uses_source_default() -> None:
+    source = _projection_schema(
+        {
+            "mode": {
+                "type": "string",
+                "enum": ["stable"],
+                "default": "stable",
+            }
+        }
+    )
+    target = _projection_schema(
+        {
+            "mode": {
+                "type": "string",
+                "enum": ["stable", "turbo"],
+                "default": "turbo",
+            }
+        }
+    )
+
+    assert project_source_effective_config({"mode": "turbo"}, source, target) == {"mode": "stable"}
+
+
+def test_validate_source_transform_values__target_only_enum__fails_closed() -> None:
+    source = _projection_schema(
+        {
+            "mode": {
+                "type": "string",
+                "enum": ["stable"],
+                "default": "stable",
+            }
+        }
+    )
+
+    with pytest.raises(PackageContractError, match="invalid under the source schema"):
+        validate_source_transform_values(
+            {"mode": "turbo"},
+            ("/mode",),
+            source,
+        )
+
+
+def test_project_source_effective_config__source_valid_atomic_collection__is_preserved() -> None:
+    source = _projection_schema(
+        {
+            "additional_source_roots": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+            }
+        }
+    )
+    target = _projection_schema(
+        {
+            "additional_source_roots": {
+                "type": "array",
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {"path": {"type": "string"}},
+                            "required": ["path"],
+                        },
+                    ]
+                },
+                "default": [],
+            }
+        }
+    )
+
+    assert project_source_effective_config(
+        {"additional_source_roots": ["src"]},
+        source,
+        target,
+    ) == {"additional_source_roots": ["src"]}
+
+
+def test_project_source_effective_config__source_invalid_collection__omits_whole_key() -> None:
+    source = _projection_schema(
+        {
+            "additional_source_roots": {
+                "type": "array",
+                "items": {"type": "string"},
+                "default": [],
+            }
+        }
+    )
+    target = _projection_schema(
+        {
+            "additional_source_roots": {
+                "type": "array",
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {"path": {"type": "string"}},
+                            "required": ["path"],
+                        },
+                    ]
+                },
+                "default": [],
+            }
+        }
+    )
+
+    assert project_source_effective_config(
+        {"additional_source_roots": ["src", {"path": "generated"}]},
+        source,
+        target,
+    ) == {"additional_source_roots": []}
+
+
+def test_project_source_effective_config__required_source_key__still_fails_closed() -> None:
+    source = _projection_schema({"mode": {"type": "string"}})
+    source.document["required"] = ["mode"]
+    target = _projection_schema(
+        {
+            "mode": {
+                "oneOf": [
+                    {"type": "string"},
+                    {"type": "integer"},
+                ]
+            }
+        }
+    )
+
+    with pytest.raises(PackageContractError, match="package options violate schema"):
+        project_source_effective_config({"mode": 1}, source, target)
+
+
+def test_project_source_effective_config__remaining_cross_constraint__fails_closed() -> None:
+    source = _projection_schema(
+        {
+            "mode": {"type": "string", "default": "stable"},
+            "flag": {"type": "boolean", "default": False},
+        }
+    )
+    source.document["allOf"] = [
+        {
+            "if": {"properties": {"flag": {"const": True}}},
+            "then": {"properties": {"mode": {"const": "turbo"}}},
+        }
+    ]
+    target = _projection_schema(
+        {
+            "mode": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
+            "flag": {"type": "boolean", "default": False},
+        }
+    )
+
+    with pytest.raises(PackageContractError, match="package options violate schema"):
+        project_source_effective_config(
+            {"mode": 1, "flag": True},
+            source,
+            target,
+        )
 
 
 def test_resolution_is_deterministic_across_input_order_permutations() -> None:

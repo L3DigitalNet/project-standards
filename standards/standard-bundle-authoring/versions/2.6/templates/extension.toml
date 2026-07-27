@@ -1,0 +1,7 @@
+# The bound option must be a path string in config.schema.json.
+[[extensions]]
+id = "extra-rules"
+option = "extra_rules_file"
+media_type = "application/toml"
+path_policy = "repository-relative"
+preferred_root = ".standards/extensions/example-standard/"

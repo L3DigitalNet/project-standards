@@ -126,8 +126,8 @@ def test_planner_composes_complete_virtual_tree_and_next_lock(tmp_path: Path) ->
     assert [request.provider_id for request in plan.verification_requests] == ["verify-alpha"]
     assert len(plan.preconditions) == 3
     public = plan.to_jsonable()
-    assert public["schema_version"] == "1.2"
-    assert ReconciliationPlanSchema.model_validate(public).schema_version == "1.2"
+    assert public["schema_version"] == "1.3"
+    assert ReconciliationPlanSchema.model_validate(public).schema_version == "1.3"
     assert json.dumps(public, sort_keys=True)
     assert "alpha\\n" not in json.dumps(public, sort_keys=True)
     assert (repo / "tools/alpha.py").exists() is False
