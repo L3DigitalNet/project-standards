@@ -33,8 +33,8 @@ from project_standards.package_contract.repository import (
 from project_standards.standards_graph import StandardsGraph, render_catalog
 
 _ROOT = Path(__file__).resolve().parents[2]
-_BASELINE_REF = "v5.8.0"
-_RELEASE_VERSION = "5.9.0"
+_BASELINE_REF = "v5.9.0"
+_RELEASE_VERSION = "5.10.0"
 
 
 def _repository() -> PackageRepository:
@@ -106,7 +106,7 @@ def _target_role(payload: LoadedPayload) -> CatalogRole:
     return CatalogRole.INTERNAL
 
 
-def test_catalog_activation__five_staged_successors__become_canonical_rows() -> None:
+def test_catalog_activation__four_staged_successors__become_canonical_rows() -> None:
     repository = _repository()
     targets = _activation_targets(repository)
     entries = _catalog_entries(repository)
