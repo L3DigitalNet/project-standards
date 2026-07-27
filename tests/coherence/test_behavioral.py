@@ -16,6 +16,13 @@ _MDLINT_CFG = str(_REPO / ".markdownlint.json")
 _SUCCESSOR_MDLINT_CFG = str(
     _REPO / "standards/markdown-tooling/versions/1.9/resources/markdownlint.json"
 )
+# Issue #64's pre-fix rule set (MD060 enabled). Used only to prove the corpus
+# still contains a case that rule actually rejected — a narrower table would let
+# Prettier pad the empty cell, and the co-satisfaction tests above would pass for
+# the wrong reason.
+_PRE_FIX_MDLINT_CFG = str(
+    _REPO / "standards/markdown-tooling/versions/1.8/resources/markdownlint.json"
+)
 
 pytestmark = pytest.mark.skipif(
     not (_BIN / "prettier").exists() or not (_BIN / "markdownlint-cli2").exists(),
@@ -65,3 +72,14 @@ def test_prettier_lint_sequence_is_a_fixed_point(tmp_path: Path, markdownlint_co
     assert result.returncode == 0, result.stderr.decode()
     _prettier_write(work)
     assert work.read_text(encoding="utf-8") == once
+
+
+def test_corpus_still_reproduces_the_md060_empty_first_cell_conflict(tmp_path: Path) -> None:
+    """Issue #64: the empty-first-cell row must stay a case the old rule set rejected."""
+    work = tmp_path / "adversarial.md"
+    work.write_text((_CORPUS / "adversarial.md").read_text(encoding="utf-8"), encoding="utf-8")
+    _prettier_write(work)
+    result = _markdownlint(work, _PRE_FIX_MDLINT_CFG)
+    assert result.returncode == 1, result.stdout.decode()
+    # markdownlint-cli2 writes findings to stderr and only the banner to stdout.
+    assert b"MD060/table-column-style" in result.stderr
