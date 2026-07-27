@@ -1,15 +1,15 @@
 [project_standards]
 schema_version = "1.1"
 catalog = "5"
-release = "5.10.0"
-catalog_digest = "sha256:0661e4552e30735581979db2d67f85ea882ab98d20bbae5cf11512a46023027c"
+release = "5.11.0"
+catalog_digest = "sha256:492b1cc8a18b5e14974282bd8a797f27595398c27ad983a0934bdfc4562876e9"
 config_digest = "sha256:51508f54e3491379b4883ebf856fe9480d25fa914b9c04c486b345bab0e5e090"
 
 [standards.adr]
 requested = "latest"
-resolved = "1.2"
+resolved = "1.3"
 selection = "stable"
-payload_digest = "sha256:5b36e6f63a2477f2c7c5bcef647edc8b674366eb64937aba646aefc65d8a6f21"
+payload_digest = "sha256:6c5d8da41c80658cb701b5aedd17a93149aab5e8dab4caa58f8e0047bf645d1f"
 effective_config_digest = "sha256:7ddd7f39d1a9bff9867c1cfd91e6abb614e4e1efecf3574789161ff92c89dd38"
 
 [standards.agent-handoff]
@@ -21,9 +21,9 @@ effective_config_digest = "sha256:7d8ffcf355d1948151d6988e6b8cb809fcbeae2cc28cd3
 
 [standards.cli-documentation]
 requested = "latest"
-resolved = "1.4"
+resolved = "1.5"
 selection = "stable"
-payload_digest = "sha256:8c2f1e9cd6538954d8ace67146133c6864a149ae0a1a97d6aba75560d5ecf346"
+payload_digest = "sha256:90bd59f457ec467da0990bbf89667f534753768be79530c7bfdde9c791d3b618"
 effective_config_digest = "sha256:f468155ebc87979f1dbad12ae07ad3424eaf9122664df42d3e388078c1974cdc"
 
 [standards.markdown-frontmatter]
@@ -42,9 +42,9 @@ effective_config_digest = "sha256:fb54c8fbbf984f1e474f0409d04b062ddcb595b87996f7
 
 [standards.project-spec]
 requested = "latest"
-resolved = "1.4"
+resolved = "1.5"
 selection = "stable"
-payload_digest = "sha256:8ea9d9a5f82156c1f177defa4bd78d5f55693013ced2ab9d07cabce63969e845"
+payload_digest = "sha256:e4286963cf591e3ee1454e5be317519b6610d3257dc61eb08de489d47ba407e1"
 effective_config_digest = "sha256:e5676de1c1332aec8dbedc2275b36b8b4fa914831da459febda2170b2ed99247"
 
 [standards.python-tooling]
@@ -392,7 +392,7 @@ path = ".github/workflows/validate-specs.yml"
 adapter = "whole-file"
 scope = "$file"
 owners = ["project-spec"]
-versions = { project-spec = "1.4" }
+versions = { project-spec = "1.5" }
 provenance = "provider"
 policy = "managed"
 semantic_digest = "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
@@ -1020,7 +1020,7 @@ path = "docs/adr/adr.template.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["adr"]
-versions = { adr = "1.2" }
+versions = { adr = "1.3" }
 provenance = "source"
 policy = "create-only"
 semantic_digest = "sha256:f6ac2567ea1116a1596ecf0477f194d8ad360401e06a64f6a5d2f1b09f3135d7"
@@ -1128,7 +1128,7 @@ path = "docs/usage.md"
 adapter = "whole-file"
 scope = "$file"
 owners = ["cli-documentation"]
-versions = { cli-documentation = "1.4" }
+versions = { cli-documentation = "1.5" }
 provenance = "provider"
 policy = "create-only"
 semantic_digest = "sha256:0f8bb12cae59b92623c6d1015225323033b7ab897faa82d6ada5602bdb57f6ef"
