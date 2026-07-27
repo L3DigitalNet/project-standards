@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from project_standards.cli import main
-from project_standards.package_contract import PackageContractError
+from project_standards.package_contract import PackageContractError, PackageFinding
 from project_standards.package_contract import cli as package_cli
 from project_standards.package_contract.cli import run_packages, run_standards
 from project_standards.package_contract.repository import (
@@ -366,6 +366,21 @@ def test_packages_check_release_uses_tagged_baseline(
     _create_released_fixture(repository)
     monkeypatch.setattr(package_cli, "package_version", lambda: "5.2.1")
 
+    def no_consistency_findings(
+        _root: Path,
+        _repository: PackageRepository,
+        *,
+        distribution_version: str,
+    ) -> tuple[PackageFinding, ...]:
+        del distribution_version
+        return ()
+
+    monkeypatch.setattr(
+        package_cli,
+        "validate_release_consistency",
+        no_consistency_findings,
+    )
+
     assert run_packages(["check-release", "--root", str(repository), "--baseline", "v5.2.0"]) == 0
     assert "patch" in capsys.readouterr().out
 
@@ -384,6 +399,70 @@ def test_packages_check_release_uses_tagged_baseline(
     )
     payload = json.loads(capsys.readouterr().out)
     assert payload["classification"] == "patch"
+
+
+def test_packages_check_release_stops_on_candidate_consistency_findings(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.2.1")
+    finding = PackageFinding(
+        code="PC-RELEASE-PROJECT-VERSION",
+        severity="error",
+        standard_id="project-standards",
+        version="5.2.0",
+        path="README.md",
+        identity="line:1:project-release",
+        message="release-current project version is stale",
+        hint="refresh release-current prose",
+    )
+
+    def stale_consistency_finding(
+        _root: Path,
+        _repository: PackageRepository,
+        *,
+        distribution_version: str,
+    ) -> tuple[PackageFinding, ...]:
+        del distribution_version
+        return (finding,)
+
+    monkeypatch.setattr(
+        package_cli,
+        "validate_release_consistency",
+        stale_consistency_finding,
+    )
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["findings"] == [
+        {
+            "code": finding.code,
+            "severity": finding.severity,
+            "standard_id": finding.standard_id,
+            "version": finding.version,
+            "path": finding.path,
+            "identity": finding.identity,
+            "message": finding.message,
+            "hint": finding.hint,
+        }
+    ]
 
 
 def test_top_level_dispatch_and_help_preserve_existing_groups(

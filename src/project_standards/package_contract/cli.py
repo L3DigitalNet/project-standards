@@ -34,6 +34,9 @@ from project_standards.package_contract.release import (
     classify_catalog_diff,
     load_git_release_snapshot,
 )
+from project_standards.package_contract.release_consistency import (
+    validate_release_consistency,
+)
 from project_standards.package_contract.repository import (
     PackageRepository,
     build_package_repository,
@@ -352,6 +355,13 @@ def _run_check_release(argv: list[str]) -> int:
         graph_findings = validate_package_graph(repository)
         if graph_findings:
             return _emit_findings(graph_findings, json_mode=json_mode)
+        consistency_findings = validate_release_consistency(
+            root,
+            repository,
+            distribution_version=current_version,
+        )
+        if consistency_findings:
+            return _emit_findings(consistency_findings, json_mode=json_mode)
         previous = load_git_release_snapshot(root, baseline, previous_major)
         result = classify_catalog_diff(
             previous,

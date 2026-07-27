@@ -12,12 +12,12 @@ This is the Catalog 5 family landing page for the active consumer package `proje
 
 ## Use this standard when
 
-Use Light, Standard, or Full specifications for durable project, feature, or subsystem requirements and design. Package 1.2 provides stable canonical sections, typed identifiers, deterministic validation and linting, provider-backed scaffold and upgrade plans, and a managed validation workflow. Consumer-authored specifications remain consumer-owned.
+Use Light, Standard, or Full specifications for durable project, feature, or subsystem requirements and design. Package 1.4 provides stable canonical sections, typed identifiers, deterministic validation and linting, provider-backed scaffold and upgrade plans, and a managed validation workflow. Consumer-authored specifications remain consumer-owned.
 
 ## Adopt
 
 ```bash
-project-standards standards enable project-spec --version 1.2
+project-standards standards enable project-spec --version 1.4
 project-standards reconcile
 project-standards reconcile --apply
 ```

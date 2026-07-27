@@ -5,7 +5,7 @@ The current consumer package is [`project-spec@1.4`](versions/1.4/adopt.md). Use
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable project-spec --version 1.2
+project-standards standards enable project-spec --version 1.4
 project-standards reconcile
 project-standards reconcile --apply
 ```
