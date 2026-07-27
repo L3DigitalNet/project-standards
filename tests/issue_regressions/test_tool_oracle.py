@@ -11,6 +11,7 @@ from tests.issue_regressions.tool_oracle import (
     markdownlint,
     markdownlint_findings,
     prettier_differences,
+    prettier_workflow,
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +51,26 @@ def test_prettier_oracle_keeps_json_and_jsonc_as_distinct_probes(tmp_path: Path)
     assert {
         path.name: path.read_bytes() for path in (tmp_path / "probe.json", tmp_path / "probe.jsonc")
     } == formatted
+
+
+def test_prettier_workflow__forced_color_parent__returns_plain_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "probe.md").write_text("# Title\n\n-   item\n", encoding="utf-8")
+    caller = tmp_path / "format.caller.yml"
+    caller.write_text(
+        'jobs:\n  format:\n    with:\n      globs: "**/*.md"\n      exclusions: ""\n',
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+
+    outcome = prettier_workflow(_ROOT, tmp_path, caller)
+
+    assert outcome.returncode == 1
+    assert "\x1b[" not in outcome.output
+    assert "[warn] probe.md" in outcome.output
 
 
 def test_markdown_directive_and_table_oracles_record_pinned_baseline(

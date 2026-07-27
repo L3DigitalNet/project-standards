@@ -594,15 +594,18 @@ references = [
     "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal",
     "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged",
 ]
-amendments = []
+amendments = [
+    { approved_by = "Codex independent review", date = "2026-07-27", new_digest = "sha256:a1b6155417dd43b6e3cde7bed8f1d2cc7ac267b20d951125a8b94a273e9476f1", new_symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal", old_digest = "sha256:13ddc44001d0871d99cc1df998c7fb6eb3792fb184cea08bae2802dd55327601", old_symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal", reason = "make reusable-format oracle output color-independent without changing the exclusion contract", requirement = "DR-002" },
+    { approved_by = "Codex independent review", date = "2026-07-27", new_digest = "sha256:ff9073a410fdb9f26bd4ee6c200930137488d73330a736a57b7e0e14442d426b", new_symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged", old_digest = "sha256:754b570c0cce12aa90fc6e33e452c7f87c44d2716e2fa9d19174aa3dfe54e933", old_symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged", reason = "make reusable-format oracle output color-independent without changing the immutable-predecessor contract", requirement = "DR-002" },
+]
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_pinned_effective_sets__provider_workflow_and_tools__remain_equal"
-digest = "sha256:13ddc44001d0871d99cc1df998c7fb6eb3792fb184cea08bae2802dd55327601"
+digest = "sha256:a1b6155417dd43b6e3cde7bed8f1d2cc7ac267b20d951125a8b94a273e9476f1"
 
 [[issues.proofs]]
 symbol = "tests/package_contract/test_markdown_tooling_exclusions.py::test_t9_unmigrated_1_8_fixture__shared_v5_workflow_outcomes__stay_unchanged"
-digest = "sha256:754b570c0cce12aa90fc6e33e452c7f87c44d2716e2fa9d19174aa3dfe54e933"
+digest = "sha256:ff9073a410fdb9f26bd4ee6c200930137488d73330a736a57b7e0e14442d426b"
 
 [[issues]]
 id = "GH-48"

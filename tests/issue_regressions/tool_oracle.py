@@ -266,9 +266,13 @@ def prettier_workflow(
         {
             "FORMAT_GLOBS": globs,
             "FORMAT_EXCLUSIONS": exclusions,
+            # ANSI escapes inside "[warn]" make the parsed selection depend on
+            # runner color policy instead of the workflow's file matching.
+            "NO_COLOR": "1",
             "npm_config_offline": "true",
         }
     )
+    environment.pop("FORCE_COLOR", None)
     try:
         completed = subprocess.run(
             ["bash", "-c", cast("str", check["run"])],
