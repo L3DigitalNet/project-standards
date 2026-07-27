@@ -16,7 +16,28 @@ from project_standards.specs.registry import (
 )
 
 _ANGLE = re.compile(r"<[^>\n]+>")
+_INLINE_CODE = re.compile(r"`+[^`]*`+")
+# A code span that is nothing but one angle group is how the shipped templates write
+# their own fields (`<capability>`, `<owner>`), so it stays visible to the scan;
+# blanket-masking inline code would silence this rule on an entirely unfilled template.
+# Anything else in the span makes the angle group domain notation instead — a
+# metavariable (`test_<unit>_<scenario>`) or generic call shape (`_Probe(<base>)`).
+_CODE_FIELD = re.compile(r"`+\s*<[^<>\n]+>\s*`+")
+# GFM autolinks are valid Markdown, and are the fix markdownlint's MD034 prescribes for
+# a bare URL; flagging them would put the two managed linters in direct conflict.
+_AUTOLINK = re.compile(r"<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:|[^<>\s@]+@)[^<>\s]*>")
 _GUIDANCE = "> **Template instructions"
+
+
+def _placeholder_angles(line: str) -> bool:
+    """Report whether a line holds an angle pair that is neither notation nor a link."""
+    # Masked to spaces, not deleted, so a removed span cannot join the text on either
+    # side of it into an angle pair that was never written.
+    visible = _INLINE_CODE.sub(
+        lambda m: m.group(0) if _CODE_FIELD.fullmatch(m.group(0)) else " " * len(m.group(0)),
+        line,
+    )
+    return any(not _AUTOLINK.fullmatch(m.group(0)) for m in _ANGLE.finditer(visible))
 
 
 def _w(code: str, message: str, line: int | None = None, locus: str | None = None) -> Finding:
@@ -28,7 +49,7 @@ def lint_document(doc: SpecDocument, reg: Registry) -> list[Finding]:
     out: list[Finding] = []
     structural_body = _masked_structural_view(doc.body)
     for i, line in enumerate(structural_body.splitlines(), start=1):
-        if _ANGLE.search(line):
+        if _placeholder_angles(line):
             out.append(_w("SL-PLACEHOLDER", "unfilled <angle-bracket> placeholder", line=i))
         if line.lstrip().startswith(_GUIDANCE):
             out.append(_w("SL-GUIDANCE", "template guidance not deleted", line=i))

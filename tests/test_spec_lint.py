@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from project_standards.specs.commands.lint import lint_document
 from project_standards.specs.document import parse_document
 from project_standards.specs.registry import load_registry
@@ -106,6 +108,44 @@ def test_fenced_placeholders_and_guidance_are_not_linted() -> None:
     codes = {finding.code for finding in lint_document(doc, load_registry())}
 
     assert codes.isdisjoint({"SL-PLACEHOLDER", "SL-GUIDANCE"})
+
+
+def _placeholder_lines(body: str) -> list[int | None]:
+    doc = parse_document("angles.md", "# Demo\n" + body)
+    return [f.line for f in lint_document(doc, load_registry()) if f.code == "SL-PLACEHOLDER"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Test names follow `test_<unit>_<scenario>_<expected>`.",
+        "Generic class-pattern notation is `_Probe(<base>)`.",
+        "The message contract is `got <type>`.",
+        "Qt notation is `self.<signal>.emit(payload)`.",
+        "See the docs (<https://docs.python.org/3/library/typing.html#typing.get_args>).",
+        "Contact <mailto:user@example.com> for access.",
+        "Contact <user@example.com> for access.",
+    ],
+)
+def test_inline_code_and_autolinks_are_not_placeholders(line: str) -> None:
+    assert _placeholder_lines(line + "\n") == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Owner is <owner>.",
+        "Approved on <date> by the reviewer.",
+        "The autolink <https://example.com> sits beside <owner>.",
+        "Mixed `code` and a bare <placeholder> here.",
+        # The shipped templates write every field as a whole code span, so a span that
+        # holds nothing but an angle group stays a template field, not notation.
+        "This project provides `<capability>` for `<user/system>`.",
+        "| 0.1 | `<YYYY-MM-DD>` | `<author>` | Initial draft |",
+    ],
+)
+def test_real_placeholders_are_still_flagged(line: str) -> None:
+    assert _placeholder_lines(line + "\n") == [2]
 
 
 def test_fenced_traceability_example_does_not_satisfy_mapping() -> None:
