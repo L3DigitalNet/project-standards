@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import tomllib
 import zipfile
 from collections import Counter
 from pathlib import Path
@@ -1457,3 +1458,21 @@ source-include = ["standards/**"]
 
     assert wheel_files == source_files
     _assert_local_markdown_links_stay_within_payload(installed / prefix)
+
+
+def test_markdown_frontmatter_1_6__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in catalog["packages"]
+        if package["id"] == "markdown-frontmatter"
+    }
+
+    assert roles["1.6"] == "default"
+    assert roles["1.5"] == "retained"

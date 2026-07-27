@@ -274,3 +274,21 @@ def test_option_schema__declares_the_documented_opt_out(option: str) -> None:
     resolved = _options(_V110, {})
     assert resolved[option] is True
     assert _options(_V110, {option: False})[option] is False
+
+
+def test_markdown_tooling_1_10__catalog_role__selects_the_successor_as_default() -> None:
+    """Catalog 5 must actually select the successor these tests pin.
+
+    The payload can be complete and valid while the catalog still selects its
+    predecessor; only this row makes the successor the default a consumer on
+    `version = "latest"` resolves to.
+    """
+    catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
+    roles = {
+        package["version"]: package["role"]
+        for package in catalog["packages"]
+        if package["id"] == "markdown-tooling"
+    }
+
+    assert roles["1.10"] == "default"
+    assert roles["1.9"] == "retained"
