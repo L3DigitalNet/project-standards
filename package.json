@@ -10,5 +10,8 @@
 	"devDependencies": {
 		"markdownlint-cli2": "0.23.1",
 		"prettier": "3.8.3"
+	},
+	"overrides": {
+		"js-yaml": "5.2.2"
 	}
 }
