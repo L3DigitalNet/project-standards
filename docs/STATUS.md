@@ -2,17 +2,17 @@
 
 ## Current snapshot
 
-- Project Standards 5.10.0 is published at `4caeb1046342f14078c5aad61254d5751900511d`; signed `v5.10.0`/`v5` refs and the Latest GitHub release are live.
-- Wheel SHA-256 `c51d1e7829d121dd7eb9aa0c00b393e421835e04e02337c06a15fc7da435c936` and sdist SHA-256 `7b44fdb69673d8e150b9690fe7ce67167b08d3bafc90475252aaa048c9f8bf80` match.
-- All nine release-commit workflow runs passed, including `Check` run `30292732694`.
-- Exact 5.10.0 verification passes 3,828 ordinary tests, 133 compatibility rows, 5 performance tests, and 91% branch coverage, with strict Ruff/BasedPyright, clean dependency audits, and MINOR classification against `v5.9.0`.
-- Issues #50–#54, #56–#61, and #63–#69 are closed with release evidence.
-- #64 was already fixed in Markdown Tooling 1.9 and is now regression-pinned; #67 closed as consumer-owned content with no code change.
-- Issues #55, #62, and #69's configurable-threshold request stay deferred as new capability requests; tracking issues #70–#74 are open.
-- Catalog 5 promotes Python Tooling 1.10, Markdown Tooling 1.10, Agent Handoff 1.6, and Markdown Frontmatter 1.6; CLI Documentation, Project Specification, and ADR are unchanged.
-- Where 5.9.0 corrected what the tooling generated, 5.10.0 corrects what it reports.
-- Corrected surfaces: specification validation and strict lint, `standards show` digests, the migration hint, create-only removal planning, and Agent Handoff shape checks.
-- Every predecessor remains byte-identical and selectable. `packages check-release --baseline v5.9.0` classifies the release as minor with no findings.
+- Project Standards 5.11.0 is published at `ab7563585161a67ee9d8d219e752f947766a274b`; signed `v5.11.0` tag (GPG `9375AFEFA6F841B0`, verified GOODSIG), force-moved `v5` tag, and the Latest GitHub release are live.
+- Wheel SHA-256 `53e93aa6…` and sdist SHA-256 `4c3b36b2…` match the qualified bytes.
+- All nine release-commit workflow runs passed; `Check` completed in roughly 41 minutes.
+- Issues #70–#74 are closed with release references: create-only deletion drift explained with apply convergence (#70, `b5f4014`/`f476c41`), engine `shape.defaults` fallback resolved (#71, `c8c192b`), masked-view parity for `max_rule_summary_chars`/`require_tables_or_bullets` (#73, `c8c192b`/`772d3a1`), `standards show` fallback-basis disclosure (#74, `8b2b80f`/`772d3a1`), and adr 1.3/cli-documentation 1.5/project-spec 1.5 dropping mutable release links (#72, `984acff`).
+- Verified by two rounds of internal adversarial review (round 1 refuted `b5f4014`'s executor skip, round 2 confirmed the `f476c41` rework) plus an external Codex review of 4 findings (1 already-fixed, 3 accepted and fixed in `772d3a1`).
+- Issues #55 and #62 remain open-deferred; new trackers #75 (enrichment FIFO mispairing), #76 (planner policy-transition asymmetry), and #77 (CREATE-side truthiness for empty managed artifacts) were filed from review discoveries.
+- Consumer-facing behavior: `shape.defaults` now applies on the provider-less legacy route, and paragraphs over 360 characters in fatal-severity docs (e.g. `docs/TODO.md`) can now block `validate`.
+- Every predecessor remains byte-identical and selectable.
+- Post-release, `96b21bd` overrides `js-yaml` to `5.2.2` for a Dependabot high-severity DoS advisory, keeping `markdownlint-cli2` at `0.23.1` for action alignment until `markdownlint-cli2-action` ships `>=0.23.2`.
+- Project Standards 5.10.0 was published at `4caeb104`; its signed tag and byte-verified wheel (`c51d1e78…936`) and sdist (`7b44fdb6…f80`) assets remain live.
+- Issues #50–#54, #56–#61, and #63–#69 closed with release evidence; #64 was already fixed in Markdown Tooling 1.9 and is now regression-pinned; #67 closed as consumer-owned content with no code change.
 - SPEC-VFCT rev 0.3 is implemented and released under the MCP-hold exception; it was implemented directly against the specification with no separate plan document.
 - Project Standards 5.9.0 was published at `7e63055`; its signed tag and byte-verified wheel (`3c38ba98…f729`) and sdist (`91748772…59a1`) assets remain live.
 - The 5.9.0 release-commit `Check` false negative was resolved by test-only `cb5ba6d` without changing release bytes; issues #32 and #35–#49 are closed.
@@ -28,7 +28,7 @@
 - The consumer-documentation drift audit anchored to pre-remediation commit `88a6f88` is closed: all 17 documentation findings (1 high, 11 medium, 5 low) and all 3 implementation bugs have verified outcomes in `docs/reviews/2026-07-21-project-standards-drift.md`. Released payload bytes remain unchanged.
 - Project Standards 5.3.1 publishes all 24 accepted code-simplification findings as a PATCH release: shared schema, package, control-plane, CLI, sync, Agent Handoff, adapter, and specification logic replace verified duplicate implementations without changing accepted inputs, consumer outcomes, package or catalog selections, schemas, workflows, or immutable payloads. `packages check-release --baseline v5.3.0` reports `patch` with no findings.
 - Catalog 5 contains seven consumer packages plus reference-only Python Coding 0.6.
-- Current defaults are ADR 1.2, Agent Handoff 1.6, CLI Documentation 1.4, Markdown Frontmatter 1.6, Markdown Tooling 1.10, Project Specification 1.4, and Python Tooling 1.10.
+- Current defaults are ADR 1.3, Agent Handoff 1.6, CLI Documentation 1.5, Markdown Frontmatter 1.6, Markdown Tooling 1.10, Project Specification 1.5, and Python Tooling 1.10.
 - Internal Standard Bundle Authoring 2.6 is advertised but not consumer-selectable. Every superseded payload remains advertised.
 - Exact 5.5.0 verification passes 3,139 ordinary tests, all 83 catalog-derived compatibility rows, 5 performance tests, 90% branch coverage, strict Ruff/BasedPyright checks, package graph/schema/projection/catalog and MINOR-classification checks, 8 coherence tests, dogfood and Agent Handoff validation, and Python and Node dependency audits with no known vulnerabilities. Downloaded wheel (`bebc096f…c6e5a`) and sdist (`7e1f2792…96e9`) assets match the qualified bytes exactly.
 - Exact 5.4.0 verification passes 3,066 ordinary tests, all 80 catalog-derived compatibility rows, 5 performance tests, 90% branch coverage, strict Ruff/BasedPyright checks, package graph/schema/projection/catalog and MINOR-classification checks, 8 coherence tests, dogfood and Agent Handoff validation, and Python and Node dependency audits with no known vulnerabilities. All eight release-commit workflows passed, including `Check` run `29883365570`; downloaded wheel (`2915f4ce…a2e39`) and sdist (`d9bcfe3e…bac87`) assets match exactly.
