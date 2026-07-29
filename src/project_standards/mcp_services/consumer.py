@@ -207,7 +207,7 @@ def inspect_repo(distribution: InstalledDistribution, repo_root: Path) -> RepoIn
         desired_config=_projected(state.config),
         consumer_catalog=_projected(state.catalog),
         central_lock=_projected(state.lock),
-        findings=tuple(_finding(item) for item in _state_findings(state)),
+        findings=tuple(map_finding(item) for item in _state_findings(state)),
     )
 
 
@@ -316,24 +316,31 @@ def _state_path(state: ControlPlaneState) -> str | None:
 def _projected(model: Any) -> StableJson | None:
     if model is None:
         return None
-    return _stable(model.model_dump(mode="json"))
+    return stable_json(model.model_dump(mode="json"))
 
 
-def _stable(value: object) -> StableJson:
+def stable_json(value: object) -> StableJson:
     """Normalize one authoritative projection into the immutable JSON tree.
 
     The authoritative serializers emit dataclass projections that still contain
     tuples, so this pass is what makes the preview's declared type honest — and
     it deep-freezes every sequence on the way through.
+
+    Mapping keys are sorted (DR-009's "explicit documented key"). A JSON object
+    has no declared order, and insertion order is not a stable fact: a producer
+    that builds a mapping by iterating a set yields a hash-seed-dependent order
+    that survives a JSON round trip, so two interpreters would serialize the
+    same value differently (T4.4 Codex GREEN review, finding 7). Sequences keep
+    their order, which *is* declared.
     """
     if value is None or isinstance(value, str | bool | int | float):
         return value
     if isinstance(value, Mapping):
         mapping = cast("Mapping[object, object]", value)
-        return {str(key): _stable(item) for key, item in mapping.items()}
+        return {str(key): stable_json(mapping[key]) for key in sorted(mapping, key=str)}
     if isinstance(value, Sequence) and not isinstance(value, bytes | bytearray):
         sequence = cast("Sequence[object]", value)
-        return tuple(_stable(item) for item in sequence)
+        return tuple(stable_json(item) for item in sequence)
     # Unreachable for authoritative output (bytes included: proposed content is
     # executor-only). Refusing beats publishing an opaque object or raw bytes
     # into a stable result.
@@ -402,7 +409,7 @@ def _control_finding(
     )
 
 
-def _finding(finding: ControlFinding) -> Finding:
+def map_finding(finding: ControlFinding) -> Finding:
     return Finding(
         rule_id=finding.code,
         severity=finding.severity,
@@ -417,8 +424,8 @@ def _finding(finding: ControlFinding) -> Finding:
         locus=finding.locus,
         observed=finding.observed,
         limit=finding.limit,
-        expected=_stable(finding.expected),
-        actual=_stable(finding.actual),
+        expected=stable_json(finding.expected),
+        actual=stable_json(finding.actual),
         expected_digest=finding.expected_digest,
         actual_digest=finding.actual_digest,
         governing_options=finding.governing_options,
@@ -440,7 +447,7 @@ def _strings(value: StableJson) -> tuple[str, ...]:
 
 def _preview(plan: ReconciliationPlan) -> ReconciliationPreview:
     """Map one authoritative plan onto the frozen preview DTO."""
-    public = _stable(plan.to_jsonable())
+    public = stable_json(plan.to_jsonable())
     assert isinstance(public, dict)
     return ReconciliationPreview(
         schema_version=str(public["schema_version"]),

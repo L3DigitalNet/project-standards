@@ -20,12 +20,19 @@ from project_standards.mcp_services.models import (
     ServiceError,
     StandardDescriptor,
 )
+from project_standards.mcp_services.providers import (
+    DriftReport,
+    ProviderOperationResult,
+    ValidationReport,
+)
 
 __all__ = [
     "CatalogDescriptor",
+    "DriftReport",
     "Finding",
     "McpServiceFacade",
     "ProviderDescriptor",
+    "ProviderOperationResult",
     "ReconciliationPreview",
     "RelationshipSet",
     "RepoInspectionSnapshot",
@@ -33,4 +40,5 @@ __all__ = [
     "ResourceDescriptor",
     "ServiceError",
     "StandardDescriptor",
+    "ValidationReport",
 ]

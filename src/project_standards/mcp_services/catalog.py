@@ -39,6 +39,20 @@ from project_standards.mcp_services.models import (
     ServiceError,
     StandardDescriptor,
 )
+from project_standards.mcp_services.providers import (
+    DriftReport,
+    ProviderOperationResult,
+    ValidationReport,
+)
+from project_standards.mcp_services.providers import (
+    drift_check as drift_check_repo,
+)
+from project_standards.mcp_services.providers import (
+    invoke_read_provider as invoke_read_provider_service,
+)
+from project_standards.mcp_services.providers import (
+    validate_repo as validate_consumer_repo,
+)
 from project_standards.package_contract.catalog import CatalogSource
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import FamilyManifest
@@ -335,6 +349,40 @@ class McpServiceFacade:
     def reconcile(self, repo_root: Path) -> ReconciliationPreview:
         """Return the dry-run reconciliation preview for one explicit consumer root (T3)."""
         return reconcile_consumer_repo(self._consumer_distribution(), repo_root)
+
+    def invoke_read_provider(
+        self,
+        repo_root: Path,
+        *,
+        standard_id: str,
+        version: str,
+        provider_id: str,
+        operation: str,
+        provider_input: object = None,
+    ) -> ProviderOperationResult:
+        """Dispatch one approved non-mutating provider through a bounded worker (T4).
+
+        ``version`` qualifies the request against the repository's *current*
+        resolution rather than selecting a payload: a version the resolution
+        rejected has no authoritative effective configuration to run under.
+        """
+        return invoke_read_provider_service(
+            self._consumer_distribution(),
+            repo_root,
+            standard_id=standard_id,
+            version=version,
+            provider_id=provider_id,
+            operation=operation,
+            provider_input=provider_input,
+        )
+
+    def validate_repo(self, repo_root: Path) -> ValidationReport:
+        """Run every applicable validate/verify/lint provider for one root (T4)."""
+        return validate_consumer_repo(self._consumer_distribution(), repo_root)
+
+    def drift_check(self, repo_root: Path) -> DriftReport:
+        """Return reconciliation facts plus applicable drift-check results (T4)."""
+        return drift_check_repo(self._consumer_distribution(), repo_root)
 
     def _consumer_distribution(self) -> InstalledDistribution:
         if self._distribution is None:

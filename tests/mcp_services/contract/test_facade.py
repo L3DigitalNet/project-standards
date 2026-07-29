@@ -29,9 +29,16 @@ _FROZEN_EXPORTS = {
     "RepoInspectionSnapshot",
     "Finding",
     "ReconciliationPreview",
+    # T4 provider DTOs: same §5.5 rationale as the T3 block above, applied to
+    # the three result types the frozen provider methods return (T4.2 Codex RED
+    # review, finding 14).
+    "ProviderOperationResult",
+    "ValidationReport",
+    "DriftReport",
 }
 _FROZEN_T2_METHODS = {"from_installed", "from_source", "catalog", "standard", "resource"}
 _FROZEN_T3_METHODS = {"inspect_repo", "reconcile"}
+_FROZEN_T4_METHODS = {"invoke_read_provider", "validate_repo", "drift_check"}
 _FORBIDDEN_IMPORT_ROOTS = ("mcp", "project_standards.mcp_server")
 
 # Runs the facade end to end in a fresh interpreter whose import machinery
@@ -102,7 +109,9 @@ def test_facade_exports_protocol_neutral_types_without_mcp_sdk() -> None:
 
     facade = services.McpServiceFacade
     missing = {
-        name for name in _FROZEN_T2_METHODS | _FROZEN_T3_METHODS if not hasattr(facade, name)
+        name
+        for name in _FROZEN_T2_METHODS | _FROZEN_T3_METHODS | _FROZEN_T4_METHODS
+        if not hasattr(facade, name)
     }
     assert not missing, f"facade is missing frozen §5.5 methods: {missing}"
     assert issubclass(services.ServiceError, Exception)
