@@ -362,6 +362,14 @@ def main(argv: list[str] | None = None) -> int:
 
         return _agent_handoff_run(args_list[1:])
 
+    if args_list and args_list[0] == "mcp":
+        # Imported lazily: the adapter pulls in the MCP SDK, and no other
+        # subcommand should pay that import cost (ADR 0025 ships the SDK in the
+        # standard install, so this is a startup-time concern, not availability).
+        from project_standards.mcp_server.entrypoint import run as _mcp_run
+
+        return _mcp_run(args_list[1:])
+
     specialized_adopt_help = args_list[:2] == ["adopt", "agent-handoff"] and any(
         argument in {"--help", "-h"} for argument in args_list[2:]
     )
@@ -608,6 +616,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init", help="create the neutral .standards control plane")
     sub.add_parser("reconcile", help="plan, check, apply, or recover unified standards state")
     sub.add_parser("render", help="render one enabled package provider to stdout")
+    # Registered only so top-level `--help` advertises it; real handling is the
+    # early dispatch above, which owns the subcommand's own option parsing.
+    sub.add_parser("mcp", help="serve the installed standards over MCP on local stdio")
 
     p_adopt = sub.add_parser(
         "adopt",
