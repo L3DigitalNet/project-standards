@@ -56,9 +56,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Begin MCP source implementation at T2 only after T1 completes. _(Done 2026-07-28: commit `e06da3b` — SDK-free facade construction plus exact catalog/standard/resource services, Codex-reviewed RED and GREEN, full battery green under the rebuilt candidate wheel.)_
   - [ ] Extend `ProviderDescriptor` (entrypoint, schema references, resource set), define both DTOs field-by-field in plan §5.5, and update `models.py` plus the T2 contract tests. Owner-directed 2026-07-29; lands before T3.
   - [ ] Continue with T3 (consumer inspection and reconciliation services) when directed. _(Directed 2026-07-29, after the DTO extension above.)_
-  - [ ] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. Owner-directed 2026-07-29 hold exception; lands after T3, before T6.
+  - [ ] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. Owner-directed 2026-07-29 hold exception; lands after T3, before T6, and ships in standards v5.12.0 with the MCP server.
 
-- [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline.
+- [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline. _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.
