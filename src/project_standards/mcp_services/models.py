@@ -56,13 +56,24 @@ class ResourceContent(_ServiceModel):
 
 
 class ProviderDescriptor(_ServiceModel):
-    """Declared provider identity and execution contract facts (DR-001)."""
+    """Declared provider identity and execution contract facts (DR-001).
+
+    ``entrypoint``, ``input_schema``, and ``output_schema`` are mapped
+    one-to-one from the already validated ``ProviderDeclaration`` and are
+    absent (``None``) for a documentation-only provider, never re-derived or
+    re-validated here (§5.5 amendment, owner-directed 2026-07-29). ``resources``
+    is the declaration's sorted-unique resource-ID tuple.
+    """
 
     provider_id: str
     operation: str
     kind: str
     phase: str
     effect: str
+    entrypoint: str | None
+    input_schema: str | None
+    output_schema: str | None
+    resources: tuple[str, ...]
 
 
 class StandardDescriptor(_ServiceModel):

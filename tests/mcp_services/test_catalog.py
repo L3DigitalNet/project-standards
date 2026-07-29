@@ -201,6 +201,42 @@ def test_descriptor_uses_v2_package_facts(tmp_path: Path) -> None:
     assert embedded[("gamma", "1.0")] == gamma
 
 
+def test_provider_descriptors_preserve_declared_execution_contract(tmp_path: Path) -> None:
+    """TC-T13-001: descriptors preserve the full declared execution contract.
+
+    FULL_FIXTURE only declares executable (``kind="python"``) providers — see
+    notes.md T13.1 for the absent documentation-only counterpart — so this
+    proves the executable mapping is exact and never re-derived: entrypoint,
+    both schema references, and the resource set must equal the already
+    validated ``ProviderDeclaration`` facts field-by-field, with deterministic
+    (sorted unique) resource ordering.
+    """
+    services = import_mcp_services()
+    installed = build_installed_tree(tmp_path)
+    facade = services.McpServiceFacade.from_installed(
+        InstalledDistribution(installed, tool_release=_TOOL_RELEASE_5), CatalogMajor("5")
+    )
+
+    oracle = build_package_repository(FULL_FIXTURE, catalog_major=5)
+    checked_providers = 0
+    for (standard_id, version), manifest in oracle.payload_map.items():
+        descriptor = facade.standard(standard_id, version)
+        by_id = {provider.provider_id: provider for provider in descriptor.providers}
+        for declared in manifest.providers:
+            mapped = by_id[declared.id]
+            assert mapped.entrypoint == declared.entrypoint
+            assert mapped.input_schema == declared.input_schema
+            assert mapped.output_schema == declared.output_schema
+            assert mapped.resources == tuple(sorted(declared.resources))
+            assert isinstance(mapped.resources, tuple)
+            checked_providers += 1
+
+    # alpha 2.0 declares render-alpha and migrate-alpha; alpha 3.0 declares
+    # migrate-alpha. If the fixture stops declaring any provider this count
+    # silently drops to zero and the loop above proves nothing.
+    assert checked_providers == 3
+
+
 def test_relationships_preserve_v2_declarations_and_empty_independence(
     tmp_path: Path,
 ) -> None:

@@ -127,6 +127,10 @@ def _standard_descriptor(
             kind=declaration.kind.value,
             phase=declaration.phase.value,
             effect=declaration.effect.value,
+            entrypoint=declaration.entrypoint,
+            input_schema=declaration.input_schema,
+            output_schema=declaration.output_schema,
+            resources=tuple(declaration.resources),
         )
         for declaration in sorted(manifest.providers, key=lambda item: item.id)
     )

@@ -118,3 +118,32 @@ def test_facade_exports_protocol_neutral_types_without_mcp_sdk() -> None:
     assert result.returncode == 0, (
         f"facade operations failed with SDK imports blocked:\n{result.stderr}"
     )
+
+
+def test_nested_dto_shapes_are_frozen_field_by_field() -> None:
+    """TC-T13-002: freeze the exact field sets of both nested DTOs.
+
+    ``RelationshipSet`` and ``ProviderDescriptor`` are nested inside
+    ``StandardDescriptor`` rather than top-level facade results, so the
+    top-level ``_FROZEN_EXPORTS``/``_FROZEN_T2_METHODS`` sets above never
+    exercise their shape. The amended §5.5 DTO table is the single source for
+    both field sets (owner-directed 2026-07-29, tracked at T13).
+    """
+    services = import_mcp_services()
+
+    assert set(services.RelationshipSet.model_fields) == {
+        "companions",
+        "extends",
+        "conflicts",
+    }
+    assert set(services.ProviderDescriptor.model_fields) == {
+        "provider_id",
+        "operation",
+        "kind",
+        "phase",
+        "effect",
+        "entrypoint",
+        "input_schema",
+        "output_schema",
+        "resources",
+    }
