@@ -58,7 +58,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Continue with T3 (consumer inspection and reconciliation services) when directed. _(Done 2026-07-29: commit `6e4e7e8` after Codex RED and GREEN reviews; five harvest items recorded in plan notes.)_
   - [x] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. _(Done 2026-07-29: commit `e400f83`, 917 rows; ships in standards v5.12.0 with the MCP server.)_
   - [x] Continue with T4 (bounded non-mutating provider services) when directed. _(Done 2026-07-29: commit `b2b9964` after Codex RED and GREEN reviews; two rejected sandbox-architecture demands recorded as T10 hardening candidates in plan notes.)_
-  - [ ] Continue with T5 (stdio adapter and capability boundary) when directed.
+  - [x] Continue with T5 (stdio adapter and capability boundary) when directed. _(Done 2026-07-29: commit `72794ea` after Codex RED and GREEN reviews; `project-standards mcp` serves both protocol eras from the low-level SDK server; contract amendments at `e071aa7`.)_
+  - [ ] Continue with T6 (expose exact resources) when directed.
   - [ ] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default (flag registered disabled in 0.146.0, openai/codex#34747) before capturing the FR-030 probe evidence.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline. _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
