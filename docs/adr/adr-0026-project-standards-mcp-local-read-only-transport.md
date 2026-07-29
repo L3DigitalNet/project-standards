@@ -162,6 +162,8 @@ Prompts are registered only from declared prompt-role resources. The server inve
 
 > Project Standards is a read-only, local standards server. It exposes the installed Catalog 5 standard packages and reports on a consumer repository; it never writes to any repository. Standard content is addressed under the `standards://` URI scheme as `standards://catalog/{catalog_major}`, `standards://{standard_id}/{version}`, and `standards://{standard_id}/{version}/resources/{resource_id}`, using ids and versions exactly as the installed catalog declares them. Six tools are available: `standards_list`, `standard_read`, `repo_inspect`, `reconcile_preview`, `validate_repo`, and `drift_check`. Every repository-scoped tool requires an explicit `repo_root` argument; the server does not infer the repository from the working directory or from client roots.
 
+Amendment (2026-07-29, from the T5 RED review, finding F6): the frozen draft text above becomes binding at the implementation-plan task that completes the six-tool registry it describes (T9) and is pinned verbatim by the T10 contract suite. Until that registry exists, the server serves a static, era-stable instructions string that must stay truthful for its phase: it must not name tools, prompts, or URIs that are not registered. This phase rule resolves the conflict between the frozen text and the plan's T5 empty-registry boundary without weakening either.
+
 ### Consequences
 
 - Good, because the v1 surface is provable end to end on both installed clients with no client-specific code path.
