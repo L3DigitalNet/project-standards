@@ -26,6 +26,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Decide the `standards://` URI alignment flagged in ADR 0026: the shipped catalog index publishes three-segment resource URIs (and `render_catalog` can emit a two-segment form) while the served MCP grammar is the four-segment SPEC-MS01 form with no alias. Aligning the producers, `SPEC-MS01`, and ADR 0010 on one form is an owner decision outside T1.
 
+- [ ] Review the T2 DTO shapes chosen under the overnight "sane defaults" directive.
+
+  `mcp_services` exports nested `RelationshipSet` and summary-level `ProviderDescriptor` (identity/operation/kind/phase/effect), which the plan §5.5 DTO table implies but does not define field-by-field. Both Codex reviews flagged the gap; rationale is in the T2 evidence logs. Ratify or direct a §5.5 amendment before T6/T8 map them onto protocol surfaces.
+
 - [x] Create durable repo rule: `docs/superpowers/` is a forbidden path. Nothing should get saved here. Use `docs/plans/` and `docs/specs/` instead. _(Done 2026-07-19: the directory is deleted, its contents relocated, and the rule is recorded in `AGENTS.md` Working Rules.)_
 
 - [x] Ensure full meta-repo tooling functionality is documented. _(Done 2026-07-19: audited the full tooling surface — CLI leaves/options, console scripts, `scripts/` helpers, workflows, pre-commit hooks, coherence suite — and closed the gaps: `.pre-commit-hooks.yaml` documented in `README.md`, repo-CI workflow inventory documented in `tests/README.md` § CI relationship, stale bundle-authoring `2.0` references bumped to `2.1`.)_
@@ -49,7 +53,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Verify the protocol, SDK, license, conformance, and current Codex/Claude client capabilities in the dated evidence matrix. _(Done 2026-07-28: `docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md`.)_
   - [x] Create and accept ADRs 0025-0026, obtain the recorded owner decisions required by T1, resolve the assigned SPEC-RD01/SPEC-MS01 open questions, and update their revisions and indexes. _(Done 2026-07-28 with recorded owner approvals; SPEC-RD01 1.6, SPEC-MS01 1.3.)_
   - [x] Pin the approved SDK dependency, update `uv.lock`, and pass the T1 lock, audit, client-probe, candidate-wheel, specification, and documentation gates. _(Done 2026-07-28: commit `d695d46`.)_
-  - [ ] Begin MCP source implementation at T2 only after T1 completes.
+  - [x] Begin MCP source implementation at T2 only after T1 completes. _(Done 2026-07-28: commit `e06da3b` — SDK-free facade construction plus exact catalog/standard/resource services, Codex-reviewed RED and GREEN, full battery green under the rebuilt candidate wheel.)_
+  - [ ] Continue with T3 (consumer inspection and reconciliation services) when directed.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline.
 
