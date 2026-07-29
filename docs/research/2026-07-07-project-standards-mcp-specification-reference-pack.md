@@ -6,8 +6,8 @@ description: 'Reference and support material for agents implementing the Project
 doc_type: 'research'
 status: 'active'
 created: '2026-07-07'
-updated: '2026-07-24'
-reviewed: '2026-07-24'
+updated: '2026-07-28'
+reviewed: '2026-07-28'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -22,6 +22,7 @@ related:
   - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
+  - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
 source:
   - 'https://modelcontextprotocol.io/specification/2025-11-25'
   - 'https://modelcontextprotocol.io/specification/2025-11-25/changelog'
@@ -49,7 +50,7 @@ This document collects the references used to prepare and refresh the three Proj
 2. `SPEC-RD01` — Project Standards MCP Enablement Roadmap.
 3. `SPEC-MS01` — Project Standards MCP Server Implementation.
 
-It is intended for the agent or maintainer doing the work. Use it as supporting material, not as a replacement for the specifications or canonical package contracts. This 2026-07-24 review records the current Catalog 5 package/control-plane authorities, the locked MCP 2026-07-28 release candidate, the Python SDK v1/v2 transition, and Codex/Claude Code client differences. It deliberately does not preselect a not-yet-final protocol or SDK release.
+It is intended for the agent or maintainer doing the work. Use it as supporting material, not as a replacement for the specifications or canonical package contracts. This 2026-07-28 review records the current Catalog 5 package/control-plane authorities, the final MCP 2026-07-28 publication, the selected stable Python SDK line, and Codex/Claude Code client differences. The exact protocol and SDK selection is recorded in ADR 0025 and evidenced by the 2026-07-28 protocol/SDK/client matrix; this pack points at that register rather than restating it.
 
 ## Usage rules for agents
 
@@ -75,7 +76,7 @@ It is intended for the agent or maintainer doing the work. Use it as supporting 
 
 | Reference | Link / Path | Used By | Summary |
 | --- | --- | --- | --- |
-| Project Specification package 1.4 | Catalog 5 selected payload | All three specs | Defines the Full profile, stable IDs, validation/lint tooling, traceability, open questions, and agent contract used here. |
+| Project Specification package 1.5 | Catalog 5 selected payload | All three specs | Defines the Full profile, stable IDs, validation/lint tooling, traceability, open questions, and agent contract used here. |
 | V2 family/payload contracts | `src/project_standards/package_contract/` | All three specs | Current authority for exact versions, exposure, capabilities, relations, providers, resources, media types, and digests. |
 | Installed distribution | `src/project_standards/control_plane/distribution.py` | `SPEC-RD01`, `SPEC-MS01` | Production loader for published Catalog 5 package projections. |
 | Unified consumer control plane | `src/project_standards/control_plane/` | `SPEC-RD01`, `SPEC-MS01` | Current `.standards/` desired/catalog/lock models, reconciliation planner/executor, provider dispatch, and stable schemas. |
@@ -92,6 +93,7 @@ It is intended for the agent or maintainer doing the work. Use it as supporting 
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.4 | 2026-07-28 | Claude (T1 decision gate) | Record the final 2026-07-28 publication, the exact mcp==2.0.0 selection, the resolved Step 09 recheck, and the current project-spec 1.5 selected payload; evidence authority transfers to the 2026-07-28 protocol/SDK/client matrix. |
 | 0.3 | 2026-07-24 | Codex | Refresh internal authorities, protocol/SDK sources, client evidence, and open maintenance decisions for Project Standards 5.8.0. |
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added roots/authorization references, SDK volatility notes, and independent-standard-package design support. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial reference pack for the three MCP-related specifications. |
@@ -102,10 +104,10 @@ It is intended for the agent or maintainer doing the work. Use it as supporting 
 
 | Reference | URL | Used By | Summary | Last checked |
 | --- | --- | --- | --- | --- |
-| MCP Specification 2025-11-25 | <https://modelcontextprotocol.io/specification/2025-11-25> | `SPEC-RD01`, `SPEC-MS01` | Current stable protocol at review time. Defines the resource, prompt, tool, root, transport, and security contracts that remain the baseline until the next final publication. | 2026-07-24 |
-| MCP 2025-11-25 changelog | <https://modelcontextprotocol.io/specification/2025-11-25/changelog> | `SPEC-RD01`, `SPEC-MS01` | Authoritative change summary for the current stable revision. Use it with the full revision rather than assuming older initialization/capability details. | 2026-07-24 |
-| MCP 2026-07-28 release candidate | <https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/> | `SPEC-RD01`, `SPEC-MS01` | Locked next revision, scheduled to become final on 2026-07-28. It materially changes initialization/session/discovery semantics, so implementation must wait for and verify the final publication. | 2026-07-24 |
-| MCP Python SDK repository | <https://github.com/modelcontextprotocol/python-sdk> | `SPEC-RD01`, `SPEC-MS01` | Official Python implementation. v1.x is stable while v2 is still a prerelease transition at review time; the exact final stable line must be selected at Step 09. | 2026-07-24 |
+| MCP Specification 2025-11-25 | <https://modelcontextprotocol.io/specification/2025-11-25> | `SPEC-RD01`, `SPEC-MS01` | Previous stable protocol revision, superseded by the final 2026-07-28 publication. It defined the resource, prompt, tool, root, transport, and security contracts that were the baseline until 2026-07-28. | 2026-07-28 |
+| MCP 2025-11-25 changelog | <https://modelcontextprotocol.io/specification/2025-11-25/changelog> | `SPEC-RD01`, `SPEC-MS01` | Authoritative change summary for the superseded 2025-11-25 revision. The 2026-07-28 changelog is the current one; use this only when reasoning about the earlier revisions the server still serves. | 2026-07-28 |
+| MCP 2026-07-28 final release | <https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/> | `SPEC-RD01`, `SPEC-MS01` | Published on 2026-07-28 as the final revision (announcement URL unchanged). It materially changes initialization/session/discovery semantics; the verified evidence now lives in the 2026-07-28 protocol/SDK/client matrix. | 2026-07-28 |
+| MCP Python SDK repository | <https://github.com/modelcontextprotocol/python-sdk> | `SPEC-RD01`, `SPEC-MS01` | Official Python implementation. v2.0.0 is the stable line released on 2026-07-28 and selected at Step 09; v1.x is in maintenance mode receiving security fixes only. | 2026-07-28 |
 | MCP Python SDK releases | <https://github.com/modelcontextprotocol/python-sdk/releases> | `SPEC-MS01` | Release authority for the exact dependency pin and prerelease/stable status. | 2026-07-24 |
 | MCP Python SDK documentation | <https://py.sdk.modelcontextprotocol.io/> | `SPEC-MS01` | Current SDK API documentation; use only after the exact release line is frozen. | 2026-07-24 |
 | Codex MCP documentation | <https://developers.openai.com/codex/mcp/> | `SPEC-MS01` | Official Codex configuration and client surface. Codex supports local stdio and Streamable HTTP servers; current documentation emphasizes tools, so direct resources/prompts behavior requires a live compatibility check. | 2026-07-24 |
@@ -175,7 +177,7 @@ MCP enables powerful access and code execution paths. The specs therefore defer 
 
 Primary external references: MCP Python SDK repository, releases, and SDK documentation.
 
-The server should use the official SDK behind one adapter boundary. As checked on 2026-07-24, v1.x remains stable and v2 is still prerelease while the next protocol revision is four days from final publication. Step 09 must recheck the final protocol, SDK release status, license, conformance surface, and client behavior before selecting an exact constraint.
+The server should use the official SDK behind one adapter boundary. As checked on 2026-07-28, the final protocol revision is published, `mcp` 2.0.0 is the stable SDK line, and it is selected and pinned exactly per ADR 0025 while v1.x moves to maintenance mode. The Step 09 recheck of protocol, SDK release status, license, conformance surface, and client behavior is complete; its evidence is the 2026-07-28 protocol/SDK/client matrix.
 
 ## Recommended reading order for implementers
 
@@ -186,7 +188,7 @@ The server should use the official SDK behind one adapter boundary. As checked o
 5. ADRs listed in the three specs.
 6. Project Specification Standard and Full template.
 7. V2 package contracts, installed distribution, reconciliation planner, and provider APIs.
-8. Current stable MCP revision, the final 2026-07-28 revision when published, and the selected SDK documentation.
+8. The final MCP 2026-07-28 revision, the earlier revisions the server still serves, and the selected SDK documentation.
 9. Python Tooling and Python Coding standards before writing server code.
 
 ---
@@ -197,4 +199,4 @@ The server should use the official SDK behind one adapter boundary. As checked o
 | --- | --- | --- | --- | --- | --- | --- |
 | REF-OQ-001 | Where should this reference pack live? | Resolved: `docs/research/` is the repository's durable research corpus and `docs/research/index.md` indexes it. | No | Owner | Complete | Resolved 2026-07-24 |
 | REF-OQ-002 | Should source URLs move into a generated source register? | Keep this document as the source register until a current package contract requires a generated form. | No | Owner | Before implementation | Open |
-| REF-OQ-003 | Which MCP protocol/SDK pair will implementation use? | Recheck after the 2026-07-28 final publication and pin an exact stable-compatible SDK at `SPEC-MS01` MS-0. | Yes for implementation | Owner/implementer | Server MS-0 | Open |
+| REF-OQ-003 | Which MCP protocol/SDK pair will implementation use? | Resolved: final MCP 2026-07-28 with exact `mcp==2.0.0`, pinned at T1 with recorded owner approval (ADR 0025; 2026-07-28 protocol/SDK/client matrix). | Yes for implementation | Owner/implementer | Server MS-0 | Resolved 2026-07-28 |

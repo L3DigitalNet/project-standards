@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-24'
+last_reviewed: '2026-07-28'
 supersedes: null
 superseded_by: null
 related:
@@ -20,6 +20,8 @@ related:
     - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
     - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
     - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
+    - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+    - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
 
   tickets: []
   repositories:
@@ -36,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.6 | 2026-07-28 | Claude (T1 decision gate) | Resolve OQ-001 and OQ-002 from the Step 09 decision gate: final 2026-07-28 protocol with exact mcp==2.0.0 accepted under ADR 0025, resource URI grammar frozen under ADR 0026 with the shipped-index divergence disclosed; the roadmap's related-ADR links, the §3 protocol/SDK current-state paragraph, and the protocol/SDK reference entries now point at the accepted ADRs and the final publication. Step 09 is recorded complete with current traceability statuses; no roadmap requirement text was rewritten beyond recording the gate outcome. |
 | 1.5 | 2026-07-24 | Codex with Claude Opus review | Correct the stale Step 08 current-state paragraph after closeout quality review: documentation reconciliation and both reviews are complete, while Step 09 remains the next no-code T1 gate after final publication evidence becomes available. |
 | 1.4 | 2026-07-24 | Codex with Claude Opus review | Record the separately converged implementation-plan review, complete the three combined spec-plus-plan evidence markers, and move FR-020 to Passing without starting Step 09 or implementation. |
 | 1.3 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the current-state and v1 runtime-authority reconciliation after high-effort Opus spec review convergence; record this roadmap's own approval and FR-016 evidence while leaving combined plan convergence open. |
@@ -52,7 +55,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This approved revision is re-locked after separate high-effort Opus spec and implementation-plan reviews converged and remains change-controlled. `SPEC-MT01` and Step 08 are complete. Step 09 is the next no-code protocol, SDK, client, and service-boundary decision gate; implementation remains unstarted. Later controlled-write and remote-transport phases still require separate approval.
+**Spec lifecycle:** This approved revision is re-locked after separate high-effort Opus spec and implementation-plan reviews converged and remains change-controlled. `SPEC-MT01`, Step 08, and Step 09 are complete. The no-code protocol, SDK, client, and service-boundary decision gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted and exact `mcp==2.0.0` pinned; server implementation may begin at T2 of the implementation plan. Later controlled-write and remote-transport phases still require separate approval.
 
 ---
 
@@ -124,9 +127,9 @@ Project Standards 5.8.0 is published from `d007ba0`. Catalog 5 contains seven co
 
 The unified `.standards/` control plane now owns consumer desired state, installed catalog state, applied-state provenance, deterministic reconciliation planning, explicit apply, recovery, and drift reporting. `InstalledDistribution` is the production boundary for package facts; `PackageRepository` is the source-repository validation boundary. Typed provider operations and structured reconciliation results already supply the non-MCP semantics the server should expose.
 
-`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 remains the next no-code decision gate, executed by implementation-plan T1 only after final post-2026-07-28 protocol and stable SDK evidence is available; it freezes the protocol, SDK, client, and service boundary before code begins.
+`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 was executed by implementation-plan T1 on 2026-07-28 against the final protocol and stable SDK evidence, and is complete: it froze the protocol, SDK, client, and service boundary before code begins, recording ADR 0025 and ADR 0026 as accepted and exact `mcp==2.0.0` as the pinned dependency. Server implementation may begin at T2 of the implementation plan.
 
-External MCP inputs are unusually time-sensitive on this review date. MCP `2025-11-25` is the latest stable protocol revision; the breaking `2026-07-28` revision is a locked release candidate scheduled four days later. The official Python SDK v1 line remains stable while v2 is pre-release with stable release targeted alongside the new protocol. The roadmap therefore forbids selecting a pre-release merely to make this document look current.
+External MCP inputs were unusually time-sensitive at the 2026-07-24 review date, and that window has now closed. The breaking `2026-07-28` revision was published as final on 2026-07-28 and supersedes `2025-11-25`; the official Python SDK v2 line reached stable release alongside it while v1.x moved to maintenance mode. The roadmap's prohibition on selecting a pre-release merely to make this document look current was honoured: the Step 09 selection is exact `mcp==2.0.0` against the final publication under [ADR 0025](../adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md), evidenced by the 2026-07-28 protocol/SDK/client matrix.
 
 ### 3.2 Target State
 
@@ -340,14 +343,14 @@ flowchart TB
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
 | D-001 | Complete `SPEC-MT01` before MCP implementation. | Prevents hardcoded server assumptions. | Start MCP now and refactor later. | `adr-0012-mcp-readiness-before-server-implementation.md` |
-| D-002 | Local stdio first for MCP. | Simplest local agent integration and lowest security surface. | Streamable HTTP first. | Planned MCP boundary ADR in Step 09 |
-| D-003 | Read-only MCP first. | Early value without mutation risk. | Start with adoption apply/write tools. | Planned MCP boundary ADR in Step 09 |
+| D-002 | Local stdio first for MCP. | Simplest local agent integration and lowest security surface. | Streamable HTTP first. | ADR 0026 (accepted 2026-07-28) |
+| D-003 | Read-only MCP first. | Early value without mutation risk. | Start with adoption apply/write tools. | ADR 0026 (accepted 2026-07-28) |
 | D-004 | Generic tools only. | Stable tool surface as standards grow. | Per-standard tools. | `adr-0005-stable-generic-agent-tooling-interface.md` |
 | D-005 | Payload-declared resources. | New package versions become visible automatically and exact version/digest identity survives exposure. | Hardcoded resource list. | ADR 0010 plus `SPEC-BA02` |
 | D-006 | Plan-first controlled writes. | Mutations need reviewable intent and replay protection. | Direct apply commands from agent request. | Future controlled-write ADR in Step 15 |
-| D-007 | Remote transport deferred. | HTTP transport requires auth/origin/security design. | Remote server first. | Planned MCP boundary ADR in Step 09 |
+| D-007 | Remote transport deferred. | HTTP transport requires auth/origin/security design. | Remote server first. | ADR 0026 (accepted 2026-07-28) |
 | D-008 | Independent-standard-package validation gates MCP implementation. | MCP must consume a composable graph, not repair dependency problems at runtime. | Let MCP auto-adopt or auto-require standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
-| D-009 | Recheck MCP spec/SDK before implementation starts. | MCP SDK and protocol releases are active; dependency decisions can stale quickly. | Freeze July 2026 research as final; rejected. | Planned protocol/SDK selection ADR in Step 09 |
+| D-009 | Recheck MCP spec/SDK before implementation starts. | MCP SDK and protocol releases are active; dependency decisions can stale quickly. | Freeze July 2026 research as final; rejected. | ADR 0025 (accepted 2026-07-28) |
 | D-010 | Reuse the unified consumer control plane for repository state, reconciliation plans, findings, and provider execution. | ADR 0023 superseded the original adopt-engine and package-specific provenance model. | Preserve a parallel MCP-only adoption/drift model; rejected. | ADR 0023 |
 
 ### 8.4 Solution Alternatives Considered
@@ -375,7 +378,7 @@ flowchart TB
 
 | Dependency | Allowed? | Reason |
 | --- | --- | --- |
-| Official MCP Python SDK | Conditional after Step 09 | Select an exact stable release only after rechecking the final protocol, SDK support/conformance, license, and target-client behavior. Pre-release use requires explicit owner approval and a recorded risk disposition. |
+| Official MCP Python SDK | Conditional after Step 09 | Select an exact stable release only after rechecking the final protocol, SDK support/conformance, license, and target-client behavior. Pre-release use requires explicit owner approval and a recorded risk disposition. Condition met 2026-07-28: exact `mcp==2.0.0` pinned (ADR 0025). |
 | Existing `project-standards` package | Yes | Canonical implementation substrate. |
 | New web framework | No for local stdio phase | Remote HTTP is deferred. |
 | GitHub API client | Deferred | GitHub mutations and fleet reporting are later phases. |
@@ -668,7 +671,7 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 | FR-016 | Refreshed `SPEC-MS01` and converged specification-review result. | Passing |
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
-| FR-019 | 2026-07-24 stable/RC research baseline plus mandatory Step 09 final recheck and exact pin. | Gate Defined |
+| FR-019 | Step 09 final recheck executed 2026-07-28: ADR 0025 and ADR 0026 accepted, exact `mcp==2.0.0` pinned, evidence in the 2026-07-28 protocol/SDK/client matrix. | Passing |
 | FR-020 | `docs/plans/2026-07-24-project-standards-mcp-server-plan.md`, `scripts/plan.py validate`, and converged plan-review result. | Passing |
 
 ---
@@ -782,7 +785,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | Step 06 | Dogfood fixtures and generated index | Step 05 | Standards retrofitted. | Consumer fixtures, generated standards index, relationship catalog, freshness checks. | Pairwise/all-standard fixture checks pass and companion/extension metadata is visible. | Step 07 |
 | Step 07 | MCP-readiness gate | Step 06 | `SPEC-MT01` traceability complete. | Readiness report. | No blocking gaps, no hidden hard dependencies, no stale generated indexes. | Step 08 |
 | Step 08 | MCP specification and plan refresh | Step 07 | Readiness gate pass and current repository evidence. | Refreshed `SPEC-RD01`, `SPEC-MS01`, reference pack, and durable TDD implementation plan. | Local validators pass and Claude Opus spec/plan reviews converge. OQ-001 and other Step 09 decisions may remain open only when the converged plan binds them to a pre-code Step 09 gate. | Step 09 |
-| Step 09 | Implementation boundary and dependency freeze | Step 08 | Converged spec and plan; final protocol/SDK releases available or owner accepts a documented alternative. | ADRs for service/SDK boundary, stdio/read-only scope, resource URI rules, protocol/SDK version selection, and remote deferral; exact dependency constraint and client matrix. | ADRs accepted; final protocol and stable SDK support are proven; no blocking client gap. | Step 10 |
+| Step 09 | Implementation boundary and dependency freeze | Step 08 | Converged spec and plan; final protocol/SDK releases available or owner accepts a documented alternative. | ADRs for service/SDK boundary, stdio/read-only scope, resource URI rules, protocol/SDK version selection, and remote deferral; exact dependency constraint and client matrix. | Complete 2026-07-28: ADR 0025 and ADR 0026 accepted with owner approvals recorded, exact `mcp==2.0.0` pinned, and the protocol/SDK/client matrix recorded; final protocol and stable SDK support proven with no blocking client gap. | Step 10 |
 | Step 10 | Service facade and MCP skeleton | Step 09 | Accepted boundary ADRs and exact dependency lock. | SDK-independent package/control-plane facade, package entrypoint, local stdio adapter, protocol tests. | Server starts from source and installed wheel, reports accurate capabilities, and keeps stdout protocol-clean. | Step 11 |
 | Step 11 | Resource and prompt layer | Step 10 | Service facade available. | Payload-derived, version-qualified resources and only client-supported prompt exposure. | List/read resources pass; fixture payload appears without registration changes; prompt/tool fallback decisions match the client matrix. | Step 12 |
 | Step 12 | Generic read-only tools | Step 11 | Resource layer. | `standards_list`, `repo_inspect`, plus `standard_read` only if the client matrix proves a primary client cannot give the model direct resource access. | Tool schemas and fixture calls pass; the fallback decision is justified by the frozen client matrix. | Step 13 |
@@ -868,8 +871,8 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Which final MCP protocol revision and stable Python SDK release should implementation pin? | On 2026-07-24, `2025-11-25` and SDK v1 are stable while the breaking `2026-07-28` protocol and SDK v2 are pre-release. Recheck after final publication and prefer an exact stable, conformance-tested combination. | Yes | Owner / MCP implementer | Step 09 | Open |
-| OQ-002 | What exact version-qualified resource URI grammar should be frozen? | Derive it from Catalog 5 standard ID, exact payload version, and declared resource ID; record canonicalization and compatibility in the Step 09 ADR. | Yes | MCP implementer | Step 09 | Open |
+| OQ-001 | Which final MCP protocol revision and stable Python SDK release should implementation pin? | Resolved: final MCP 2026-07-28 plus exact `mcp==2.0.0` behind the ADR 0025 adapter; dual-era serving required because Codex CLI 0.145.0 speaks `2025-06-18` only. Owner approval recorded 2026-07-28; evidence in the 2026-07-28 protocol/SDK/client matrix. | Yes | Owner / MCP implementer | Step 09 | Resolved 2026-07-28 |
+| OQ-002 | What exact version-qualified resource URI grammar should be frozen? | Resolved: frozen in ADR 0026 as `standards://catalog/{catalog_major}`, `standards://{standard_id}/{version}`, and `standards://{standard_id}/{version}/resources/{resource_id}`, canonical-only with no aliases; the shipped-index divergence is disclosed and alignment is flagged for owner follow-up. | Yes | MCP implementer | Step 09 | Resolved 2026-07-28 |
 | OQ-003 | Should MCP use package-bundled standards, live repo checkout, or both? | Installed wheel data is the production authority. Source checkout is a development/test mode and must produce equivalent exposed facts through an explicit injected repository service. | No | MCP implementer | Step 09 | Resolved |
 | OQ-004 | Should controlled writes ever call GitHub directly? | No for v1; local repo writes first. | No | Standards owner | Step 15 | Open |
 | OQ-005 | How should MCP clients surface approval for apply tools? | Server enforces plan identity; client UX varies. | No | MCP implementer | Step 15 | Open |
@@ -894,9 +897,9 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 - Full Project Specification Template — `standards/project-spec/templates/spec-full-template.md`.
 - Meta-repository MCP Readiness Preparation Spec — `SPEC-MT01`.
 - Current package and control-plane source — `src/project_standards/package_contract/` and `src/project_standards/control_plane/`.
-- MCP Specification 2025-11-25 — latest stable protocol on 2026-07-24.
-- MCP 2026-07-28 release candidate — breaking next revision scheduled for final publication on 2026-07-28.
-- MCP Python SDK main/v1 documentation — v1 is stable and v2 is pre-release on 2026-07-24; Step 09 rechecks the exact implementation target.
+- MCP Specification 2025-11-25 — previous stable protocol revision, superseded on 2026-07-28.
+- MCP 2026-07-28 — breaking revision published as final on 2026-07-28; the implementation target.
+- MCP Python SDK v2 documentation — v2.0.0 is the stable line selected at Step 09 and pinned exactly; v1.x is in maintenance mode.
 - Project Standards MCP Specification Reference Pack — supporting source register and reference summaries.
 
 ### Project References

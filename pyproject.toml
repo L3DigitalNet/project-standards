@@ -8,6 +8,9 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "jsonschema>=4.23.0",
+    # Exact pin per ADR 0025: official MCP SDK, protocol 2026-07-28 dual-era serving;
+    # any change to this constraint goes through the ADR, not a routine bump.
+    "mcp==2.0.0",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.2",
 ]

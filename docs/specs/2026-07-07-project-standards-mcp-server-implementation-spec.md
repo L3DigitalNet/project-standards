@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-24'
+last_reviewed: '2026-07-28'
 supersedes: null
 superseded_by: null
 related:
@@ -21,6 +21,8 @@ related:
     - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
     - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
     - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
+    - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
+    - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
 
   tickets: []
   repositories:
@@ -36,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.3 | 2026-07-28 | Claude (T1 decision gate) | Record the Step 09/T1 decision-gate outcomes: final 2026-07-28 protocol and exact mcp==2.0.0 pin accepted (ADR 0025), local read-only transport contract accepted (ADR 0026), OQ-001/002/003/004/006 resolved and OQ-007 dispositioned (omit) with recorded owner approval, OQ-005 preserved for T11, and release-candidate wording updated to the final publication; §8.3 decision sources and the spec's related-ADR links now point at the accepted ADRs; the published-baseline references are synchronized to 5.11.0. No server scope or requirement changed. |
 | 1.2 | 2026-07-27 | Codex | Synchronize current package-authority context with the Project Standards 5.9.0 release candidate and Standard Bundle Authoring 2.6 without changing the approved server scope or requirements. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority corrections after high-effort Opus review convergence; implementation and the protocol/SDK decision gate remain unstarted. |
 | 1.0 | 2026-07-24 | Codex | Correct the two current Standard Bundle Authoring package-authority references from 2.2 to 2.5 without changing server scope or requirements. |
@@ -49,7 +52,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Review pass: added protocol-version pinning, independent-standard relationship handling, SDK caution, structured output schemas, resource annotations, and tool-description quality gates. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial full implementation specification for the Project Standards MCP server, aligned to `SPEC-MT01` and `SPEC-RD01`. |
 
-**Spec lifecycle:** This approved document is re-locked after narrow review of current package-authority corrections and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.8.0 remains the published baseline that supplies the package and consumer control planes required by this design; the 5.9.0 release candidate updates the current package authorities without changing the server contract. Implementation remains blocked until the implementation plan review and the protocol/SDK decision gate in §19 pass.
+**Spec lifecycle:** This approved document is re-locked after narrow review of current package-authority corrections and remains change-controlled. Implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The `SPEC-MT01` readiness prerequisite passed on 2026-07-12. Project Standards 5.11.0 is the published baseline that supplies the package and consumer control planes required by this design. The implementation plan review and the protocol/SDK decision gate in §19 have both passed; the gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted.
 
 ---
 
@@ -59,7 +62,7 @@ The Project Standards MCP server shall expose installed Project Standards packag
 
 `SPEC-MT01` established the readiness contract. Catalog 5 subsequently replaced its provisional graph/adopt model with immutable V2 family and payload manifests, digest-addressed resources, provider declarations, an installed-distribution loader, a source-repository validation boundary, and the `.standards/` desired-state/reconciliation control plane. `SPEC-RD01` defines the ordered enablement path. This specification defines the server against those current authorities rather than recreating their obsolete predecessors.
 
-The server's first useful version shall target the stable MCP revision and official Python SDK line selected at its implementation preflight, be local and read-only, and use stdio. The selection shall account for the locked 2026-07-28 protocol release candidate and the Python SDK v2 transition without coding against a prerelease assumption. It shall allow an agent to discover exact package versions, read declared immutable resources, inspect a consumer repository's `.standards/` state, and return the existing deterministic reconciliation plan and provider findings without mutation. Controlled writes, fleet reporting, GitHub integration, and remote HTTP transport are later phases gated by explicit specifications and safety checks.
+The server's first useful version shall target the stable MCP revision and official Python SDK line selected at its implementation preflight, be local and read-only, and use stdio. The selection accounts for the final 2026-07-28 protocol publication and the stable SDK v2 line — exact `mcp==2.0.0` per ADR 0025 — without any prerelease assumption. It shall allow an agent to discover exact package versions, read declared immutable resources, inspect a consumer repository's `.standards/` state, and return the existing deterministic reconciliation plan and provider findings without mutation. Controlled writes, fleet reporting, GitHub integration, and remote HTTP transport are later phases gated by explicit specifications and safety checks.
 
 The long-term goal is to make agent workflows safer and more efficient while preserving the repository's independent-standard-package model:
 
@@ -126,7 +129,7 @@ The long-term goal is to make agent workflows safer and more efficient while pre
 
 ### 3.1 Current State
 
-Project Standards 5.8.0 remains the published baseline; the 5.9.0 release candidate advances its current package authorities:
+Project Standards 5.11.0 is the published baseline and supplies the current package authorities:
 
 - Catalog 5 contains nine independently versioned package families; seven are consumer packages, Python Coding is reference-only, and Standard Bundle Authoring 2.6 is internal.
 - V2 family and payload manifests declare exact versions, capabilities, relations, providers, resources, media types, and SHA-256 digests.
@@ -136,7 +139,7 @@ Project Standards 5.8.0 remains the published baseline; the 5.9.0 release candid
 - Legacy V1 manifests, `.project-standards.yml`, registry projections, and copy-adopt machinery remain migration-only evidence and are not MCP authorities.
 - `SPEC-MT01` and `docs/mcp-readiness.md` record the completed readiness gate.
 
-The remaining preflight is not meta-repository readiness. It is selection of the final stable MCP protocol/SDK pair, client compatibility verification, and approval of the SDK-independent service boundary.
+The preflight was not meta-repository readiness. It was selection of the final stable MCP protocol/SDK pair, client compatibility verification, and approval of the SDK-independent service boundary, all completed on 2026-07-28.
 
 ### 3.2 Target State
 
@@ -391,16 +394,16 @@ flowchart LR
 
 | ID | Decision | Rationale | Alternatives Considered | ADR |
 | --- | --- | --- | --- | --- |
-| D-001 | MCP server is a thin adapter over an SDK-independent package service facade. | Prevents parallel package/control-plane semantics and contains SDK churn. | Protocol modules call internals directly; rejected as coupling. | Planned Step 09 boundary ADR |
-| D-002 | Use local stdio first. | Fits local coding-agent workflows without remote operation. | Streamable HTTP first; rejected as unnecessary scope. | Planned Step 09 boundary ADR |
-| D-003 | Expose canonical content primarily as exact-version resources, with a shared read-tool fallback. | Resources are lazy context while supported clients differ. | Tool per document; rejected as tool bloat. | ADR 0010 plus planned client-compatibility decision |
+| D-001 | MCP server is a thin adapter over an SDK-independent package service facade. | Prevents parallel package/control-plane semantics and contains SDK churn. | Protocol modules call internals directly; rejected as coupling. | ADR 0025 (accepted 2026-07-28) |
+| D-002 | Use local stdio first. | Fits local coding-agent workflows without remote operation. | Streamable HTTP first; rejected as unnecessary scope. | ADR 0026 (accepted 2026-07-28) |
+| D-003 | Expose canonical content primarily as exact-version resources, with a shared read-tool fallback. | Resources are lazy context while supported clients differ. | Tool per document; rejected as tool bloat. | ADR 0010 and ADR 0026 (accepted 2026-07-28) |
 | D-004 | Keep MCP tools generic over standards. | New standards should not expand tool surface. | Per-standard tools; rejected. | `adr-0005-stable-generic-agent-tooling-interface.md` |
-| D-005 | Ship read-only/planning v1; defer controlled writes. | Proves value while reusing, not bypassing, executor safety. | Write tools immediately; rejected until separately specified. | Planned Step 09 boundary ADR |
-| D-006 | Wrap the selected MCP SDK behind one adapter. | Protocol/SDK contracts are transitioning; services must remain stable. | SDK types in services; rejected. | Planned Step 09 dependency ADR |
-| D-007 | Defer remote transport. | It provides no required v1 value. | Local HTTP by default; rejected. | Planned Step 09 boundary ADR |
+| D-005 | Ship read-only/planning v1; defer controlled writes. | Proves value while reusing, not bypassing, executor safety. | Write tools immediately; rejected until separately specified. | ADR 0026 (accepted 2026-07-28) |
+| D-006 | Wrap the selected MCP SDK behind one adapter. | Protocol/SDK contracts are transitioning; services must remain stable. | SDK types in services; rejected. | ADR 0025 (accepted 2026-07-28) |
+| D-007 | Defer remote transport. | It provides no required v1 value. | Local HTTP by default; rejected. | ADR 0026 (accepted 2026-07-28) |
 | D-008 | Preserve independent standard package semantics. | MCP should reveal graph relationships, not enforce hidden bundles. | Auto-adopt companion standards; rejected. | `adr-0013-independent-standard-packages-and-relationship-taxonomy.md` |
-| D-009 | Require explicit `repo_root`; client roots may only narrow it. | Client roots support is not uniform and filesystem authority must be explicit. | Trust arbitrary paths or require roots; rejected. | Planned Step 09 boundary ADR |
-| D-010 | Advertise/discover only implemented revision-specific capabilities. | Incorrect metadata causes client compatibility failures. | Optimistically advertise future features; rejected. | Planned Step 09 dependency ADR |
+| D-009 | Require explicit `repo_root`; client roots may only narrow it. | Client roots support is not uniform and filesystem authority must be explicit. | Trust arbitrary paths or require roots; rejected. | ADR 0026 (accepted 2026-07-28) |
+| D-010 | Advertise/discover only implemented revision-specific capabilities. | Incorrect metadata causes client compatibility failures. | Optimistically advertise future features; rejected. | ADR 0026 (accepted 2026-07-28) |
 | D-011 | Use installed exact-version payloads in production and source injection only in development/tests. | Preserves published-version and artifact-parity authority. | Read live source checkout in production; rejected. | ADR 0019 and ADR 0024 |
 | D-012 | Reuse stable reconciliation/provider schemas instead of MCP-specific planning or validation schemas. | One consumer truth surface prevents drift. | Reimplement adoption/drift logic; rejected. | ADR 0023 |
 
@@ -435,7 +438,7 @@ flowchart LR
 
 | Dependency | Allowed? | Reason |
 | --- | --- | --- |
-| Official MCP Python SDK (`mcp`) | Conditional | Required implementation path if the Step 09 gate identifies a final stable compatible release. Use an exact reviewed constraint and keep it behind the adapter; prereleases require explicit owner approval. |
+| Official MCP Python SDK (`mcp`) | Conditional | Required implementation path if the Step 09 gate identifies a final stable compatible release. Use an exact reviewed constraint and keep it behind the adapter; prereleases require explicit owner approval. Condition satisfied 2026-07-28: exact `mcp==2.0.0` pinned (ADR 0025). |
 | Pydantic v2 | Yes if already present/consistent | Useful for typed structured tool outputs and validation. |
 | FastAPI/HTTP server dependencies | No for v1 | Remote HTTP transport deferred; no ASGI/FastAPI dependency unless a later transport spec approves it. |
 | Watchdog/file watchers | No for v1 | Resource list changes can be handled without runtime watch initially. |
@@ -999,13 +1002,13 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 | ID | Question | Current Assumption | Blocking? | Owner | Needed By | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| OQ-001 | Which final stable MCP protocol and Python SDK versions should be pinned after the 2026-07-28 publication? | Use the official final stable pair behind one adapter; prereleases require explicit owner approval. | Yes | Owner/implementer | MS-0 | Open |
-| OQ-002 | Should entry point be `project-standards mcp` or separate `project-standards-mcp`? | Prefer `project-standards mcp` for discoverability. | No | Owner | MS-1 | Open |
-| OQ-003 | Which supported clients give the model direct resource access, and where is `standard_read` required? | Provide the shared read-tool fallback when either primary client needs it. | Yes | Implementer | MS-0 | Open |
-| OQ-004 | How should repo roots be supplied for clients without MCP roots support? | Require explicit `repo_root` tool argument. | No | Implementer | MS-3 | Open |
+| OQ-001 | Which final stable MCP protocol and Python SDK versions should be pinned after the 2026-07-28 publication? | Resolved: MCP 2026-07-28 served dual-era via exact `mcp==2.0.0` (ADR 0025; evidence: 2026-07-28 protocol/SDK/client matrix). Owner approval recorded 2026-07-28. | Yes | Owner/implementer | MS-0 | Resolved 2026-07-28 |
+| OQ-002 | Should entry point be `project-standards mcp` or separate `project-standards-mcp`? | Resolved: `project-standards mcp` subcommand on the unified CLI (ADR 0026). Owner approval recorded 2026-07-28. | No | Owner | MS-1 | Resolved 2026-07-28 |
+| OQ-003 | Which supported clients give the model direct resource access, and where is `standard_read` required? | Resolved: `standard_read` is required: Codex CLI 0.145.0 model-initiated resource access is not established; Claude Code 2.1.220 has native resource access (matrix). | Yes | Implementer | MS-0 | Resolved 2026-07-28 |
+| OQ-004 | How should repo roots be supplied for clients without MCP roots support? | Resolved: explicit `repo_root` argument is mandatory and authoritative; client roots and the optional configured boundary only narrow (ADR 0026); protocol 2026-07-28 deprecates Roots. | No | Implementer | MS-3 | Resolved 2026-07-28 |
 | OQ-005 | What minimum real consumer repo should be used for smoke testing? | Use a low-risk L3Digital repo after fixtures pass. | No | Owner | MS-5 | Open |
-| OQ-006 | What exact resources/prompts/roots semantics do current Codex and Claude Code builds expose after the final protocol/SDK selection? | Record both clients in a checked compatibility matrix and let explicit `repo_root` remain authoritative. | Yes | Implementer | MS-0 | Open |
-| OQ-007 | Should generic provider dispatch ship in v1 or remain behind specialized validate/drift tools? | Include it only if the non-mutating effect allowlist and typed results materially reduce tool surface. | No | Owner | MS-4 | Open |
+| OQ-006 | What exact resources/prompts/roots semantics do current Codex and Claude Code builds expose after the final protocol/SDK selection? | Resolved: observed semantics frozen in the 2026-07-28 matrix: Claude Code resources/prompts/roots yes, sampling no; Codex tools/instructions/elicitation yes, roots/prompts/sampling no, protocol 2025-06-18 only. | Yes | Implementer | MS-0 | Resolved 2026-07-28 |
+| OQ-007 | Should generic provider dispatch ship in v1 or remain behind specialized validate/drift tools? | Resolved (omit): generic dispatch omitted from v1; six specialized tools only; `invoke_read_provider` stays facade-internal. Owner approval recorded 2026-07-28. | No | Owner | MS-4 | Resolved 2026-07-28 |
 
 ---
 
@@ -1031,9 +1034,9 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 
 ### External References
 
-- MCP Specification 2025-11-25 — current stable overview and capability contracts at review time.
-- MCP 2026-07-28 release candidate announcement — locked next revision and final publication schedule.
-- MCP Python SDK repository/releases — current v1 stable and v2 transition status; recheck at MS-0.
+- MCP Specification 2025-11-25 — previous stable revision (baseline until 2026-07-28) and capability contracts at review time.
+- MCP 2026-07-28 final release announcement — published revision; evidence frozen in the 2026-07-28 protocol/SDK/client matrix.
+- MCP Python SDK repository/releases — v2.0.0 stable selected (exact pin); v1.x in maintenance mode.
 - MCP Roots — filesystem boundary model for client-provided roots.
 - MCP Authorization — future HTTP transport authorization guidance; stdio auth remains out of scope for v1.
 - MCP tool-description research — evidence for compact, reviewed tool metadata.
