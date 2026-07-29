@@ -31,16 +31,29 @@ CATALOG_MAJOR = "5"
 #:
 #: ADR 0026's frozen draft text becomes binding at the task that completes the
 #: registry it describes (record amendment 2026-07-29); until then the string
-#: must be static, era-stable, and truthful for its phase — naming no tool,
-#: prompt, or URI scheme this build does not register. Advertising the six tools
-#: here would be exactly the untruthful surface TC-T5-002 exists to police.
+#: must be static, era-stable, and truthful for its phase. Truthful cuts three
+#: ways, and each has cost a review finding:
+#:
+#: * it must not name a tool, prompt, or URI scheme this build does not register
+#:   (advertising the six tools here is the untruthful surface TC-T5-002 polices);
+#: * it must not *deny* a surface this build does register (continuing to say "no
+#:   resources are registered" after T6 registered them is the same fault in
+#:   reverse);
+#: * it must not *promise* behaviour this build cannot perform. The ADR's frozen
+#:   text says the server "reports on a consumer repository" and describes the
+#:   explicit-root rule for repository-scoped operations — both true of the
+#:   finished v1 surface, both premature while no repository-scoped tool is
+#:   registered (T6.4 Codex GREEN review, F3). Those two claims return with the
+#:   tools that implement them, at T8/T9, along with the removal of the
+#:   no-prompt/no-tool sentence below.
 PHASE_INSTRUCTIONS = (
     "Project Standards is a read-only, local standards server. It exposes the installed "
-    "Catalog 5 standard packages and reports on a consumer repository; it never writes to "
-    "any repository. This build serves protocol discovery only: no resources, prompts, or "
-    "tools are registered, and no capability is advertised for them. Repository-scoped "
-    "operations require an explicit repository root argument; the server never infers the "
-    "repository from the working directory or from client roots."
+    f"Catalog {CATALOG_MAJOR} standard packages and never writes to any repository. "
+    "Standard content is addressed under the standards:// URI scheme as "
+    f"standards://catalog/{CATALOG_MAJOR}, standards://{{standard_id}}/{{version}}, and "
+    "standards://{standard_id}/{version}/resources/{resource_id}, using ids and versions "
+    "exactly as the installed catalog declares them. This build registers those resources "
+    "and nothing else; no prompt or tool is available yet."
 )
 
 

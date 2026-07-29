@@ -120,12 +120,17 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     arguments = _parser().parse_args(list(argv) if argv is not None else None)
 
+    # Server construction joins the refusal path at T6: building the resource
+    # registration set can fail (a declared identifier that does not round-trip
+    # through the frozen URI grammar), and the plan requires that to be a
+    # server-start failure rather than a server with a partial resource list. A
+    # traceback would satisfy "non-zero exit" but not "structured error".
     try:
         boundary = _configured_boundary(arguments.root_boundary)
         facade = _installed_facade()
+        server = transport.create_server(facade, AdapterConfiguration(configured_boundary=boundary))
     except ServiceError as error:
         return _report(error)
 
-    server = transport.create_server(facade, AdapterConfiguration(configured_boundary=boundary))
     transport.run_stdio(server)
     return EXIT_OK
