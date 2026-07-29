@@ -13,7 +13,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
-class _ServiceModel(BaseModel):
+class ServiceModel(BaseModel):
     """Immutable strict base for every protocol-neutral DTO.
 
     ``strict=True`` matters here: stable facts must arrive as their exact types,
@@ -24,7 +24,7 @@ class _ServiceModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
 
-class RelationshipSet(_ServiceModel):
+class RelationshipSet(ServiceModel):
     """Exact V2 family relations; independence is the empty default (DR-006)."""
 
     companions: tuple[str, ...] = ()
@@ -32,7 +32,7 @@ class RelationshipSet(_ServiceModel):
     conflicts: tuple[str, ...] = ()
 
 
-class ResourceDescriptor(_ServiceModel):
+class ResourceDescriptor(ServiceModel):
     """One declared payload resource behind its canonical four-segment URI.
 
     The URI grammar is frozen by ADR 0026:
@@ -48,14 +48,14 @@ class ResourceDescriptor(_ServiceModel):
     package_version: str
 
 
-class ResourceContent(_ServiceModel):
+class ResourceContent(ServiceModel):
     """One resource descriptor plus its digest-verified immutable bytes."""
 
     descriptor: ResourceDescriptor
     data: bytes
 
 
-class ProviderDescriptor(_ServiceModel):
+class ProviderDescriptor(ServiceModel):
     """Declared provider identity and execution contract facts (DR-001).
 
     ``entrypoint``, ``input_schema``, and ``output_schema`` are mapped
@@ -76,7 +76,7 @@ class ProviderDescriptor(_ServiceModel):
     resources: tuple[str, ...]
 
 
-class StandardDescriptor(_ServiceModel):
+class StandardDescriptor(ServiceModel):
     """One exact standard package version derived from validated V2 facts.
 
     ``resources`` and ``providers`` are ordered by their declared IDs — the
@@ -95,7 +95,7 @@ class StandardDescriptor(_ServiceModel):
     providers: tuple[ProviderDescriptor, ...]
 
 
-class CatalogDescriptor(_ServiceModel):
+class CatalogDescriptor(ServiceModel):
     """One catalog generation with its ordered exact standard descriptors."""
 
     catalog_major: int

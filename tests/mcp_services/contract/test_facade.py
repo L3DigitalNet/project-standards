@@ -23,8 +23,15 @@ _FROZEN_EXPORTS = {
     "ProviderDescriptor",
     "RelationshipSet",
     "ServiceError",
+    # T3 consumer DTOs: §5.5 names them as facade results, so they belong on the
+    # public package surface rather than only inside the implementation module
+    # (T3 Codex RED review, finding 7).
+    "RepoInspectionSnapshot",
+    "Finding",
+    "ReconciliationPreview",
 }
 _FROZEN_T2_METHODS = {"from_installed", "from_source", "catalog", "standard", "resource"}
+_FROZEN_T3_METHODS = {"inspect_repo", "reconcile"}
 _FORBIDDEN_IMPORT_ROOTS = ("mcp", "project_standards.mcp_server")
 
 # Runs the facade end to end in a fresh interpreter whose import machinery
@@ -94,8 +101,10 @@ def test_facade_exports_protocol_neutral_types_without_mcp_sdk() -> None:
         assert hasattr(services, name), f"__all__ names an unbound export: {name}"
 
     facade = services.McpServiceFacade
-    missing = {name for name in _FROZEN_T2_METHODS if not hasattr(facade, name)}
-    assert not missing, f"facade is missing frozen T2 methods: {missing}"
+    missing = {
+        name for name in _FROZEN_T2_METHODS | _FROZEN_T3_METHODS if not hasattr(facade, name)
+    }
+    assert not missing, f"facade is missing frozen §5.5 methods: {missing}"
     assert issubclass(services.ServiceError, Exception)
 
     package_file = services.__file__

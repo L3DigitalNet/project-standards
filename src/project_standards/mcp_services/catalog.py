@@ -20,6 +20,16 @@ from pathlib import Path
 
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.paths import CatalogMajor
+from project_standards.mcp_services.consumer import (
+    ReconciliationPreview,
+    RepoInspectionSnapshot,
+)
+from project_standards.mcp_services.consumer import (
+    inspect_repo as inspect_consumer_repo,
+)
+from project_standards.mcp_services.consumer import (
+    reconcile as reconcile_consumer_repo,
+)
 from project_standards.mcp_services.models import (
     CatalogDescriptor,
     ProviderDescriptor,
@@ -197,9 +207,14 @@ class McpServiceFacade:
         *,
         catalog: CatalogDescriptor,
         entries: dict[tuple[str, str], _StandardEntry],
+        distribution: InstalledDistribution | None = None,
     ) -> None:
         self._catalog = catalog
         self._entries = entries
+        # Consumer operations plan against the same installed distribution the
+        # package facts came from. A source-built facade has none, so those
+        # operations fail structurally instead of planning against a guess.
+        self._distribution = distribution
 
     @classmethod
     def from_installed(
@@ -226,7 +241,11 @@ class McpServiceFacade:
             for payload in installed.payloads
         }
         return cls._from_validated(
-            installed.source, installed.family_map, payloads, distribution.package_root
+            installed.source,
+            installed.family_map,
+            payloads,
+            distribution.package_root,
+            distribution=distribution,
         )
 
     @classmethod
@@ -288,6 +307,8 @@ class McpServiceFacade:
         families: dict[str, FamilyManifest],
         payloads: dict[tuple[str, str], _PayloadSource],
         boundary: Path,
+        *,
+        distribution: InstalledDistribution | None = None,
     ) -> McpServiceFacade:
         entries = _build_entries(source, families, payloads, boundary)
         descriptor = CatalogDescriptor(
@@ -296,11 +317,36 @@ class McpServiceFacade:
                 entries[(entry.id, entry.version.value)].descriptor for entry in source.packages
             ),
         )
-        return cls(catalog=descriptor, entries=entries)
+        return cls(catalog=descriptor, entries=entries, distribution=distribution)
 
     def catalog(self) -> CatalogDescriptor:
         """Return the immutable generation-qualified catalog descriptor."""
         return self._catalog
+
+    def inspect_repo(self, repo_root: Path) -> RepoInspectionSnapshot:
+        """Return the current bounded snapshot of one explicit consumer root (T3).
+
+        The snapshot is reloaded on every call: consumer state is never cached
+        behind the facade, so a repository edited between calls is reported as
+        it now is without rebuilding the facade.
+        """
+        return inspect_consumer_repo(self._consumer_distribution(), repo_root)
+
+    def reconcile(self, repo_root: Path) -> ReconciliationPreview:
+        """Return the dry-run reconciliation preview for one explicit consumer root (T3)."""
+        return reconcile_consumer_repo(self._consumer_distribution(), repo_root)
+
+    def _consumer_distribution(self) -> InstalledDistribution:
+        if self._distribution is None:
+            raise ServiceError(
+                code="consumer-services-unavailable",
+                message=(
+                    "consumer inspection and reconciliation require an installed "
+                    "distribution; this facade was built from source"
+                ),
+                remediation="build the facade with McpServiceFacade.from_installed",
+            )
+        return self._distribution
 
     def standard(self, standard_id: str, version: str) -> StandardDescriptor:
         """Return one exact V2-derived descriptor or a structured not-found."""

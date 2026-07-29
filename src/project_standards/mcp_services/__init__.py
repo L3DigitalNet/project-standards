@@ -6,6 +6,11 @@ Exports are limited to the frozen §5.5 facade and its DTO/error types.
 """
 
 from project_standards.mcp_services.catalog import McpServiceFacade
+from project_standards.mcp_services.consumer import (
+    Finding,
+    ReconciliationPreview,
+    RepoInspectionSnapshot,
+)
 from project_standards.mcp_services.models import (
     CatalogDescriptor,
     ProviderDescriptor,
@@ -18,9 +23,12 @@ from project_standards.mcp_services.models import (
 
 __all__ = [
     "CatalogDescriptor",
+    "Finding",
     "McpServiceFacade",
     "ProviderDescriptor",
+    "ReconciliationPreview",
     "RelationshipSet",
+    "RepoInspectionSnapshot",
     "ResourceContent",
     "ResourceDescriptor",
     "ServiceError",
