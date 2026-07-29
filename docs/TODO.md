@@ -18,11 +18,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Define the repository policy and tooling for durable document references.
 
-  Decide when identifiers such as `SPEC-MT01` must link to their canonical documents. Define checks for inconsistent or missing links, maintenance of `related:` frontmatter, graph generation, and safe reconciliation of detected drift.
+  Decide when identifiers such as `SPEC-MT01` must link to their canonical documents. Define checks for inconsistent or missing links, maintenance of `related:` frontmatter, graph generation, and safe reconciliation of detected drift. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
 
 - [ ] Define structure and formatting instructions for `docs/STATUS.md`.
 
-  The current snapshot is concise; define durable formatting rules so future updates preserve that shape.
+  The current snapshot is concise; define durable formatting rules so future updates preserve that shape. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
 
 - [x] Decide the `standards://` URI alignment flagged in ADR 0026: the shipped catalog index publishes three-segment resource URIs (and `render_catalog` can emit a two-segment form) while the served MCP grammar is the four-segment SPEC-MS01 form with no alias. Aligning the producers, `SPEC-MS01`, and ADR 0010 on one form is an owner decision outside T1. _(Decided 2026-07-29: the four-segment SPEC-MS01 form is canonical everywhere; both producers align in a narrow directed commit after T3, before T6. Tracked as an agent task below.)_
 
@@ -57,7 +57,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Extend `ProviderDescriptor` (entrypoint, schema references, resource set), define both DTOs field-by-field in plan §5.5, and update `models.py` plus the T2 contract tests. _(Done 2026-07-29: discovered-work task T13, commit `b8effb1`.)_
   - [x] Continue with T3 (consumer inspection and reconciliation services) when directed. _(Done 2026-07-29: commit `6e4e7e8` after Codex RED and GREEN reviews; five harvest items recorded in plan notes.)_
   - [x] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. _(Done 2026-07-29: commit `e400f83`, 917 rows; ships in standards v5.12.0 with the MCP server.)_
-  - [ ] Continue with T4 (bounded non-mutating provider services) when directed.
+  - [x] Continue with T4 (bounded non-mutating provider services) when directed. _(Done 2026-07-29: commit `b2b9964` after Codex RED and GREEN reviews; two rejected sandbox-architecture demands recorded as T10 hardening candidates in plan notes.)_
+  - [ ] Continue with T5 (stdio adapter and capability boundary) when directed.
   - [ ] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default (flag registered disabled in 0.146.0, openai/codex#34747) before capturing the FR-030 probe evidence.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline. _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
