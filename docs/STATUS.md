@@ -2,6 +2,10 @@
 
 ## Current snapshot
 
+- MCP implementation T1 (the Step 09 decision gate) closed 2026-07-28 at `d695d46`: the final 2026-07-28 MCP protocol and exact `mcp==2.0.0` (MIT, released same day, dual-era serving) are pinned under accepted ADRs 0025/0026 with recorded owner approvals; SPEC-RD01 is at revision 1.6 and SPEC-MS01 at 1.3 with OQ-001–004/006/007 resolved and OQ-005 assigned to T11; the evidence register is `docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md`; T2 (package-resource services) is the ready task; commits are not yet pushed.
+- Key client facts frozen for the server design: installed Codex CLI 0.145.0 negotiates protocol 2025-06-18 only (making SDK v2 dual-era serving mandatory and the `standard_read` fallback required), while Claude Code 2.1.220 supports resources, prompts, and roots natively.
+- Test-ledger repair `37a6486` split the node authority pins into the immutable v5.8.0 capture and new `current_*` working-tree fields after `96b21bd`'s js-yaml override diverged them and silently broke pytest collection; the ordinary suite passes 3856/3856 and the consumer-outcomes compatibility module 6/6 under the wheel-runtime PYTHONPATH.
+- The `standards://` URI alignment (three-segment shipped index vs the served four-segment grammar, no alias in v1) is disclosed in ADR 0026 and awaits an owner decision tracked in `docs/TODO.md`.
 - Project Standards 5.11.0 is published at `ab7563585161a67ee9d8d219e752f947766a274b`; signed `v5.11.0` tag (GPG `9375AFEFA6F841B0`, verified GOODSIG), force-moved `v5` tag, and the Latest GitHub release are live.
 - Wheel SHA-256 `53e93aa6…` and sdist SHA-256 `4c3b36b2…` match the qualified bytes.
 - All nine release-commit workflow runs passed; `Check` completed in roughly 41 minutes.
