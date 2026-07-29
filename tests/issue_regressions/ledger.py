@@ -1083,13 +1083,21 @@ def validate_baseline(path: Path, repo: Path) -> Baseline:
         )
         for row in _tables(catalog.get("packages"), label="catalog packages")
     }
+    # `node` holds the immutable v5.8.0 tag capture consumed by _verify_git_baseline;
+    # `current_node` is the separately sanctioned working-tree authority. The fields
+    # split because the 96b21bd js-yaml override legitimately diverged the working
+    # tree from the release capture, and one pin cannot satisfy both checks.
     node = {
         "package.json": _string(raw, "package_json_sha256", label="baseline"),
         "package-lock.json": _string(raw, "package_lock_sha256", label="baseline"),
     }
+    current_node = {
+        "package.json": _string(raw, "current_package_json_sha256", label="baseline"),
+        "package-lock.json": _string(raw, "current_package_lock_sha256", label="baseline"),
+    }
     compare_predecessor_authority(payloads, observed_payloads)
     compare_authority(
-        {"node": node},
+        {"node": current_node},
         {
             "node": {
                 "package.json": _file_sha256(repo / "package.json"),
