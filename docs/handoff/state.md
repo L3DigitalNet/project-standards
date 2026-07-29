@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- MCP T2 closed 2026-07-28 at `e06da3b`: SDK-free facade serves exact catalog/standard/resource; suites 3869+133 green; T3 ready.
-- T1 closed at `d695d46` (`mcp==2.0.0`, ADRs 0025/0026); ledger repair `37a6486`; Codex-reviewed T2 DTO shapes await owner glance.
-- 5.11.0 remains published from `ab75635`; trackers #75–#77 open, #55/#62 deferred; `standards://` URI alignment awaits owner (ADR 0026).
+- MCP T13+T3 closed 2026-07-29 (`b8effb1`, `6e4e7e8`): DTOs carry the full execution contract; inspect/reconcile live; T4 ready when directed.
+- Owner 2026-07-29: four-segment `standards://` URIs canonical, producers aligned at `e400f83`; minor standards changes authorized; v5.12.0 ships with MCP.
+- Codex 0.146.0 assessed: dual-era serving stays mandatory (`mcp_2026_07_28` flag off by default); T11 re-check queued; 5.11.0 published; #75–#77 open.
 - MCP hold through T12: defer significant non-MCP features, refactors, standards work, releases, and changes; owner directs exceptions.
 
 ## Active incidents
