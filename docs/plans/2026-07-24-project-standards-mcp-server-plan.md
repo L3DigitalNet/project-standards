@@ -6,7 +6,7 @@ status: active
 source: 'SPEC-MS01 revision 1.1 and SPEC-RD01 revision 1.5'
 spec_ref: 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
 created: 2026-07-24
-updated: 2026-07-24
+updated: 2026-07-29
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -201,7 +201,9 @@ Protocol-neutral DTOs have these minimum fields:
 | DTO | Required stable fields |
 | --- | --- |
 | `CatalogDescriptor` | exact `catalog_major` and ordered exact `StandardDescriptor` values |
-| `StandardDescriptor` | `standard_id`, `title`, `status`, exact `package_version`, `exposure`, ordered `capabilities`, exact `relationships`, ordered resource descriptors, ordered provider descriptors |
+| `StandardDescriptor` | `standard_id`, `title`, `status`, exact `package_version`, `exposure`, ordered `capabilities`, exact `relationships` (one `RelationshipSet`), ordered resource descriptors, ordered provider descriptors (`ProviderDescriptor` values) |
+| `RelationshipSet` | `companions`, `extends`, `conflicts`: ordered standard-ID tuples, each defaulting to empty (independence is the empty default) |
+| `ProviderDescriptor` | `provider_id`, `operation`, `kind`, `phase`, `effect`, `entrypoint` (payload-qualified; absent for documentation-only), `input_schema` and `output_schema` declared resource IDs (absent for documentation-only), and sorted unique `resources` |
 | `ResourceDescriptor` | canonical URI, `resource_id`, role, media type, digest, `standard_id`, exact package version |
 | `ResourceContent` | one `ResourceDescriptor` plus exact immutable bytes |
 | `RepoInspectionSnapshot` | normalized root identity serialized as `.`, parsed desired/catalog/lock state or explicit missing/invalid state, bounded findings |
@@ -250,7 +252,7 @@ For T2-T10, add one focused failing behavior test, verify it fails only because 
 | --- | --- | --- | --- | --- | --- |
 | T1 | Freeze protocol, SDK, clients, and boundary | P1 | None | FR-029, FR-030, NFR-011 | ADR/source/license/client gate |
 | T2 | Build exact package-resource services | P2 | T1 | FR-001-003, FR-006, FR-015, FR-021, FR-026-027, NFR-005-007, NFR-010, NFR-013, IR-004, DR-001-002, DR-006, DR-009 | `uv run pytest tests/mcp_services/test_catalog.py tests/mcp_services/test_resources.py` |
-| T3 | Build consumer inspection and reconciliation services | P2 | T2 | FR-009, FR-011, FR-015, FR-017, FR-024, FR-026, FR-028, NFR-005-006, IR-004-005, IR-007, DR-004-005, DR-009 | `uv run pytest tests/mcp_services/test_consumer.py` |
+| T3 | Build consumer inspection and reconciliation services | P2 | T2, T13 | FR-009, FR-011, FR-015, FR-017, FR-024, FR-026, FR-028, NFR-005-006, IR-004-005, IR-007, DR-004-005, DR-009 | `uv run pytest tests/mcp_services/test_consumer.py` |
 | T4 | Build bounded non-mutating provider services | P2 | T2, T3 | FR-012-015, FR-026, NFR-005-006, IR-004, IR-009, DR-003, DR-008-009 | `uv run pytest tests/mcp_services/test_providers.py tests/mcp_services/test_provider_worker.py` |
 | T5 | Add stdio adapter and capability boundary | P3 | T2, T3, T4 | FR-018, FR-024-025, NFR-003-004, NFR-006, NFR-008, NFR-013, IR-001, IR-006-008, DR-007 | `uv run pytest tests/mcp_server/test_transport.py` |
 | T6 | Expose exact resources | P3 | T5 | FR-001-004, FR-006, FR-021, FR-027, NFR-001-002, NFR-005, NFR-007, IR-002, DR-002 | `uv run pytest tests/mcp_server/test_resources.py` |
@@ -260,6 +262,7 @@ For T2-T10, add one focused failing behavior test, verify it fails only because 
 | T10 | Prove protocol, safety, determinism, and CI | P5 | T6, T7, T8, T9 | FR-010, FR-018, FR-025, FR-029, NFR-001, NFR-003-006, NFR-008-009, NFR-011-013, IR-008, DR-003, DR-007, DR-009 | `uv run pytest tests/mcp_services tests/mcp_server` |
 | T11 | Prove installed-wheel clients and document use | P5 | T10 | FR-016, FR-020, FR-030, NFR-009-011 | candidate-wheel client smoke matrix |
 | T12 | Run final gate and prepare handoff | P5 | T11 | All | complete scoped verification gate |
+| T13 | Extend provider descriptors to the declared execution contract | P2 | T2 | FR-021, NFR-005, DR-001, DR-009 | `uv run pytest tests/mcp_services/test_catalog.py tests/mcp_services/contract/test_facade.py` |
 
 ### 7.1 Checklist Execution Protocol
 
@@ -313,7 +316,7 @@ Before T1, the implementing agent must:
 
 #### T3: Build consumer inspection and reconciliation services
 
-- **goal:** Inspect explicit `.standards/` state and return the existing reconciliation plan/fingerprint without reading unrelated content. · **phase:** P2 · **depends_on:** [T2] · **requirements:** [FR-009, FR-011, FR-015, FR-017, FR-024, FR-026, FR-028, NFR-005, NFR-006, IR-004, IR-005, IR-007, DR-004, DR-005, DR-009] · **priority:** must
+- **goal:** Inspect explicit `.standards/` state and return the existing reconciliation plan/fingerprint without reading unrelated content. · **phase:** P2 · **depends_on:** [T2, T13] · **requirements:** [FR-009, FR-011, FR-015, FR-017, FR-024, FR-026, FR-028, NFR-005, NFR-006, IR-004, IR-005, IR-007, DR-004, DR-005, DR-009] · **priority:** must
 - **files:** `src/project_standards/mcp_services/consumer.py` (create), `tests/mcp_services/test_consumer.py` (create), `tests/mcp_services/security/test_consumer_boundaries.py` (create)
 - **preconditions:** T2 is done; the same facade instance can resolve selected installed payloads; existing state/planner/executor tests are green.
 - **interface/data:** implement the `inspect_repo` and `reconcile` methods from §5.5 by composing `detect_control_plane_state`/control-plane codecs, `PlannerRequest`, `plan_reconciliation`, and `reconciliation_fingerprint`. Each consumer-operation call reloads the current bounded `.standards/` snapshot; never cache consumer state across calls. Read only `.standards/config.toml`, `.standards/catalog.toml`, `.standards/lock.toml`, and exact paths already requested by authoritative planner/provider APIs. Map paths to root-relative stable values; never return file contents.
@@ -343,6 +346,22 @@ Before T1, the implementing agent must:
   - **T4.4 Verify GREEN** — targeted plus current provider/control-plane tests; confirm the slow fixture cannot hang the suite.
   - **T4.5 REFACTOR** — reuse T2 DTOs without exposing provider internals or SDK types.
   - **T4.6 Verify Task** — run `uv run pytest tests/mcp_services/test_providers.py tests/mcp_services/test_provider_worker.py tests/mcp_services/security/test_provider_effects.py tests/mcp_services/test_consumer.py tests/control_plane/test_providers.py tests/package_contract/test_payload_execution_contracts.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
+
+#### T13: Extend provider descriptors to the declared execution contract
+
+- **goal:** Preserve the full V2 `ProviderDeclaration` execution contract in `ProviderDescriptor` and freeze both nested DTO shapes field-by-field per the owner direction of 2026-07-29. · **phase:** P2 · **depends_on:** [T2] · **requirements:** [FR-021, NFR-005, DR-001, DR-009] · **priority:** must
+- **files:** `src/project_standards/mcp_services/models.py` (modify), `src/project_standards/mcp_services/catalog.py` (modify), `tests/mcp_services/contract/test_facade.py` (modify), `tests/mcp_services/test_catalog.py` (modify)
+- **preconditions:** T2 is done and its battery is green; the owner disposition of the Codex-flagged DTO gap is recorded in `docs/TODO.md`; the amended §5.5 DTO rows define both shapes.
+- **interface/data:** extend `ProviderDescriptor` with `entrypoint: str | None`, `input_schema: str | None`, `output_schema: str | None`, and sorted unique `resources: tuple[str, ...]`, each mapped one-to-one from the already validated `ProviderDeclaration` without re-deriving or re-validating execution semantics; documentation-only providers keep the three optional execution fields absent. `RelationshipSet` (`companions`, `extends`, `conflicts`) is ratified as built. No new public exports from `mcp_services/__init__.py`.
+- **stop/backtrack:** if `ProviderDeclaration` lacks a fact the amended §5.5 requires, stop and record a spec deviation; do not parse manifests, invent fields, or weaken declaration validation.
+- **acceptance:** provider descriptors preserve the declared execution contract for executable and documentation-only providers with deterministic resource ordering (TC-T13-001); the facade contract test freezes the exact field sets of both nested DTOs (TC-T13-002).
+- **sub-tasks:**
+  - **T13.1 RED** — extend catalog and facade contract tests to assert entrypoint/schema/resource facts per declaration kind and the exact frozen field sets of both nested DTOs.
+  - **T13.2 Verify RED** — failures come only from the missing descriptor fields, never from collection, fixtures, or unrelated code.
+  - **T13.3 GREEN** — add the four fields to `ProviderDescriptor` and map them in the descriptor builder; change nothing else.
+  - **T13.4 Verify GREEN** — rerun the T2 facade/catalog/resource battery plus nearest installed-distribution/package-repository regressions.
+  - **T13.5 REFACTOR** — none expected; record `none` when unused.
+  - **T13.6 Verify Task** — run `uv run pytest tests/mcp_services/contract/test_facade.py tests/mcp_services/test_catalog.py tests/mcp_services/test_resources.py tests/control_plane/test_distribution.py tests/package_contract/test_repository.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
 
 ### Phase P3: Protocol and Resources
 
@@ -668,6 +687,8 @@ Teardown: harvest notes into this section and applicable ADR/handoff artifacts, 
 | TC-T11-003 | FR-016, FR-020 | T11 | `tests/mcp_server/e2e/test_installed_wheel.py::test_documented_commands_match_installed_entrypoint` plus README/reference Markdown gates | documentation |
 | TC-T12-001 | Every source row, including the FR-010 omission | T12 | `uv run scripts/plan.py validate docs/plans/2026-07-24-project-standards-mcp-server-plan.md` plus a checklist-evidence audit for every source row and test ID | audit |
 | TC-T12-002 | Every Must/Should and the FR-010 omission | T12 | Every command and manual assertion in §13 against one extracted candidate wheel | integration |
+| TC-T13-001 | DR-001, NFR-005, DR-009 | T13 | `tests/mcp_services/test_catalog.py::test_provider_descriptors_preserve_declared_execution_contract` | contract |
+| TC-T13-002 | FR-021 | T13 | `tests/mcp_services/contract/test_facade.py::test_nested_dto_shapes_are_frozen_field_by_field` | contract |
 
 ### Appendix C. Deferred Work
 

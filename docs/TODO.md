@@ -24,11 +24,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The current snapshot is concise; define durable formatting rules so future updates preserve that shape.
 
-- [ ] Decide the `standards://` URI alignment flagged in ADR 0026: the shipped catalog index publishes three-segment resource URIs (and `render_catalog` can emit a two-segment form) while the served MCP grammar is the four-segment SPEC-MS01 form with no alias. Aligning the producers, `SPEC-MS01`, and ADR 0010 on one form is an owner decision outside T1.
+- [x] Decide the `standards://` URI alignment flagged in ADR 0026: the shipped catalog index publishes three-segment resource URIs (and `render_catalog` can emit a two-segment form) while the served MCP grammar is the four-segment SPEC-MS01 form with no alias. Aligning the producers, `SPEC-MS01`, and ADR 0010 on one form is an owner decision outside T1. _(Decided 2026-07-29: the four-segment SPEC-MS01 form is canonical everywhere; both producers align in a narrow directed commit after T3, before T6. Tracked as an agent task below.)_
 
-- [ ] Review the T2 DTO shapes chosen under the overnight "sane defaults" directive.
+- [x] Review the T2 DTO shapes chosen under the overnight "sane defaults" directive.
 
-  `mcp_services` exports nested `RelationshipSet` and summary-level `ProviderDescriptor` (identity/operation/kind/phase/effect), which the plan §5.5 DTO table implies but does not define field-by-field. Both Codex reviews flagged the gap; rationale is in the T2 evidence logs. Ratify or direct a §5.5 amendment before T6/T8 map them onto protocol surfaces.
+  `mcp_services` exports nested `RelationshipSet` and summary-level `ProviderDescriptor` (identity/operation/kind/phase/effect), which the plan §5.5 DTO table implies but does not define field-by-field. Both Codex reviews flagged the gap; rationale is in the T2 evidence logs. Ratify or direct a §5.5 amendment before T6/T8 map them onto protocol surfaces. _(Reviewed 2026-07-29: extend `ProviderDescriptor` with entrypoint, schema references, and resource set via a §5.5 amendment before T3; `RelationshipSet` is ratified as built. Tracked as an agent task below.)_
 
 - [x] Create durable repo rule: `docs/superpowers/` is a forbidden path. Nothing should get saved here. Use `docs/plans/` and `docs/specs/` instead. _(Done 2026-07-19: the directory is deleted, its contents relocated, and the rule is recorded in `AGENTS.md` Working Rules.)_
 
@@ -54,7 +54,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Create and accept ADRs 0025-0026, obtain the recorded owner decisions required by T1, resolve the assigned SPEC-RD01/SPEC-MS01 open questions, and update their revisions and indexes. _(Done 2026-07-28 with recorded owner approvals; SPEC-RD01 1.6, SPEC-MS01 1.3.)_
   - [x] Pin the approved SDK dependency, update `uv.lock`, and pass the T1 lock, audit, client-probe, candidate-wheel, specification, and documentation gates. _(Done 2026-07-28: commit `d695d46`.)_
   - [x] Begin MCP source implementation at T2 only after T1 completes. _(Done 2026-07-28: commit `e06da3b` — SDK-free facade construction plus exact catalog/standard/resource services, Codex-reviewed RED and GREEN, full battery green under the rebuilt candidate wheel.)_
-  - [ ] Continue with T3 (consumer inspection and reconciliation services) when directed.
+  - [ ] Extend `ProviderDescriptor` (entrypoint, schema references, resource set), define both DTOs field-by-field in plan §5.5, and update `models.py` plus the T2 contract tests. Owner-directed 2026-07-29; lands before T3.
+  - [ ] Continue with T3 (consumer inspection and reconciliation services) when directed. _(Directed 2026-07-29, after the DTO extension above.)_
+  - [ ] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. Owner-directed 2026-07-29 hold exception; lands after T3, before T6.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline.
 
