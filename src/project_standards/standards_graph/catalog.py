@@ -169,7 +169,7 @@ def _render_package_catalog(
             version = payload.payload.version.value
             package = f"{standard_id}@{version}"
             for resource in payload.resources:
-                uri = f"standards://{standard_id}/{version}/{resource.id}"
+                uri = f"standards://{standard_id}/{version}/resources/{resource.id}"
                 lines.append(
                     f"| `{package}` | `{resource.id}` | `{resource.role}` | "
                     f"`{uri}` | `{resource.path.original}` |"
@@ -327,7 +327,7 @@ def render_catalog(
     )
     for node in graph.standards:
         for resource_id, path in sorted(node.manifest.resources.as_dict().items()):
-            uri = f"standards://{node.standard_id}/{resource_id}"
+            uri = f"standards://{node.standard_id}/{node.manifest.versions.latest}/resources/{resource_id}"
             lines.append(f"| `{node.standard_id}` | `{resource_id}` | `{uri}` | `{path}` |")
 
     lines.extend(

@@ -19,12 +19,12 @@ def test_catalog_renders_all_manifest_and_relationship_facts() -> None:
     assert "Package" in rendered
     assert "Role" in rendered
     assert "Managed outputs" in rendered
-    assert "standards://markdown-frontmatter/1.2/readme" in rendered
+    assert "standards://markdown-frontmatter/1.2/resources/readme" in rendered
     assert "markdown-frontmatter" in rendered
     assert "markdown-tooling" in rendered
     assert "companion" in rendered
     assert "[`agent-handoff`](agent-handoff/README.md)" in rendered
-    assert "standards://agent-handoff/1.1/skill" in rendered
+    assert "standards://agent-handoff/1.1/resources/skill" in rendered
     assert "startup\\|resume\\|clear\\|compact" in rendered
 
 
@@ -119,4 +119,4 @@ provenance = "external-owned"
     assert "| `alpha` | `render` | python | `pkg.alpha:render` | no |" in rendered
     assert "external-owned: 1, generated: 1, package-owned: 1, source-owned: 1" in rendered
     assert "`.agents/skills/alpha/SKILL.md`" in rendered
-    assert "`standards://alpha/extension_adr`" in rendered
+    assert "`standards://alpha/2.0/resources/extension_adr`" in rendered
