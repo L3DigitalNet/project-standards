@@ -57,6 +57,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [ ] Extend `ProviderDescriptor` (entrypoint, schema references, resource set), define both DTOs field-by-field in plan §5.5, and update `models.py` plus the T2 contract tests. Owner-directed 2026-07-29; lands before T3.
   - [ ] Continue with T3 (consumer inspection and reconciliation services) when directed. _(Directed 2026-07-29, after the DTO extension above.)_
   - [ ] Align both `standards://` producers on the four-segment form and regenerate `standards/catalog.md`. Owner-directed 2026-07-29 hold exception; lands after T3, before T6, and ships in standards v5.12.0 with the MCP server.
+  - [ ] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default (flag registered disabled in 0.146.0, openai/codex#34747) before capturing the FR-030 probe evidence.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline. _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
 
