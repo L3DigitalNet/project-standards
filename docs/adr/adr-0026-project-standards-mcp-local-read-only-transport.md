@@ -164,6 +164,8 @@ Prompts are registered only from declared prompt-role resources. The server inve
 
 Amendment (2026-07-29, from the T5 RED review, finding F6): the frozen draft text above becomes binding at the implementation-plan task that completes the six-tool registry it describes (T9) and is pinned verbatim by the T10 contract suite. Until that registry exists, the server serves a static, era-stable instructions string that must stay truthful for its phase: it must not name tools, prompts, or URIs that are not registered. This phase rule resolves the conflict between the frozen text and the plan's T5 empty-registry boundary without weakening either.
 
+Amendment (2026-07-30, from the T9 RED review, finding F2): the frozen text binds per session registry. A server process whose recorded client matrix registers all six tools serves the six-tool text; a process whose matrix omits the `standard_read` fallback serves the same text with the tool enumeration reduced to its actual registry — the count word and the enumeration shrink, nothing else changes — so the instructions never name a tool the session does not register. The string remains static and non-tunable: it is fixed at process construction from the T1 evidence matrix, which is recorded evidence rather than configuration. The T10 contract suite pins each rendering the matrix can produce. This keeps the truthfulness rule — name nothing unregistered, deny nothing registered, promise nothing unimplemented — true in every configuration.
+
 ### Consequences
 
 - Good, because the v1 surface is provable end to end on both installed clients with no client-specific code path.
