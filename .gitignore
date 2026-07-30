@@ -41,3 +41,4 @@ prettier_probe_*/
 
 # Analysis working space (code-simplification runs)
 .scratch/
+.workflow/
