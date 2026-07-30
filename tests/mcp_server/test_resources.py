@@ -194,8 +194,17 @@ MAX_LIST_PAGES = 32
 # distribution* rather than a consumer repository. Used by the instructions phase
 # test below to tell "a tool exists" from "a tool that makes the record's
 # repository claims true exists" (amended at T7.3, when `standard_read` became
-# the first registered tool).
+# the first registered tool). The set stays exactly these two: `repo_inspect` is
+# repository-scoped, and adding it here to quiet the guard would be the lie the
+# guard exists to catch.
 DISTRIBUTION_SCOPED_TOOLS = frozenset({"standards_list", "standard_read"})
+
+# The record's two repository claims, as the phrases a truthful instructions
+# string must carry once a repository-scoped tool is registered. They are the
+# other side of the `promises` list below: before that tool exists the claims are
+# premature, and after it exists withholding them denies a surface this build
+# serves (T8.3).
+REQUIRED_REPOSITORY_CLAIMS = ("consumer repository", "repo_root")
 
 # How long a launch on a corrupt distribution may take to *die*. The startup
 # check must complete before stdio, so the process must exit on its own without
@@ -2142,15 +2151,17 @@ def test_instructions_stay_truthful_once_resources_are_registered(full_runtime: 
     phrases are claim-shaped rather than word-shaped, so the truthful sentence
     "never writes to any repository" is unaffected.
 
-    **Amended at T7.3, following this test's own instruction.** The guard below
-    used to require that *no* tool be registered, with a message telling the task
-    that registered one to "fold the repository claims back into the instructions
-    with the tools that keep them". T7 registers ``standard_read`` — which is a
-    distribution-scoped read, not a repository-scoped one, so the repository
-    claims are still premature and the half this test protects is still live. The
-    guard is therefore narrowed rather than deleted: it now fires when a
-    *repository-scoped* tool appears, which is the task (T8/T9) that really does
-    make those claims true and owes the rewrite.
+    **Amended at T7.3, then flipped at T8.3, both times following this test's own
+    instruction.** The guard used to require that *no* tool be registered, with a
+    message telling the task that registered one to "fold the repository claims
+    back into the instructions with the tools that keep them". T7 narrowed it:
+    ``standard_read`` is a distribution-scoped read, so the repository claims were
+    still premature. T8 registers ``repo_inspect``, which is the repository-scoped
+    tool that makes them true — so the guard now *switches* rather than fires.
+    While no repository-scoped tool is registered the claims must be absent; once
+    one is, they must be present, because withholding them is the same denial
+    fault in the other direction and FR-024's explicit-root rule is the one thing
+    a caller most needs the instructions to say.
     """
     era = MODERN_ERA
     with resource_session(era, runtime_root=full_runtime, label="instructions") as (
@@ -2168,11 +2179,6 @@ def test_instructions_stay_truthful_once_resources_are_registered(full_runtime: 
             for tool in reachable.get("tools", [])
         }
         repository_scoped = sorted(advertised - DISTRIBUTION_SCOPED_TOOLS)
-        assert not repository_scoped, server.diagnosis(
-            f"a repository-scoped tool is registered ({repository_scoped}), so the "
-            "premature-claim half of this test no longer applies; fold the repository claims "
-            "back into the instructions with the tools that keep them"
-        )
         instructions = result.get("instructions")
         assert isinstance(instructions, str) and instructions.strip(), server.diagnosis(
             f"the server must serve a non-empty instructions string, got {instructions!r}"
@@ -2190,24 +2196,31 @@ def test_instructions_stay_truthful_once_resources_are_registered(full_runtime: 
         assert not denials, server.diagnosis(
             f"the instructions deny a resource surface this build registers: {denials}"
         )
-        promises = [
-            phrase
-            for phrase in (
-                "reports on",
-                "consumer repository",
-                "repository-scoped",
-                "repository root",
-                "inspect",
-                "reconcil",
-                "drift",
-                "working directory",
-                "client roots",
+        if repository_scoped:
+            missing = [phrase for phrase in REQUIRED_REPOSITORY_CLAIMS if phrase not in lowered]
+            assert not missing, server.diagnosis(
+                f"a repository-scoped tool is registered ({repository_scoped}), so the record's "
+                f"repository claims are true and must be served; missing {missing}"
             )
-            if phrase in lowered
-        ]
-        assert not promises, server.diagnosis(
-            "the instructions claim repository inspection or reporting this build cannot "
-            f"perform, with no tool registered: {promises}"
-        )
+        else:
+            promises = [
+                phrase
+                for phrase in (
+                    "reports on",
+                    "consumer repository",
+                    "repository-scoped",
+                    "repository root",
+                    "inspect",
+                    "reconcil",
+                    "drift",
+                    "working directory",
+                    "client roots",
+                )
+                if phrase in lowered
+            ]
+            assert not promises, server.diagnosis(
+                "the instructions claim repository inspection or reporting this build cannot "
+                f"perform, with no repository-scoped tool registered: {promises}"
+            )
         assert server.finish() == 0
         assert_stdout_is_protocol_only(server)

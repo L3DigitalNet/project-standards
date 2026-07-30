@@ -448,10 +448,32 @@ def tool_argument_name(server: ServerProcess, entry: Mapping[str, Any]) -> str:
 
 
 def call_tool(
-    server: ServerProcess, era: Era, argument: str, value: object, *, name: str = TOOL_NAME
+    server: ServerProcess,
+    era: Era,
+    argument: str | None = None,
+    value: object = None,
+    *,
+    name: str = TOOL_NAME,
+    arguments: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """One ``tools/call`` frame, successful or not."""
-    return server.call("tools/call", era.params({"name": name, "arguments": {argument: value}}))
+    """One ``tools/call`` frame for any registered tool, successful or not.
+
+    The single ``argument``/``value`` pair is this suite's shape, because
+    ``standard_read`` takes exactly one input. ``arguments`` is the general form
+    for tools that take none or several — generalized here rather than forked into
+    the suite that needed it, so one probe keeps building every tool call frame
+    (T8.2 Codex RED review, F9).
+    """
+    assert argument is None or arguments is None, (
+        "pass either one argument/value pair or a whole arguments mapping, not both"
+    )
+    if arguments is not None:
+        sent = dict(arguments)
+    elif argument is not None:
+        sent = {argument: value}
+    else:
+        sent = {}
+    return server.call("tools/call", era.params({"name": name, "arguments": sent}))
 
 
 def tool_result(server: ServerProcess, frame: Mapping[str, Any]) -> dict[str, Any]:

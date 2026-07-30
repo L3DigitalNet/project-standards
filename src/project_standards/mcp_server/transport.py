@@ -16,10 +16,11 @@ low-level ``Server`` derives its capabilities from actual registrations in both
 eras and still answers the mandatory ``server/discover``, so it is the only
 construction that can be truthful here. Recorded at T5.1 with probe evidence.
 
-T6 registers the three ADR 0026 resource forms; prompts and tools arrive at T7
-and T8. Only the handlers that exist are passed, so the SDK derives the advertised
-capability set from the actual registrations — the property the transport suite
-asserts rather than any hard-coded list.
+T6 registers the three ADR 0026 resource forms and T7/T8 register the read-only
+tool half of the v1 registry; the record still approves no prompt role. Only the
+handlers that exist are passed, so the SDK derives the advertised capability set
+from the actual registrations — the property the transport suite asserts rather
+than any hard-coded list.
 
 **Error mapping lives here because the wire code does, and it is revision-aware.**
 ``mcp_services`` and ``resources`` speak ``ServiceError``; JSON-RPC codes are
@@ -69,7 +70,12 @@ from project_standards.mcp_server.resources import (
     ResourceTemplateEntry,
     build_resource_registry,
 )
-from project_standards.mcp_server.tools import ToolEntry, build_tool_registry, invoke_tool
+from project_standards.mcp_server.tools import (
+    ToolContext,
+    ToolEntry,
+    build_tool_registry,
+    invoke_tool,
+)
 from project_standards.mcp_services import McpServiceFacade, ServiceError
 
 # Service codes whose cause is a corrupted or drifted distribution rather than a
@@ -183,11 +189,18 @@ def _contents(payload: ResourcePayload) -> types.TextResourceContents | types.Bl
 
 
 def _tool(entry: ToolEntry) -> types.Tool:
+    """Project one protocol-neutral registration onto the SDK's tool type.
+
+    ``output_schema`` is passed unconditionally: FR-022 requires every v1 tool to
+    declare a typed output model, so an entry without one is a registration bug
+    rather than an optional-field case.
+    """
     return types.Tool(
         name=entry.name,
         title=entry.title,
         description=entry.description,
         input_schema=entry.input_schema,
+        output_schema=entry.output_schema,
     )
 
 
@@ -202,7 +215,7 @@ def create_server(
     advertise features it does not register. ``configuration`` therefore carries
     only the one launch-time input the record leaves open, which no resource
     handler consults — resources are distribution-scoped, and the boundary
-    narrows *repository* roots for the tools T8/T9 add.
+    narrows *repository* roots, so it reaches the tool context and nothing else.
 
     The registry is built before the ``Server`` object exists, so a registration
     that cannot be expressed canonically aborts the launch instead of producing a
@@ -217,7 +230,16 @@ def create_server(
     """
     registry = build_resource_registry(facade)
     tools = build_tool_registry()
-    del configuration  # consumed by the repository-scoped tools T8/T9 register.
+    # The launch-time boundary reaches the tool layer here and nowhere else: it
+    # narrows *repository* roots, so only the repository-scoped tools consult it,
+    # and they reach it through `resolve_effective_root` rather than by comparing
+    # paths themselves.
+    tool_context = ToolContext(
+        registry=registry,
+        facade=facade,
+        tools=tools,
+        configured_boundary=configuration.configured_boundary,
+    )
 
     # ADR 0026: prompts are registered only from declared prompt-role resources,
     # and the record approves none, so this is empty for every installed
@@ -276,21 +298,29 @@ def create_server(
         context: ServerRequestContext[dict[str, Any], Any],
         params: types.CallToolRequestParams,
     ) -> types.CallToolResult:
-        """Answer one tool call with the resource read it delegates to.
+        """Answer one tool call in both carriers FR-022 names.
 
-        The payload is projected by the same ``_contents`` mapper the resource
-        read uses, so the object a client receives from the tool is identical to
-        the one it would receive from ``resources/read`` — bytes, declared media
-        type, and the DR-002 declaration ``_meta`` alike (FR-008: "the same
-        descriptor/bytes mapping"). Failures travel the same
-        ``ServiceError`` → JSON-RPC projection, so the two surfaces cannot
-        disagree about a refusal either.
+        ``structuredContent`` always carries the typed answer. The ``content``
+        blocks carry the human half: a bounded one-line summary when the tool
+        supplies one, and — for ``standard_read`` only — the resource payload
+        projected by the same ``_contents`` mapper the resource read uses, so the
+        object a client receives from that tool is identical to the one it would
+        receive from ``resources/read`` (FR-008: "the same descriptor/bytes
+        mapping"), ``_meta`` declaration included.
+
+        Failures travel the same ``ServiceError`` → JSON-RPC projection as a
+        resource read, so the two surfaces cannot disagree about a refusal either.
         """
         try:
-            payload = invoke_tool(registry, params.name, params.arguments)
+            answer = invoke_tool(tool_context, params.name, params.arguments)
         except ServiceError as error:
             raise _protocol_error(error, context.protocol_version) from error
-        return types.CallToolResult(content=[types.EmbeddedResource(resource=_contents(payload))])
+        blocks: list[types.ContentBlock] = []
+        if answer.text:
+            blocks.append(types.TextContent(type="text", text=answer.text))
+        if answer.payload is not None:
+            blocks.append(types.EmbeddedResource(resource=_contents(answer.payload)))
+        return types.CallToolResult(content=blocks, structured_content=answer.structured)
 
     return Server(
         SERVER_NAME,

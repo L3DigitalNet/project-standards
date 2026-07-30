@@ -510,6 +510,20 @@ class ResourceRegistry:
             return address
         return address if (*key, address.resource_id) in self._resources else None
 
+    def catalog_projection(self) -> dict[str, Any]:
+        """The FR-001 masked catalog projection, produced in exactly one place.
+
+        Both the catalog resource below and the ``standards_list`` tool serve this
+        document, and FR-007 requires them to be the same facts ("the same
+        installed catalog facts and exact resource URIs as FR-001"). Exposing it
+        here rather than letting the tool layer re-apply
+        :data:`CATALOG_FIELD_MASK` is what makes "the catalog has one projection"
+        structural instead of a convention two call sites have to remember — the
+        same collapse T6.5 applied to the URI grammar, and for the same reason:
+        two producers of one document is how they come to disagree.
+        """
+        return self._catalog.model_dump(mode="json", include=CATALOG_FIELD_MASK)
+
     def listings(self) -> tuple[ResourceEntry, ...]:
         """Every concrete registered resource, in deterministic order."""
         return self._entries
@@ -567,9 +581,7 @@ class ResourceRegistry:
                 )
             # Masked to FR-001's field list; digests, roles, media types, and
             # provider declarations live on the package resource, one read away.
-            return _metadata_payload(
-                uri, self._catalog.model_dump(mode="json", include=CATALOG_FIELD_MASK)
-            )
+            return _metadata_payload(uri, self.catalog_projection())
 
         key = (address.standard_id, address.version)
         descriptor = self._packages.get(key)

@@ -102,6 +102,7 @@ def build_consumer_repo(
     *,
     distribution: InstalledDistribution,
     select_alpha: bool = True,
+    catalog_major: str = "5",
 ) -> Path:
     """Initialize one real consumer control plane against the installed fixture.
 
@@ -109,10 +110,16 @@ def build_consumer_repo(
     repository-relative extension input whose schema default points at it; the
     authoritative planner resolves that declared input and fails when it is
     absent, so its presence is a fixture precondition rather than test content.
+
+    ``catalog_major`` exists for the one classification that needs a repository
+    written for a *different* generation than the observing tool: an installed
+    distribution refuses to supply a catalog whose major its release does not
+    match, so ``TOOL_MISMATCH`` cannot be built by pairing a major-6 release with
+    the default generation (added at T8.1 rev 2 for the shared consumer fixtures).
     """
     repo = tmp_path / name
     repo.mkdir(parents=True)
-    initialize_control_plane(repo, "5", distribution=distribution)
+    initialize_control_plane(repo, catalog_major, distribution=distribution)
     extension = repo / ".standards/extensions/alpha/options.toml"
     extension.parent.mkdir(parents=True)
     extension.write_text("consumer = true\n", encoding="utf-8")
