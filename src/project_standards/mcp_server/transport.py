@@ -59,12 +59,17 @@ from project_standards.mcp_server.models import (
     AdapterConfiguration,
     server_version,
 )
+from project_standards.mcp_server.prompts import (
+    PROMPT_DERIVATION_UNAVAILABLE,
+    prompt_role_resources,
+)
 from project_standards.mcp_server.resources import (
     ResourceEntry,
     ResourcePayload,
     ResourceTemplateEntry,
     build_resource_registry,
 )
+from project_standards.mcp_server.tools import ToolEntry, build_tool_registry, invoke_tool
 from project_standards.mcp_services import McpServiceFacade, ServiceError
 
 # Service codes whose cause is a corrupted or drifted distribution rather than a
@@ -177,6 +182,15 @@ def _contents(payload: ResourcePayload) -> types.TextResourceContents | types.Bl
     )
 
 
+def _tool(entry: ToolEntry) -> types.Tool:
+    return types.Tool(
+        name=entry.name,
+        title=entry.title,
+        description=entry.description,
+        input_schema=entry.input_schema,
+    )
+
+
 def create_server(
     facade: McpServiceFacade, configuration: AdapterConfiguration
 ) -> Server[dict[str, Any]]:
@@ -193,9 +207,37 @@ def create_server(
     The registry is built before the ``Server`` object exists, so a registration
     that cannot be expressed canonically aborts the launch instead of producing a
     server with a partial resource list.
+
+    **Every capability the SDK declares is derived from a handler being passed
+    here.** That is why the tool handlers are conditional rather than always
+    registered with an empty list: ADR 0026 requires the server to declare only
+    what it implements, so "no tool is registered" and "the tools capability is
+    absent" have to be the same fact. Prompts take the same route — no prompt
+    handler is passed at all, because no record approves a prompt role.
     """
     registry = build_resource_registry(facade)
+    tools = build_tool_registry()
     del configuration  # consumed by the repository-scoped tools T8/T9 register.
+
+    # ADR 0026: prompts are registered only from declared prompt-role resources,
+    # and the record approves none, so this is empty for every installed
+    # distribution and no prompt handler is registered below. The check runs on
+    # every launch rather than being assumed, so approving a role without also
+    # building the derivation it needs fails loudly here instead of silently
+    # registering nothing (plan T7; the derivation itself is a separate approval).
+    approved = prompt_role_resources(facade.catalog())
+    if approved:
+        raise ServiceError(
+            code=PROMPT_DERIVATION_UNAVAILABLE,
+            message=(
+                f"{len(approved)} declared resources carry an approved prompt role, but this "
+                "build derives no prompts"
+            ),
+            remediation=(
+                "add the prompt derivation for the approved role, or remove the role from "
+                "prompts.APPROVED_PROMPT_ROLES"
+            ),
+        )
 
     # The paginated params are optional in the SDK's handler contract and both
     # listings are single-page by construction: the registration set is fixed at
@@ -225,6 +267,31 @@ def create_server(
             raise _protocol_error(error, context.protocol_version) from error
         return types.ReadResourceResult(contents=[_contents(payload)])
 
+    async def _list_tools(
+        _context: object, _params: types.PaginatedRequestParams | None
+    ) -> types.ListToolsResult:
+        return types.ListToolsResult(tools=[_tool(entry) for entry in tools])
+
+    async def _call_tool(
+        context: ServerRequestContext[dict[str, Any], Any],
+        params: types.CallToolRequestParams,
+    ) -> types.CallToolResult:
+        """Answer one tool call with the resource read it delegates to.
+
+        The payload is projected by the same ``_contents`` mapper the resource
+        read uses, so the object a client receives from the tool is identical to
+        the one it would receive from ``resources/read`` — bytes, declared media
+        type, and the DR-002 declaration ``_meta`` alike (FR-008: "the same
+        descriptor/bytes mapping"). Failures travel the same
+        ``ServiceError`` → JSON-RPC projection, so the two surfaces cannot
+        disagree about a refusal either.
+        """
+        try:
+            payload = invoke_tool(registry, params.name, params.arguments)
+        except ServiceError as error:
+            raise _protocol_error(error, context.protocol_version) from error
+        return types.CallToolResult(content=[types.EmbeddedResource(resource=_contents(payload))])
+
     return Server(
         SERVER_NAME,
         version=server_version(),
@@ -232,6 +299,10 @@ def create_server(
         on_list_resources=_list_resources,
         on_list_resource_templates=_list_resource_templates,
         on_read_resource=_read_resource,
+        # Passing ``None`` is how a capability stays undeclared: the SDK derives
+        # the tools capability from the presence of these handlers.
+        on_list_tools=_list_tools if tools else None,
+        on_call_tool=_call_tool if tools else None,
     )
 
 

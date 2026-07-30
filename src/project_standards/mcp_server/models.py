@@ -44,16 +44,23 @@ CATALOG_MAJOR = "5"
 #:   explicit-root rule for repository-scoped operations — both true of the
 #:   finished v1 surface, both premature while no repository-scoped tool is
 #:   registered (T6.4 Codex GREEN review, F3). Those two claims return with the
-#:   tools that implement them, at T8/T9, along with the removal of the
-#:   no-prompt/no-tool sentence below.
+#:   tools that implement them, at T8/T9.
+#:
+#: T7 moved this text on one phase: ``standard_read`` is now registered, so the
+#: previous sentence ("no prompt or tool is available yet") became a denial of a
+#: surface this build does serve. The prompt half of that denial stays, because
+#: it is still true — ADR 0026 approves no prompt role — and it is worded as a
+#: denial rather than as a claim about available prompts, so a truthfulness check
+#: looking for promises cannot mistake it for one.
 PHASE_INSTRUCTIONS = (
     "Project Standards is a read-only, local standards server. It exposes the installed "
     f"Catalog {CATALOG_MAJOR} standard packages and never writes to any repository. "
     "Standard content is addressed under the standards:// URI scheme as "
     f"standards://catalog/{CATALOG_MAJOR}, standards://{{standard_id}}/{{version}}, and "
     "standards://{standard_id}/{version}/resources/{resource_id}, using ids and versions "
-    "exactly as the installed catalog declares them. This build registers those resources "
-    "and nothing else; no prompt or tool is available yet."
+    "exactly as the installed catalog declares them. One tool is registered: standard_read, "
+    "which returns the bytes of one declared resource addressed by that same URI, for clients "
+    "whose models cannot read MCP resources directly. No prompt is registered."
 )
 
 

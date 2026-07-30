@@ -190,6 +190,13 @@ LEGACY_RESOURCE_NOT_FOUND = -32002
 # server that keeps handing out cursors is looping, not paginating.
 MAX_LIST_PAGES = 32
 
+# The two members of ADR 0026's frozen v1 registry that address the *installed
+# distribution* rather than a consumer repository. Used by the instructions phase
+# test below to tell "a tool exists" from "a tool that makes the record's
+# repository claims true exists" (amended at T7.3, when `standard_read` became
+# the first registered tool).
+DISTRIBUTION_SCOPED_TOOLS = frozenset({"standards_list", "standard_read"})
+
 # How long a launch on a corrupt distribution may take to *die*. The startup
 # check must complete before stdio, so the process must exit on its own without
 # ever being sent a frame and without its stdin being closed (F4): a server that
@@ -2134,6 +2141,16 @@ def test_instructions_stay_truthful_once_resources_are_registered(full_runtime: 
     about repository reporting slips past it; this closes that half. The forbidden
     phrases are claim-shaped rather than word-shaped, so the truthful sentence
     "never writes to any repository" is unaffected.
+
+    **Amended at T7.3, following this test's own instruction.** The guard below
+    used to require that *no* tool be registered, with a message telling the task
+    that registered one to "fold the repository claims back into the instructions
+    with the tools that keep them". T7 registers ``standard_read`` — which is a
+    distribution-scoped read, not a repository-scoped one, so the repository
+    claims are still premature and the half this test protects is still live. The
+    guard is therefore narrowed rather than deleted: it now fires when a
+    *repository-scoped* tool appears, which is the task (T8/T9) that really does
+    make those claims true and owes the rewrite.
     """
     era = MODERN_ERA
     with resource_session(era, runtime_root=full_runtime, label="instructions") as (
@@ -2146,9 +2163,15 @@ def test_instructions_stay_truthful_once_resources_are_registered(full_runtime: 
         assert reachable.get("resources"), server.diagnosis(
             "no resource is registered, so the phase rule this test asserts is not yet live"
         )
-        assert not reachable.get("tools"), server.diagnosis(
-            "a tool is registered, so the premature-claim half of this test no longer applies; "
-            "fold the repository claims back into the instructions with the tools that keep them"
+        advertised = {
+            str(as_object(tool, "a tools/list entry").get("name"))
+            for tool in reachable.get("tools", [])
+        }
+        repository_scoped = sorted(advertised - DISTRIBUTION_SCOPED_TOOLS)
+        assert not repository_scoped, server.diagnosis(
+            f"a repository-scoped tool is registered ({repository_scoped}), so the "
+            "premature-claim half of this test no longer applies; fold the repository claims "
+            "back into the instructions with the tools that keep them"
         )
         instructions = result.get("instructions")
         assert isinstance(instructions, str) and instructions.strip(), server.diagnosis(
