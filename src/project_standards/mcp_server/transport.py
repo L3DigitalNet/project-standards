@@ -43,21 +43,25 @@ remediation" machine-readable instead of collapsing into prose.
 from __future__ import annotations
 
 import base64
+import warnings
+from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 import anyio
 import mcp_types as types
 from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
-from mcp.shared.exceptions import MCPError
+from mcp.shared.exceptions import MCPDeprecationWarning, MCPError
 from mcp_types import INTERNAL_ERROR, INVALID_PARAMS
 from mcp_types.version import MODERN_PROTOCOL_VERSIONS
+from pydantic import ValidationError
 
 from project_standards.mcp_server.models import (
-    PHASE_INSTRUCTIONS,
     SERVER_NAME,
     AdapterConfiguration,
+    instructions_for,
     server_version,
 )
 from project_standards.mcp_server.prompts import (
@@ -71,6 +75,8 @@ from project_standards.mcp_server.resources import (
     build_resource_registry,
 )
 from project_standards.mcp_server.tools import (
+    REPOSITORY_SCOPED_TOOLS,
+    RootSet,
     ToolContext,
     ToolEntry,
     build_tool_registry,
@@ -186,6 +192,77 @@ def _contents(payload: ResourcePayload) -> types.TextResourceContents | types.Bl
         blob=base64.b64encode(payload.data).decode("ascii"),
         _meta=_declaration_meta(payload.declared),
     )
+
+
+def _advertised_root(root: types.Root) -> object:
+    """One advertised root as a filesystem path, or the raw value if it is not one.
+
+    The protocol says a root's URI "*must* start with ``file://`` for now", so the
+    ``file`` scheme is the only one that maps to a directory. Anything else is
+    passed through untouched rather than dropped, because
+    :func:`~project_standards.mcp_server.repo_access.resolve_effective_root`
+    refuses an unusable boundary value and *that* is the safe direction: silently
+    discarding a root the client advertised would widen the boundary it was
+    supposed to narrow.
+    """
+    parsed = urlparse(str(root.uri))
+    if parsed.scheme != "file" or parsed.netloc not in ("", "localhost"):
+        return str(root.uri)
+    return Path(unquote(parsed.path))
+
+
+async def _client_roots(context: ServerRequestContext[dict[str, Any], Any]) -> RootSet:
+    """What this client advertised for this call, in ADR 0026's two empty forms.
+
+    ``None`` means *no advertised set*: either the client declared no roots
+    capability, or it declared one but cannot be asked. An empty sequence means
+    *the client advertised none*, which admits no repository at all.
+    ``resolve_effective_root`` treats those as opposites, so collapsing them would
+    either widen authority or refuse every call from a client that cannot answer.
+
+    Both unaskable cases are real. SEP-2577 deprecates Roots at 2026-07-28 and the
+    stdio transport context there carries no back-channel for server-initiated
+    requests at all, so ``list_roots`` raises rather than returning an empty set;
+    a handshake-era client that declared the capability may still fail the
+    request. Neither is a refusal: a client that cannot be asked has not narrowed
+    anything, and the explicit ``repo_root`` plus the launch-time boundary still
+    decide the call.
+
+    Fetched per call rather than cached for the process because the record makes
+    advertised roots an input to *this* request; a cached answer would freeze
+    whatever the client said when the first tool ran.
+    """
+    session = context.session
+    capabilities = session.client_capabilities
+    if capabilities is None or capabilities.roots is None:
+        return None
+    try:
+        with warnings.catch_warnings():
+            # The deprecation belongs to the protocol feature, not to this call:
+            # the record still requires advertised roots to narrow while clients
+            # send them, and the warning would otherwise ride the server's stderr
+            # on every repository-scoped call.
+            warnings.simplefilter("ignore", MCPDeprecationWarning)
+            # The SDK marks `list_roots` deprecated because SEP-2577 deprecates
+            # the protocol feature, not because a replacement exists. ADR 0026
+            # still requires advertised roots to narrow containment while clients
+            # send them, and its own root rules note the design "does not become
+            # less correct when Roots is removed" — at which point this branch
+            # simply stops being reached, because no client will declare the
+            # capability.
+            answer = await session.list_roots()  # pyright: ignore[reportDeprecated]
+    except MCPError, ValidationError:
+        # Three failures, one meaning: no advertised set could be obtained.
+        # `NoBackChannelError` is an `MCPError` (the 2026-07-28 stdio context has
+        # no back-channel at all), as is a client that answers the request with
+        # an error — and the SDK documents `pydantic.ValidationError` for a
+        # *successful* response whose body does not match `ListRootsResult`
+        # (`mcp/server/connection.py`, `send_request`). Letting the last one
+        # escape would turn a malformed client answer into an unhandled
+        # exception on a call the explicit `repo_root` was already authoritative
+        # for; degrading to ``None`` keeps every unfetchable case on one rule.
+        return None
+    return tuple(_advertised_root(root) for root in answer.roots)
 
 
 def _tool(entry: ToolEntry) -> types.Tool:
@@ -308,11 +385,17 @@ def create_server(
         receive from ``resources/read`` (FR-008: "the same descriptor/bytes
         mapping"), ``_meta`` declaration included.
 
+        Client-advertised roots are fetched here, before the handler runs, and
+        only for the repository-scoped tools: they narrow a *repository* root, so
+        asking a client for them before listing the installed catalog would be a
+        round trip no rule uses.
+
         Failures travel the same ``ServiceError`` → JSON-RPC projection as a
         resource read, so the two surfaces cannot disagree about a refusal either.
         """
+        roots = await _client_roots(context) if params.name in REPOSITORY_SCOPED_TOOLS else None
         try:
-            answer = invoke_tool(tool_context, params.name, params.arguments)
+            answer = invoke_tool(tool_context, params.name, params.arguments, roots)
         except ServiceError as error:
             raise _protocol_error(error, context.protocol_version) from error
         blocks: list[types.ContentBlock] = []
@@ -325,7 +408,12 @@ def create_server(
     return Server(
         SERVER_NAME,
         version=server_version(),
-        instructions=PHASE_INSTRUCTIONS,
+        # ADR 0026's 2026-07-30 amendment binds the frozen instructions text to
+        # the *session's* registry, so the rendering is computed from the set
+        # actually built above rather than read from a constant. It is still
+        # static for the process and still not caller-tunable: the only input is
+        # the T1 evidence matrix `build_tool_registry` consulted.
+        instructions=instructions_for(entry.name for entry in tools),
         on_list_resources=_list_resources,
         on_list_resource_templates=_list_resource_templates,
         on_read_resource=_read_resource,

@@ -435,7 +435,7 @@ Before T1, the implementing agent must:
 #### T9: Add reconciliation and provider tools
 
 - **goal:** Register non-mutating reconciliation, validation, drift, and approved helper tools with no alternate schemas or write path. · **phase:** P4 · **depends_on:** [T3, T4, T5, T7] · **requirements:** [FR-011, FR-012, FR-013, FR-014, FR-017, FR-018, FR-019, FR-022, FR-023, FR-024, FR-028, NFR-012, IR-003, IR-009, DR-004, DR-008] · **priority:** must
-- **files:** `src/project_standards/mcp_server/tools.py` (modify), `tests/mcp_server/test_consumer_tools.py` (create), `tests/mcp_server/security/test_no_writes.py` (create)
+- **files:** `src/project_standards/mcp_server/tools.py` (modify), `src/project_standards/mcp_server/models.py` (modify), `src/project_standards/mcp_server/transport.py` (modify), `tests/mcp_server/test_consumer_tools.py` (create), `tests/mcp_server/security/test_no_writes.py` (create), `tests/mcp_server/test_discovery_tools.py` (modify)
 - **preconditions:** T3/T4 services, T5 transport, and T7's completed `tools.py` registry/fallback decision are green; T1 has either enumerated one generic helper tool and its non-mutating operations or explicitly omitted it.
 - **interface/data:** always register `reconcile_preview(repo_root)`, `validate_repo(repo_root)`, and `drift_check(repo_root)`. Preview returns `McpServiceFacade.reconcile`; validation and drift map `McpServiceFacade.validate_repo` and `McpServiceFacade.drift_check` without performing provider selection or drift interpretation in `mcp_server`. Register a generic helper only if ADR 0025 names it and its exact schema. Every handler calls `McpServiceFacade`; `mcp_server` must not import `apply_reconciliation`, `apply_authoring_plan`, mutation schemas, provider entrypoints, or provider declarations directly.
 - **stop/backtrack:** if authoritative service output cannot map losslessly to the frozen structured schema, or an operation reaches a mutating effect/write/syscall fixture, stop and return to T3/T4. Never sanitize away an unsafe action and return success, invoke CLI text, or add an apply callable.
@@ -446,7 +446,7 @@ Before T1, the implementing agent must:
   - **T9.3 GREEN** — register the minimum approved tools; no executor/apply callable.
   - **T9.4 Verify GREEN** — targeted plus current planner/provider regressions.
   - **T9.5 REFACTOR** — deduplicate tool mapping without combining distinct domain services.
-  - **T9.6 Verify Task** — run `uv run pytest tests/mcp_server/test_consumer_tools.py tests/mcp_server/security/test_no_writes.py tests/mcp_services/test_consumer.py tests/mcp_services/test_providers.py tests/control_plane/test_planner.py tests/control_plane/test_providers.py`, `uv run ruff check src/project_standards/mcp_server tests/mcp_server`, `uv run ruff format --check src/project_standards/mcp_server tests/mcp_server`, and `uv run basedpyright`; commit with IDs.
+  - **T9.6 Verify Task** — run `uv run pytest tests/mcp_server/test_consumer_tools.py tests/mcp_server/security/test_no_writes.py tests/mcp_server/test_discovery_tools.py tests/mcp_services/test_consumer.py tests/mcp_services/test_providers.py tests/control_plane/test_planner.py tests/control_plane/test_providers.py`, `uv run ruff check src/project_standards/mcp_server tests/mcp_server`, `uv run ruff format --check src/project_standards/mcp_server tests/mcp_server`, and `uv run basedpyright`; commit with IDs.
 
 ### Phase P5: Hardening, Clients, and Handoff
 

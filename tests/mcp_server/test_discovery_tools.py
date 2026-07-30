@@ -146,6 +146,12 @@ STANDARDS_LIST = "standards_list"
 REPO_INSPECT = "repo_inspect"
 DISCOVERY_TOOLS = (STANDARDS_LIST, REPO_INSPECT)
 
+# The three T9 registered, named here only so the conformance map below can call
+# them. Their metadata is reviewed by the suite that owns them.
+RECONCILE_PREVIEW = "reconcile_preview"
+VALIDATE_REPO = "validate_repo"
+DRIFT_CHECK = "drift_check"
+
 # FR-024 and §5.5 both name the argument, so its spelling is contract rather than
 # an implementation choice: "The server shall require an explicit `repo_root`".
 REPO_ROOT_ARGUMENT = "repo_root"
@@ -176,9 +182,24 @@ FORBIDDEN_TOOL_TOKENS = ("resolve", "recommend", "suggest", "advise", "best")
 #
 # A snapshot is stricter than any budget in the direction that matters: nothing
 # can be dropped, reworded, retyped, or added without this constant changing, and
-# changing it is a review. It is deliberately *whole-surface* equality rather than
-# per-tool containment, so a seventh tool, a renamed tool, or a schema that grew
-# an enum of installed standard ids all fail here as well as in TC-T8-004.
+# changing it is a review.
+#
+# **Scope: three of six, deliberately.** This constant reviews the three tools
+# *this* suite registers. T9's three consumer tools are reviewed the same way by
+# the suite that registers them
+# (`tests/mcp_server/test_consumer_tools.EXPECTED_CONSUMER_TOOL_METADATA`), and
+# whole-surface equality over all six lives there, in
+# `test_consumer_tool_metadata_is_compact_and_read_only`, as equality with the
+# union of the two constants.
+#
+# The split is the reviewed resolution of forward conflict (b), not a weakening:
+# each suite reviews the metadata it introduced, which is what FR-023's
+# "test-reviewed" asks for, and rewording a reviewed T8 constant from a later
+# task would be the bigger change (T9.4 Codex GREEN review, F5). The
+# alternative — centralizing six entries here — was rejected for the same reason,
+# and because `test_consumer_tools` already imports this module for the shared
+# schema and probe helpers, so importing back would make the two mutually
+# dependent.
 #
 # The wire spelling is the protocol's (`inputSchema`, `outputSchema`), because
 # this is compared against what a client actually receives.
@@ -1314,12 +1335,21 @@ def test_tool_metadata_is_compact_and_read_only(full_runtime: Path) -> None:
     the whole advertised surface must equal :data:`EXPECTED_TOOL_METADATA`, field
     for field, for every tool the recorded client matrix registers.
 
-    Whole-surface equality is what an invented budget could not give. A
-    description that had grown into documentation, a retyped schema, a dropped
-    authority sentence, a seventh tool, and a schema that enumerated installed
-    standard ids all change this constant; none of them is reliably caught by a
-    character count, and a character count additionally rejects conforming
-    metadata for reasons no record states (T8.2 Codex RED review, F1/F2).
+    **Scope: the three tools this suite registers.** T9 completed the registry,
+    and each suite reviews the metadata it introduced — whole-surface equality
+    over all six is asserted by
+    ``tests/mcp_server/test_consumer_tools.test_consumer_tool_metadata_is_compact_and_read_only``
+    against the union of the two reviewed constants. What stays here
+    unilaterally is that the advertised surface is exactly ADR 0026's frozen
+    registry, so a seventh tool, a renamed tool, or a missing one fails here as
+    well (T9.4 Codex GREEN review, F5).
+
+    Snapshot equality is what an invented budget could not give. A description
+    that had grown into documentation, a retyped schema, a dropped authority
+    sentence, and a schema that enumerated installed standard ids all change this
+    constant; none of them is reliably caught by a character count, and a
+    character count additionally rejects conforming metadata for reasons no
+    record states (T8.2 Codex RED review, F1/F2).
 
     The constant is then held to FR-023's own three obligations — purpose, input
     authority, and read-only effect — so that a future edit to the snapshot has
@@ -1337,9 +1367,20 @@ def test_tool_metadata_is_compact_and_read_only(full_runtime: Path) -> None:
         assert len(served) == len(entries), server.diagnosis(
             f"a tool is advertised more than once: {tool_names(entries)}"
         )
-        assert served == EXPECTED_TOOL_METADATA, server.diagnosis(
-            "the advertised tool metadata is not the reviewed FR-023 snapshot.\n"
-            f"served:   {rendered(served)}\nreviewed: {rendered(EXPECTED_TOOL_METADATA)}"
+        reviewed_here = {
+            name: entry for name, entry in served.items() if name in EXPECTED_TOOL_METADATA
+        }
+        assert reviewed_here == EXPECTED_TOOL_METADATA, server.diagnosis(
+            "the metadata of the tools this suite registers is not the reviewed FR-023 "
+            f"snapshot.\nserved:   {rendered(reviewed_here)}\n"
+            f"reviewed: {rendered(EXPECTED_TOOL_METADATA)}"
+        )
+        assert set(served) == FROZEN_V1_TOOLS, server.diagnosis(
+            "the advertised surface is not exactly ADR 0026's frozen v1 registry. The tools "
+            "outside this suite's snapshot are reviewed by "
+            "tests/mcp_server/test_consumer_tools.py, which asserts whole-surface equality "
+            f"against the union.\nadvertised: {sorted(served)}\n"
+            f"frozen:     {sorted(FROZEN_V1_TOOLS)}"
         )
         assert server.finish() == 0
         assert_stdout_is_protocol_only(server)
@@ -1418,10 +1459,19 @@ def test_tools_are_typed_and_generic(
     catalog = oracle_facade(full_runtime).catalog()
     repo = consumer_repos[StateKind.INITIALIZED.value]
     resource_uri = sorted(declared_resources(catalog))[0]
+    # Every advertised tool needs a conformance call here, and the assertion in
+    # the loop below says so, so this map grows with the registry: T9 registered
+    # three repository-scoped tools and each takes the same explicit root
+    # (T9.2 Codex RED review, F7 — the conflict this map would otherwise have
+    # become at T9 GREEN).
+    root_arguments = {REPO_ROOT_ARGUMENT: str(repo)}
     call_arguments: dict[str, dict[str, Any]] = {
         STANDARDS_LIST: {},
-        REPO_INSPECT: {REPO_ROOT_ARGUMENT: str(repo)},
+        REPO_INSPECT: root_arguments,
         STANDARD_READ: {"uri": resource_uri},
+        RECONCILE_PREVIEW: root_arguments,
+        VALIDATE_REPO: root_arguments,
+        DRIFT_CHECK: root_arguments,
     }
     grown_expected = catalog_projection(oracle_facade(grown_family.runtime).catalog())
 

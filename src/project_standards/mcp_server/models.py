@@ -14,6 +14,7 @@ forbids (T5.4 Codex GREEN review, F1).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,50 +28,87 @@ SERVER_NAME = "project-standards"
 #: would make the served resource identities depend on invocation.
 CATALOG_MAJOR = "5"
 
-#: Instructions served before the six-tool registry exists.
-#:
-#: ADR 0026's frozen draft text becomes binding at the task that completes the
-#: registry it describes (record amendment 2026-07-29); until then the string
-#: must be static, era-stable, and truthful for its phase. Truthful cuts three
-#: ways, and each has cost a review finding:
-#:
-#: * it must not name a tool, prompt, or URI scheme this build does not register
-#:   (advertising the six tools here is the untruthful surface TC-T5-002 polices);
-#: * it must not *deny* a surface this build does register (continuing to say "no
-#:   resources are registered" after T6 registered them is the same fault in
-#:   reverse);
-#: * it must not *promise* behaviour this build cannot perform.
-#:
-#: T8 moves this text on one phase, and in the direction the phase rule always
-#: anticipated. The ADR's frozen text says the server "reports on a consumer
-#: repository" and describes the explicit-root rule for repository-scoped
-#: operations; both were premature while no repository-scoped tool existed (T6.4
-#: Codex GREEN review, F3) and both are now simply true, because ``repo_inspect``
-#: is the tool that keeps them. Withholding them at this point would be the
-#: *denial* half of the same fault: a client would have no way to learn that the
-#: repository is an explicit argument rather than an inference from the working
-#: directory, which is the one rule FR-024 most needs a caller to know.
-#:
-#: Three tools are named because three are registered. The remaining three from
-#: the record's frozen text stay unnamed until T9 registers them, and the prompt
-#: denial stays because ADR 0026 still approves no prompt role — worded as a
-#: denial rather than as a claim about available prompts, so a truthfulness check
-#: looking for promises cannot mistake it for one.
-PHASE_INSTRUCTIONS = (
+#: ADR 0026's own enumeration order for the v1 registry. It is the order the
+#: record's instructions sentence uses, so a rendering built from it reproduces
+#: the record rather than re-deciding it. Registry *membership* belongs to
+#: ``tools.build_tool_registry``; this is the record's prose order, and the T9
+#: instructions test holds the two equal.
+INSTRUCTIONS_TOOL_ORDER: tuple[str, ...] = (
+    "standards_list",
+    "standard_read",
+    "repo_inspect",
+    "reconcile_preview",
+    "validate_repo",
+    "drift_check",
+)
+
+#: The count word the record's sentence uses, indexed by registry size. Spelled
+#: out because the frozen text says "Six tools are available": a rendering that
+#: said "6" would not be that text with its enumeration reduced.
+_COUNT_WORDS: tuple[str, ...] = ("No", "One", "Two", "Three", "Four", "Five", "Six")
+
+_INSTRUCTIONS_PREFIX = (
     "Project Standards is a read-only, local standards server. It exposes the installed "
     f"Catalog {CATALOG_MAJOR} standard packages and reports on a consumer repository; it "
     "never writes to any repository. Standard content is addressed under the standards:// "
     f"URI scheme as standards://catalog/{CATALOG_MAJOR}, "
     "standards://{standard_id}/{version}, and "
     "standards://{standard_id}/{version}/resources/{resource_id}, using ids and versions "
-    "exactly as the installed catalog declares them. Three tools are registered: "
-    "standards_list, which lists the installed packages; standard_read, which returns the "
-    "bytes of one declared resource addressed by that same URI, for clients whose models "
-    "cannot read MCP resources directly; and repo_inspect, which reports the control-plane "
-    "state of one consumer repository. Every repository-scoped tool requires an explicit "
-    "repo_root argument; the server does not infer the repository from the working directory "
-    "or from client roots. No prompt is registered."
+    "exactly as the installed catalog declares them. "
 )
+
+_INSTRUCTIONS_SUFFIX = (
+    " Every repository-scoped tool requires an explicit repo_root argument; the server does "
+    "not infer the repository from the working directory or from client roots."
+)
+
+
+def instructions_for(registered: Iterable[str]) -> str:
+    """ADR 0026's frozen instructions, rendered for one session's actual registry.
+
+    The record's 2026-07-30 amendment binds the frozen text *per session*: a
+    process registering all six tools serves it verbatim, and a process whose
+    client matrix omits the ``standard_read`` fallback serves the same text with
+    the count word and the enumeration reduced to its actual registry, nothing
+    else changed. That is what keeps the string truthful in every configuration —
+    naming a tool the session does not register is the untruthful surface
+    TC-T5-002 polices, and it is why one static sentence could not survive
+    FR-008's matrix gate.
+
+    The string stays *static and non-tunable*: it is fixed at server construction
+    from the T1 evidence matrix, which is recorded evidence rather than a knob,
+    and no caller can supply it.
+
+    Ordering is normalized to the record's own enumeration rather than taken from
+    the caller, so a registry assembled in another order still renders the
+    record's sentence.
+
+    Raises:
+        ValueError: if the registry names a tool ADR 0026's v1 set does not
+            contain. A tool with no place in the record's enumeration cannot be
+            described truthfully, so that is a registration bug and must abort the
+            launch rather than produce prose that silently omits a served tool.
+    """
+    names = set(registered)
+    unknown = sorted(names - set(INSTRUCTIONS_TOOL_ORDER))
+    if unknown:
+        raise ValueError(f"tools outside ADR 0026's v1 registry cannot be described: {unknown}")
+    ordered = [name for name in INSTRUCTIONS_TOOL_ORDER if name in names]
+    enumeration = f"{', '.join(ordered[:-1])}, and {ordered[-1]}"
+    return (
+        f"{_INSTRUCTIONS_PREFIX}{_COUNT_WORDS[len(ordered)]} tools are available: "
+        f"{enumeration}.{_INSTRUCTIONS_SUFFIX}"
+    )
+
+
+#: The record's text for a session that registers the whole v1 registry.
+#:
+#: Kept as a module constant because ADR 0026 makes identity, version, and
+#: instructions frozen facts no caller may supply (T5.4 Codex GREEN review, F1),
+#: and because it is what a default launch serves: the recorded client matrix
+#: requires the ``standard_read`` fallback, so all six register and the served
+#: string equals this constant.
+PHASE_INSTRUCTIONS = instructions_for(INSTRUCTIONS_TOOL_ORDER)
 
 
 def server_version() -> str:

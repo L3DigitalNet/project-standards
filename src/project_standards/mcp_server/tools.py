@@ -1,4 +1,4 @@
-"""The v1 tool registry: two generic discovery tools and the read fallback (plan T7, T8).
+"""The complete v1 tool registry (plan T7, T8, T9).
 
 Deliberately SDK-free and repository-free, like every adapter module except
 ``transport``: each tool's declaration is a plain mapping the transport projects
@@ -6,50 +6,64 @@ onto ``types.Tool``, and every fact any of them serves comes from the T6 resourc
 registry or from ``McpServiceFacade``. Both boundaries are enforced by
 ``tests/mcp_server/contract/test_import_boundary.py``.
 
-**Three tools, and only one of them is conditional.** ADR 0026 closes the v1
-registry at six names; T8 completes the read-only discovery half of it.
+**Six tools, and only one of them is conditional.** ADR 0026 closes the v1
+registry at these names; T9 completes it.
 
 * ``standards_list`` (FR-007) — the installed catalog, as the FR-001 masked
   projection. It takes no argument at all: a tool that accepted a standard id
   would be the per-standard surface FR-007 exists to replace.
-* ``repo_inspect`` (FR-009) — one consumer repository's authoritative
-  control-plane state, for an explicit ``repo_root``.
 * ``standard_read`` (FR-008) — the resource-read fallback, registered only when
   the client matrix says a supported primary client needs it.
+* ``repo_inspect`` (FR-009) — one consumer repository's authoritative
+  control-plane state, for an explicit ``repo_root``.
+* ``reconcile_preview`` (FR-011) — the dry-run plan, or the control-plane state
+  that explains why no plan exists.
+* ``validate_repo`` (FR-012) — the applicable validate/verify/lint provider
+  results for one repository.
+* ``drift_check`` (FR-013) — reconciliation facts plus applicable drift-check
+  results, uninterpreted.
 
-FR-007 and FR-009 make the first two unconditional parts of the surface, so the
-matrix decides the third and nothing else. That distinction is why the tools
-capability now survives the counterfactual matrix in which every client can read
+Every requirement above except FR-008 puts its tool in the surface outright, so
+the matrix decides the fallback and nothing else — which is why the tools
+capability survives the counterfactual matrix in which every client can read
 resources directly, where T7's registry emptied entirely.
 
-**``standards_list`` does not re-project the catalog.** FR-007's acceptance is
-that the tool "returns the same installed catalog facts and exact resource URIs as
-FR-001", and T6 already serves exactly that at ``standards://catalog/{major}``.
-The projection is therefore taken from
+**Nothing here re-derives a domain fact.** ``standards_list`` takes the FR-001
+field mask from
 :meth:`~project_standards.mcp_server.resources.ResourceRegistry.catalog_projection`
-— the single producer of the FR-001 field mask — rather than rebuilt here. A
-second producer is how the resource and the tool would come to disagree, which is
-the failure one shared mapping exists to prevent, and it is also the shape the
-T6.5 collapse of the URI grammar already ruled out for this adapter.
+rather than rebuilding it; the four repository-scoped tools publish
+``McpServiceFacade`` DTOs verbatim. That is not stylistic: a second producer of
+the catalog projection is how the resource and the tool would come to disagree,
+and a second producer of a report is what DR-004 ("no parallel MCP plan schema")
+and plan:439 ("without performing provider selection or drift interpretation in
+``mcp_server``") forbid outright. No handler names a provider, an operation, or a
+payload version, so no unapproved operation is even expressible here.
 
-**``repo_inspect`` owns no path policy either.** The root goes through
-:func:`~project_standards.mcp_server.repo_access.resolve_effective_root`, which is
-the one place the server decides which directory a repository-scoped call may
-touch: the explicit argument is mandatory, the launch-time boundary can only
-narrow it, and containment is decided on resolved paths. The snapshot itself is
-``McpServiceFacade.inspect_repo``'s, published verbatim — no health summary is
-synthesized over the authoritative classification (DR-005).
+**One root policy, one place.** Every repository-scoped tool reaches
+:func:`~project_standards.mcp_server.repo_access.resolve_effective_root` through
+:func:`_resolved_root`: the explicit argument is mandatory, the launch-time
+boundary and the client's advertised roots may only narrow, and containment is
+decided on resolved paths. A tool that resolved its own root would be a second
+place those rules could drift.
+
+**``reconcile_preview`` is the one composed answer**, and its shape is contract:
+§5.5 freezes a closed two-slot envelope whose populated slot follows the
+*authoritative classification* rather than a caught failure code, because
+``McpServiceFacade.reconcile`` raises for a degraded control plane, for lock
+contention, and for a planner refusal alike — and only the first is EC-005's
+"returns control-plane findings". The other two stay structured refusals.
 
 **Every result is typed and structured, and the human half stays bounded.**
 FR-022 requires each v1 tool to declare an output schema and to return
 "protocol-supported structured content plus bounded human text where useful", so
 :class:`ToolResult` carries both and :data:`ToolEntry.output_schema` is not
-optional. ``standard_read``'s structured content publishes the resource's identity
-and its DR-002 declaration rather than a second copy of the bytes: the bytes
-already travel once in the result's embedded resource, and duplicating a payload
-into structured content is exactly the "unnecessary verbosity" NFR-012 names. The
-rejected alternative — mirroring the whole contents entry into
-``structuredContent`` — is a complete answer twice on every read.
+optional. Two deliberate restraints in the text half: ``standard_read``'s
+structured content publishes the resource's identity and its DR-002 declaration
+rather than a second copy of the bytes (they already travel once in the embedded
+resource, and duplicating a payload is the "unnecessary verbosity" NFR-012
+names), and ``drift_check``'s summary counts what the report carries without
+asserting anything about it — a line announcing "no drift" would be the invented
+clean-state boolean §5.5 forbids, wearing prose.
 
 **``standard_read`` cannot take a path.** FR-008: the tool "cannot accept
 arbitrary paths"; the plan: "with no path argument". The input is one canonical
@@ -64,7 +78,7 @@ registration-index lookup, digest recheck, and refusal taxonomy unchanged.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -81,22 +95,57 @@ from project_standards.mcp_server.resources import (
 )
 from project_standards.mcp_services import McpServiceFacade, ServiceError
 
-#: ADR 0026's frozen v1 registry spells all three names; nothing here may rename
-#: them, and no fourth name may join them under T8 (the record's tool set is
-#: closed and the plan's stop condition repeats it).
+#: ADR 0026's frozen v1 registry spells all six names; nothing here may rename
+#: them, and no seventh name may join them (the record's tool set is closed and
+#: the plan's stop condition repeats it).
 STANDARDS_LIST = "standards_list"
 STANDARD_READ = "standard_read"
 REPO_INSPECT = "repo_inspect"
+RECONCILE_PREVIEW = "reconcile_preview"
+VALIDATE_REPO = "validate_repo"
+DRIFT_CHECK = "drift_check"
+
+#: The tools that address a consumer repository rather than the installed
+#: distribution. They are the only ones that take a ``repo_root``, the only ones
+#: the launch-time boundary narrows, and the only ones for which a client's
+#: advertised roots are consulted: asking a client for roots before listing the
+#: installed catalog would be a round trip no rule uses.
+REPOSITORY_SCOPED_TOOLS = frozenset({REPO_INSPECT, RECONCILE_PREVIEW, VALIDATE_REPO, DRIFT_CHECK})
+
+#: The authoritative ``StateKind.INITIALIZED`` value, spelled rather than
+#: imported. The §5.5 ``reconcile_preview`` row makes the published slot follow
+#: the authoritative classification, so this comparison has to happen — but T5's
+#: import-boundary contract forbids ``tools.py`` from importing
+#: ``control_plane.state`` at all, and ``mcp_services`` exports no state
+#: vocabulary. The literal is pinned by tests rather than by an import: the
+#: EC-005 suite drives every degraded classification ``StateKind`` defines and
+#: requires the control-plane slot for each, so a new or renamed classification
+#: fails there instead of silently publishing a preview.
+INITIALIZED_STATE = "initialized"
 
 #: ``standard_read``'s one input. Named for what it is — the canonical resource
 #: URI — because a path-shaped argument name would advertise an addressing mode
 #: FR-008 forbids.
 STANDARD_READ_ARGUMENT = "uri"
 
-#: ``repo_inspect``'s one input. Unlike the URI argument this spelling is
-#: *contract*: FR-024 names it in the requirement text ("shall require an explicit
-#: `repo_root`") and §5.5 names it on the facade method.
+#: The one input every repository-scoped tool takes. Unlike the URI argument this
+#: spelling is *contract*: FR-024 names it in the requirement text ("shall require
+#: an explicit `repo_root`") and §5.5 names it on the facade methods.
 REPO_ROOT_ARGUMENT = "repo_root"
+
+#: The two slots of the §5.5 ``reconcile_preview`` tool-result envelope. Exactly
+#: one is non-null on every call, and which one follows the authoritative state
+#: classification rather than a caught failure code.
+PREVIEW_SLOT = "preview"
+CONTROL_PLANE_SLOT = "control_plane"
+
+#: What a client advertised for one call, in the two forms ADR 0026's root rules
+#: distinguish: ``None`` is *no advertised set* — the client declared no roots
+#: capability, or could not be asked — and an empty sequence is *the client
+#: advertised none*, which admits no repository at all. ``resolve_effective_root``
+#: treats them as opposites, so the alias exists to keep that distinction visible
+#: at every signature that carries it.
+type RootSet = Sequence[object] | None
 
 #: The Step 09 client matrix, transcribed to the single question FR-008 asks of
 #: each supported primary client: *does this client give the model direct
@@ -132,10 +181,31 @@ _URI_REMEDIATION = (
     f"{PACKAGE_TEMPLATE}, or {RESOURCE_TEMPLATE}"
 )
 
-_ROOT_ARGUMENT_REMEDIATION = (
-    f"call {REPO_INSPECT} with exactly one argument, {REPO_ROOT_ARGUMENT!r}, whose value is the "
-    "absolute path of the repository to inspect"
-)
+
+def _root_remediation(name: str) -> str:
+    """The remediation every repository-scoped refusal carries, named for its tool.
+
+    One producer rather than a constant per tool: the four tools take the same
+    argument under the same rule, so four sentences would be four chances to
+    describe it differently — and the only per-tool fact in it is the name, which
+    the caller already has (T9.5).
+    """
+    return (
+        f"call {name} with exactly one argument, {REPO_ROOT_ARGUMENT!r}, whose value is the "
+        "absolute path of the repository to operate on"
+    )
+
+
+def _plural(count: int, singular: str, plural: str | None = None) -> str:
+    """``count`` and its noun, agreeing. Used by every tool's bounded summary.
+
+    The seven hand-written ternaries this replaces were identical in shape and
+    differed only in the noun, which is exactly the duplication plan:447 asks this
+    task to remove — and a summary that says "1 findings" is the kind of defect
+    nobody writes a test for (T9.5).
+    """
+    return f"{count} {singular if count == 1 else plural or f'{singular}s'}"
+
 
 _NO_ARGUMENT_REMEDIATION = f"call {STANDARDS_LIST} with no arguments"
 
@@ -179,6 +249,35 @@ REPO_INSPECT_DESCRIPTION = (
     "nothing."
 )
 
+RECONCILE_PREVIEW_TITLE = "Preview reconciliation for one consumer repository"
+RECONCILE_PREVIEW_DESCRIPTION = (
+    "Return the dry-run reconciliation plan for one consumer repository: actions, "
+    "findings, preconditions, provider notices, next lock, and the control plane's own "
+    "reconciliation fingerprint. When the repository cannot be planned, its "
+    "control-plane state and findings are returned instead. The repository is the "
+    "explicit repo_root argument, never the working directory. Read-only: it plans but "
+    "never applies, and writes nothing."
+)
+
+VALIDATE_REPO_TITLE = "Validate one consumer repository against its standards"
+VALIDATE_REPO_DESCRIPTION = (
+    "Run every applicable validate, verify, and lint provider declared by the standards "
+    "this consumer repository currently resolves, and return their typed status, "
+    "findings, and bounded diagnostics. Providers are chosen by the repository's own "
+    "resolution and cannot be named by the caller. The repository is the explicit "
+    "repo_root argument, never the working directory. Read-only: no mutating provider "
+    "operation is dispatched and nothing is written."
+)
+
+DRIFT_CHECK_TITLE = "Report standards drift for one consumer repository"
+DRIFT_CHECK_DESCRIPTION = (
+    "Report drift for one consumer repository: the control plane's own reconciliation "
+    "actions, findings, and fingerprint, plus the results of every applicable "
+    "drift-check provider. Facts only, with no summary verdict, confidence, or "
+    "clean-state flag invented. The repository is the explicit repo_root argument, "
+    "never the working directory. Read-only: it writes nothing."
+)
+
 #: ``standards_list`` takes nothing. ``additionalProperties: false`` is the
 #: schema-level half of the refusal :func:`invoke_tool` enforces on the wire.
 STANDARDS_LIST_INPUT_SCHEMA: dict[str, Any] = {
@@ -210,22 +309,42 @@ STANDARD_READ_INPUT_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
-#: ``repo_inspect``'s declared input. Required, and required *in the schema* as
-#: well as in the handler, so a client can see FR-024's rule before it calls.
-REPO_INSPECT_INPUT_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        REPO_ROOT_ARGUMENT: {
-            "type": "string",
-            "description": (
-                "Absolute path to the consumer repository to inspect. Required: the server "
-                "never infers a repository from its working directory."
-            ),
-        }
-    },
-    "required": [REPO_ROOT_ARGUMENT],
-    "additionalProperties": False,
-}
+
+def repo_root_input_schema(description: str) -> dict[str, Any]:
+    """FR-024's explicit root, declared in the schema as well as in the handler.
+
+    Required *in the schema* so a client can see the rule before it calls. The
+    property sentence differs per tool because the purpose does; the
+    required-clause is identical everywhere, so the one rule a caller must learn
+    reads the same on all four repository-scoped tools.
+    """
+    return {
+        "type": "object",
+        "properties": {REPO_ROOT_ARGUMENT: {"type": "string", "description": description}},
+        "required": [REPO_ROOT_ARGUMENT],
+        "additionalProperties": False,
+    }
+
+
+REPO_INSPECT_INPUT_SCHEMA: dict[str, Any] = repo_root_input_schema(
+    "Absolute path to the consumer repository to inspect. Required: the server "
+    "never infers a repository from its working directory."
+)
+
+RECONCILE_PREVIEW_INPUT_SCHEMA: dict[str, Any] = repo_root_input_schema(
+    "Absolute path to the consumer repository to preview reconciliation for. Required: "
+    "the server never infers a repository from its working directory."
+)
+
+VALIDATE_REPO_INPUT_SCHEMA: dict[str, Any] = repo_root_input_schema(
+    "Absolute path to the consumer repository to validate. Required: the server never "
+    "infers a repository from its working directory."
+)
+
+DRIFT_CHECK_INPUT_SCHEMA: dict[str, Any] = repo_root_input_schema(
+    "Absolute path to the consumer repository to report drift for. Required: the server "
+    "never infers a repository from its working directory."
+)
 
 #: Any JSON value, spelled out rather than written as the empty schema. ``{}`` is a
 #: legal schema that constrains nothing, which is indistinguishable from having
@@ -433,6 +552,153 @@ _DECLARATION_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
+#: Any JSON value, as an array element. The three composite reports carry the
+#: control plane's *own* serializations here — a plan action, a plan finding, a
+#: resolution — whose shapes belong to the control plane rather than to this
+#: adapter, which is exactly why DR-004 forbids re-describing them.
+_ANY_JSON_ARRAY: dict[str, Any] = {"type": "array", "items": _ANY_JSON}
+
+#: ``ReconciliationPreview``, closed and complete against the frozen §5.5 field
+#: list: every public field of ``ReconciliationPlan.to_jsonable()`` plus
+#: ``reconciliation_fingerprint``, and nothing else. The executor-only proposed
+#: bytes have no slot at all, which is the schema-level half of "a preview may
+#: never publish staged content".
+PREVIEW_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "schema_version": {"type": "string"},
+        "applicable": {"type": "boolean"},
+        "actions": _ANY_JSON_ARRAY,
+        "configuration_transforms": _ANY_JSON_ARRAY,
+        "units": _ANY_JSON_ARRAY,
+        "findings": _ANY_JSON_ARRAY,
+        "preconditions": _ANY_JSON_ARRAY,
+        "resolution": _ANY_JSON,
+        "verification_requests": _ANY_JSON_ARRAY,
+        "provider_notices": _ANY_JSON_ARRAY,
+        "namespace_prunes": _STRING_ARRAY,
+        "catalog_refresh": _ANY_JSON,
+        "next_lock": _ANY_JSON,
+        "proposed_lock": _ANY_JSON,
+        "reconciliation_fingerprint": {"type": "string"},
+    },
+    "required": [
+        "schema_version",
+        "applicable",
+        "actions",
+        "configuration_transforms",
+        "units",
+        "findings",
+        "preconditions",
+        "resolution",
+        "verification_requests",
+        "provider_notices",
+        "namespace_prunes",
+        "catalog_refresh",
+        "next_lock",
+        "proposed_lock",
+        "reconciliation_fingerprint",
+    ],
+    "additionalProperties": False,
+}
+
+#: EC-005's envelope, frozen field-by-field by the master plan §5.5 DTO table
+#: (2026-07-30): both slots required, exactly one non-null, the populated slot
+#: chosen by the authoritative state classification. Closed, because a third slot
+#: would be the parallel plan schema DR-004 forbids.
+#:
+#: **"Exactly one" is enforced by the schema, not merely by the handler.** Two
+#: independently nullable properties would validate a both-null document (an
+#: answer carrying nothing) and a both-populated one (an answer carrying a
+#: preview *and* the state that says no preview exists), neither of which the
+#: record permits — so the two valid arms are spelled as ``oneOf`` and a client
+#: validating against the advertised schema rejects the other two combinations
+#: (T9.4 Codex GREEN review, F2).
+RECONCILE_PREVIEW_OUTPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        PREVIEW_SLOT: _nullable(PREVIEW_SCHEMA),
+        CONTROL_PLANE_SLOT: _nullable(REPO_INSPECT_OUTPUT_SCHEMA),
+    },
+    "required": [PREVIEW_SLOT, CONTROL_PLANE_SLOT],
+    "additionalProperties": False,
+    "oneOf": [
+        {
+            "properties": {
+                PREVIEW_SLOT: PREVIEW_SCHEMA,
+                CONTROL_PLANE_SLOT: {"type": "null"},
+            }
+        },
+        {
+            "properties": {
+                PREVIEW_SLOT: {"type": "null"},
+                CONTROL_PLANE_SLOT: REPO_INSPECT_OUTPUT_SCHEMA,
+            }
+        },
+    ],
+}
+
+#: DR-008's declared provider-result fields, closed and fully required: identity,
+#: operation, phase/effect, status, findings, bounded diagnostics, and the
+#: declared output-schema fields the dispatcher already validated and published.
+_PROVIDER_RESULT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "standard_id": {"type": "string"},
+        "version": {"type": "string"},
+        "provider_id": {"type": "string"},
+        "operation": {"type": "string"},
+        "phase": {"type": "string"},
+        "effect": {"type": "string"},
+        "status": {"type": "string"},
+        "findings": {"type": "array", "items": _FINDING_SCHEMA},
+        "diagnostics": {"type": "string"},
+        "output": _ANY_JSON,
+    },
+    "required": [
+        "standard_id",
+        "version",
+        "provider_id",
+        "operation",
+        "phase",
+        "effect",
+        "status",
+        "findings",
+        "diagnostics",
+        "output",
+    ],
+    "additionalProperties": False,
+}
+
+VALIDATE_REPO_OUTPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "repo_root": {"type": "string"},
+        "results": {"type": "array", "items": _PROVIDER_RESULT_SCHEMA},
+        "findings": {"type": "array", "items": _FINDING_SCHEMA},
+    },
+    "required": ["repo_root", "results", "findings"],
+    "additionalProperties": False,
+}
+
+#: ``DriftReport.findings`` carries the *plan's* own findings serialization, not
+#: the protocol-neutral ``Finding`` DTO that ``ValidationReport.findings``
+#: carries. The difference is contract rather than accident: drift findings come
+#: from ``ReconciliationPlan.to_jsonable()``, whose shape belongs to the control
+#: plane, and re-describing it here is what DR-004 forbids.
+DRIFT_CHECK_OUTPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "repo_root": {"type": "string"},
+        "reconciliation_fingerprint": {"type": "string"},
+        "actions": _ANY_JSON_ARRAY,
+        "findings": _ANY_JSON_ARRAY,
+        "results": {"type": "array", "items": _PROVIDER_RESULT_SCHEMA},
+    },
+    "required": ["repo_root", "reconciliation_fingerprint", "actions", "findings", "results"],
+    "additionalProperties": False,
+}
+
 #: ``standard_read``'s structured half: which resource was read and what the
 #: catalog declares about it. ``declaration`` is null for the two metadata forms,
 #: which declare no payload resource of their own — so the slot is the complete
@@ -556,13 +822,36 @@ def build_tool_registry() -> tuple[ToolEntry, ...]:
                 output_schema=STANDARD_READ_OUTPUT_SCHEMA,
             )
         )
-    entries.append(
-        ToolEntry(
-            name=REPO_INSPECT,
-            title=REPO_INSPECT_TITLE,
-            description=REPO_INSPECT_DESCRIPTION,
-            input_schema=REPO_INSPECT_INPUT_SCHEMA,
-            output_schema=REPO_INSPECT_OUTPUT_SCHEMA,
+    entries.extend(
+        (
+            ToolEntry(
+                name=REPO_INSPECT,
+                title=REPO_INSPECT_TITLE,
+                description=REPO_INSPECT_DESCRIPTION,
+                input_schema=REPO_INSPECT_INPUT_SCHEMA,
+                output_schema=REPO_INSPECT_OUTPUT_SCHEMA,
+            ),
+            ToolEntry(
+                name=RECONCILE_PREVIEW,
+                title=RECONCILE_PREVIEW_TITLE,
+                description=RECONCILE_PREVIEW_DESCRIPTION,
+                input_schema=RECONCILE_PREVIEW_INPUT_SCHEMA,
+                output_schema=RECONCILE_PREVIEW_OUTPUT_SCHEMA,
+            ),
+            ToolEntry(
+                name=VALIDATE_REPO,
+                title=VALIDATE_REPO_TITLE,
+                description=VALIDATE_REPO_DESCRIPTION,
+                input_schema=VALIDATE_REPO_INPUT_SCHEMA,
+                output_schema=VALIDATE_REPO_OUTPUT_SCHEMA,
+            ),
+            ToolEntry(
+                name=DRIFT_CHECK,
+                title=DRIFT_CHECK_TITLE,
+                description=DRIFT_CHECK_DESCRIPTION,
+                input_schema=DRIFT_CHECK_INPUT_SCHEMA,
+                output_schema=DRIFT_CHECK_OUTPUT_SCHEMA,
+            ),
         )
     )
     return tuple(entries)
@@ -588,7 +877,9 @@ def _accepted(
     return supplied
 
 
-def _standards_list(context: ToolContext, arguments: Mapping[str, Any] | None) -> ToolResult:
+def _standards_list(
+    context: ToolContext, arguments: Mapping[str, Any] | None, _roots: RootSet
+) -> ToolResult:
     """FR-007: the installed catalog, exactly as the FR-001 resource serves it.
 
     The human summary counts what the projection carries rather than what the
@@ -597,14 +888,40 @@ def _standards_list(context: ToolContext, arguments: Mapping[str, Any] | None) -
     _accepted(STANDARDS_LIST, arguments, (), _NO_ARGUMENT_REMEDIATION)
     projection = context.registry.catalog_projection()
     installed = cast("list[object]", projection["standards"])
-    noun = "package" if len(installed) == 1 else "packages"
     return ToolResult(
         structured=projection,
-        text=f"{len(installed)} standard {noun} installed in Catalog {projection['catalog_major']}.",
+        text=(
+            f"{_plural(len(installed), 'standard package')} installed in "
+            f"Catalog {projection['catalog_major']}."
+        ),
     )
 
 
-def _repo_inspect(context: ToolContext, arguments: Mapping[str, Any] | None) -> ToolResult:
+def _resolved_root(
+    context: ToolContext,
+    name: str,
+    arguments: Mapping[str, Any] | None,
+    client_roots: RootSet,
+) -> Path:
+    """The one path every repository-scoped tool takes to a filesystem root.
+
+    Single-sited because the record's root rules are written for *every*
+    repository-scoped tool: the explicit argument is mandatory, the launch-time
+    boundary and the client's advertised roots may only narrow, and containment
+    is decided on resolved paths. A tool that resolved its own root would be a
+    second place those rules could drift.
+    """
+    supplied = _accepted(name, arguments, (REPO_ROOT_ARGUMENT,), _root_remediation(name))
+    return resolve_effective_root(
+        supplied.get(REPO_ROOT_ARGUMENT),
+        configured_boundary=context.configured_boundary,
+        client_roots=client_roots,
+    )
+
+
+def _repo_inspect(
+    context: ToolContext, arguments: Mapping[str, Any] | None, client_roots: RootSet
+) -> ToolResult:
     """FR-009/FR-024/DR-005: one repository's authoritative state, for an explicit root.
 
     The root is normalized and contained by ``resolve_effective_root`` before the
@@ -612,20 +929,104 @@ def _repo_inspect(context: ToolContext, arguments: Mapping[str, Any] | None) -> 
     happens here, which is the point: containment policy has one owner and the
     state classification has another, and this tool is the wiring between them.
     """
-    supplied = _accepted(REPO_INSPECT, arguments, (REPO_ROOT_ARGUMENT,), _ROOT_ARGUMENT_REMEDIATION)
-    root = resolve_effective_root(
-        supplied.get(REPO_ROOT_ARGUMENT), configured_boundary=context.configured_boundary
-    )
+    root = _resolved_root(context, REPO_INSPECT, arguments, client_roots)
     snapshot = context.facade.inspect_repo(root)
-    count = len(snapshot.findings)
-    noun = "finding" if count == 1 else "findings"
     return ToolResult(
         structured=snapshot.model_dump(mode="json"),
-        text=f"Control plane state: {snapshot.state}; {count} {noun}.",
+        text=f"Control plane state: {snapshot.state}; {_plural(len(snapshot.findings), 'finding')}.",
     )
 
 
-def _standard_read(context: ToolContext, arguments: Mapping[str, Any] | None) -> ToolResult:
+def _reconcile_preview(
+    context: ToolContext, arguments: Mapping[str, Any] | None, client_roots: RootSet
+) -> ToolResult:
+    """FR-011/DR-004/EC-005: the dry-run plan, or the state that explains its absence.
+
+    The §5.5 tool-result row makes this envelope contract rather than choice:
+    two required nullable slots, exactly one non-null, and **the slot follows the
+    authoritative classification** — not a caught failure code. That distinction
+    is the whole design. ``McpServiceFacade.reconcile`` raises for every
+    non-``initialized`` state *and* for lock contention *and* for a planner
+    refusal on a perfectly good repository; catching a ``ServiceError`` and
+    reading its code would silently turn the last two into a "degraded" answer.
+    Asking ``inspect_repo`` first is what keeps EC-005's obligation ("returns
+    control-plane findings") separate from a real failure, which stays a
+    structured refusal.
+
+    Neither arm is synthesized: the preview slot is ``reconcile``'s own
+    projection and the control-plane slot is ``inspect_repo``'s own snapshot, so
+    the control plane keeps one serialization and DR-004's "no parallel MCP plan
+    schema" holds in both directions.
+    """
+    root = _resolved_root(context, RECONCILE_PREVIEW, arguments, client_roots)
+    snapshot = context.facade.inspect_repo(root)
+    if snapshot.state != INITIALIZED_STATE:
+        return ToolResult(
+            structured={
+                PREVIEW_SLOT: None,
+                CONTROL_PLANE_SLOT: snapshot.model_dump(mode="json"),
+            },
+            text=(
+                f"No reconciliation preview: control plane state is {snapshot.state}; "
+                f"{_plural(len(snapshot.findings), 'finding')}."
+            ),
+        )
+    preview = context.facade.reconcile(root)
+    return ToolResult(
+        structured={PREVIEW_SLOT: preview.model_dump(mode="json"), CONTROL_PLANE_SLOT: None},
+        text=(
+            f"Reconciliation preview: {_plural(len(preview.actions), 'planned action')}; "
+            "nothing applied."
+        ),
+    )
+
+
+def _validate_repo(
+    context: ToolContext, arguments: Mapping[str, Any] | None, client_roots: RootSet
+) -> ToolResult:
+    """FR-012: the applicable validate/verify/lint results, exactly as the service ran them.
+
+    Provider *selection* happens in ``mcp_services`` and nowhere else (plan:439:
+    "without performing provider selection or drift interpretation in
+    ``mcp_server``"), so this handler names no operation, no provider, and no
+    payload version — it forwards one contained root and publishes the report.
+    """
+    root = _resolved_root(context, VALIDATE_REPO, arguments, client_roots)
+    report = context.facade.validate_repo(root)
+    return ToolResult(
+        structured=report.model_dump(mode="json"),
+        text=(
+            f"{_plural(len(report.results), 'applicable provider')} ran; "
+            f"{_plural(len(report.findings), 'finding')}."
+        ),
+    )
+
+
+def _drift_check(
+    context: ToolContext, arguments: Mapping[str, Any] | None, client_roots: RootSet
+) -> ToolResult:
+    """FR-013/FR-017: reconciliation facts plus drift-check results, uninterpreted.
+
+    The summary counts what the report carries and asserts nothing about it: §5.5
+    forbids inventing a confidence, a relevance, or a clean-state boolean, and a
+    human line that announced "no drift" would be exactly that invention wearing
+    prose. The fingerprint is the executor's own, so the protocol introduces no
+    competing plan identity.
+    """
+    root = _resolved_root(context, DRIFT_CHECK, arguments, client_roots)
+    report = context.facade.drift_check(root)
+    return ToolResult(
+        structured=report.model_dump(mode="json"),
+        text=(
+            f"{_plural(len(report.actions), 'reconciliation action')}; "
+            f"{_plural(len(report.results), 'drift-check provider')} ran."
+        ),
+    )
+
+
+def _standard_read(
+    context: ToolContext, arguments: Mapping[str, Any] | None, _roots: RootSet
+) -> ToolResult:
     """FR-008: the same read ``resources/read`` performs, reached the same way.
 
     The argument shape is checked here and the URI is not: everything about
@@ -654,12 +1055,25 @@ def _standard_read(context: ToolContext, arguments: Mapping[str, Any] | None) ->
     )
 
 
-def invoke_tool(context: ToolContext, name: str, arguments: Mapping[str, Any] | None) -> ToolResult:
+def invoke_tool(
+    context: ToolContext,
+    name: str,
+    arguments: Mapping[str, Any] | None,
+    client_roots: RootSet = None,
+) -> ToolResult:
     """Answer one tool call, or refuse it structurally.
 
     The name is checked against the *registration set* rather than against the
     handler table: a tool the client matrix omitted has a handler but is not
     served, and answering it anyway would make the advertised surface a lie.
+
+    ``client_roots`` carries what the client advertised for *this* call, and its
+    two empty forms are deliberately different — ``None`` is "no advertised set"
+    and ``()`` is "the client advertised none", which
+    :func:`~project_standards.mcp_server.repo_access.resolve_effective_root`
+    treats as unconstrained and refuse-everything respectively. Collapsing them
+    would either widen authority or refuse every call from a client that cannot
+    be asked.
 
     Raises:
         ServiceError: for an unknown tool or a malformed argument set, and
@@ -673,11 +1087,14 @@ def invoke_tool(context: ToolContext, name: str, arguments: Mapping[str, Any] | 
             message=f"this server registers no tool named {name!r}",
             remediation="list the available tools and call one of them",
         )
-    return handler(context, arguments)
+    return handler(context, arguments, client_roots)
 
 
-_HANDLERS = {
+_HANDLERS: dict[str, Callable[[ToolContext, Mapping[str, Any] | None, RootSet], ToolResult]] = {
     STANDARDS_LIST: _standards_list,
     STANDARD_READ: _standard_read,
     REPO_INSPECT: _repo_inspect,
+    RECONCILE_PREVIEW: _reconcile_preview,
+    VALIDATE_REPO: _validate_repo,
+    DRIFT_CHECK: _drift_check,
 }
