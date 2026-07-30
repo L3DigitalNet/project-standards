@@ -63,7 +63,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   - [x] Continue with T7 (declared prompts and shared read fallback) when directed. _(Done 2026-07-29: commit `572d84b` after Codex RED and GREEN reviews; prompts truthfully absent, matrix-gated `standard_read` fallback live.)_
   - [x] Finish T8 (catalog and repository inspection tools). _(Done 2026-07-30: commit `614e7e2` after rerun Codex RED and GREEN reviews, all findings accepted; discovery tools registered unconditionally with closed typed schemas.)_
   - [x] Continue with T9 (reconciliation and provider tools) when directed. _(Done 2026-07-30: commit `7b46a30` after Codex RED and GREEN reviews, all findings dispositioned; contract amendments `223fcd5`.)_
-  - [ ] Continue with T10 (protocol, safety, determinism, and CI proof) when directed.
+  - [x] Continue with T10 (protocol, safety, determinism, and CI proof) when directed. _(Done 2026-07-30: commit `e30862f` after Codex RED and GREEN reviews, all findings dispositioned; ADR 0026 taxonomy amendments `2c75bea`/`0323bb1`.)_
+  - [ ] Continue with T11 (installed-wheel client proof and documentation) when directed.
   - [ ] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default (flag registered disabled in 0.146.0, openai/codex#34747) before capturing the FR-030 probe evidence.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes: avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline. _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
