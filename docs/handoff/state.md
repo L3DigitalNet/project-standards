@@ -2,7 +2,7 @@
 
 ## Current focus
 
-- MCP T8 closed 2026-07-30 (`614e7e2`): both discovery tools live on both eras with closed typed schemas; T9 (reconciliation + provider tools) ready when directed.
+- MCP T9 closed 2026-07-30 (`7b46a30`): all three consumer tools live on both eras with client-root narrowing; T10 ready when directed.
 - Owner 2026-07-29: four-segment `standards://` URIs canonical; minor standards changes authorized; v5.12.0 ships with MCP; both open user tasks deferred past T12.
 - Codex 0.146.0 assessed: dual-era serving stays mandatory (`mcp_2026_07_28` flag off by default); T11 re-check queued; 5.11.0 published; #75–#77 open.
 - MCP hold through T12: defer significant non-MCP features, refactors, standards work, releases, and changes; owner directs exceptions.
