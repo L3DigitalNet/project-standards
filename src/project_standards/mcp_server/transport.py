@@ -38,11 +38,22 @@ of it depends on the revision the connection negotiated:
 In all three the structured ``ServiceError`` fields travel in ``error.data``,
 which is what keeps NFR-004's "code, message, affected path/standard, severity,
 remediation" machine-readable instead of collapsing into prose.
+
+There is a fourth class, and it is the one the SDK would otherwise answer for us.
+An *unexpected* handler failure — anything that is not a ``ServiceError`` — is a
+bug in this server, and ADR 0026's 2026-07-30 error-taxonomy amendment forbids
+serving the SDK's generic path for it: at 2026-07-28 that path answers
+``-32603`` with no ``data``, and at the handshake revisions it answers ``code: 0``
+carrying the **raw exception text**, which is both a code no revision defines and
+an FR-028 exposure. Both handler wrappers therefore map it themselves, to a
+structured ``-32603`` whose message is this adapter's own; the exception goes to
+stderr. See :func:`_unexpected_error`.
 """
 
 from __future__ import annotations
 
 import base64
+import logging
 import warnings
 from pathlib import Path
 from typing import Any
@@ -101,6 +112,62 @@ _NOT_FOUND_CODES = frozenset({"catalog-not-found", "standard-not-found", "resour
 # only place it may appear, and it is spelled here rather than imported for
 # exactly that reason (T6.4 Codex GREEN review, F2).
 LEGACY_RESOURCE_NOT_FOUND = -32002
+
+# The stable code an *unexpected* handler failure publishes — a bug in this server,
+# not a bad request and not one of the two declared server faults above.
+#
+# It exists because ADR 0026's error-taxonomy amendment (2026-07-30) requires such
+# a failure to be "mapped by the adapter to a structured `-32603` refusal in both
+# eras", and NFR-004 makes "structured" mean a stable code, a severity, and a
+# remediation. Without a code of its own the class would have to borrow one that
+# describes a different cause.
+UNEXPECTED_INTERNAL_ERROR = "internal-error"
+
+# What a client can actually do about a server bug. Deliberately not "check your
+# input": the request was well-formed by construction, since every input-shaped
+# failure is already a `ServiceError` before it reaches here.
+_UNEXPECTED_REMEDIATION = (
+    "retry the request; if it recurs, report the server version and the failing method, and read "
+    "the server's stderr for the traceback"
+)
+
+# Every log record, warning, and traceback goes to stderr (ADR 0026). The logger is
+# module-level so a launch that bypasses the CLI still gets the traceback on
+# stderr through logging's last-resort handler rather than losing it.
+_logger = logging.getLogger(__name__)
+
+
+def _unexpected_error(method: str, error: BaseException) -> MCPError:
+    """Project one *unmapped* handler failure onto the wire without publishing it.
+
+    Two obligations that pull in opposite directions, and both are contract.
+
+    *NFR-004*: the failure must still be structured — a stable code, a severity,
+    and a remediation in ``error.data`` — because a client that cannot classify a
+    failure cannot act on it. The SDK's generic path gives none of that: at
+    2026-07-28 it answers ``-32603`` with no ``data`` at all, and at the handshake
+    revisions it answers ``code: 0``, which no revision defines.
+
+    *FR-028 and the ADR*: the exception's own text may never reach the wire. It is
+    the one string here that was not written for a client — it can carry a
+    consumer path, a fragment of repository content, or a provider's output — so
+    the message published is this adapter's, and the exception travels to
+    **stderr** instead, where the operator who can act on it will find it.
+
+    The method name is included because it is the one piece of context a client
+    needs to retry or report, and it is protocol vocabulary rather than repository
+    content.
+    """
+    _logger.exception("unhandled failure answering %s", method, exc_info=error)
+    return MCPError(
+        code=INTERNAL_ERROR,
+        message=f"the server failed to answer {method}",
+        data={
+            "code": UNEXPECTED_INTERNAL_ERROR,
+            "severity": "error",
+            "remediation": _UNEXPECTED_REMEDIATION,
+        },
+    )
 
 
 def _protocol_error(error: ServiceError, protocol_version: str) -> MCPError:
@@ -360,11 +427,23 @@ def create_server(
         context: ServerRequestContext[dict[str, Any], Any],
         params: types.ReadResourceRequestParams,
     ) -> types.ReadResourceResult:
+        """Answer one resource read, or refuse it in the frozen error contract.
+
+        Both refusal classes are mapped here and neither reaches the SDK's generic
+        path: a ``ServiceError`` carries the service's own published fields, and
+        anything else is a bug in this server, which ADR 0026's taxonomy amendment
+        requires to be a structured ``-32603`` with the exception text kept off the
+        wire. The whole body is inside the guard, not only the read, because a
+        failure while *projecting* the payload is as unmapped as a failure while
+        producing it.
+        """
         try:
             payload = registry.read(params.uri)
+            return types.ReadResourceResult(contents=[_contents(payload)])
         except ServiceError as error:
             raise _protocol_error(error, context.protocol_version) from error
-        return types.ReadResourceResult(contents=[_contents(payload)])
+        except Exception as error:
+            raise _unexpected_error("resources/read", error) from error
 
     async def _list_tools(
         _context: object, _params: types.PaginatedRequestParams | None
@@ -391,19 +470,26 @@ def create_server(
         round trip no rule uses.
 
         Failures travel the same ``ServiceError`` → JSON-RPC projection as a
-        resource read, so the two surfaces cannot disagree about a refusal either.
+        resource read, and an *unexpected* failure travels the same structured
+        ``-32603`` projection, so the two surfaces cannot disagree about a refusal
+        in either class. The root fetch is inside the guard with everything else:
+        ``_client_roots`` already degrades the failures it anticipates to "no
+        advertised set", so anything that escapes it is a bug rather than a
+        client-answerable condition.
         """
-        roots = await _client_roots(context) if params.name in REPOSITORY_SCOPED_TOOLS else None
         try:
+            roots = await _client_roots(context) if params.name in REPOSITORY_SCOPED_TOOLS else None
             answer = invoke_tool(tool_context, params.name, params.arguments, roots)
+            blocks: list[types.ContentBlock] = []
+            if answer.text:
+                blocks.append(types.TextContent(type="text", text=answer.text))
+            if answer.payload is not None:
+                blocks.append(types.EmbeddedResource(resource=_contents(answer.payload)))
+            return types.CallToolResult(content=blocks, structured_content=answer.structured)
         except ServiceError as error:
             raise _protocol_error(error, context.protocol_version) from error
-        blocks: list[types.ContentBlock] = []
-        if answer.text:
-            blocks.append(types.TextContent(type="text", text=answer.text))
-        if answer.payload is not None:
-            blocks.append(types.EmbeddedResource(resource=_contents(answer.payload)))
-        return types.CallToolResult(content=blocks, structured_content=answer.structured)
+        except Exception as error:
+            raise _unexpected_error("tools/call", error) from error
 
     return Server(
         SERVER_NAME,
