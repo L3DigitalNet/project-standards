@@ -249,6 +249,8 @@ def sweep_version_references(current: Version) -> StepResult:
     # and fail the ordinary lane when left behind (found at v5.13.0 prep).
     targets.append(REPO_ROOT / "tests/package_contract/test_current_catalog_activation.py")
     targets.append(REPO_ROOT / "tests/fixtures/package_contract/valid/full/expected/catalog.toml")
+    # FR-020: the MCP guide must state the exact installed package version.
+    targets.append(REPO_ROOT / "docs/mcp-server.md")
 
     needle = str(current)
     hits: list[str] = []

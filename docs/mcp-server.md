@@ -41,25 +41,27 @@ The server is optional and replaces nothing: the CLI and the CI gates remain the
 
 ## Install and version check
 
-**The published 5.11.0 release does not contain the MCP server.** The feature is recorded under `Unreleased` in [`CHANGELOG.md`](../CHANGELOG.md) and ships to consumers with standards v5.12.0. Until that release exists, `uv tool install project-standards` installs the MCP-less published release, so the only way to run the server is a candidate you build from a checkout of this repository.
-
-### Build and install a candidate (the current route)
-
-The candidate-wheel procedure is the repository's own, documented under [Developing this repository](../README.md#developing-this-repository):
+**The MCP server ships in every published release from v5.12.0 onward.** Install the current release from its immutable tag:
 
 ```bash
-uv sync --dev
+uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.13.0"
+```
+
+Releases before v5.12.0 do not contain the server; on those, `project-standards mcp --help` fails as an unknown command.
+
+### Build and install a candidate (development route)
+
+Working from a checkout, the candidate-wheel procedure is the repository's own, documented under [Developing this repository](../README.md#developing-this-repository):
+
+```bash
+uv sync --all-groups
 uv run project-standards standards sync-payload-projection --root .
 uv build --wheel --out-dir dist
-sha256sum dist/project_standards-5.12.0-py3-none-any.whl
-uv tool install ./dist/project_standards-5.12.0-py3-none-any.whl
+sha256sum dist/project_standards-5.13.0-py3-none-any.whl
+uv tool install ./dist/project_standards-5.13.0-py3-none-any.whl
 ```
 
 Keep that SHA-256. A candidate carries no release identity, so the digest is the only thing that says which bytes your client is talking to; quote it in any bug report about server behaviour.
-
-### After v5.12.0 is published
-
-`uv tool install project-standards` becomes the install route once the MCP-carrying release exists. Until then it selects a release without the `mcp` subcommand, and `project-standards mcp --help` fails as an unknown command.
 
 ### Version check
 
@@ -70,7 +72,7 @@ project-standards --version
 project-standards mcp --help
 ```
 
-The version command reports `project-standards 5.12.0`. Until v5.12.0 is published that number identifies the release the candidate is being prepared for, not a release you can install from a tag, so two candidates built from different commits report it identically and are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
+The version command reports `project-standards 5.13.0`. A candidate built from a checkout reports the same number as the release it is being prepared for, so two candidates built from different commits are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
 
 ```bash
 project-standards mcp --root-boundary /home/chris/projects
