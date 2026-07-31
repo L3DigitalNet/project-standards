@@ -318,10 +318,45 @@ One honest limitation on the wording: `~/.claude.json` is continuously rewritten
 
 ---
 
+## v5.12.0 release-gate re-probe (2026-07-31)
+
+The v5.12.0 release train (version bump plus the owner-approved thirteen-issue roll-in, including three new default payload versions) rebuilt the candidate, so the release-gate re-ran the §13 regression set against the new wheel. The MCP service layer and the provider-dispatch-input seam are byte-identical to the `4d2ece9` baseline (`git diff 4d2ece9..23daf49 -- src/project_standards/mcp_services/ src/project_standards/control_plane/provider_inputs.py` is empty); what changed underneath the server is the payload set it serves.
+
+### Candidate identity
+
+| Fact          | Value                                                               |
+| ------------- | ------------------------------------------------------------------- |
+| Wheel         | `dist/project_standards-5.12.0-py3-none-any.whl`                    |
+| SHA-256       | `766a155434a68d86dd43c6c0060abe64f838e6979a8ab02721d5b1f75d2a3986`  |
+| Source commit | `23daf49` (`testing`, release-prep tip)                             |
+| Verdict       | **NO-REGRESSIONS** versus the T12 baseline `8ed0b2e8…` at `4d2ece9` |
+
+### Candidate server observed under the release wheel
+
+| Observation | 2025-06-18 / 2025-11-25 eras | 2026-07-28 era |
+| --- | --- | --- |
+| `serverInfo` | `{"name": "project-standards", "version": "5.12.0"}` | same, carried in `_meta["io.modelcontextprotocol/serverInfo"]` per the frozen contract |
+| Capabilities | `experimental {}`, `resources {listChanged: false, subscribe: false}`, `tools {listChanged: false}` | identical |
+| `tools/list` | the same six read-only tools as T12 | identical |
+| `resources/list` | 56 entries — exactly +3 over T12's 53, the three new payload versions | identical |
+| `prompts/list` | `-32601 Method not found` | identical |
+| stdout / stderr | pure JSON-RPC, empty stderr, exit 0 | identical |
+
+### New default payloads through composite dispatch
+
+The three payload successors that v5.12.0 activates (`markdown-frontmatter 1.7`, `markdown-tooling 1.11`, `agent-handoff 1.7`) are demonstrably the versions dispatched, and they reproduce the T11 baseline corpora exactly: this repository yields 10 provider results, all `completed`, with the identical 240-finding agent-handoff validate corpus; `~/scripts` yields its baseline 42. The `TC-T14-004` canary passes with the new defaults, and the MCP↔CLI parity check matches action-kind histograms exactly on both real roots (`38 {no-op: 25, preserve: 13}` here; `30 {no-op: 11, preserve: 11, update: 8}` for `~/scripts`, whose `update` set is that consumer's own not-yet-upgraded drift, reported identically by both surfaces). Reconciliation fingerprints moved on both roots, as they must when the resolved payload set changes; both surfaces agree on the new values' consequences.
+
+### Frozen probes re-executed verbatim
+
+All four probes exit 0: `claude --version` → `2.1.220 (Claude Code)`; `codex --version` → `codex-cli 0.146.0`; both `mcp list` commands enumerate only the user's own servers. No frozen T1 matrix row moves. The Claude inventory shifted to three stdio and two HTTP entries — the same unrelated-workstation-drift class the T12 re-probe already dispositioned. **Neither persistent client configuration contained a `project-standards` entry before the gate and neither gained one**; the candidate was exercised from an isolated throwaway directory with its own `CODEX_HOME`, with the same `~/.claude.json` provability caveat recorded by the T12 entry.
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.6 | 2026-07-31 | Claude (v5.12.0 release gate) | Append the v5.12.0 release-gate re-probe: new candidate wheel `766a1554…` at release-prep tip `23daf49`, NO-REGRESSIONS verdict, byte-identical MCP service layer since `4d2ece9`, the 5.12.0 version surface on all three eras, resources 53→56 for the three new default payloads, composite-dispatch corpus parity (240/42) with the moved reconciliation fingerprints dispositioned, and the four frozen probes at exit 0 with no persistent-configuration changes. |
 | 0.5 | 2026-07-31 | Claude (T12 final gate) | Append the `TC-T12-002` final-gate re-probe: the freshly built final candidate is byte-identical to the T11 candidate (`8ed0b2e8…`), the four frozen probes re-executed verbatim at exit 0, the candidate server's observed capabilities and six read-only tools under the final wheel, and the persistent-client-configuration disposition. Client inventories moved with unrelated workstation changes, so no frozen T1 row is amended. Server URLs are deliberately not reproduced because one carries an API key and this page is tracked and publicly mirrored. |
 | 0.4 | 2026-07-30 | Claude (T11 client gate, refresh) | Re-run the whole `TC-T11-002` smoke against the post-fix candidate `8ed0b2e8…`: new wheel digest, the fixture leg exercised with an absolute root, repository-scoped results for all six tools on both real roots (10 and 5 provider results, all `completed`), and precise client-scope wording. The `validate_repo` empty-input finding is retained as a dated historical record of the discovery and its routing to `75c9653`/`1abf8d9`, not as current behaviour. |
 | 0.3 | 2026-07-30 | Claude (T11 client gate) | Append the `TC-T11-002` candidate-wheel client smoke: wheel digest and invocation, the owner-approved `OQ-005` smoke set, three-era server observations, scoped Codex 0.146.0 and Claude Code 2.1.220 probes, and the `validate_repo` empty-snapshot finding. The T1 client matrix is unchanged; 0.146.0 keeps `mcp_2026_07_28` disabled by default, so the authorized refresh condition did not occur. |
