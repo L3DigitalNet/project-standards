@@ -244,6 +244,11 @@ def sweep_version_references(current: Version) -> StepResult:
     targets: list[Path] = [REPO_ROOT / "README.md"]
     targets.extend(sorted(REPO_ROOT.glob("standards/*/adopt.md")))
     targets.extend(sorted(REPO_ROOT.glob("meta/*.md")))
+    # Release-version pins the battery enforces: the activation constants and
+    # the synthetic-repository catalog golden both embed the release literal
+    # and fail the ordinary lane when left behind (found at v5.13.0 prep).
+    targets.append(REPO_ROOT / "tests/package_contract/test_current_catalog_activation.py")
+    targets.append(REPO_ROOT / "tests/fixtures/package_contract/valid/full/expected/catalog.toml")
 
     needle = str(current)
     hits: list[str] = []
