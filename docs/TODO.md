@@ -55,6 +55,18 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   - [ ] Run the #102 live reproduction first: the `_is_legacy_command` guard shipped at `4cc5efb` may already cover it, closing the issue with no change.
 
+### Release v5.13.0
+
+- [ ] **Important:** cut release-gate verification wall-clock; implement with the v5.13.0 train. _(Owner 2026-07-31: spike first, immediately after v5.12.0 closes.)_
+
+  Sequencing: the xdist read-safety/inode spike and the sysmon-vs-trace coverage diff run as the first work item after the v5.12.0 release closes, so the harness is proven before any 5.13.0 gate depends on it.
+
+  Levers by value: pytest-xdist (spike dogfood read-safety and parallel inode pressure first); `COVERAGE_CORE=sysmon` coverage on Python 3.14; a pytest tmpfs with raised `nr_inodes` (~4M) to reclaim the ~40% disk-backed TMPDIR penalty (conventions §14); fewer full-battery runs per train (full battery only after the last content change and at release prep).
+
+  Also bundle the two smaller levers: statics (prettier, markdownlint, basedpyright, pip-audit) run concurrently with the battery via a non-uv invocation path (~2–3 min return); MCP fixture file-count reduction through session-scoped fixture reuse, pursued only if the primary levers prove insufficient.
+
+  Baseline to beat (measured 2026-07-31): plain battery 16:22 tmpfs / 22:30 disk-backed; coverage battery 55:31 disk-backed. Target: 5–8 minute release gate.
+
 ### Maintenance
 
 - [ ] Finish Agent Handoff consumer retirement.

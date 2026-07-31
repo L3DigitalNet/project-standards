@@ -6,7 +6,7 @@ description: 'Setup, capability, resource and tool reference, security rules, eq
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-30'
-updated: '2026-07-30'
+updated: '2026-07-31'
 reviewed: '2026-07-30'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -51,8 +51,8 @@ The candidate-wheel procedure is the repository's own, documented under [Develop
 uv sync --dev
 uv run project-standards standards sync-payload-projection --root .
 uv build --wheel --out-dir dist
-sha256sum dist/project_standards-5.11.0-py3-none-any.whl
-uv tool install ./dist/project_standards-5.11.0-py3-none-any.whl
+sha256sum dist/project_standards-5.12.0-py3-none-any.whl
+uv tool install ./dist/project_standards-5.12.0-py3-none-any.whl
 ```
 
 Keep that SHA-256. A candidate carries no release identity, so the digest is the only thing that says which bytes your client is talking to; quote it in any bug report about server behaviour.
@@ -70,7 +70,7 @@ project-standards --version
 project-standards mcp --help
 ```
 
-The version command reports `project-standards 5.11.0`. That is the candidate's base version and it is deliberately unchanged: the MCP work does not finalize a release, so a candidate and the published 5.11.0 report the same number and are told apart by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
+The version command reports `project-standards 5.12.0`. Until v5.12.0 is published that number identifies the release the candidate is being prepared for, not a release you can install from a tag, so two candidates built from different commits report it identically and are told apart only by the wheel digest above. The `mcp` subcommand accepts exactly one launch-time option:
 
 ```bash
 project-standards mcp --root-boundary /home/chris/projects
