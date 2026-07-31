@@ -257,7 +257,7 @@ policy = "managed"
 id = "skill-new-doc-id"
 target = ".agents/skills/markdown-frontmatter/scripts/new-doc-id"
 source = "skills/markdown-frontmatter/scripts/new-doc-id"
-digest = "sha256:bb12fc2e5ca887c511a761cb3531b4843774e498bee999cce065614adbb5a5fc"
+digest = "sha256:abec9fc9e78390949320dc0b0a9e63d2d6a9959990068782ec6d60596fcf14b5"
 policy = "managed"
 mode = "0755"
 

@@ -192,9 +192,19 @@ def test_missing_intermediate_container_counts_as_only_the_declared_leaf(
     [_INLINE_EMPTY_CONTAINER, _INLINE_MISSING_CONTAINER],
     ids=["empty-inline-container", "missing-inline-container"],
 )
-def test_multiple_missing_sibling_leaves_are_inserted_atomically(
+def test_multiple_missing_sibling_leaves_render_once_and_ignore_key_order(
     original: bytes,
 ) -> None:
+    """Two sibling leaves render exactly once each, idempotently and order-blind.
+
+    Scope, because the previous name ("inserted atomically") claimed more than
+    this establishes: every assertion below goes through
+    `render_package_config_transform`, which receives the whole transformed
+    config and the full pointer set in one call. That is the renderer's contract,
+    not the planner's. Whether the planner batches sibling CREATEs into one such
+    call — rather than emitting colliding per-leaf actions — is a separate
+    question this file does not reach, tracked as issue #105.
+    """
     pointers = ("/ci/performance", "/ci/smoke")
 
     updated = _render(original, _MULTI_LEAF_TRANSFORMED_CONFIG, pointers)

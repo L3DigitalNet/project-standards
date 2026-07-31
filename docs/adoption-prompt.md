@@ -89,11 +89,12 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
    release_tag="<release-tag>"
    release_version="<release-version>"
    uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@${release_tag}"
-   probed="$(project-standards --version || project-standards --version)"
+   project-standards --version >/dev/null 2>&1 || true
+   probed="$(project-standards --version)"
    test "$probed" = "project-standards ${release_version}"
    ```
 
-   The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring, with no reinstall needed. Retry the probe once before treating a failure as real; continue only once a probe succeeds. Replace both placeholders with the values recorded above before running the block. Continue only if the version check succeeds.
+   The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring, with no reinstall needed. The first line absorbs that transient failure without capturing anything, so the authoritative probe on the second line compares a single clean value — capturing `cmd || cmd` instead would concatenate a failed first probe's partial output with the second probe's output and fail the comparison for the wrong reason. Replace both placeholders with the values recorded above before running the block. Continue only if the version check succeeds.
 
 7. Work on a branch with a clean baseline whenever possible. Do not discard, overwrite, normalize, commit, push, or open a pull request for unrelated work. Do not use `--force` to bypass ownership or provenance protections.
 
@@ -132,13 +133,23 @@ Moving from an older 5.x release to `<release-version>` is an in-place, non-brea
 3. Produce both previews against identical repository bytes. Keep the machine-readable report outside the repository so it cannot be mistaken for a migration output or committed accidentally — a literal `>migration-plan.json` redirect inside the repository changes the bytes the second preview inspects and must not be used:
 
    ```bash
-   report=$(mktemp "${TMPDIR:-/tmp}/project-standards-migration.XXXXXX")
-   trap 'rm -f -- "$report"' EXIT
+   tmp_root="${TMPDIR:-/tmp}"
+   case "$(cd "$tmp_root" && pwd -P)/" in
+     "$(pwd -P)"/*) tmp_root="/tmp" ;;
+   esac
+   report=$(mktemp "${tmp_root}/project-standards-migration.XXXXXX")
    project-standards init --catalog 5 --migrate
    project-standards init --catalog 5 --migrate --json >"$report"
    ```
 
-4. Review and resolve every ambiguity, unknown artifact, modified managed file, ownership conflict, unsafe path, and missing intent. Rerun both previews after any correction.
+   The `case` guard forces the report outside the repository even when `TMPDIR` points inside it, which is the whole reason for not redirecting into the working tree. Do not add a `trap 'rm -f -- "$report"' EXIT`: if this block runs as a script or subshell the trap fires when the block ends, deleting the report before step 4 can read it.
+
+4. Review and resolve every ambiguity, unknown artifact, modified managed file, ownership conflict, unsafe path, and missing intent. Rerun both previews after any correction. Delete the report once the review is complete:
+
+   ```bash
+   rm -f -- "$report"
+   ```
+
 5. Apply only the accepted plan:
 
    ```bash

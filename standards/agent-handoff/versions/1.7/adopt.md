@@ -84,20 +84,29 @@ The skill tree exclusion covers both `.agents/skills/agent-handoff/SKILL.md` and
 
 ### Secret scanners and the managed policy.toml
 
-Reconciliation writes `.standards/packages/agent-handoff/policy.toml`, whose `[credentials].private_key_headers` list contains the literal PEM header strings this package's own credential checker searches for (`-----BEGIN PRIVATE KEY-----` and similar). A consumer running Gitleaks with default rules will match those strings as the `private-key` rule and fail the adoption commit even though no key material exists — the file is lock-managed, digest-verified content, not a leaked credential.
+Reconciliation writes `.standards/packages/agent-handoff/policy.toml`, whose `[credentials].private_key_headers` list contains the literal PEM header strings this package's own credential checker searches for (`-----BEGIN PRIVATE KEY-----` and similar). Gitleaks' default `private-key` rule matches across that array and fails the adoption commit even though no key material exists — the file declares detection patterns, not a credential.
 
-The file is a centrally locked managed artifact, so it cannot carry an inline `gitleaks:allow` comment without creating drift against the lock. A durable fix is a path allowlist in the consumer's own `.gitleaks.toml`:
+The file is a centrally locked managed artifact, so it cannot carry an inline `gitleaks:allow` comment without creating drift against the lock. Scope the exception to the one rule and the one path rather than allowlisting the path globally:
 
 ```toml
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Agent Handoff managed policy declares private-key header patterns, not keys"
+targetRules = ["private-key"]
 paths = ['''^\.standards/packages/agent-handoff/policy\.toml$''']
 ```
 
-This is safe because the file's bytes are verified against `.standards/lock.toml` on every reconcile, so allowlisting the path does not create an unwatched hiding place for a real secret. A per-commit `.gitleaksignore` fingerprint is not a durable alternative: it embeds the commit SHA, so it stops applying the next time reconciliation re-renders the file (a package upgrade or an option change).
+`targetRules` requires Gitleaks v8.25.0 or newer. Narrow it further by AND-ing the path with the header lines themselves (`condition = "AND"` plus `regexTarget = "line"` and a `regexes` entry), and confirm the result with a `gitleaks detect` run before relying on it: the `private-key` match spans several lines, so which line a regex condition sees is worth verifying rather than assuming.
+
+Be clear about what the exception costs. A `paths` allowlist suppresses its rules for that file on **every** commit, so future content at that path stops being scanned by them; without `targetRules` that means _all_ rules, not just `private-key`. Reconciliation's digest verification does not close that gap — it is a separate control that runs later, not a guarantee at commit time. Pair the allowlist with the managed-state check at the same boundary the scanner runs:
+
+```bash
+project-standards reconcile --check
+```
+
+Run that in pre-commit or CI and any tampering with the managed file fails there, so the path the scanner stops watching is still watched. A per-commit `.gitleaksignore` fingerprint is not a durable alternative: it embeds the commit SHA, so it stops applying the next time reconciliation re-renders the file (a package upgrade or an option change).
 
 ## Verify
 
@@ -110,7 +119,7 @@ git status --short
 
 Claude Code and Codex still apply their normal project trust and hook-review workflows. Review the repository-local hook before trusting it.
 
-`AH-SECRET-LITERAL` reports one finding per offending line and names that line, so the message points at the assignment instead of the whole document. Shell command substitution — `TOKEN=$(...)` and its backtick equivalent — is runtime acquisition, not stored material, and is not reported; a credential reference wrapped in a Markdown code span is read as the reference it wraps. A blocked label assigned a literal value, an inline private-key header, and an access-key pattern all still fail closed.
+`AH-SECRET-LITERAL` reports one finding per offending line and names that line, so the message points at the assignment instead of the whole document. `TOKEN=$(...)` is read as runtime acquisition rather than stored material, and its backtick equivalent is too **when the command names its source** — `` TOKEN=`bao kv get -field=value secret/apps/example` `` and `` TOKEN=`credential-helper read env:CRED` `` are accepted because `secret/apps/example` and `env:CRED` each satisfy the reference policy. A backtick command that names no reference is not an acquisition: `` TOKEN=`printf '%s' 'literal'` `` and `` password: `echo literal` `` are a credential written as a command argument and still fail closed. A credential reference wrapped in a Markdown code span is read as the reference it wraps, while a single-token span that names nothing (`` token: `abc123` ``) stays reported. Inline private-key headers and access-key patterns are unchanged.
 
 ## Authoring operations
 

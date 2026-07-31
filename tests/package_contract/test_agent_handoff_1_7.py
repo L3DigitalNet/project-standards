@@ -11,10 +11,17 @@ same normalization gap flags a credential reference an author wrapped in a
 Markdown code span even though the engine's `_is_reference` strips backticks
 before deciding.
 
-1.7 therefore (a) treats both `$( ... )` and backtick command substitution as
-runtime acquisition, (b) strips a wrapping code span before applying the
-reference policy, and (c) reports one finding per offending line carrying that
-line number, with a message that says which rule matched.
+1.7 therefore (a) treats `$( ... )` and REFERENCE-NAMING backtick command
+substitution as runtime acquisition, (b) strips a wrapping code span before
+applying the reference policy, and (c) reports one finding per offending line
+carrying that line number, with a message that says which rule matched.
+
+A backtick span is only an acquisition when one of its tokens passes the
+reference policy, because a genuine retrieval command names its source
+(`bao kv get ... secret/apps/x`, `credential-helper read env:CRED`). Requiring
+merely that the span contain whitespace would exempt
+``TOKEN=`printf '%s' 'literal'` `` -- a literal written as a command argument,
+which is laundering, not acquisition.
 """
 
 from __future__ import annotations
@@ -161,6 +168,16 @@ def test_agent_handoff_1_7__runtime_acquisition__is_not_literal_material(
             "line contains an access-key pattern",
             id="access-key-pattern",
         ),
+        pytest.param(
+            "TOKEN=`printf '%s' 'synth-live-7Jm9Qv2Nk4Rx8Pz6'`",
+            "line assigns credential-shaped literal material to a blocked label",
+            id="backtick-printf-laundering",
+        ),
+        pytest.param(
+            "password: `echo correct-horse-battery-staple`",
+            "line assigns credential-shaped literal material to a blocked label",
+            id="backtick-echo-laundering",
+        ),
     ],
 )
 def test_agent_handoff_1_7__literal_material__names_its_line(
@@ -196,6 +213,8 @@ _PARITY_CASES = (
     "token: `bao kv get -field=value secret/apps/example`",
     "token: `secret/apps/example`",
     "token: `abc123literal`",
+    "TOKEN=`printf '%s' 'synth-live-7Jm9Qv2Nk4Rx8Pz6'`",
+    "password: `echo correct-horse-battery-staple`",
     'token = "literal-secret-value"',
     "token: env:EXAMPLE_TOKEN",
     "-----BEGIN PRIVATE KEY-----",

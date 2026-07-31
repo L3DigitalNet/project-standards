@@ -7,18 +7,26 @@ The skill names that helper as the only sanctioned id source and the file is
 lock-owned, so a consumer following both standards could not generate an id and
 could not fix it locally either. 1.7 starts both steps with `uv run python3 -`.
 
+1.7 dispatches both steps through `$PYTHON_RUNNER`, which resolves to
+`uv run --no-project python3 -` when uv is installed and plain `python3 -`
+otherwise. The conditional is the point: an unconditional `uv run` exits 127 for
+a consumer that has python3 and no uv, and a bare `uv run` (no `--no-project`)
+resolves and syncs whatever project surrounds the script.
+
 The behavioral tests run the real script under a stand-in `python3` that refuses
-a bare invocation exactly as the shim does, plus a stand-in `uv` that forwards to
-the interpreter running the suite. That is what makes the 1.6 leg fail and the
-1.7 leg pass for the reported reason rather than by string inspection alone.
+a bare invocation exactly as the shim does, and reach uv through the REAL uv
+binary -- a forwarding stand-in would pass regardless of what the script does.
+Both dispatch branches are exercised: uv-present under the rejecting shim, and
+uv-absent on a PATH with no uv at all.
 """
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import stat
 import subprocess
-import sys
 import tomllib
 from pathlib import Path
 
@@ -50,15 +58,29 @@ _SUCCESSOR_CHANGES = frozenset(
 _ID = re.compile(r"^note-[0-9a-z]{6}-example-document$")
 
 
-def _shim_path(tmp_path: Path) -> str:
-    """Build a PATH whose `python3` refuses bare use and whose `uv` forwards.
+def _real_uv() -> Path:
+    """Locate the genuine uv binary, skipping any uv-strict PATH shim.
 
-    This reproduces the reported environment rather than the reported command:
-    the uv-strict shim rejects `python3` outright, so any surviving bare call
-    site fails here regardless of how the script is written.
+    The uv branch has to be exercised by real uv: a stand-in that forwards to the
+    test interpreter would pass no matter what the script does with `--no-project`
+    or whether the conditional resolves at all.
     """
+    found = shutil.which("uv")
+    if found is None:
+        pytest.skip("uv is not installed; the uv-present branch cannot be exercised")
+    resolved = Path(found).resolve()
+    if resolved.parent.name == "shims":
+        direct = Path.home() / ".local/bin/uv"
+        if not direct.is_file():
+            pytest.skip("only a uv shim is on PATH and no direct uv binary was found")
+        return direct
+    return resolved
+
+
+def _rejecting_python3(tmp_path: Path) -> Path:
+    """Write a stand-in `python3` that refuses bare use, as the uv-strict shim does."""
     bin_dir = tmp_path / "shim-bin"
-    bin_dir.mkdir()
+    bin_dir.mkdir(exist_ok=True)
     python3 = bin_dir / "python3"
     python3.write_text(
         "#!/usr/bin/env bash\n"
@@ -67,34 +89,57 @@ def _shim_path(tmp_path: Path) -> str:
         "exit 1\n",
         encoding="utf-8",
     )
-    uv = bin_dir / "uv"
-    uv.write_text(
-        f'#!/usr/bin/env bash\nif [[ "$1" == "run" ]]; then shift; fi\n'
-        f'if [[ "$1" == "python3" || "$1" == "python" ]]; then shift; fi\n'
-        f'exec "{sys.executable}" "$@"\n',
-        encoding="utf-8",
-    )
-    for executable in (python3, uv):
-        executable.chmod(executable.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    return f"{bin_dir}:/usr/bin:/bin"
+    python3.chmod(python3.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return bin_dir
 
 
-def _run_new_doc_id(version_root: Path, tmp_path: Path) -> subprocess.CompletedProcess[str]:
+def _run_new_doc_id(
+    version_root: Path,
+    tmp_path: Path,
+    *,
+    path: str,
+    scaffold: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    arguments = ["--scaffold"] if scaffold else []
     return subprocess.run(
-        ["/bin/bash", str(version_root / _SCRIPT), "--doc-type", "note", "example document"],
+        [
+            "/bin/bash",
+            str(version_root / _SCRIPT),
+            *arguments,
+            "--doc-type",
+            "note",
+            "example document",
+        ],
         capture_output=True,
         text=True,
         cwd=tmp_path,
-        env={"PATH": _shim_path(tmp_path), "HOME": str(tmp_path)},
+        # HOME is inherited, not redirected to tmp_path: uv discovers its managed
+        # interpreters under ~/.local/share/uv, and hiding them makes uv fall back
+        # to PATH lookup -- straight into the rejecting shim. That failure is a
+        # property of the sandbox, not of the script, and masked the real result.
+        env={"PATH": path, "HOME": os.environ["HOME"]},
         check=False,
     )
+
+
+def _uv_strict_path(tmp_path: Path) -> str:
+    """uv present (real binary) with a `python3` that rejects bare invocation."""
+    return f"{_rejecting_python3(tmp_path)}:{_real_uv().parent}:/usr/bin:/bin"
+
+
+def _no_uv_path() -> str:
+    """A plain environment: a working `python3`, no uv anywhere on PATH."""
+    assert shutil.which("uv", path="/usr/bin:/bin") is None, (
+        "this test asserts the uv-absent branch, but uv is installed in /usr/bin"
+    )
+    return "/usr/bin:/bin"
 
 
 def test_markdown_frontmatter_1_7__predecessor__still_fails_under_the_shim(
     tmp_path: Path,
 ) -> None:
     """Characterize 1.6 so the 1.7 result is attributable to the fix (issue #97)."""
-    result = _run_new_doc_id(_PREDECESSOR, tmp_path)
+    result = _run_new_doc_id(_PREDECESSOR, tmp_path, path=_uv_strict_path(tmp_path))
 
     assert result.returncode == 1
     assert "instead of" in result.stderr
@@ -104,46 +149,71 @@ def test_markdown_frontmatter_1_7__predecessor__still_fails_under_the_shim(
 def test_markdown_frontmatter_1_7__helper__generates_an_id_under_the_shim(
     tmp_path: Path,
 ) -> None:
-    """The sanctioned id generator works in a uv-strict environment."""
-    result = _run_new_doc_id(_SUCCESSOR, tmp_path)
+    """uv-present branch: the sanctioned generator works in a uv-strict environment."""
+    result = _run_new_doc_id(_SUCCESSOR, tmp_path, path=_uv_strict_path(tmp_path))
 
     assert result.returncode == 0, result.stderr
     assert _ID.fullmatch(result.stdout.strip()), result.stdout
 
 
-def test_markdown_frontmatter_1_7__scaffold_step__also_runs_through_uv(tmp_path: Path) -> None:
+def test_markdown_frontmatter_1_7__helper__generates_an_id_without_uv(
+    tmp_path: Path,
+) -> None:
+    """uv-absent branch: a consumer with python3 and no uv is not broken.
+
+    This is the regression the unconditional `uv run` introduced -- it exits 127
+    here -- and it matters because this package is adopted by repositories that
+    are not Python projects and have no reason to install uv.
+    """
+    result = _run_new_doc_id(_SUCCESSOR, tmp_path, path=_no_uv_path())
+
+    assert result.returncode == 0, result.stderr
+    assert _ID.fullmatch(result.stdout.strip()), result.stdout
+
+
+@pytest.mark.parametrize(
+    "environment",
+    ["uv-strict", "no-uv"],
+)
+def test_markdown_frontmatter_1_7__scaffold_step__dispatches_in_both_environments(
+    tmp_path: Path, environment: str
+) -> None:
     """The second call site is the scaffold title, which only `--scaffold` reaches.
 
-    Fixing one call site would leave this path broken, so the scaffold output is
-    exercised separately instead of trusting a single invocation to cover both.
+    Fixing or breaking one call site would leave this path inconsistent, so the
+    scaffold output is exercised separately in both dispatch branches instead of
+    trusting a single invocation to cover both.
     """
-    result = subprocess.run(
-        [
-            "/bin/bash",
-            str(_SUCCESSOR / _SCRIPT),
-            "--scaffold",
-            "--doc-type",
-            "note",
-            "example document",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=tmp_path,
-        env={"PATH": _shim_path(tmp_path), "HOME": str(tmp_path)},
-        check=False,
-    )
+    path = _uv_strict_path(tmp_path) if environment == "uv-strict" else _no_uv_path()
+
+    result = _run_new_doc_id(_SUCCESSOR, tmp_path, path=path, scaffold=True)
 
     assert result.returncode == 0, result.stderr
     assert "title: 'Example Document'" in result.stdout
 
 
-def test_markdown_frontmatter_1_7__helper__has_no_bare_python_call_site() -> None:
-    """No call site may regress to bare `python3 -`, including any added later."""
-    text = (_SUCCESSOR / _SCRIPT).read_text(encoding="utf-8")
-    call_sites = re.findall(r"(?m)^.*\bpython3 -\s*<<", text)
+def test_markdown_frontmatter_1_7__uv_branch__never_syncs_the_surrounding_project() -> None:
+    """A bare `uv run` would resolve and sync the consumer project around the script.
 
-    assert len(call_sites) == 2
-    assert all("uv run python3 -" in site for site in call_sites)
+    Generating a document id must not mutate an unrelated virtualenv, so the uv
+    branch is pinned to `--no-project` by text: the behavior it prevents cannot be
+    asserted from the outside without building a throwaway project to be mutated.
+    """
+    text = (_SUCCESSOR / _SCRIPT).read_text(encoding="utf-8")
+
+    assert "uv run --no-project python3 -" in text
+    assert re.search(r"uv run (?!--no-project)", text) is None
+
+
+def test_markdown_frontmatter_1_7__helper__dispatches_every_call_site() -> None:
+    """Neither call site may hardcode an interpreter, including any added later."""
+    text = (_SUCCESSOR / _SCRIPT).read_text(encoding="utf-8")
+    heredoc_calls = re.findall(r"(?m)^.*<<'PY'$", text)
+
+    assert len(heredoc_calls) == 2
+    assert all('"${PYTHON_RUNNER[@]}"' in call for call in heredoc_calls)
+    assert "PYTHON_RUNNER=(uv run --no-project python3 -)" in text
+    assert "PYTHON_RUNNER=(python3 -)" in text
 
 
 def test_markdown_frontmatter_1_7__provider_schema__binds_the_successor_identity() -> None:

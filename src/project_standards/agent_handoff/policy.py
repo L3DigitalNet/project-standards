@@ -664,36 +664,49 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
 # the masking parity of issues #68/#69 is; `tests/package_contract/
 # test_agent_handoff_1_7.py` asserts the two implementations agree case for case.
 #
-# A backtick span with internal whitespace is a command invocation. Without that
-# whitespace it is a quoted value, and it falls through to the reference policy
-# below, so backticks alone can never launder a literal.
+# Two boundaries keep the exemption from becoming a laundering path: a span with a
+# single token is a quoted VALUE, not a command, so it falls through to the
+# reference policy; and a command-shaped span counts only when one of its tokens
+# itself passes that policy. A genuine retrieval names its source
+# (`bao kv get ... secret/apps/x`); `printf '%s' 'literal'` names nothing and is a
+# secret written as a command argument.
 _COMMAND_SUBSTITUTION = re.compile(r"\A(?:\$\((?P<paren>.*)\)|`(?P<span>.*)`)\Z", re.DOTALL)
 
 
-def _acquires_at_runtime(value: str) -> bool:
-    """Return whether a quote-stripped assignment value runs a command."""
-    match = _COMMAND_SUBSTITUTION.fullmatch(value)
-    if match is None:
-        return False
-    if match.group("paren") is not None:
-        return True
-    return " " in (match.group("span") or "").strip()
-
-
-def _is_reference(value: str, policy: CredentialsPolicy) -> bool:
-    # Purely additive against the checks below: a value they already accepted is
-    # still accepted, so this only withdraws the command-substitution false
-    # positive. `$( ... )` was already tolerated here through the "$" reference
-    # prefix; naming it explicitly is what keeps engine and provider in step if
-    # that prefix is ever tightened.
-    if _acquires_at_runtime(value.strip().strip("\"'")):
-        return True
+def _names_a_reference(value: str, policy: CredentialsPolicy) -> bool:
+    """Return whether one token or value is a credential reference under the policy."""
     normalized = value.strip().strip("\"'`")
     if normalized in policy.allowed_reference_values:
         return True
     if any(normalized.startswith(prefix) for prefix in policy.allowed_reference_prefixes):
         return True
     return re.fullmatch(r"[A-Z][A-Z0-9_]{2,}", normalized) is not None
+
+
+def _acquires_at_runtime(value: str, policy: CredentialsPolicy) -> bool:
+    """Return whether a quote-stripped assignment value retrieves a named credential."""
+    match = _COMMAND_SUBSTITUTION.fullmatch(value)
+    if match is None:
+        return False
+    if match.group("paren") is not None:
+        return True
+    tokens = (match.group("span") or "").split()
+    if len(tokens) < 2:
+        # Single token: not a command invocation. The reference policy below
+        # applies to it, unchanged.
+        return False
+    return any(_names_a_reference(token, policy) for token in tokens)
+
+
+def _is_reference(value: str, policy: CredentialsPolicy) -> bool:
+    # Purely additive against `_names_a_reference`: a value it already accepted is
+    # still accepted, so this only withdraws the command-substitution false
+    # positive. `$( ... )` was already tolerated here through the "$" reference
+    # prefix; naming it explicitly is what keeps engine and provider in step if
+    # that prefix is ever tightened.
+    if _acquires_at_runtime(value.strip().strip("\"'"), policy):
+        return True
+    return _names_a_reference(value, policy)
 
 
 def check_secret_references(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding, ...]:

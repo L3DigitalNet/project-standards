@@ -472,17 +472,28 @@ def test_runtime_acquisition_is_not_literal_material(policy: HandoffPolicy, text
         pytest.param(
             "password = `s3cr3t-value`\n", "s3cr3t-value", id="no-whitespace-span-other-label"
         ),
+        pytest.param(
+            "TOKEN=`printf '%s' 'synth-live-7Jm9Qv2Nk4Rx8Pz6'`\n",
+            "synth-live-7Jm9Qv2Nk4Rx8Pz6",
+            id="printf-command-naming-no-reference",
+        ),
+        pytest.param(
+            "password: `echo correct-horse-battery-staple`\n",
+            "correct-horse-battery-staple",
+            id="echo-command-naming-no-reference",
+        ),
     ],
 )
 def test_backtick_spans_do_not_launder_literal_material(
     policy: HandoffPolicy, text: str, secret: str
 ) -> None:
-    """Wrapping a single-token value in backticks must not buy an exemption.
+    """Backticks must not buy an exemption, with or without internal whitespace.
 
-    A span with no internal whitespace is a quoted value, not a command
-    invocation, so it falls through to the reference policy and stays flagged
-    when it names no reference. Without this boundary the exemption would be a
-    one-character laundering path for any literal.
+    A single-token span is a quoted value, not a command invocation. A span that
+    IS shaped like a command still only counts as acquisition when one of its
+    tokens passes the reference policy -- a genuine retrieval names its source.
+    `printf`/`echo` forms name none, so they are a literal written as a command
+    argument, and without this boundary the exemption would launder any secret.
     """
     findings = check_secret_references("docs/handoff/credentials.md", text, policy)
 

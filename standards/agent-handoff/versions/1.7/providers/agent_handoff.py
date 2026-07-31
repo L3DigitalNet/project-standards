@@ -928,21 +928,40 @@ def _credential_findings(
 # though it is the same shell construct. Backticks are also how Markdown writes an
 # inline code span, which is how an author naturally quotes a reference in prose;
 # the engine's `_is_reference` already strips them, so the provider not stripping
-# them was a second, silent divergence. A backticked span with no internal
-# whitespace is NOT treated as a command: `abc123` must stay on the flagged path
-# so wrapping a literal secret in backticks cannot launder it.
+# them was a second, silent divergence.
+#
+# Two boundaries keep the exemption from becoming a laundering path:
+#   * a span with a single token is a quoted VALUE, not a command, so `abc123`
+#     falls through to the reference policy below and stays flagged;
+#   * a command-shaped span counts only when one of its tokens itself passes the
+#     reference policy. A genuine retrieval names its source
+#     (`bao kv get ... secret/apps/x`, `credential-helper read env:CRED`);
+#     `printf '%s' 'literal'` and `echo literal` name nothing, so they are a
+#     secret written as a command argument and must stay flagged.
 _COMMAND_SUBSTITUTION = re.compile(r"\A(?:\$\((?P<paren>.*)\)|`(?P<span>.*)`)\Z", re.DOTALL)
 
 
-def _acquires_at_runtime(value: str) -> bool:
-    """Return whether a quote-stripped assignment value runs a command."""
+def _names_a_reference(value: str, *, prefixes: list[object], allowed: list[object]) -> bool:
+    """Return whether one token or value is a credential reference under the policy."""
+    normalized = value.strip().strip("\"'`")
+    return normalized in allowed or any(
+        normalized.startswith(cast(str, prefix)) for prefix in prefixes
+    )
+
+
+def _acquires_at_runtime(value: str, *, prefixes: list[object], allowed: list[object]) -> bool:
+    """Return whether a quote-stripped assignment value retrieves a named credential."""
     match = _COMMAND_SUBSTITUTION.fullmatch(value)
     if match is None:
         return False
-    paren = match.group("paren")
-    if paren is not None:
+    if match.group("paren") is not None:
         return True
-    return " " in cast(str, match.group("span")).strip()
+    tokens = cast(str, match.group("span")).split()
+    if len(tokens) < 2:
+        # Single token: not a command invocation. The caller applies the
+        # reference policy to it, unchanged.
+        return False
+    return any(_names_a_reference(token, prefixes=prefixes, allowed=allowed) for token in tokens)
 
 
 def _credential_rule(
@@ -969,11 +988,10 @@ def _credential_rule(
     if match is None or match.group(1).casefold().replace("-", "_") not in blocked:
         return None
     value = match.group(2).strip().strip("'\"")
-    if _acquires_at_runtime(value):
+    if _acquires_at_runtime(value, prefixes=prefixes, allowed=allowed):
         return None
     # A code span quotes the value; the reference policy decides what it quotes.
-    value = value.strip("`").strip()
-    if value in allowed or any(value.startswith(cast(str, prefix)) for prefix in prefixes):
+    if _names_a_reference(value, prefixes=prefixes, allowed=allowed):
         return None
     return "line assigns credential-shaped literal material to a blocked label"
 
