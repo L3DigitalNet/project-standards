@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.13.0] — 2026-07-31
+
 > **Why MINOR:** the shipped wheel carries a single engine correction whose classification floor is PATCH — `packages check-release --baseline v5.12.0` reports no removed capability — and no payload family changes. The MINOR number is the owner's designation for the efficiency train shipping around that wheel: the repository gains a verified parallel release gate, a scripted release preparation, and a revised verification policy, all of which change how every future release is produced.
 
 This release is the efficiency train: the release-gate verification wall-clock drops from a 55-minute serial coverage battery to a ~10-minute concurrent gate measured under real workstation load (5.3×), with the equivalence evidence, read-safety corrections, and process automation recorded in [`docs/research/2026-07-31-release-gate-wall-clock-spike.md`](docs/research/2026-07-31-release-gate-wall-clock-spike.md). The planned self-hosted-runner migration was deferred after an adversarial security review; the review and the hardening program a future migration requires are recorded in [`docs/research/2026-07-31-self-hosted-runner-security-review.md`](docs/research/2026-07-31-self-hosted-runner-security-review.md).
