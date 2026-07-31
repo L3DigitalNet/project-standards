@@ -127,7 +127,7 @@ def _run_new_doc_id(
     )
 
 
-_MANAGED_INTERPRETER_READY = False
+_managed_interpreter_ready = False
 
 
 def _ensure_managed_interpreter() -> None:
@@ -143,8 +143,8 @@ def _ensure_managed_interpreter() -> None:
     install` is idempotent and honors UV_PYTHON_INSTALL_DIR, so CI provisions
     into its own setup-uv directory and a developer machine is a fast no-op.
     """
-    global _MANAGED_INTERPRETER_READY
-    if _MANAGED_INTERPRETER_READY:
+    global _managed_interpreter_ready
+    if _managed_interpreter_ready:
         return
     install = subprocess.run(
         [str(_real_uv()), "python", "install"],
@@ -157,7 +157,7 @@ def _ensure_managed_interpreter() -> None:
             "could not provision a uv-managed interpreter for the uv-strict leg: "
             + install.stderr.strip()[:200]
         )
-    _MANAGED_INTERPRETER_READY = True
+    _managed_interpreter_ready = True
 
 
 def _uv_strict_path(tmp_path: Path) -> str:
