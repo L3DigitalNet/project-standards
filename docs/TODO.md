@@ -39,11 +39,11 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 - [ ] Complete the reviewed MCP implementation plan.
   - [x] Continue with T11 (installed-wheel client proof and documentation) when directed. _(Done 2026-07-30: commit `df25964` after Codex RED and GREEN reviews; the smoke-discovered dispatch defect was fixed via discovered-work T15 `75c9653` and T14 `1abf8d9`; SPEC-MS01 OQ-005 resolved at revision 1.4.)_
   - [x] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default before capturing the FR-030 probe evidence. _(Done 2026-07-30: 0.146.0 is still the latest stable and the flag remains default-disabled; no matrix refresh triggered.)_
-  - [ ] Continue with T12 (final gate and handoff) when directed.
+  - [x] Continue with T12 (final gate and handoff) when directed. _(Done 2026-07-31: T12.0's traceability audit returned CLEAN and T12.6 ran the §13 gate against one fresh candidate wheel; state recorded as implementation verified, release unprepared and unpublished. No version bump, tag, versioned changelog section, or publication.)_
 
-- [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes.
+- [x] Maintain the temporary MCP project change hold until implementation-plan T12 closes. _(Done 2026-07-31: the hold ends at T12 close. Ordinary non-MCP features, refactors, and maintenance no longer need owner direction.)_
 
-  Avoid significant non-MCP features, architectural refactors, standards-package programs, release trains, or other broad repository changes. Keep necessary maintenance narrow, and obtain owner direction before any exception that could disturb the MCP baseline.
+  One narrower constraint outlives the hold and remains in force: standards packages stay locked except minor-level version changes until the MCP server ships in standards v5.12.0.
 
   _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
 
@@ -54,6 +54,10 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   Four consumers owe protected merges to `main`: `docmend` and `hw-radar` from `dev`, `website-aboutme` and `website-l3digital.net` from `testing`; `~/scripts` needs `reconcile --apply`; `llm-wiki` has two consumer-side shape overflows.
 
   `control-center` stays on legacy config, blocked by issue #83, owner-handled — not engine-blocked. Details: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.
+
+- [ ] Retire `control_plane/provider_inputs.py` in favour of payload-declared provider input shapes.
+
+  The T15 seam consolidated four private per-standard input constructions behind one fail-closed authority — correct for a shared module, but it keeps per-standard knowledge in the engine. The owner recorded payload-declared input shapes as that module's retirement path once the MCP hold lifted (freeze J-N, 2026-07-30, resolution A).
 
 - [ ] Complete the approved future-artifact cleanup.
 

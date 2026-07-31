@@ -6,8 +6,8 @@ description: 'Final Step 09 official-source, license, conformance, and client ev
 doc_type: 'research'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-30'
-reviewed: '2026-07-30'
+updated: '2026-07-31'
+reviewed: '2026-07-31'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -275,10 +275,54 @@ It was a service-layer defect, not a packaging or documentation defect: source a
 
 ---
 
+## T12 final-gate re-probe (2026-07-31)
+
+`TC-T12-002`. The final gate built one fresh candidate wheel and ran §13 against only those bytes. **The final candidate is byte-identical to the T11 candidate** — SHA-256 `8ed0b2e8838fcc67a13bc62a82b52791e5b6b37104b7494c8dad16d04b17e07f`, the same digest recorded in the Candidate identity table above. Every commit between T11 and this gate touched `docs/` only, and `docs/` is not packaged, so no product byte changed. This section therefore records a re-probe of the frozen commands rather than any new behavioural claim, and the T1 register above is **not** amended.
+
+### Frozen probes re-executed verbatim
+
+Copied verbatim from the "Executable probes and results" table. All four are read-only.
+
+| # | Command | Exit | Result on 2026-07-31 |
+| --- | --- | --- | --- |
+| 1 | `claude --version` | 0 | `2.1.220 (Claude Code)` — unchanged from the T1 register |
+| 2 | `codex --version` | 0 | `codex-cli 0.146.0` — 0.145.0 in the T1 register; the 0.146.0 assessment is already dispositioned (the `mcp_2026_07_28` flag still ships disabled by default, so the authorized refresh condition did not occur) |
+| 3 | `claude mcp list` | 0 | health check passes; every configured server reports `✔ Connected` (2 stdio, 3 HTTP). Server URLs are **not** reproduced here — one carries an API key in its query string, and this page is a tracked, publicly mirrored document |
+| 4 | `codex mcp list` | 0 | exit 0; 4 stdio servers `enabled`, 1 `disabled`, 2 HTTP servers `enabled` |
+
+The client inventories differ from the 2026-07-28 register because the workstation's own unrelated MCP servers changed in the interim. That is environment drift, not a protocol or client-capability change: no recorded protocol revision, roots behaviour, prompts behaviour, or resource-access fact moved, so no frozen row is amended.
+
+### Candidate server observed under the final wheel
+
+One process, launched from the extracted candidate runtime only.
+
+| Observation | Value |
+| --- | --- |
+| `serverInfo` | `{"name": "project-standards", "version": "5.11.0"}` |
+| Negotiated revision | `2025-06-18` (the Codex-era opening contract) |
+| Advertised capabilities | `experimental {}`, `resources {listChanged: false, subscribe: false}`, `tools {listChanged: false}` |
+| `tools/list` | exactly six, all read-only: `drift_check`, `reconcile_preview`, `repo_inspect`, `standard_read`, `standards_list`, `validate_repo` |
+| `resources/list` | 53 entries |
+| `prompts/list` | `-32601 Method not found` — the prompts capability is truthfully absent because no prompt-role resource is approved |
+| `tools/call standards_list` | `isError: false`; structured content carries `catalog_major` and `standards` |
+| stdout | pure JSON-RPC on every line |
+| stderr | empty for the whole session |
+
+This satisfies the §13 discovery inspection: capabilities equal registrations, and no mutating, apply, recommendation, logging, or remote surface is reachable.
+
+### Persistent client configuration
+
+Neither persistent configuration was written. Before the probes, the Claude global `mcpServers` mapping held `brave-search`, `serper-search`, and `tavily`, and the Codex `mcp_servers` table held `basedpyright-lsp`, `brave-search`, `context7`, `lsp-typescript`, `openaiDeveloperDocs`, `serper-search`, and `tavily-mcp`. **Neither contained a `project-standards` entry before the gate and neither gained one.** The candidate server was exercised from an isolated throwaway directory with its own `CODEX_HOME`, never through a registered client entry.
+
+One honest limitation on the wording: `~/.claude.json` is continuously rewritten by the running Claude Code harness for unrelated session state, so a whole-file checksum cannot prove "untouched" and none is claimed. The precise provable claim is the one made above — the `mcpServers` mapping is unchanged and gained no `project-standards` entry.
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.5 | 2026-07-31 | Claude (T12 final gate) | Append the `TC-T12-002` final-gate re-probe: the freshly built final candidate is byte-identical to the T11 candidate (`8ed0b2e8…`), the four frozen probes re-executed verbatim at exit 0, the candidate server's observed capabilities and six read-only tools under the final wheel, and the persistent-client-configuration disposition. Client inventories moved with unrelated workstation changes, so no frozen T1 row is amended. Server URLs are deliberately not reproduced because one carries an API key and this page is tracked and publicly mirrored. |
 | 0.4 | 2026-07-30 | Claude (T11 client gate, refresh) | Re-run the whole `TC-T11-002` smoke against the post-fix candidate `8ed0b2e8…`: new wheel digest, the fixture leg exercised with an absolute root, repository-scoped results for all six tools on both real roots (10 and 5 provider results, all `completed`), and precise client-scope wording. The `validate_repo` empty-input finding is retained as a dated historical record of the discovery and its routing to `75c9653`/`1abf8d9`, not as current behaviour. |
 | 0.3 | 2026-07-30 | Claude (T11 client gate) | Append the `TC-T11-002` candidate-wheel client smoke: wheel digest and invocation, the owner-approved `OQ-005` smoke set, three-era server observations, scoped Codex 0.146.0 and Claude Code 2.1.220 probes, and the `validate_repo` empty-snapshot finding. The T1 client matrix is unchanged; 0.146.0 keeps `mcp_2026_07_28` disabled by default, so the authorized refresh condition did not occur. |
 | 0.2 | 2026-07-28 | Claude | Post-review corrections: reattributed the dual-era compatibility facts to the lifecycle page and the custom-URI-scheme quote to the resources page and added both sources; restated the SDK v1 line as maintenance-mode with no documented 2026-07-28 support instead of asserting non-support; labelled the HTTP-stack grouping an author assessment distinct from the register's unconditional-installation fact; labelled the Codex client-timeout guidance an author assessment; and changed the Claude Code resource-templates and Codex output-limits cells to 'not recorded in the evidence register'. |

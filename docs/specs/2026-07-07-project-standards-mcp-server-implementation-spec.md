@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-30'
+last_reviewed: '2026-07-31'
 supersedes: null
 superseded_by: null
 related:
@@ -38,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.5 | 2026-07-31 | Claude (T12 final gate and handoff) | Record-side reconciliation of two sketch surfaces to the contract implementation actually froze, owner-authorized 2026-07-31 and queued since the T3 close-out harvest. §9's `RepoInspectionSnapshot` sketch named `warnings: list[Finding]` and omitted the state classification; it now names `state` (the authoritative `StateKind` value, including missing/invalid) and ordered bounded `findings`, with `repo_root` as a normalized identity and the three parsed slots marked explicitly absent when unloadable — matching the field-by-field freeze in the implementation plan's §5.5. §10.3's `EC-005` said `reconcile_preview` "returns control-plane findings"; it now states the implemented closed two-slot envelope, whose `preview` and `control_plane` fields are exactly-one-non-null and follow the authoritative classification, so the findings requirement is satisfied at the tool layer while the facade continues to fail closed. Satisfied-in-substance wording made precise: no requirement, scope, tool schema, or server behavior changed, and no code was modified for this revision. |
 | 1.4 | 2026-07-30 | Claude (T11 client and documentation gate) | Record the owner's `OQ-005` decision and close the question: the minimum real-consumer smoke set is the mandatory test fixtures, this repository, and `~/scripts`, exercised read-only against the candidate wheel; smoke evidence is appended to the 2026-07-28 client matrix. Note for verification: FR-016 is verified against its normative acceptance sentence in §5.1 ("Setup/reference docs identify equivalent package and consumer-control-plane commands; existing CLI/CI behavior remains green"); the §11 verification-plan wording "Documentation and tool outputs link equivalent CLI/CI commands" is a sketch row, and no tool output shape was changed to satisfy it. No server scope, requirement, or tool schema changed. |
 | 1.3 | 2026-07-28 | Claude (T1 decision gate) | Record the Step 09/T1 decision-gate outcomes: final 2026-07-28 protocol and exact mcp==2.0.0 pin accepted (ADR 0025), local read-only transport contract accepted (ADR 0026), OQ-001/002/003/004/006 resolved and OQ-007 dispositioned (omit) with recorded owner approval, OQ-005 preserved for T11, and release-candidate wording updated to the final publication; §8.3 decision sources and the spec's related-ADR links now point at the accepted ADRs; the published-baseline references are synchronized to 5.11.0. No server scope or requirement changed. |
 | 1.2 | 2026-07-27 | Codex | Synchronize current package-authority context with the Project Standards 5.9.0 release candidate and Standard Bundle Authoring 2.6 without changing the approved server scope or requirements. |
@@ -479,11 +480,12 @@ ResourceDescriptor:
   digest: str
 
 RepoInspectionSnapshot:
-  repo_root: Path
-  desired_config: object | None
-  consumer_catalog: object | None
-  central_lock: object | None
-  warnings: list[Finding]
+  repo_root: str                     # normalized root identity, serialized as "."
+  state: str                         # authoritative StateKind classification, including missing/invalid
+  desired_config: object | None      # parsed authoritative state, or explicitly absent
+  consumer_catalog: object | None    # parsed authoritative state, or explicitly absent
+  central_lock: object | None        # parsed authoritative state, or explicitly absent
+  findings: list[Finding]            # ordered and bounded
 
 Finding:
   rule_id: str
@@ -562,7 +564,7 @@ Expected result:
 | EC-002 | Unknown `standard_id`. | Tool/resource returns structured not-found error with known IDs. |
 | EC-003 | Manifest declares missing or digest-invalid resource bytes, or selected bytes no longer match the startup-validated declaration. | Startup package validation catches the initial defect; each resource read rechecks the selected contained path and byte digest and fails closed without bytes if the installed file changed. |
 | EC-004 | Consumer repo root path escapes allowed root. | Request is rejected. |
-| EC-005 | Repo lacks `.standards/config.toml`, catalog, or lock. | `repo_inspect` reports the exact missing state and `reconcile_preview` returns control-plane findings. |
+| EC-005 | Repo lacks `.standards/config.toml`, catalog, or lock. | `repo_inspect` reports the exact authoritative state classification. `reconcile_preview` returns a closed two-slot envelope whose required nullable fields `preview` and `control_plane` are exactly-one-non-null: an `initialized` classification publishes `preview`, and every other classification publishes `control_plane` — the `RepoInspectionSnapshot` projection carrying the control-plane findings — so the findings requirement is met at the tool layer while the facade still fails closed. |
 | EC-006 | Repo contains legacy V1/copy-adopt files. | Tool may report migration evidence but never treats it as current desired or locked state. |
 | EC-007 | Tool execution fails due to missing dependency. | Return structured error with command/provider and remediation. |
 | EC-008 | SDK emits logs or warnings to stdout. | Adapter/test must catch; stdout contamination is release-blocking. |
