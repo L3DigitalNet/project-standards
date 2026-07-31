@@ -46,11 +46,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Baseline to beat (measured 2026-07-31): plain battery 16:22 tmpfs / 22:30 disk-backed; coverage battery 55:31 disk-backed. Target: 5–8 minute release gate.
 
-- [ ] Move repository CI from GitHub-hosted runners to the self-hosted runner on the Hetzner box; ship with the v5.13.0 train. _(Owner 2026-07-31.)_
+- [ ] ~~Move repository CI to the self-hosted runner; ship with the v5.13.0 train.~~ **Deferred from v5.13.0** _(owner decision 2026-07-31)_ after an adversarial security review refuted the design; hosted minutes are free for public repos, so speed was the only payoff.
 
-  Restrict pull requests to administrators (owner-only) so the self-hosted runner never executes untrusted contributor code — the standard workflow-injection risk on self-hosted runners. Saves GitHub-hosted runner minutes and is potentially faster.
-
-  Before migrating, load the gh-runner situational reference (`agent-configs` repo: `global/claude/context/gh-runner.md`) and re-check every workflow's `runs-on` target plus any downstream consumers of this repo's reusable workflows.
+  Revisit under the `agent-managed-repo`/governance program using the approved dedicated-group architecture and the ten-item hardening program in `docs/research/2026-07-31-self-hosted-runner-security-review.md` (several items are homelab-repo VM 200/Ansible work; two GitHub behaviors need empirical verification first).
 
 - [ ] Evaluate further release-process efficiency candidates for the v5.13.0 efficiency train. _(Owner 2026-07-31: the next version is all about process efficiency.)_
 
