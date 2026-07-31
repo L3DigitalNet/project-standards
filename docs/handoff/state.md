@@ -2,10 +2,10 @@
 
 ## Current focus
 
-- MCP T12 gate 2026-07-31 20/20: implementation verified; release UNPREPARED/UNPUBLISHED. Candidate = wheel `8ed0b2e8…` + commit `4d2ece9`.
-- Full digest 8ed0b2e8838fcc67a13bc62a82b52791e5b6b37104b7494c8dad16d04b17e07f; published MCP-less 5.11.0 shares the version string.
-- MCP change hold ends at T12 close; the standards-package lock persists until v5.12.0 ships (owner 2026-07-29).
-- Owner 2026-07-31: roll Tier 1+2 issue fixes into v5.12.0 next session; triage at docs/reviews/2026-07-31-open-issue-triage-for-v5.12.0.md.
+- Project Standards 5.12.0 published at `932219c`; signed `v5.12.0`/`v5` tags; MCP server (`project-standards mcp`) is live.
+- 13-issue train closed: #78 #79 #81 #82 #85 #92 #93 #94 #96 #97 #100 #103 #104; #102 deferred; new trackers #105 #106 #107.
+- Release-commit Check failed on a test-sandbox defect, not the payload; `0ff5438`+`9db6a83` fixed it, Check `30633727426` passed.
+- Next: v5.13.0 efficiency program (verification wall-clock, self-hosted runner, process spikes), owner 2026-07-31.
 
 ## Active incidents
 

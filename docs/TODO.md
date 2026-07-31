@@ -34,27 +34,6 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
-### Active program (MCP)
-
-- [ ] Complete the reviewed MCP implementation plan.
-  - [x] Continue with T11 (installed-wheel client proof and documentation) when directed. _(Done 2026-07-30: commit `df25964` after Codex RED and GREEN reviews; the smoke-discovered dispatch defect was fixed via discovered-work T15 `75c9653` and T14 `1abf8d9`; SPEC-MS01 OQ-005 resolved at revision 1.4.)_
-  - [x] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default before capturing the FR-030 probe evidence. _(Done 2026-07-30: 0.146.0 is still the latest stable and the flag remains default-disabled; no matrix refresh triggered.)_
-  - [x] Continue with T12 (final gate and handoff) when directed. _(Done 2026-07-31: T12.0's traceability audit returned CLEAN and T12.6 ran the §13 gate against one fresh candidate wheel; state recorded as implementation verified, release unprepared and unpublished. No version bump, tag, versioned changelog section, or publication.)_
-
-- [x] Maintain the temporary MCP project change hold until implementation-plan T12 closes. _(Done 2026-07-31: the hold ends at T12 close. Ordinary non-MCP features, refactors, and maintenance no longer need owner direction.)_
-
-  One narrower constraint outlives the hold and remains in force: standards packages stay locked except minor-level version changes until the MCP server ships in standards v5.12.0.
-
-  _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
-
-### Release v5.12.0
-
-- [ ] Roll the owner-approved Tier 1 and Tier 2 issue fixes into the v5.12.0 release train (fresh session).
-
-  Tier 1 docs-only: #85, #92, #93, #96, #103. Tier 2 low-risk: #97, #100, #94, #104 (docs option), #81+#82, #78, #79. Tier 3 is timeline-conditional; full disposition and rationale: `docs/reviews/2026-07-31-open-issue-triage-for-v5.12.0.md`. _(Owner 2026-07-31: roll in the safe tiers; release finalization remains separately authorized.)_
-
-  - [ ] Run the #102 live reproduction first: the `_is_legacy_command` guard shipped at `4cc5efb` may already cover it, closing the issue with no change.
-
 ### Release v5.13.0
 
 - [ ] **Important:** cut release-gate verification wall-clock; implement with the v5.13.0 train. _(Owner 2026-07-31: spike first, immediately after v5.12.0 closes.)_
@@ -66,6 +45,24 @@ This document is the user-visible and agent-visible work queue for the repo-loca
   Also bundle the two smaller levers: statics (prettier, markdownlint, basedpyright, pip-audit) run concurrently with the battery via a non-uv invocation path (~2–3 min return); MCP fixture file-count reduction through session-scoped fixture reuse, pursued only if the primary levers prove insufficient.
 
   Baseline to beat (measured 2026-07-31): plain battery 16:22 tmpfs / 22:30 disk-backed; coverage battery 55:31 disk-backed. Target: 5–8 minute release gate.
+
+- [ ] Move repository CI from GitHub-hosted runners to the self-hosted runner on the Hetzner box; ship with the v5.13.0 train. _(Owner 2026-07-31.)_
+
+  Restrict pull requests to administrators (owner-only) so the self-hosted runner never executes untrusted contributor code — the standard workflow-injection risk on self-hosted runners. Saves GitHub-hosted runner minutes and is potentially faster.
+
+  Before migrating, load the gh-runner situational reference (`agent-configs` repo: `global/claude/context/gh-runner.md`) and re-check every workflow's `runs-on` target plus any downstream consumers of this repo's reusable workflows.
+
+- [ ] Evaluate further release-process efficiency candidates for the v5.13.0 efficiency train. _(Owner 2026-07-31: the next version is all about process efficiency.)_
+
+  Candidate: break the serial-venv constraint — a frozen venv with `uv run --no-sync`, or per-lane git worktrees with their own environments, so independent suites (package_contract, mcp_server, control_plane) run in parallel instead of queuing on one shared environment.
+
+  Candidate: after the runner migration, make hosted CI the single authoritative full battery and trim local pre-push verification to targeted lanes plus statics — today every train pays the full battery twice, once locally and once in `Check`.
+
+  Candidate: cache the candidate-wheel runtime keyed by `src/` and payload digests so unchanged builds skip the rebuild-and-extract cycle, and enable `prettier --cache` for the 1,150-file format gate.
+
+  Candidate: script the mechanical release-prep steps behind one command — version-string sweep, changelog conversion, activation-constant advance, and the payload wiring order (digests → aggregate → manifests → projection → catalog) — so release prep costs minutes, not a session leg.
+
+  Candidate: diff-scoped test selection for intermediate train legs (an impacted-lane map or pytest-testmon), reserving the full battery for the last content change and release prep.
 
 ### Maintenance
 
