@@ -29,6 +29,30 @@ _SCRIPTS = tuple(
 )
 
 
+# Everything `uv build` does not read, skipped when a fixture copies the live
+# repository. Two reasons, and the second is the load-bearing one:
+#
+# 1. size — `node_modules` alone is tens of thousands of files no wheel build
+#    touches, copied once per module-scoped fixture per xdist worker;
+# 2. concurrency — `shutil.copytree` walks with `os.scandir` and copies each entry
+#    afterwards, so any file another test deletes in between raises inside the
+#    fixture. Every tree here is either generated or a tool cache, i.e. exactly the
+#    trees a concurrent test may churn. `build` covers the Prettier parity oracle's
+#    probe directories (tests/test_frontmatter_prettier_parity.py), which used to
+#    land in the repository root and broke this copy under `pytest -n auto`.
+_WHEEL_SOURCE_IGNORE = shutil.ignore_patterns(
+    ".git",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+)
+
+
 def _venv_environment(**extra: str) -> dict[str, str]:
     return {**os.environ, "PYTHONPATH": "", **extra}
 
@@ -62,14 +86,7 @@ def migration_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     shutil.copytree(
         _ROOT,
         source,
-        ignore=shutil.ignore_patterns(
-            ".git",
-            ".venv",
-            ".pytest_cache",
-            "__pycache__",
-            "build",
-            "dist",
-        ),
+        ignore=_WHEEL_SOURCE_IGNORE,
     )
     fixture = source / "tests/fixtures/package_contract/valid/full"
     shutil.rmtree(source / "standards")
@@ -153,14 +170,7 @@ def selected_command_venv(tmp_path_factory: pytest.TempPathFactory) -> Path:
     shutil.copytree(
         _ROOT,
         source,
-        ignore=shutil.ignore_patterns(
-            ".git",
-            ".venv",
-            ".pytest_cache",
-            "__pycache__",
-            "build",
-            "dist",
-        ),
+        ignore=_WHEEL_SOURCE_IGNORE,
     )
     pyproject = source / "pyproject.toml"
     pyproject.write_text(

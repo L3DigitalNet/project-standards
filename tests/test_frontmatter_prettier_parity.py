@@ -37,6 +37,17 @@ from project_standards.format_frontmatter import format_text
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PRETTIER = _REPO_ROOT / "node_modules" / ".bin" / "prettier"
+# Probe directories must live inside the repository tree (see `_run_prettier`) but
+# NOT directly in its root: the root is shared mutable state that other tests in
+# this suite read whole. `real_tree_digest` (tests/mcp_services/test_providers.py)
+# hashes every root entry to prove a composite call wrote nothing, and the wheel
+# fixtures in tests/test_installed_wrappers.py `shutil.copytree` the root; a probe
+# appearing or vanishing between their two samples — or mid-walk — failed both
+# under `pytest -n auto`. `build/` is the repository's generated-output tree: it is
+# gitignored, and it is already excluded by every one of those readers, so probe
+# churn is invisible to them while staying in-tree for Prettier's config
+# resolution.
+_PROBE_PARENT = _REPO_ROOT / "build" / "prettier-probes"
 
 
 def _require_prettier() -> None:
@@ -57,21 +68,27 @@ def _run_prettier(text: str) -> str:
     matching the `**/*.md` glob against the file path relative to the config's
     directory, so an out-of-tree temp path silently falls back to base
     `singleQuote: false` and rewrites every scalar (the config lie that motivated
-    the in-tree mkdtemp).
+    the in-tree mkdtemp). `**/*.md` matches at any depth, so `_PROBE_PARENT` keeps
+    that property while keeping the churn out of the repository root — see the
+    comment on `_PROBE_PARENT` for which readers that protects. The corpus below is
+    the standing proof the override still applies: every document in it is a fixed
+    point only under `singleQuote: true`, so a probe location that lost the override
+    fails direction A loudly rather than passing trivially.
 
     `--ignore-path os.devnull` is LOAD-BEARING, not hygiene: Prettier 3 honors
-    `.gitignore` by default, and the repo's `.gitignore` lists `prettier_probe_*/`
-    (so a crashed run leaves no tracked artifact). Without this flag Prettier would
-    treat every probe file as ignored and, in stdout mode, echo it back UNCHANGED
-    with no warning — silently vacating the whole oracle (every parity assertion
-    would pass trivially because Prettier never actually reformats). Pointing
-    `--ignore-path` at an empty file disables both default ignore files for this one
-    explicit probe, while config resolution (the `**/*.md` override) is unaffected.
+    `.gitignore` by default, and the repo's `.gitignore` lists `build/` (so a crashed
+    run leaves no tracked artifact). Without this flag Prettier would treat every
+    probe file as ignored and, in stdout mode, echo it back UNCHANGED with no warning
+    — silently vacating the whole oracle (every parity assertion would pass trivially
+    because Prettier never actually reformats). Pointing `--ignore-path` at an empty
+    file disables both default ignore files for this one explicit probe, while config
+    resolution (the `**/*.md` override) is unaffected.
 
     `check=True` turns a Prettier parse error into a test error, not a skip — per the
     FR-009 rule that a Prettier failure on a legal document is itself a divergence to
     surface, never to hide."""
-    probe_dir = Path(tempfile.mkdtemp(dir=_REPO_ROOT, prefix="prettier_probe_"))
+    _PROBE_PARENT.mkdir(parents=True, exist_ok=True)
+    probe_dir = Path(tempfile.mkdtemp(dir=_PROBE_PARENT, prefix="probe_"))
     try:
         probe = probe_dir / "frontmatter.md"
         probe.write_text(text, encoding="utf-8")
@@ -155,7 +172,7 @@ def test_prettier_harness_detects_non_fixed_point() -> None:
     `_NON_FIXED_POINT_DOC` is KNOWN not to be a fixed point: Prettier rewrites its
     doubled-apostrophe `'Apple''s thing'` to the no-escape `"Apple's thing"`. If a
     future cleanup drops `--ignore-path os.devnull`, Prettier starts treating the
-    (gitignored `prettier_probe_*/`) probe directory as ignored and echoes stdin-mode
+    (gitignored `build/`) probe directory as ignored and echoes stdin-mode
     output back byte-identical with no warning — every parity assertion in this file
     would then pass trivially. This test is the tripwire for exactly that regression:
     it fails (output == input) the moment `--ignore-path` stops doing its job."""

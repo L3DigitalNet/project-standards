@@ -26,8 +26,10 @@ venv/
 node_modules/
 # Transient Prettier probe dirs created inside the repo tree by the parity oracle
 # (mkdtemp needs an in-tree path so the `**/*.md` singleQuote override applies —
-# an out-of-tree probe silently uses the wrong config). Cleaned up per-test, but
-# ignored so a crashed run never leaves a tracked artifact (resolves T1 review minor).
+# an out-of-tree probe silently uses the wrong config). They now live under the
+# already-ignored `build/prettier-probes/` rather than in the repository root, so
+# their churn is invisible to the suites that digest or copy the root whole; this
+# pattern only catches leftovers from a pre-5.13 checkout.
 prettier_probe_*/
 
 # Editor/backup snapshots (never tracked)

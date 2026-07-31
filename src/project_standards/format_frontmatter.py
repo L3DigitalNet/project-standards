@@ -748,39 +748,18 @@ def _resolve_mode(args: argparse.Namespace) -> Literal["check", "write"]:
     return "write" if args.write else "check"
 
 
-def main(
-    argv: list[str] | None = None,
-    *,
-    _command_locked: bool = False,
-    _selected_package: SelectedCommandPackage | None = None,
-    _config_driven_invocation: str = "format-frontmatter",
-) -> int:
-    arguments = list(sys.argv[1:] if argv is None else argv)
-    if not _command_locked:
-        outcome = reenter_selected_command(
-            arguments,
-            standard_id="markdown-frontmatter",
-            mode=LockMode.WRITE if "--write" in arguments else LockMode.READ,
-            reenter=lambda args_, selected: main(
-                args_,
-                _command_locked=True,
-                _selected_package=selected,
-                _config_driven_invocation=_config_driven_invocation,
-            ),
-        )
-        if outcome is not None:
-            return outcome
-    if _selected_package is not None and "--write" in arguments:
-        from project_standards.frontmatter_commands import (
-            run_locked_standalone_fix,
-        )
+def _parse_arguments(arguments: list[str]) -> argparse.Namespace:
+    """Parse and usage-validate the command line, touching nothing outside it.
 
-        return run_locked_standalone_fix(
-            arguments,
-            _selected_package,
-            surface="format-frontmatter",
-            config_driven_invocation=_config_driven_invocation,
-        )
+    Ordering contract: this runs BEFORE `main` reaches for the control-plane
+    lock. Argument shape is a property of the command line alone, so a usage
+    error must never depend on — or wait for — exclusive access to the
+    repository. When the lock came first, `format-frontmatter --stdin --write`
+    in a repository another standards operation was reading reported
+    `CP-BUSY: another standards operation holds the repository lock` instead of
+    the `--stdin` conflict, turning a deterministic exit-2 diagnostic into one
+    that depended on who else was running.
+    """
     parser = argparse.ArgumentParser(
         prog="format-frontmatter",
         description=__doc__,
@@ -813,6 +792,43 @@ def main(
     # file set or in-place write. Enforce it (parser.error exits 2) — CR-005.
     if args.stdin and (args.files or args.glob or args.write):
         parser.error("--stdin cannot be combined with FILE, --glob, or --write")
+    return args
+
+
+def main(
+    argv: list[str] | None = None,
+    *,
+    _command_locked: bool = False,
+    _selected_package: SelectedCommandPackage | None = None,
+    _config_driven_invocation: str = "format-frontmatter",
+) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    args = _parse_arguments(arguments)
+    if not _command_locked:
+        outcome = reenter_selected_command(
+            arguments,
+            standard_id="markdown-frontmatter",
+            mode=LockMode.WRITE if args.write else LockMode.READ,
+            reenter=lambda args_, selected: main(
+                args_,
+                _command_locked=True,
+                _selected_package=selected,
+                _config_driven_invocation=_config_driven_invocation,
+            ),
+        )
+        if outcome is not None:
+            return outcome
+    if _selected_package is not None and args.write:
+        from project_standards.frontmatter_commands import (
+            run_locked_standalone_fix,
+        )
+
+        return run_locked_standalone_fix(
+            arguments,
+            _selected_package,
+            surface="format-frontmatter",
+            config_driven_invocation=_config_driven_invocation,
+        )
 
     loaded = load_cli_config_or_exit(
         args.config,

@@ -268,11 +268,13 @@ rationale = "Frontmatter formatter output remains a pinned-Prettier fixed point.
 introduced_release = "5.8.0"
 environments = ["source", "baseline-wheel", "candidate-wheel"]
 references = ["tests/test_frontmatter_prettier_parity.py::test_corpus_class_is_prettier_fixed_point"]
-amendments = []
+amendments = [
+    { approved_by = "v5.13.0 efficiency-train read-safety review", date = "2026-07-31", new_digest = "sha256:6d64f0aeae846c2f7e6fc2c119fc29b24869ebad8b38211aabfd6aae8dda6a9d", new_symbol = "tests/test_frontmatter_prettier_parity.py::test_corpus_class_is_prettier_fixed_point", old_digest = "sha256:daa4e99d2af1de20616d350d2c83e150814401eef3aa149bafe9faa9fb5c9d56", old_symbol = "tests/test_frontmatter_prettier_parity.py::test_corpus_class_is_prettier_fixed_point", reason = "relocate the Prettier probe workspace from the repository root to build/prettier-probes/ for pytest-xdist read-safety; the probe stays in-tree so the **/*.md singleQuote override still applies, and an A/B oracle run proved byte-identical Prettier output, so the fixed-point contract this proof guards is unchanged", requirement = "DR-002" },
+]
 
 [[issues.proofs]]
 symbol = "tests/test_frontmatter_prettier_parity.py::test_corpus_class_is_prettier_fixed_point"
-digest = "sha256:daa4e99d2af1de20616d350d2c83e150814401eef3aa149bafe9faa9fb5c9d56"
+digest = "sha256:6d64f0aeae846c2f7e6fc2c119fc29b24869ebad8b38211aabfd6aae8dda6a9d"
 
 [[issues]]
 id = "GH-27"
