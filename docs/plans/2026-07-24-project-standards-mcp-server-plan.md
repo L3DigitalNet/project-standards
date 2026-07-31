@@ -264,6 +264,8 @@ For T2-T10, add one focused failing behavior test, verify it fails only because 
 | T11 | Prove installed-wheel clients and document use | P5 | T10 | FR-016, FR-020, FR-030, NFR-009-011 | candidate-wheel client smoke matrix |
 | T12 | Run final gate and prepare handoff | P5 | T11 | All | complete scoped verification gate |
 | T13 | Extend provider descriptors to the declared execution contract | P2 | T2 | FR-021, NFR-005, DR-001, DR-009 | `uv run pytest tests/mcp_services/test_catalog.py tests/mcp_services/contract/test_facade.py` |
+| T14 | Dispatch composite providers with authoritative typed input | P2 | T4, T15 | FR-012-013, NFR-005, DR-009 | `uv run pytest tests/mcp_services/test_providers.py` |
+| T15 | Publish the provider-dispatch-input authority seam | P2 | T4 | FR-015, NFR-005, DR-009 | `uv run pytest tests/control_plane/test_command_resolution.py` |
 
 ### 7.1 Checklist Execution Protocol
 
@@ -363,6 +365,38 @@ Before T1, the implementing agent must:
   - **T13.4 Verify GREEN** — rerun the T2 facade/catalog/resource battery plus nearest installed-distribution/package-repository regressions.
   - **T13.5 REFACTOR** — none expected; record `none` when unused.
   - **T13.6 Verify Task** — run `uv run pytest tests/mcp_services/contract/test_facade.py tests/mcp_services/test_catalog.py tests/mcp_services/test_resources.py tests/control_plane/test_distribution.py tests/package_contract/test_repository.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
+
+#### T14: Dispatch composite providers with authoritative typed input
+
+- **goal:** Make `validate_repo` and `drift_check` construct per-provider typed input equivalent to authoritative direct dispatch so real packaged providers succeed against real consumer roots, with provider failures isolated as typed per-result failures, per the T11 smoke discovery of 2026-07-30. · **phase:** P2 · **depends_on:** [T4, T15] · **requirements:** [FR-012, FR-013, NFR-005, DR-009] · **priority:** must
+- **files:** `src/project_standards/mcp_services/providers.py` (modify), `src/project_standards/mcp_services/provider_worker.py` (modify only if input construction must move worker-side), `tests/mcp_services/test_providers.py` (modify)
+- **preconditions:** T4 and T9 are done with green batteries; the T11 client-matrix evidence records the real-consumer failure (`-32602 provider failed with ValueError` for `adr@1.3/validate-adr` and `markdown-frontmatter@1.6/validate-frontmatter`); the empty-input dispatch sites are `providers.py` `validate_repo` and `drift_check`.
+- **interface/data:** composite operations must build each applicable provider's typed input through the T15 public seam (`control_plane.provider_inputs.provider_dispatch_input`), never a parallel reimplementation (FR-015); input construction is deterministic under DR-009; a provider raising during dispatch yields a structured per-result failure in the existing `ProviderOperationResult` failure shape without aborting sibling providers or the composite report; `invoke_read_provider`'s caller-supplied input contract, the §5.5 facade signatures, and the T9 tool registration/schemas are unchanged.
+- **stop/backtrack:** if the T15 seam cannot supply a provider's input for a reason its own contract does not cover, stop and route the gap back to T15; if a frozen T4/T9 test pins the whole-call abort behavior, stop for orchestrator arbitration before changing that oracle; do not weaken provider validation, tolerate empty snapshots in packaged providers, or change provider entrypoints.
+- **acceptance:** composite dispatch input matches authoritative direct dispatch for the same provider and root (TC-T14-001); a real packaged provider validates a real consumer root through the facade (TC-T14-002); a failing provider isolates to a typed per-result failure while sibling providers complete (TC-T14-003).
+- **sub-tasks:**
+  - **T14.1 RED** — add a real-packaged-provider fixture path and the three contract tests; remove the echo-only masking that let empty input pass.
+  - **T14.2 Verify RED** — failures come only from empty-input dispatch and whole-call abort, never from fixtures, collection, or unrelated code.
+  - **T14.3 GREEN** — construct authoritative typed input for composite dispatch and isolate per-result failures; change nothing else.
+  - **T14.4 Verify GREEN** — rerun the provider battery, the T9 consumer-tools and no-writes suites, and the nearest facade regressions.
+  - **T14.5 REFACTOR** — none expected; record `none` when unused.
+  - **T14.6 Verify Task** — run `uv run pytest tests/mcp_services/test_providers.py tests/mcp_services/security/test_no_writes.py tests/mcp_server/test_consumer_tools.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
+
+#### T15: Publish the provider-dispatch-input authority seam
+
+- **goal:** Consolidate the four private per-standard provider-input constructions behind one public control-plane function so exactly one authority builds provider typed input, preserving every existing CLI and executor behavior byte-for-byte, per the T14.1 blocked-leg record of 2026-07-30. · **phase:** P2 · **depends_on:** [T4] · **requirements:** [FR-015, NFR-005, DR-009] · **priority:** must
+- **files:** `src/project_standards/control_plane/provider_inputs.py` (create), `src/project_standards/control_plane/command_resolution.py` (modify), `src/project_standards/frontmatter_commands.py` (modify), `src/project_standards/validate_frontmatter.py` (modify), `src/project_standards/_filesystem.py` (modify), `src/project_standards/specs/cli.py` (modify), `src/project_standards/agent_handoff/cli.py` (modify), `src/project_standards/control_plane/executor.py` (modify), `tests/control_plane/test_command_resolution.py` (modify)
+- **preconditions:** T4 is done; the four authoritative construction sites and their divergent shapes are recorded in the T14.1 evidence log; the full battery is green at the current baseline.
+- **interface/data:** add a public `provider_dispatch_input` function whose published address is the dedicated `control_plane/provider_inputs.py` module — the sole control-plane home authorized to dispatch on package identity, per the owner decision of 2026-07-30 honoring the shared-module boundary contract (`test_shared_command_boundary_contains_no_package_dispatch`; the three shared modules stay generic). Payload-declared input shapes are the recorded post-hold retirement path for this registry. The function maps (selected package resolution, operation, provider identity, consumer root) to exactly the typed input the owning authoritative site builds today, performing its own file selection — the seam covers both halves: selection (which files a provider family reads) and construction (the typed input built from them). The pure selection functions currently above the tier boundary (`validate_frontmatter.collect_paths`, the project-spec path selection in `specs/cli.py`) relocate unchanged into the tier-neutral `_filesystem.py` so the seam can call them without circular imports; relocation is mechanical, with the original modules re-exporting or repointing. The four per-family input shapes are genuinely four and stay byte-identical — the `documents` array (five fields) for frontmatter providers, the three-field `documents` array for project-spec, the path-keyed snapshots plus `managed_*` facts (with `precondition_digest`) for agent-handoff, and the plan-bound verification snapshot (with `referenced_inputs`) for executor-run verify providers; no unified shape may be introduced. Move the four private constructions behind the seam and repoint their callers; the exact signature may adapt to what the call sites need, recorded as an interpretive freeze; the equivalence oracle must not import the moved implementation to generate its own expectations; no CLI flag, output, or exit-code changes; no MCP-module changes in this task; no provider, payload, or schema byte changes.
+- **stop/backtrack:** if any call site's construction depends on CLI-parse-time state that cannot pass through a public signature, stop and record the coupling for orchestrator arbitration; do not change any provider, payload, or schema byte, and do not alter what any CLI command prints or returns.
+- **acceptance:** the public seam returns each packaged provider's authoritative typed input, equal to the prior in-site construction, for every applicable provider on the full fixture and this repository (TC-T15-001); all four repointed callers keep byte-identical behavior under the existing battery (TC-T15-002).
+- **sub-tasks:**
+  - **T15.1 RED** — add the seam equivalence contract test across every applicable packaged provider on the full fixture and this repository; expected failure: the public seam does not exist.
+  - **T15.2 Verify RED** — failures come only from the missing seam, never from fixtures, collection, or the existing constructions.
+  - **T15.3 GREEN** — add the seam, move the four constructions behind it, repoint the callers; change nothing else.
+  - **T15.4 Verify GREEN** — rerun the four repointed-caller suites and the ordinary battery; tallies must match the pre-change baseline exactly; statics clean.
+  - **T15.5 REFACTOR** — none expected; record `none` when unused.
+  - **T15.6 Verify Task** — run `uv run pytest tests/control_plane/test_command_resolution.py tests/control_plane/test_executor.py tests/control_plane/test_providers.py tests/test_adopt_manifest.py tests/test_validate_frontmatter.py`, the agent-handoff and spec CLI suites, `uv run ruff check` and `uv run ruff format --check` on the changed paths, and `uv run basedpyright`; commit with IDs.
 
 ### Phase P3: Protocol and Resources
 
@@ -690,6 +724,11 @@ Teardown: harvest notes into this section and applicable ADR/handoff artifacts, 
 | TC-T12-002 | Every Must/Should and the FR-010 omission | T12 | Every command and manual assertion in §13 against one extracted candidate wheel | integration |
 | TC-T13-001 | DR-001, NFR-005, DR-009 | T13 | `tests/mcp_services/test_catalog.py::test_provider_descriptors_preserve_declared_execution_contract` | contract |
 | TC-T13-002 | FR-021 | T13 | `tests/mcp_services/contract/test_facade.py::test_nested_dto_shapes_are_frozen_field_by_field` | contract |
+| TC-T14-001 | FR-012, NFR-005, DR-009 | T14 | `tests/mcp_services/test_providers.py::test_composite_dispatch_input_matches_authoritative_direct_dispatch` | contract |
+| TC-T14-002 | FR-012, FR-013 | T14 | `tests/mcp_services/test_providers.py::test_real_packaged_provider_validates_real_consumer_root` | end-to-end |
+| TC-T14-003 | FR-012, FR-013 | T14 | `tests/mcp_services/test_providers.py::test_provider_failure_isolates_to_typed_per_result_failure` | contract |
+| TC-T15-001 | FR-015, NFR-005, DR-009 | T15 | `tests/control_plane/test_command_resolution.py::test_provider_dispatch_input_matches_each_authoritative_construction` | contract |
+| TC-T15-002 | FR-015 | T15 | Existing CLI and executor suites pass with pre-change tallies after the repoint | end-to-end |
 
 ### Appendix C. Deferred Work
 
