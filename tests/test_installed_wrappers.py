@@ -50,6 +50,11 @@ _WHEEL_SOURCE_IGNORE = shutil.ignore_patterns(
     "build",
     "dist",
     "node_modules",
+    # Coverage worker data and the agent-session ledger appear and vanish in
+    # the repository root while the parallel coverage gate runs; copying them
+    # is both unnecessary and a mid-walk race.
+    ".coverage*",
+    ".workflow",
 )
 
 
