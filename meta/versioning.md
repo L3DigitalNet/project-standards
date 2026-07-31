@@ -6,7 +6,7 @@ description: 'How releases of this repository are numbered, tagged, and consumed
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-27'
+updated: '2026-07-31'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -50,7 +50,7 @@ license: null
   - [Consuming repositories](#consuming-repositories)
   - [Pre-1.0 releases](#pre-10-releases)
 
-> **Active post-v5 release policy (since 2026-07-18).** Project Standards 5.11.0 is published from release commit `ab7563585161a67ee9d8d219e752f947766a274b`; the moving `v5` tag tracks it. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
+> **Active post-v5 release policy (since 2026-07-18).** The active release is the version recorded in [`pyproject.toml`](../pyproject.toml)'s `version` field, published from the commit tagged with the matching full-version tag; the moving `v5` tag tracks it. The most recent dated section of [`CHANGELOG.md`](../CHANGELOG.md) names the same version and its release commit. This paragraph deliberately does not restate the number or commit so it cannot go stale across a release cut — `pyproject.toml` and `CHANGELOG.md` are already bumped by the release requirements below, so they stay authoritative without a separate update here. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
 
 **Historical policy:** From 2026-07-07 until the v5.0.0 publication, the repository intentionally accumulated all release-affecting work under one v5 freeze. That freeze ended when release commit `8869a08` and the signed `v5.0.0` and `v5` refs were published.
 

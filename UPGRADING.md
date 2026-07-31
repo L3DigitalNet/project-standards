@@ -6,7 +6,7 @@ description: 'Step-by-step runbook for migrating a consuming repository from pro
 doc_type: 'runbook'
 status: 'active'
 created: '2026-07-05'
-updated: '2026-07-27'
+updated: '2026-07-31'
 tags:
   - 'migration'
   - 'upgrade'
@@ -34,10 +34,10 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
   ```bash
   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.11.0"
-  project-standards --version
+  project-standards --version || project-standards --version
   ```
 
-  Confirm that the command reports `project-standards 5.11.0` before continuing.
+  Confirm that the command reports `project-standards 5.11.0` before continuing. The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real.
 
 - Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
 - Review the current package-specific [adoption guide](standards/README.md) for option and output changes.

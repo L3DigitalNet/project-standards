@@ -6,7 +6,7 @@ description: 'Copy/paste agent prompt for a safe, verified Project Standards ado
 doc_type: 'prompt'
 status: 'active'
 created: '2026-07-20'
-updated: '2026-07-28'
+updated: '2026-07-31'
 reviewed: '2026-07-28'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
@@ -89,10 +89,11 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
    release_tag="<release-tag>"
    release_version="<release-version>"
    uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@${release_tag}"
-   test "$(project-standards --version)" = "project-standards ${release_version}"
+   probed="$(project-standards --version || project-standards --version)"
+   test "$probed" = "project-standards ${release_version}"
    ```
 
-   Replace both placeholders with the values recorded above before running the block. Continue only if the version check succeeds.
+   The first `--version` probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring, with no reinstall needed. Retry the probe once before treating a failure as real; continue only once a probe succeeds. Replace both placeholders with the values recorded above before running the block. Continue only if the version check succeeds.
 
 7. Work on a branch with a clean baseline whenever possible. Do not discard, overwrite, normalize, commit, push, or open a pull request for unrelated work. Do not use `--force` to bypass ownership or provenance protections.
 
@@ -128,11 +129,13 @@ Moving from an older 5.x release to `<release-version>` is an in-place, non-brea
 
 1. Follow `UPGRADING.md` exactly. Do not run plain `init` and do not create `.standards/` beside legacy authority manually.
 2. Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
-3. Produce both previews against identical repository bytes:
+3. Produce both previews against identical repository bytes. Keep the machine-readable report outside the repository so it cannot be mistaken for a migration output or committed accidentally — a literal `>migration-plan.json` redirect inside the repository changes the bytes the second preview inspects and must not be used:
 
    ```bash
+   report=$(mktemp "${TMPDIR:-/tmp}/project-standards-migration.XXXXXX")
+   trap 'rm -f -- "$report"' EXIT
    project-standards init --catalog 5 --migrate
-   project-standards init --catalog 5 --migrate --json >migration-plan.json
+   project-standards init --catalog 5 --migrate --json >"$report"
    ```
 
 4. Review and resolve every ambiguity, unknown artifact, modified managed file, ownership conflict, unsafe path, and missing intent. Rerun both previews after any correction.

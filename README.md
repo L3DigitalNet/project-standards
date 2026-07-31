@@ -136,10 +136,10 @@ Project Standards 5.11.0 requires Python 3.14 or newer. Install the exact releas
 
 ```bash
 uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.11.0"
-project-standards --version
+project-standards --version || project-standards --version
 ```
 
-The version command must report `project-standards 5.11.0`. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
+The version command must report `project-standards 5.11.0`. The first probe immediately after a forced install can fail transiently while the freshly installed environment finishes import wiring; retry once before treating a failure as real. V5 consumers use one catalog/config/lock plane. Initialization is neutral and enables no package:
 
 ```bash
 project-standards init --catalog 5
