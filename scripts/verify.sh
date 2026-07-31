@@ -278,10 +278,11 @@ printf 'verify: PYTHONPATH=%s\n\n' "$PYTHONPATH"
 
 # Fresh-clone parity with CI: first-import __pycache__ creation mutates
 # parent-dir mtimes mid-run and races the read-only real-root digest proof.
-# tests/ ONLY — the battery imports the package from build/wheel-runtime,
-# and compiling src/ litters the symlink-only payload projection, failing
-# the projection and wheel-content proofs.
-"$VENV_BIN/python" -m compileall -q tests || die "compileall failed"
+# tests/ plus the src package (clean-env subprocess tests import the
+# editable install from src/), EXCLUDING the payloads/bundles resource
+# mirrors whose byte-exact proofs a compile would break.
+"$VENV_BIN/python" -m compileall -q tests src/project_standards -x "/(payloads|bundles)/" ||
+    die "compileall failed"
 
 "$VENV_BIN/coverage" erase || die "coverage erase failed"
 

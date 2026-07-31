@@ -72,13 +72,14 @@ jobs:
       # On a fresh checkout, first-import __pycache__ creation bumps parent
       # directory mtimes mid-run; under xdist those first imports spread
       # across the whole run and race the read-only real-root digest proof
-      # (serial runs finished importing before the proof sampled). Warm
-      # tests/ ONLY: the battery imports the package from build/wheel-runtime
-      # (digest-pruned), and compiling src/ writes __pycache__ into the
-      # symlink-only payload projection, failing the projection and
-      # wheel-content proofs (run 30663987887).
+      # (serial runs finished importing before the proof sampled). tests/
+      # plus the src package: clean-env subprocess tests resolve the
+      # editable install and import from src/ (run 30664963271). payloads/
+      # and bundles/ are excluded — compiling those resource mirrors breaks
+      # the projection and wheel-content proofs (run 30663987887); the
+      # runtime itself only ever imports the real package dirs.
       - name: Warm bytecode caches
-        run: uv run python -m compileall -q tests
+        run: uv run python -m compileall -q tests src/project_standards -x "/(payloads|bundles)/"
 
       - name: Reset coverage data
         run: uv run coverage erase
