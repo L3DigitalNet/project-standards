@@ -210,6 +210,69 @@ def test_multiple_missing_sibling_leaves_are_inserted_atomically(
     assert _render(original, reversed_provider_order, pointers) == updated
 
 
+_INLINE_TIGHT_CONTAINER = _INLINE_MISSING_CONTAINER.replace(
+    b'config = { keep = "consumer" }',
+    b'config = {keep = "consumer"}',
+)
+_INLINE_BARE_EMPTY_CONTAINER = _INLINE_MISSING_CONTAINER.replace(
+    b'config = { keep = "consumer" }',
+    b"config = {}",
+)
+_INLINE_SPACED_EMPTY_CONTAINER = _INLINE_MISSING_CONTAINER.replace(
+    b'config = { keep = "consumer" }',
+    b"config = { }",
+)
+_EMPTY_TRANSFORMED_CONFIG: JsonObject = {"ci": {"performance": True}}
+
+
+@pytest.mark.parametrize(
+    ("original", "transformed", "before", "after"),
+    [
+        pytest.param(
+            _INLINE_MISSING_CONTAINER,
+            _CONTAINER_TRANSFORMED_CONFIG,
+            b'config = { keep = "consumer" }',
+            b'config = { keep = "consumer", ci = { performance = true } }',
+            id="spaced-populated",
+        ),
+        pytest.param(
+            _INLINE_TIGHT_CONTAINER,
+            _CONTAINER_TRANSFORMED_CONFIG,
+            b'config = {keep = "consumer"}',
+            b'config = {keep = "consumer", ci = { performance = true }}',
+            id="tight-populated",
+        ),
+        pytest.param(
+            _INLINE_BARE_EMPTY_CONTAINER,
+            _EMPTY_TRANSFORMED_CONFIG,
+            b"config = {}",
+            b"config = { ci = { performance = true } }",
+            id="bare-empty",
+        ),
+        pytest.param(
+            _INLINE_SPACED_EMPTY_CONTAINER,
+            _EMPTY_TRANSFORMED_CONFIG,
+            b"config = { }",
+            b"config = { ci = { performance = true } }",
+            id="spaced-empty",
+        ),
+    ],
+)
+def test_inline_insertion_keeps_reviewable_punctuation_and_is_idempotent(
+    original: bytes,
+    transformed: JsonObject,
+    before: bytes,
+    after: bytes,
+) -> None:
+    """Issue #79: no space before the comma and no crowded closing brace."""
+    updated = _render(original, transformed)
+
+    assert updated == original.replace(before, after)
+    assert b" ," not in updated
+    assert _package_config(updated) == transformed
+    assert _render(updated, transformed) == updated
+
+
 def test_missing_leaf_uses_existing_dotted_inline_container() -> None:
     transformed: JsonObject = {
         "ci": {"enabled": True, "performance": True},

@@ -277,6 +277,102 @@ def test_json_update_position_preserves_prettier_fixed_point(
     _assert_prettier_fixed_point(tmp_path, path, after)
 
 
+_EXCLUDE_SEED = (
+    b'{"files.exclude":{"**/__pycache__":true,"**/.pytest_cache":true,'
+    b'"**/.ruff_cache":true,"**/.mypy_cache":true,"**/.coverage":true},'
+    b'"consumer":{"keep":true}}\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("position", "key"),
+    [
+        ("first", "**~1__pycache__"),
+        ("middle", "**~1.mypy_cache"),
+        ("last", "**~1.coverage"),
+    ],
+)
+def test_json_remove_position_preserves_prettier_fixed_point(
+    tmp_path: Path,
+    position: str,
+    key: str,
+) -> None:
+    """Issue #78: an obsolete key must not leave its indentation behind."""
+    relative = f"remove-{position}.json"
+    path, before = _prettier_clean_seed(tmp_path, relative, _EXCLUDE_SEED)
+    preserved = b'"consumer": { "keep": true }'
+    assert before.count(preserved) == 1
+    adapter = JsonAdapter()
+    scope = f"key:/files.exclude/{key}"
+
+    after = adapter.render(
+        adapter.inspect(before, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after.count(preserved) == 1
+    assert adapter.inspect(after, (scope,)).units == ()
+    assert not [line for line in after.decode().splitlines() if line.strip() == "" and line != ""]
+    _assert_prettier_fixed_point(tmp_path, path, after)
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_removal_consumes_the_emptied_line_verbatim(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    """Issue #78: the removed member's own line goes with it, byte for byte."""
+    content = (
+        b"{\n"
+        b'\t"files.exclude": {\n'
+        b'\t\t"**/.ruff_cache": true,\n'
+        b'\t\t"**/.mypy_cache": true,\n'
+        b'\t\t"**/.coverage": true\n'
+        b"\t}\n"
+        b"}\n"
+    )
+    scope = "key:/files.exclude/**~1.mypy_cache"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == (
+        b'{\n\t"files.exclude": {\n\t\t"**/.ruff_cache": true,\n\t\t"**/.coverage": true\n\t}\n}\n'
+    )
+
+
+@pytest.mark.parametrize("adapter", [JsonAdapter(), JsoncAdapter()])
+def test_json_family_removal_of_a_sole_member_leaves_no_whitespace_residue(
+    adapter: JsonAdapter | JsoncAdapter,
+) -> None:
+    """Issue #78: a container emptied by removal keeps no indentation-only line."""
+    content = b'{\n\t"managed": {\n\t\t"owned": true\n\t}\n}\n'
+    scope = "key:/managed/owned"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b'{\n\t"managed": {\n\t}\n}\n'
+    assert json.loads(after) == {"managed": {}}
+
+
+def test_jsonc_removal_keeps_a_line_shared_with_a_consumer_comment() -> None:
+    """Issue #78: line consumption stops at any surviving consumer byte."""
+    adapter = JsoncAdapter()
+    content = b'{\n\t"owned": true, // consumer note\n\t"other": 1\n}\n'
+    scope = "key:/owned"
+
+    after = adapter.render(
+        adapter.inspect(content, (scope,)),
+        (UnitChange(ActionKind.REMOVE, scope),),
+    )
+
+    assert after == b'{\n\t // consumer note\n\t"other": 1\n}\n'
+
+
 def test_json_create_formats_owned_fragment_inside_compact_consumer_object() -> None:
     before = b'{"consumer":{"keep":true}}\n'
     scope = "key:/[json]"

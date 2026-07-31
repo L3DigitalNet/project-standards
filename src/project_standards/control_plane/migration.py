@@ -1987,6 +1987,7 @@ def _plan_legacy_migration(
         payloads=installed.payloads,
         retired_targets=retired_targets,
         retired_content=retired_content,
+        migration_catalog=major,
     )
     reconciliation = plan_reconciliation(planner)
     if state.kind is StateKind.DUAL_AUTHORITY:

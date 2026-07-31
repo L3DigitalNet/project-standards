@@ -794,6 +794,34 @@ def _semantically_equal(left: JsonValue, right: JsonValue) -> bool:
     return semantic_digest(left) == semantic_digest(right)
 
 
+def _emptied_line_span(
+    text: str,
+    start: int,
+    end: int,
+    comma: JsonToken | None,
+) -> tuple[int, int] | None:
+    """Return the line span a removal would reduce to whitespace, when it exists.
+
+    Deleting only the unit and its separator leaves the removed line's own
+    indentation behind, which fails ``git diff --check`` and the Prettier gate
+    (issue #78). The line is consumed only when nothing but whitespace would
+    survive on it, so a shared line's comment or code keeps its bytes.
+    """
+    line_start = _line_start(text, start)
+    if text[line_start:start].strip():
+        return None
+    newline = text.find("\n", end)
+    line_end = len(text) if newline == -1 else newline + 1
+    trailing = (
+        f"{text[end : comma.start]}{text[comma.end : line_end]}"
+        if comma is not None and end <= comma.start and comma.end <= line_end
+        else text[end:line_end]
+    )
+    if trailing.strip():
+        return None
+    return line_start, line_end
+
+
 def _deletion_edits(
     located: LocatedUnit,
     text: str | None = None,
@@ -836,6 +864,19 @@ def _deletion_edits(
     edits = [(start, end, "")]
     selected_comma = comma if comma is not None else previous_comma
     if selected_comma is not None:
+        edits.append((selected_comma.start, selected_comma.end, ""))
+    if text is None:
+        return edits
+    emptied = _emptied_line_span(text, start, end, selected_comma)
+    if emptied is None:
+        return edits
+    line_start, line_end = emptied
+    edits = [(line_start, line_end, "")]
+    # A separator that closes the previous line (last-unit removal) sits outside
+    # the consumed line and still needs its own disjoint span.
+    if selected_comma is not None and not (
+        line_start <= selected_comma.start and selected_comma.end <= line_end
+    ):
         edits.append((selected_comma.start, selected_comma.end, ""))
     return edits
 

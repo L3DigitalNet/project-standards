@@ -16,6 +16,7 @@ from project_standards.control_plane.diagnostics import (
     findings_to_jsonable,
 )
 from project_standards.control_plane.distribution import InstalledPayload
+from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import (
     PlannerRequest,
     ReconciliationPlan,
@@ -113,6 +114,94 @@ def test_pre_adoption_whole_artifact__without_selector__does_not_invent_option(
     assert "deleting tool.txt is permitted" in finding.hint
     assert "rm -- tool.txt && project-standards reconcile --apply" in finding.hint
     assert "ownership option" not in finding.hint
+
+
+def test_pre_adoption_whole_artifact__managed_selector__names_its_ownership_option(
+    tmp_path: Path,
+) -> None:
+    """Issue #82: an artifact's own ownership predicate reaches the hint."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".markdownlint.json").write_text("{}\n", encoding="utf-8")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "markdownlint-config",
+                "target": ".markdownlint.json",
+                "content": b'{"MD060": false}\n',
+                "when_any": [{"option": "markdownlint_config_ownership", "equals": "managed"}],
+            }
+        ],
+        option_properties={
+            "markdownlint_config_ownership": {
+                "enum": ["managed", "consumer-owned"],
+                "default": "managed",
+            }
+        },
+    )
+
+    finding = _consumer_conflict(
+        plan_reconciliation(
+            _request(
+                repo,
+                (payload,),
+                configs={"demo": {"markdownlint_config_ownership": "managed"}},
+            )
+        )
+    )
+
+    assert "deleting .markdownlint.json is permitted" in finding.hint
+    assert 'current ownership option: markdownlint_config_ownership = "managed"' in finding.hint
+
+
+def test_pre_adoption_whole_file__migration_mode__names_the_migration_entry_point(
+    tmp_path: Path,
+) -> None:
+    """Issue #81: a V4 migration must not be pointed at ``reconcile --apply``."""
+    repo = tmp_path / "repo"
+    (repo / ".github/workflows").mkdir(parents=True)
+    (repo / ".github/workflows/format.yml").write_text("consumer\n", encoding="utf-8")
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "format-caller",
+                "target": ".github/workflows/format.yml",
+                "content": b"package\n",
+                "when_any": [{"option": "format_workflow_ownership", "equals": "managed"}],
+            }
+        ],
+        option_properties={
+            "format_workflow_ownership": {
+                "enum": ["managed", "consumer-owned"],
+                "default": "managed",
+            }
+        },
+    )
+    configs = {"demo": {"format_workflow_ownership": "managed"}}
+
+    reconcile = _consumer_conflict(plan_reconciliation(_request(repo, (payload,), configs=configs)))
+    migration = _consumer_conflict(
+        plan_reconciliation(
+            replace(
+                _request(repo, (payload,), configs=configs),
+                migration_catalog=CatalogMajor("5"),
+            )
+        )
+    )
+
+    command = "rm -- .github/workflows/format.yml && project-standards init --catalog 5 --migrate"
+    assert command in migration.hint
+    assert "reconcile --apply" not in migration.hint
+    assert "init --catalog 5 --migrate --apply" in migration.hint
+    assert 'format_workflow_ownership = "managed"' in migration.hint
+    assert (
+        "rm -- .github/workflows/format.yml && project-standards reconcile --apply"
+    ) in reconcile.hint
+    assert "--migrate" not in reconcile.hint
 
 
 @pytest.mark.parametrize(

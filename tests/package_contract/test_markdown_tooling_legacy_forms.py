@@ -223,3 +223,47 @@ def test_both_byte_forms_migrate_cleanly_on_1_8(tmp_path: Path, markdownlint: Pa
         and action.target == ".markdownlint.json"
         for action in second.actions
     )
+
+
+def test_customized_v4_artifacts_are_told_how_to_migrate_or_keep_ownership(
+    tmp_path: Path,
+) -> None:
+    """A blocked V4 preview names the migration command and the escape (#81, #82).
+
+    Both conflicts are whole-file package artifacts, so the remedy must be the
+    migration write path (``.project-standards.yml`` is still the only authority
+    and ``reconcile --apply`` cannot run) and each must name the ownership option
+    that preserves the consumer's customization instead of deleting it.
+    """
+    repo = _v4_consumer(tmp_path, markdownlint=_SHIPPED_MARKDOWNLINT)
+    customized = json.loads((repo / ".markdownlint.json").read_text(encoding="utf-8"))
+    customized["MD060"] = False
+    (repo / ".markdownlint.json").write_text(
+        json.dumps(customized, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (repo / ".github/workflows/format.yml").write_text(
+        "name: consumer format\n",
+        encoding="utf-8",
+    )
+    distribution = _installed_distribution(tmp_path, version="1.10")
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    hints = {
+        finding.path: finding.hint
+        for finding in plan.findings
+        if finding.code == "CP-CONSUMER-CONFLICT"
+    }
+    assert set(hints) == {".markdownlint.json", ".github/workflows/format.yml"}
+    for target, option in (
+        (".markdownlint.json", "markdownlint_config_ownership"),
+        (".github/workflows/format.yml", "format_workflow_ownership"),
+    ):
+        hint = hints[target]
+        assert hint is not None
+        assert f"rm -- {target} && project-standards init --catalog 5 --migrate" in hint
+        assert "project-standards init --catalog 5 --migrate --apply" in hint
+        assert "reconcile --apply" not in hint
+        assert f'current ownership option: {option} = "managed"' in hint

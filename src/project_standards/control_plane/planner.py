@@ -72,6 +72,7 @@ from project_standards.control_plane.models import (
     LockHeader,
     UnitProvenance,
 )
+from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
@@ -104,6 +105,7 @@ from project_standards.package_contract.paths import (
 from project_standards.package_contract.payload import (
     AdapterKind,
     ArtifactPolicy,
+    ConditionalMaterialization,
     ContributionDeclaration,
     JsonObject,
     JsonValue,
@@ -133,6 +135,11 @@ class PlannerRequest:
     catalog_refresh: CatalogRefreshPlan | None = None
     retired_targets: frozenset[SafeRelativePath] = frozenset()
     retired_content: tuple[tuple[SafeRelativePath, bytes], ...] = ()
+    # Diagnostics only. Set by legacy-migration planning so conflict hints name
+    # the migration write entry point instead of ``reconcile --apply``, which is
+    # not runnable while legacy authority stands (issue #81). It changes no
+    # classification, action, or lock outcome.
+    migration_catalog: CatalogMajor | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -369,6 +376,10 @@ class _Intent:
     provenance: UnitProvenance
     content: bytes
     declaration: ContributionDeclaration | None
+    # Diagnostics only. Whole-file artifacts carry ownership predicates but no
+    # ContributionDeclaration, so the conflict hint reads this instead of
+    # ``declaration`` to name their relinquishment option (issue #82).
+    ownership_options: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -509,6 +520,20 @@ def _read_payload_file(
     return content
 
 
+def _ownership_options(declaration: ConditionalMaterialization) -> tuple[str, ...]:
+    """Name the "managed" ownership options that gate one declaration."""
+    return tuple(
+        sorted(
+            {
+                predicate.option
+                for predicate in declaration.when_any
+                if predicate.equals == "managed"
+                and predicate.option.rsplit("/", 1)[-1].endswith("ownership")
+            }
+        )
+    )
+
+
 def _artifact_intent(
     package: ResolvedPackage,
     payload: InstalledPayload,
@@ -526,6 +551,7 @@ def _artifact_intent(
         provenance=UnitProvenance.SOURCE,
         content=_read_payload_file(payload, artifact.source, artifact.digest),
         declaration=None,
+        ownership_options=_ownership_options(artifact),
     )
 
 
@@ -640,6 +666,7 @@ def _desired_intents(
                     provenance=provenance,
                     content=content,
                     declaration=contribution,
+                    ownership_options=_ownership_options(contribution),
                 )
             )
     return tuple(sorted(intents, key=_intent_order))
@@ -760,7 +787,7 @@ def _consumer_alignment_hint(group: _DesiredGroup) -> str:
     return "resolve the declared ownership or repository content before applying"
 
 
-def _consumer_conflict_hint(group: _DesiredGroup) -> str:
+def _consumer_conflict_hint(group: _DesiredGroup, migration_catalog: CatalogMajor | None) -> str:
     if len(group.owners) > 1:
         return (
             f"ownership class: shared semantic unit; deleting {group.target.original} "
@@ -768,14 +795,21 @@ def _consumer_conflict_hint(group: _DesiredGroup) -> str:
             f"separately managed content; {_consumer_alignment_hint(group)}"
         )
     if group.adapter is AdapterKind.WHOLE_FILE:
-        recovery_command = (
-            f"rm -- {shlex.quote(group.target.original)} && project-standards reconcile --apply"
+        # While legacy authority is the only authority, `reconcile --apply` is not
+        # a runnable write path; the migration preview and its apply are.
+        write_command = (
+            "project-standards reconcile --apply"
+            if migration_catalog is None
+            else f"project-standards init --catalog {migration_catalog.value} --migrate"
         )
+        recovery_command = f"rm -- {shlex.quote(group.target.original)} && {write_command}"
         hint = (
             "ownership class: pre-adoption exclusive whole-file target; deleting "
             f"{group.target.original} is permitted to let the selected package create "
             f"it; from the repository root, run {recovery_command}"
         )
+        if migration_catalog is not None:
+            hint = f"{hint}, then apply the reviewed plan with {write_command} --apply"
         if group.ownership_options:
             selectors = ", ".join(f'{option} = "managed"' for option in group.ownership_options)
             hint = f"{hint}; current ownership option: {selectors}"
@@ -787,7 +821,11 @@ def _consumer_conflict_hint(group: _DesiredGroup) -> str:
     )
 
 
-def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> ControlFinding:
+def _consumer_conflict_finding(
+    group: _DesiredGroup,
+    current: AdapterUnit,
+    migration_catalog: CatalogMajor | None,
+) -> ControlFinding:
     expected_value = group.unit.value
     actual_value = current.value
     # 5.8.0 FR-012 / SPEC-CP01: only whole-file text conflicts carry a line
@@ -807,7 +845,7 @@ def _consumer_conflict_finding(group: _DesiredGroup, current: AdapterUnit) -> Co
         standard_id=group.owners[0],
         version=group.versions[0][1],
         message="pre-existing consumer unit differs from the selected package value",
-        hint=_consumer_conflict_hint(group),
+        hint=_consumer_conflict_hint(group, migration_catalog),
         expected=None if isinstance(expected_value, bytes) else expected_value,
         actual=None if isinstance(actual_value, bytes) else actual_value,
         expected_digest=group.unit.semantic_digest.value,
@@ -1091,16 +1129,7 @@ def _group_desired(
         }
         governing = next(iter(declared)) if len(declared) == 1 else None
         ownership_options = tuple(
-            sorted(
-                {
-                    predicate.option
-                    for item in items
-                    if item.intent.declaration is not None
-                    for predicate in item.intent.declaration.when_any
-                    if predicate.equals == "managed"
-                    and predicate.option.rsplit("/", 1)[-1].endswith("ownership")
-                }
-            )
+            sorted({option for item in items for option in item.intent.ownership_options})
         )
         groups.append(
             _DesiredGroup(
@@ -1254,6 +1283,7 @@ def _classify_desired(
     entry: SnapshotEntry,
     *,
     preserve_absence: bool,
+    migration_catalog: CatalogMajor | None,
 ) -> tuple[PlannedUnit | None, ControlFinding | None]:
     if previous is None:
         if current is None:
@@ -1264,7 +1294,7 @@ def _classify_desired(
             return _unit_plan(ActionKind.ADOPT, group, current), None
         if group.policy is ArtifactPolicy.CREATE_ONLY and entry.kind is EntryKind.REGULAR:
             return _unit_plan(ActionKind.PRESERVE, group, current), None
-        return None, _consumer_conflict_finding(group, current)
+        return None, _consumer_conflict_finding(group, current, migration_catalog)
     if previous.adapter is not group.adapter or previous.scope != group.scope:
         return None, _finding(
             "CP-LOCK-INCONSISTENT",
@@ -1550,6 +1580,7 @@ def _render_targets(
     blocked_targets: frozenset[str],
     retained_absence_keys: frozenset[_OwnedNaturalKey],
     transitions: frozenset[DeclaredTransition],
+    migration_catalog: CatalogMajor | None,
 ) -> tuple[
     tuple[ControlAction, ...],
     tuple[PlannedUnit, ...],
@@ -1628,6 +1659,7 @@ def _render_targets(
                 previous_map.get((group.adapter, group.scope)),
                 entry,
                 preserve_absence=_group_natural_key(group) in retained_absence_keys,
+                migration_catalog=migration_catalog,
             )
             if finding is not None:
                 target_findings.append(finding)
@@ -2497,6 +2529,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
         blocked_targets=frozenset(finding.path for finding in findings if finding.path),
         retained_absence_keys=retained_absence_keys,
         transitions=request.resolution.transition_paths,
+        migration_catalog=request.migration_catalog,
     )
     findings.extend(target_findings)
     if request.catalog_refresh is not None and request.catalog_refresh.changed:

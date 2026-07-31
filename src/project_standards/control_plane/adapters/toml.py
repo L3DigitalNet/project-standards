@@ -524,7 +524,15 @@ def _inline_insertion_point(
     start: int,
     end: int,
     parent: tuple[str, ...],
-) -> tuple[int, bool] | None:
+) -> tuple[int, int, bool] | None:
+    """Return the span an inserted entry replaces, plus whether siblings exist.
+
+    A populated table anchors immediately after its last value so the caller's
+    ``", "`` separator lands against that value and the consumer's own spacing
+    before ``}`` survives; an empty table yields its whole interior so the
+    caller can spell one canonical ``{ key = value }`` body. Anchoring on the
+    closing brace instead produced ``value , entry}`` (issue #79).
+    """
     entries = _inline_entries(text, start, end)
     if not parent:
         closing = end
@@ -532,7 +540,12 @@ def _inline_insertion_point(
             closing -= 1
         if closing <= start or text[closing - 1] != "}":
             raise ControlPlaneError("inline TOML table cannot be extended safely")
-        return closing - 1, bool(entries)
+        if entries:
+            return entries[-1].value_end, entries[-1].value_end, True
+        opening = start
+        while opening < closing and text[opening].isspace():
+            opening += 1
+        return opening + 1, closing - 1, False
     for entry in entries:
         if not _is_prefix(entry.key, parent):
             continue
@@ -557,18 +570,18 @@ def _inline_creation_point(
     start: int,
     end: int,
     parent: tuple[str, ...],
-) -> tuple[int, bool, tuple[str, ...], bool]:
+) -> tuple[int, int, bool, tuple[str, ...], bool]:
     entries = _inline_entries(text, start, end)
     if not parent:
         insertion = _inline_insertion_point(text, start, end, ())
         assert insertion is not None
-        return insertion[0], insertion[1], (), False
+        return *insertion, (), False
     for entry in entries:
         if not _is_prefix(entry.key, parent):
             if entry.key and parent[0] == entry.key[0]:
                 insertion = _inline_insertion_point(text, start, end, ())
                 assert insertion is not None
-                return insertion[0], insertion[1], parent, True
+                return *insertion, parent, True
             continue
         if entry.key == parent:
             return _inline_creation_point(
@@ -585,7 +598,7 @@ def _inline_creation_point(
         )
     insertion = _inline_insertion_point(text, start, end, ())
     assert insertion is not None
-    return insertion[0], insertion[1], parent, False
+    return *insertion, parent, False
 
 
 def _nested_inline_assignment(
@@ -1137,12 +1150,11 @@ class TomlAdapter:
                         )
                     )
                     if insertion is not None:
-                        separator = ", " if insertion[1] else " "
                         assignment = (
-                            f"{_canonical_path((*insertion[2], spec.path[-1]))} = {fragment}"
-                            if insertion[3]
+                            f"{_canonical_path((*insertion[3], spec.path[-1]))} = {fragment}"
+                            if insertion[4]
                             else _nested_inline_assignment(
-                                insertion[2],
+                                insertion[3],
                                 spec.path[-1],
                                 fragment,
                             )
@@ -1150,8 +1162,8 @@ class TomlAdapter:
                         edits.append(
                             (
                                 insertion[0],
-                                insertion[0],
-                                separator + assignment,
+                                insertion[1],
+                                f", {assignment}" if insertion[2] else f" {assignment} ",
                             )
                         )
                     elif (
