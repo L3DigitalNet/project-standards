@@ -15,7 +15,7 @@
 - Approved specification: `docs/specs/2026-07-09-agent-handoff-standard-package.md` (`SPEC-DPEY`, rev 0.5).
 - Accepted hook methodology: `docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md`.
 - Package methodology: ADRs 0017–0021 and `standards/standard-bundle-authoring/README.md`.
-- Pinned legacy evidence source: `/home/chris/projects/agent-handoff-v3` commit `56b24df7279572c485c2512783b0cc7e5395429b`.
+- Pinned legacy evidence source: `/home/chris/projects/agent-handoff-v3` commit `56b24df7279572c485c2512783b0cc7e5395429b`. _(2026-07-30: this local path is gone — the engine was retired; the local checkout was deleted and the GitHub repository `chrisdpurcell/agent-handoff-v3` was archived read-only, the only remaining source for the pinned commit. See the Deletion checkpoint and Engine record in `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.)_
 - Claude Code hook contract: <https://code.claude.com/docs/en/hooks>.
 - Codex hook contract: <https://learn.chatgpt.com/docs/hooks>.
 - Codex project config contract: <https://learn.chatgpt.com/docs/config-file/config-basic>.
@@ -1288,7 +1288,7 @@ For each inventory row, the repository's local agent runs `legacy-report`, recon
 
 - [ ] **Step 6: Enforce the deletion checkpoint.**
 
-The retirement inventory must show every known consumer validated, the released wheel must operate without the legacy checkout, and a final search must find no operational dependency. Stop and obtain explicit owner approval immediately before deleting `/home/chris/projects/agent-handoff-v3` or its remote repository.
+The retirement inventory must show every known consumer validated, the released wheel must operate without the legacy checkout, and a final search must find no operational dependency. Stop and obtain explicit owner approval immediately before deleting `/home/chris/projects/agent-handoff-v3` or its remote repository. _(2026-07-30: this gate was satisfied as documented — the local checkout is deleted and the remote is archived read-only. See the Deletion checkpoint gate-by-gate disposition in `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`; this pre-deletion approval record is preserved unchanged above.)_
 
 - [ ] **Step 7: Update handoff and commit release-readiness state.**
 

@@ -9,4 +9,4 @@
 
 ## Active incidents
 
-- Engine deletion is blocked until all consumers validate, the final dependency search is clean, and the owner approves.
+- Engine agent-handoff-v3 retired 2026-07-30 (GitHub archived, local checkout deleted); reconciliation queue in docs/TODO.md.

@@ -30,6 +30,8 @@ license: null
 
 This inventory freezes the legacy evidence used to build `agent-handoff` v1. The legacy checkout is read-only and pinned to commit `56b24df7279572c485c2512783b0cc7e5395429b`; no runtime or release artifact may depend on that checkout.
 
+> **2026-07-30 note:** the engine repository was retired — the private GitHub repository `chrisdpurcell/agent-handoff-v3` was archived read-only, and the local checkout at the frontmatter `source` path above no longer exists. That path is no longer resolvable locally (nor against a live target) and now lives only in the read-only archive; the pinned commit and this inventory's content remain unchanged. See the Deletion checkpoint and Engine record in `docs/research/2026-07-09-agent-handoff-retirement-inventory.md` for the retirement's authorization record and preserved engine facts.
+
 ## License and ownership verification
 
 The pinned commit's root `LICENSE` is the MIT License and identifies `Copyright (c) 2026 Chris Purcell`. Its redistribution condition requires the copyright and permission notice in copies or substantial portions. `git log --follow` and per-path author scans show only `Chris Purcell <168346341+chrisdpurcell@users.noreply.github.com>` for every retained or referenced path below.
