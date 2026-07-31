@@ -672,6 +672,30 @@ def test_unified_format_stdin_holds_a_read_lock(
     assert format_frontmatter.main(["--stdin", "--quiet"]) == 0
 
 
+def test_stdin_write_conflict_is_decided_before_the_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A usage error must never acquire the repository lock.
+
+    Ordering pin for the parse-before-lock fix: the previous code took an
+    exclusive lock for `--stdin --write` before argument validation, so under
+    contention the operator saw CP-BUSY instead of the CR-005 conflict. With
+    the lock already held here, only the fixed ordering can produce the usage
+    error — the old ordering would report CP-BUSY.
+    """
+    _write_unified_config(tmp_path, custom_schema=False)
+    monkeypatch.chdir(tmp_path)
+    with control_plane_lock(tmp_path, LockMode.WRITE):
+        with pytest.raises(SystemExit) as excinfo:
+            format_frontmatter.main(["--stdin", "--write"])
+        assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "stdin" in err.lower()
+    assert "CP-BUSY" not in err
+
+
 def test_top_level_validate_routes_only_through_selected_provider(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

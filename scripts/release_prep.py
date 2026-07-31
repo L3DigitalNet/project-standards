@@ -353,8 +353,7 @@ def _runtime_version() -> str | None:
     return parts[-1] if parts else None
 
 
-def verify_chain(target: Version, *, dry_run: bool) -> tuple[list[StepResult], str]:
-    baseline = _previous_release_tag(target)
+def verify_chain(target: Version, baseline: str, *, dry_run: bool) -> list[StepResult]:
     commands: list[tuple[str, list[str]]] = [
         ("validate-packages", ["standards", "validate-packages", "--root", ".", "--json"]),
         (
@@ -426,7 +425,7 @@ def verify_chain(target: Version, *, dry_run: bool) -> tuple[list[StepResult], s
                 f"exit {result.returncode}",
             )
         )
-    return results, baseline
+    return results
 
 
 # ---- step 6: summary ---------------------------------------------------------
@@ -491,22 +490,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         target = Version.parse(cast("str", args.version))
         current, precondition = check_preconditions(target)
-        # Every validation that can reject the run happens before the first write.
+        # Every validation that can reject the run happens before the first
+        # write — including the check-release baseline lookup, whose "no prior
+        # release tag" failure is a precondition, not a step outcome.
         changelog = plan_changelog(target, today=date.today().isoformat())
+        baseline = _previous_release_tag(target)
         results = [precondition]
         results.append(bump_version(current, target, dry_run=dry_run))
         results.append(sweep_version_references(current))
         results.append(apply_changelog(changelog, dry_run=dry_run))
+        results.extend(verify_chain(target, baseline, dry_run=dry_run))
     except ReleasePrepError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-
-    try:
-        chain, baseline = verify_chain(target, dry_run=dry_run)
-    except ReleasePrepError as error:
-        print(f"error: {error}", file=sys.stderr)
-        return 1
-    results.extend(chain)
 
     print_summary(results, target, current, baseline)
     return 1 if any(row.status == "FAILED" for row in results) else 0

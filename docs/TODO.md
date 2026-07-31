@@ -36,33 +36,17 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Release v5.13.0
 
-- [ ] **Important:** cut release-gate verification wall-clock; implement with the v5.13.0 train. _(Owner 2026-07-31: spike first, immediately after v5.12.0 closes.)_
-
-  Sequencing: the xdist read-safety/inode spike and the sysmon-vs-trace coverage diff run as the first work item after the v5.12.0 release closes, so the harness is proven before any 5.13.0 gate depends on it.
-
-  Levers by value: pytest-xdist (spike dogfood read-safety and parallel inode pressure first); `COVERAGE_CORE=sysmon` coverage on Python 3.14; a pytest tmpfs with raised `nr_inodes` (~4M) to reclaim the ~40% disk-backed TMPDIR penalty (conventions §14); fewer full-battery runs per train (full battery only after the last content change and at release prep).
-
-  Also bundle the two smaller levers: statics (prettier, markdownlint, basedpyright, pip-audit) run concurrently with the battery via a non-uv invocation path (~2–3 min return); MCP fixture file-count reduction through session-scoped fixture reuse, pursued only if the primary levers prove insufficient.
-
-  Baseline to beat (measured 2026-07-31): plain battery 16:22 tmpfs / 22:30 disk-backed; coverage battery 55:31 disk-backed. Target: 5–8 minute release gate.
+- [x] **Important:** cut release-gate verification wall-clock; implement with the v5.13.0 train. _(Done 2026-07-31: spike + adoption shipped. Gate green at 10:23 under real-usage load, 5.3× vs the 55:31 baseline; quiet floor in the 5–8 min target band. Evidence and adopted configuration: `docs/research/2026-07-31-release-gate-wall-clock-spike.md`; runner: `scripts/verify.sh`; MCP fixture-reduction lever not needed.)_
 
 - [ ] ~~Move repository CI to the self-hosted runner; ship with the v5.13.0 train.~~ **Deferred from v5.13.0** _(owner decision 2026-07-31)_ after an adversarial security review refuted the design; hosted minutes are free for public repos, so speed was the only payoff.
 
   Revisit under the `agent-managed-repo`/governance program using the approved dedicated-group architecture and the ten-item hardening program in `docs/research/2026-07-31-self-hosted-runner-security-review.md` (several items are homelab-repo VM 200/Ansible work; two GitHub behaviors need empirical verification first).
 
-- [ ] Evaluate further release-process efficiency candidates for the v5.13.0 efficiency train. _(Owner 2026-07-31: the next version is all about process efficiency.)_
-
-  Candidate: break the serial-venv constraint — a frozen venv with `uv run --no-sync`, or per-lane git worktrees with their own environments, so independent suites (package_contract, mcp_server, control_plane) run in parallel instead of queuing on one shared environment.
-
-  Candidate: after the runner migration, make hosted CI the single authoritative full battery and trim local pre-push verification to targeted lanes plus statics — today every train pays the full battery twice, once locally and once in `Check`.
-
-  Candidate: cache the candidate-wheel runtime keyed by `src/` and payload digests so unchanged builds skip the rebuild-and-extract cycle, and enable `prettier --cache` for the 1,150-file format gate.
-
-  Candidate: script the mechanical release-prep steps behind one command — version-string sweep, changelog conversion, activation-constant advance, and the payload wiring order (digests → aggregate → manifests → projection → catalog) — so release prep costs minutes, not a session leg.
-
-  Candidate: diff-scoped test selection for intermediate train legs (an impacted-lane map or pytest-testmon), reserving the full battery for the last content change and release prep.
+- [x] Evaluate further release-process efficiency candidates for the v5.13.0 efficiency train. _(Done 2026-07-31, all five dispositioned: SHIPPED — trimmed local verification policy (fast gate for intermediate legs, `--full` at release prep), `scripts/release_prep.py`, local `prettier --cache`. REJECTED — frozen-venv/per-lane parallel suites (xdist in one venv already delivers the win) and diff-scoped test selection (catalog-wide couplings make it unsafe; the fast gate subsumes it); wheel-runtime build caching rejected inside the caching candidate (build+extract ≈1 s). Rationale: `docs/research/2026-07-31-release-gate-wall-clock-spike.md` §Rejected levers.)_
 
 ### Maintenance
+
+- [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency. _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_
 
 - [ ] Finish Agent Handoff consumer retirement.
 

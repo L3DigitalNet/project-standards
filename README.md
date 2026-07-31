@@ -257,26 +257,26 @@ See [`meta/versioning.md`](meta/versioning.md) for the full classification table
 
 ## Developing this repository
 
-Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself:
+Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself, set up once:
 
 ```bash
-uv sync --dev                                                # set up the environment
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright
+uv sync --all-groups                                         # Python environment
+npm ci                                                       # Prettier and markdownlint oracles
 uv run project-standards standards sync-payload-projection --root . # required before the build
 uv build --wheel --out-dir dist
-python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+uv run python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
 export PYTHONPATH="$PWD/build/wheel-runtime"
-uv run coverage erase
-npm ci
-uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
-uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
-uv run pytest -m performance
-uv run coverage report
-uv run pip-audit
-uv run project-standards validate                              # dogfood: schema, id, and references
 ```
 
-Run `sync-payload-projection` before `uv build --wheel`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
+Then run the gate:
+
+```bash
+scripts/verify.sh                    # fast gate: statics, ordinary suite, and compatibility as concurrent lanes
+scripts/verify.sh --full             # legacy serial battery (release prep and the last content change of a train)
+uv run project-standards validate    # dogfood: schema, id, and references
+```
+
+The fast gate is the everyday verification; the serial `--full` battery runs after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against. Run `sync-payload-projection` before `uv build --wheel`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
 
 ## License
 

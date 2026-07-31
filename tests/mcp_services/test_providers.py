@@ -796,6 +796,8 @@ _UNWATCHED_TREES = frozenset(
 # mid-run: xdist workers save `.coverage.<host>.<pid>.*` on exit while this
 # digest may be sampling on another worker. The composite under test writes no
 # coverage data, so excluding these cannot mask the write this digest guards.
+# Applied at the root only — a `.coverage*`-named file deeper in the corpus
+# (e.g. a future `.coveragerc` fixture) stays watched.
 _UNWATCHED_FILE_PREFIX = ".coverage"
 
 
@@ -812,7 +814,15 @@ def real_tree_digest(root: Path) -> str:
     for current, directories, files in os.walk(root, followlinks=False):
         directories[:] = sorted(item for item in directories if item not in _UNWATCHED_TREES)
         base = Path(current)
-        watched_files = [item for item in files if not item.startswith(_UNWATCHED_FILE_PREFIX)]
+        if base == root / ".claude":
+            # Agent worktrees are full transient checkouts inside the live
+            # root — the same shared-mutable-state class as .workflow.
+            directories[:] = [item for item in directories if item != "worktrees"]
+        watched_files = (
+            [item for item in files if not item.startswith(_UNWATCHED_FILE_PREFIX)]
+            if base == root
+            else list(files)
+        )
         for name in sorted(watched_files) + list(directories):
             entry = base / name
             try:

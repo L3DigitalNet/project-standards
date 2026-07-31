@@ -73,8 +73,11 @@ jobs:
         run: uv run coverage erase
 
       # -n 4 matches the hosted runner's 4 vCPU. tests/conftest.py starts a
-      # data_suffix'd Coverage in each xdist worker, so the controller's
-      # `.coverage` alone is incomplete until the combine step below.
+      # data_suffix'd Coverage in each xdist worker; the controller measures
+      # nothing itself under xdist, and `coverage combine` REPLACES (not
+      # merges) the unsuffixed data file with the workers' union — correct
+      # exactly because the controller's own file is empty. Dropping -n while
+      # keeping combine would discard real controller data.
       - name: Ordinary tests with coverage
         run: uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility" -n 4 --dist load --max-worker-restart=0
 

@@ -2,6 +2,23 @@
 
 Developer helpers for `project-standards`.
 
+## `verify.sh` — the repository release gate
+
+Runs the repository's own verification as three concurrent lanes (statics through the non-uv path, the ordinary suite under coverage with pytest-xdist, and the compatibility matrix), then the timing-sensitive performance lane alone, then `coverage combine` and the report. `--full` reproduces the legacy serial battery for release-prep cross-checks. Expects the candidate wheel runtime on `PYTHONPATH` prerequisites and refuses to start without them; see the script header for the environment it establishes.
+
+```bash
+scripts/verify.sh            # fast gate (default)
+scripts/verify.sh --full     # legacy serial battery
+```
+
+## `release_prep.py` — mechanical release preparation
+
+Performs the judgment-free subset of `meta/versioning.md` behind one command: the scoped `pyproject.toml` version bump with `uv lock`, the `CHANGELOG.md` `[Unreleased]` conversion, a reviewed-never-rewritten report of outgoing-version references, and the wiring verification chain ending in `packages check-release`. Tags, publication, and MAJOR-only prose stay manual and are printed as a follow-up list.
+
+```bash
+uv run python scripts/release_prep.py X.Y.Z [--dry-run]
+```
+
 ## `check.py` — Python Tooling dogfood gate
 
 Runs the portable Python Tooling verification sequence, stopping at the first failure and propagating its exit code:
@@ -16,7 +33,7 @@ Usage:
 uv run python scripts/check.py
 ```
 
-This byte-locked dogfood artifact remains the generic consumer gate. Repository CI spells out its additional compatibility and performance phases directly in `.github/workflows/check.yml`.
+This byte-locked dogfood artifact remains the generic consumer gate. The repository's own gate is `verify.sh` above; CI spells out its compatibility and performance phases directly in `.github/workflows/check.yml`.
 
 ### Dogfood relationship
 

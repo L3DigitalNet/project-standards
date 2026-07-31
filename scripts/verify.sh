@@ -30,7 +30,11 @@
 #   COVERAGE_FILE off the repository root. xdist workers save `.coverage.<pid>`
 #                 next to the data file; in-root they race the read-only digest
 #                 proofs and the wheel-source copytree.
-#   COVERAGE_CORE sysmon, proved report-identical to the serial trace core.
+#   COVERAGE_CORE sysmon in the fast gate only (proved report-identical to the
+#                 serial trace core). --full keeps the default trace core so the
+#                 cross-check varies the core as well as the parallelism —
+#                 otherwise a sysmon-specific divergence would be undetectable
+#                 by the very lane documented to catch it.
 #
 # Usage:
 #   scripts/verify.sh            fast gate (default)
@@ -102,7 +106,12 @@ fi
 for tool in coverage pytest ruff basedpyright pip-audit; do
     [[ -x "$VENV_BIN/$tool" ]] || die "missing $VENV_BIN/$tool — run: uv sync --all-groups"
 done
-[[ -d "$REPO_ROOT/node_modules" ]] || die "missing node_modules — run: npm ci"
+# The resolved binaries, not npx: a partial node_modules would make npx fall
+# back to a registry fetch or an interactive prompt inside a redirected lane.
+NODE_BIN="$REPO_ROOT/node_modules/.bin"
+for tool in prettier markdownlint-cli2; do
+    [[ -x "$NODE_BIN/$tool" ]] || die "missing $NODE_BIN/$tool — run: npm ci"
+done
 
 # ── Temporary-file root ───────────────────────────────────────────────────
 # A bind-mounted or symlinked directory would not report a distinct device, so
@@ -124,6 +133,16 @@ else
     TMP_KIND="disk-backed fallback (conventions §14)"
 fi
 
+# One gate at a time per machine: TMP_ROOT is a fixed path and the cleanup
+# below would destroy a concurrent run's TMPDIR, basetemps, and coverage data
+# mid-flight. mkdir is the atomic test-and-set; the trap releases it on any
+# exit path.
+LOCK_DIR="${TMP_ROOT}.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    die "another verify.sh appears to be running (lock: $LOCK_DIR); if that is stale, remove it"
+fi
+trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
+
 rm -rf "$TMP_ROOT" || die "cannot clean $TMP_ROOT"
 LOG_DIR="$TMP_ROOT/logs"
 RESULT_DIR="$TMP_ROOT/results"
@@ -136,7 +155,12 @@ mkdir -p "$TMP_ROOT/tmp" "$TMP_ROOT/coverage" "$LOG_DIR" "$RESULT_DIR" "$BASETEM
 export PYTHONPATH="$WHEEL_RUNTIME"
 export TMPDIR="$TMP_ROOT/tmp"
 export COVERAGE_FILE="$TMP_ROOT/coverage/.coverage"
-export COVERAGE_CORE="sysmon"
+# Fast gate only — --full must keep the default trace core (see header).
+if [[ "$MODE" == "fast" ]]; then
+    export COVERAGE_CORE="sysmon"
+else
+    unset COVERAGE_CORE
+fi
 
 # ── Lane bookkeeping ──────────────────────────────────────────────────────
 LANE_ORDER=()
@@ -148,7 +172,7 @@ run_lane() {
     local name="$1" start end status
     shift
     start="$(date +%s)"
-    "$@" >"$LOG_DIR/$name.log" 2>&1
+    "$@" >"$LOG_DIR/$name.log" 2>&1 </dev/null
     status=$?
     end="$(date +%s)"
     printf '%s\t%s\n' "$status" "$((end - start))" >"$RESULT_DIR/$name"
@@ -179,9 +203,14 @@ lane_statics() {
     local status=0
     statics_step "ruff format --check" "$VENV_BIN/ruff" format --check . || status=1
     statics_step "ruff check" "$VENV_BIN/ruff" check . || status=1
+    if [[ "$SMOKE" == "1" ]]; then
+        # Smoke proves lane plumbing; ruff alone is enough signal in seconds.
+        printf '\n(smoke: basedpyright/prettier/markdownlint/pip-audit skipped)\n'
+        return "$status"
+    fi
     statics_step "basedpyright" "$VENV_BIN/basedpyright" || status=1
-    statics_step "prettier" npx prettier --check . --cache || status=1
-    statics_step "markdownlint" npx markdownlint-cli2 || status=1
+    statics_step "prettier" "$NODE_BIN/prettier" --check . --cache || status=1
+    statics_step "markdownlint" "$NODE_BIN/markdownlint-cli2" || status=1
     statics_step "pip-audit" "$VENV_BIN/pip-audit" || status=1
     return "$status"
 }
@@ -290,5 +319,6 @@ for lane in "${LANE_ORDER[@]}"; do
     printf '  %-16s %8s  %s\n' "$lane" "$(format_duration "$lane_seconds")" "$verdict"
 done
 printf '  %-16s %8s\n' "TOTAL" "$(format_duration "$GATE_SECONDS")"
+[[ "$SMOKE" == "1" ]] && printf '  (VERIFY_SMOKE=1 — token selections, NOT a gate run)\n'
 
 exit "$exit_status"
