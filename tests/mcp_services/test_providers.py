@@ -69,15 +69,21 @@ from project_standards.control_plane.command_resolution import (
     invoke_selected_provider,
     selected_command,
 )
-from project_standards.control_plane.diagnostics import ControlFinding
+from project_standards.control_plane.diagnostics import ControlFinding, ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import reconciliation_fingerprint
 from project_standards.control_plane.locking import LockMode
 from project_standards.control_plane.paths import CatalogMajor
 from project_standards.control_plane.planner import ReconciliationPlan, plan_reconciliation
+from project_standards.control_plane.provider_inputs import (
+    NoDeclaredProviderInput,
+    provider_dispatch_input,
+)
 from project_standards.control_plane.providers import ProviderResult
+from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.integrity import validate_payload_integrity
 from project_standards.package_contract.payload import (
+    PayloadAvailability,
     PayloadManifest,
     ProviderEffect,
     ProviderOperation,
@@ -725,6 +731,149 @@ def oracle_dispatch(
         return invoke_selected_provider(
             selected, operation, snapshots or {}, provider_id=provider_id
         )
+
+
+# ---------------------------------------------------------------------------
+# T14: the real-packaged-provider path
+# ---------------------------------------------------------------------------
+
+# This repository is the consumer root for every T14 real-provider node. It is
+# the only root that has the shipping Catalog 5 packages enabled, reconciled, and
+# populated with real documents, and it is the root the T11 smoke discovery was
+# made against. T15's own frozen equivalence node uses it for the same reason.
+REAL_CONSUMER_ROOT = Path(__file__).resolve().parents[2]
+
+# Which authority owns each shipping provider's typed input, read from the T14.1
+# authoritative-site census (logs/T14.1.txt §3) rather than from the service under
+# test or from the seam's own branch table:
+#
+# * `family` — the provider has a public command that dispatches it, and that
+#   command's shape is authoritative: frontmatter/adr through
+#   `frontmatter_commands`, project-spec through `specs/cli.py`, and all three
+#   agent-handoff providers — INCLUDING `verify` — through `agent_handoff/cli.py`.
+# * `plan-bound` — the provider has no public command at all and is
+#   authoritatively dispatched only by the executor's post-apply verification.
+#
+# `agent-handoff/verify` is the row that makes this table an oracle rather than a
+# restatement: the seam serves it under BOTH authorities (33 keys against 41), so
+# a composite that reached for the plan-bound shape would still get an input and
+# would still fail here.
+AUTHORITATIVE_INPUT_OWNER: dict[tuple[str, str], str] = {
+    ("adr", "validate-adr"): "family",
+    ("agent-handoff", "validate"): "family",
+    ("agent-handoff", "verify"): "family",
+    ("agent-handoff", "drift-check"): "family",
+    ("markdown-frontmatter", "validate-frontmatter"): "family",
+    ("project-spec", "validate"): "family",
+    ("project-spec", "lint"): "family",
+    ("cli-documentation", "verify-workflow"): "plan-bound",
+    ("markdown-tooling", "verify-format"): "plan-bound",
+    ("markdown-tooling", "verify-lint"): "plan-bound",
+    ("python-tooling", "verify-toolchain"): "plan-bound",
+}
+
+
+# Generated, cached, and vendored trees a composite never reads and every other
+# process on this machine writes to. Everything else — the whole consumer corpus
+# the seam captures, the control plane the in-worker plan reads, and the sources
+# beside them — is inside the digest.
+_UNWATCHED_TREES = frozenset(
+    {
+        ".git",
+        ".venv",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+        "build",
+        "dist",
+        "node_modules",
+    }
+)
+
+
+def real_tree_digest(root: Path) -> str:
+    """Digest one real repository's inode facts, without reading its content.
+
+    The bounded variant of ``tree_state`` for a root of this size: 12,149 entries
+    in 0.28 s, against several minutes if every file's bytes were read. Mode,
+    size, inode, and change time are what T4's own capture uses to catch a write
+    that puts the original bytes back — an unprivileged process can restore
+    neither ``st_ctime_ns`` nor an inode on demand.
+    """
+    digest = hashlib.sha256()
+    for current, directories, files in os.walk(root, followlinks=False):
+        directories[:] = sorted(item for item in directories if item not in _UNWATCHED_TREES)
+        base = Path(current)
+        for name in sorted(files) + list(directories):
+            entry = base / name
+            try:
+                info = entry.lstat()
+            except OSError:  # pragma: no cover - a racing external process
+                continue
+            digest.update(
+                f"{entry.relative_to(root).as_posix()}|{info.st_mode}|{info.st_size}|"
+                f"{info.st_ino}|{info.st_ctime_ns}|{info.st_mtime_ns}\n".encode()
+            )
+    return digest.hexdigest()
+
+
+def real_packaged_distribution() -> InstalledDistribution:
+    """Return the shipping distribution this repository dogfoods.
+
+    Deliberately not a fixture projection. Every other composite node in this
+    suite runs against synthetic `alpha` providers that ignore their input, which
+    is exactly the masking that let empty-input dispatch look correct for three
+    tasks; only real packaged providers reading a real corpus can fail the way the
+    T11 smoke failed.
+    """
+    return InstalledDistribution.current()
+
+
+def authoritative_direct_dispatch(
+    repo: Path,
+    distribution: InstalledDistribution,
+    *,
+    standard_id: str,
+    provider_id: str,
+    operation: ProviderOperation,
+    owner: str,
+) -> ProviderResult:
+    """Dispatch one shipping provider in-process the way its own authority does.
+
+    The parity oracle for TC-T14-001. Under worker-side construction the service
+    never holds the built input at any observable boundary, so the comparison is
+    over *consequences* — the findings and the declared output — against the same
+    dispatcher the CLI and the executor use, fed the input the seam builds for the
+    authority `AUTHORITATIVE_INPUT_OWNER` names.
+
+    Calling the seam here is not the oracle importing its implementation: the seam
+    is an independently frozen authority (TC-T15-001 proves it equals all four
+    pre-existing in-site constructions against a test-owned reconstruction), and
+    the code under test is `mcp_services` composite dispatch, which is a different
+    module. What this oracle does NOT take from the implementation is the
+    *routing* — which authority owns which provider — which is declared above.
+    """
+    with selected_command(
+        repo,
+        standard_id,
+        distribution,
+        mode=LockMode.READ,
+        require_reconciled=False,
+    ) as selected:
+        assert selected is not None, f"{standard_id} must have unified package authority"
+        if owner == "family":
+            snapshots = provider_dispatch_input(selected, operation, provider_id=provider_id)
+        else:
+            snapshots = provider_dispatch_input(
+                None,
+                operation,
+                repo=repo,
+                standard_id=standard_id,
+                plan=oracle_plan(repo, distribution),
+                provider_id=provider_id,
+            )
+        return invoke_selected_provider(selected, operation, snapshots, provider_id=provider_id)
 
 
 def oracle_selection(
@@ -1928,4 +2077,368 @@ def test_provider_output_key_order_is_canonical_across_worker_processes(
         projections.add(json.dumps(output))
     assert len(projections) == 1, (
         f"identical invocations serialized {len(projections)} different ways"
+    )
+
+
+# ---------------------------------------------------------------------------
+# TC-T14-001..004: authoritative typed input for composite dispatch
+# ---------------------------------------------------------------------------
+
+
+def test_composite_dispatch_input_matches_authoritative_direct_dispatch() -> None:
+    """TC-T14-001: every composite result equals its authority's own dispatch.
+
+    The composite sends a seam directive rather than a built input, so nothing at
+    the service boundary exposes the bytes a provider received. The oracle is
+    therefore the consequence: for each applicable shipping provider, the findings
+    and declared output the composite publishes must equal what the same provider
+    produces when dispatched in-process by its own authority.
+
+    The second half is what keeps the first from being vacuous. Empty input — what
+    composite dispatch sent before T14 — must produce a DIFFERENT answer for at
+    least one provider, or this node would pass against the defect it exists to
+    close (T11: agent-handoff/validate answered 24 findings where its authority
+    answers 240, and three other providers raised outright).
+    """
+    services = import_mcp_services()
+    distribution = real_packaged_distribution()
+    facade = build_facade(services, distribution)
+    validate_repo = require_operation(facade, "validate_repo")
+
+    report = validate_repo(REAL_CONSUMER_ROOT)
+    applicable = oracle_selection(
+        REAL_CONSUMER_ROOT, distribution, frozenset({"validate", "verify", "lint"})
+    )
+    assert result_sequence(report) == applicable
+    assert applicable, "this repository must resolve applicable shipping providers"
+
+    for item in report.results:
+        owner = AUTHORITATIVE_INPUT_OWNER.get((item.standard_id, item.provider_id))
+        assert owner is not None, (
+            f"{item.standard_id}/{item.provider_id} has no declared authoritative input owner; "
+            "the census in AUTHORITATIVE_INPUT_OWNER is stale"
+        )
+        oracle = authoritative_direct_dispatch(
+            REAL_CONSUMER_ROOT,
+            distribution,
+            standard_id=item.standard_id,
+            provider_id=item.provider_id,
+            operation=ProviderOperation(item.operation),
+            owner=owner,
+        )
+        assert [published_finding(finding) for finding in item.findings] == [
+            mapped_finding(finding) for finding in oracle.findings
+        ], (
+            f"{item.standard_id}/{item.provider_id} did not answer what its own authority "
+            "answers for this root"
+        )
+        assert dumped(item)["output"] == oracle.structured_output
+
+    # Mutation control: the pre-T14 input is observably wrong for a real provider.
+    assert empty_input_diverges(REAL_CONSUMER_ROOT, distribution, applicable), (
+        "empty input produced the authoritative answer for every provider, so this "
+        "node cannot distinguish seam-built input from the defect"
+    )
+
+
+def empty_input_diverges(
+    repo: Path,
+    distribution: InstalledDistribution,
+    applicable: list[tuple[str, str, str, str]],
+) -> bool:
+    """Report whether any shipping provider answers differently on empty input.
+
+    Refusing outright counts as divergence: three of the four providers the T11
+    smoke exercised raise rather than answer when handed ``{}``.
+    """
+    for standard_id, _version, provider_id, operation in applicable:
+        owner = AUTHORITATIVE_INPUT_OWNER[(standard_id, provider_id)]
+        authoritative = authoritative_direct_dispatch(
+            repo,
+            distribution,
+            standard_id=standard_id,
+            provider_id=provider_id,
+            operation=ProviderOperation(operation),
+            owner=owner,
+        )
+        try:
+            empty = oracle_dispatch(
+                repo,
+                distribution,
+                standard_id=standard_id,
+                provider_id=provider_id,
+                operation=ProviderOperation(operation),
+            )
+        except ValueError, ControlPlaneError, PackageContractError:
+            return True
+        if [mapped_finding(item) for item in authoritative.findings] != [
+            mapped_finding(item) for item in empty.findings
+        ]:
+            return True
+    return False
+
+
+def test_real_packaged_provider_validates_real_consumer_root() -> None:
+    """TC-T14-002: shipping providers complete against a real consumer repository.
+
+    The end-to-end half of T14. Before it, `adr/validate-adr`,
+    `markdown-frontmatter/validate-frontmatter` and both project-spec providers
+    raised `provider failed with ValueError` on this exact root (the T11 client
+    matrix), and the composite aborted on the first of them.
+    """
+    services = import_mcp_services()
+    distribution = real_packaged_distribution()
+    facade = build_facade(services, distribution)
+
+    # T14 review F2: the composite no-write proof elsewhere in this suite runs on
+    # the synthetic `alpha` package, which is family-less and therefore never
+    # reaches `authoritative_provider_input` or its in-worker plan. This is the
+    # only node that exercises that read surface, so it carries the snapshot.
+    before = real_tree_digest(REAL_CONSUMER_ROOT)
+
+    report = require_operation(facade, "validate_repo")(REAL_CONSUMER_ROOT)
+    assert report.repo_root == "."
+    assert report.results, "this repository must resolve applicable shipping providers"
+    unfinished = [
+        (item.standard_id, item.provider_id, item.status, item.diagnostics[:300])
+        for item in report.results
+        if item.status != "completed"
+    ]
+    assert not unfinished, f"shipping providers did not complete: {unfinished}"
+
+    # The four the T11 smoke recorded as crashing on empty input.
+    crashed_before = {
+        ("adr", "validate-adr"),
+        ("markdown-frontmatter", "validate-frontmatter"),
+        ("project-spec", "validate"),
+        ("project-spec", "lint"),
+    }
+    served = {(item.standard_id, item.provider_id) for item in report.results}
+    assert crashed_before <= served
+
+    drift = require_operation(facade, "drift_check")(REAL_CONSUMER_ROOT)
+    assert drift.results, "this repository must resolve a shipping drift-check provider"
+    assert all(item.status == "completed" for item in drift.results)
+
+    assert real_tree_digest(REAL_CONSUMER_ROOT) == before, (
+        "a composite call wrote to the real consumer repository; the worker-side seam, "
+        "its corpus capture, or its in-worker reconciliation plan is not read-only"
+    )
+
+
+def test_provider_failure_isolates_to_typed_per_result_failure(tmp_path: Path) -> None:
+    """TC-T14-003: one provider's failure is a typed result, not a lost report.
+
+    `crash-alpha` calls ``os._exit(9)`` inside its worker, so the failure is a
+    real dispatch failure rather than a simulated one. Its siblings must still
+    answer, the composite must still return, and the failure must be published in
+    the closed §5.5 result shape — which carries no error field, so the outcome
+    lands in ``status`` and ``diagnostics`` with no findings invented.
+    """
+    services = import_mcp_services()
+    distribution = build_provider_distribution(tmp_path, hazards=("crash", "probe"))
+    facade = build_facade(services, distribution)
+    repo = build_provider_repo(tmp_path, "consumer", distribution=distribution)
+
+    report = require_operation(facade, "validate_repo")(repo)
+
+    expected = oracle_selection(repo, distribution, frozenset({"validate", "verify", "lint"}))
+    assert result_sequence(report) == expected, (
+        "a failing provider changed which providers the composite answered for"
+    )
+
+    # The status a provider that finished reports, read from a live single-provider
+    # dispatch rather than pinned as a literal: nothing in §5.5 or the T9 schema
+    # freezes the word, and this suite already treats status that way.
+    completed = require_operation(facade, "invoke_read_provider")(
+        repo,
+        standard_id=SELECTED_STANDARD,
+        version=SELECTED_VERSION,
+        provider_id="validate-alpha",
+        operation="validate",
+        provider_input={},
+    ).status
+
+    results = {item.provider_id: item for item in report.results}
+    failed = results["crash-alpha"]
+    assert failed.status != completed, "the crashed provider reported success"
+    assert isinstance(failed.status, str) and failed.status
+    assert failed.findings == ()
+    assert isinstance(failed.diagnostics, str) and failed.diagnostics
+    assert str(repo.resolve()) not in failed.diagnostics
+    assert str(distribution.package_root.resolve()) not in failed.diagnostics
+    for claim in UNCHANGED_CLAIMS:
+        assert claim not in failed.diagnostics.lower()
+    # Identity survives the failure: a caller must be able to say which provider
+    # did not answer, which is the whole point of a per-result failure.
+    assert (failed.standard_id, failed.version, failed.operation) == (
+        SELECTED_STANDARD,
+        SELECTED_VERSION,
+        "validate",
+    )
+
+    siblings = [item for item in report.results if item.provider_id != "crash-alpha"]
+    assert siblings, "the fixture must declare providers beside the failing one"
+    assert all(item.status == completed for item in siblings)
+    assert_ran_in_worker(results["probe-alpha"])
+    assert report.findings == tuple(finding for item in report.results for finding in item.findings)
+    assert report.findings, "the surviving providers must still publish their findings"
+    assert_no_unreaped_children()
+
+
+def build_unconstructible_family_consumer(tmp_path: Path) -> tuple[InstalledDistribution, Path]:
+    """Reconcile a real markdown-frontmatter consumer, then break what the seam reads.
+
+    A *family* standard is the point: the seam declares an authoritative input for
+    `markdown-frontmatter/validate-frontmatter` and then cannot build it, which is
+    the case T14 review F1 separates from a family-less standard. The consumer
+    declares a custom frontmatter schema that the lock does not carry as a
+    referenced input, so resolution still selects the package and only
+    construction fails — with a `CommandResolutionError`, which is precisely the
+    class the pre-F1 worker converted into an empty input. Built from the T15
+    custom-schema consumer recipe (``tests/control_plane/test_command_resolution.py``).
+    """
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+
+    installed = tmp_path / "unconstructible-installed/project_standards"
+    shutil.copytree(REAL_CONSUMER_ROOT / "src/project_standards", installed, symlinks=False)
+    distribution = InstalledDistribution(installed, tool_release=TOOL_RELEASE)
+    repo = tmp_path / "unconstructible-consumer"
+    repo.mkdir()
+    initialize_control_plane(repo, "5", distribution=distribution)
+    control = repo / ".standards"
+    schema = control / "extensions/markdown-frontmatter/schema.json"
+    schema.parent.mkdir(parents=True)
+    schema.write_bytes(json.dumps({"type": "object"}, sort_keys=True).encode())
+    (control / "config.toml").write_bytes(
+        b'[project_standards]\nschema_version = "1.0"\ncatalog = "5"\n\n'
+        b'[standards.markdown-frontmatter]\nenabled = true\nversion = "latest"\n\n'
+        b"[standards.markdown-frontmatter.config]\n"
+        b'contract_version = "1.1"\n'
+        b'schema = "custom"\n'
+        b'schema_path = ".standards/extensions/markdown-frontmatter/schema.json"\n'
+        b"required = false\n"
+        b'include = ["handbook/**/*.md"]\n'
+        b"exclude = []\n"
+    )
+    handbook = repo / "handbook"
+    handbook.mkdir()
+    (handbook / "one.md").write_text("---\ntitle: one\n---\n\n# One\n", encoding="utf-8")
+    return distribution, repo
+
+
+def test_unconstructible_authoritative_input_fails_typed_rather_than_empty(
+    tmp_path: Path,
+) -> None:
+    """TC-T14-003 (review F1): a seam that cannot build must not degrade to ``{}``.
+
+    The family-less tolerance is a one-case exemption, and this is the case next
+    to it. `markdown-frontmatter` *has* a declared authority here; its declared
+    custom schema is not a locked referenced input, so construction fails with the
+    very error class a worker that caught `CommandResolutionError` wholesale used
+    to answer with ``{}``. It must surface instead as a typed per-result failure
+    carrying the seam's own refusal — never as the generic empty input, which
+    would hand a real packaged provider the exact wrong corpus the T11 smoke
+    found.
+    """
+    services = import_mcp_services()
+    distribution, repo = build_unconstructible_family_consumer(tmp_path)
+    facade = build_facade(services, distribution)
+
+    # What the seam says, taken independently of the service under test.
+    with selected_command(
+        repo,
+        "markdown-frontmatter",
+        distribution,
+        mode=LockMode.READ,
+        require_reconciled=False,
+    ) as selected:
+        assert selected is not None
+        # The base class, deliberately: a construction failure may surface as any
+        # control-plane error the capture raises. What matters is the one class it
+        # must NOT be.
+        with pytest.raises(ControlPlaneError) as refused:
+            provider_dispatch_input(
+                selected,
+                ProviderOperation.VALIDATE,
+                provider_id="validate-frontmatter",
+            )
+    assert not isinstance(refused.value, NoDeclaredProviderInput), (
+        "a family standard whose input cannot be built must not report an absent "
+        "declaration; that is the conflation T14 review F1 names"
+    )
+
+    report = require_operation(facade, "validate_repo")(repo)
+    results = {item.provider_id: item for item in report.results}
+    failed = results["validate-frontmatter"]
+    assert failed.status != "completed"
+    assert failed.findings == ()
+    assert failed.output is None
+    assert refused.value.message in failed.diagnostics, (
+        "the per-result failure does not carry the seam's construction failure, so the "
+        f"provider was dispatched with something else: {failed.diagnostics[:400]!r}"
+    )
+    assert_no_unreaped_children()
+
+
+def test_every_shipping_catalog_provider_is_seam_served() -> None:
+    """TC-T14-004: no shipping provider may fall back to generic dispatch.
+
+    Standards outside the seam's four families keep the existing generic input, so
+    the fixture standards the rest of this suite depends on are unaffected. That
+    tolerance is exactly what could let a future packaged standard reopen the
+    empty-input defect silently, so the shipping catalog is pinned: every provider
+    the composite operations dispatch for a real consumer must obtain seam-built
+    input from the worker-side authority.
+
+    "Applicable" is defined as the T4 selection rule — a provider of a package the
+    live resolution selects, declaring one of the composite operations — evaluated
+    against this repository, whose control plane enables every consumer-role
+    package in Catalog 5. The membership assertion is what makes a newly shipped
+    package fail here rather than pass unnoticed.
+    """
+    worker = require_service_module("provider_worker")
+    seam_input = require_attribute(
+        worker,
+        "authoritative_provider_input",
+        "T14 worker-side seam authority",
+    )
+    distribution = real_packaged_distribution()
+
+    consumer_packages = {
+        payload.manifest.payload.standard
+        for payload in distribution.load_catalog(CatalogMajor("5")).payloads
+        if payload.manifest.payload.availability is PayloadAvailability.CONSUMER
+    }
+    applicable = oracle_selection(
+        REAL_CONSUMER_ROOT,
+        distribution,
+        frozenset({"validate", "verify", "lint", "drift-check"}),
+    )
+    exercised = {standard_id for standard_id, _version, _provider, _operation in applicable}
+    assert exercised == consumer_packages, (
+        "this repository no longer enables every consumer-role package in the shipping "
+        f"catalog, so the canary is blind: missing {sorted(consumer_packages - exercised)}"
+    )
+
+    unserved: list[tuple[str, str]] = []
+    for standard_id, _version, provider_id, operation in applicable:
+        with selected_command(
+            REAL_CONSUMER_ROOT,
+            standard_id,
+            distribution,
+            mode=LockMode.READ,
+            require_reconciled=False,
+        ) as selected:
+            assert selected is not None
+            built = seam_input(
+                selected,
+                ProviderOperation(operation),
+                provider_id=provider_id,
+            )
+        if not built:
+            unserved.append((standard_id, provider_id))
+    assert not unserved, (
+        "these shipping providers fall back to generic dispatch and would receive the "
+        f"empty input T14 exists to remove: {unserved}"
     )

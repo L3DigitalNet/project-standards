@@ -39,13 +39,26 @@ import re
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # pragma: no cover - annotations only; see the import note below
+    from project_standards.control_plane.command_resolution import SelectedCommandPackage
+    from project_standards.package_contract.payload import ProviderOperation
 
 # Responses above this many bytes are refused rather than transported. The
 # parent applies the same limit when reading, so neither side can be made to
 # buffer an unbounded provider result (ADR 0025: "bounded JSON with an explicit
 # size cap").
 RESULT_LIMIT_BYTES = 262_144
+
+# The request field that names who builds the provider's typed input. Absent or
+# `caller` keeps the T4 contract exactly: `invoke_read_provider` passes the
+# caller's own input through untouched. `seam` is what the composite operations
+# send, and it means "build the authoritative input here" — see
+# `authoritative_provider_input` for why construction happens on this side of the
+# pipe rather than in the parent.
+INPUT_AUTHORITY_FIELD = "input_authority"
+SEAM_AUTHORITY = "seam"
 
 _ABSOLUTE_PATH_PATTERN = re.compile(r"(?:^|[\s'\"(])/[\w.\-/]{4,}")
 _REDACTED_DETAIL = "the failure detail was withheld because it named a filesystem path"
@@ -69,6 +82,82 @@ def _jsonable(value: object) -> Any:
         sequence: list[object] = list(value)  # pyright: ignore[reportUnknownArgumentType]
         return [_jsonable(item) for item in sequence]
     return value
+
+
+def authoritative_provider_input(
+    selected: SelectedCommandPackage,
+    operation: ProviderOperation,
+    *,
+    provider_id: str,
+) -> dict[str, Any] | None:
+    """Build one provider's authoritative typed input, or ``None`` if none exists.
+
+    The single authority is ``control_plane.provider_inputs.provider_dispatch_input``
+    (FR-015); nothing here reconstructs a shape. What this function owns is the
+    *routing* — which of the seam's two authorities a given provider belongs to —
+    and it derives that from the seam's own contract rather than from any package
+    identity:
+
+    * ask the family branch first, because a provider that has a public command is
+      authoritatively dispatched by that command (every frontmatter, project-spec
+      and agent-handoff provider, ``agent-handoff/verify`` included);
+    * on refusal, retry plan-bound *only* for a ``verify`` operation, because the
+      only other authority that dispatches a provider is the executor's post-apply
+      verification. The seam then fails closed on membership in
+      ``plan.verification_requests`` itself (T15 review F2), so the membership rule
+      is never restated here.
+
+    ``None`` means the seam declares no authority for this provider at all, which
+    it says with a distinct `NoDeclaredProviderInput` and nothing else (T14 review
+    F1). Every other seam failure — a corpus that cannot be captured, a custom
+    schema with no locked input, a package that does not own the standard —
+    propagates, becomes the worker's typed failure response, and lands in the
+    composite as a per-result failure. Catching the base class here would convert
+    an unconstructible authoritative input into an empty one, which is the defect
+    T14 exists to close rather than a tolerance it may grant.
+
+    Only genuinely family-less standards therefore keep the generic dispatch they
+    have always had; that a *shipping* provider never lands there is pinned by
+    TC-T14-004 rather than assumed.
+
+    This runs worker-side because it cannot run anywhere else: the authoritative
+    inputs measured on a real consumer are 290 KB to 4.8 MB (2026-07-30), against
+    a 256 KiB IPC request bound that ADR 0025 makes a property rather than a
+    tuning knob. Building here means only the small directive crosses the pipe.
+    """
+    from project_standards.control_plane.provider_inputs import (
+        NoDeclaredProviderInput,
+        provider_dispatch_input,
+    )
+    from project_standards.package_contract.payload import ProviderOperation
+
+    try:
+        return dict(provider_dispatch_input(selected, operation, provider_id=provider_id))
+    except NoDeclaredProviderInput:
+        if operation is not ProviderOperation.VERIFY:
+            return None
+    # Built here, not shipped: a `ReconciliationPlan` is an object graph that does
+    # not survive JSON, so the parent could not hand one over even if the request
+    # had room for it.
+    from project_standards.control_plane.cli import build_planner_request
+    from project_standards.control_plane.planner import plan_reconciliation
+
+    plan = plan_reconciliation(
+        build_planner_request(selected.repo, selected.distribution, frozenset())
+    )
+    try:
+        return dict(
+            provider_dispatch_input(
+                None,
+                operation,
+                repo=selected.repo,
+                standard_id=selected.payload.manifest.payload.standard,
+                plan=plan,
+                provider_id=provider_id,
+            )
+        )
+    except NoDeclaredProviderInput:
+        return None
 
 
 def run_request(request: dict[str, Any]) -> dict[str, Any]:
@@ -108,6 +197,14 @@ def run_request(request: dict[str, Any]) -> dict[str, Any]:
             # The parent qualified this already; re-checking closes the window
             # between its resolution and the worker's own.
             raise ValueError("selected payload version does not match the request")
+        if request.get(INPUT_AUTHORITY_FIELD) == SEAM_AUTHORITY:
+            # The composite operations send a directive rather than an input. The
+            # selection this worker just resolved for its own dispatch is the same
+            # one the seam needs, so the authoritative corpus is read once, here,
+            # against the root the request named.
+            built = authoritative_provider_input(selected, operation, provider_id=provider_id)
+            if built is not None:
+                snapshots = built
         result = invoke_selected_provider(selected, operation, snapshots, provider_id=provider_id)
 
     return {

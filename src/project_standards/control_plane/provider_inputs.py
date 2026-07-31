@@ -57,6 +57,31 @@ from project_standards.package_contract.payload import (
     ProviderOperation,
 )
 
+
+class NoDeclaredProviderInput(CommandResolutionError):
+    """No authority declares a typed input for this provider at all.
+
+    The narrow half of this module's refusals, and the only half a caller may
+    answer with a generic dispatch. It means the question "which corpus does this
+    provider read?" has no declared answer here: neither the family table below
+    nor the plan's verification requests names it. Every other refusal — a
+    package that does not own the standard, a provider the payload does not
+    declare, a plan-bound call for a non-verification operation, a corpus that
+    cannot be captured, a custom schema with no locked input — is a *failure to
+    build an input that does exist*, and stays an ordinary
+    `CommandResolutionError`.
+
+    The distinction lives here rather than in the caller because family
+    membership is this module's knowledge (T14 review F1): a caller that told the
+    two apart by catching one exception class for both, or by matching message
+    text, would be reimplementing the family table it is forbidden to duplicate,
+    and would convert a genuine construction failure into a silently wrong
+    generic dispatch. Additive by construction — it subclasses the error every
+    existing caller already catches, so nothing that refused before stops
+    refusing.
+    """
+
+
 _FRONTMATTER_STANDARDS = frozenset({"adr", "markdown-frontmatter"})
 _FRONTMATTER_OPERATIONS = frozenset({ProviderOperation.VALIDATE, ProviderOperation.FIX})
 _SPEC_OPERATIONS = frozenset({ProviderOperation.VALIDATE, ProviderOperation.LINT})
@@ -139,7 +164,13 @@ def provider_dispatch_input(
             request.standard_id == owner and request.provider_id == provider_id
             for request in plan.verification_requests
         ):
-            raise CommandResolutionError(
+            # The plan is the authority on which providers post-apply verification
+            # dispatches, so "not in its requests" is an absent declaration rather
+            # than a failure to build one — the plan-bound half of
+            # `NoDeclaredProviderInput`. The operation guard above stays an
+            # ordinary refusal because a non-VERIFY plan-bound call is caller
+            # misuse, not a missing declaration.
+            raise NoDeclaredProviderInput(
                 f"plan declares no verification request for {owner}/{provider_id or 'unnamed'}"
             )
         return _verification_input(root, plan, owner)
@@ -176,7 +207,7 @@ def provider_dispatch_input(
         return _handoff_input(selected)
     if owner in _FRONTMATTER_STANDARDS and operation in _FRONTMATTER_OPERATIONS:
         return _frontmatter_input(selected, paths, schema_override=schema_override)
-    raise CommandResolutionError(
+    raise NoDeclaredProviderInput(
         f"no authoritative provider input is declared for {owner}/{operation.value}"
     )
 

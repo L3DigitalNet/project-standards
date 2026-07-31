@@ -60,7 +60,12 @@ from project_standards.mcp_services.consumer import (
     stable_json,
 )
 from project_standards.mcp_services.models import ServiceError, ServiceModel
-from project_standards.mcp_services.provider_worker import RESULT_LIMIT_BYTES, safe_detail
+from project_standards.mcp_services.provider_worker import (
+    INPUT_AUTHORITY_FIELD,
+    RESULT_LIMIT_BYTES,
+    SEAM_AUTHORITY,
+    safe_detail,
+)
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.payload import ProviderDeclaration, ProviderEffect
 
@@ -98,6 +103,21 @@ REQUEST_LIMIT_BYTES = 262_144
 _APPROVED_OPERATIONS = frozenset({"validate", "verify", "lint", "drift-check"})
 
 _STATUS_COMPLETED = "completed"
+
+# Who builds the dispatched provider's typed input. `invoke_read_provider` keeps
+# the caller's, unchanged; the composites send the seam directive instead, and the
+# worker builds the authoritative corpus on its own side of the pipe — the
+# measured authoritative inputs (290 KB to 4.8 MB on a real consumer, 2026-07-30)
+# are one to eighteen times the frozen `REQUEST_LIMIT_BYTES`, so they cannot cross
+# it and the bound is not raised to let them.
+_CALLER_AUTHORITY = "caller"
+
+# Composite dispatch supplies no input of its own. The empty object is not a
+# placeholder: it is exactly what a standard outside the seam's four families
+# still receives, so fixture and third-party standards keep the generic dispatch
+# they have always had while every shipping provider is seam-served
+# (pinned by TC-T14-004).
+_SEAM_DIRECTIVE_INPUT: dict[str, Any] = {}
 
 _ROOT_IDENTITY = "."
 
@@ -855,6 +875,8 @@ def _dispatch(
     root: Path,
     selection: _Selection,
     typed_input: dict[str, Any],
+    *,
+    input_authority: str = _CALLER_AUTHORITY,
 ) -> ProviderOperationResult:
     request = _encoded_request(
         {
@@ -866,6 +888,7 @@ def _dispatch(
             "provider_id": selection.declaration.id,
             "operation": selection.declaration.operation.value,
             "provider_input": typed_input,
+            INPUT_AUTHORITY_FIELD: input_authority,
         }
     )
     # Read the bound at call time: this is the injection seam the ADR-approved
@@ -918,12 +941,65 @@ def _applicable(
     )
 
 
+def _failed_result(selection: _Selection, error: ServiceError) -> ProviderOperationResult:
+    """Publish one provider failure as a typed result instead of aborting the report.
+
+    A composite answers for every applicable provider, so one provider that
+    crashes, exhausts its execution bound, or returns an unreadable frame must not
+    delete its siblings' answers. The §5.5 result shape is closed and declares no
+    error field, so the outcome lands in the two fields it does declare: ``status``
+    carries the stable service code — the same taxonomy a single-provider dispatch
+    raises, so a caller reads one vocabulary either way — and ``diagnostics``
+    carries the already content-safe message and remediation. ``findings`` is
+    empty because none were produced, never because none exist.
+    """
+    return ProviderOperationResult(
+        standard_id=selection.standard_id,
+        version=selection.version,
+        provider_id=selection.declaration.id,
+        operation=selection.declaration.operation.value,
+        phase=selection.declaration.phase.value,
+        effect=selection.declaration.effect.value,
+        status=error.code,
+        findings=(),
+        diagnostics=_bounded(f"{error.message}\n{error.remediation}"),
+        output=stable_json(None),
+    )
+
+
+def _bounded(text: str) -> str:
+    if len(text) <= DIAGNOSTIC_LIMIT_CHARS:
+        return text
+    omitted = len(text) - DIAGNOSTIC_LIMIT_CHARS
+    return (
+        text[:DIAGNOSTIC_LIMIT_CHARS]
+        + f"\n[project-standards: {omitted} further diagnostic characters omitted "
+        f"after the {DIAGNOSTIC_LIMIT_CHARS}-character limit]"
+    )
+
+
+def _composite_dispatch(
+    distribution: InstalledDistribution, root: Path, selection: _Selection
+) -> ProviderOperationResult:
+    """Dispatch one composite member under the seam directive, failing per result."""
+    try:
+        return _dispatch(
+            distribution,
+            root,
+            selection,
+            dict(_SEAM_DIRECTIVE_INPUT),
+            input_authority=SEAM_AUTHORITY,
+        )
+    except ServiceError as exc:
+        return _failed_result(selection, exc)
+
+
 def validate_repo(distribution: InstalledDistribution, repo_root: Path) -> ValidationReport:
     """Run every applicable validate/verify/lint provider for one consumer root."""
     root = resolve_consumer_root(repo_root)
     selected = _resolved_selection(distribution, root)
     results = tuple(
-        _dispatch(distribution, root, selection, {})
+        _composite_dispatch(distribution, root, selection)
         for selection in _applicable(selected, frozenset({"validate", "verify", "lint"}))
     )
     return ValidationReport(
@@ -945,7 +1021,7 @@ def drift_check(distribution: InstalledDistribution, repo_root: Path) -> DriftRe
     assert isinstance(actions, tuple)
     assert isinstance(findings, tuple)
     results = tuple(
-        _dispatch(distribution, root, selection, {})
+        _composite_dispatch(distribution, root, selection)
         for selection in _applicable(selected, frozenset({"drift-check"}))
     )
     return DriftReport(
