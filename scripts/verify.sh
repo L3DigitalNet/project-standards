@@ -276,6 +276,10 @@ printf 'verify: mode=%s tmp=%s (%s)\n' "$MODE" "$TMP_ROOT" "$TMP_KIND"
 [[ "$SMOKE" == "1" ]] && printf 'verify: VERIFY_SMOKE=1 — token selections, NOT a gate run\n'
 printf 'verify: PYTHONPATH=%s\n\n' "$PYTHONPATH"
 
+# Fresh-clone parity with CI: first-import __pycache__ creation mutates
+# parent-dir mtimes mid-run and races the read-only real-root digest proof.
+"$VENV_BIN/python" -m compileall -q tests src build/wheel-runtime || die "compileall failed"
+
 "$VENV_BIN/coverage" erase || die "coverage erase failed"
 
 GATE_START="$(date +%s)"

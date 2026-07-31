@@ -69,6 +69,14 @@ jobs:
       - name: Extract candidate wheel
         run: python -m zipfile -e "$PROJECT_STANDARDS_COMPATIBILITY_WHEEL" build/wheel-runtime
 
+      # On a fresh checkout, first-import __pycache__ creation bumps parent
+      # directory mtimes mid-run; under xdist those first imports spread
+      # across the whole run and race the read-only real-root digest proof
+      # (serial runs finished importing before the proof sampled). Warming
+      # the caches up front makes import side effects happen before any test.
+      - name: Warm bytecode caches
+        run: uv run python -m compileall -q tests src build/wheel-runtime
+
       - name: Reset coverage data
         run: uv run coverage erase
 
