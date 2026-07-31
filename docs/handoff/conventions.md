@@ -244,3 +244,13 @@ Use the affected focused or full gate when documentation changes a byte-locked s
 **Sources:** 2026-07-20 session closeout correction.
 
 **Related:** 1, 3, 7, 9.
+
+## 14. Whole-battery runs move TMPDIR and basetemp off /tmp
+
+Any whole-battery pytest run (the ordinary suite plus compatibility/performance lanes) must export `TMPDIR` to a disk-backed path and pass `--basetemp` under `/home` (e.g. `/home/chris/.cache/pytest-basetemp`, cleaned between legs). The MCP fixture suites are file-count-heavy and exhaust the 1,048,576-inode tmpfs `/tmp` by inodes, not bytes; nested pytest invocations bypass a parent `--basetemp`, so `TMPDIR` must be exported too.
+
+**Why:** measured at the T12 final gate (2026-07-31): with both redirects, `/tmp` inode usage fell 56,480 → 16,672 during the full 4,114-test battery while basetemp grew to 270 MB on `/home`. The cost is wall-clock (22:30 disk-backed vs 16:00 tmpfs) — an accepted trade for survivability after the 2026-07-29 ENOSPC session kill.
+
+**Sources:** MCP plan §14 close-out (J-P/P14); `.workflow/lessons/tmpfs-seal-hygiene-enospc.md`.
+
+**Related:** 3, 13.

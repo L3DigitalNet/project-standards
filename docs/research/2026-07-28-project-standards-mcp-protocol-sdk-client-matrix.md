@@ -196,7 +196,7 @@ The selected pair is protocol revision **2026-07-28**, served dual-era, through 
 | Reported version | `project-standards 5.11.0` |
 | Invocation | `project-standards mcp` (console script `project-standards = project_standards.cli:main`) |
 | Runtime | the extracted wheel only, on `PYTHONPATH`; no other distribution was importable |
-| Final commit | added by T12 |
+| Final commit | `4d2ece9` |
 
 The superseded first candidate — `ed01ce3939b3312247303bde51fc6ad7685f51537d2f87bbba3ac61efd0bd4ff`, built before the provider-dispatch correction — is retained only as the identity of the run that raised the finding below. Every result on this page is the current candidate's.
 
