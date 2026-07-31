@@ -72,10 +72,13 @@ jobs:
       # On a fresh checkout, first-import __pycache__ creation bumps parent
       # directory mtimes mid-run; under xdist those first imports spread
       # across the whole run and race the read-only real-root digest proof
-      # (serial runs finished importing before the proof sampled). Warming
-      # the caches up front makes import side effects happen before any test.
+      # (serial runs finished importing before the proof sampled). Warm
+      # tests/ ONLY: the battery imports the package from build/wheel-runtime
+      # (digest-pruned), and compiling src/ writes __pycache__ into the
+      # symlink-only payload projection, failing the projection and
+      # wheel-content proofs (run 30663987887).
       - name: Warm bytecode caches
-        run: uv run python -m compileall -q tests src build/wheel-runtime
+        run: uv run python -m compileall -q tests
 
       - name: Reset coverage data
         run: uv run coverage erase
