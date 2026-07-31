@@ -181,10 +181,10 @@ This is the checklist a reviewer applies. It is deliberately about _categories_,
 
 ## Running the tests
 
-The full gate (all six must pass before committing per [AGENTS.md](../AGENTS.md)):
+The gate (every lane must pass before committing, per [AGENTS.md](../AGENTS.md)). It needs the extracted candidate wheel on `PYTHONPATH` and `npm ci` already run, and refuses to start without them:
 
 ```bash
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
+scripts/verify.sh
 ```
 
 `pytest` is configured in `pyproject.toml` (`testpaths`, `addopts = "-ra -q"`). Useful invocations:
@@ -206,7 +206,7 @@ When you add `src/project_standards/<newtool>.py`:
 2. Cover the layers that apply: unit (pure helpers), security invariants (if the tool handles paths), integration (`main()` exit codes if it has a CLI), and contract/dogfood (if it reads or emits a shipped artifact).
 3. If the tool has a CLI, document its exit-code contract in a table in the test module docstring.
 4. If shared helpers emerge, move them to a focused importable helper module rather than copy-pasting. Use `conftest.py` only when pytest fixture discovery or lifecycle is required.
-5. Keep the gate green: `uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit`.
+5. Keep the gate green: `scripts/verify.sh`.
 
 When you add a new **subpackage** with orthogonal concerns (like `adopt/`), split tests by concern rather than by source module. Each concern file should have a single, auditable focus — a reviewer looking for path-safety tests should find them all in one place.
 
@@ -214,7 +214,7 @@ When you add a new **subpackage** with orthogonal concerns (like `adopt/`), spli
 
 Repository CI uses deliberately separate enforcement workflows against this repo's own code and content:
 
-- **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification sequence on push and PR, on Python 3.14: `ruff format --check`, `ruff check`, `basedpyright`, then builds and extracts the candidate wheel, runs the ordinary suite under coverage with the extracted wheel first on `PYTHONPATH`, the xdist compatibility matrix, the serial performance gates, `coverage report`, and `pip-audit`. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
+- **The developer gate** ([.github/workflows/check.yml](../.github/workflows/check.yml)) runs the full verification sequence on push and PR, on Python 3.14: `ruff format --check`, `ruff check`, `basedpyright`, then builds and extracts the candidate wheel, runs the ordinary suite under coverage with the extracted wheel first on `PYTHONPATH` (xdist `-n 4`, matching the hosted runner's 4 vCPU, then `coverage combine` to merge the worker data files), the xdist compatibility matrix, the serial performance gates, `coverage report`, and `pip-audit`. This protects the validator's own logic. The `glob('**')` behaviour change is guarded directly by its version-independent regression test (`test_exclude_dir_glob_matches_nested_files`, which exercises the `fnmatch`-based exclusion), so the gate no longer needs a Python version matrix to bracket it (see the Regression layer above).
 - **The coherence gate** ([.github/workflows/coherence.yml](../.github/workflows/coherence.yml)) intentionally repeats the behavioral coherence coverage in the developer gate so the repository retains a separately named coherence status. It proves that the shipped `.markdownlint.json` and `.prettierrc.json` are co-satisfiable — markdownlint accepts Prettier's output over the corpus in `tests/coherence/corpus/`. Both this job and the developer gate install the pinned Node dependencies with `npm ci`, so running `tests/coherence` locally requires `npm ci` first.
 - **The standards-graph gate** ([.github/workflows/validate-standards-graph.yml](../.github/workflows/validate-standards-graph.yml)) enforces the package contract: `standards validate-packages`, `standards validate-graph --require-all-manifests`, `standards generate-package-schemas --check`, `standards sync-payload-projection --check`, `standards render-catalog --check`, then resolves the newest released V2 baseline tag and runs `packages check-release` so a push can never publish a forbidden transition.
 - **The dogfood caller** ([.github/workflows/validate-standards.yml](../.github/workflows/validate-standards.yml)) invokes the reusable frontmatter workflow against this repository's own Markdown — proving the consumer entry point works here before any downstream repo pins it.
@@ -229,5 +229,11 @@ The _reusable_ workflows are the consumer-facing product, and they deliberately 
 Run the gate locally before every commit that touches `src/project_standards/` or `tests/` — CI is the backstop, not a substitute for the local check:
 
 ```bash
-uv run ruff format --check . && uv run ruff check . && uv run basedpyright && uv run coverage run -m pytest && uv run coverage report && uv run pip-audit
+scripts/verify.sh
+```
+
+Verification is trimmed to match the change: intermediate legs of a train run the fast gate above; the full serial battery runs only after the last content change and at release prep, where it doubles as the legacy cross-check against the coverage baseline the parallel lanes must reproduce.
+
+```bash
+scripts/verify.sh --full
 ```

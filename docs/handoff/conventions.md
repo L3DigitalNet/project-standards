@@ -19,6 +19,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 11 | Installed V2 payloads use a symlink-only source projection | Adding or packaging canonical versioned payloads |
 | 12 | Managed Markdown ranges use paired Prettier guards | Composing formatter-stable package blocks in consumer Markdown |
 | 13 | Keep documentation-only closeout proportional | Closing a documentation-only session |
+| 14 | Move TMPDIR, basetemp, and COVERAGE_FILE off /tmp and the repo root | Running a whole-battery pytest |
 
 ## 1. Dogfood the standards
 
@@ -56,26 +57,20 @@ PYTHONPATH="$PWD/build/wheel-runtime" uv run project-standards validate
 
 **Applies when:** changing the validator (`src/project_standards/`) or its tests.
 
-**Rule:** run the complete gate before committing; every phase must pass.
+**Rule:** run `scripts/verify.sh` before committing; every lane must pass. Intermediate legs of a train run the fast gate; the serial battery runs after the last content change and at release prep.
 
 **Code:**
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run basedpyright
+uv sync --all-groups
+npm ci
 uv build --wheel --out-dir dist
-python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
-export PYTHONPATH="$PWD/build/wheel-runtime"
-uv run coverage erase
-uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
-uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0
-uv run pytest -m performance
-uv run coverage report
-uv run pip-audit
+uv run python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+scripts/verify.sh          # fast gate: concurrent lanes, then performance alone
+scripts/verify.sh --full   # legacy serial battery / release-prep cross-check
 ```
 
-**Why:** `main` must stay releasable; consumers pin to tags. Direct commands keep the ordinary, compatibility, performance, and coverage responsibilities visible without a repository-specific orchestrator.
+**Why:** `main` must stay releasable; consumers pin to tags. Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
 
 **Sources:** pre-v3 `AGENTS.md`.
 
@@ -245,12 +240,22 @@ Use the affected focused or full gate when documentation changes a byte-locked s
 
 **Related:** 1, 3, 7, 9.
 
-## 14. Whole-battery runs move TMPDIR and basetemp off /tmp
+## 14. Whole-battery runs move TMPDIR, basetemp, and COVERAGE_FILE off /tmp and off the repo root
 
-Any whole-battery pytest run (the ordinary suite plus compatibility/performance lanes) must export `TMPDIR` to a disk-backed path and pass `--basetemp` under `/home` (e.g. `/home/chris/.cache/pytest-basetemp`, cleaned between legs). The MCP fixture suites are file-count-heavy and exhaust the 1,048,576-inode tmpfs `/tmp` by inodes, not bytes; nested pytest invocations bypass a parent `--basetemp`, so `TMPDIR` must be exported too.
+**Applies when:** running any whole-battery pytest (ordinary, compatibility, performance).
 
-**Why:** measured at the T12 final gate (2026-07-31): with both redirects, `/tmp` inode usage fell 56,480 → 16,672 during the full 4,114-test battery while basetemp grew to 270 MB on `/home`. The cost is wall-clock (22:30 disk-backed vs 16:00 tmpfs) — an accepted trade for survivability after the 2026-07-29 ENOSPC session kill.
+**Rule:** `scripts/verify.sh` sets these; do it by hand only for ad-hoc runs.
 
-**Sources:** MCP plan §14 close-out (J-P/P14); `.workflow/lessons/tmpfs-seal-hygiene-enospc.md`.
+- `TMPDIR` and `--basetemp` under one non-`/tmp` root, cleaned at run start; `COVERAGE_FILE` outside the repository.
+- Fast path: the 4M-inode tmpfs at `/mnt/pytesttmp` (persistent systemd unit); fallback when unmounted: disk-backed under `~/.cache`.
+
+**Why:**
+
+- The MCP fixture suites exhaust the 1,048,576-inode `/tmp` by inodes, not bytes; nested pytest bypasses a parent `--basetemp`, so `TMPDIR` must be exported.
+- T12 (2026-07-31): `/tmp` inodes fell 56,480 → 16,672 with both redirects, costing 22:30 disk-backed vs 16:00 tmpfs — accepted after the 2026-07-29 ENOSPC kill.
+- Ceiling since measured: 768,844 inodes sequential, ~465,000 concurrent — marginal for default `/tmp`, 5× headroom on the 4M tmpfs.
+- In-root, xdist workers' `.coverage.<host>.<pid>` files raced the read-only digest proof and the wheel-source `copytree` (spike R6/R7, root-caused in R8).
+
+**Sources:** MCP plan §14 close-out (J-P/P14); `.workflow/lessons/tmpfs-seal-hygiene-enospc.md`; the 2026-07-31 release-gate wall-clock spike.
 
 **Related:** 3, 13.

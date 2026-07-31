@@ -4,8 +4,8 @@
 	"private": true,
 	"description": "Dev tooling only (Prettier). This repo's product is the documentation standards; Node is present solely to pin the formatter.",
 	"scripts": {
-		"format": "prettier --write .",
-		"format:check": "prettier --check ."
+		"format": "prettier --write . --cache",
+		"format:check": "prettier --check . --cache"
 	},
 	"devDependencies": {
 		"markdownlint-cli2": "0.23.1",

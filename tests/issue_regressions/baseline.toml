@@ -7,8 +7,9 @@ package_json_sha256 = "769ff22b51b7b6fa980e125ce62a1009c0a45190fd8c43c3eaa5012ef
 package_lock_sha256 = "89d4d46fb71f50a731a375460ecb37f85a75d8a07ed96bfebc7022ca2a3f2a43"
 # The v5.8.0-tagged pins above are immutable release capture; the current_* pins
 # below are the sanctioned working-tree Node authority, which diverged from the
-# capture when 96b21bd added the temporary js-yaml 5.2.2 security override.
-current_package_json_sha256 = "e9d680a095d5fdbf413662f0b4da95bb66f7c6d44abb4a733d9b5c44051ddd07"
+# capture when 96b21bd added the temporary js-yaml 5.2.2 security override and
+# again when the v5.13.0 gate work added `--cache` to the Prettier scripts.
+current_package_json_sha256 = "7a0bfd1bbb668d96003b5793d6939332d640c9f68eef3e5381294073f8cbdcd7"
 current_package_lock_sha256 = "db0bc16e9d3586c5451381a75aa5552fa9793c24dae92f5cd228712b4b9aadc1"
 
 [[payloads]]

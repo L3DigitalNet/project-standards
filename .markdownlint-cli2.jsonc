@@ -21,6 +21,7 @@
 	// Authored design docs under docs/superpowers/{specs,plans} are deliberately NOT
 	// ignored — they stay gated.
 	"ignores": [
+		".claude/worktrees/**",
 		"AGENTS.md",
 		"CLAUDE.md",
 		"docs/handoff/**",

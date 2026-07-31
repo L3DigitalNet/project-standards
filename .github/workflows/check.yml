@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}/build/wheel-runtime
+      # sys.monitoring tracing: the coverage core that makes the parallel
+      # ordinary lane affordable. Proved byte-identical to the serial trace
+      # core in docs/research/2026-07-31-release-gate-wall-clock-spike.md.
+      COVERAGE_CORE: sysmon
 
     steps:
       - uses: actions/checkout@v7
@@ -68,8 +72,14 @@ jobs:
       - name: Reset coverage data
         run: uv run coverage erase
 
+      # -n 4 matches the hosted runner's 4 vCPU. tests/conftest.py starts a
+      # data_suffix'd Coverage in each xdist worker, so the controller's
+      # `.coverage` alone is incomplete until the combine step below.
       - name: Ordinary tests with coverage
-        run: uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"
+        run: uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility" -n 4 --dist load --max-worker-restart=0
+
+      - name: Combine worker coverage
+        run: uv run coverage combine
 
       - name: Compatibility matrix
         run: uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0

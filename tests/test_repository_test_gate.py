@@ -28,7 +28,13 @@ def test_repository_workflow_runs_direct_test_phases() -> None:
 
     assert test_commands == [
         "uv run coverage erase",
-        'uv run coverage run --source=project_standards -m pytest -m "not performance and not compatibility"',
+        (
+            "uv run coverage run --source=project_standards -m pytest "
+            '-m "not performance and not compatibility" -n 4 --dist load --max-worker-restart=0'
+        ),
+        # xdist workers write their own `.coverage.*` files; without this the
+        # report would only see the controller process.
+        "uv run coverage combine",
         "uv run pytest -m compatibility -n 4 --dist load --max-worker-restart=0",
         "uv run pytest -m performance",
         "uv run coverage report",
