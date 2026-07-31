@@ -47,6 +47,14 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   _(Owner 2026-07-29: standards packages stay locked until the MCP server is live, except minor-level version changes; standards v5.12.0 ships with the MCP server.)_
 
+### Release v5.12.0
+
+- [ ] Roll the owner-approved Tier 1 and Tier 2 issue fixes into the v5.12.0 release train (fresh session).
+
+  Tier 1 docs-only: #85, #92, #93, #96, #103. Tier 2 low-risk: #97, #100, #94, #104 (docs option), #81+#82, #78, #79. Tier 3 is timeline-conditional; full disposition and rationale: `docs/reviews/2026-07-31-open-issue-triage-for-v5.12.0.md`. _(Owner 2026-07-31: roll in the safe tiers; release finalization remains separately authorized.)_
+
+  - [ ] Run the #102 live reproduction first: the `_is_legacy_command` guard shipped at `4cc5efb` may already cover it, closing the issue with no change.
+
 ### Maintenance
 
 - [ ] Finish Agent Handoff consumer retirement.
