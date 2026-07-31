@@ -101,6 +101,15 @@ def _run_new_doc_id(
     scaffold: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     arguments = ["--scaffold"] if scaffold else []
+    # The UV_* passthrough keeps uv's interpreter-install and cache directories
+    # visible to the child: hosted CI's managed interpreters live under
+    # setup-uv's UV_PYTHON_INSTALL_DIR, which a PATH+HOME-only env strips.
+    # Pinning UV_PYTHON to a system interpreter is NOT a substitute — against a
+    # non-managed interpreter `uv run` resolves the command name `python3` from
+    # PATH, straight into the rejecting shim (verified locally); only a managed
+    # interpreter gets the ephemeral-environment bin prepended.
+    env = {"PATH": path, "HOME": os.environ["HOME"]}
+    env.update({key: value for key, value in os.environ.items() if key.startswith("UV_")})
     return subprocess.run(
         [
             "/bin/bash",
@@ -113,17 +122,47 @@ def _run_new_doc_id(
         capture_output=True,
         text=True,
         cwd=tmp_path,
-        # HOME is inherited, not redirected to tmp_path: uv discovers its managed
-        # interpreters under ~/.local/share/uv, and hiding them makes uv fall back
-        # to PATH lookup -- straight into the rejecting shim. That failure is a
-        # property of the sandbox, not of the script, and masked the real result.
-        env={"PATH": path, "HOME": os.environ["HOME"]},
+        env=env,
         check=False,
     )
 
 
+_MANAGED_INTERPRETER_READY = False
+
+
+def _ensure_managed_interpreter() -> None:
+    """Provision a uv-managed interpreter, the configuration uv-strict mandates.
+
+    The uv branch is only shim-safe through an ephemeral environment built from
+    a managed interpreter: `uv run --no-project python3` prepends that
+    environment's bin, so `python3` never resolves through the PATH shim.
+    Against a bare system interpreter the command name falls back to PATH — the
+    self-contradictory shim-without-managed-Python configuration no real
+    uv-strict setup produces, but exactly what a hosted runner has (the
+    v5.12.0 release-commit `Check` failure, run 30631582570). `uv python
+    install` is idempotent and honors UV_PYTHON_INSTALL_DIR, so CI provisions
+    into its own setup-uv directory and a developer machine is a fast no-op.
+    """
+    global _MANAGED_INTERPRETER_READY
+    if _MANAGED_INTERPRETER_READY:
+        return
+    install = subprocess.run(
+        [str(_real_uv()), "python", "install"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if install.returncode != 0:
+        pytest.skip(
+            "could not provision a uv-managed interpreter for the uv-strict leg: "
+            + install.stderr.strip()[:200]
+        )
+    _MANAGED_INTERPRETER_READY = True
+
+
 def _uv_strict_path(tmp_path: Path) -> str:
     """uv present (real binary) with a `python3` that rejects bare invocation."""
+    _ensure_managed_interpreter()
     return f"{_rejecting_python3(tmp_path)}:{_real_uv().parent}:/usr/bin:/bin"
 
 
