@@ -35,6 +35,12 @@ All notable changes to this project are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`project-standards mcp` serves the installed Catalog 5 standards to a local MCP client over stdio.** The subcommand starts a local, read-only Model Context Protocol server backed by the same installed distribution the CLI uses: three `standards://` resource forms (catalog, package, payload) and six read-only tools — `standards_list`, `standard_read`, `repo_inspect`, `reconcile_preview`, `validate_repo`, and `drift_check`. It registers no write, apply, or remote surface; every repository-scoped tool takes an explicit absolute `repo_root`, and the single launch option `--root-boundary` can only narrow which roots are reachable. Both protocol eras are served from one process, so a client pinned to `2025-06-18` and a client speaking `2026-07-28` connect to the same server. The CLI and the CI workflows remain the enforcement backstop; the server replaces neither. Setup, the capability matrix, the resource and tool reference, security rules, equivalent commands, and troubleshooting are documented in [`docs/mcp-server.md`](docs/mcp-server.md).
+
 ## [5.11.0] — 2026-07-27
 
 > **Why MINOR:** Catalog 5 adds three backward-compatible consumer successors on their existing major tracks — ADR 1.3, CLI Documentation 1.5, and Project Spec 1.5 — and `standards show --json` gains one additive field. No option, contribution, provider, or rendered artifact changes, and every previously advertised payload remains byte-identical and exactly selectable. `packages check-release --baseline v5.10.0` classifies the release as minor.

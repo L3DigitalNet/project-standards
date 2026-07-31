@@ -6,8 +6,8 @@ description: 'Final Step 09 official-source, license, conformance, and client ev
 doc_type: 'research'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-28'
-reviewed: '2026-07-28'
+updated: '2026-07-30'
+reviewed: '2026-07-30'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -183,9 +183,103 @@ The selected pair is protocol revision **2026-07-28**, served dual-era, through 
 
 ---
 
+## T11 candidate-wheel client smoke (2026-07-30)
+
+`TC-T11-002`. Everything below was produced against one candidate wheel and nothing else. The first candidate raised the finding recorded at the end of this section; once that defect was corrected in its owning task the whole smoke was re-run, and every result here is the corrected candidate's. The client matrix above is the T1 register and is **not** amended here: `codex-cli` moved 0.145.0 → 0.146.0, but 0.146.0 registers `mcp_2026_07_28` disabled by default, so every recorded value — protocol revision `2025-06-18`, no roots, no prompts, model-initiated resource access not established — still holds and the owner-authorized refresh condition (a default-on flag) did not occur.
+
+### Candidate identity
+
+| Fact | Value |
+| --- | --- |
+| Wheel | `project_standards-5.11.0-py3-none-any.whl` |
+| SHA-256 | `8ed0b2e8838fcc67a13bc62a82b52791e5b6b37104b7494c8dad16d04b17e07f` |
+| Reported version | `project-standards 5.11.0` |
+| Invocation | `project-standards mcp` (console script `project-standards = project_standards.cli:main`) |
+| Runtime | the extracted wheel only, on `PYTHONPATH`; no other distribution was importable |
+| Final commit | added by T12 |
+
+The superseded first candidate — `ed01ce3939b3312247303bde51fc6ad7685f51537d2f87bbba3ac61efd0bd4ff`, built before the provider-dispatch correction — is retained only as the identity of the run that raised the finding below. Every result on this page is the current candidate's.
+
+### Smoke set (`SPEC-MS01 OQ-005`, owner decision 2026-07-30)
+
+| Target | Identity | Role |
+| --- | --- | --- |
+| Fixture | `tests/fixtures/package_contract/valid/full` | Mandatory fixture leg; uninitialized control plane |
+| This repository | `/home/chris/projects/project-standards` | Initialized V5 consumer |
+| Real consumer | `/home/chris/scripts` | Low-risk L3Digital consumer, read-only |
+
+Nothing was written to any target. Every repository-scoped call passed an explicit absolute `repo_root`; no target was inferred, and a relative path is refused with `-32602 the repository root must be an absolute path`.
+
+### Server-side observations (all three eras, one process each)
+
+| Observation | `2025-06-18` (Codex era) | `2025-11-25` | `2026-07-28` |
+| --- | --- | --- | --- |
+| Negotiated | `2025-06-18` | `2025-11-25` | `2026-07-28` (`server/discover`) |
+| serverInfo | `project-standards` 5.11.0 | same | same, in `_meta` |
+| Capabilities | resources (`subscribe` false, `listChanged` false), tools (`listChanged` false) | same | same |
+| Instructions | 727 characters | 727 | present |
+| Tools | 6: `drift_check`, `reconcile_preview`, `repo_inspect`, `standard_read`, `standards_list`, `validate_repo` | same 6 | same 6 |
+| Resources | 53 registered | 53 | 53 |
+| Resource templates | both parameterized forms | same | same |
+| Prompts | `prompts/list` → `-32601 Method not found` | same | same |
+| Roots | probe advertised none; every repository-scoped call still resolved its target from the explicit `repo_root` | same | same |
+| stdout | JSON-RPC frames only | same | same |
+| stderr | 0 bytes | 0 | 0 |
+
+Fallback exercise: `standard_read` returned `standards://adr/1.1/resources/adopt` with its declared digest, media type, and bytes — the required fallback for a client without model-initiated resource access. `resources/read` on `standards://catalog/5` returned the same catalog projection, confirming the two paths agree.
+
+### Repository-scoped tool results (`2025-06-18` process, explicit absolute roots)
+
+| Tool | `tests/fixtures/package_contract/valid/full` | `/home/chris/projects/project-standards` | `/home/chris/scripts` |
+| --- | --- | --- | --- |
+| `repo_inspect` | state `uninitialized`, 1 finding | state `initialized`, 0 findings | state `initialized`, 0 findings |
+| `reconcile_preview` | no preview: control plane uninitialized, 1 finding | 38 planned actions, nothing applied | 30 planned actions, nothing applied |
+| `validate_repo` | `-32602 control-plane state is uninitialized` | 10 provider results, all `completed`, 240 findings | 5 provider results, all `completed`, 44 findings |
+| `drift_check` | `-32602 control-plane state is uninitialized` | fingerprint `72f1d3a8…`, 1 provider result `completed` | fingerprint `7044b1a3…`, 1 provider result `completed` |
+
+Every composite provider is dispatched with the same authoritative typed input the CLI builds for it, so these are answers and not artifacts of an empty payload. On this repository the ten selected providers are `adr@1.3/validate-adr`, `agent-handoff@1.6/validate` (the 240-finding corpus) and `agent-handoff@1.6/verify`, `cli-documentation@1.5/verify-workflow`, `markdown-frontmatter@1.6/validate-frontmatter`, `markdown-tooling@1.10/verify-format` and `verify-lint`, `project-spec@1.5/validate` and `lint`, and `python-tooling@1.10/verify-toolchain`; on `/home/chris/scripts` the five are `agent-handoff@1.6/validate` (42 findings) and `verify`, `markdown-frontmatter@1.6/validate-frontmatter`, and `markdown-tooling@1.10/verify-format` and `verify-lint` (1 finding each). The uninitialized-fixture refusals are the declared containment path, not a provider failure.
+
+### Client-side probes (scoped configuration only)
+
+Neither client's persistent configuration was written, and neither supplied the `project-standards` server definition: Codex read a throwaway `CODEX_HOME`, and Claude Code read a throwaway project directory carrying only `.mcp.json`, which is the scope it reports back. Claude Code additionally lists the user's own globally configured servers, which are unrelated to this evidence. Both throwaway trees were deleted afterwards; `~/.codex/config.toml` was md5-identical before and after, `~/.claude.json` gained no project entry for the throwaway path, and its root `mcpServers` set was unchanged.
+
+```text
+  $ project-standards --version                        -> project-standards 5.11.0 (candidate bytes only)
+  $ codex --version                                    -> codex-cli 0.146.0
+  $ CODEX_HOME=<temp> codex mcp list                   -> exit 0; project-standards | project-standards | mcp | enabled
+  $ CODEX_HOME=<temp> codex mcp get project-standards  -> exit 0; enabled: true, transport: stdio,
+                                                          command: project-standards, args: mcp
+  $ claude --version                                   -> 2.1.220 (Claude Code)
+  $ claude mcp list        (cwd = <temp project>)      -> exit 0; project-standards: project-standards mcp - ✔ Connected
+  $ claude mcp get project-standards                   -> Scope: Project config (shared via .mcp.json); Status: ✔ Connected
+```
+
+Claude Code's health check performs a real stdio handshake, so `✔ Connected` is a live connection to the candidate wheel's server, not a configuration echo. Under a `CODEX_HOME` below `/home/chris/tmp`, `codex mcp` prints one warning to stderr — it refuses to create PATH helper binaries under a directory it treats as temporary — and then completes normally with exit 0.
+
+### Finding raised by this smoke
+
+**Historical, 2026-07-30 — raised by the first candidate, corrected before the results above were recorded.** The record is kept because it is what this client gate was for; it does **not** describe the current server.
+
+On the first candidate (`ed01ce39…`), `validate_repo` failed against every **real** consumer repository. The composite service dispatched each applicable validate/verify/lint provider with an empty snapshot object, while the packaged providers require the document snapshots the CLI builds for them:
+
+```text
+  validate_repo  /home/chris/projects/project-standards -> -32602 provider failed with ValueError
+                                                           (adr@1.3/validate-adr)
+  validate_repo  /home/chris/scripts                    -> -32602 provider failed with ValueError
+                                                           (markdown-frontmatter@1.6/validate-frontmatter)
+```
+
+Root cause, reproduced directly at the time: `payloads/adr/1.3/providers/adr.py` raised `ValueError: snapshots.documents must be an array` because the composite dispatch passed `{}` where `frontmatter_commands.py` builds `{"documents": …}` for the same provider. The existing provider tests used a synthetic echo provider that tolerates any snapshot object, which is why no suite caught it. The follow-up analysis widened the finding beyond the two crashes this smoke saw: of eleven providers reachable on this repository, four crashed and at least one more — `agent-handoff@1.6/validate` — returned a _different, wrong_ answer from empty input, so every composite answer was untrustworthy rather than merely incomplete.
+
+It was a service-layer defect, not a packaging or documentation defect: source and extracted-wheel behaviour were identical, so the wheel-equivalence contract was never affected. It was routed out of the documentation task to its owning work and fixed there — `75c9653` published the provider-dispatch-input authority seam and `1abf8d9` made composite dispatch use that authoritative typed input, with per-provider failure isolation so one incompatible provider can no longer abort a whole call. The refreshed run above is against the post-fix candidate.
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 0.4 | 2026-07-30 | Claude (T11 client gate, refresh) | Re-run the whole `TC-T11-002` smoke against the post-fix candidate `8ed0b2e8…`: new wheel digest, the fixture leg exercised with an absolute root, repository-scoped results for all six tools on both real roots (10 and 5 provider results, all `completed`), and precise client-scope wording. The `validate_repo` empty-input finding is retained as a dated historical record of the discovery and its routing to `75c9653`/`1abf8d9`, not as current behaviour. |
+| 0.3 | 2026-07-30 | Claude (T11 client gate) | Append the `TC-T11-002` candidate-wheel client smoke: wheel digest and invocation, the owner-approved `OQ-005` smoke set, three-era server observations, scoped Codex 0.146.0 and Claude Code 2.1.220 probes, and the `validate_repo` empty-snapshot finding. The T1 client matrix is unchanged; 0.146.0 keeps `mcp_2026_07_28` disabled by default, so the authorized refresh condition did not occur. |
 | 0.2 | 2026-07-28 | Claude | Post-review corrections: reattributed the dual-era compatibility facts to the lifecycle page and the custom-URI-scheme quote to the resources page and added both sources; restated the SDK v1 line as maintenance-mode with no documented 2026-07-28 support instead of asserting non-support; labelled the HTTP-stack grouping an author assessment distinct from the register's unconditional-installation fact; labelled the Codex client-timeout guidance an author assessment; and changed the Claude Code resource-templates and Codex output-limits cells to 'not recorded in the evidence register'. |
 | 0.1 | 2026-07-28 | Claude | Initial Step 09 evidence register: final 2026-07-28 protocol, `mcp==2.0.0` SDK, Claude Code 2.1.220 and Codex CLI 0.145.0 client matrix, executable probes, required fallbacks, and the pending-approval selection statement. |

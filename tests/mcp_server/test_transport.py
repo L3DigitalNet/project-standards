@@ -86,9 +86,12 @@ from mcp_types.version import HANDSHAKE_PROTOCOL_VERSIONS, MODERN_PROTOCOL_VERSI
 import project_standards
 from project_standards._version import package_version
 
-# The exact revision the installed Codex CLI 0.145.0 hardcodes. It is spelled
+# The exact revision the installed Codex CLI 0.146.0 hardcodes. It is spelled
 # out because it is a *client* fact frozen by the evidence matrix, not an SDK
 # value; the assertion below keeps it honest against the SDK's own register.
+# The value survives the 0.145.0 -> 0.146.0 refresh: 0.146.0 registers the
+# `mcp_2026_07_28` feature disabled by default, so the released client still
+# negotiates 2025-06-18 only.
 CODEX_CLIENT_REVISION = "2025-06-18"
 
 # ADR 0026, frozen adapter configuration.

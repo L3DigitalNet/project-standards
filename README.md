@@ -26,6 +26,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
     - [Current consumer packages](#current-consumer-packages)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
     - [Pre-commit hooks](#pre-commit-hooks)
+  - [MCP server](#mcp-server)
   - [Versioning](#versioning)
   - [Developing this repository](#developing-this-repository)
   - [License](#license)
@@ -238,6 +239,12 @@ repos:
       - id: validate-id-check
       - id: validate-frontmatter
 ```
+
+## MCP server
+
+`project-standards mcp` serves the installed Catalog 5 standards to a local MCP client over stdio, read-only. It is optional and replaces nothing: the CLI and the CI workflows remain the enforcement backstop.
+
+See [`docs/mcp-server.md`](docs/mcp-server.md) for prerequisites, per-client stdio configuration, the capability matrix, the resource and tool reference, security rules, equivalent commands, and troubleshooting.
 
 ## Versioning
 

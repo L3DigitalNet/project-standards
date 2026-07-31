@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-28'
+last_reviewed: '2026-07-30'
 supersedes: null
 superseded_by: null
 related:
@@ -38,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.4 | 2026-07-30 | Claude (T11 client and documentation gate) | Record the owner's `OQ-005` decision and close the question: the minimum real-consumer smoke set is the mandatory test fixtures, this repository, and `~/scripts`, exercised read-only against the candidate wheel; smoke evidence is appended to the 2026-07-28 client matrix. Note for verification: FR-016 is verified against its normative acceptance sentence in §5.1 ("Setup/reference docs identify equivalent package and consumer-control-plane commands; existing CLI/CI behavior remains green"); the §11 verification-plan wording "Documentation and tool outputs link equivalent CLI/CI commands" is a sketch row, and no tool output shape was changed to satisfy it. No server scope, requirement, or tool schema changed. |
 | 1.3 | 2026-07-28 | Claude (T1 decision gate) | Record the Step 09/T1 decision-gate outcomes: final 2026-07-28 protocol and exact mcp==2.0.0 pin accepted (ADR 0025), local read-only transport contract accepted (ADR 0026), OQ-001/002/003/004/006 resolved and OQ-007 dispositioned (omit) with recorded owner approval, OQ-005 preserved for T11, and release-candidate wording updated to the final publication; §8.3 decision sources and the spec's related-ADR links now point at the accepted ADRs; the published-baseline references are synchronized to 5.11.0. No server scope or requirement changed. |
 | 1.2 | 2026-07-27 | Codex | Synchronize current package-authority context with the Project Standards 5.9.0 release candidate and Standard Bundle Authoring 2.6 without changing the approved server scope or requirements. |
 | 1.1 | 2026-07-24 | Codex with Claude Opus review | Approve and re-lock the narrow Standard Bundle Authoring 2.5 current-authority corrections after high-effort Opus review convergence; implementation and the protocol/SDK decision gate remain unstarted. |
@@ -1006,7 +1007,7 @@ The server owns no durable data in v1. Backup/DR is not applicable beyond normal
 | OQ-002 | Should entry point be `project-standards mcp` or separate `project-standards-mcp`? | Resolved: `project-standards mcp` subcommand on the unified CLI (ADR 0026). Owner approval recorded 2026-07-28. | No | Owner | MS-1 | Resolved 2026-07-28 |
 | OQ-003 | Which supported clients give the model direct resource access, and where is `standard_read` required? | Resolved: `standard_read` is required: Codex CLI 0.145.0 model-initiated resource access is not established; Claude Code 2.1.220 has native resource access (matrix). | Yes | Implementer | MS-0 | Resolved 2026-07-28 |
 | OQ-004 | How should repo roots be supplied for clients without MCP roots support? | Resolved: explicit `repo_root` argument is mandatory and authoritative; client roots and the optional configured boundary only narrow (ADR 0026); protocol 2026-07-28 deprecates Roots. | No | Implementer | MS-3 | Resolved 2026-07-28 |
-| OQ-005 | What minimum real consumer repo should be used for smoke testing? | Use a low-risk L3Digital repo after fixtures pass. | No | Owner | MS-5 | Open |
+| OQ-005 | What minimum real consumer repo should be used for smoke testing? | Resolved: the mandatory test fixtures first, then this repository, then `~/scripts` as the low-risk real consumer. All three are exercised read-only through the candidate wheel; nothing is written to any of them. Owner decision recorded 2026-07-30. | No | Owner | MS-5 | Resolved 2026-07-30 |
 | OQ-006 | What exact resources/prompts/roots semantics do current Codex and Claude Code builds expose after the final protocol/SDK selection? | Resolved: observed semantics frozen in the 2026-07-28 matrix: Claude Code resources/prompts/roots yes, sampling no; Codex tools/instructions/elicitation yes, roots/prompts/sampling no, protocol 2025-06-18 only. | Yes | Implementer | MS-0 | Resolved 2026-07-28 |
 | OQ-007 | Should generic provider dispatch ship in v1 or remain behind specialized validate/drift tools? | Resolved (omit): generic dispatch omitted from v1; six specialized tools only; `invoke_read_provider` stays facade-internal. Owner approval recorded 2026-07-28. | No | Owner | MS-4 | Resolved 2026-07-28 |
 

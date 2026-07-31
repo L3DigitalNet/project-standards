@@ -139,8 +139,10 @@ CLAUDE_CLIENT_TOKEN = "claude"
 # outside the seam. The whole mapping is therefore pinned to the two supported
 # primary clients the evidence matrix records, with the values it records for
 # them — Claude Code 2.1.220 gives the model direct resource access, Codex CLI
-# 0.145.0 does not. A new supported client is a T1 refresh, and must fail here
-# until that refresh happens.
+# 0.146.0 does not. A new supported client is a T1 refresh, and must fail here
+# until that refresh happens. The booleans survived the 0.145.0 -> 0.146.0
+# refresh: 0.146.0 ships `mcp_2026_07_28` disabled by default and establishes no
+# model-initiated resource access.
 FROZEN_CLIENT_MATRIX = {"claude-code": True, "codex-cli": False}
 
 # Argument names that would make the tool path-addressable. FR-008 says it
@@ -730,7 +732,7 @@ def test_tools_module_is_the_planned_registration_surface() -> None:
     assert evidence == FROZEN_CLIENT_MATRIX, (
         f"{EVIDENCE_NAME} must be exactly the T1 primary-client matrix "
         f"{FROZEN_CLIENT_MATRIX}; got {evidence}. Claude Code 2.1.220 gives the model direct "
-        "resource access (client matrix); Codex CLI 0.145.0 does not (required-fallbacks table)"
+        "resource access (client matrix); Codex CLI 0.146.0 does not (required-fallbacks table)"
     )
     codex = client_key(evidence, CODEX_CLIENT_TOKEN)
     claude = client_key(evidence, CLAUDE_CLIENT_TOKEN)
