@@ -4,18 +4,15 @@ from __future__ import annotations
 
 import argparse
 import base64
-import os
-import posixpath
 import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards.adopt.errors import AdoptError
 from project_standards.agent_handoff.integrations.links import (
     _normalized_link_occurrences,  # pyright: ignore[reportPrivateUsage]  # predecessor enrichment
-    _normalized_link_targets,  # pyright: ignore[reportPrivateUsage]  # package-internal parser
 )
 from project_standards.agent_handoff.legacy import legacy_report
 from project_standards.agent_handoff.model import (
@@ -42,14 +39,13 @@ from project_standards.control_plane.command_resolution import (
     SelectedCommandPackage,
     capture_command_snapshot,
     invoke_selected_provider,
-    managed_markdown_unit_snapshot,
-    managed_unit_snapshot,
     selected_command,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.distribution import InstalledDistribution
 from project_standards.control_plane.executor import apply_authoring_plan
 from project_standards.control_plane.locking import LockMode
+from project_standards.control_plane.provider_inputs import provider_dispatch_input
 from project_standards.control_plane.schemas import MutationActionSchema, MutationPlanSchema
 from project_standards.package_contract.payload import (
     JsonObject,
@@ -74,27 +70,6 @@ _FIXED_VIEWS = {
     "size-report": "size",
     "shape-check": "shape",
 }
-
-_READ_PATHS = (
-    ".agents/hooks/agent-handoff/session_start.py",
-    ".agents/skills/agent-handoff/SKILL.md",
-    ".agents/skills/agent-handoff/agents/openai.yaml",
-    ".standards/packages/agent-handoff/policy.toml",
-    ".claude/settings.json",
-    ".codex/config.toml",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "docs/STATUS.md",
-    "docs/TODO.md",
-    "docs/handoff/architecture.md",
-    "docs/handoff/bugs",
-    "docs/handoff/conventions.md",
-    "docs/handoff/credentials.md",
-    "docs/handoff/deployed.md",
-    "docs/handoff/sessions",
-    "docs/handoff/specs-plans.md",
-    "docs/handoff/state.md",
-)
 
 _UPGRADE_RESOURCES = {
     ".agents/hooks/agent-handoff/session_start.py": "hook",
@@ -178,47 +153,6 @@ def _parse_v2(
         bool(getattr(parsed, "dry_run", False)),
         fixed_view or cast(str, getattr(parsed, "view", "full")),
     )
-
-
-def _walk_handoff_paths(repo: Path) -> tuple[str, ...]:
-    """Declare every handoff document without following repository symlinks."""
-    root = repo.resolve(strict=True)
-    handoff = root / "docs/handoff"
-    discovered: set[str] = set(_READ_PATHS)
-    if handoff.is_dir() and not handoff.is_symlink():
-        for current, directories, files in os.walk(handoff, followlinks=False):
-            base = Path(current)
-            for name in [*directories, *files]:
-                discovered.add((base / name).relative_to(root).as_posix())
-    return tuple(sorted(discovered, key=str.encode))
-
-
-def _read_snapshots(selected: SelectedCommandPackage) -> JsonObject:
-    snapshots = capture_command_snapshot(
-        selected.repo,
-        _walk_handoff_paths(selected.repo),
-    )
-    candidates: set[str] = set()
-    for source, raw in snapshots.items():
-        if not source.endswith(".md") or not isinstance(raw, dict):
-            continue
-        encoded = raw.get("content_base64")
-        if not isinstance(encoded, str):
-            continue
-        text = base64.b64decode(encoded).decode("utf-8", errors="replace")
-        for target in _normalized_link_targets(text):
-            if not target or "://" in target or target.startswith(("mailto:", "#")):
-                continue
-            for candidate in (PurePosixPath(target), PurePosixPath(source).parent / target):
-                normalized = posixpath.normpath(candidate.as_posix())
-                if not normalized.startswith(("../", "/")) and normalized not in {"..", "."}:
-                    candidates.add(normalized)
-    missing = tuple(sorted(candidates - snapshots.keys(), key=str.encode))
-    if missing:
-        snapshots.update(capture_command_snapshot(selected.repo, missing))
-    snapshots["managed_units"] = managed_unit_snapshot(selected.lock, "agent-handoff")
-    snapshots["managed_markdown_units"] = managed_markdown_unit_snapshot(selected.lock)
-    return snapshots
 
 
 def _report(
@@ -366,7 +300,7 @@ def _selected_shape_findings(
 def _provider_findings(
     selected: SelectedCommandPackage, operation: V2ProviderOperation
 ) -> tuple[Finding, ...]:
-    snapshots = _read_snapshots(selected)
+    snapshots = provider_dispatch_input(selected, operation)
     result = invoke_selected_provider(selected, operation, snapshots)
     if result.effect is not ProviderEffect.FINDINGS:
         raise CommandResolutionError("selected Agent Handoff provider returned the wrong effect")

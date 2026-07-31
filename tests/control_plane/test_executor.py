@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 import os
 import stat
+import subprocess
+import sys
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import replace
@@ -33,7 +35,7 @@ from project_standards.control_plane.providers import (
     ProviderResult,
     materialize_referenced_input_snapshots,
 )
-from project_standards.package_contract.payload import ProviderEffect
+from project_standards.package_contract.payload import ProviderEffect, ProviderOperation
 from tests.control_plane.planner_helpers import (
     digest,
     locked_unit,
@@ -925,3 +927,66 @@ def test_apply_refuses_a_disclaimed_target_that_reappears_before_verification(
     # The prior lock survives, so no recorded absence contradicts the live file.
     assert parse_lock((control / "lock.toml").read_bytes()) == installed.next_lock
     assert (repo / "notes.md").read_bytes() == b"recreated by the consumer\n"
+
+
+def test_verification_dispatch_reaches_the_seam_through_its_deferred_import(
+    tmp_path: Path,
+) -> None:
+    """Pin the deferred-import contract at `executor._verify` (T15 review F5).
+
+    `provider_inputs` imports `command_resolution`, which imports
+    `control_plane.cli`, which imports this module — so the seam is reachable
+    only from inside the call. The rationale alone is not a guard: a later edit
+    can hoist that import to module scope and the comment would still read true.
+    This exercises the real verification path and asserts the dispatched
+    snapshots ARE the seam's output, so the import both runs and returns the one
+    authoritative shape.
+    """
+    from project_standards.control_plane.provider_inputs import provider_dispatch_input
+
+    repo, planner, plan = _fixture(tmp_path, verify=True)
+    assert plan.verification_requests, "the verify fixture must declare a verification request"
+    request = plan.verification_requests[0]
+    seen: list[ProviderInvocation] = []
+
+    def verify(invocation: ProviderInvocation) -> ProviderResult:
+        seen.append(invocation)
+        return ProviderResult(ProviderEffect.FINDINGS, findings=())
+
+    result = _apply(planner, plan, verification_runner=verify)
+
+    assert result.success
+    assert [item.provider_id for item in seen] == [request.provider_id]
+    assert seen[0].snapshots == provider_dispatch_input(
+        None,
+        ProviderOperation.VERIFY,
+        repo=repo,
+        standard_id=request.standard_id,
+        plan=plan,
+        provider_id=request.provider_id,
+    )
+
+
+def test_deferred_seam_import_is_cycle_safe_in_a_fresh_interpreter() -> None:
+    """Import the three modules in every order that could expose a cycle.
+
+    In-process assertions cannot see this: by the time the suite runs, every
+    module is already in `sys.modules`, so a module-scope cycle would import
+    cleanly here and fail only for the first real caller. Each order below runs
+    in its own interpreter with an empty module table.
+    """
+    orders = (
+        ("provider_inputs", "command_resolution", "executor"),
+        ("executor", "provider_inputs", "command_resolution"),
+        ("command_resolution", "executor", "provider_inputs"),
+    )
+    for order in orders:
+        program = "\n".join(f"import project_standards.control_plane.{name}" for name in order)
+        completed = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0, f"{order}: {completed.stderr}"
+        assert not completed.stderr, f"{order}: {completed.stderr}"

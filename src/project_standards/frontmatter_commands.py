@@ -14,7 +14,6 @@ from project_standards import validate_frontmatter
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
     SelectedCommandPackage,
-    capture_command_snapshot,
     invoke_selected_provider,
     resolve_enabled_companion,
     selected_command,
@@ -27,13 +26,13 @@ from project_standards.control_plane.locking import (
     LockMode,
     control_plane_lock,
 )
+from project_standards.control_plane.provider_inputs import provider_dispatch_input
 from project_standards.control_plane.providers import ProviderResult
 from project_standards.control_plane.schemas import MutationPlanSchema
 from project_standards.control_plane.state import StateKind, detect_control_plane_state
 from project_standards.id_format import random_token
 from project_standards.package_contract.payload import (
     JsonObject,
-    JsonValue,
     ProviderEffect,
     ProviderOperation,
 )
@@ -59,101 +58,38 @@ def _parser(command: str) -> _Parser:
     return parser
 
 
-def _documents(selected: SelectedCommandPackage, paths: list[Path]) -> list[JsonValue]:
-    root = selected.repo.resolve(strict=True)
-    relative = tuple(
-        (path.relative_to(root) if path.is_absolute() else path).as_posix() for path in paths
-    )
-    captured = capture_command_snapshot(selected.repo, relative)
-    documents: list[JsonValue] = []
-    for path in relative:
-        raw = captured[path]
-        if not isinstance(raw, dict):
-            raise CommandResolutionError("frontmatter snapshot has an invalid shape")
-        state = cast(JsonObject, raw)
-        documents.append(
-            {
-                "path": path,
-                "kind": state["kind"],
-                "mode": state["mode"],
-                "content_base64": state["content_base64"],
-                "precondition_digest": state["precondition_digest"],
-            }
-        )
-    return documents
-
-
 def _provider_inputs(
     selected: SelectedCommandPackage,
     paths: list[Path],
     *,
+    operation: ProviderOperation,
     schema_override: Path | None,
     no_require: bool,
 ) -> tuple[JsonObject, JsonObject]:
+    """Pair the option-derived effective config with the seam-built snapshots.
+
+    Only the CONFIG half lives here. `--no-require-frontmatter` and `--schema`
+    are markdown-frontmatter option handling, not provider input, so the seam
+    owns the snapshots and this function reads back the schema path it captured
+    rather than capturing the override a second time.
+    """
+    snapshots = provider_dispatch_input(
+        selected,
+        operation,
+        paths=paths,
+        schema_override=schema_override,
+    )
     config = dict(selected.effective_config)
-    snapshots: JsonObject = {"documents": _documents(selected, paths)}
     if no_require:
         config["required"] = False
     if schema_override is not None:
-        try:
-            relative = (
-                schema_override.relative_to(selected.repo)
-                if schema_override.is_absolute()
-                else schema_override
-            )
-            schema_path = relative.as_posix()
-            raw = capture_command_snapshot(selected.repo, (schema_path,))[schema_path]
-        except (OSError, ValueError) as exc:
-            raise CommandResolutionError(
-                f"custom schema must remain inside the repository: {schema_override}"
-            ) from exc
-        if not isinstance(raw, dict):
+        referenced = snapshots.get("referenced_input_content")
+        entry = referenced[0] if isinstance(referenced, list) and referenced else None
+        schema_path = cast(JsonObject, entry).get("path") if isinstance(entry, dict) else None
+        if not isinstance(schema_path, str):
             raise CommandResolutionError("custom schema snapshot has an invalid shape")
-        state = cast(JsonObject, raw)
-        encoded = state.get("content_base64")
-        digest = state.get("content_digest")
-        if (
-            state.get("kind") != "regular"
-            or not isinstance(encoded, str)
-            or not isinstance(digest, str)
-        ):
-            raise CommandResolutionError("custom schema must be a regular repository file")
         config["schema"] = "custom"
         config["schema_path"] = schema_path
-        snapshots["referenced_input_content"] = [
-            {
-                "standard_id": "markdown-frontmatter",
-                "extension_id": "custom-schema",
-                "path": schema_path,
-                "digest": digest,
-                "content_base64": encoded,
-            }
-        ]
-    elif config.get("schema") == "custom":
-        schema_path = config.get("schema_path")
-        if not isinstance(schema_path, str):
-            raise CommandResolutionError("custom frontmatter schema requires schema_path")
-        matching = [
-            item
-            for item in selected.lock.referenced_inputs
-            if item.standard_id == "markdown-frontmatter"
-            and item.extension_id == "custom-schema"
-            and item.path.original == schema_path
-        ]
-        if len(matching) != 1:
-            raise CommandResolutionError(
-                "custom frontmatter schema requires one locked referenced input"
-            )
-        content = validate_frontmatter.read_locked_input_bytes(selected.repo, matching[0])
-        snapshots["referenced_input_content"] = [
-            {
-                "standard_id": "markdown-frontmatter",
-                "extension_id": "custom-schema",
-                "path": schema_path,
-                "digest": matching[0].digest.value,
-                "content_base64": base64.b64encode(content).decode("ascii"),
-            }
-        ]
     return config, snapshots
 
 
@@ -279,6 +215,7 @@ def _selected_context(
     selected: SelectedCommandPackage,
     *,
     config_driven_invocation: str | None,
+    operation: ProviderOperation = ProviderOperation.VALIDATE,
 ) -> tuple[validate_frontmatter.ProjectConfig, list[Path], JsonObject, JsonObject]:
     config = validate_frontmatter.config_from_unified_options(
         selected.effective_config,
@@ -295,6 +232,7 @@ def _selected_context(
     effective, snapshots = _provider_inputs(
         selected,
         paths,
+        operation=operation,
         schema_override=parsed.schema,
         no_require=parsed.no_require_frontmatter,
     )
@@ -343,6 +281,7 @@ def _validate_selected(
         full_effective, full_snapshots = _provider_inputs(
             selected,
             full_paths,
+            operation=ProviderOperation.VALIDATE,
             schema_override=parsed.schema,
             no_require=parsed.no_require_frontmatter,
         )
@@ -360,6 +299,9 @@ def _validate_selected(
         adr_result = invoke_selected_provider(
             adr,
             ProviderOperation.VALIDATE,
+            # A projection of the input the seam already built, not a fifth
+            # construction: recapturing here would let the adr companion see a
+            # different byte state than the frontmatter provider just saw.
             {"documents": snapshots["documents"]},
         )
         findings.extend(adr_result.findings)
@@ -413,6 +355,7 @@ def run_locked_standalone_validate(
         effective, snapshots = _provider_inputs(
             selected,
             paths,
+            operation=ProviderOperation.VALIDATE,
             schema_override=parsed.schema,
             no_require=parsed.no_require_frontmatter,
         )
@@ -474,6 +417,7 @@ def run_locked_standalone_fix(
         parsed,
         selected,
         config_driven_invocation=config_driven_invocation,
+        operation=ProviderOperation.FIX,
     )
     if effective.get("schema") == "custom":
         label = "id-format" if surface == "validate-id" else "frontmatter formatting"
@@ -609,7 +553,11 @@ def run_validate(
                 result = invoke_selected_provider(
                     selected,
                     ProviderOperation.VALIDATE,
-                    {"documents": _documents(selected, paths)},
+                    provider_dispatch_input(
+                        selected,
+                        ProviderOperation.VALIDATE,
+                        paths=paths,
+                    ),
                 )
                 status = _emit_findings(
                     result,
@@ -695,6 +643,7 @@ def run_fix(
                 parsed,
                 selected,
                 config_driven_invocation="project-standards fix",
+                operation=ProviderOperation.FIX,
             )
             if effective.get("schema") == "custom":
                 print("note: custom schema in use; skipping fix", file=sys.stderr)

@@ -14,13 +14,14 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
-from typing import NoReturn, cast
+from typing import NoReturn
 
 from project_standards._filesystem import (
     _directory_descriptor,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
     _ParentDirectoryError,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
     _PublishedCleanupError,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
     _write_bytes,  # pyright: ignore[reportPrivateUsage]  # package-internal boundary
+    select_spec_paths,
 )
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
@@ -31,6 +32,7 @@ from project_standards.control_plane.diagnostics import ControlFinding, ControlP
 from project_standards.control_plane.distribution import InstalledDistribution, InstalledPayload
 from project_standards.control_plane.executor import apply_authoring_plan
 from project_standards.control_plane.locking import LockMode
+from project_standards.control_plane.provider_inputs import provider_dispatch_input
 from project_standards.control_plane.providers import (
     ProviderInvocation,
     ProviderResult,
@@ -38,7 +40,7 @@ from project_standards.control_plane.providers import (
 )
 from project_standards.control_plane.snapshot import EntryKind, RepositorySnapshot, SnapshotEntry
 from project_standards.package_contract.paths import SafeRelativePath
-from project_standards.package_contract.payload import JsonObject, JsonValue, ProviderOperation
+from project_standards.package_contract.payload import JsonObject, ProviderOperation
 from project_standards.specs.commands.extract import extract_slice
 from project_standards.specs.commands.lint import lint_document
 from project_standards.specs.commands.new import (
@@ -105,32 +107,16 @@ def _selected_paths(
             for path in sorted(explicit)
         ]
     assert runtime.effective_config is not None
-    raw_patterns = runtime.effective_config.get("include_patterns")
-    if (
-        not isinstance(raw_patterns, list)
-        or not raw_patterns
-        or not all(isinstance(pattern, str) for pattern in raw_patterns)
-    ):
-        raise ConfigError("selected project-spec include_patterns are invalid")
-    paths: set[Path] = set()
-    try:
-        for pattern in cast(list[str], raw_patterns):
-            if (
-                Path(pattern).is_absolute()
-                or "\\" in pattern
-                or any(part in {".", ".."} for part in Path(pattern).parts)
-            ):
-                raise ValueError("include pattern escapes the consumer root")
-            paths.update(
-                candidate.relative_to(runtime.repo) for candidate in runtime.repo.glob(pattern)
-            )
-    except (NotImplementedError, ValueError) as exc:
-        raise ConfigError(f"invalid selected project-spec include pattern: {exc}") from exc
+    # Discovery itself relocated to `_filesystem.select_spec_paths` in T15 so the
+    # control-plane seam can select the same corpus without importing this
+    # CLI-tier module. The empty-corpus policy below stays here: it is a
+    # reporting decision that depends on the selected package version.
+    paths = select_spec_paths(runtime.repo, runtime.effective_config)
     if not paths:
         if _selected_empty_corpus_is_valid(runtime):
             return []
         raise DiscoveryError("spec discovery matched no files")
-    return [(path, _selected_snapshot(path, runtime, must_exist=True)[2]) for path in sorted(paths)]
+    return [(path, _selected_snapshot(path, runtime, must_exist=True)[2]) for path in paths]
 
 
 def _selected_empty_corpus_is_valid(runtime: _SpecRuntime) -> bool:
@@ -175,18 +161,11 @@ def _selected_findings(
 ) -> list[tuple[Path, list[ControlFinding]]]:
     assert runtime.payload is not None
     assert runtime.effective_config is not None
-    documents: list[JsonValue] = []
     for display, entry in paths:
-        content = entry.content
-        if content is None:
+        # Kept ahead of the seam so the operator-facing message and its exit-2
+        # class stay this command's, not the control plane's.
+        if entry.content is None:
             raise ConfigError(f"cannot read spec {display}: snapshot has no regular content")
-        documents.append(
-            {
-                "path": str(display),
-                "kind": "regular",
-                "content_base64": base64.b64encode(content).decode("ascii"),
-            }
-        )
     operation = ProviderOperation.LINT if lint else ProviderOperation.VALIDATE
     result = invoke_provider(
         ProviderInvocation(
@@ -197,7 +176,12 @@ def _selected_findings(
             provider_id=operation.value,
             operation=operation,
             effective_config=runtime.effective_config,
-            snapshots={"documents": documents},
+            snapshots=provider_dispatch_input(
+                None,
+                operation,
+                standard_id="project-spec",
+                spec_entries=paths,
+            ),
         )
     )
     grouped: dict[str, list[ControlFinding]] = {str(display): [] for display, _entry in paths}

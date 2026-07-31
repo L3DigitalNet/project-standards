@@ -35,12 +35,9 @@ import argparse
 import datetime
 import io
 import json
-import os
 import re
-import stat
 import sys
-from collections.abc import Callable, Mapping
-from fnmatch import fnmatchcase
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -48,6 +45,12 @@ import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
+from project_standards._filesystem import (
+    DEFAULT_EXCLUDE,
+    DEFAULT_INCLUDE,
+    ConfigError,
+    collect_paths,
+)
 from project_standards._version import package_version
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
@@ -71,17 +74,6 @@ from project_standards.registry import Registry, RegistryError, load_registry
 _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)", re.DOTALL)
 
 _DEFAULT_SCHEMA_NAME = "markdown-frontmatter"
-DEFAULT_INCLUDE: tuple[str, ...] = ("README.md", "docs/**/*.md")
-DEFAULT_EXCLUDE: tuple[str, ...] = (
-    "**/*.template.md",
-    "AGENTS.md",
-    "CLAUDE.md",
-    ".agents/**",
-    ".claude/**",
-    ".codex/**",
-    ".github/**",
-    "node_modules/**",
-)
 
 
 class FrontmatterParseError(ValueError):
@@ -90,15 +82,6 @@ class FrontmatterParseError(ValueError):
     Distinct from "no block" / "non-mapping block" (which parse_frontmatter
     returns None for): this is a syntax error in an otherwise-present block, and
     must surface as a clean validation error rather than an uncaught traceback.
-    """
-
-
-class ConfigError(ValueError):
-    """An operator/invocation error: unreadable or invalid config, a bad glob or
-    named file, a non-string version value, or an unloadable doc_type enum.
-
-    Every CLI boundary in the package maps this to exit 2, so raising it from a
-    shared helper is the one sanctioned way to abort with a clean operator error.
     """
 
 
@@ -374,161 +357,6 @@ def validate_file(
         for section in missing_adr_sections(text):
             errors.append(f"{path}: missing required ADR section '## {section}'")
     return errors
-
-
-# ---------------------------------------------------------------------------
-# Path collection
-# ---------------------------------------------------------------------------
-
-
-def _default_corpus() -> list[Path]:
-    """Every Markdown file under cwd, skipping hidden and vendored trees.
-
-    A bare Path().glob("**/*.md") is rejected here because it recurses into
-    .git/, .venv/ and node_modules/ — the advertised zero-config default would
-    become unusable after the first dependency install, and validate-references'
-    index would fill with vendored docs. Hidden components and node_modules are
-    pruned during traversal, so those trees are never walked at all. Explicit
-    include patterns are untouched: a repo that wants hidden paths can name them.
-    """
-    found: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk("."):
-        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "node_modules"]
-        for filename in filenames:
-            if filename.endswith(".md") and not filename.startswith("."):
-                found.append(Path(dirpath, filename))
-    return found
-
-
-def _glob_files(pattern: str) -> list[Path]:
-    """Glob *pattern* relative to cwd, surfacing bad patterns as operator errors.
-
-    Path.glob raises NotImplementedError for absolute patterns (and ValueError for
-    other unsupported shapes); uncaught, that exits 1 looking like a validator
-    crash instead of the documented exit-2 invocation error.
-    """
-    try:
-        return [p for p in Path().glob(pattern) if p.is_file()]
-    except (NotImplementedError, ValueError) as exc:
-        raise ConfigError(
-            f"invalid glob pattern {pattern!r} (patterns must be relative to the repo root): {exc}"
-        ) from exc
-
-
-def collect_paths(
-    explicit: list[Path],
-    glob_pattern: str | None,
-    include_patterns: list[str],
-    exclude_patterns: list[str],
-    *,
-    on_named_excluded: Callable[[Path], None] | None = None,
-    config_driven_invocation: str | None = None,
-) -> list[Path]:
-    """Resolve the final set of files to check.
-
-    Explicit file arguments and/or a --glob take precedence: when either is given,
-    the config `include` patterns are NOT added (naming files means "just these").
-    Only when nothing is named do we fall back to config `include`, and failing
-    that to every Markdown file under cwd. `exclude` is applied in all cases.
-
-    Raises ConfigError for an explicitly named path that is not a regular file:
-    globs and includes may legitimately match nothing, but silently dropping a
-    named file turns a typo'd CI invocation into a green run that validated
-    nothing. Explicit-file callers can set `config_driven_invocation` to render a
-    distinct directory diagnostic with their supported no-positional-file command.
-    Config-only callers omit it and retain the existing missing-file behavior.
-
-    An explicitly named file that survives the existence check but is then dropped
-    by `exclude` is a milder version of the same trap (5.8.0 FR-010, issue #29): the
-    file exists, so no ConfigError fires, and it just vanishes from the result with
-    no signal. `on_named_excluded`, when given, is called once per such path, in
-    sorted order, purely for reporting — it never changes which paths are returned.
-    Glob/include-derived paths are expected to be pruned by `exclude` (that is what
-    exclude patterns are for) and never trigger the callback; only a path present in
-    `explicit` does. Kept as an opt-in callback rather than widening the return type
-    so only a caller that opts in pays for the diagnostic.
-
-    Pattern-dialect warning: include patterns use Path.glob semantics (`*` stops at
-    `/`), but exclude patterns use fnmatch semantics where `*` ALSO spans path
-    separators — `docs/*.md` excludes nested files too. For parity with Path.glob,
-    a leading `**/` also matches at the repository root. This asymmetry is the price
-    of version-independent `dir/**` exclusion (see the comment below); write exclude
-    patterns accordingly.
-    """
-    paths: set[Path] = set()
-
-    if explicit or glob_pattern:
-        invalid: list[tuple[Path, bool]] = []
-        for path in explicit:
-            try:
-                mode = path.stat().st_mode
-            except OSError:
-                invalid.append((path, False))
-                continue
-            if stat.S_ISDIR(mode):
-                invalid.append((path, True))
-            elif not stat.S_ISREG(mode):
-                invalid.append((path, False))
-        messages: list[str] = []
-        directories = [path for path, is_directory in invalid if is_directory]
-        if directories and config_driven_invocation is not None:
-            messages.append(
-                "directory inputs are not supported: "
-                + ", ".join(str(path) for path in directories)
-                + f"; run {config_driven_invocation!r} without positional FILE arguments "
-                "to use configured include patterns"
-            )
-            missing = [path for path, is_directory in invalid if not is_directory]
-        else:
-            missing = [path for path, _is_directory in invalid]
-        if missing:
-            messages.append("no such file: " + ", ".join(str(path) for path in missing))
-        if messages:
-            raise ConfigError("; ".join(messages))
-        paths.update(explicit)
-        if glob_pattern:
-            paths.update(_glob_files(glob_pattern))
-    elif include_patterns:
-        for pattern in include_patterns:
-            paths.update(_glob_files(pattern))
-    else:
-        paths.update(_default_corpus())
-
-    # Exclusion matches each candidate's posix path against the patterns with fnmatch
-    # rather than Path.glob. Path.glob's `**` semantics are version-dependent (on Python
-    # 3.13+ a trailing `**` also matches files; on <=3.12 it matches directories only),
-    # so a directory pattern like "docs/decisions/**" would silently fail to exclude the
-    # files beneath it on older interpreters. fnmatch's `*` spans path
-    # separators, giving consistent prefix-style exclusion on every supported
-    # Python version.
-    cwd = Path.cwd().resolve()
-
-    def _match_key(path: Path) -> str:
-        # Exclude patterns are written repo-root-relative; an explicitly passed
-        # absolute path must not bypass them just because its string form differs.
-        candidate = path if path.is_absolute() else cwd / path
-        try:
-            return candidate.resolve().relative_to(cwd).as_posix()
-        # Unparenthesized multi-exception is PEP 758 (Python >=3.14 only) and is
-        # what ruff format enforces here — re-adding parens gets stripped. Do not
-        # vendor this file onto older interpreters without re-parenthesizing.
-        except OSError, ValueError:
-            return path.as_posix()  # outside the repo root — match the raw form
-
-    def is_excluded(path: Path) -> bool:
-        key = _match_key(path)
-        return any(
-            fnmatchcase(key, pattern)
-            or (pattern.startswith("**/") and fnmatchcase(key, pattern.removeprefix("**/")))
-            for pattern in exclude_patterns
-        )
-
-    if on_named_excluded is not None:
-        for path in sorted(set(explicit)):
-            if is_excluded(path):
-                on_named_excluded(path)
-
-    return sorted(p for p in paths if not is_excluded(p))
 
 
 # ---------------------------------------------------------------------------

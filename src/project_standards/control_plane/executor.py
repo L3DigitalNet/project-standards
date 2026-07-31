@@ -9,7 +9,6 @@ the next planner can classify and repair the incomplete transition.
 
 from __future__ import annotations
 
-import base64
 import errno
 import hashlib
 import json
@@ -62,7 +61,6 @@ from project_standards.control_plane.snapshot import (
 )
 from project_standards.package_contract.paths import SafeRelativePath
 from project_standards.package_contract.payload import (
-    JsonObject,
     ProviderEffect,
     ProviderOperation,
 )
@@ -765,51 +763,6 @@ def _publish_targets(
         applied.append(f"prune:{namespace}")
 
 
-def _verification_snapshot(
-    repo: Path,
-    plan: ReconciliationPlan,
-    standard_id: str,
-) -> JsonObject:
-    targets = tuple(SafeRelativePath.parse(item.target) for item in plan.preconditions)
-    snapshot = RepositorySnapshot.capture(repo, targets)
-    result: JsonObject = {
-        entry.path.original: {
-            "kind": entry.kind.value,
-            "content_digest": entry.content_digest.value if entry.content_digest else None,
-            "content_base64": (
-                base64.b64encode(entry.content).decode("ascii")
-                if entry.content is not None
-                else None
-            ),
-            "mode": entry.mode,
-        }
-        for entry in snapshot.entries
-    }
-    result["referenced_inputs"] = [
-        {
-            "standard_id": item.standard_id,
-            "extension_id": item.extension_id,
-            "path": item.path.original,
-            "digest": item.digest.value,
-        }
-        for item in plan.next_lock.referenced_inputs
-        if item.standard_id == standard_id
-    ]
-    result["managed_units"] = [
-        {
-            "target": item.path.original,
-            "adapter": item.adapter.value,
-            "scope": item.scope,
-            "semantic_digest": item.semantic_digest.value,
-            "content_digest": item.content_digest.value,
-            "mode": item.mode,
-        }
-        for item in plan.next_lock.artifacts
-        if standard_id in item.owners
-    ]
-    return result
-
-
 def _disclaimed_targets(plan: ReconciliationPlan) -> frozenset[str]:
     """Return targets the plan asserts do not exist after apply, so none is staged.
 
@@ -877,6 +830,12 @@ def _verify(
     _verify_published_targets(request.planner.repo, plan)
     if not plan.verification_requests:
         return ()
+    # Deferred: `provider_inputs` imports `command_resolution`, which imports
+    # `control_plane.cli`, which imports this module. The one authority that
+    # builds provider input is therefore only reachable from inside the call;
+    # a module-scope import reintroduces that cycle.
+    from project_standards.control_plane.provider_inputs import provider_dispatch_input
+
     runner = request.verification_runner or invoke_provider
     packages = {item.standard_id: item for item in plan.resolution.packages}
     payloads = _selected_payloads(request)
@@ -895,10 +854,13 @@ def _verify(
                     provider_id=verification.provider_id,
                     operation=ProviderOperation.VERIFY,
                     effective_config=package.effective_config,
-                    snapshots=_verification_snapshot(
-                        request.planner.repo,
-                        plan,
-                        verification.standard_id,
+                    snapshots=provider_dispatch_input(
+                        None,
+                        ProviderOperation.VERIFY,
+                        repo=request.planner.repo,
+                        standard_id=verification.standard_id,
+                        plan=plan,
+                        provider_id=verification.provider_id,
                     ),
                 )
             )
