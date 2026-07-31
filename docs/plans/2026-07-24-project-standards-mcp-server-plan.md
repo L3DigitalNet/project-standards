@@ -3,10 +3,10 @@ title: 'Project Standards MCP Server Implementation Plan'
 slug: 'project-standards-mcp-server'
 size: full
 status: active
-source: 'SPEC-MS01 revision 1.1 and SPEC-RD01 revision 1.5'
+source: 'SPEC-MS01 revision 1.4 and SPEC-RD01 revision 1.6'
 spec_ref: 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
 created: 2026-07-24
-updated: 2026-07-29
+updated: 2026-07-31
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -73,16 +73,16 @@ Deliver a local, stdio, read-only Project Standards MCP server that exposes exac
 | FR-009 | Current-control-plane `repo_inspect`. | SPEC-MS01 §7.1 | must | T3, T8 |
 | FR-010 | Omit deterministic recommendations unless an existing typed service can justify them. | SPEC-MS01 §7.1 | could | T10 |
 | FR-011 | Dry-run `reconcile_preview`. | SPEC-MS01 §7.1 | must | T3, T9 |
-| FR-012 | Provider-backed `validate_repo`. | SPEC-MS01 §7.1 | must | T4, T9 |
-| FR-013 | Structured `drift_check`. | SPEC-MS01 §7.1 | should | T4, T9 |
+| FR-012 | Provider-backed `validate_repo`. | SPEC-MS01 §7.1 | must | T4, T9, T14 |
+| FR-013 | Structured `drift_check`. | SPEC-MS01 §7.1 | should | T4, T9, T14 |
 | FR-014 | Generic payload-qualified helper operations. | SPEC-MS01 §7.1 | should | T4, T9 |
-| FR-015 | Delegate all semantics through the facade. | SPEC-MS01 §7.1 | must | T2, T3, T4 |
+| FR-015 | Delegate all semantics through the facade. | SPEC-MS01 §7.1 | must | T2, T3, T4, T15 |
 | FR-016 | Preserve CLI/CI backstops. | SPEC-MS01 §7.1 | must | T11 |
 | FR-017 | Preserve reconciliation fingerprints/preconditions. | SPEC-MS01 §7.1 | should | T3, T9 |
 | FR-018 | No v1 write tools. | SPEC-MS01 §7.1 | must | T5, T9, T10 |
 | FR-019 | Future writes reuse executor safety. | SPEC-MS01 §7.1 | should | T9 |
 | FR-020 | Client setup and troubleshooting docs. | SPEC-MS01 §7.1 | should | T11 |
-| FR-021 | Preserve declared relationships without hidden dependencies. | SPEC-MS01 §7.1 | must | T2, T6, T8 |
+| FR-021 | Preserve declared relationships without hidden dependencies. | SPEC-MS01 §7.1 | must | T2, T6, T8, T13 |
 | FR-022 | Typed structured tool results. | SPEC-MS01 §7.1 | must | T8, T9 |
 | FR-023 | Compact reviewed tool metadata. | SPEC-MS01 §7.1 | should | T8, T9 |
 | FR-024 | Explicit root with optional narrowing. | SPEC-MS01 §7.1 | must | T3, T5, T8, T9 |
@@ -96,7 +96,7 @@ Deliver a local, stdio, read-only Project Standards MCP server that exposes exac
 | NFR-002 | Compact lazy discovery. | SPEC-MS01 §7.2 | must | T6 |
 | NFR-003 | Protocol-only stdout. | SPEC-MS01 §7.2 | must | T5, T10 |
 | NFR-004 | Structured clear errors. | SPEC-MS01 §7.2 | must | T5, T10 |
-| NFR-005 | Explicit deterministic normalization. | SPEC-MS01 §7.2 | must | T2, T3, T4, T6, T10 |
+| NFR-005 | Explicit deterministic normalization. | SPEC-MS01 §7.2 | must | T2, T3, T4, T6, T10, T13, T14, T15 |
 | NFR-006 | Thin MCP layer. | SPEC-MS01 §7.2 | must | T2, T3, T4, T5, T10 |
 | NFR-007 | Bounded/cached common reads. | SPEC-MS01 §7.2 | should | T2, T6 |
 | NFR-008 | No remote transport. | SPEC-MS01 §7.2 | must | T5, T10 |
@@ -114,7 +114,7 @@ Deliver a local, stdio, read-only Project Standards MCP server that exposes exac
 | IR-007 | Explicit roots with optional narrowing. | SPEC-MS01 §7.3 | required | T3, T5 |
 | IR-008 | Accurate revision-specific capability discovery. | SPEC-MS01 §7.3 | required | T5, T10 |
 | IR-009 | Exact payload-qualified provider dispatch. | SPEC-MS01 §7.3 | required | T4, T9 |
-| DR-001 | V2 package descriptor authority. | SPEC-MS01 §7.4 | required | T2 |
+| DR-001 | V2 package descriptor authority. | SPEC-MS01 §7.4 | required | T2, T13 |
 | DR-002 | Exact resource descriptor fields and validation. | SPEC-MS01 §7.4 | required | T2, T6 |
 | DR-003 | Required structured Finding fields. | SPEC-MS01 §7.4 | required | T4, T10 |
 | DR-004 | Existing reconciliation preview schema. | SPEC-MS01 §7.4 | required | T3, T9 |
@@ -122,7 +122,7 @@ Deliver a local, stdio, read-only Project Standards MCP server that exposes exac
 | DR-006 | Exact V2 relationship result. | SPEC-MS01 §7.4 | required | T2, T8 |
 | DR-007 | Truthful MCP capability descriptor/list changes. | SPEC-MS01 §7.4 | required | T5, T10 |
 | DR-008 | Exact typed provider result. | SPEC-MS01 §7.4 | required | T4, T9 |
-| DR-009 | Explicit deterministic normalization. | SPEC-MS01 §7.4 | required | T2, T3, T4, T10 |
+| DR-009 | Explicit deterministic normalization. | SPEC-MS01 §7.4 | required | T2, T3, T4, T10, T13, T14, T15 |
 
 `FR-010` is Could-priority and is satisfied in v1 by an explicit omission: no current typed recommendation service exists, so T10 proves that the server registers no recommendation tool and returns no invented confidence or relevance result. Appendix C records the conditions for reconsidering it.
 
@@ -469,7 +469,7 @@ Before T1, the implementing agent must:
 #### T9: Add reconciliation and provider tools
 
 - **goal:** Register non-mutating reconciliation, validation, drift, and approved helper tools with no alternate schemas or write path. · **phase:** P4 · **depends_on:** [T3, T4, T5, T7] · **requirements:** [FR-011, FR-012, FR-013, FR-014, FR-017, FR-018, FR-019, FR-022, FR-023, FR-024, FR-028, NFR-012, IR-003, IR-009, DR-004, DR-008] · **priority:** must
-- **files:** `src/project_standards/mcp_server/tools.py` (modify), `src/project_standards/mcp_server/models.py` (modify), `src/project_standards/mcp_server/transport.py` (modify), `tests/mcp_server/test_consumer_tools.py` (create), `tests/mcp_server/security/test_no_writes.py` (create), `tests/mcp_server/test_discovery_tools.py` (modify)
+- **files:** `src/project_standards/mcp_server/tools.py` (modify), `src/project_standards/mcp_server/models.py` (modify), `src/project_standards/mcp_server/transport.py` (modify), `tests/mcp_server/test_consumer_tools.py` (create), `tests/mcp_server/security/test_no_writes.py` (create), `tests/mcp_server/security/__init__.py` (create; empty package marker required by the `tests.*` import convention — recorded T9.1 deviation), `tests/mcp_server/test_discovery_tools.py` (modify)
 - **preconditions:** T3/T4 services, T5 transport, and T7's completed `tools.py` registry/fallback decision are green; T1 has either enumerated one generic helper tool and its non-mutating operations or explicitly omitted it.
 - **interface/data:** always register `reconcile_preview(repo_root)`, `validate_repo(repo_root)`, and `drift_check(repo_root)`. Preview returns `McpServiceFacade.reconcile`; validation and drift map `McpServiceFacade.validate_repo` and `McpServiceFacade.drift_check` without performing provider selection or drift interpretation in `mcp_server`. Register a generic helper only if ADR 0025 names it and its exact schema. Every handler calls `McpServiceFacade`; `mcp_server` must not import `apply_reconciliation`, `apply_authoring_plan`, mutation schemas, provider entrypoints, or provider declarations directly.
 - **stop/backtrack:** if authoritative service output cannot map losslessly to the frozen structured schema, or an operation reaches a mutating effect/write/syscall fixture, stop and return to T3/T4. Never sanitize away an unsafe action and return success, invoke CLI text, or add an apply callable.
@@ -487,7 +487,7 @@ Before T1, the implementing agent must:
 #### T10: Prove protocol, safety, determinism, and CI
 
 - **goal:** Close cross-cutting protocol and repository acceptance with stable fixtures and the existing CI gate. · **phase:** P5 · **depends_on:** [T6, T7, T8, T9] · **requirements:** [FR-010, FR-018, FR-025, FR-029, NFR-001, NFR-003, NFR-004, NFR-005, NFR-006, NFR-008, NFR-009, NFR-011, NFR-012, NFR-013, IR-008, DR-003, DR-007, DR-009] · **priority:** must
-- **files:** `tests/mcp_server/contract/test_protocol_conformance.py` (create), `tests/mcp_server/contract/test_determinism.py` (create), `tests/mcp_server/contract/test_no_recommendations.py` (create), `tests/mcp_server/contract/test_import_boundary.py` (modify), `tests/mcp_server/integration/__init__.py` (create; empty package marker for the planned directory, required by the `tests.*` import convention), `tests/mcp_server/integration/test_server.py` (create), `tests/mcp_server/integration/test_registry_invariants.py` (create), `.github/workflows/check.yml` (modify only if current discovery does not already run these tests; unmodified at T10 — discovery already reaches these paths)
+- **files:** `src/project_standards/mcp_server/transport.py` (modify — the single authorized T10.3 product change mapping unexpected handler exceptions to structured `-32603` `internal-error` refusals in both eras), `tests/mcp_server/contract/test_protocol_conformance.py` (create), `tests/mcp_server/contract/test_determinism.py` (create), `tests/mcp_server/contract/test_no_recommendations.py` (create), `tests/mcp_server/contract/test_import_boundary.py` (modify), `tests/mcp_server/integration/__init__.py` (create; empty package marker for the planned directory, required by the `tests.*` import convention), `tests/mcp_server/integration/test_server.py` (create), `tests/mcp_server/integration/test_registry_invariants.py` (create), `.github/workflows/check.yml` (modify only if current discovery does not already run these tests; unmodified at T10 — discovery already reaches these paths)
 - **preconditions:** T6-T9 are done; every task-specific suite is green; T1 protocol/client evidence still matches the locked SDK and installed clients.
 - **interface/data:** protocol fixtures cover initialize/discovery, resource template/list/read, prompt list/get when present, tool list/call, structured errors, and shutdown for the selected revision. At least one provider fixture writes to Python and file-descriptor stdout/stderr so the transcript proves worker output cannot contaminate protocol stdout. Golden tests compare stable fields verbatim, permute semantically unordered inputs to prove declared ordering, require root-relative paths, and reject timestamps/durations or hidden normalization. Registry invariants prove fixture package growth changes data/resources only, no recommendation surface exists, and no remote/write capability is reachable.
 - **stop/backtrack:** a cross-cutting failure returns to the earliest owning task; T10 may fix only adapter mapping, test harness, or necessary existing-workflow discovery. Do not add features, weaken goldens, blanket-normalize new fields, or create a second CI workflow. If official conformance behavior has changed, return to T1.
@@ -503,7 +503,7 @@ Before T1, the implementing agent must:
 #### T11: Prove installed-wheel clients and document use
 
 - **goal:** Demonstrate the same candidate wheel in Codex and Claude Code and write accurate setup/reference/troubleshooting docs. · **phase:** P5 · **depends_on:** [T10] · **requirements:** [FR-016, FR-020, FR-030, NFR-009, NFR-010, NFR-011] · **priority:** must
-- **files:** `README.md` (modify), `docs/mcp-server.md` (create), `CHANGELOG.md` (modify under `Unreleased` only), `docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md` (modify), `docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md` (modify), `docs/specs/README.md` (modify), `tests/mcp_server/e2e/test_installed_wheel.py` (create), candidate wheel/runtime (temporary)
+- **files:** `README.md` (modify), `docs/mcp-server.md` (create), `CHANGELOG.md` (modify under `Unreleased` only), `docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md` (modify), `docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md` (modify), `docs/specs/README.md` (modify), `tests/mcp_server/e2e/test_installed_wheel.py` (create), `tests/mcp_server/e2e/__init__.py` (create; empty package marker required by the `tests.*` import convention — recorded T11 deviation F-N), `tests/mcp_server/test_standard_read.py` (modify — equivalence-suite accommodation), `tests/mcp_server/test_transport.py` (modify — equivalence-suite accommodation), candidate wheel/runtime (temporary)
 - **preconditions:** T10 is done; source tests are green; current Codex and Claude versions match or intentionally supersede the versions recorded in T1; client smoke work has isolated temporary configuration and an owner-approved repo fixture.
 - **interface/data:** the installed-wheel test constructs the facade/server from extracted package bytes and compares the complete stable catalog/resource/tool schemas with source-fixture results. The temporary candidate is identified by its SHA-256 and the final T12 commit because release-version finalization is not authorized; do not publish or install it as a replacement for a released artifact carrying the same base version. `docs/mcp-server.md` must carry repository-compliant frontmatter and contain prerequisites, install/version check, exact stdio configuration for each client, capability matrix, URI/tool schemas, explicit-root/read-only/security rules, equivalent CLI/CI commands, troubleshooting, and uninstall/disable steps. `CHANGELOG.md` records the additive feature under `Unreleased` without creating a versioned release section. Client evidence records wheel digest, version, invocation, observed capabilities, roots, prompts/resources/tools, fallback use, stdout/stderr result, and fixture identity; T12 adds the final commit. Record the owner's real-consumer dogfood decision against `SPEC-MS01 OQ-005`, update that question's status, append exactly one next sequential `SPEC-MS01` revision row summarizing the T11 decision, and update `last_reviewed` plus `docs/specs/README.md`.
 - **stop/backtrack:** if source and wheel facts differ, stop and fix packaging/projection in the earliest owning task, discard the old temporary artifact/runtime, and restart T11.0 before documentation. If a primary client cannot satisfy the frozen v1 contract or the owner has not recorded the `SPEC-MS01 OQ-005` decision, return to T1 or stop for owner direction as applicable; do not make an unplanned packaging correction in T11, modify the user's persistent global client configuration, silently drop a primary client, add an unplanned compatibility tool, or self-authorize the real-consumer choice.
@@ -579,6 +579,8 @@ CLI, CI, and package/control-plane APIs remain primary and unchanged. MCP is an 
 | D-005 | No writes or remote transport in v1. | Preserve bounded first release. | T1, T5, T9, T10 |
 
 ## 12. Open Questions
+
+All nine questions are resolved (SPEC-RD01 at revision 1.6, SPEC-MS01 at revision 1.4; OQ-005 closed at T11 on 2026-07-30). The rows below preserve the original pre-resolution assumptions as authored; the resolutions live in the spec revision histories and the §14 close-out.
 
 | ID | Question | Blocking? | Owner | Current assumption |
 | --- | --- | --- | --- | --- |
