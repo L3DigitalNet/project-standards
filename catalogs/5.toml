@@ -53,6 +53,12 @@ role = "retained"
 id = "agent-handoff"
 version = "1.6"
 digest = "sha256:97041fb9a47c28cf0e2dd38c2de32be827af4b079de3943d6b74675bf52d81f8"
+role = "retained"
+
+[[packages]]
+id = "agent-handoff"
+version = "1.7"
+digest = "sha256:f6f73298701a9934b6e610babb45c24efd0c8e502872c881702b5ad102bcb707"
 role = "default"
 
 [[packages]]
@@ -113,6 +119,12 @@ role = "retained"
 id = "markdown-frontmatter"
 version = "1.6"
 digest = "sha256:cf1e2c975d5f139f1b3864090e6fcc0e45dcb895a97dd07113c0eeb7af0d0f32"
+role = "retained"
+
+[[packages]]
+id = "markdown-frontmatter"
+version = "1.7"
+digest = "sha256:97fd123d61d3b0932376872c5089ed537ae47dfe8f5e2e12b31e4fed77bc041a"
 role = "default"
 
 [[packages]]
@@ -167,6 +179,12 @@ role = "retained"
 id = "markdown-tooling"
 version = "1.10"
 digest = "sha256:db6b97d120ac9f31ab589c2d48926acb5713b840738dd13b6460d34632e4fc9b"
+role = "retained"
+
+[[packages]]
+id = "markdown-tooling"
+version = "1.11"
+digest = "sha256:6bd9701104593e3a917bf757fbcc8b2ebba22a5142149e2f7c372685d8aae386"
 role = "default"
 
 [[packages]]

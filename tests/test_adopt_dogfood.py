@@ -32,7 +32,7 @@ from project_standards.control_plane.planner import plan_reconciliation
 _REPO = Path(__file__).resolve().parent.parent
 _BUNDLES = _REPO / "src" / "project_standards" / "bundles"
 _CURRENT_MARKDOWNLINT = (
-    _REPO / "standards/markdown-tooling/versions/1.10/artifacts/markdownlint.json"
+    _REPO / "standards/markdown-tooling/versions/1.11/artifacts/markdownlint.json"
 )
 FROZEN_V1_CHECK_DIGEST = "2dd6b7c11db910458add9696ade9b37c9f5ae4e23004da5333b52e3669bd15e5"
 
@@ -149,7 +149,7 @@ def test_generated_workflow_yaml_has_no_tabs() -> None:
 
 @pytest.mark.parametrize(
     "standard_id,version",
-    [("markdown-frontmatter", "1.6"), ("adr", "1.3"), ("project-spec", "1.5")],
+    [("markdown-frontmatter", "1.7"), ("adr", "1.3"), ("project-spec", "1.5")],
 )
 def test_current_adoption_guides_use_v5_packages_not_v1_fragments(
     standard_id: str,

@@ -1,6 +1,6 @@
 # Agent Handoff family: Agent Summary
 
-Current authority is the Catalog 5 consumer payload [`agent-handoff@1.6`](versions/1.6/agent-summary.md). Its [versioned standard](versions/1.6/README.md) and installed repo-local skill win over this mutable navigation summary.
+Current authority is the Catalog 5 consumer payload [`agent-handoff@1.7`](versions/1.7/agent-summary.md). Its [versioned standard](versions/1.7/README.md) and installed repo-local skill win over this mutable navigation summary.
 
 - Keep all project handoff knowledge inside the adopting repository.
 - Preserve consumer-owned `docs/STATUS.md`, `docs/TODO.md`, and `docs/handoff/**`; package operations create them only when absent.

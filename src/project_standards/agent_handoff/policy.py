@@ -657,7 +657,37 @@ def check_document(path: str, text: str, policy: HandoffPolicy) -> tuple[Finding
     return (*advisory, *findings)
 
 
+# Issue #94: mirrors `_COMMAND_SUBSTITUTION` / `_acquires_at_runtime` in the
+# agent-handoff 1.7 payload provider, which is the authority for these semantics.
+# The payload cannot be imported from here (a payload is self-contained and
+# version-selected), so the rule is duplicated rather than shared, the same way
+# the masking parity of issues #68/#69 is; `tests/package_contract/
+# test_agent_handoff_1_7.py` asserts the two implementations agree case for case.
+#
+# A backtick span with internal whitespace is a command invocation. Without that
+# whitespace it is a quoted value, and it falls through to the reference policy
+# below, so backticks alone can never launder a literal.
+_COMMAND_SUBSTITUTION = re.compile(r"\A(?:\$\((?P<paren>.*)\)|`(?P<span>.*)`)\Z", re.DOTALL)
+
+
+def _acquires_at_runtime(value: str) -> bool:
+    """Return whether a quote-stripped assignment value runs a command."""
+    match = _COMMAND_SUBSTITUTION.fullmatch(value)
+    if match is None:
+        return False
+    if match.group("paren") is not None:
+        return True
+    return " " in (match.group("span") or "").strip()
+
+
 def _is_reference(value: str, policy: CredentialsPolicy) -> bool:
+    # Purely additive against the checks below: a value they already accepted is
+    # still accepted, so this only withdraws the command-substitution false
+    # positive. `$( ... )` was already tolerated here through the "$" reference
+    # prefix; naming it explicitly is what keeps engine and provider in step if
+    # that prefix is ever tightened.
+    if _acquires_at_runtime(value.strip().strip("\"'")):
+        return True
     normalized = value.strip().strip("\"'`")
     if normalized in policy.allowed_reference_values:
         return True

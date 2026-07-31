@@ -16,7 +16,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.3 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.4 | retained | consumer | 29 | 8 | 18 |
 | [`agent-handoff`](agent-handoff/README.md) | active | 1.5 | retained | consumer | 29 | 8 | 18 |
-| [`agent-handoff`](agent-handoff/README.md) | active | 1.6 | default | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.6 | retained | consumer | 29 | 8 | 18 |
+| [`agent-handoff`](agent-handoff/README.md) | active | 1.7 | default | consumer | 29 | 8 | 18 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.1 | retained | consumer | 13 | 3 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.2 | retained | consumer | 13 | 3 | 1 |
 | [`cli-documentation`](cli-documentation/README.md) | active | 1.3 | retained | consumer | 13 | 3 | 1 |
@@ -26,7 +27,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.3 | retained | consumer | 29 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.4 | retained | consumer | 30 | 5 | 9 |
 | [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.5 | retained | consumer | 30 | 5 | 9 |
-| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.6 | default | consumer | 30 | 5 | 9 |
+| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.6 | retained | consumer | 30 | 5 | 9 |
+| [`markdown-frontmatter`](markdown-frontmatter/README.md) | active | 1.7 | default | consumer | 30 | 5 | 9 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.2 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.3 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.4 | retained | consumer | 17 | 6 | 25 |
@@ -35,7 +37,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.7 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.8 | retained | consumer | 17 | 6 | 25 |
 | [`markdown-tooling`](markdown-tooling/README.md) | active | 1.9 | retained | consumer | 17 | 6 | 25 |
-| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.10 | default | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.10 | retained | consumer | 17 | 6 | 25 |
+| [`markdown-tooling`](markdown-tooling/README.md) | active | 1.11 | default | consumer | 17 | 6 | 25 |
 | [`project-spec`](project-spec/README.md) | active | 1.1 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.2 | retained | consumer | 23 | 9 | 1 |
 | [`project-spec`](project-spec/README.md) | active | 1.3 | retained | consumer | 23 | 9 | 1 |
@@ -74,6 +77,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.4` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.5` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `agent-handoff@1.6` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
+| `agent-handoff@1.7` | `agent-handoff.drift-check`, `agent-handoff.extract`, `agent-handoff.scaffold`, `agent-handoff.session-context`, `agent-handoff.upgrade`, `agent-handoff.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `cli-documentation@1.1` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.2` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
 | `cli-documentation@1.3` | `cli.docs.usage`, `cli.docs.workflow-render`, `cli.docs.workflow-verify` | `project-standards.reconcile` |
@@ -84,6 +88,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.4` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.5` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-frontmatter@1.6` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
+| `markdown-frontmatter@1.7` | `markdown.frontmatter.format`, `markdown.frontmatter.schema`, `markdown.id.validate`, `markdown.references.validate` | `project-standards.reconcile` |
 | `markdown-tooling@1.2` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.3` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.4` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
@@ -93,6 +98,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.8` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.9` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `markdown-tooling@1.10` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
+| `markdown-tooling@1.11` | `json.format`, `markdown.format`, `markdown.lint.structure`, `yaml.format` | `project-standards.reconcile` |
 | `project-spec@1.1` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.2` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
 | `project-spec@1.3` | `spec.extract`, `spec.id-next`, `spec.lint`, `spec.scaffold`, `spec.upgrade`, `spec.validate` | `project-standards.authoring`, `project-standards.reconcile` |
@@ -135,6 +141,8 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.5` | companion | `markdown-tooling` |
 | `markdown-frontmatter@1.6` | companion | `adr` |
 | `markdown-frontmatter@1.6` | companion | `markdown-tooling` |
+| `markdown-frontmatter@1.7` | companion | `adr` |
+| `markdown-frontmatter@1.7` | companion | `markdown-tooling` |
 | `markdown-tooling@1.2` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.3` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.4` | companion | `markdown-frontmatter` |
@@ -144,6 +152,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.8` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.9` | companion | `markdown-frontmatter` |
 | `markdown-tooling@1.10` | companion | `markdown-frontmatter` |
+| `markdown-tooling@1.11` | companion | `markdown-frontmatter` |
 | `project-spec@1.1` | companion | `markdown-frontmatter` |
 | `project-spec@1.2` | companion | `markdown-frontmatter` |
 | `project-spec@1.3` | companion | `markdown-frontmatter` |
@@ -376,6 +385,35 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.6` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.6/resources/provider-findings` | `schemas/findings.schema.json` |
 | `agent-handoff@1.6` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.6/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
 | `agent-handoff@1.6` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.6/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `agent-handoff@1.7` | `readme` | `canonical-standard` | `standards://agent-handoff/1.7/resources/readme` | `README.md` |
+| `agent-handoff@1.7` | `adopt` | `adoption-guide` | `standards://agent-handoff/1.7/resources/adopt` | `adopt.md` |
+| `agent-handoff@1.7` | `agent-summary` | `agent-summary` | `standards://agent-handoff/1.7/resources/agent-summary` | `agent-summary.md` |
+| `agent-handoff@1.7` | `config-schema` | `config-schema` | `standards://agent-handoff/1.7/resources/config-schema` | `config.schema.json` |
+| `agent-handoff@1.7` | `legacy-guidance` | `standard-reference` | `standards://agent-handoff/1.7/resources/legacy-guidance` | `resources/legacy-migration.md` |
+| `agent-handoff@1.7` | `legacy-instructions-source` | `legacy-reference` | `standards://agent-handoff/1.7/resources/legacy-instructions-source` | `resources/integration/agent-instructions.md` |
+| `agent-handoff@1.7` | `legacy-claude-source` | `legacy-reference` | `standards://agent-handoff/1.7/resources/legacy-claude-source` | `resources/integration/claude-session-start.json` |
+| `agent-handoff@1.7` | `legacy-codex-source` | `legacy-reference` | `standards://agent-handoff/1.7/resources/legacy-codex-source` | `resources/integration/codex-session-start.toml` |
+| `agent-handoff@1.7` | `legacy-config-source` | `legacy-reference` | `standards://agent-handoff/1.7/resources/legacy-config-source` | `resources/integration/project-config.yml` |
+| `agent-handoff@1.7` | `hook` | `provider-resource` | `standards://agent-handoff/1.7/resources/hook` | `provider-resources/managed/hook.py` |
+| `agent-handoff@1.7` | `skill` | `provider-resource` | `standards://agent-handoff/1.7/resources/skill` | `provider-resources/managed/skill.md` |
+| `agent-handoff@1.7` | `skill-openai` | `provider-resource` | `standards://agent-handoff/1.7/resources/skill-openai` | `provider-resources/managed/openai.yaml` |
+| `agent-handoff@1.7` | `policy` | `provider-resource` | `standards://agent-handoff/1.7/resources/policy` | `provider-resources/managed/policy.toml` |
+| `agent-handoff@1.7` | `template-status` | `template` | `standards://agent-handoff/1.7/resources/template-status` | `provider-resources/templates/STATUS.md` |
+| `agent-handoff@1.7` | `template-todo` | `template` | `standards://agent-handoff/1.7/resources/template-todo` | `provider-resources/templates/TODO.md` |
+| `agent-handoff@1.7` | `template-architecture` | `template` | `standards://agent-handoff/1.7/resources/template-architecture` | `provider-resources/templates/architecture.md` |
+| `agent-handoff@1.7` | `template-bugs-keep` | `template` | `standards://agent-handoff/1.7/resources/template-bugs-keep` | `provider-resources/templates/bugs.gitkeep` |
+| `agent-handoff@1.7` | `template-conventions` | `template` | `standards://agent-handoff/1.7/resources/template-conventions` | `provider-resources/templates/conventions.md` |
+| `agent-handoff@1.7` | `template-credentials` | `template` | `standards://agent-handoff/1.7/resources/template-credentials` | `provider-resources/templates/credentials.md` |
+| `agent-handoff@1.7` | `template-deployed` | `template` | `standards://agent-handoff/1.7/resources/template-deployed` | `provider-resources/templates/deployed.md` |
+| `agent-handoff@1.7` | `template-sessions-keep` | `template` | `standards://agent-handoff/1.7/resources/template-sessions-keep` | `provider-resources/templates/sessions.gitkeep` |
+| `agent-handoff@1.7` | `template-specs-plans` | `template` | `standards://agent-handoff/1.7/resources/template-specs-plans` | `provider-resources/templates/specs-plans.md` |
+| `agent-handoff@1.7` | `template-state` | `template` | `standards://agent-handoff/1.7/resources/template-state` | `provider-resources/templates/state.md` |
+| `agent-handoff@1.7` | `provider-code` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-code` | `providers/agent_handoff.py` |
+| `agent-handoff@1.7` | `provider-input` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `agent-handoff@1.7` | `provider-content` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-content` | `schemas/content.schema.json` |
+| `agent-handoff@1.7` | `provider-findings` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-findings` | `schemas/findings.schema.json` |
+| `agent-handoff@1.7` | `provider-mutation-plan` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `agent-handoff@1.7` | `provider-migration-report` | `provider-resource` | `standards://agent-handoff/1.7/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `cli-documentation@1.1` | `readme` | `canonical-standard` | `standards://cli-documentation/1.1/resources/readme` | `README.md` |
 | `cli-documentation@1.1` | `adopt` | `adoption-guide` | `standards://cli-documentation/1.1/resources/adopt` | `adopt.md` |
 | `cli-documentation@1.1` | `agent-summary` | `agent-summary` | `standards://cli-documentation/1.1/resources/agent-summary` | `agent-summary.md` |
@@ -591,6 +629,36 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.6` | `provider-mutation-plan` | `provider-resource` | `standards://markdown-frontmatter/1.6/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
 | `markdown-frontmatter@1.6` | `provider-migration-report` | `provider-resource` | `standards://markdown-frontmatter/1.6/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `markdown-frontmatter@1.6` | `frontmatter-schema` | `provider-resource` | `standards://markdown-frontmatter/1.6/resources/frontmatter-schema` | `schemas/markdown-frontmatter.schema.json` |
+| `markdown-frontmatter@1.7` | `readme` | `canonical-standard` | `standards://markdown-frontmatter/1.7/resources/readme` | `README.md` |
+| `markdown-frontmatter@1.7` | `agent-summary` | `agent-summary` | `standards://markdown-frontmatter/1.7/resources/agent-summary` | `agent-summary.md` |
+| `markdown-frontmatter@1.7` | `config-schema` | `config-schema` | `standards://markdown-frontmatter/1.7/resources/config-schema` | `config.schema.json` |
+| `markdown-frontmatter@1.7` | `adopt` | `adoption-guide` | `standards://markdown-frontmatter/1.7/resources/adopt` | `adopt.md` |
+| `markdown-frontmatter@1.7` | `structure` | `standard-reference` | `standards://markdown-frontmatter/1.7/resources/structure` | `structure.md` |
+| `markdown-frontmatter@1.7` | `field-values` | `standard-reference` | `standards://markdown-frontmatter/1.7/resources/field-values` | `field-values.md` |
+| `markdown-frontmatter@1.7` | `example-concept` | `example` | `standards://markdown-frontmatter/1.7/resources/example-concept` | `examples/concept.example.md` |
+| `markdown-frontmatter@1.7` | `example-note` | `example` | `standards://markdown-frontmatter/1.7/resources/example-note` | `examples/note.example.md` |
+| `markdown-frontmatter@1.7` | `example-runbook` | `example` | `standards://markdown-frontmatter/1.7/resources/example-runbook` | `examples/runbook.example.md` |
+| `markdown-frontmatter@1.7` | `template-concept` | `template` | `standards://markdown-frontmatter/1.7/resources/template-concept` | `templates/concept.md` |
+| `markdown-frontmatter@1.7` | `template-frontmatter-minimal` | `template` | `standards://markdown-frontmatter/1.7/resources/template-frontmatter-minimal` | `templates/frontmatter-minimal.yml` |
+| `markdown-frontmatter@1.7` | `template-frontmatter-standard` | `template` | `standards://markdown-frontmatter/1.7/resources/template-frontmatter-standard` | `templates/frontmatter-standard.yml` |
+| `markdown-frontmatter@1.7` | `template-note` | `template` | `standards://markdown-frontmatter/1.7/resources/template-note` | `templates/note.md` |
+| `markdown-frontmatter@1.7` | `template-repo-pages` | `template` | `standards://markdown-frontmatter/1.7/resources/template-repo-pages` | `templates/repo-pages/README.directory.template.md` |
+| `markdown-frontmatter@1.7` | `template-repository-frontmatter-adr` | `template` | `standards://markdown-frontmatter/1.7/resources/template-repository-frontmatter-adr` | `templates/repository-frontmatter-adr.md` |
+| `markdown-frontmatter@1.7` | `template-research` | `template` | `standards://markdown-frontmatter/1.7/resources/template-research` | `templates/research.md` |
+| `markdown-frontmatter@1.7` | `template-runbook` | `template` | `standards://markdown-frontmatter/1.7/resources/template-runbook` | `templates/runbook.md` |
+| `markdown-frontmatter@1.7` | `template-spec` | `template` | `standards://markdown-frontmatter/1.7/resources/template-spec` | `templates/spec.md` |
+| `markdown-frontmatter@1.7` | `legacy-skill` | `legacy-reference` | `standards://markdown-frontmatter/1.7/resources/legacy-skill` | `resources/legacy-markdown-frontmatter-skill.md` |
+| `markdown-frontmatter@1.7` | `workflow-caller` | `workflow-template` | `standards://markdown-frontmatter/1.7/resources/workflow-caller` | `validate-markdown-frontmatter.caller.yml` |
+| `markdown-frontmatter@1.7` | `workflow-job-caller` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/workflow-job-caller` | `workflow-job.yml` |
+| `markdown-frontmatter@1.7` | `workflow-job-self-hosted` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/workflow-job-self-hosted` | `workflow-job.self-hosted.yml` |
+| `markdown-frontmatter@1.7` | `provider-code` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-code` | `providers/frontmatter.py` |
+| `markdown-frontmatter@1.7` | `legacy-validate-standards-workflow` | `legacy-reference` | `standards://markdown-frontmatter/1.7/resources/legacy-validate-standards-workflow` | `resources/legacy-validate-standards.yml` |
+| `markdown-frontmatter@1.7` | `provider-input` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `markdown-frontmatter@1.7` | `provider-findings` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-findings` | `schemas/findings.schema.json` |
+| `markdown-frontmatter@1.7` | `provider-content` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-content` | `schemas/content.schema.json` |
+| `markdown-frontmatter@1.7` | `provider-mutation-plan` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-mutation-plan` | `schemas/mutation-plan.schema.json` |
+| `markdown-frontmatter@1.7` | `provider-migration-report` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `markdown-frontmatter@1.7` | `frontmatter-schema` | `provider-resource` | `standards://markdown-frontmatter/1.7/resources/frontmatter-schema` | `schemas/markdown-frontmatter.schema.json` |
 | `markdown-tooling@1.2` | `readme` | `canonical-standard` | `standards://markdown-tooling/1.2/resources/readme` | `README.md` |
 | `markdown-tooling@1.2` | `adopt` | `adoption-guide` | `standards://markdown-tooling/1.2/resources/adopt` | `adopt.md` |
 | `markdown-tooling@1.2` | `agent-summary` | `agent-summary` | `standards://markdown-tooling/1.2/resources/agent-summary` | `agent-summary.md` |
@@ -744,6 +812,23 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.10` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.10/resources/provider-content` | `schemas/content.schema.json` |
 | `markdown-tooling@1.10` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.10/resources/provider-findings` | `schemas/findings.schema.json` |
 | `markdown-tooling@1.10` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.10/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
+| `markdown-tooling@1.11` | `readme` | `canonical-standard` | `standards://markdown-tooling/1.11/resources/readme` | `README.md` |
+| `markdown-tooling@1.11` | `adopt` | `adoption-guide` | `standards://markdown-tooling/1.11/resources/adopt` | `adopt.md` |
+| `markdown-tooling@1.11` | `agent-summary` | `agent-summary` | `standards://markdown-tooling/1.11/resources/agent-summary` | `agent-summary.md` |
+| `markdown-tooling@1.11` | `config-schema` | `config-schema` | `standards://markdown-tooling/1.11/resources/config-schema` | `config.schema.json` |
+| `markdown-tooling@1.11` | `markdownlint-source` | `provider-resource` | `standards://markdown-tooling/1.11/resources/markdownlint-source` | `resources/markdownlint.json` |
+| `markdown-tooling@1.11` | `prettier-source` | `provider-resource` | `standards://markdown-tooling/1.11/resources/prettier-source` | `resources/prettierrc.json` |
+| `markdown-tooling@1.11` | `legacy-editorconfig` | `legacy-reference` | `standards://markdown-tooling/1.11/resources/legacy-editorconfig` | `resources/legacy-editorconfig` |
+| `markdown-tooling@1.11` | `legacy-vscode-extensions` | `legacy-reference` | `standards://markdown-tooling/1.11/resources/legacy-vscode-extensions` | `resources/legacy-vscode-extensions.json` |
+| `markdown-tooling@1.11` | `legacy-lint-caller` | `legacy-reference` | `standards://markdown-tooling/1.11/resources/legacy-lint-caller` | `resources/legacy-lint-markdown.caller.yml` |
+| `markdown-tooling@1.11` | `legacy-format-caller` | `legacy-reference` | `standards://markdown-tooling/1.11/resources/legacy-format-caller` | `resources/legacy-format.caller.yml` |
+| `markdown-tooling@1.11` | `self-host-lint-workflow` | `provider-resource` | `standards://markdown-tooling/1.11/resources/self-host-lint-workflow` | `resources/self-host-lint-markdown.yml` |
+| `markdown-tooling@1.11` | `self-host-format-workflow` | `provider-resource` | `standards://markdown-tooling/1.11/resources/self-host-format-workflow` | `resources/self-host-format.yml` |
+| `markdown-tooling@1.11` | `provider-code` | `provider-resource` | `standards://markdown-tooling/1.11/resources/provider-code` | `providers/markdown_tooling.py` |
+| `markdown-tooling@1.11` | `provider-input` | `provider-resource` | `standards://markdown-tooling/1.11/resources/provider-input` | `schemas/provider-input.schema.json` |
+| `markdown-tooling@1.11` | `provider-content` | `provider-resource` | `standards://markdown-tooling/1.11/resources/provider-content` | `schemas/content.schema.json` |
+| `markdown-tooling@1.11` | `provider-findings` | `provider-resource` | `standards://markdown-tooling/1.11/resources/provider-findings` | `schemas/findings.schema.json` |
+| `markdown-tooling@1.11` | `provider-migration-report` | `provider-resource` | `standards://markdown-tooling/1.11/resources/provider-migration-report` | `schemas/migration-report.schema.json` |
 | `project-spec@1.1` | `readme` | `canonical-standard` | `standards://project-spec/1.1/resources/readme` | `README.md` |
 | `project-spec@1.1` | `adopt` | `adoption-guide` | `standards://project-spec/1.1/resources/adopt` | `adopt.md` |
 | `project-spec@1.1` | `agent-summary` | `agent-summary` | `standards://project-spec/1.1/resources/agent-summary` | `agent-summary.md` |
@@ -1142,6 +1227,14 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.6` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
 | `agent-handoff@1.6` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
 | `agent-handoff@1.6` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `agent-handoff@1.7` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `agent-handoff@1.7` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `agent-handoff@1.7` | `verify` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
+| `agent-handoff@1.7` | `drift-check` | `drift-check` | `validate` | `findings` | `payload:provider-code#run_drift_check` |
+| `agent-handoff@1.7` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
+| `agent-handoff@1.7` | `scaffold` | `scaffold` | `authoring` | `mutation-plan` | `payload:provider-code#run_scaffold` |
+| `agent-handoff@1.7` | `upgrade` | `upgrade` | `authoring` | `mutation-plan` | `payload:provider-code#run_upgrade` |
+| `agent-handoff@1.7` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `cli-documentation@1.1` | `render-workflow` | `render` | `plan` | `content` | `payload:provider-code#run_render` |
 | `cli-documentation@1.1` | `verify-workflow` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `cli-documentation@1.1` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
@@ -1184,6 +1277,11 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.6` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
 | `markdown-frontmatter@1.6` | `fix-frontmatter` | `fix` | `authoring` | `mutation-plan` | `payload:provider-code#run_fix` |
 | `markdown-frontmatter@1.6` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-frontmatter@1.7` | `render-workflow-job` | `render` | `plan` | `content` | `payload:provider-code#run_render_workflow` |
+| `markdown-frontmatter@1.7` | `validate-frontmatter` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
+| `markdown-frontmatter@1.7` | `id-next` | `id-next` | `inspect` | `content` | `payload:provider-code#run_id_next` |
+| `markdown-frontmatter@1.7` | `fix-frontmatter` | `fix` | `authoring` | `mutation-plan` | `payload:provider-code#run_fix` |
+| `markdown-frontmatter@1.7` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `markdown-tooling@1.2` | `render-lint-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_lint` |
 | `markdown-tooling@1.2` | `render-format-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_format` |
 | `markdown-tooling@1.2` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
@@ -1238,6 +1336,12 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.10` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
 | `markdown-tooling@1.10` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
 | `markdown-tooling@1.10` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
+| `markdown-tooling@1.11` | `render-lint-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_lint` |
+| `markdown-tooling@1.11` | `render-format-caller` | `render` | `plan` | `content` | `payload:provider-code#run_render_format` |
+| `markdown-tooling@1.11` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `markdown-tooling@1.11` | `verify-lint` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_lint` |
+| `markdown-tooling@1.11` | `verify-format` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify_format` |
+| `markdown-tooling@1.11` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `project-spec@1.1` | `validate` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `project-spec@1.1` | `lint` | `lint` | `validate` | `findings` | `payload:provider-code#run_lint` |
 | `project-spec@1.1` | `extract` | `extract` | `inspect` | `content` | `payload:provider-code#run_extract` |
@@ -1433,6 +1537,24 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `agent-handoff@1.6` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
 | `agent-handoff@1.6` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `agent-handoff@1.6` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.7` | artifact | `status` | `docs/STATUS.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `todo` | `docs/TODO.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `architecture` | `docs/handoff/architecture.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `bugs-keep` | `docs/handoff/bugs/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `conventions` | `docs/handoff/conventions.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `credentials` | `docs/handoff/credentials.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `deployed` | `docs/handoff/deployed.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `sessions-keep` | `docs/handoff/sessions/.gitkeep` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `specs-plans` | `docs/handoff/specs-plans.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `state` | `docs/handoff/state.md` | `create-only` | whole-file |
+| `agent-handoff@1.7` | artifact | `hook` | `.agents/hooks/agent-handoff/session_start.py` | `managed` | whole-file |
+| `agent-handoff@1.7` | artifact | `skill` | `.agents/skills/agent-handoff/SKILL.md` | `managed` | whole-file |
+| `agent-handoff@1.7` | artifact | `skill-openai` | `.agents/skills/agent-handoff/agents/openai.yaml` | `managed` | whole-file |
+| `agent-handoff@1.7` | artifact | `policy` | `.standards/packages/agent-handoff/policy.toml` | `managed` | whole-file |
+| `agent-handoff@1.7` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.7` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:agent-handoff` |
+| `agent-handoff@1.7` | contribution | `claude-session-start` | `.claude/settings.json` | `managed` | `jsonc` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
+| `agent-handoff@1.7` | contribution | `codex-session-start` | `.codex/config.toml` | `managed` | `toml` / `keyed-set:/hooks/SessionStart#matcher=startup\|resume\|clear\|compact` |
 | `cli-documentation@1.1` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `cli-documentation@1.2` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
 | `cli-documentation@1.3` | artifact | `usage-document` | `docs/usage.md` | `create-only` | whole-file |
@@ -1482,6 +1604,15 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-frontmatter@1.6` | contribution | `workflow-on` | `.github/workflows/validate-standards.yml` | `create-only` | `yaml` / `key:/on` |
 | `markdown-frontmatter@1.6` | contribution | `workflow-permissions` | `.github/workflows/validate-standards.yml` | `managed` | `yaml` / `key:/permissions` |
 | `markdown-frontmatter@1.6` | contribution | `workflow-frontmatter-job` | `.github/workflows/validate-standards.yml` | `managed` | `yaml` / `key:/jobs/frontmatter` |
+| `markdown-frontmatter@1.7` | artifact | `agent-summary-package` | `.standards/packages/markdown-frontmatter/agent-summary.md` | `managed` | whole-file |
+| `markdown-frontmatter@1.7` | artifact | `skill` | `.agents/skills/markdown-frontmatter/SKILL.md` | `managed` | whole-file |
+| `markdown-frontmatter@1.7` | artifact | `skill-openai` | `.agents/skills/markdown-frontmatter/agents/openai.yaml` | `managed` | whole-file |
+| `markdown-frontmatter@1.7` | artifact | `skill-new-doc-id` | `.agents/skills/markdown-frontmatter/scripts/new-doc-id` | `managed` | whole-file |
+| `markdown-frontmatter@1.7` | artifact | `self-host-workflow` | `.github/workflows/validate-markdown-frontmatter.yml` | `managed` | whole-file |
+| `markdown-frontmatter@1.7` | contribution | `workflow-name` | `.github/workflows/validate-standards.yml` | `create-only` | `yaml` / `key:/name` |
+| `markdown-frontmatter@1.7` | contribution | `workflow-on` | `.github/workflows/validate-standards.yml` | `create-only` | `yaml` / `key:/on` |
+| `markdown-frontmatter@1.7` | contribution | `workflow-permissions` | `.github/workflows/validate-standards.yml` | `managed` | `yaml` / `key:/permissions` |
+| `markdown-frontmatter@1.7` | contribution | `workflow-frontmatter-job` | `.github/workflows/validate-standards.yml` | `managed` | `yaml` / `key:/jobs/frontmatter` |
 | `markdown-tooling@1.2` | artifact | `markdownlint-config` | `.markdownlint.json` | `managed` | whole-file |
 | `markdown-tooling@1.2` | artifact | `prettier-config` | `.prettierrc.json` | `managed` | whole-file |
 | `markdown-tooling@1.2` | contribution | `lint-caller` | `.github/workflows/lint-markdown.yml` | `managed` | `whole-file` / `$file` |
@@ -1707,6 +1838,31 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `markdown-tooling@1.10` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
 | `markdown-tooling@1.10` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `markdown-tooling@1.10` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.11` | artifact | `markdownlint-config` | `.markdownlint.json` | `managed` | whole-file |
+| `markdown-tooling@1.11` | artifact | `prettier-config` | `.prettierrc.json` | `managed` | whole-file |
+| `markdown-tooling@1.11` | contribution | `lint-caller` | `.github/workflows/lint-markdown.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.11` | contribution | `format-caller` | `.github/workflows/format.yml` | `managed` | `whole-file` / `$file` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-root` | `.editorconfig` | `managed` | `editorconfig` / `property:$global#root` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-charset` | `.editorconfig` | `managed` | `editorconfig` / `property:*#charset` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-eol` | `.editorconfig` | `managed` | `editorconfig` / `property:*#end_of_line` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-final-newline` | `.editorconfig` | `managed` | `editorconfig` / `property:*#insert_final_newline` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-global-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*#trim_trailing_whitespace` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-global-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_style` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-global-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*#indent_size` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-markdown-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_style` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-markdown-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#indent_size` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-markdown-trailing` | `.editorconfig` | `managed` | `editorconfig` / `property:*.md#trim_trailing_whitespace` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-yaml-indent-style` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_style` |
+| `markdown-tooling@1.11` | contribution | `editorconfig-yaml-indent-size` | `.editorconfig` | `managed` | `editorconfig` / `property:*.{yml,yaml}#indent_size` |
+| `markdown-tooling@1.11` | contribution | `vscode-prettier-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=esbenp.prettier-vscode` |
+| `markdown-tooling@1.11` | contribution | `vscode-markdownlint-extension` | `.vscode/extensions.json` | `managed` | `jsonc` / `set:/recommendations#value=DavidAnson.vscode-markdownlint` |
+| `markdown-tooling@1.11` | contribution | `vscode-markdown-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.defaultFormatter` |
+| `markdown-tooling@1.11` | contribution | `vscode-markdown-format-on-save` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[markdown]/editor.formatOnSave` |
+| `markdown-tooling@1.11` | contribution | `vscode-json-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[json]/editor.defaultFormatter` |
+| `markdown-tooling@1.11` | contribution | `vscode-jsonc-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[jsonc]/editor.defaultFormatter` |
+| `markdown-tooling@1.11` | contribution | `vscode-yaml-formatter` | `.vscode/settings.json` | `managed` | `jsonc` / `key:/[yaml]/editor.defaultFormatter` |
+| `markdown-tooling@1.11` | contribution | `agents-instructions` | `AGENTS.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
+| `markdown-tooling@1.11` | contribution | `claude-instructions` | `CLAUDE.md` | `managed` | `markdown-block` / `block:markdown-tooling` |
 | `project-spec@1.1` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.2` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |
 | `project-spec@1.3` | contribution | `validate-specs-workflow` | `.github/workflows/validate-specs.yml` | `managed` | `whole-file` / `$file` |

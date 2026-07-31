@@ -425,6 +425,85 @@ def test_secret_references_are_allowed(policy: HandoffPolicy, text: str) -> None
     assert check_secret_references("docs/handoff/credentials.md", text, policy) == ()
 
 
+# Issue #94 (engine mirror of the agent-handoff 1.7 provider fix).
+#
+# A right-hand side that ACQUIRES a credential at runtime stores none, so it is
+# not literal material. `$( ... )` was already tolerated here, but only
+# incidentally: "$" is an allowed reference prefix. The backtick form is the same
+# shell construct and was reported as a literal. The engine already strips
+# backticks before applying the reference policy, so a reference wrapped in a
+# Markdown code span was never the problem here that it was in the provider --
+# the whitespace rule is what separates a command from a quoted value.
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param(
+            "TOKEN=$(grep '<credential-name>' /path/to/credential-reference)\n",
+            id="dollar-paren-substitution",
+        ),
+        pytest.param(
+            'TOKEN="$(credential-helper read env:CREDENTIAL_NAME)"\n',
+            id="quoted-dollar-paren-substitution",
+        ),
+        pytest.param(
+            "TOKEN=`credential-helper read env:CREDENTIAL_NAME`\n",
+            id="backtick-substitution",
+        ),
+        pytest.param(
+            "token: `bao kv get -field=value secret/apps/example`\n",
+            id="backtick-substitution-colon-form",
+        ),
+        pytest.param("token: `secret/apps/example`\n", id="reference-inside-a-code-span"),
+    ],
+)
+def test_runtime_acquisition_is_not_literal_material(policy: HandoffPolicy, text: str) -> None:
+    """A command substitution or a code-span reference stores nothing (issue #94)."""
+    assert check_secret_references("docs/handoff/credentials.md", text, policy) == ()
+
+
+@pytest.mark.parametrize(
+    ("text", "secret"),
+    [
+        pytest.param(
+            "token: `abc123literal`\n", "abc123literal", id="no-whitespace-span-is-not-a-command"
+        ),
+        pytest.param(
+            "password = `s3cr3t-value`\n", "s3cr3t-value", id="no-whitespace-span-other-label"
+        ),
+    ],
+)
+def test_backtick_spans_do_not_launder_literal_material(
+    policy: HandoffPolicy, text: str, secret: str
+) -> None:
+    """Wrapping a single-token value in backticks must not buy an exemption.
+
+    A span with no internal whitespace is a quoted value, not a command
+    invocation, so it falls through to the reference policy and stays flagged
+    when it names no reference. Without this boundary the exemption would be a
+    one-character laundering path for any literal.
+    """
+    findings = check_secret_references("docs/handoff/credentials.md", text, policy)
+
+    assert [finding.code for finding in findings] == ["AH-SECRET-LITERAL"]
+    assert all(secret not in finding.message for finding in findings)
+
+
+def test_runtime_acquisition_findings_keep_their_line_coordinate(policy: HandoffPolicy) -> None:
+    """The mirror removes a false positive only; located reporting is unchanged."""
+    text = (
+        "# Credentials\n\n"
+        "token = literal-token-value\n"
+        "TOKEN=`credential-helper read env:SAFE`\n"
+        "password: another-literal\n"
+    )
+
+    findings = check_secret_references("docs/handoff/credentials.md", text, policy)
+
+    assert [(finding.line, finding.column) for finding in findings] == [(3, 1), (5, 1)]
+
+
 def test_malformed_policy_is_controlled(tmp_path: Path) -> None:
     malformed = tmp_path / "policy.toml"
     malformed.write_text('version = "1.0"\n[shape]\nunknown = true\n', encoding="utf-8")

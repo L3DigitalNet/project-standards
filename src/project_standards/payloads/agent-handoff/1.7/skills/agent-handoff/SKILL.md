@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.7/skills/agent-handoff/SKILL.md

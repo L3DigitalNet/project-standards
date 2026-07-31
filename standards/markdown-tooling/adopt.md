@@ -1,11 +1,11 @@
 # Adopt the Markdown Tooling Standard
 
-The current consumer package is [`markdown-tooling@1.10`](versions/1.10/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
+The current consumer package is [`markdown-tooling@1.11`](versions/1.11/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable markdown-tooling --version 1.10
+project-standards standards enable markdown-tooling --version 1.11
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,7 +31,7 @@ Run a local tool only when its matching `lint` or `format` option is `true`. For
 
 Local verification does not honor `.git/info/exclude`. A bare CLI glob invocation only respects tracked `.gitignore`/`.prettierignore` patterns (and, for the format caller, `--ignore-path .gitignore`); a path excluded solely through the repository-local `.git/info/exclude` file is invisible to that mechanism and still enters the scan. If local scratch or evidence content is excluded only in `.git/info/exclude`, add it as an explicit negative glob to the local invocation as well — do not rely on `gitignore`-style options alone to cover it.
 
-Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.10/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.
+Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.11/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.
 
 ### Autofix hazards: markdownlint `--fix` and Prettier `--write`
 

@@ -276,12 +276,12 @@ def test_option_schema__declares_the_documented_opt_out(option: str) -> None:
     assert _options(_V110, {option: False})[option] is False
 
 
-def test_markdown_tooling_1_10__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_markdown_tooling_1_10__catalog_role__stays_retained_beside_1_9() -> None:
+    """5.12.0 advanced the default to 1.11, so 1.10 joins 1.9 as retained.
 
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes the successor the default a consumer on
-    `version = "latest"` resolves to.
+    Both stay advertised: a superseded payload is never withdrawn from the
+    catalog. The default-selection assertion moves to the 1.11 registration file
+    with the payload that now owns it.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -290,5 +290,5 @@ def test_markdown_tooling_1_10__catalog_role__selects_the_successor_as_default()
         if package["id"] == "markdown-tooling"
     }
 
-    assert roles["1.10"] == "default"
+    assert roles["1.10"] == "retained"
     assert roles["1.9"] == "retained"

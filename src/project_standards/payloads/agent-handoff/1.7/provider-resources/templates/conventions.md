@@ -1,0 +1,1 @@
+../../../../../../../standards/agent-handoff/versions/1.7/provider-resources/templates/conventions.md

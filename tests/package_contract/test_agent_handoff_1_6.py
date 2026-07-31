@@ -92,7 +92,7 @@ def test_agent_handoff_1_6__provider_schemas__bind_the_successor_identity() -> N
     assert migration_report["properties"]["package"]["properties"]["version"]["const"] == "1.6"
 
 
-def test_agent_handoff_1_6__activated_successor__is_complete_default_and_immutable() -> None:
+def test_agent_handoff_1_6__retained_successor__is_complete_and_immutable() -> None:
     predecessor_manifest = load_payload_manifest(_PREDECESSOR / "payload.toml")
     predecessor_integrity = validate_payload_integrity(_PREDECESSOR, predecessor_manifest)
     assert predecessor_integrity.aggregate_digest.value == _PREDECESSOR_DIGEST
@@ -123,9 +123,9 @@ def test_agent_handoff_1_6__activated_successor__is_complete_default_and_immutab
         migration.to_endpoint.value == "package:1.6" for migration in successor_manifest.migrations
     )
 
-    # Catalog 5 selects 1.6 and keeps 1.5 advertised as retained. The dogfood lock
-    # tracks this default only after the release-prep reconcile, so that assertion
-    # stays in tests/agent_handoff/test_packaging.py rather than here.
+    # 5.12.0 advanced the default to 1.7, so 1.6 joins 1.5 as retained; both stay
+    # advertised because a superseded payload is never withdrawn. The activated-
+    # default assertion moves to tests/package_contract/test_agent_handoff_1_7.py.
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
         package["version"]: package["role"]
@@ -133,7 +133,7 @@ def test_agent_handoff_1_6__activated_successor__is_complete_default_and_immutab
         if package["id"] == "agent-handoff"
     }
     successor_version = successor_manifest.payload.version.value
-    assert roles[successor_version] == "default"
+    assert roles[successor_version] == "retained"
     assert roles[predecessor_manifest.payload.version.value] == "retained"
 
 
