@@ -155,6 +155,11 @@ mkdir -p "$TMP_ROOT/tmp" "$TMP_ROOT/coverage" "$LOG_DIR" "$RESULT_DIR" "$BASETEM
 export PYTHONPATH="$WHEEL_RUNTIME"
 export TMPDIR="$TMP_ROOT/tmp"
 export COVERAGE_FILE="$TMP_ROOT/coverage/.coverage"
+# `uv run` prepends .venv/bin to PATH; invoking the venv binaries directly
+# skips that, so test-spawned subprocesses calling bare `python3` would
+# resolve into whatever shim the workstation puts first (the v5.12.0 CI
+# sandbox defect class). Restore the venv-first PATH the serial gate had.
+export PATH="$VENV_BIN:$PATH"
 # Fast gate only — --full must keep the default trace core (see header).
 if [[ "$MODE" == "fast" ]]; then
     export COVERAGE_CORE="sysmon"
