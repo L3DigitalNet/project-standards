@@ -18,6 +18,7 @@ related: []
 
 | id | title | created | updated | status | confidence | tags | related |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| research-g8t3vx-release-gate-wall-clock-spike | Release-Gate Wall-Clock Spike | 2026-07-31 | 2026-07-31 | active | high | release-gate pytest-xdist coverage sysmon performance | docs/handoff/conventions.md |
 | reference-k4n2pw-self-hosted-runner-security-review | Self-Hosted Runner Security Review | 2026-07-31 | 2026-07-31 | active | high | ci self-hosted-runner security migration deferral | docs/TODO.md |
 | research-byzynj-consumer-owned-workflow-migration-safety | Consumer-Owned Whole-File Preservation During Legacy Migration | 2026-07-12 | 2026-07-12 | active | high | v5 migration ownership python-tooling workflow | docs/specs/2026-07-10-consumer-standards-control-plane-spec.md |
 | cli-usage-docs-packaged-src-layout-python | CLI Usage Documentation for Packaged src/-Layout Python Projects | 2026-07-07 | 2026-07-07 | active | high | cli packaging python documentation entry-points | standards/cli-documentation/README.md |
