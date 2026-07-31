@@ -37,13 +37,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 ### Active program (MCP)
 
 - [ ] Complete the reviewed MCP implementation plan.
-  - [ ] Continue with T11 (installed-wheel client proof and documentation) when directed.
-
-    _(Owner 2026-07-30: OQ-005 smoke set = mandatory fixtures + this repo + `~/scripts`; a default-on codex `mcp_2026_07_28` flag authorizes a narrow T1 matrix refresh inline; T10 context ceilings stay reviewed test constants.)_
-
-  - [ ] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default before capturing the FR-030 probe evidence.
-
-    _(Flag registered disabled in codex-cli 0.146.0, openai/codex#34747.)_
+  - [x] Continue with T11 (installed-wheel client proof and documentation) when directed. _(Done 2026-07-30: commit `df25964` after Codex RED and GREEN reviews; the smoke-discovered dispatch defect was fixed via discovered-work T15 `75c9653` and T14 `1abf8d9`; SPEC-MS01 OQ-005 resolved at revision 1.4.)_
+  - [x] At T11, re-check whether codex-cli has enabled `mcp_2026_07_28` by default before capturing the FR-030 probe evidence. _(Done 2026-07-30: 0.146.0 is still the latest stable and the flag remains default-disabled; no matrix refresh triggered.)_
+  - [ ] Continue with T12 (final gate and handoff) when directed.
 
 - [ ] Maintain the temporary MCP project change hold until implementation-plan T12 closes.
 
