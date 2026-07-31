@@ -244,6 +244,30 @@ def test_agent_handoff_1_7__credential_exemption__matches_the_engine(
     assert engine_flagged == provider_flagged
 
 
+def test_agent_handoff_1_7__decoy_reference_tokens__are_an_accepted_residual(
+    tmp_path: Path,
+) -> None:
+    """A decoy reference token defeats the runtime-acquisition rule — accepted.
+
+    ``TOKEN=`printf '%s%.0s' 'literal' env:DECOY` `` is exempt in both
+    implementations because one token passes the reference policy while the
+    command emits only the embedded literal (Codex round-2 review, 2026-07-31).
+    Accepted rather than fixed: the checker guards against accidental credential
+    storage, a deliberately constructed decoy sits outside that threat model, and
+    the identical decoy already passes through the long-released ``$( ... )``
+    exemption, so the backtick surface adds no marginal exposure. Every static
+    rule short of rejecting all command forms is decoyable, and rejecting them
+    all resurrects the issue #94 false positives. This test documents the
+    residual so it cannot silently become load-bearing; it is not a contract
+    that the form must stay exempt.
+    """
+    line = "TOKEN=`printf '%s%.0s' 'synth-live-7Jm9Qv2Nk4Rx8Pz6' env:DECOY`"
+    policy = load_policy(_SUCCESSOR / "resources/policy.toml")
+
+    assert not check_secret_references(_CREDENTIALS, f"{line}\n", policy)
+    assert not _credential_findings(line, tmp_path)
+
+
 def test_agent_handoff_1_7__provider_schemas__bind_the_successor_identity() -> None:
     provider_input = json.loads(
         (_SUCCESSOR / "schemas/provider-input.schema.json").read_text(encoding="utf-8")
