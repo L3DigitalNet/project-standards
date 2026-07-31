@@ -380,7 +380,7 @@ Before T1, the implementing agent must:
   - **T14.3 GREEN** — construct authoritative typed input for composite dispatch and isolate per-result failures; change nothing else.
   - **T14.4 Verify GREEN** — rerun the provider battery, the T9 consumer-tools and no-writes suites, and the nearest facade regressions.
   - **T14.5 REFACTOR** — none expected; record `none` when unused.
-  - **T14.6 Verify Task** — run `uv run pytest tests/mcp_services/test_providers.py tests/mcp_services/security/test_no_writes.py tests/mcp_server/test_consumer_tools.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
+  - **T14.6 Verify Task** — run `uv run pytest tests/mcp_services/test_providers.py tests/mcp_server/security/test_no_writes.py tests/mcp_server/test_consumer_tools.py`, `uv run ruff check src/project_standards/mcp_services tests/mcp_services`, `uv run ruff format --check src/project_standards/mcp_services tests/mcp_services`, and `uv run basedpyright`; commit with IDs.
 
 #### T15: Publish the provider-dispatch-input authority seam
 
