@@ -784,12 +784,19 @@ _UNWATCHED_TREES = frozenset(
         ".mypy_cache",
         ".pytest_cache",
         ".ruff_cache",
+        ".workflow",
         "__pycache__",
         "build",
         "dist",
         "node_modules",
     }
 )
+
+# Root-level files the coverage-instrumented gate itself creates and removes
+# mid-run: xdist workers save `.coverage.<host>.<pid>.*` on exit while this
+# digest may be sampling on another worker. The composite under test writes no
+# coverage data, so excluding these cannot mask the write this digest guards.
+_UNWATCHED_FILE_PREFIX = ".coverage"
 
 
 def real_tree_digest(root: Path) -> str:
@@ -805,7 +812,8 @@ def real_tree_digest(root: Path) -> str:
     for current, directories, files in os.walk(root, followlinks=False):
         directories[:] = sorted(item for item in directories if item not in _UNWATCHED_TREES)
         base = Path(current)
-        for name in sorted(files) + list(directories):
+        watched_files = [item for item in files if not item.startswith(_UNWATCHED_FILE_PREFIX)]
+        for name in sorted(watched_files) + list(directories):
             entry = base / name
             try:
                 info = entry.lstat()
