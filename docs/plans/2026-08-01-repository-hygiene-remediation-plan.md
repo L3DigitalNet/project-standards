@@ -2,7 +2,7 @@
 title: 'Repository Hygiene Remediation Implementation Plan'
 slug: 'repository-hygiene-remediation'
 size: standard
-status: active
+status: complete
 source: 'docs/reviews/2026-08-01-repository-hygiene-maintenance-review.md; owner authorization 2026-08-01'
 spec_ref: ''
 created: 2026-08-01
@@ -297,9 +297,9 @@ None. Remote publication remains a separate authorization boundary, not an imple
 
 ## 14. Close-out
 
-- **Completed:** _pending_ · final commit _pending_
-- **Deviations / decisions harvested from notes:** _pending close-out_
-- **Risks closed / accepted:** _pending close-out_
+- **Completed:** 2026-08-01 · final content commit `cb89ce2413faa5fb825bdcf5396b227793591720`
+- **Deviations / decisions harvested from notes:** T6 used exhaustive boundary cases instead of adding Hypothesis; T9 added the three managed workflow successors required to make root action pins authoritative; final-gate corrections isolated nested smoke fixtures without changing production temporary-directory ownership.
+- **Risks closed / accepted:** immutable predecessors remained byte/mode-identical; the exact candidate passed the full gate twice; only informational unreachable Git objects remain after ordinary maintenance.
 - **Deferred work filed:** push, tag, publication, and issue mutation remain separately authorized.
 
-Teardown after harvest: set complete, commit master, then remove `.project-pipeline/2026-08-01-repository-hygiene-remediation/`.
+The ephemeral pipeline directory was removed after this evidence was harvested.
