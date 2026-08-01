@@ -14,7 +14,7 @@ Consumer packages are enabled through `.standards/config.toml` and reconciled as
 | Markdown Tooling | Markdown/structured-text linting + formatting (markdownlint, Prettier, EditorConfig) | 1.11 | default | [markdown-tooling/](markdown-tooling/) | [adopt](markdown-tooling/adopt.md) |
 | Project Specification | Tiered spec format, stable IDs, and a `project-standards spec` CLI | 1.5 | default | [project-spec/](project-spec/) | [adopt](project-spec/adopt.md) |
 | CLI Documentation | User-facing CLI usage docs: help text, usage references, man pages, CI drift checks | 1.5 | default | [cli-documentation/](cli-documentation/) | [adopt](cli-documentation/adopt.md) |
-| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.7 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
+| Agent Handoff | Repository-local project knowledge, bounded session continuity, repo-local skill and hooks, and conformance tooling | 1.8 | default | [agent-handoff/](agent-handoff/) | [adopt](agent-handoff/adopt.md) |
 | Python Coding | Code-shape and agent-behavior rules for Python (companion to Python Tooling SSOT) | 0.6 | reference-only | [python-coding/](python-coding/) | — (**in-development draft**; not released for adoption) |
 | Standard Bundle Authoring | The V2 family, payload, catalog, provider, relationship, and ownership contract | 2.6 | internal | [standard-bundle-authoring/](standard-bundle-authoring/) | — (**internal/reference**; governs this repository's packages) |
 

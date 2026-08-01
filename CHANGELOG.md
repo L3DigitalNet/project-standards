@@ -37,9 +37,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Changed
+
+- **Catalog 5 promotes Agent Handoff 1.8 as the consumer default while retaining 1.7 unchanged and exactly selectable.** The successor carries the bounded SessionStart launcher correction described below; no other Agent Handoff payload behavior changes.
+- **Release classification now follows the owner-approved catalog rule implemented by `packages check-release`.** Only the owner designates MAJOR. Otherwise, a newly introduced package or a version advertised above that package's prior advertised maximum requires exactly MINOR, while a release with no package advance requires exactly PATCH. Internal and reference-only packages count; retained older versions and unadvertised payloads do not. Advertised versions remain permanent and cannot be removed, even in a MAJOR release.
+- **Post-5.13 documentation now matches the shipped MCP, CLI, release, and Agent Handoff behavior.** The reconciliation records the complete drift audit, corrects current status and operator guidance, and removes completed implementation plans and stale release evidence from active documentation while preserving maintained specifications and historical records.
+
 ### Fixed
 
 - **Agent Handoff 1.8 starts both Codex and Claude Code sessions when a `uv-strict-python` shim rejects direct hook execution.** The 1.7 registrations executed the shared hook's `python3` shebang directly, so a policy shim exited before the hook could parse its SessionStart event or emit context. Both 1.8 registrations now use the same bounded launcher: a usable Python 3.14 runs the hook directly; otherwise `uv run --no-project --python 3.14 --no-python-downloads` selects an already-installed interpreter without inheriting the consumer project's Python constraint or downloading at startup. The interpreter probe reads `/dev/null`, preserving the original event on stdin for the hook. If neither route is available, the launcher emits one prerequisite diagnostic on stderr and no context on stdout. Executable regressions cover both harnesses through the direct, shim-fallback, and unavailable-runtime paths (issue #80).
+- **Release preparation now fails closed on the wrong branch and prints the complete candidate-wheel verification handoff before tag commands.** `scripts/release_prep.py` requires a clean `main`, orders dependency setup, payload-projection verification, isolated wheel extraction, the full serial gate, package/graph/schema/catalog checks, and release classification ahead of tagging, and never performs the owner-only commit, tag, push, or publication steps. Release-consistency validation also follows the worktree when completed plans are deleted while continuing to require current family documents.
 
 ## [5.13.0] — 2026-07-31
 
