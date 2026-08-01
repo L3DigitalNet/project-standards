@@ -90,6 +90,7 @@ fi""",
     environment = os.environ | {
         "VERIFY_FAKE_LOG": str(log),
         "VERIFY_SMOKE": "1",
+        "VERIFY_TMP_PARENT": str(tmp_path),
         "VERIFY_EXPECTED_WHEEL": str((wheel_dir / "project_standards-0.whl").resolve()),
         "XDG_CACHE_HOME": str(tmp_path / "cache"),
     }
@@ -241,6 +242,17 @@ def test_verify_gate__multiple_candidate_wheels__fails_before_lanes(tmp_path: Pa
 
     assert completed.returncode == 1
     assert "expected exactly one candidate wheel" in completed.stderr
+    assert not log.exists()
+
+
+def test_verify_gate__tmp_parent__requires_smoke_mode(tmp_path: Path) -> None:
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    environment["VERIFY_SMOKE"] = "0"
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    assert "VERIFY_TMP_PARENT is test-only and requires VERIFY_SMOKE=1" in completed.stderr
     assert not log.exists()
 
 

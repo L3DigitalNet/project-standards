@@ -391,7 +391,14 @@ def test_frontmatter_workflow_modes_render_published_and_pretag_paths(
 
 def test_frontmatter_root_workflow_is_the_v5_public_endpoint() -> None:
     root_workflow = _ROOT / ".github/workflows/validate-markdown-frontmatter.yml"
-    public_resource = _PAYLOAD / "resources/self-host-validate-markdown-frontmatter.yml"
+    catalog = tomllib.loads((_ROOT / ".standards/catalog.toml").read_text(encoding="utf-8"))
+    selected_version = catalog["standards"]["markdown-frontmatter"]["default"]
+    public_resource = (
+        _FAMILY
+        / "versions"
+        / selected_version
+        / "resources/self-host-validate-markdown-frontmatter.yml"
+    )
 
     assert root_workflow.read_bytes() == public_resource.read_bytes()
     root = yaml.safe_load(root_workflow.read_text(encoding="utf-8"))

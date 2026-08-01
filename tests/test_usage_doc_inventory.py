@@ -125,11 +125,18 @@ def _option_tokens(text: str) -> set[str]:
 def _help_option_tokens(text: str) -> set[str]:
     surfaces: list[str] = []
     if usage := re.search(r"^usage: .*?(?=\n\n)", text, re.MULTILINE | re.DOTALL):
-        surfaces.append(usage.group(0))
+        _invocation, bracket, options = usage.group(0).partition("[")
+        surfaces.append(f"{bracket}{options}")
     surfaces.extend(
         line for line in text.splitlines() if re.match(r"^\s+(?:-[a-z], |--[a-z])", line)
     )
     return _option_tokens("\n".join(surfaces))
+
+
+def test_help_option_tokens_ignore_python_module_invocation() -> None:
+    output = "usage: python -m example [-h] [--schema PATH]\n\noptions:\n"
+
+    assert _help_option_tokens(output) == {"--schema"}
 
 
 def test_every_console_script_documented() -> None:

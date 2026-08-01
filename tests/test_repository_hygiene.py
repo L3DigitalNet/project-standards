@@ -54,6 +54,16 @@ _IMMUTABLE_PROJECTION_EXCLUSIONS = frozenset(
     }
 )
 
+_POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES = frozenset(
+    {
+        "standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/scripts/new-doc-id",
+        "standards/project-spec/versions/1.6/resources/tooling-notes.md",
+        "standards/project-spec/versions/1.6/templates/spec-full-template.md",
+        "standards/project-spec/versions/1.6/templates/spec-light-template.md",
+        "standards/project-spec/versions/1.6/templates/spec-standard-template.md",
+    }
+)
+
 
 def _git(*arguments: str) -> str:
     return subprocess.run(
@@ -96,9 +106,11 @@ def test_git_mode_policy__classifies_and_normalizes_the_complete_anchor_inventor
     assert len(anchor_executables) == 43
     assert anchor_executables == classified
     assert classified <= entries.keys()
-    assert {
-        path for path, (mode, _blob) in entries.items() if mode == "100755"
-    } == _EXECUTABLE_ALLOWLIST | _IMMUTABLE_PROJECTION_EXCLUSIONS
+    assert {path for path, (mode, _blob) in entries.items() if mode == "100755"} == (
+        _EXECUTABLE_ALLOWLIST
+        | _IMMUTABLE_PROJECTION_EXCLUSIONS
+        | _POST_ANCHOR_IMMUTABLE_PROJECTION_EXECUTABLES
+    )
     assert {path: entries[path][0] for path in _MUTABLE_NORMALIZATION_ALLOWLIST} == dict.fromkeys(
         _MUTABLE_NORMALIZATION_ALLOWLIST, "100644"
     )

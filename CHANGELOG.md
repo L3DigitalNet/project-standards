@@ -37,9 +37,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+## [5.14.0] — 2026-08-01
+
 ### Changed
 
 - **Catalog 5 promotes Agent Handoff 1.8 as the consumer default while retaining 1.7 unchanged and exactly selectable.** The successor carries the bounded SessionStart launcher correction described below; no other Agent Handoff payload behavior changes.
+- **Catalog 5 promotes Markdown Frontmatter 1.8, Markdown Tooling 1.12, and Project Specification 1.6 while retaining their predecessors unchanged and exactly selectable.** The successors make the repository's four managed self-host workflows use immutable, verified action SHAs without weakening package ownership.
+- **Repository automation now pins every external GitHub Action to a full commit SHA and maintains both GitHub Actions and npm dependencies through Dependabot.** The Check workflow audits the committed npm lock immediately after installation.
+- **The local release gate now selects exactly one prepared wheel and reuses its absolute path in the compatibility lane.** Hermetic orchestration tests cover zero and multiple artifacts, aggregate failure reporting, concurrent fast-lane startup, and full-mode serial ordering.
 - **Release classification now follows the owner-approved catalog rule implemented by `packages check-release`.** Only the owner designates MAJOR. Otherwise, a newly introduced package or a version advertised above that package's prior advertised maximum requires exactly MINOR, while a release with no package advance requires exactly PATCH. Internal and reference-only packages count; retained older versions and unadvertised payloads do not. Advertised versions remain permanent and cannot be removed, even in a MAJOR release.
 - **Post-5.13 documentation now matches the shipped MCP, CLI, release, and Agent Handoff behavior.** The reconciliation records the complete drift audit, corrects current status and operator guidance, and removes completed implementation plans and stale release evidence from active documentation while preserving maintained specifications and historical records.
 

@@ -43,15 +43,15 @@ _FORMAT_WORKFLOW = _ROOT / ".github/workflows/format.yml"
 _LINT_WORKFLOW = _ROOT / ".github/workflows/lint-markdown.yml"
 
 _V18_AGGREGATE = "sha256:22ebe7b95ca82daa276746c9bf3f0688d15ce4b47314b7e4abea206df7212783"
-_FORMAT_WORKFLOW_DIGEST = "901639336cf3db411a0090c660d36036c2e8bc9bffd592bec3e4c064baf7cb7a"
+_FORMAT_WORKFLOW_DIGEST = "b75a1ebbe0e2a3deb663049a65c2ecde5a032b52f4fc9b831d7d48391a7a2d31"
 # The hosted lint workflow is not frozen forever: it is the self-hosted rendering
 # of the current default markdown-tooling payload, so an activation that changes
 # that resource changes these bytes. 1.10 (issue #63) appended the generated-tree
 # negations, which narrows what every `@v5` caller lints — a loosening, and one a
-# repository escapes with `lint_workflow_ownership = "consumer-owned"`. The digest
-# is pinned so such a change is always a deliberate, reviewed update rather than a
-# silent one; the format workflow above is genuinely unchanged since 1.8.
-_LINT_WORKFLOW_DIGEST = "fdce0f2148fc9dad902b23d1027841e21443668bb062d1f0dc08ceb070172796"
+# repository escapes with `lint_workflow_ownership = "consumer-owned"`. The digests
+# are pinned so changes to either mutable `@v5` endpoint are always deliberate and
+# reviewed; the format endpoint changed in 5.14 only to pin `actions/checkout@v7`.
+_LINT_WORKFLOW_DIGEST = "79adf319e9e092c106218d327d7186fb8c68a2d14adbdc4d05fde10f81a1ed1d"
 
 
 def _payload(root: Path) -> InstalledPayload:

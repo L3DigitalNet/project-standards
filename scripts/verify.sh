@@ -45,6 +45,10 @@
 # TEST-ONLY: VERIFY_SMOKE=1 shrinks every pytest lane to a token selection so
 # the lane orchestration itself can be exercised in seconds. It proves plumbing,
 # never correctness — a smoke run is not a gate run.
+# TEST-ONLY: VERIFY_TMP_PARENT gives smoke-mode nested-gate tests their own lock
+# and artifacts. The fixed child keeps cleanup scoped even if the parent is set
+# too broadly; a nested fixture using the production root would collide with the
+# parent gate whose orchestration it is validating.
 #
 # Worker counts are tuned for the 21-core workstation the spike measured and are
 # overridable while controlled-condition benchmarking is still open:
@@ -142,7 +146,11 @@ is_mountpoint() {
     [[ "$device" != "$parent_device" ]]
 }
 
-if is_mountpoint /mnt/pytesttmp; then
+if [[ -n "${VERIFY_TMP_PARENT:-}" ]]; then
+    [[ "$SMOKE" == "1" ]] || die "VERIFY_TMP_PARENT is test-only and requires VERIFY_SMOKE=1"
+    TMP_ROOT="${VERIFY_TMP_PARENT%/}/project-standards-gate"
+    TMP_KIND="explicit test override"
+elif is_mountpoint /mnt/pytesttmp; then
     TMP_ROOT="/mnt/pytesttmp/project-standards-gate"
     TMP_KIND="dedicated tmpfs /mnt/pytesttmp"
 else
