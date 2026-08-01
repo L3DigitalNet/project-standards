@@ -20,7 +20,7 @@ config = { contract_version = "1.0" }
 [standards.markdown-frontmatter]
 enabled = true
 version = "latest"
-config = { contract_version = "1.1", exclude = ["**/*.template.md", "standards/**", "README.md", "CLAUDE.md", "AGENTS.md", ".claude/**", ".agents/**", ".codex/**", "docs/handoff/**"], include = ["CHANGELOG.md", "UPGRADING.md", "docs/usage.md", "docs/mcp-readiness.md", "docs/workflows/**/*.md", "meta/**/*.md", "docs/adr/**/*.md"], required = true, schema = "markdown-frontmatter", workflow_mode = "self-hosted" }
+config = { contract_version = "1.1", exclude = ["**/*.template.md", "standards/**", "README.md", "CLAUDE.md", "AGENTS.md", ".claude/**", ".agents/**", ".codex/**", "docs/handoff/**"], include = ["CHANGELOG.md", "UPGRADING.md", "docs/usage.md", "docs/mcp-readiness.md", "docs/workflows/**/*.md", "meta/**/*.md", "docs/adr/**/*.md", "docs/adr-library/**/*.md"], required = true, schema = "markdown-frontmatter", workflow_mode = "self-hosted" }
 
 [standards.markdown-tooling]
 enabled = true

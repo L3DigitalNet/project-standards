@@ -6,7 +6,7 @@ description: 'Decision record for how project-standards applies and demonstrates
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-09'
-updated: '2026-07-18'
+updated: '2026-08-01'
 reviewed: '2026-07-18'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -79,7 +79,7 @@ This decision does not change `schema_version`, the JSON schema, or validator be
 
 ### Governed scope
 
-The `standards.markdown-frontmatter.config` table in `.standards/config.toml` is the source of truth for this repository's managed Markdown scope. It includes the release and upgrade documents, usage and MCP-readiness documentation, workflow documentation, `meta/**/*.md`, and `docs/adr/**/*.md`.
+The `standards.markdown-frontmatter.config` table in `.standards/config.toml` is the source of truth for this repository's managed Markdown scope. It includes the release and upgrade documents, usage and MCP-readiness documentation, workflow documentation, `meta/**/*.md`, `docs/adr/**/*.md`, and `docs/adr-library/**/*.md`.
 
 ADR 0015 excludes `standards/**` from this repository's local frontmatter scope so standard-package content is not required to carry repo-local metadata. The current config also excludes templates, the root README, agent-instruction and agent-configuration files, and handoff documents. This ADR does not widen that scope.
 
@@ -131,6 +131,8 @@ If a file has a more specific maintainer in the future, record the long-lived ro
 | `docs/usage.md`, operational procedures | `runbook` |
 | `docs/adr/adr-*.md` | `adr` |
 | `docs/adr/README.md` | `index` |
+| `docs/adr-library/README.md` | `index` |
+| `docs/adr-library/**/*.md` entries | `template` |
 | `CHANGELOG.md` | `log` |
 | Metadata/schema documents | `schema` when the document is primarily a schema reference; otherwise `reference` |
 
