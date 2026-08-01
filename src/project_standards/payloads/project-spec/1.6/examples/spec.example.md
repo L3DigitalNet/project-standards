@@ -1,0 +1,1 @@
+../../../../../../standards/project-spec/versions/1.6/examples/spec.example.md

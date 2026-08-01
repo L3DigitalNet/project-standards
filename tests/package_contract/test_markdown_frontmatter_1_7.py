@@ -290,8 +290,8 @@ def test_markdown_frontmatter_1_7__successor__is_complete_and_immutable() -> Non
     assert indexed["1.7"].digest == successor_integrity.aggregate_digest
 
 
-def test_markdown_frontmatter_1_7__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_markdown_frontmatter_1_7__catalog_role__retains_predecessor() -> None:
+    """Catalog 5 must retain 1.7 after selecting its successor.
 
     The payload can be complete and valid while the catalog still selects its
     predecessor; only this row makes the successor the default a consumer on
@@ -304,7 +304,8 @@ def test_markdown_frontmatter_1_7__catalog_role__selects_the_successor_as_defaul
         if package["id"] == "markdown-frontmatter"
     }
 
-    assert roles["1.7"] == "default"
+    assert roles["1.7"] == "retained"
+    assert roles["1.8"] == "default"
     assert roles["1.6"] == "retained"
 
 

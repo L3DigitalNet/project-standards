@@ -38,10 +38,12 @@ def test_lint_workflow_keeps_direct_and_reusable_triggers() -> None:
     assert "workflow_call" in triggers
 
 
-def test_lint_workflow_uses_action_v24() -> None:
+def test_lint_workflow_uses_pinned_action_v24() -> None:
     steps = _load()["jobs"]["lint"]["steps"]
+    uses = {str(step.get("uses", "")) for step in steps}
 
-    assert any(step.get("uses") == "DavidAnson/markdownlint-cli2-action@v24" for step in steps)
+    assert "DavidAnson/markdownlint-cli2-action@6bf21b07787794f89a243495939cd651942aeabe" in uses
+    assert "DavidAnson/markdownlint-cli2-action@v24" not in uses
 
 
 @pytest.mark.parametrize(

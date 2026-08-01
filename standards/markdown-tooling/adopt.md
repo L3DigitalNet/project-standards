@@ -1,11 +1,11 @@
 # Adopt the Markdown Tooling Standard
 
-The current consumer package is [`markdown-tooling@1.11`](versions/1.11/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
+The current consumer package is [`markdown-tooling@1.12`](versions/1.12/adopt.md). Use it for markdownlint and Prettier configuration, managed lint/format workflows, and bounded EditorConfig, VS Code, and agent-instruction contributions.
 
 ## Configure and reconcile
 
 ```bash
-project-standards standards enable markdown-tooling --version 1.11
+project-standards standards enable markdown-tooling --version 1.12
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,7 +31,7 @@ Run a local tool only when its matching `lint` or `format` option is `true`. For
 
 Local verification does not honor `.git/info/exclude`, and a bare markdownlint invocation does not honor `.gitignore` either. `markdownlint-cli2` reads Git ignore files only when a `.markdownlint-cli2.*` runner config sets `gitignore: true`, which this package does not ship and which has no CLI or action equivalent, so bare CLI globs select ignored trees. Prettier differs: the managed format caller passes `--ignore-path .gitignore`, so tracked ignore patterns do apply there. Neither tool sees `.git/info/exclude` at all. Add anything that must stay out of a local run as an explicit negative glob to the invocation itself — no Git ignore file reliably covers it.
 
-Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.11/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.
+Conflicting shared properties, invalid exclusion records, disabled-tool/enabled-CI combinations, or modified managed files block apply. Do not replace consumer-owned container content to resolve a package unit. See the [version-specific guide](versions/1.12/adopt.md) for exact options, managed outputs, companions, migration, and failure handling.
 
 ### Autofix hazards: markdownlint `--fix` and Prettier `--write`
 

@@ -1,0 +1,4 @@
+jobs:
+  frontmatter:
+    name: Frontmatter
+    uses: ./.github/workflows/validate-markdown-frontmatter.yml

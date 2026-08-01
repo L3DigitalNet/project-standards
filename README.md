@@ -66,13 +66,13 @@ The standards this repository defines. Each lives in a family under [`standards/
 
 A small, portable, **tool-neutral** set of YAML frontmatter fields for project documentation, giving every Markdown document consistent metadata for discovery, validation, and LLM/human workflows. It is deliberately **not** an Obsidian, Hugo, Jekyll, Quarto, or Pandoc schema — publishing-tool metadata goes under a `publish` namespace, never at the top level.
 
-- **Standard:** [`standards/markdown-frontmatter/versions/1.7/README.md`](standards/markdown-frontmatter/versions/1.7/README.md)
-- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.7/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.7/field-values.md)
-- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.7/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
-- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.7/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
-- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.7/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.7/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.7/adopt.md)
+- **Standard:** [`standards/markdown-frontmatter/versions/1.8/README.md`](standards/markdown-frontmatter/versions/1.8/README.md)
+- **Structure:** [`structure.md`](standards/markdown-frontmatter/versions/1.8/structure.md) · **Field values:** [`field-values.md`](standards/markdown-frontmatter/versions/1.8/field-values.md)
+- **Schema:** [`schemas/markdown-frontmatter.schema.json`](standards/markdown-frontmatter/versions/1.8/schemas/markdown-frontmatter.schema.json) (JSON Schema Draft 2020-12)
+- **Skill:** [`skills/markdown-frontmatter/`](standards/markdown-frontmatter/versions/1.8/skills/markdown-frontmatter/) — installed repo-local at `.agents/skills/markdown-frontmatter` for Claude Code and Codex CLI.
+- **Templates:** [`templates/`](standards/markdown-frontmatter/versions/1.8/templates/) · **Examples:** [`examples/`](standards/markdown-frontmatter/versions/1.8/examples/) · **Adopt:** [`adopt.md`](standards/markdown-frontmatter/versions/1.8/adopt.md)
 
-The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.7/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.7/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.7/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
+The standard defines **eleven required fields** plus a recommended optional set. Copy a ready-made block from [`templates/`](standards/markdown-frontmatter/versions/1.8/templates/) (`frontmatter-minimal.yml` or `frontmatter-standard.yml`); the [structure guide](standards/markdown-frontmatter/versions/1.8/structure.md) gives the hard field and controlled-value contract, and the [field-values guide](standards/markdown-frontmatter/versions/1.8/field-values.md) explains ownership, lifecycle, tags, aliases, relationships, and repo-local extensions.
 
 ### ADR Standard
 
@@ -95,15 +95,15 @@ The standard Python stack for agent-authored projects: `uv` + `uv_build`, `src/`
 
 The recommended linting/formatting tools and settings for Markdown and the structured-text files Prettier handles (`json`/`jsonc`/`yaml`): **markdownlint** for Markdown structure, **Prettier** for formatting, and **EditorConfig** as the floor. The V5 package manages the two configs plus `lint-markdown.yml` and `format.yml` caller/self-hosted workflows while composing only declared units in shared EditorConfig, VS Code, and instruction containers.
 
-- **Standard:** [`standards/markdown-tooling/versions/1.11/README.md`](standards/markdown-tooling/versions/1.11/README.md)
-- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.11/adopt.md)
+- **Standard:** [`standards/markdown-tooling/versions/1.12/README.md`](standards/markdown-tooling/versions/1.12/README.md)
+- **Adopt:** [`adopt.md`](standards/markdown-tooling/versions/1.12/adopt.md)
 
 ### Project Specification Standard
 
 Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed IDs, and provider-backed `validate`/`lint`/`extract`/`next`/`new`/`upgrade` commands. The selected package manages a reusable or self-hosted validation workflow; authoring writes are applied only from typed plans through the unified executor.
 
-- **Standard:** [`standards/project-spec/versions/1.5/README.md`](standards/project-spec/versions/1.5/README.md)
-- **Templates:** [`templates/`](standards/project-spec/versions/1.5/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.5/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.5/adopt.md)
+- **Standard:** [`standards/project-spec/versions/1.6/README.md`](standards/project-spec/versions/1.6/README.md)
+- **Templates:** [`templates/`](standards/project-spec/versions/1.6/templates/) · **Example:** [`examples/spec.example.md`](standards/project-spec/versions/1.6/examples/spec.example.md) · **Adopt:** [`adopt.md`](standards/project-spec/versions/1.6/adopt.md)
 
 ### CLI Documentation Standard
 
@@ -145,7 +145,7 @@ The version command must report `project-standards 5.13.0`. The first probe imme
 
 ```bash
 project-standards init --catalog 5
-project-standards standards enable markdown-frontmatter --version 1.7
+project-standards standards enable markdown-frontmatter --version 1.8
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -167,11 +167,11 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 
 | Package | Current payload | Adoption guide |
 | --- | --- | --- |
-| Markdown Frontmatter | `1.7` | [`standards/markdown-frontmatter/versions/1.7/adopt.md`](standards/markdown-frontmatter/versions/1.7/adopt.md) |
+| Markdown Frontmatter | `1.8` | [`standards/markdown-frontmatter/versions/1.8/adopt.md`](standards/markdown-frontmatter/versions/1.8/adopt.md) |
 | ADR | `1.3` | [`standards/adr/versions/1.3/adopt.md`](standards/adr/versions/1.3/adopt.md) |
 | Python Tooling | `1.10` | [`standards/python-tooling/versions/1.10/adopt.md`](standards/python-tooling/versions/1.10/adopt.md) |
-| Markdown Tooling | `1.11` | [`standards/markdown-tooling/versions/1.11/adopt.md`](standards/markdown-tooling/versions/1.11/adopt.md) |
-| Project Specification | `1.5` | [`standards/project-spec/versions/1.5/adopt.md`](standards/project-spec/versions/1.5/adopt.md) |
+| Markdown Tooling | `1.12` | [`standards/markdown-tooling/versions/1.12/adopt.md`](standards/markdown-tooling/versions/1.12/adopt.md) |
+| Project Specification | `1.6` | [`standards/project-spec/versions/1.6/adopt.md`](standards/project-spec/versions/1.6/adopt.md) |
 | CLI Documentation | `1.5` | [`standards/cli-documentation/versions/1.5/adopt.md`](standards/cli-documentation/versions/1.5/adopt.md) |
 | Agent Handoff | `1.8` | [`standards/agent-handoff/versions/1.8/adopt.md`](standards/agent-handoff/versions/1.8/adopt.md) |
 

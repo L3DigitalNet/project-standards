@@ -62,8 +62,11 @@ _PRE_ATOMIC_SELF_HOST_WORKFLOW_DIGEST = (
 _V1_1_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:b7ce900785841ebdfcd9758c76743f1390dbc162c6d48a21c1e9a246738f84a8"
 )
-_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+_V1_3_SELF_HOST_WORKFLOW_DIGEST = (
     "sha256:3cd986c11ee66c6da7169ba488d029e19473ec97d9fd785be616117e83307edc"
+)
+_CURRENT_SELF_HOST_WORKFLOW_DIGEST = (
+    "sha256:77fda8d63f55b3f2715b0c47b55ccd6306071fa6541d7b5a57decd1291e2c7bb"
 )
 
 
@@ -601,7 +604,7 @@ def test_project_spec_migration_normalizes_v1_and_preserves_ambiguity() -> None:
             _UNIFIED_AUTHORITY_SELF_HOST_WORKFLOW_DIGEST,
             id="unified-authority",
         ),
-        pytest.param(_CURRENT_SELF_HOST_WORKFLOW_DIGEST, id="current"),
+        pytest.param(_V1_3_SELF_HOST_WORKFLOW_DIGEST, id="v1.3-current"),
     ],
 )
 def test_project_spec_migration_classifies_both_self_host_generations(

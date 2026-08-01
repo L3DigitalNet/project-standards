@@ -245,8 +245,8 @@ def test_markdown_tooling_1_11__managed_bytes__are_unchanged_from_1_10() -> None
     } == {"package:1.7", "package:1.8", "package:1.9", "package:1.10", "legacy:v4-markdown-tooling"}
 
 
-def test_markdown_tooling_1_11__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_markdown_tooling_1_11__catalog_role__retains_predecessor() -> None:
+    """Catalog 5 must retain 1.11 after selecting its successor.
 
     The payload can be complete and valid while the catalog still selects its
     predecessor; only this row makes the successor the default a consumer on
@@ -259,7 +259,8 @@ def test_markdown_tooling_1_11__catalog_role__selects_the_successor_as_default()
         if package["id"] == "markdown-tooling"
     }
 
-    assert roles["1.11"] == "default"
+    assert roles["1.11"] == "retained"
+    assert roles["1.12"] == "default"
     assert roles["1.10"] == "retained"
 
 
