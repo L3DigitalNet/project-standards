@@ -42,10 +42,11 @@ related:
 | 0.7 | 2026-07-19 | Codex with owner approval | Record the `legacy-report` successful-inventory exit `0` exception while retaining every finding in human and JSON output. |
 | 0.8 | 2026-07-19 | Codex with owner approval | Record corrected package `1.2`, the shebang-resolved Python 3.14 floor, and the declared installed-artifact mode contract. |
 | 0.9 | 2026-08-01 | Codex with owner approval | Require an adaptive Python 3.14 launcher for both automatic harness profiles after the managed hook failed under `uv-strict-python` shims. |
+| 1.0 | 2026-08-01 | Codex with owner authorization | Retire the completed Task 18 plan, transfer the remaining manual consumer verification and retirement-record closeout to T32 of the open-issue resolution program, and preserve the approved V1 requirements and historical Task 18 evidence. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
-**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The currently released successor is immutable payload `agent-handoff@1.7`; the adaptive launcher correction specified by revision 0.9 requires new payload `1.8`. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
+**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The currently released successor is immutable payload `agent-handoff@1.7`; the adaptive launcher correction specified by revision 0.9 requires new payload `1.8`. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. The remaining legacy-engine retirement gates are owned by the [T32 operational closeout](../plans/2026-08-01-open-issue-resolution-program-plan.md#t32-finish-agent-handoff-consumer-retirement): two protected-consumer validations, authoritative-branch proof, and owner-approved retirement-record closure.
 
 ---
 
@@ -691,7 +692,7 @@ The completed items below are accepted through the Catalog 5 successor recorded 
 - [x] This repository dogfoods the accepted `agent-handoff` `1.2` Catalog 5 successor.
 - [ ] Every remaining known consumer completes migration and passes current Agent Handoff validation.
 - [x] The owner approved the package release.
-- [ ] The owner approves legacy-engine deletion after every Task 18 retirement gate passes.
+- [ ] The owner approves retirement-record closure after every T32 operational closeout gate passes.
 
 ### 17.2 Test Strategy
 

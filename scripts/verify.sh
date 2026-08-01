@@ -23,6 +23,8 @@
 #   PYTHONPATH    the extracted candidate wheel (the dogfood contract; this
 #                 script does not build it — see README.md "Developing this
 #                 repository")
+#   PROJECT_STANDARDS_COMPATIBILITY_WHEEL
+#                 the one resolved wheel that compatibility rows extract
 #   TMPDIR        a dedicated 4M-inode tmpfs at /mnt/pytesttmp when mounted,
 #                 otherwise a disk-backed path under the user cache. The MCP
 #                 fixture suites exhaust the default /tmp by inodes
@@ -56,6 +58,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_BIN="$REPO_ROOT/.venv/bin"
 WHEEL_RUNTIME="$REPO_ROOT/build/wheel-runtime"
+RELEASE_WHEEL_DIR="$REPO_ROOT/build/release-wheel"
 
 ORDINARY_WORKERS="${VERIFY_ORDINARY_WORKERS:-16}"
 COMPAT_WORKERS="${VERIFY_COMPAT_WORKERS:-8}"
@@ -103,6 +106,19 @@ if [[ ! -d "$WHEEL_RUNTIME" ]]; then
   rm -rf -- build/wheel-runtime
   uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime"
 fi
+
+if [[ -d "$RELEASE_WHEEL_DIR" ]]; then
+    mapfile -t candidate_wheels < <(
+        find "$RELEASE_WHEEL_DIR" -maxdepth 1 -type f -name 'project_standards-*.whl' -print | sort
+    )
+else
+    candidate_wheels=()
+fi
+if [[ "${#candidate_wheels[@]}" -ne 1 ]]; then
+    die "expected exactly one candidate wheel in $RELEASE_WHEEL_DIR; found ${#candidate_wheels[@]}"
+fi
+COMPATIBILITY_WHEEL="$(realpath -e "${candidate_wheels[0]}")" || die "cannot resolve candidate wheel"
+export PROJECT_STANDARDS_COMPATIBILITY_WHEEL="$COMPATIBILITY_WHEEL"
 
 for tool in coverage pytest ruff basedpyright pip-audit; do
     [[ -x "$VENV_BIN/$tool" ]] || die "missing $VENV_BIN/$tool — run: uv sync --all-groups"
@@ -276,6 +292,7 @@ lane_coverage_report() {
 printf 'verify: mode=%s tmp=%s (%s)\n' "$MODE" "$TMP_ROOT" "$TMP_KIND"
 [[ "$SMOKE" == "1" ]] && printf 'verify: VERIFY_SMOKE=1 — token selections, NOT a gate run\n'
 printf 'verify: PYTHONPATH=%s\n\n' "$PYTHONPATH"
+printf 'verify: PROJECT_STANDARDS_COMPATIBILITY_WHEEL=%s\n\n' "$PROJECT_STANDARDS_COMPATIBILITY_WHEEL"
 
 # Fresh-clone parity with CI: first-import __pycache__ creation mutates
 # parent-dir mtimes mid-run and races the read-only real-root digest proof.

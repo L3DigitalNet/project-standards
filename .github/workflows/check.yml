@@ -19,12 +19,12 @@ jobs:
       COVERAGE_CORE: sysmon
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # Ledger amendment authority needs its seed commits and release tags.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
           cache: npm
@@ -32,7 +32,10 @@ jobs:
       - name: Sync Node dependencies
         run: npm ci
 
-      - uses: actions/setup-python@v6
+      - name: Audit Node dependencies
+        run: npm audit --package-lock-only
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version-file: ".python-version"
 

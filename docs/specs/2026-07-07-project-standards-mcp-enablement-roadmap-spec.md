@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-07'
-last_reviewed: '2026-07-28'
+last_reviewed: '2026-08-01'
 supersedes: null
 superseded_by: null
 related:
@@ -38,6 +38,7 @@ related:
 
 | Version | Date | Author | Change |
 | --- | --- | --- | --- |
+| 1.7 | 2026-08-01 | Codex with owner authorization | Re-lock the current-state record after the read-only local MCP server shipped in 5.12.0: preserve the completed Step 09-through-14 sequencing and prior decision evidence; mark delivered read-only requirement evidence Passing; resolve v1 semantic-review omission under ADR 0026; and retain controlled-write and remote-transport work as separately approved future phases. |
 | 1.6 | 2026-07-28 | Claude (T1 decision gate) | Resolve OQ-001 and OQ-002 from the Step 09 decision gate: final 2026-07-28 protocol with exact mcp==2.0.0 accepted under ADR 0025, resource URI grammar frozen under ADR 0026 with the shipped-index divergence disclosed; the roadmap's related-ADR links, the §3 protocol/SDK current-state paragraph, and the protocol/SDK reference entries now point at the accepted ADRs and the final publication. Step 09 is recorded complete with current traceability statuses; no roadmap requirement text was rewritten beyond recording the gate outcome. |
 | 1.5 | 2026-07-24 | Codex with Claude Opus review | Correct the stale Step 08 current-state paragraph after closeout quality review: documentation reconciliation and both reviews are complete, while Step 09 remains the next no-code T1 gate after final publication evidence becomes available. |
 | 1.4 | 2026-07-24 | Codex with Claude Opus review | Record the separately converged implementation-plan review, complete the three combined spec-plus-plan evidence markers, and move FR-020 to Passing without starting Step 09 or implementation. |
@@ -55,7 +56,7 @@ related:
 | 0.2 | 2026-07-07 | ChatGPT | Normalized `spec_id` from mnemonic placeholder to Project Spec-compatible `SPEC-[0-9A-Z]{4}` form and updated prior-spec references. |
 | 0.1 | 2026-07-07 | ChatGPT | Initial ordered roadmap from meta-repository preparation through future MCP server implementation. |
 
-**Spec lifecycle:** This approved revision is re-locked after separate high-effort Opus spec and implementation-plan reviews converged and remains change-controlled. `SPEC-MT01`, Step 08, and Step 09 are complete. The no-code protocol, SDK, client, and service-boundary decision gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted and exact `mcp==2.0.0` pinned; server implementation may begin at T2 of the implementation plan. Later controlled-write and remote-transport phases still require separate approval.
+**Spec lifecycle:** This approved revision remains change-controlled. `SPEC-MT01` and Steps 08 through 14 are complete. The no-code protocol, SDK, client, and service-boundary decision gate closed on 2026-07-28 with ADR 0025 and ADR 0026 accepted and exact `mcp==2.0.0` pinned; the local read-only server was delivered in 5.12.0. Controlled-write and remote-transport phases remain deferred and require separate approval.
 
 ---
 
@@ -127,7 +128,7 @@ Project Standards 5.8.0 is published from `d007ba0`. Catalog 5 contains seven co
 
 The unified `.standards/` control plane now owns consumer desired state, installed catalog state, applied-state provenance, deterministic reconciliation planning, explicit apply, recovery, and drift reporting. `InstalledDistribution` is the production boundary for package facts; `PackageRepository` is the source-repository validation boundary. Typed provider operations and structured reconciliation results already supply the non-MCP semantics the server should expose.
 
-`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 was executed by implementation-plan T1 on 2026-07-28 against the final protocol and stable SDK evidence, and is complete: it froze the protocol, SDK, client, and service boundary before code begins, recording ADR 0025 and ADR 0026 as accepted and exact `mcp==2.0.0` as the pinned dependency. Server implementation may begin at T2 of the implementation plan.
+`SPEC-MT01` Step 07 passed on 2026-07-12. The old readiness gap no longer exists. Step 08 documentation reconciliation and its separate specification and implementation-plan reviews are complete. Step 09 was executed by implementation-plan T1 on 2026-07-28 against the final protocol and stable SDK evidence, freezing the protocol, SDK, client, and service boundary under ADR 0025 and ADR 0026 with exact `mcp==2.0.0` pinned. Steps 10 through 14 then delivered the local read-only server in 5.12.0; controlled-write and remote-transport phases remain deferred.
 
 External MCP inputs were unusually time-sensitive at the 2026-07-24 review date, and that window has now closed. The breaking `2026-07-28` revision was published as final on 2026-07-28 and supersedes `2025-11-25`; the official Python SDK v2 line reached stable release alongside it while v1.x moved to maintenance mode. The roadmap's prohibition on selecting a pre-release merely to make this document look current was honoured: the Step 09 selection is exact `mcp==2.0.0` against the final publication under [ADR 0025](../adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md), evidenced by the 2026-07-28 protocol/SDK/client matrix.
 
@@ -628,13 +629,13 @@ No secrets are required for local read-only MCP. Remote or GitHub-integrated pha
 
 - [x] `SPEC-MT01` readiness gate passes; see `docs/mcp-readiness.md`.
 - [x] Refreshed `SPEC-RD01`, `SPEC-MS01`, and the implementation plan pass local validation and Claude Opus review to convergence.
-- [ ] Required MCP boundary and dependency ADRs are accepted before implementation code.
-- [ ] Read-only local MCP can list/read exact V2 payload resources from a fully validated `InstalledDistribution`.
-- [ ] Generic tools work against a standards repo and at least one consumer fixture.
-- [ ] Adding a fixture standard changes resources/data but not top-level tools.
-- [ ] Planning tools precede write tools.
+- [x] Required MCP boundary and dependency ADRs are accepted before implementation code.
+- [x] Read-only local MCP can list/read exact V2 payload resources from a fully validated `InstalledDistribution`.
+- [x] Generic tools work against a standards repo and at least one consumer fixture.
+- [x] Adding a fixture standard changes resources/data but not top-level tools.
+- [x] Planning tools precede write tools.
 - [ ] Write tools, if implemented, reject missing/stale/mismatched plan identity.
-- [ ] Remote transport remains deferred unless separately approved.
+- [x] Remote transport remains deferred unless separately approved.
 
 ### 17.2 Test Strategy
 
@@ -657,19 +658,19 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 | FR-002 | Accepted ADRs 0005, 0012, 0013, 0018, 0019, and 0021-0024; Step 09 plan task covers remaining MCP-only decisions before code. | Passing |
 | FR-003 | `docs/mcp-readiness.md`. | Passing |
 | FR-004 | Published 5.8.0 verification plus future implementation regression gates. | Passing; Gate Defined |
-| FR-005 | Current package/control-plane API tests plus planned facade contract tests. | In Progress |
+| FR-005 | SDK-independent facade and adapter contract suites under `tests/mcp_services/` and `tests/mcp_server/`, plus the v5.12.0 delivery record in `docs/handoff/deployed.md`. | Passing |
 | FR-006 | `docs/research/2026-07-12-catalog-5-mcp-exposure-review.md` and current package-contract gates. | Passing |
-| FR-007 | Local read-only MCP smoke test. | Not Started |
-| FR-008 | Fixture standard resource discovery test. | Not Started |
-| FR-009 | Tool list snapshot test across fixture standard addition. | Not Started |
-| FR-010 | Planning tool exists before apply tool registration. | Not Started |
-| FR-011 | Structured output schema review. | Not Started |
-| FR-012 | Validation/drift consumer fixture tests. | Not Started |
+| FR-007 | Source and installed-wheel local stdio smoke tests, `docs/mcp-server.md`, and the v5.12.0 delivery record in `docs/handoff/deployed.md`. | Passing |
+| FR-008 | MCP resource discovery, digest-integrity, and fixture-extension suites under `tests/mcp_server/`, including installed-wheel coverage. | Passing |
+| FR-009 | Tool-registry and fixture-extension suites under `tests/mcp_server/`, proving a new fixture standard changes resources rather than top-level tools. | Passing |
+| FR-010 | `reconcile_preview` contract suites and the six-tool v1 registry, which registers no apply tool. | Passing |
+| FR-011 | MCP tool structured-output schemas and protocol contract suites under `tests/mcp_server/`. | Passing |
+| FR-012 | `validate_repo` and `drift_check` consumer-fixture integration suites under `tests/mcp_server/`. | Passing |
 | FR-013 | Remote transport blocked until local evidence criteria. | Guard Active |
-| FR-014 | Write safety ADR/spec review. | Not Started |
-| FR-015 | Apply tool plan identity tests, when write phase starts. | Not Started |
+| FR-014 | Future write safety ADR/spec review. | Gate Defined |
+| FR-015 | Apply tool plan identity tests, when write phase starts. | Gate Defined |
 | FR-016 | Refreshed `SPEC-MS01` and converged specification-review result. | Passing |
-| FR-017 | Single-repo primitive fixture tests. | Not Started |
+| FR-017 | Single-repository resource, inspection, validation, drift, and reconciliation-preview fixture suites under `tests/mcp_server/`. | Passing |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
 | FR-019 | Step 09 final recheck executed 2026-07-28: ADR 0025 and ADR 0026 accepted, exact `mcp==2.0.0` pinned, evidence in the 2026-07-28 protocol/SDK/client matrix. | Passing |
 | FR-020 | Converged plan-review result and the completed delivery close-out in commit `4d2ece9`, preserved in Git history and `docs/handoff/sessions/2026-07.md`. | Passing |
@@ -752,9 +753,9 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 - [x] This roadmap approved.
 - [x] `SPEC-MT01` completed; Step 07 passed on 2026-07-12.
 - [x] Refreshed MCP implementation spec and plan converge after readiness.
-- [ ] MCP ADRs for local stdio, read-only-first, generic tools, controlled writes, and remote deferral.
-- [ ] User setup instructions for local MCP.
-- [ ] Tool/resource reference generated from server schemas.
+- [x] ADRs 0025 and 0026 define the local stdio, read-only-first, generic-tool, and remote-deferral boundary; controlled writes remain a separate future approval.
+- [x] User setup instructions for local MCP in `docs/mcp-server.md`.
+- [x] Tool/resource reference in `docs/mcp-server.md`.
 - [ ] Security notes for write and remote phases.
 
 ---
@@ -876,7 +877,7 @@ No durable runtime data in read-only v1. Plans/reports, if later persisted, shou
 | OQ-003 | Should MCP use package-bundled standards, live repo checkout, or both? | Installed wheel data is the production authority. Source checkout is a development/test mode and must produce equivalent exposed facts through an explicit injected repository service. | No | MCP implementer | Step 09 | Resolved |
 | OQ-004 | Should controlled writes ever call GitHub directly? | No for v1; local repo writes first. | No | Standards owner | Step 15 | Open |
 | OQ-005 | How should MCP clients surface approval for apply tools? | Server enforces plan identity; client UX varies. | No | MCP implementer | Step 15 | Open |
-| OQ-006 | Should semantic review be an MCP prompt or tool? | Expose the declared provider only when the selected client surface can preserve its user-controlled semantics; otherwise omit it from v1 rather than reclassifying it as a model-controlled tool. | No | Standards owner | Step 11 | Open |
+| OQ-006 | Should semantic review be an MCP prompt or tool? | Resolved for v1: omit semantic review from the v1 tool and prompt registries. ADR 0026 freezes the six-tool registry and permits prompts only for declared prompt-role resources; no prompt role is registered in v1. A future expansion requires separate approval, a declared prompt-role resource, and a current client-support review. | No | Standards owner | Step 11 | Resolved for v1 |
 | OQ-007 | When is remote MCP justified? | Only after local server has recurring use and a concrete remote use case. | No | Standards owner | Step 18 | Open |
 
 ---

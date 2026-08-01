@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import sys
+import time
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -7,6 +12,101 @@ from typing import cast
 import yaml
 
 _ROOT = Path(__file__).resolve().parent.parent
+
+
+def _write_executable(path: Path, body: str) -> None:
+    path.write_text(f"#!/usr/bin/env bash\nset -u\n{body}\n", encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _gate_fixture(tmp_path: Path, *, wheel_count: int) -> tuple[Path, Path, dict[str, str]]:
+    """Create a hermetic verify.sh root whose tools expose lane orchestration."""
+    repo = tmp_path / "repo"
+    scripts = repo / "scripts"
+    venv_bin = repo / ".venv" / "bin"
+    node_bin = repo / "node_modules" / ".bin"
+    wheel_runtime = repo / "build" / "wheel-runtime"
+    wheel_dir = repo / "build" / "release-wheel"
+    log = tmp_path / "tool-invocations.log"
+
+    scripts.mkdir(parents=True)
+    venv_bin.mkdir(parents=True)
+    node_bin.mkdir(parents=True)
+    wheel_runtime.mkdir(parents=True)
+    wheel_dir.mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "src" / "project_standards").mkdir(parents=True)
+    shutil.copy2(_ROOT / "scripts" / "verify.sh", scripts / "verify.sh")
+
+    for index in range(wheel_count):
+        (wheel_dir / f"project_standards-{index}.whl").write_bytes(b"wheel")
+
+    _write_executable(venv_bin / "python", f'exec "{sys.executable}" "$@"')
+    for tool in ("basedpyright", "pip-audit"):
+        _write_executable(
+            venv_bin / tool,
+            'printf "%s %s\\n" "${0##*/}" "$*" >> "$VERIFY_FAKE_LOG"',
+        )
+    _write_executable(
+        venv_bin / "ruff",
+        """printf "ruff %s\\n" "$*" >> "$VERIFY_FAKE_LOG"
+if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$*" == "format --check ." ]]; then
+    mkdir -p "$VERIFY_START_DIR/statics"
+    until [[ -f "$VERIFY_RELEASE_FILE" ]]; do sleep 0.01; done
+fi""",
+    )
+    _write_executable(
+        venv_bin / "coverage",
+        """printf "coverage %s\\n" "$*" >> "$VERIFY_FAKE_LOG"
+if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$1" == "run" ]]; then
+    mkdir -p "$VERIFY_START_DIR/ordinary"
+    until [[ -f "$VERIFY_RELEASE_FILE" ]]; do sleep 0.01; done
+fi
+if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$1" == "combine" ]]; then
+    touch "$VERIFY_COVERAGE_COMBINE_FILE"
+fi""",
+    )
+    for tool in ("prettier", "markdownlint-cli2"):
+        _write_executable(
+            node_bin / tool,
+            'printf "%s %s\\n" "${0##*/}" "$*" >> "$VERIFY_FAKE_LOG"',
+        )
+    _write_executable(
+        venv_bin / "pytest",
+        """printf "pytest %s\\n" "$*" >> "$VERIFY_FAKE_LOG"
+if [[ "$*" == *"-m compatibility"* ]]; then
+    if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" ]]; then
+        mkdir -p "$VERIFY_START_DIR/compatibility"
+        until [[ -f "$VERIFY_RELEASE_FILE" ]]; do sleep 0.01; done
+    fi
+    [[ "${PROJECT_STANDARDS_COMPATIBILITY_WHEEL:-}" == "$VERIFY_EXPECTED_WHEEL" ]] || exit 97
+    exit "${VERIFY_COMPATIBILITY_EXIT:-0}"
+fi
+if [[ "${VERIFY_ASSERT_FAST_START:-0}" == "1" && "$*" == *"-m performance"* ]]; then
+    touch "$VERIFY_PERFORMANCE_FILE"
+fi""",
+    )
+
+    environment = os.environ | {
+        "VERIFY_FAKE_LOG": str(log),
+        "VERIFY_SMOKE": "1",
+        "VERIFY_EXPECTED_WHEEL": str((wheel_dir / "project_standards-0.whl").resolve()),
+        "XDG_CACHE_HOME": str(tmp_path / "cache"),
+    }
+    return repo, log, environment
+
+
+def _run_gate(
+    repo: Path, environment: dict[str, str], *args: str
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(repo / "scripts" / "verify.sh"), *args],
+        cwd=repo,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _workflow_steps() -> list[dict[str, object]]:
@@ -51,6 +151,11 @@ def test_repository_workflow_installs_node_dependencies_before_ordinary_tests() 
         if str(step.get("uses", "")).startswith("actions/setup-node@")
     )
     npm_ci_index = next(index for index, step in enumerate(steps) if step.get("run") == "npm ci")
+    npm_audit_index = next(
+        index
+        for index, step in enumerate(steps)
+        if step.get("run") == "npm audit --package-lock-only"
+    )
     wheel_extract_index = next(
         index for index, step in enumerate(steps) if step.get("name") == "Extract candidate wheel"
     )
@@ -60,7 +165,13 @@ def test_repository_workflow_installs_node_dependencies_before_ordinary_tests() 
         if step.get("name") == "Ordinary tests with coverage"
     )
 
-    assert setup_node_index < npm_ci_index < wheel_extract_index < ordinary_test_index
+    assert (
+        setup_node_index
+        < npm_ci_index
+        < npm_audit_index
+        < wheel_extract_index
+        < ordinary_test_index
+    )
 
 
 def test_repository_workflow__candidate_wheel__reused_for_compatibility() -> None:
@@ -111,3 +222,108 @@ def test_repository_configuration_keeps_only_retained_test_groups() -> None:
     assert not any(marker.startswith("release_replay:") for marker in markers)
     assert coverage_run == {"branch": True, "source": ["src"]}
     assert "paths" not in coverage
+
+
+def test_verify_gate__zero_candidate_wheels__fails_before_lanes(tmp_path: Path) -> None:
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=0)
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    assert "expected exactly one candidate wheel" in completed.stderr
+    assert not log.exists()
+
+
+def test_verify_gate__multiple_candidate_wheels__fails_before_lanes(tmp_path: Path) -> None:
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=2)
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    assert "expected exactly one candidate wheel" in completed.stderr
+    assert not log.exists()
+
+
+def test_verify_gate__one_candidate_wheel__exports_it_and_reports_aggregate_failure(
+    tmp_path: Path,
+) -> None:
+    repo, _log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    environment["VERIFY_COMPATIBILITY_EXIT"] = "17"
+
+    completed = _run_gate(repo, environment)
+
+    assert completed.returncode == 1
+    wheel = environment["VERIFY_EXPECTED_WHEEL"]
+    assert f"verify: PROJECT_STANDARDS_COMPATIBILITY_WHEEL={wheel}" in completed.stdout
+    assert "compatibility" in completed.stdout
+    assert "FAILED (exit 17)" in completed.stdout
+    summary = completed.stdout.index("════ summary ════")
+    assert completed.stdout.index("════ statics ════") < summary
+    assert completed.stdout.index("════ ordinary ════") < summary
+    assert completed.stdout.index("════ compatibility ════") < summary
+    assert completed.stdout.index("════ performance ════") < summary
+    assert completed.stdout.index("════ coverage-combine ════") < summary
+    assert completed.stdout.index("════ coverage-report ════") < summary
+
+
+def test_verify_gate__fast_mode__starts_parallel_lanes_before_serial_tail(tmp_path: Path) -> None:
+    repo, _log, environment = _gate_fixture(tmp_path, wheel_count=1)
+    start_dir = tmp_path / "starts"
+    release_file = tmp_path / "release-parallel-lanes"
+    performance_file = tmp_path / "performance-started"
+    coverage_combine_file = tmp_path / "coverage-combine-started"
+    environment |= {
+        "VERIFY_ASSERT_FAST_START": "1",
+        "VERIFY_START_DIR": str(start_dir),
+        "VERIFY_RELEASE_FILE": str(release_file),
+        "VERIFY_PERFORMANCE_FILE": str(performance_file),
+        "VERIFY_COVERAGE_COMBINE_FILE": str(coverage_combine_file),
+    }
+    process = subprocess.Popen(
+        [str(repo / "scripts" / "verify.sh")],
+        cwd=repo,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    expected_starts = {"statics", "ordinary", "compatibility"}
+    deadline = time.monotonic() + 5
+    try:
+        while (
+            {path.name for path in start_dir.glob("*")} != expected_starts
+            and process.poll() is None
+            and time.monotonic() < deadline
+        ):
+            time.sleep(0.01)
+
+        assert process.poll() is None
+        assert {path.name for path in start_dir.glob("*")} == expected_starts
+        assert not performance_file.exists()
+        assert not coverage_combine_file.exists()
+    finally:
+        release_file.touch()
+
+    stdout, stderr = process.communicate(timeout=5)
+    assert process.returncode == 0, stdout + stderr
+    assert performance_file.exists()
+    assert coverage_combine_file.exists()
+
+
+def test_verify_gate__full_mode__preserves_serial_lane_order(tmp_path: Path) -> None:
+    repo, log, environment = _gate_fixture(tmp_path, wheel_count=1)
+
+    completed = _run_gate(repo, environment, "--full")
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    invocations = log.read_text(encoding="utf-8").splitlines()
+    assert invocations[0] == "coverage erase"
+    assert invocations[1] == "ruff format --check ."
+    assert invocations[2] == "ruff check ."
+    assert invocations[3].startswith(
+        "coverage run --source=project_standards -m pytest -m not performance and not compatibility"
+    )
+    assert invocations[4].startswith("pytest -m compatibility -n 4")
+    assert invocations[5].startswith("pytest -m performance")
+    assert invocations[6] == "coverage report --fail-under=0"

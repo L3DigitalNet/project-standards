@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -8,9 +9,18 @@ import pytest
 import yaml
 
 _ROOT = Path(__file__).resolve().parent.parent
-_CHECKOUT = "actions/checkout@v7"
-_SETUP_NODE = "actions/setup-node@v6"
+_EXTERNAL_ACTIONS = {
+    "actions/checkout": ("3d3c42e5aac5ba805825da76410c181273ba90b1", "v7"),
+    "actions/setup-node": ("249970729cb0ef3589644e2896645e5dc5ba9c38", "v6"),
+    "actions/setup-python": ("ece7cb06caefa5fff74198d8649806c4678c61a1", "v6"),
+    "astral-sh/setup-uv": ("11f9893b081a58869d3b5fccaea48c9e9e46f990", "v8.3.2"),
+    "DavidAnson/markdownlint-cli2-action": ("6bf21b07787794f89a243495939cd651942aeabe", "v24"),
+}
+_CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+_SETUP_NODE = "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38"
 _SETUP_UV = "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"
+_CURRENT_V2_CHECKOUT = "actions/checkout@v7"
+_CURRENT_V2_SETUP_NODE = "actions/setup-node@v6"
 _LEGACY_CLI_DIGEST = "3059b84e8730775e021b3e9ce14e819ef4bd0084fbd5ac996d811ede99e5baf8"
 _LEGACY_PYTHON_DIGEST = "16a65f2bdc06adfc814786201ec32937bad4b5930cbf2bf722489007150c933e"
 
@@ -42,6 +52,10 @@ _LEGACY_CLI_WORKFLOWS = (
     "standards/cli-documentation/templates/cli-docs-check.yml",
     "src/project_standards/bundles/cli-documentation/cli-docs-check.yml",
 )
+_EXTERNAL_ACTION_USE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s+(?P<action>[^@\s]+)@(?P<ref>[^\s#]+)\s*(?:#\s*(?P<version>\S.*))?$",
+    re.MULTILINE,
+)
 
 
 def _load(relative_path: str) -> dict[Any, Any]:
@@ -56,8 +70,41 @@ def _uses(relative_path: str) -> list[dict[Any, Any]]:
     return [step for job in workflow["jobs"].values() for step in job["steps"] if "uses" in step]
 
 
+def test_live_workflow_external_actions_are_sha_pinned_with_version_comments() -> None:
+    for workflow in sorted((_ROOT / ".github" / "workflows").glob("*.yml")):
+        for match in _EXTERNAL_ACTION_USE.finditer(workflow.read_text(encoding="utf-8")):
+            action = match["action"]
+            if action.startswith("./"):
+                continue
+
+            expected_ref, expected_version = _EXTERNAL_ACTIONS[action]
+            assert match["ref"] == expected_ref, f"{workflow}: {action}"
+            assert match["version"] == expected_version, f"{workflow}: {action}"
+
+
+def test_dependabot_updates_actions_and_lockfile_backed_node_dependencies() -> None:
+    config = cast(
+        "dict[str, object]",
+        yaml.safe_load((_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")),
+    )
+    updates = cast("list[dict[str, object]]", config["updates"])
+
+    assert updates == [
+        {
+            "package-ecosystem": "github-actions",
+            "directory": "/",
+            "schedule": {"interval": "weekly"},
+        },
+        {
+            "package-ecosystem": "npm",
+            "directory": "/",
+            "schedule": {"interval": "weekly"},
+        },
+    ]
+
+
 @pytest.mark.parametrize("relative_path", _ROOT_WORKFLOWS)
-def test_live_root_workflows_use_checkout_v7(relative_path: str) -> None:
+def test_live_root_workflows_use_reviewed_checkout_pin(relative_path: str) -> None:
     checkout = [
         step["uses"]
         for step in _uses(relative_path)
@@ -100,14 +147,14 @@ def test_live_node_workflows_use_node_24_generation_and_intended_cache_policy() 
 
 
 @pytest.mark.parametrize("relative_path", _CURRENT_V2_WORKFLOWS)
-def test_current_v2_workflows_use_checkout_v7(relative_path: str) -> None:
+def test_current_v2_workflows_remain_at_checkout_v7(relative_path: str) -> None:
     checkout = [
         step["uses"]
         for step in _uses(relative_path)
         if step["uses"].startswith("actions/checkout@")
     ]
 
-    assert checkout == [_CHECKOUT]
+    assert checkout == [_CURRENT_V2_CHECKOUT]
 
 
 def test_current_v2_workflows_use_reviewed_runtime_contracts() -> None:
@@ -118,7 +165,7 @@ def test_current_v2_workflows_use_reviewed_runtime_contracts() -> None:
     )
     assert format_setup == {
         "name": "Set up Node",
-        "uses": _SETUP_NODE,
+        "uses": _CURRENT_V2_SETUP_NODE,
         "with": {"node-version": "24", "package-manager-cache": False},
     }
 

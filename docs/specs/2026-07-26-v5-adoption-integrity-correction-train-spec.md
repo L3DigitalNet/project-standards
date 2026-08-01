@@ -691,7 +691,7 @@ The train's operational evidence is deterministic command output and durable rep
 
 - [Consumer Standards Control Plane specification](2026-07-10-consumer-standards-control-plane-spec.md)
 - [Standard Bundle Authoring V2 specification](2026-07-10-standard-bundle-authoring-v2-spec.md)
-- [Current implementation plan](../plans/2026-07-25-v5-adoption-integrity-correction-train-plan.md)
+- [Completion record](../handoff/specs-plans.md)
 - [Closed-Issue Regression Audit](../reviews/2026-07-26-closed-issue-regression-audit.md)
 - [GitHub issue #32](https://github.com/L3DigitalNet/project-standards/issues/32)
 - [GitHub issues #35-#49](https://github.com/L3DigitalNet/project-standards/issues?q=is%3Aissue%20is%3Aopen%20number%3A35..49)

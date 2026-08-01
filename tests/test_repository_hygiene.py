@@ -1,0 +1,118 @@
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+_MODE_POLICY_ANCHOR = "2989563cc94dfd8561404d7ad8896eb83b459225"
+_PREDECESSOR = "v5.13.0"
+
+_EXECUTABLE_ALLOWLIST = frozenset(
+    {
+        ".agents/hooks/agent-handoff/session_start.py",
+        ".agents/skills/markdown-frontmatter/scripts/new-doc-id",
+        "docs/handoff/bugs/_regen_index.py",
+        "scripts/verify.sh",
+        "src/project_standards/bundles/agent-handoff/hooks/session-start/session_start.py",
+        "src/project_standards/bundles/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id",
+        "src/project_standards/validate_frontmatter.py",
+        "standards/agent-handoff/hooks/session-start/session_start.py",
+        "standards/markdown-frontmatter/skills/markdown-frontmatter/scripts/new-doc-id",
+    }
+)
+
+_MUTABLE_NORMALIZATION_ALLOWLIST = frozenset(
+    {
+        "src/project_standards/__init__.py",
+        "src/project_standards/specs/templates/spec-full-template.md",
+        "src/project_standards/specs/templates/spec-light-template.md",
+        "src/project_standards/specs/templates/spec-standard-template.md",
+        "standards/project-spec/resources/tooling-notes.md",
+        "standards/project-spec/templates/spec-full-template.md",
+        "standards/project-spec/templates/spec-light-template.md",
+        "standards/project-spec/templates/spec-standard-template.md",
+    }
+)
+
+_IMMUTABLE_PROJECTION_EXCLUSIONS = frozenset(
+    {
+        *{
+            "standards/markdown-frontmatter/versions/"
+            f"{version}/skills/markdown-frontmatter/scripts/new-doc-id"
+            for version in ("1.2", "1.3", "1.4", "1.5", "1.6", "1.7")
+        },
+        *{
+            f"standards/project-spec/versions/{version}/{resource}"
+            for version in ("1.1", "1.2", "1.3", "1.4", "1.5")
+            for resource in (
+                "resources/tooling-notes.md",
+                "templates/spec-full-template.md",
+                "templates/spec-light-template.md",
+                "templates/spec-standard-template.md",
+            )
+        },
+    }
+)
+
+
+def _git(*arguments: str) -> str:
+    return subprocess.run(
+        ["git", *arguments],
+        cwd=_ROOT,
+        check=True,
+        capture_output=True,
+        encoding="utf-8",
+    ).stdout
+
+
+def _index_entries() -> dict[str, tuple[str, str]]:
+    entries: dict[str, tuple[str, str]] = {}
+    for line in _git("ls-files", "-s").splitlines():
+        metadata, path = line.split("\t", maxsplit=1)
+        mode, blob, _stage = metadata.split()
+        entries[path] = (mode, blob)
+    return entries
+
+
+def _tree_entries(revision: str) -> dict[str, tuple[str, str]]:
+    entries: dict[str, tuple[str, str]] = {}
+    for line in _git("ls-tree", "-r", revision).splitlines():
+        metadata, path = line.split("\t", maxsplit=1)
+        mode, _kind, blob = metadata.split()
+        entries[path] = (mode, blob)
+    return entries
+
+
+def test_git_mode_policy__classifies_and_normalizes_the_complete_anchor_inventory() -> None:
+    entries = _index_entries()
+    anchor_entries = _tree_entries(_MODE_POLICY_ANCHOR)
+    classified = (
+        _EXECUTABLE_ALLOWLIST | _MUTABLE_NORMALIZATION_ALLOWLIST | _IMMUTABLE_PROJECTION_EXCLUSIONS
+    )
+    anchor_executables = {
+        path for path, (mode, _blob) in anchor_entries.items() if mode == "100755"
+    }
+
+    assert len(anchor_executables) == 43
+    assert anchor_executables == classified
+    assert classified <= entries.keys()
+    assert {
+        path for path, (mode, _blob) in entries.items() if mode == "100755"
+    } == _EXECUTABLE_ALLOWLIST | _IMMUTABLE_PROJECTION_EXCLUSIONS
+    assert {path: entries[path][0] for path in _MUTABLE_NORMALIZATION_ALLOWLIST} == dict.fromkeys(
+        _MUTABLE_NORMALIZATION_ALLOWLIST, "100644"
+    )
+
+
+def test_git_mode_policy__preserves_predecessor_versioned_resource_blobs_and_modes() -> None:
+    predecessor = _tree_entries(_PREDECESSOR)
+    current = _index_entries()
+    predecessor_versioned_resources = {
+        path: entry
+        for path, entry in predecessor.items()
+        if path.startswith("standards/") and "/versions/" in path
+    }
+
+    assert {path: current[path] for path in predecessor_versioned_resources} == (
+        predecessor_versioned_resources
+    )
