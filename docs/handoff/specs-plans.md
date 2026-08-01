@@ -8,6 +8,7 @@
 
 | Item | Path | Status |
 | --- | --- | --- |
+| Open-issue resolution program | `docs/plans/2026-08-01-open-issue-resolution-program-plan.md` | **active, 33 tasks** — groups 24 frozen issues and three owner TODOs into bounded trains; T30 is complete; T1 and T32 are ready |
 | Durable document references optional tooling — **SPEC-GSF3** | `docs/specs/2026-07-31-durable-document-references-optional-tooling-spec.md`; `docs/plans/2026-07-31-durable-document-references-optional-tooling-plan.md` | **draft specification and active 14-task plan** — optional meta-repository main-wheel tooling; owner-approved design and Opus findings are integrated; T1 is ready for implementation in a fresh session; no implementation is claimed |
 | V5 adoption friction correction train design | `docs/specs/archive/2026-07-22-v5-adoption-friction-correction-train-design.md` | **released (5.8.0)** — python-tooling 1.8 `pytest.test_paths`, markdown-tooling 1.8 legacy byte-form acceptance, markdown-frontmatter 1.5 `workflow_ownership`, minimal-escape frontmatter serialization converged on the pinned Prettier oracle, CLI hardening, legacy-note rewording (issues #26–#31); the implementation plan was removed under the completed-plan policy |
 | V5 managed-edit fidelity correction train design | `docs/specs/archive/2026-07-22-v5-managed-edit-fidelity-correction-train-design.md` | **released (5.7.0)** — python-tooling 1.7 per-root coverage scoping and anchored TOML comment preservation (issues #24–#25); the implementation plan was removed under the completed-plan policy |

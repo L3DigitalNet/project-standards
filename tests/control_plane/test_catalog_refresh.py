@@ -198,7 +198,7 @@ def _distribution_with_alpha_2_1(tmp_path: Path) -> InstalledDistribution:
     assert sync_payload_projection(repository, check=False) == ()
     installed = tmp_path / "installed-refresh/project_standards"
     shutil.copytree(repository / "src/project_standards", installed)
-    return InstalledDistribution(installed, tool_release="5.1.0")
+    return InstalledDistribution(installed, tool_release="5.0.1")
 
 
 def test_catalog_refresh_boundary_module_exists() -> None:
@@ -806,7 +806,7 @@ from project_standards.control_plane.executor import ApplyRequest, apply_reconci
 from project_standards.control_plane.planner import plan_reconciliation
 
 repo = Path(sys.argv[1])
-distribution = InstalledDistribution(Path(sys.argv[2]), tool_release="5.1.0")
+distribution = InstalledDistribution(Path(sys.argv[2]), tool_release="5.0.1")
 planner = build_planner_request(repo, distribution, frozenset())
 plan = plan_reconciliation(planner)
 
@@ -828,7 +828,7 @@ raise AssertionError("termination fault did not run")
     assert completed.returncode == 74, completed.stderr
     assert list(repo.rglob(".project-standards-*.tmp"))
     assert (
-        detect_control_plane_state(repo, tool_release="5.1.0").kind is StateKind.INTERRUPTED_REFRESH
+        detect_control_plane_state(repo, tool_release="5.0.1").kind is StateKind.INTERRUPTED_REFRESH
     )
     assert (
         run(

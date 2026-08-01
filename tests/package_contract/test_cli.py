@@ -401,6 +401,49 @@ def test_packages_check_release_uses_tagged_baseline(
     assert payload["classification"] == "patch"
 
 
+def test_packages_check_release__unchanged_catalog_with_proposed_minor__exits_one(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    shutil.copytree(_FIXTURE, repository)
+    _create_released_fixture(repository)
+    monkeypatch.setattr(package_cli, "package_version", lambda: "5.3.0")
+
+    def no_consistency_findings(
+        _root: Path,
+        _repository: PackageRepository,
+        *,
+        distribution_version: str,
+    ) -> tuple[PackageFinding, ...]:
+        del distribution_version
+        return ()
+
+    monkeypatch.setattr(
+        package_cli,
+        "validate_release_consistency",
+        no_consistency_findings,
+    )
+
+    assert (
+        run_packages(
+            [
+                "check-release",
+                "--root",
+                str(repository),
+                "--baseline",
+                "v5.2.0",
+                "--json",
+            ]
+        )
+        == 1
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["classification"] == "forbidden"
+    assert [finding["code"] for finding in payload["findings"]] == ["PC-RELEASE-LEVEL"]
+
+
 def test_packages_check_release_stops_on_candidate_consistency_findings(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

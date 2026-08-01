@@ -6,8 +6,8 @@ description: 'Defines non-breaking catalog defaults, opt-in breaking package can
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-10'
-updated: '2026-07-10'
-reviewed: '2026-07-10'
+updated: '2026-08-01'
+reviewed: '2026-08-01'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -47,7 +47,7 @@ MADR status: **accepted**.
 
 ## Context and Problem Statement
 
-The repository has one SemVer release for the `project-standards` distribution, while each standard package evolves on its own `major.minor` line. Earlier policy treated package `latest` as the numerically highest bundled version and treated adding a package version as an ordinary additive tool release. That does not safely support publishing an opt-in breaking package major before the entire catalog is ready for another major release.
+The `project-standards` distribution has one release identifier using the SemVer `MAJOR.MINOR.PATCH` grammar, while each standard package evolves on its own `major.minor` line. The distribution's release level follows the owner and package-composition policy below, not SemVer impact classification. Earlier policy treated package `latest` as the numerically highest bundled version and treated adding a package version as an ordinary additive tool release. That does not safely support publishing an opt-in breaking package major before the entire catalog is ready for another major release.
 
 Consumers need automatic non-breaking updates within their chosen catalog line, exact pins when desired, and an explicit way to test breaking package candidates. Package authorization must remain durable across disable/re-enable without silently changing the ordinary default for other consumers.
 
@@ -61,6 +61,7 @@ How should tool releases, catalog majors, package versions, selectors, breaking 
 - Exact pins must remain exact.
 - Accepted intent must survive reconciliation and disable/re-enable.
 - Every advertised version must be installable offline from immutable payloads.
+- Every advertised version must remain advertised permanently.
 - Tool, package, selector, and internal contract versions must remain distinct.
 
 ## Considered Options
@@ -76,7 +77,7 @@ Chosen option: **use catalog-scoped default and candidate channels with explicit
 
 The version planes are distinct:
 
-- The `project-standards` distribution uses SemVer `MAJOR.MINOR.PATCH`.
+- The `project-standards` distribution uses the SemVer `MAJOR.MINOR.PATCH` grammar without deriving its release level from behavioral impact.
 - A consumer selects the matching catalog major in `.standards/config.toml`.
 - Each standard package release uses immutable `major.minor` identity.
 - The consumer selects `latest` or an exact package version independently for each standard.
@@ -118,7 +119,11 @@ The ordinary meaning of `latest` therefore changes only when the consumer explic
 
 ### Tool release classification
 
-Advertising an opt-in breaking package candidate is non-breaking at the tool plane when the ordinary default and all previously valid selections remain available. It may ship in a MINOR release. Removing an advertised version, changing a same-major ordinary default incompatibly, or promoting a breaking package major to the default requires a MAJOR tool release.
+A matching tool and catalog major increment is the owner's MAJOR designation. When the owner has not designated a MAJOR, a package-version advance requires exactly MINOR and a release without one requires exactly PATCH.
+
+Package-version advance is computed independently for each package ID from advertised catalog entries. A newly introduced package counts. For an existing package, only a newly advertised version greater than that package's prior advertised maximum counts. Internal and reference-only packages count; older retained history and unadvertised repository payloads do not.
+
+Forbidden transitions are independent of release-level selection. Every advertised catalog version is permanent. Released-payload deletion or mutation, catalog digest replacement, advertised-version removal, package default downgrade, mismatched tool/catalog majors, a non-advancing tool version, and breaking-default promotion within the same catalog major remain forbidden. A matching-major breaking-default promotion is accepted as the owner's MAJOR designation when no other invariant is violated.
 
 ### Consequences
 
@@ -129,7 +134,7 @@ Advertising an opt-in breaking package candidate is non-breaking at the tool pla
 - Good, because catalog-major opt-in is the single boundary for promoted defaults.
 - Neutral, because the central lock stores current exceptional authorization while Git history supplies historical auditability.
 - Bad, because the resolver, release policy, migration graph, and compatibility suite become more complex.
-- Bad, because every advertised historical or candidate version must remain packaged and verified while supported.
+- Bad, because every advertised historical or candidate version must remain packaged and verified permanently.
 
 ### Confirmation
 

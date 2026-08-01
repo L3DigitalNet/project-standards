@@ -39,7 +39,7 @@ _SAFE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*", re.ASCII)
 
 
 class ReleaseClassification(StrEnum):
-    """Minimum tool release level, or a change that cannot be released."""
+    """Exact tool release level, or a change that cannot be released."""
 
     PATCH = "patch"
     MINOR = "minor"
@@ -142,7 +142,8 @@ def classify_catalog_diff(
     """Classify one proposed repository/catalog transition under ADR 0024."""
     findings: list[PackageFinding] = []
     forbidden = False
-    required = ReleaseClassification.PATCH
+    package_advance = _has_package_version_advance(previous.catalog, current.catalog)
+    required = ReleaseClassification.MINOR if package_advance else ReleaseClassification.PATCH
     previous_payloads = {payload.key: payload for payload in previous.payloads}
     current_payloads = {payload.key: payload for payload in current.payloads}
     for key, old_payload in previous_payloads.items():
@@ -177,7 +178,16 @@ def classify_catalog_diff(
     for key, old_entry in previous_entries.items():
         new_entry = current_entries.get(key)
         if new_entry is None:
-            required = ReleaseClassification.MAJOR
+            forbidden = True
+            findings.append(
+                _finding(
+                    "PC-CATALOG-VERSION-REMOVED",
+                    "an advertised catalog version was removed",
+                    standard_id=key[0],
+                    version=key[1],
+                    identity="catalog-entry",
+                )
+            )
         elif new_entry.digest != old_entry.digest:
             forbidden = True
             findings.append(
@@ -188,12 +198,6 @@ def classify_catalog_diff(
                     version=key[1],
                     identity="catalog-entry",
                 )
-            )
-        elif new_entry.role != old_entry.role:
-            required = max(
-                required,
-                ReleaseClassification.MINOR,
-                key=_release_rank,
             )
 
     previous_defaults = {
@@ -207,30 +211,32 @@ def classify_catalog_diff(
         new_default = current_defaults[standard_id]
         if old_default.version == new_default.version:
             continue
-        if old_default.version.major != new_default.version.major:
-            required = ReleaseClassification.MAJOR
-        else:
-            required = max(
-                required,
-                ReleaseClassification.MINOR,
-                key=_release_rank,
+        if new_default.version.sort_key < old_default.version.sort_key:
+            forbidden = True
+            findings.append(
+                _finding(
+                    "PC-CATALOG-PACKAGE-DOWNGRADE",
+                    "the ordinary package default was downgraded",
+                    standard_id=standard_id,
+                    version=new_default.version.value,
+                    identity="catalog-entry",
+                )
             )
-
-    if previous_entries != current_entries:
-        # Versioning is a consumer-outcome contract: internal payloads are never
-        # consumer-selectable, so a purely additive internal advertisement cannot
-        # change any consuming repository's resolution and stays PATCH. Removals,
-        # digest/role changes, and consumer-visible additions keep their levels.
-        added_entries = [
-            entry for key, entry in current_entries.items() if key not in previous_entries
-        ]
-        only_internal_additions = set(previous_entries) <= set(current_entries) and all(
-            entry.role is CatalogRole.INTERNAL for entry in added_entries
-        )
-        if not only_internal_additions:
-            required = max(required, ReleaseClassification.MINOR, key=_release_rank)
-    if previous.catalog.catalog_major != current.catalog.catalog_major:
-        required = ReleaseClassification.MAJOR
+        elif (
+            old_default.version.major != new_default.version.major
+            and previous.catalog.catalog_major == current.catalog.catalog_major
+        ):
+            forbidden = True
+            findings.append(
+                _finding(
+                    "PC-RELEASE-LEVEL",
+                    "breaking default promotion requires an owner-designated "
+                    "tool and catalog major",
+                    standard_id=standard_id,
+                    version=new_default.version.value,
+                    identity="catalog-entry",
+                )
+            )
 
     try:
         previous_tool, current_tool = tool_versions.parsed()
@@ -250,18 +256,44 @@ def classify_catalog_diff(
         if release_error is not None:
             findings.append(_finding("PC-RELEASE-LEVEL", release_error))
             forbidden = True
+        elif _is_owner_major_designation(previous, current, previous_tool, current_tool):
+            required = ReleaseClassification.MAJOR
 
     classification = ReleaseClassification.FORBIDDEN if forbidden else required
     return CatalogDiff(classification, tuple(sort_findings(findings)))
 
 
-def _release_rank(level: ReleaseClassification) -> int:
-    return {
-        ReleaseClassification.PATCH: 0,
-        ReleaseClassification.MINOR: 1,
-        ReleaseClassification.MAJOR: 2,
-        ReleaseClassification.FORBIDDEN: 3,
-    }[level]
+def _has_package_version_advance(previous: CatalogSource, current: CatalogSource) -> bool:
+    previous_maxima: dict[str, tuple[int, int]] = {}
+    for entry in previous.packages:
+        previous_maxima[entry.id] = max(
+            previous_maxima.get(entry.id, entry.version.sort_key),
+            entry.version.sort_key,
+        )
+
+    current_maxima: dict[str, tuple[int, int]] = {}
+    for entry in current.packages:
+        current_maxima[entry.id] = max(
+            current_maxima.get(entry.id, entry.version.sort_key),
+            entry.version.sort_key,
+        )
+
+    return any(
+        standard_id not in previous_maxima or maximum > previous_maxima[standard_id]
+        for standard_id, maximum in current_maxima.items()
+    )
+
+
+def _is_owner_major_designation(
+    previous: ReleaseSnapshot,
+    current: ReleaseSnapshot,
+    previous_tool: _ToolRelease,
+    current_tool: _ToolRelease,
+) -> bool:
+    return (
+        current_tool.major > previous_tool.major
+        and current.catalog.catalog_major > previous.catalog.catalog_major
+    )
 
 
 def _release_boundary_error(
@@ -277,16 +309,16 @@ def _release_boundary_error(
         return "proposed tool major does not match its catalog major"
     if current_tool <= previous_tool:
         return "proposed tool release must advance beyond the released baseline"
-    if required is ReleaseClassification.MAJOR:
-        if (
-            current_tool.major <= previous_tool.major
-            or current.catalog.catalog_major <= previous.catalog.catalog_major
-        ):
-            return "this catalog change requires a new tool and catalog major"
-    elif required is ReleaseClassification.MINOR and (
+    if _is_owner_major_designation(previous, current, previous_tool, current_tool):
+        return None
+    if required is ReleaseClassification.MINOR and (
         current_tool.major != previous_tool.major or current_tool.minor <= previous_tool.minor
     ):
-        return "this catalog change requires a tool minor release"
+        return "a package-version advance requires exactly a tool minor release"
+    if required is ReleaseClassification.PATCH and (
+        current_tool.major != previous_tool.major or current_tool.minor != previous_tool.minor
+    ):
+        return "a release without a package-version advance requires exactly a tool patch release"
     return None
 
 

@@ -2,12 +2,12 @@
 schema_version: '1.1'
 id: 'reference-cirycm-versioning-standard'
 title: 'Versioning Standard'
-description: 'How releases of this repository are numbered, tagged, and consumed — a consumer-outcome contract over the standard, schema, validator, and workflow.'
+description: 'How releases of this repository are numbered, tagged, and consumed under the catalog and package-composition contract.'
 doc_type: 'reference'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-31'
-reviewed: '2026-07-27'
+updated: '2026-08-01'
+reviewed: '2026-08-01'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -45,12 +45,10 @@ license: null
     - [FM→ADR compatibility](#fmadr-compatibility)
   - [Component-level version markers](#component-level-version-markers)
   - [Change classification](#change-classification)
-  - [The previously-passing rule](#the-previously-passing-rule)
   - [Release requirements](#release-requirements)
   - [Consuming repositories](#consuming-repositories)
-  - [Pre-1.0 releases](#pre-10-releases)
 
-> **Active post-v5 release policy (since 2026-07-18).** The active release is the version recorded in [`pyproject.toml`](../pyproject.toml)'s `version` field, published from the commit tagged with the matching full-version tag; the moving `v5` tag tracks it. The most recent dated section of [`CHANGELOG.md`](../CHANGELOG.md) names the same version and its release commit. This paragraph deliberately does not restate the number or commit so it cannot go stale across a release cut — `pyproject.toml` and `CHANGELOG.md` are already bumped by the release requirements below, so they stay authoritative without a separate update here. Normal Semantic Versioning classification and the release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer. A correction that preserves every previously passing consumer outcome may ship as PATCH or MINOR according to the tables below; a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition.
+> **Active post-v5 release policy (since 2026-07-18).** The active release is the version recorded in [`pyproject.toml`](../pyproject.toml)'s `version` field, published from the commit tagged with the matching full-version tag; the moving `v5` tag tracks it. The most recent dated section of [`CHANGELOG.md`](../CHANGELOG.md) names the same version and its release commit. This paragraph deliberately does not restate the number or commit so it cannot go stale across a release cut — `pyproject.toml` and `CHANGELOG.md` are already bumped by the release requirements below, so they stay authoritative without a separate update here. The package-composition classification and release requirements below apply; there is no active release freeze. Record changes under `## [Unreleased]` until the owner authorizes a release. Every consumer surface requires Python 3.14 or newer.
 
 **Historical policy:** From 2026-07-07 until the v5.0.0 publication, the repository intentionally accumulated all release-affecting work under one v5 freeze. That freeze ended when release commit `8869a08` and the signed `v5.0.0` and `v5` refs were published.
 
@@ -64,15 +62,15 @@ This document defines what a release number promises, how to classify a change, 
 
 ## What a version promises
 
-Releases follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) (`MAJOR.MINOR.PATCH`), but the compatibility being versioned is **the consuming repository's validation outcome**, not a code API.
+Releases use the [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) `MAJOR.MINOR.PATCH` grammar. Their level records the owner-designated catalog line and package composition, not inferred implementation impact.
 
-> **Governing principle.** A release tag is a contract about what happens to a consuming repository on its next pull. A release's level is the **worst-case impact of any single change** across all shipped components.
+> **Governing principle.** The owner designates a matching tool/catalog major. Otherwise, a newly introduced package or a new advertised maximum for any package is MINOR; a release without either is PATCH.
 
-This reframing is what makes the current moving major tag (`@v5`) safe to track unattended: within a major, a consumer that passed validation yesterday will still pass today.
+Every proposed release still receives explicit owner review for behavioral impact. The classifier does not infer a MAJOR from that impact: when the owner requires a MAJOR boundary, both tool and catalog majors advance together before publication.
 
 ## Version grammar
 
-- **Tool release plane:** full SemVer `MAJOR.MINOR.PATCH` for the git tag and `pyproject.toml` version. "SemVer" in this document refers to this plane.
+- **Tool release plane:** the SemVer `MAJOR.MINOR.PATCH` grammar for the git tag and `pyproject.toml` version; classification follows [Change classification](#change-classification), not behavioral-impact inference.
 - **Catalog plane:** an integer major selected in `.standards/config.toml`; it matches the tool release major and defines the ordinary package defaults available to that consumer line.
 - **Package release plane:** immutable `major.minor` payload identities advertised by the selected catalog.
 - **Internal contract plane:** an optional package-owned selector such as `contract_version`, used only when one resolved package payload supports multiple schema or behavior contracts.
@@ -83,11 +81,11 @@ Within one catalog major, each package declares one non-breaking default for ord
 
 A catalog may also advertise retained versions and opt-in breaking candidates. Entering a non-default package major requires explicit `--allow-major STANDARD_ID@TARGET_MAJOR` authorization and a declared migration path. Successful entry records a durable accepted-major track in `.standards/lock.toml`, separate from enabled-package state, so disable/re-enable and compatible same-major updates preserve the consumer's intent. Exact package selectors remain exact.
 
-A MINOR tool release may advertise an opt-in breaking candidate when the ordinary default and every previously valid selection remain available. A purely additive advertisement of an `internal` payload is PATCH: internal payloads are never consumer-selectable, so the addition cannot change any consuming repository's resolution. Promoting that candidate to the ordinary `latest` default, removing an advertised version, or incompatibly changing a same-catalog-major default requires a MAJOR tool release and catalog-major transition. The consumer therefore opts into changed defaults once by changing catalog major; package-level `latest` then remains non-breaking within that selected catalog line.
+A new advertised package maximum is MINOR, including an opt-in breaking candidate, reference-only package, or internal package. Advertising older retained history does not count as an advance. Promoting a breaking candidate to the ordinary `latest` default requires an owner-designated tool and catalog MAJOR; the same promotion within one catalog major is forbidden. Removing any advertised version or downgrading a package default is forbidden in every release. The consumer therefore opts into changed defaults once by changing catalog major; package-level `latest` then remains non-breaking within that selected catalog line.
 
 ## Package release and contract versions
 
-Every advertised package release is a complete, immutable, offline-installable payload. A supported-version list or registry entry alone is not proof of availability: the installed distribution must carry the versioned manifest, schemas, migrations, resources, artifacts, providers, and integrity data required to reconcile it.
+Every advertised package release is permanent and remains a complete, immutable, offline-installable payload. A supported-version list or registry entry alone is not proof of availability: the installed distribution must carry the versioned manifest, schemas, migrations, resources, artifacts, providers, and integrity data required to reconcile it.
 
 A package release may expose one or more internal contract versions. Those selectors describe schema or behavior choices _inside_ the resolved payload and are not package release identities. Legacy `registry.json` entries, V1 package manifests, and `.project-standards.yml` selectors remain V5 migration inputs only; `.standards/config.toml`, the catalog, and the central lock are the V5 authorities. The v5 read-only fallback is removed in v6 after migration evidence is complete.
 
@@ -108,27 +106,17 @@ The **ADR standard** carries its own ADR contract version for body rules and Fro
 
 ## Change classification
 
-Classify each release by the highest-severity change it contains.
+After rejecting forbidden transitions, classify the release in this order:
 
-| Component | MAJOR — migrate intentionally | MINOR — safe to inherit on `@vN` | PATCH — no consumer-visible change |
-| --- | --- | --- | --- |
-| **Frontmatter / ADR standard + schema** | New _required_ field; a rule made stricter (tighter enum or pattern); an enum value **removed**; a field removed or renamed | A new _optional_ field; an enum value **added**; a new template, example, or extension namespace | Wording or typo fix in non-normative prose |
-| **Validator CLI** | Any change that makes a previously-passing document fail; a flag or command removed or renamed; a default changed so pass/fail differs; a config key removed or renamed; the minimum Python raised | A new opt-in flag or command; a new config option with a backward-compatible default; new output that does not change any pass/fail result | A crash or message-text fix with **no** outcome change; an internal refactor; a dependency bump with no behavior change |
-| **Reusable workflow** | A `workflow_call` input removed or renamed; a default change — or any other behavior — that can fail a previously-passing caller | A new optional input with a default; a default change that cannot fail a previously-passing caller; a new opt-in capability | CI plumbing with no caller-visible effect (e.g. bumping a pinned action version) |
-| **Consumer package payload** | Removing/renaming a supported option, managed unit, provider operation, or contract; an incompatible default that makes a previously-valid selection fail | A backward-compatible option/provider/resource addition; a compatible same-major payload default | Editorial payload prose with no option, output, provider, migration, or conformance change |
-| **Catalog / package payload set** | An advertised version removed; a same-catalog-major ordinary default changed incompatibly; a breaking candidate promoted to ordinary default | A compatible payload added; an opt-in breaking candidate advertised while the ordinary default and prior selections remain available | A purely additive advertisement of an internal-role payload (never consumer-selectable) |
+1. A matching tool and catalog major increment is the owner's MAJOR designation.
+2. Otherwise, a package-version advance requires exactly MINOR.
+3. Otherwise, the release requires exactly PATCH.
 
-An opt-in breaking candidate is MINOR only while existing defaults and selections remain valid. Promotion to the ordinary default is MAJOR.
+Compute package-version advance independently for each package ID from advertised catalog entries. A newly introduced package advances the composition. For an existing package, only a newly advertised version greater than that package's prior advertised maximum advances it. Internal and reference-only packages count. Adding older retained history and adding an unadvertised repository payload do not count.
 
-Consumer package changes are inherited only through catalog resolution and explicit reconciliation. Exact selectors remain pinned; `latest` advances only within its compatible default or accepted-major track. The previously-passing rule applies to the resolved package behavior and the tool/workflow surface together.
+Forbidden transitions are not higher release levels. Every advertised catalog version is permanent; released payload deletion or mutation, catalog digest replacement, advertised-version removal, package default downgrade, mismatched tool/catalog majors, a non-advancing tool version, and breaking-default promotion within the same catalog major cannot be released. A matching-major breaking-default promotion remains an owner-designated MAJOR when none of those invariants is violated.
 
-## The previously-passing rule
-
-> If any change can turn a **previously-passing** consumer document or workflow run into a **failure**, the release is **MAJOR** — without exception.
-
-This holds even when the change is a genuine bug fix. If the validator was wrongly lenient and a fix causes real-world documents that passed yesterday to fail today, the fix waits for the next major version. The contract is the consumer's outcome, not the maintainer's intent. Ship the corrected, stricter behavior as the next `vN.0.0`, document the migration in the changelog, and let consumers adopt it deliberately.
-
-The inverse is the freedom this buys: anything that _cannot_ newly-fail a passing consumer (additive standard fields, opt-in validator features, internal fixes, CI plumbing) is a minor or patch and flows to `@vN` trackers automatically.
+Consumer package changes are inherited only through catalog resolution and explicit reconciliation. Exact selectors remain pinned; `latest` advances only within its compatible default or accepted-major track.
 
 ## Release requirements
 
@@ -185,18 +173,14 @@ Every release MUST:
 
 ## Consuming repositories
 
-Pin the reusable workflow and the CLI by **major tag** to receive non-breaking fixes automatically:
+Pin the reusable workflow and the CLI by **major tag** to receive releases on that owner-designated catalog line automatically:
 
 ```yaml
 uses: L3DigitalNet/project-standards/.github/workflows/validate-markdown-frontmatter.yml@v5
 ```
 
-- **`@vMAJOR`** (recommended) — tracks the latest release in that major. The previously-passing rule protects ordinary defaults and prior valid selections; breaking package candidates require explicit package-major authorization.
+- **`@vMAJOR`** (recommended) — tracks the latest release in that major. Catalog channels protect ordinary package defaults and prior advertised selections; breaking package candidates require explicit package-major authorization.
 - **`@vMAJOR.MINOR.PATCH`** or a **commit SHA** — an immutable freeze, for repos that want byte-for-byte reproducibility and to adopt every change explicitly.
 - **`@main`** — only for this repository's own development or deliberate test repos. Never pin a production consumer to `main`.
 
 A **major upgrade is intentional work**: read the changelog migration notes, bump the pin from `@vN` to `@v(N+1)`, and re-run validation before merging.
-
-## Pre-1.0 releases
-
-While the major version is `0` (`0.y.z`), the standard SemVer caveat applies: the public contract is not yet stable, so a `0.y` bump may carry breaking changes and `0.0.z` carries additive ones. This repository is past `1.0.0`; the note is retained for forks that start fresh.

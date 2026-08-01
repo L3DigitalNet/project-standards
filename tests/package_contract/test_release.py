@@ -31,9 +31,15 @@ _DIGEST_A = Sha256Digest("sha256:1ec8d07e07de0defe61804181b75e9139a7d6e9ed8540f6
 _DIGEST_B = Sha256Digest("sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 
 
-def _entry(version: str, role: CatalogRole, digest: Sha256Digest = _DIGEST_A):
+def _entry(
+    version: str,
+    role: CatalogRole,
+    digest: Sha256Digest = _DIGEST_A,
+    *,
+    standard_id: str = "demo",
+) -> CatalogPackageEntry:
     return CatalogPackageEntry.model_validate(
-        {"id": "demo", "version": version, "digest": digest, "role": role}
+        {"id": standard_id, "version": version, "digest": digest, "role": role}
     )
 
 
@@ -123,10 +129,7 @@ def test_new_non_default_candidate_major_is_minor() -> None:
     assert result.classification is ReleaseClassification.MINOR
 
 
-def test_additive_internal_advertisement_is_patch() -> None:
-    # Internal payloads are never consumer-selectable, so advertising a new one
-    # cannot change any consumer's resolution: the consumer-outcome contract
-    # classifies it PATCH (e.g. standard-bundle-authoring 2.0 -> 2.0 + 2.1).
+def test_release_level__internal_maximum_advances__is_minor() -> None:
     previous = _snapshot(5, _entry("2.0", CatalogRole.INTERNAL))
     current = _snapshot(
         5,
@@ -134,44 +137,102 @@ def test_additive_internal_advertisement_is_patch() -> None:
         _entry("2.1", CatalogRole.INTERNAL, _DIGEST_B),
     )
 
-    result = _classify(previous, current, previous_tool="5.0.1", current_tool="5.0.2")
+    result = _classify(previous, current, previous_tool="5.0.1", current_tool="5.1.0")
+
+    assert result.classification is ReleaseClassification.MINOR
+    assert result.findings == ()
+
+
+def test_release_level__older_retained_history_is_added__is_patch() -> None:
+    previous = _snapshot(5, _entry("2.0", CatalogRole.DEFAULT))
+    current = _snapshot(
+        5,
+        _entry("1.9", CatalogRole.RETAINED, _DIGEST_B),
+        _entry("2.0", CatalogRole.DEFAULT),
+    )
+
+    result = _classify(previous, current, current_tool="5.2.1")
 
     assert result.classification is ReleaseClassification.PATCH
     assert result.findings == ()
 
 
-def test_versioning_document_matches_internal_advertisement_classification() -> None:
-    previous = _snapshot(5, _entry("2.0", CatalogRole.INTERNAL))
+def test_release_level__role_only_change_with_unchanged_maximum__is_patch() -> None:
+    previous = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("2.0", CatalogRole.RETAINED, _DIGEST_B),
+    )
     current = _snapshot(
         5,
-        _entry("2.0", CatalogRole.INTERNAL),
-        _entry("2.1", CatalogRole.INTERNAL, _DIGEST_B),
-    )
-    classification = _classify(previous, current).classification
-    versioning = (Path(__file__).resolve().parents[2] / "meta/versioning.md").read_text(
-        encoding="utf-8"
-    )
-    catalog_row = next(
-        line
-        for line in versioning.splitlines()
-        if line.startswith("| **Catalog / package payload set**")
-    )
-    cells = [cell.strip() for cell in catalog_row.strip("|").split("|")]
-    column_by_classification = {
-        ReleaseClassification.MAJOR: 1,
-        ReleaseClassification.MINOR: 2,
-        ReleaseClassification.PATCH: 3,
-    }
-
-    assert cells[column_by_classification[classification]] == (
-        "A purely additive advertisement of an internal-role payload (never consumer-selectable)"
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("2.0", CatalogRole.CANDIDATE, _DIGEST_B),
+        payloads=previous.payloads,
     )
 
+    result = _classify(previous, current, current_tool="5.2.1")
 
-def test_additive_consumer_advertisement_still_requires_minor() -> None:
-    # The internal carve-out must not leak: an addition that includes any
-    # consumer-visible role keeps the MINOR floor even when an internal entry
-    # rides along in the same diff.
+    assert result.classification is ReleaseClassification.PATCH
+    assert result.findings == ()
+
+
+def test_release_level__new_reference_only_package__is_minor() -> None:
+    previous = _snapshot(5, _entry("2.0", CatalogRole.DEFAULT))
+    current = _snapshot(
+        5,
+        _entry("2.0", CatalogRole.DEFAULT),
+        _entry(
+            "0.1",
+            CatalogRole.REFERENCE_ONLY,
+            _DIGEST_B,
+            standard_id="python-coding",
+        ),
+    )
+
+    result = _classify(previous, current)
+
+    assert result.classification is ReleaseClassification.MINOR
+    assert result.findings == ()
+
+
+def test_release_level__unchanged_catalog_with_proposed_minor__is_forbidden() -> None:
+    snapshot = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+
+    result = _classify(snapshot, snapshot)
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-RELEASE-LEVEL"}
+
+
+def test_release_level__maximum_advance_with_proposed_patch__is_forbidden() -> None:
+    previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+    current = _snapshot(
+        5,
+        _entry("1.2", CatalogRole.DEFAULT),
+        _entry("1.3", CatalogRole.RETAINED, _DIGEST_B),
+    )
+
+    result = _classify(previous, current, current_tool="5.2.1")
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-RELEASE-LEVEL"}
+
+
+def test_release_level__matching_tool_and_catalog_major_advance__is_owner_major() -> None:
+    previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+    current = _snapshot(
+        6,
+        _entry("1.2", CatalogRole.DEFAULT),
+        payloads=previous.payloads,
+    )
+
+    result = _classify(previous, current, current_tool="6.0.0")
+
+    assert result.classification is ReleaseClassification.MAJOR
+    assert result.findings == ()
+
+
+def test_release_level__consumer_and_internal_maxima_advance__is_minor() -> None:
     previous = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
     current = _snapshot(
         5,
@@ -216,12 +277,15 @@ def test_released_payload_mutation_or_deletion_is_forbidden() -> None:
     deletion = _classify(previous, deleted, previous_tool="5.2.0", current_tool="6.0.0")
 
     assert mutation.classification is ReleaseClassification.FORBIDDEN
-    assert {finding.code for finding in mutation.findings} >= {"PC-RELEASE-PAYLOAD-MUTATED"}
+    assert {finding.code for finding in mutation.findings} >= {
+        "PC-CATALOG-DIGEST-REPLACED",
+        "PC-RELEASE-PAYLOAD-MUTATED",
+    }
     assert deletion.classification is ReleaseClassification.FORBIDDEN
     assert {finding.code for finding in deletion.findings} >= {"PC-RELEASE-PAYLOAD-DELETED"}
 
 
-def test_catalog_entry_removal_requires_a_tool_and_catalog_major_transition() -> None:
+def test_catalog_entry_removal__matching_major_advance__is_forbidden() -> None:
     retained_payload = ReleasedPayload(
         standard_id="demo",
         version=_entry("1.1", CatalogRole.RETAINED).version,
@@ -240,22 +304,35 @@ def test_catalog_entry_removal_requires_a_tool_and_catalog_major_transition() ->
         _entry("1.2", CatalogRole.DEFAULT),
         payloads=(retained_payload, current_payload),
     )
-    same_major = _snapshot(
-        5,
-        _entry("1.2", CatalogRole.DEFAULT),
-        payloads=(retained_payload, current_payload),
-    )
     next_major = _snapshot(
         6,
         _entry("1.2", CatalogRole.DEFAULT),
         payloads=(retained_payload, current_payload),
     )
 
-    assert _classify(previous, same_major).classification is ReleaseClassification.FORBIDDEN
-    assert (
-        _classify(previous, next_major, previous_tool="5.2.0", current_tool="6.0.0").classification
-        is ReleaseClassification.MAJOR
+    result = _classify(previous, next_major, current_tool="6.0.0")
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-CATALOG-VERSION-REMOVED"}
+
+
+def test_default_downgrade__matching_major_advance__is_forbidden() -> None:
+    previous = _snapshot(
+        5,
+        _entry("1.1", CatalogRole.RETAINED),
+        _entry("1.2", CatalogRole.DEFAULT),
     )
+    current = _snapshot(
+        6,
+        _entry("1.1", CatalogRole.DEFAULT),
+        _entry("1.2", CatalogRole.RETAINED),
+        payloads=previous.payloads,
+    )
+
+    result = _classify(previous, current, current_tool="6.0.0")
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-CATALOG-PACKAGE-DOWNGRADE"}
 
 
 def test_breaking_default_promotion_requires_matching_new_catalog_major() -> None:
@@ -280,6 +357,52 @@ def test_breaking_default_promotion_requires_matching_new_catalog_major() -> Non
         _classify(previous, new_catalog, previous_tool="5.3.0", current_tool="6.0.0").classification
         is ReleaseClassification.MAJOR
     )
+
+
+@pytest.mark.parametrize(
+    ("previous_major", "current_major", "previous_tool", "current_tool"),
+    [
+        pytest.param(5, 5, "5.2.0", "5.2.0", id="tool-does-not-advance"),
+        pytest.param(5, 5, "5.2.0", "6.0.0", id="proposed-major-mismatch"),
+        pytest.param(5, 6, "5.2.0", "5.3.0", id="catalog-major-mismatch"),
+    ],
+)
+def test_release_boundary__invalid_tool_or_catalog_transition__is_forbidden(
+    previous_major: int,
+    current_major: int,
+    previous_tool: str,
+    current_tool: str,
+) -> None:
+    previous = _snapshot(previous_major, _entry("1.2", CatalogRole.DEFAULT))
+    current = _snapshot(
+        current_major,
+        _entry("1.2", CatalogRole.DEFAULT),
+        payloads=previous.payloads,
+    )
+
+    result = _classify(previous, current, previous_tool, current_tool)
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-RELEASE-LEVEL"}
+
+
+@pytest.mark.parametrize(
+    ("previous_tool", "current_tool"),
+    [
+        pytest.param("v5.2.0", "5.2.1", id="malformed-previous"),
+        pytest.param("5.2.0", "5.2", id="malformed-current"),
+    ],
+)
+def test_release_boundary__malformed_tool_version__is_forbidden(
+    previous_tool: str,
+    current_tool: str,
+) -> None:
+    snapshot = _snapshot(5, _entry("1.2", CatalogRole.DEFAULT))
+
+    result = _classify(snapshot, snapshot, previous_tool, current_tool)
+
+    assert result.classification is ReleaseClassification.FORBIDDEN
+    assert {finding.code for finding in result.findings} == {"PC-RELEASE-VERSION"}
 
 
 def test_release_findings_are_stably_sorted() -> None:

@@ -1140,7 +1140,7 @@
       "type": "object"
     },
     "ReleaseClassification": {
-      "description": "Minimum tool release level, or a change that cannot be released.",
+      "description": "Exact tool release level, or a change that cannot be released.",
       "enum": [
         "patch",
         "minor",
