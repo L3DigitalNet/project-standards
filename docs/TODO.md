@@ -16,19 +16,21 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## User tasks
 
-- [ ] Define the repository policy and tooling for durable document references.
-
-  Decide when identifiers such as `SPEC-MT01` must link to their canonical documents, and define checks for missing or inconsistent links, `related:` frontmatter maintenance, graph generation, and drift reconciliation. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
-
 - [ ] Define structure and formatting instructions for `docs/STATUS.md`.
 
   The current snapshot is concise; define durable formatting rules so future updates preserve that shape. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
+
+- [ ] **Elevated Priority:** [frontmatter schema migration tool](docs/feature-proposal-frontmatter-migration.md):
+
+  Specify the adapter-driven migration product from the linked starting brief; keep it separate from durable-reference reconciliation and automatic standards adoption.
 
 - [ ] Assess each standards package for potentially adding a skill for using it. The skill would be owned by and ship with the package. The consumer could enable/disable it in the relevant config.
 
 - [ ] In the markdown-frontmatter package: Create a script that indexes all Markdown front-matter-governed documents in the consumer repository and generates an LLM-friendly master index for agents working in the repo to search documents and orient themselves.
 
 - [ ] In the python-coding package: Move governance of the Python expert skill (from the current owner `agent-configs` repo) to the python-coding standard.
+
+- [ ] In the ADR standards package: Create an "ADR Library"; a set of pre-written ADRs that can be used as templates for common decisions. The library should be versioned and maintained by the ADR standards package.
 
 - [ ] Create a script that is meant for use by the human-user of the consuming v5 repo. This will be a CLI tool that allows the user to select what standards packages they want to enable in their repo, and also choose any optional tooling/skills/features/etc. that they want to enable. The script will then generate the appropriate config files and add them to the repo.
 

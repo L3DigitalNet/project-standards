@@ -23,12 +23,11 @@ This repo is the source of truth for reusable project standards. Catalog 5 has s
 
 ## Working Rules
 
-- **Sub-agents.** Individual agents and headless Codex are pre-authorized. Ask before agent teams or orchestration, with a cost sketch. Never use Fable; use Haiku only for mechanical work, Sonnet+ for substantive work, and Opus for adversarial review. Set the model.
+- **Sub-agents.** Individual agents and headless Codex are pre-authorized via `cross-agent` skill or ad hoc. Never use Fable unless explicitly requested by the user; use Haiku only for mechanical work, Sonnet+ for substantive work, and Opus for adversarial review. Set the model and an appropriate effort level.
 - **Self-containment.** This conventions source does not import global agent conventions. It dogfoods repo-local Agent Handoff; do not add workstation ownership.
 - **Dogfood.** After extracting the candidate wheel and putting it first on `PYTHONPATH` as shown in [README.md](README.md#developing-this-repository), validate managed Markdown with `uv run project-standards validate`. ADR 0015 excludes `standards/**` so packages do not ship repo metadata.
 - **Markdown Tooling.** Prettier and markdownlint remain the formatting and structure authorities.
-- **Never add frontmatter to agent-instruction files** — `CLAUDE.md`, `AGENTS.md`, `.claude/**`, `.agents/**`, `.codex/**`.
-- **`docs/superpowers/` is a forbidden path** — retired 2026-07-19; never recreate it. Designs go to `docs/specs/archive/`, plans to `docs/plans/`, research to `docs/research/`.
+- **`docs/superpowers/` is a forbidden path**; never recreate it. Specs go to `docs/specs/`, plans to `docs/plans/`, research to `docs/research/`, reviews to `docs/reviews/`.
 - **Keep the toolchain green** before committing validator/test changes. `scripts/verify.sh` is the gate: it runs statics, the ordinary suite under coverage, and the compatibility matrix concurrently, then the performance lane alone, then `coverage combine` + `coverage report`. Build and extract the candidate wheel and run `npm ci` first; the script requires both. **Trimmed verification:** intermediate legs of a train run the fast gate. The full serial battery (`scripts/verify.sh --full`) runs only after the last content change and at release prep, where it doubles as the legacy cross-check against the coverage baseline. Hosted `Check` remains the every-push backstop.
 - **Keep package contracts green.** Under `uv run project-standards standards`, run `validate-packages --root . --json`, `validate-graph --root . --require-all-manifests --json`, `generate-package-schemas --root . --check`, and `sync-payload-projection --root . --check`.
 - **The schema is versioned** — see `docs/handoff/conventions.md` #4.
