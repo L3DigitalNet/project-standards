@@ -1,38 +1,40 @@
----
-schema_version: '1.1'
-id: 'prompt-3nw7vm-project-standards-adoption-update'
-title: 'Adopt or update Project Standards with an agent'
-description: 'Copy/paste agent prompt for a safe, verified Project Standards adoption, minor-version upgrade, or major migration.'
-doc_type: 'prompt'
-status: 'active'
-created: '2026-07-20'
-updated: '2026-07-31'
-reviewed: '2026-07-28'
-owner: 'Chris Purcell / L3DigitalNet'
-consumer: 'agent'
-tags:
-  - 'standard'
-aliases: []
-related:
-  - 'README.md'
-  - 'UPGRADING.md'
-  - 'CHANGELOG.md'
-  - 'docs/usage.md'
-  - 'meta/versioning.md'
-source: []
-confidence: 'high'
-visibility: 'public'
-license: null
----
+# Adopt Latest Project Standards
 
-# Adopt or update Project Standards with an agent
+Complete the selection form below, then give this prompt to the agent. Adopt or update this repository to the most recent official Project Standards release. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
 
-Copy the prompt below into a coding agent session rooted in the repository to adopt Project Standards or update an existing consumer. It covers all three entry points — a fresh adoption, a V5 consumer moving from an older 5.x release to the latest 5.x release, and a V4-to-V5 migration — plus migrating a repository off the pre-package Agent Handoff v3 system. The prompt requires a preview before every apply, preservation of consumer intent, latest-release discovery with immutable-release verification, a review of open upstream issues before planning, and sanitized upstream issue reports for defects, blockers, and friction-reducing improvements.
+## Requested installation selection
 
-## Copy/paste prompt
+**Requester:** mark every package or optional tool to install with `[x]` before handing this prompt to an agent. Leave every unwanted entry unchecked. The checked package IDs are the complete requested package set: the agent must enable exactly those packages in `.standards/config.toml` and must not add another package merely because repository evidence suggests it could be useful. Repository evidence still determines each selected package's required options and whether its prerequisites are met.
 
-````markdown
-Adopt or update this repository to the most recent official Project Standards release. Work end to end, but preserve the repository's existing intent and stop for user input only when a consequential choice cannot be derived safely.
+The agent resolves the package versions from the immutable release selected below; do not write package versions in this checklist unless you deliberately need an exact selector.
+
+### Consumer packages (select zero or more)
+
+- [ ] No consumer packages — create or refresh the Catalog 5 control plane only. Do not combine with another consumer-package selection.
+- [ ] `markdown-frontmatter` — validates a portable YAML metadata schema for managed Markdown documents and provides a repository-local frontmatter skill.
+- [ ] `adr` — supplies a structured Architecture Decision Record format, templates, and validation for durable technical decisions.
+- [ ] `python-tooling` — configures the Python toolchain: uv, Ruff, strict BasedPyright, pytest with coverage, pip-audit, and CI support.
+- [ ] `markdown-tooling` — configures Prettier, markdownlint, EditorConfig, and Markdown/structured-text format and lint workflows.
+- [ ] `project-spec` — provides Light, Standard, and Full project-specification formats, tooling, and validation workflows.
+- [ ] `cli-documentation` — provides CLI usage-reference/man-page scaffolding and checks for drift from the executable interface.
+- [ ] `agent-handoff` — establishes repository-local status, task, and handoff knowledge; it can also install a shared SessionStart hook for supported agent harnesses.
+
+### Existing V5 repositories (select only when changing its package set)
+
+- [ ] Replace the existing V5 package set with the checked consumer packages above. Without this selection, preserve every existing package and use checked packages only to request additions.
+
+### Optional local integration (not a standards package)
+
+- [ ] `project-standards` MCP server — installs/configures the local, read-only stdio server for the selected active clients. It is not recorded in `.standards/config.toml` and does not replace the CLI, reconciliation, package validation, or CI.
+  - [ ] Codex — user-scoped `~/.codex/config.toml` registration.
+  - [ ] Claude Code — project-scoped `.mcp.json` registration.
+
+### Reference-only packages (listed for clarity; never select or enable)
+
+- `python-coding` — draft reference guidance for Python code shape, boundaries, typing, tests, and agent behavior; it is not consumer-selectable.
+- `standard-bundle-authoring` — internal contract for authoring standards packages; it is not consumer-selectable.
+
+**Agent instruction:** copy the checked consumer-package IDs into the initial `.standards/config.toml` during fresh adoption. For an existing V5 repository, preserve every existing selection unless the requester marks “Replace the existing V5 package set”; otherwise, use checked packages only to request additions. Explain every resulting addition or removal in the preview before applying it. Treat every unchecked consumer package as intentionally out of scope. Configure the MCP server only when its parent checkbox is marked; configure only marked clients. If “No consumer packages” is selected, initialize or inspect the Catalog 5 control plane without enabling a package. If neither a consumer package nor “No consumer packages” is selected, stop and ask the requester to complete the checklist.
 
 Resolve GitHub's latest published, non-prerelease Project Standards release once, before reading release documentation or changing the repository:
 
@@ -49,11 +51,11 @@ Record both values and use them unchanged for the rest of the task, even if a ne
 Use these resolved, immutable-release sources as authority:
 
 - Consumer setup: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/README.md#consuming-the-standards`
-- V4-to-V5 migration: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/UPGRADING.md`
 - Release history for 5.x minor upgrades: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/CHANGELOG.md`
 - Versioning and selector policy: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/meta/versioning.md`
 - Package catalog and adoption guides: `https://github.com/L3DigitalNet/project-standards/tree/<release-tag>/standards`
 - CLI reference: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/docs/usage.md`
+- MCP server setup and reference: `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/docs/mcp-server.md`
 
 Treat the documentation at `<release-tag>` and the installed `project-standards <release-version>` behavior as authoritative. Do not follow `main`, mutable family pages from another ref, older release instructions, or remembered commands when they conflict with these sources.
 
@@ -70,9 +72,8 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
    Read the open issues that touch adoption, upgrading, migration, reconciliation, the CLI commands this task will run, and the packages this repository will enable; open the relevant ones with `gh issue view <issue-number> --repo L3DigitalNet/project-standards` to capture the reproduction and any documented workaround. Also check recently closed issues, because a fix merged after `<release-tag>` is not present in the release being installed. Plan around each confirmed limitation and note it in the final report; apply a workaround from an issue thread only when the behavior you observe actually matches it, never preemptively. If the tracker is unreachable, report that gap and continue.
 
 4. Determine whether this is:
-   - a fresh adoption with no Project Standards authority;
-   - an existing V5 repository using `.standards/`, either already on `<release-version>` or behind it on an older 5.x release; or
-   - a V4 repository using `.project-standards.yml` and package-specific locks.
+   - a fresh adoption with no Project Standards authority; or
+   - an existing V5 repository using `.standards/`, either already on `<release-version>` or behind it on an older 5.x release.
 
    For an existing V5 repository, record the release it currently sits on before changing anything:
 
@@ -82,7 +83,7 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
 
    Both files must report the same value; call it `<current-version>` and use it for the rest of the task. If they disagree or either value is missing, treat the control plane as inconsistent and resolve that before upgrading. If `<current-version>` is newer than `<release-version>`, stop and ask the user: a tool older than the repository's recorded release refuses catalog refresh.
 
-5. Inventory the repository's languages, tooling, workflows, current standards configuration, and consumer-owned files. Select only packages supported by repository evidence or explicit user intent. Do not enable reference-only or internal packages. Separately detect any pre-package Agent Handoff implementation; if present, complete "Legacy Agent Handoff migration" below in addition to the mode-specific workflow.
+5. Inventory the repository's languages, tooling, workflows, current standards configuration, and consumer-owned files. Use the checked consumer-package list as the requested package set; do not add another package from repository evidence alone, and do not enable reference-only or internal packages. Use repository evidence to determine required options and prerequisites for each selected package. Separately detect any pre-package Agent Handoff implementation; if present, complete "Legacy Agent Handoff migration" below in addition to the mode-specific workflow only when `agent-handoff` is selected or already enabled.
 6. Use Python 3.14 or newer. Install the exact release and verify it before changing the repository:
 
    ```bash
@@ -108,7 +109,7 @@ Treat the documentation at `<release-tag>` and the installed `project-standards 
    project-standards init --catalog 5
    ```
 
-2. Enable each evidence-backed consumer package at the version specified by its exact-release adoption guide. Configure its closed options from repository intent; do not invent values.
+2. Enable every checked consumer package at the version specified by its exact-release adoption guide. Configure its closed options from repository intent; do not invent values.
 3. Read every selected package's `versions/<major.minor>/adopt.md` from `<release-tag>`.
 4. Run `project-standards reconcile` first as a read-only preview. Review every planned write, removal, ownership claim, finding, and verification action.
 5. Resolve all unexpected or ambiguous preview findings before running `project-standards reconcile --apply`.
@@ -126,39 +127,9 @@ Moving from an older 5.x release to `<release-version>` is an in-place, non-brea
 7. Never silently cross a package-major boundary or rewrite a closed package option to make reconciliation pass. A refreshed catalog may advertise opt-in breaking package candidates; entering one requires reading its migration path and an explicit `project-standards reconcile --allow-major <standard>@<major>` authorization, which is outside a routine minor upgrade unless the user asks for it.
 8. Review consumer-owned references to the standards release that reconciliation does not own: reusable workflow `uses:` refs, `standards-ref` inputs, `uv tool install` and `uvx` invocations, and documentation examples. A `@v5` major pin already tracks this release and must not be narrowed on its own; update an exact `@v<release-version>`-style pin only where the repository deliberately freezes the release, and update every such reference in the same change.
 
-### V4-to-V5 migration
-
-1. Follow `UPGRADING.md` exactly. Do not run plain `init` and do not create `.standards/` beside legacy authority manually.
-2. Preserve `.project-standards.yml`, recognized package locks, and managed artifacts until migration apply succeeds.
-3. Produce both previews against identical repository bytes. Keep the machine-readable report outside the repository so it cannot be mistaken for a migration output or committed accidentally — a literal `>migration-plan.json` redirect inside the repository changes the bytes the second preview inspects and must not be used:
-
-   ```bash
-   tmp_root="${TMPDIR:-/tmp}"
-   case "$(cd "$tmp_root" && pwd -P)/" in
-     "$(pwd -P)"/*) tmp_root="/tmp" ;;
-   esac
-   report=$(mktemp "${tmp_root}/project-standards-migration.XXXXXX")
-   project-standards init --catalog 5 --migrate
-   project-standards init --catalog 5 --migrate --json >"$report"
-   ```
-
-   The `case` guard forces the report outside the repository even when `TMPDIR` points inside it, which is the whole reason for not redirecting into the working tree. Do not add a `trap 'rm -f -- "$report"' EXIT`: if this block runs as a script or subshell the trap fires when the block ends, deleting the report before step 4 can read it.
-
-4. Review and resolve every ambiguity, unknown artifact, modified managed file, ownership conflict, unsafe path, and missing intent. Rerun both previews after any correction. Delete the report once the review is complete:
-
-   ```bash
-   rm -f -- "$report"
-   ```
-
-5. Apply only the accepted plan:
-
-   ```bash
-   project-standards init --catalog 5 --migrate --apply
-   ```
-
 ### Legacy Agent Handoff migration
 
-A repository may carry a pre-package Agent Handoff implementation — the v3 system — independently of its Project Standards mode, so check for it in a fresh adoption, a 5.x minor upgrade, and a V4 migration alike. Legacy evidence includes root `STATUS.md` or `TODO.md`, `docs/state.md` or `docs/handoff.md`, `.claude/hooks/session_start.py` or `.codex/hooks/session_start.py`, a repo-local `.agents/skills/handoff-system-v3/` or similarly named retired skill, and SessionStart registrations in harness settings that point at those paths. The package layout instead keeps the status snapshot and work queues at `docs/STATUS.md` and `docs/TODO.md` beside `docs/handoff/**`, injected by the shared managed hook.
+A repository may carry a pre-package Agent Handoff implementation — the v3 system — independently of its Project Standards mode, so check for it in both fresh adoptions and 5.x minor upgrades alike. Legacy evidence includes root `STATUS.md` or `TODO.md`, `docs/state.md` or `docs/handoff.md`, `.claude/hooks/session_start.py` or `.codex/hooks/session_start.py`, a repo-local `.agents/skills/handoff-system-v3/` or similarly named retired skill, and SessionStart registrations in harness settings that point at those paths. The package layout instead keeps the status snapshot and work queues at `docs/STATUS.md` and `docs/TODO.md` beside `docs/handoff/**`, injected by the shared managed hook.
 
 When any such evidence exists, migrating it onto the release's Agent Handoff package is part of this task, not a follow-up. Read the packaged runbook for the Agent Handoff version being adopted at `https://github.com/L3DigitalNet/project-standards/blob/<release-tag>/standards/agent-handoff/versions/<major.minor>/resources/legacy-migration.md` and work through it:
 
@@ -185,18 +156,56 @@ When any such evidence exists, migrating it onto the release's Agent Handoff pac
 
 6. Do not delete a legacy file whose facts you could not confidently route, and do not guess a transformation for an unclassified item. Preserve it and present the ambiguity to the user.
 
+### Optional Project Standards MCP server adoption
+
+Perform this section only when the `project-standards` MCP server is selected in the installation checklist. It provides a local, read-only stdio convenience layer over the installed Catalog 5 distribution; it does not replace the CLI, reconciliation, package validation, or CI gates. Configure only the client registrations selected in that checklist; do not infer another client from repository files or local availability.
+
+1. Read the exact-release MCP server reference before configuring a client. Confirm that the installed release exposes the subcommand:
+
+   ```bash
+   project-standards mcp --help
+   ```
+
+   If the resolved release does not provide that command, do not invent a candidate-wheel or development-checkout installation path. Record that the requested release cannot supply the server, report the discrepancy upstream, and stop for user direction only if the user must choose a different release or installation source.
+
+2. Configure every client selected in the checklist. Preserve existing client configuration and unrelated MCP servers. Do not add credentials, remote URLs, HTTP/SSE transport, or a write/apply capability. Use the release-pinned reference for the exact client configuration shape and scope:
+   - For Codex, add or preserve the user-scoped `project-standards` stdio entry in `~/.codex/config.toml` (or the task's explicit `CODEX_HOME`):
+
+     ```toml
+     [mcp_servers.project-standards]
+     command = "project-standards"
+     args = ["mcp"]
+     ```
+
+   - For Claude Code, add or preserve the project-scoped `project-standards` entry in the consumer repository's `.mcp.json`; merge it with an existing `mcpServers` object rather than replacing that file:
+
+     <!-- prettier-ignore -->
+     ```json
+     {
+       "mcpServers": {
+         "project-standards": { "command": "project-standards", "args": ["mcp"] }
+       }
+     }
+     ```
+
+   Add `--root-boundary <absolute-parent-directory>` only when the intended repository roots can be derived safely and a narrower boundary is useful. It can only narrow access; every repository-scoped MCP tool must still receive an explicit absolute `repo_root`.
+
+3. Verify each configured client using the release-pinned commands. For Codex, run `codex mcp list` and `codex mcp get project-standards`; confirm it is enabled and uses stdio with `project-standards` and `mcp`. For Claude Code, run `claude mcp list` and `claude mcp get project-standards` from the consumer repository; confirm the project-scoped server completes a real stdio handshake. Also record the successful `project-standards mcp --help` check. Treat client registration as separate from repository reconciliation and from a full repository gate.
+
+4. Use only the server's declared read-only capabilities. Its repository tools require an explicit absolute root, and `reconcile_preview` is a dry run; do not treat it as authorization to apply a plan. Continue to run the required CLI and CI verification commands independently.
+
 ## Report adoption and upgrade irregularities upstream
 
 Open or update an upstream issue for every concrete observation whose resolution could make adoption or updating faster, clearer, safer, or less error-prone. Issue eligibility does not depend on blocking progress, causing a command failure, or lacking a workaround. Examples include contradictory, incomplete, or hard-to-discover documentation; an undocumented prerequisite; unclear package selection, option semantics, command output, or help; unnecessary manual or repeated steps; avoidable retries; surprising diffs; unsafe-looking ownership or removal plans; preservation conflicts; non-idempotent reconciliation; weak diagnostics; validation failures; traceback or internal errors; and steps that require an undocumented workaround.
 
 Use consumer impact and reproducibility to prioritize the report, not to decide whether to report it. A safe workaround or the ability to complete the adoption or update does not waive issue reporting.
 
-Report upstream at https://github.com/L3DigitalNet/project-standards/issues. The repository has GitHub Issues enabled.
+Report upstream at <https://github.com/L3DigitalNet/project-standards/issues>. The repository has GitHub Issues enabled.
 
 Do not silently work around, normalize, or hide an irregularity. For each distinct irregularity:
 
 1. Preserve the failing state and capture sanitized evidence before attempting a workaround:
-   - adoption mode: fresh, V5 update, or V4 migration;
+   - adoption mode: fresh or V5 update;
    - Project Standards version and exact source ref;
    - selected package ids, selectors, and relevant non-secret options;
    - operating system, Python version, agent/harness, and installation method;
@@ -261,10 +270,11 @@ Review the complete diff. Confirm that `.standards/config.toml`, `.standards/cat
 
 Report:
 
-- whether this was fresh adoption, a V5 update, or a V4 migration, and whether a legacy Agent Handoff migration was included;
+- whether this was fresh adoption or a V5 update, and whether a legacy Agent Handoff migration was included;
 - for a V5 update, the release the repository moved from and to, or that it was already current, and every resolved package version that advanced;
 - for a legacy Agent Handoff migration, the legacy files retired, where their facts now live, and anything preserved for user judgment;
 - installed Project Standards version and selected package versions;
+- MCP server availability, every client scope configured or preserved, and the MCP launch/client-registration checks run;
 - files created, changed, preserved, or intentionally removed;
 - preview and apply commands run;
 - known upstream issues that shaped the plan, and any workaround adopted because the observed behavior matched one;
@@ -274,4 +284,3 @@ Report:
 - whether the working tree is ready for human review.
 
 Do not commit, push, or open a pull request unless the invoking user separately authorizes those actions.
-````
