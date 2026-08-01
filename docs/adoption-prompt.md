@@ -11,23 +11,23 @@ The agent resolves the package versions from the immutable release selected belo
 ### Consumer packages (select zero or more)
 
 - [ ] No consumer packages — create or refresh the Catalog 5 control plane only. Do not combine with another consumer-package selection.
-- [ ] `markdown-frontmatter` — validates a portable YAML metadata schema for managed Markdown documents and provides a repository-local frontmatter skill.
-- [ ] `adr` — supplies a structured Architecture Decision Record format, templates, and validation for durable technical decisions.
-- [ ] `python-tooling` — configures the Python toolchain: uv, Ruff, strict BasedPyright, pytest with coverage, pip-audit, and CI support.
-- [ ] `markdown-tooling` — configures Prettier, markdownlint, EditorConfig, and Markdown/structured-text format and lint workflows.
-- [ ] `project-spec` — provides Light, Standard, and Full project-specification formats, tooling, and validation workflows.
-- [ ] `cli-documentation` — provides CLI usage-reference/man-page scaffolding and checks for drift from the executable interface.
-- [ ] `agent-handoff` — establishes repository-local status, task, and handoff knowledge; it can also install a shared SessionStart hook for supported agent harnesses.
+- [x] `markdown-frontmatter` — validates a portable YAML metadata schema for managed Markdown documents and provides a repository-local frontmatter skill.
+- [x] `adr` — supplies a structured Architecture Decision Record format, templates, and validation for durable technical decisions.
+- [x] `python-tooling` — configures the Python toolchain: uv, Ruff, strict BasedPyright, pytest with coverage, pip-audit, and CI support.
+- [x] `markdown-tooling` — configures Prettier, markdownlint, EditorConfig, and Markdown/structured-text format and lint workflows.
+- [x] `project-spec` — provides Light, Standard, and Full project-specification formats, tooling, and validation workflows.
+- [x] `cli-documentation` — provides CLI usage-reference/man-page scaffolding and checks for drift from the executable interface.
+- [x] `agent-handoff` — establishes repository-local status, task, and handoff knowledge; it can also install a shared SessionStart hook for supported agent harnesses.
 
 ### Existing V5 repositories (select only when changing its package set)
 
-- [ ] Replace the existing V5 package set with the checked consumer packages above. Without this selection, preserve every existing package and use checked packages only to request additions.
+- [x] Replace the existing V5 package set with the checked consumer packages above. Without this selection, preserve every existing package and use checked packages only to request additions.
 
 ### Optional local integration (not a standards package)
 
-- [ ] `project-standards` MCP server — installs/configures the local, read-only stdio server for the selected active clients. It is not recorded in `.standards/config.toml` and does not replace the CLI, reconciliation, package validation, or CI.
-  - [ ] Codex — user-scoped `~/.codex/config.toml` registration.
-  - [ ] Claude Code — project-scoped `.mcp.json` registration.
+- [x] `project-standards` MCP server — installs/configures the local, read-only stdio server for the selected active clients. It is not recorded in `.standards/config.toml` and does not replace the CLI, reconciliation, package validation, or CI.
+  - [x] Codex — user-scoped `~/.codex/config.toml` registration.
+  - [x] Claude Code — project-scoped `.mcp.json` registration.
 
 ### Reference-only packages (listed for clarity; never select or enable)
 

@@ -20,7 +20,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The current snapshot is concise; define durable formatting rules so future updates preserve that shape. _(Owner 2026-07-29: deferred past implementation-plan T12 under the MCP hold.)_
 
-- [ ] **Elevated Priority:** [frontmatter schema migration tool](docs/feature-proposal-frontmatter-migration.md):
+- [ ] **Elevated Priority:** [frontmatter schema migration tool](feature-proposal-frontmatter-migration.md):
 
   Specify the adapter-driven migration product from the linked starting brief; keep it separate from durable-reference reconciliation and automatic standards adoption.
 
@@ -30,7 +30,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] In the python-coding package: Move governance of the Python expert skill (from the current owner `agent-configs` repo) to the python-coding standard.
 
-- [ ] In the ADR standards package: Create an "ADR Library"; a set of pre-written ADRs that can be used as templates for common decisions. The library should be versioned and maintained by the ADR standards package.
+- [ ] In the ADR standards package: Create an [ADR Library](../standards/adr/library/README.md); a set of pre-written ADRs that can be used as templates for common decisions. The library should be versioned and maintained by the ADR standards package.
+
+- [ ] In the ADRE standards package: Provide tigher guidance on how to write ADRs that are clear, concise, properly scoped, bounded to prevent forcing requirements on non-relevant stakeholders, etc. Particularly for scope, boundaries, and awareness of potentially affected stakeholders, provide a checklist or template for authors to follow. Agents have been quite terrible at writing properly scoped ADRs, and this is a major source of friction, ammendments, superseding, etc.
 
 - [ ] Create a script that is meant for use by the human-user of the consuming v5 repo. This will be a CLI tool that allows the user to select what standards packages they want to enable in their repo, and also choose any optional tooling/skills/features/etc. that they want to enable. The script will then generate the appropriate config files and add them to the repo.
 
@@ -42,15 +44,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Authorize a Python Tooling successor that replaces the selected 1.10 package's stale V1-authority statement.
 
-- [ ] Release Agent Handoff 1.8 from clean `main`, then reconcile this repository's managed Claude Code and Codex registrations.
+- [ ] Finish Agent Handoff consumer retirement.
+
+- [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md); begin with T30, the release-classification alignment.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
 - [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency. _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_
 
-- [ ] Finish Agent Handoff consumer retirement.
-
-  Four consumers owe protected merges to `main`: `docmend` and `hw-radar` from `dev`, `website-aboutme` and `website-l3digital.net` from `testing`; `~/scripts` needs `reconcile --apply`; `llm-wiki` has two consumer-side shape overflows.
+  Two consumers owe protected merges to `main`: `website-aboutme` and `website-l3digital.net` from `testing`. `docmend` and `hw-radar` are already merged; unrelated catalog drift is outside this retirement closeout.
 
   `control-center` stays on legacy config, blocked by issue #83, owner-handled — not engine-blocked. Details: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.
 
