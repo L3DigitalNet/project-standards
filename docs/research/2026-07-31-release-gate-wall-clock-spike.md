@@ -35,7 +35,7 @@ Three concurrent lanes, then a serial tail:
 
 - **Ordinary lane:** `coverage run --source=project_standards -m pytest -m "not performance and not compatibility" -n 16 --dist load --max-worker-restart=0` with `COVERAGE_CORE=sysmon`. 4,191 tests; 4:19 solo, ~7:11 contended (CI serial equivalent: 26:00).
 - **Compatibility lane:** `pytest -m compatibility -n 8 --dist load --max-worker-restart=0`. 133 tests; 6:45 solo, ~10:00 contended (was 10:05 at `-n 4` solo).
-- **Statics lane (non-uv invocation path):** `.venv/bin/ruff format --check`, `.venv/bin/ruff check`, `.venv/bin/basedpyright`, `npx prettier --check .`, bare `npx markdownlint-cli2`, `.venv/bin/pip-audit` — ~2:20–3:25 total, fully hidden under the battery lanes; zero uv-cache contention by construction (no uv processes, the 2026-07-29 contention class cannot occur).
+- **Statics lane (non-uv invocation path):** `.venv/bin/ruff format --check`, `.venv/bin/ruff check`, `.venv/bin/basedpyright`, resolved `node_modules/.bin/prettier --check . --cache` and `node_modules/.bin/markdownlint-cli2`, `.venv/bin/pip-audit` — ~2:20–3:25 total, fully hidden under the battery lanes; zero uv-cache contention by construction (no uv processes, the 2026-07-29 contention class cannot occur).
 - **Serial tail:** performance lane alone (its assertions are timing-sensitive), then `coverage combine` + `coverage report`.
 
 Environment: `PYTHONPATH` = extracted candidate wheel; `TMPDIR` + `--basetemp` on a dedicated tmpfs mounted with `nr_inodes=4194304`; `COVERAGE_FILE` pointed off-root so no coverage artifact ever appears in the repository during the run.

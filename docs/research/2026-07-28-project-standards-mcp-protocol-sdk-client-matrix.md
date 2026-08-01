@@ -23,7 +23,6 @@ aliases:
 related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
-  - 'docs/plans/2026-07-24-project-standards-mcp-server-plan.md'
   - 'docs/research/2026-07-07-project-standards-mcp-specification-reference-pack.md'
   - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
   - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.package_contract.release_consistency as release_consistency
 from project_standards.package_contract import (
     PackageFinding,
     PackageRepository,
@@ -770,6 +771,31 @@ def test_release_consistency__structural_history_classes__pass(
     assert release_fixture.validate() == ()
 
 
+def test_release_consistency__deleted_structural_document__follows_worktree(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    path = "docs/plans/current-release.md"
+    (release_fixture.root / path).unlink()
+    deleted = set(_run_git(release_fixture.root, "ls-files", "--deleted").stdout.splitlines())
+    assert path in deleted
+
+    assert release_fixture.validate() == ()
+
+
+def test_release_consistency__deleted_current_family_document__remains_required(
+    release_fixture: ReleaseConsistencyFixture,
+) -> None:
+    path = "standards/project-spec/README.md"
+    (release_fixture.root / path).unlink()
+    deleted = set(_run_git(release_fixture.root, "ls-files", "--deleted").stdout.splitlines())
+    assert path in deleted
+
+    findings = release_fixture.validate()
+
+    assert path in {finding.path for finding in findings}
+    assert "PC-RELEASE-CORPUS" in {finding.code for finding in findings}
+
+
 def test_release_consistency__unclassified_mutable_path__fails_closed(
     release_fixture: ReleaseConsistencyFixture,
 ) -> None:
@@ -915,6 +941,16 @@ def test_release_consistency__characterized_document_digest__uses_raw_bytes(
 
     assert path in {finding.path for finding in findings}
     assert "PC-RELEASE-PATH-UNCLASSIFIED" in {finding.code for finding in findings}
+
+
+def test_release_consistency__characterized_digests_name_existing_documents() -> None:
+    """Keep exemption records aligned when completed plans are pruned."""
+    # The registry intentionally exempts exact historical bytes. A deleted path
+    # cannot be characterized, and would silently become unmaintained dead state.
+    paths = release_consistency._CHARACTERIZED_SPEC_PLAN_DIGESTS  # pyright: ignore[reportPrivateUsage]
+    missing = sorted(path for path in paths if not (_ROOT / path).is_file())
+
+    assert not missing, f"characterized documents no longer exist: {missing}"
 
 
 @pytest.mark.parametrize(

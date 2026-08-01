@@ -1,15 +1,15 @@
 ---
 schema_version: '1.0'
-id: index-rs0001-research-index
-title: Research Index
-description: Index of research reports maintained with the research corpus.
-doc_type: index
-status: active
+id: 'index-rs0001-research-index'
+title: 'Research Index'
+description: 'Index of research reports maintained with the research corpus.'
+doc_type: 'index'
+status: 'active'
 created: '2026-07-07'
-updated: '2026-07-28'
+updated: '2026-07-31'
 tags:
-  - research
-  - index
+  - 'research'
+  - 'index'
 aliases: []
 related: []
 ---

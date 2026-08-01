@@ -99,8 +99,9 @@ cd "$REPO_ROOT" || die "cannot enter $REPO_ROOT"
 
 if [[ ! -d "$WHEEL_RUNTIME" ]]; then
     die "missing $WHEEL_RUNTIME — build the candidate wheel runtime first:
-  uv build --wheel --out-dir dist
-  uv run python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime"
+  uv build --clear --wheel --out-dir build/release-wheel
+  rm -rf -- build/wheel-runtime
+  uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime"
 fi
 
 for tool in coverage pytest ruff basedpyright pip-audit; do

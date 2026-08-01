@@ -672,7 +672,7 @@ Status distinguishes completed evidence (`Passing`), an active prohibition (`Gua
 | FR-017 | Single-repo primitive fixture tests. | Not Started |
 | FR-018 | `docs/mcp-readiness.md`; zero-finding required-manifest graph validation and composition tests. | Passing |
 | FR-019 | Step 09 final recheck executed 2026-07-28: ADR 0025 and ADR 0026 accepted, exact `mcp==2.0.0` pinned, evidence in the 2026-07-28 protocol/SDK/client matrix. | Passing |
-| FR-020 | `docs/plans/2026-07-24-project-standards-mcp-server-plan.md`, `scripts/plan.py validate`, and converged plan-review result. | Passing |
+| FR-020 | Converged plan-review result and the completed delivery close-out in commit `4d2ece9`, preserved in Git history and `docs/handoff/sessions/2026-07.md`. | Passing |
 
 ---
 

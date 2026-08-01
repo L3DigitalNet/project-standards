@@ -187,7 +187,7 @@ The gate (every lane must pass before committing, per [AGENTS.md](../AGENTS.md))
 scripts/verify.sh
 ```
 
-`pytest` is configured in `pyproject.toml` (`testpaths`, `addopts = "-ra -q"`). Useful invocations:
+`pytest` is configured in `pyproject.toml` (`testpaths`, `addopts = ["-ra", "--strict-markers", "--strict-config"]`). Useful invocations:
 
 ```bash
 uv run pytest -k frontmatter          # filter by name

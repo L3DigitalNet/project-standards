@@ -28,9 +28,11 @@ _CONTROL_LEAVES = (
     "adopt",
     "list",
 )
+_MCP_LEAVES = ("mcp",)
 _TOP_LEVEL_LEAVES = (
     *_FRONTMATTER_LEAVES,
     *_CONTROL_LEAVES,
+    *_MCP_LEAVES,
     "standards",
     "agent-handoff",
 )
@@ -85,6 +87,7 @@ def test_usage_summary_and_render_contract_match_live_inventory() -> None:
     leaf_count = (
         len(_FRONTMATTER_LEAVES)
         + len(_CONTROL_LEAVES)
+        + len(_MCP_LEAVES)
         + len(_STANDARDS_VERBS)
         + 1
         + len(_VERBS)

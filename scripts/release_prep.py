@@ -15,8 +15,9 @@ here:
     *reports* stale references and rewrites none.
   * step 6 (UPGRADING.md prose, MAJOR only) — authored migration prose.
 
-The script edits files and runs read-only verification. It never commits, tags,
-pushes, or touches a remote.
+The script edits files and runs the mechanical wiring checks. It never commits,
+tags, pushes, touches a remote, or executes the required candidate-wheel release
+verification; its summary prints that operator handoff before tag instructions.
 
 Usage (from the repository root):
 
@@ -53,10 +54,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # PC-RELEASE-PROJECTION finding.
 CONSUMER_CATALOG = Path(".standards/catalog.toml")
 
-# The release branch versioning.md expects work to be staged on. Preparing
-# elsewhere is legitimate (the owner sometimes preps on a worktree branch), so this
-# is a warning, never a block.
-EXPECTED_BRANCH = "testing"
+# Version and changelog mutations must be committed on main before their candidate
+# wheel is built; preparing elsewhere can otherwise validate bytes that are never
+# tagged. Keep this in lockstep with meta/versioning.md's release ordering.
+RELEASE_BRANCH = "main"
 
 _SEMVER = re.compile(
     r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<patch>0|[1-9][0-9]*)$"
@@ -168,17 +169,13 @@ def check_preconditions(target: Version) -> tuple[Version, StepResult]:
             f"{target} does not advance beyond the current pyproject version {current}"
         )
 
-    notes = [f"tree clean; {current} -> {target}"]
     branch = _git("rev-parse", "--abbrev-ref", "HEAD").strip()
-    if branch != EXPECTED_BRANCH:
-        # Warn only: versioning.md step 0 requires the release to *land* on main, and
-        # the owner preps on whatever branch the work lives on.
-        print(
-            f"warning: on branch {branch!r}, not {EXPECTED_BRANCH!r} — continuing", file=sys.stderr
+    if branch != RELEASE_BRANCH:
+        raise ReleasePrepError(
+            f"release preparation must run on {RELEASE_BRANCH!r}; found {branch!r}. "
+            "Switch only after the current worktree is clean."
         )
-        notes.append(f"branch {branch} (expected {EXPECTED_BRANCH})")
-    else:
-        notes.append(f"branch {branch}")
+    notes = [f"tree clean; {current} -> {target}; branch {branch}"]
     return current, StepResult("1. preconditions", "ok", "; ".join(notes))
 
 
@@ -441,6 +438,7 @@ def verify_chain(target: Version, baseline: str, *, dry_run: bool) -> list[StepR
 def print_summary(
     results: Sequence[StepResult], target: Version, current: Version, baseline: str
 ) -> None:
+    candidate_wheel = Path("build/release-wheel") / f"project_standards-{target}-py3-none-any.whl"
     width = max(len(row.name) for row in results)
     print("\n== release prep summary ==")
     for row in results:
@@ -459,8 +457,29 @@ def print_summary(
         print(f'      rewrite UPGRADING.md as "Upgrading from v{current.major} to v{target.major}"')
 
     print("\n-- remaining manual steps (meta/versioning.md, owner only) --")
-    print("  # step 0 — the release commit and both tags MUST live on main")
-    print("  git switch main && git merge --ff-only <release-branch>")
+    print("  # step 0 — review and commit the prepared release on main before building it")
+    print("  git diff --check")
+    print("  git status --short")
+    print(f'  git commit -am "release: prepare v{target}"')
+    print("  # mandatory pre-tag verification — run on that release commit before either tag")
+    print("  uv sync --all-groups --locked")
+    print("  npm ci")
+    print("  uv run project-standards standards sync-payload-projection --root . --check --json")
+    print("  uv build --clear --wheel --out-dir build/release-wheel")
+    print("  rm -rf -- build/wheel-runtime")
+    print(f"  uv run python -m zipfile -e {candidate_wheel} build/wheel-runtime")
+    print('  export PYTHONPATH="$PWD/build/wheel-runtime"')
+    print("  scripts/verify.sh --full")
+    print("  uv run project-standards validate")
+    print("  uv run project-standards standards validate-packages --root . --json")
+    print(
+        "  uv run project-standards standards validate-graph --root . --require-all-manifests --json"
+    )
+    print("  uv run project-standards standards generate-package-schemas --root . --check --json")
+    print("  uv run project-standards standards render-catalog --root . --check")
+    print(
+        f"  uv run project-standards packages check-release --root . --baseline {baseline} --json"
+    )
     print("  # step 1 — annotated, GPG-signed, immutable full-version tag")
     print(f'  git tag -as v{target} -m "project-standards v{target}"')
     print(f"  git push origin v{target}")

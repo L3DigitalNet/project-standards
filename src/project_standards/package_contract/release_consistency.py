@@ -117,15 +117,6 @@ _NATURAL_HISTORY_PHRASES = (
 # These exact documents were characterized at T14.0. Any byte change removes the
 # exemption so newly edited body prose must pass the ordinary fail-closed scan.
 _CHARACTERIZED_SPEC_PLAN_DIGESTS = {
-    "docs/plans/2026-07-19-project-standards-5.1-review-remediation.md": (
-        "40bfd4fa0261c384d50bba2c92556b6d5c56136022814955b40c3ba7feb68a4a"
-    ),
-    "docs/plans/2026-07-24-project-standards-mcp-documentation-reconciliation-plan.md": (
-        "a9d677cb3895790a0aca43bfeccbd025accd17049d6b310a17bb3c692a99088a"
-    ),
-    "docs/plans/2026-07-25-v5-adoption-integrity-correction-train-plan.md": (
-        "3b52aae630a2605cd931196d481c7815c43b7c5380eaf7da30a1ee78fafbf229"
-    ),
     "docs/specs/2026-07-10-standard-bundle-authoring-v2-spec.md": (
         "b36e2e68130f3b4ac61f87d073aba703b47b0b3940493b8bb1c7c8f264d54413"
     ),
@@ -288,18 +279,18 @@ def _family_facts(
     return facts, findings
 
 
-def _tracked_markdown(root: Path) -> tuple[str, ...]:
-    completed = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "-z", "--", "*.md"],
+def _git_markdown_paths(root: Path, option: str) -> tuple[str, ...] | None:
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z", option, "--", "*.md"],
         check=False,
         capture_output=True,
     )
-    if completed.returncode != 0:
-        return ()
+    if result.returncode != 0:
+        return None
     try:
-        paths = completed.stdout.decode("utf-8").split("\0")
+        paths = result.stdout.decode("utf-8").split("\0")
     except UnicodeDecodeError:
-        return ()
+        return None
     return tuple(sorted(path for path in paths if path))
 
 
@@ -798,8 +789,9 @@ def validate_release_consistency(
     findings.extend(fact_findings)
     _validate_distribution_version(resolved_root, distribution_version, findings)
 
-    tracked = _tracked_markdown(resolved_root)
-    if not tracked:
+    tracked = _git_markdown_paths(resolved_root, "--cached")
+    deleted = _git_markdown_paths(resolved_root, "--deleted")
+    if not tracked or deleted is None:
         findings.append(
             _finding(
                 "PC-RELEASE-CORPUS",
@@ -825,9 +817,14 @@ def validate_release_consistency(
         if text is not None:
             _scan_project_versions(path, text, distribution_version, findings)
 
+    # Completed plans leave the release corpus before their deletion is committed.
+    # All current and other Markdown surfaces remain fail-closed when missing.
+    unclassified = tuple(
+        path for path in tracked if not (path in deleted and path.startswith("docs/plans/"))
+    )
     _scan_unclassified_paths(
         resolved_root,
-        tracked,
+        unclassified,
         current_paths,
         facts,
         findings,

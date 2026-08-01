@@ -2,12 +2,12 @@
 schema_version: '1.1'
 id: 'reference-u0n3ou-project-standards-mcp-readiness-report'
 title: 'Project Standards MCP Readiness Report'
-description: 'Step 07 evidence that the standards repository is manifest-driven, graph-valid, composition-safe, documented, and ready for a separately governed MCP implementation phase.'
+description: 'Historical Step 07 evidence that the standards repository was manifest-driven, graph-valid, composition-safe, documented, and ready for the separately governed MCP implementation that shipped in v5.12.0.'
 doc_type: 'reference'
 status: 'active'
 created: '2026-07-12'
-updated: '2026-07-24'
-reviewed: '2026-07-24'
+updated: '2026-07-31'
+reviewed: '2026-07-31'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -19,6 +19,8 @@ aliases:
 related:
   - 'docs/specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
+  - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
+  - 'docs/mcp-server.md'
   - 'standards/catalog.md'
 source: []
 confidence: 'high'
@@ -32,16 +34,18 @@ license: null
 
 **Step 07 passes with no blocking gaps.** The repository is ready to support a separately specified MCP implementation without hardcoding standards or bypassing package, graph, composition, and provider contracts.
 
-This result authorizes only the next design/research phase. It does not start MCP server implementation or select an MCP SDK or protocol version. Those decisions remain governed by `SPEC-RD01`, `SPEC-MS01`, and a fresh protocol/SDK review before server MS-0.
+At the time of this pass, the result authorized only the next design/research phase. It did not itself start MCP server implementation or select an MCP SDK or protocol version. Those subsequent decisions were governed by `SPEC-RD01`, `SPEC-MS01`, ADR 0025, and ADR 0026.
 
 ## Current Successor State
 
-The 2026-07-24 documentation reconciliation preserves this historical pass while aligning the downstream design with Project Standards 5.8.0:
+The 2026-07-31 successor reconciliation preserves this historical pass while recording the released implementation state:
 
-- `SPEC-MT01` rev 1.3 records the completed readiness contract and current V2 package/control-plane successor architecture.
-- `SPEC-RD01` rev 1.5 and `SPEC-MS01` rev 1.1 are approved and locked after separate Claude Opus high-effort specification and implementation-plan convergence reviews, including the final closeout correction.
-- The active implementation plan under `docs/plans/` validates as 12 ordered tasks and 72 subtasks against 61 governing requirements. Its final SHA-256 is `51783be849d524e547e521e188475c9f1b11359a2fdd7ad2e3ee3ce40aeb00a8`. It remains definition-only; T1 has not started.
-- Step 09 remains a no-code gate that must select the final stable protocol/SDK pair and verify license, conformance, and Codex/Claude client behavior after the 2026-07-28 protocol publication.
+- `SPEC-MT01` remains the completed historical Step 07 readiness contract. The maintained specifications index records its successor-state reconciliation separately.
+- `SPEC-RD01` rev 1.6 records the completed Step 08 documentation gate and the Step 09-through-18 sequencing. `SPEC-MS01` rev 1.5 records the implemented server contract through its T12 final gate.
+- Project Standards v5.12.0 shipped `project-standards mcp`: a local read-only stdio server over the installed Catalog 5 distribution. v5.13.0 carries the current published-release guide and package metadata.
+- [`docs/mcp-server.md`](mcp-server.md) is the current operator reference for installation, client setup, resources, tools, security rules, and troubleshooting. ADR 0025 and ADR 0026 remain the service-boundary and transport authorities.
+
+The checklist and observed results below are fixed evidence from the 2026-07-12 readiness pass, not claims about the current repository gate or current MCP implementation state.
 
 ## Readiness Checklist
 
@@ -79,7 +83,7 @@ Observed results were zero package or graph findings, current generated artifact
 ## Remaining Work That Does Not Block MCP Readiness
 
 - Maintain the published v5 line without reintroducing release-only proof infrastructure.
-- Recheck the MCP protocol, Python SDK, licenses, and supported client capabilities before server MS-0.
+- Recheck the MCP protocol, Python SDK, licenses, and supported client capabilities before any future transport, capability, or write-surface expansion.
 - Keep `project-toolbox` and `agent-managed-repo` in their dedicated post-v5 package programs.
 
-No MCP server code should begin until plan T1 completes the separately governed `SPEC-RD01` Step 09 protocol, SDK, client, and service-boundary gate.
+The v1 MCP server completed the separately governed `SPEC-RD01` Step 09 protocol, SDK, client, and service-boundary gate before implementation; this report remains its Step 07 prerequisite evidence.

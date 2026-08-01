@@ -134,7 +134,29 @@ The inverse is the freedom this buys: anything that _cannot_ newly-fail a passin
 
 Every release MUST:
 
-0. **Land the release on `main` first.** The release commit and **both** tags — the full-version `vMAJOR.MINOR.PATCH` and the moving-major `vMAJOR` — MUST live on `main`. Merge the release commit to `main` **before** tagging, then tag the commit as it exists on `main`. This is not optional polish: [`docs/handoff/deployed.md`](../docs/handoff/deployed.md) defines "Deployed" as _published git refs on `main`_, and every prior release (`v1.x`–`v3.x`) was cut there. A tag on a topic branch (`testing`) is not a release. Do the version-pin bumps (steps 3–6 below) in the release commit on `main`, not on the development branch.
+0. **Prepare and land the release on `main` first.** `scripts/release_prep.py` requires a clean `main` worktree: its version and changelog mutations, all manual release-current updates, and the release commit belong there. Review and commit that prepared tree on `main`, then build and validate that exact commit. The release commit and **both** tags — the full-version `vMAJOR.MINOR.PATCH` and the moving-major `vMAJOR` — MUST live on `main`. This is not optional polish: [`docs/handoff/deployed.md`](../docs/handoff/deployed.md) defines "Deployed" as _published git refs on `main`_, and every prior release (`v1.x`–`v3.x`) was cut there. A tag on a topic branch (`testing`) is not a release. Do the version-pin bumps (steps 3–6 below) in the release commit on `main`, not on a development branch.
+
+   **Before creating either tag or publishing, prove that exact release commit.** Confirm the locked environment and payload projection, build and extract the candidate wheel, put it first on `PYTHONPATH`, then run the serial release cross-check, managed-Markdown dogfood validation, and package-contract/release checks. `scripts/release_prep.py` remains mechanical and prints this handoff; it does not run the commands for the owner.
+
+   ```bash
+   uv sync --all-groups --locked
+   npm ci
+   uv run project-standards standards sync-payload-projection --root . --check --json
+   uv build --clear --wheel --out-dir build/release-wheel
+   rm -rf -- build/wheel-runtime
+   uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime
+   export PYTHONPATH="$PWD/build/wheel-runtime"
+   scripts/verify.sh --full
+   uv run project-standards validate
+   uv run project-standards standards validate-packages --root . --json
+   uv run project-standards standards validate-graph --root . --require-all-manifests --json
+   uv run project-standards standards generate-package-schemas --root . --check --json
+   uv run project-standards standards render-catalog --root . --check
+   uv run project-standards packages check-release --root . --baseline vPREVIOUS --json
+   ```
+
+   Replace `X.Y.Z` with the release version and `vPREVIOUS` with the previous full release tag. `--clear` gives the release wheel a unique output directory, and only the generated `build/wheel-runtime` is removed before extraction; this prevents a stale wheel or old extraction from satisfying the gate. The candidate wheel must remain first on `PYTHONPATH` for every command after extraction; otherwise source-tree imports can hide a distribution defect.
+
 1. **Tag a full version.** Create an annotated, GPG-signed tag `vMAJOR.MINOR.PATCH` on the release commit. Full-version tags are **immutable** — never deleted, moved, or repointed once pushed.
 2. **Advance the moving major tag.** Maintain a `vMAJOR` tag that always points at the newest release within that major. Repoint it locally, then move it on the remote by **deleting and re-pushing** — not `git push --force`. The force flag is unnecessary for a tag move, can clobber branch history, and is blocked by this repository's force-push guard (`release-pipeline`):
 

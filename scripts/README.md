@@ -13,7 +13,7 @@ scripts/verify.sh --full     # legacy serial battery
 
 ## `release_prep.py` — mechanical release preparation
 
-Performs the judgment-free subset of `meta/versioning.md` behind one command: the scoped `pyproject.toml` version bump with `uv lock`, the `CHANGELOG.md` `[Unreleased]` conversion, a reviewed-never-rewritten report of outgoing-version references, and the wiring verification chain ending in `packages check-release`. Tags, publication, and MAJOR-only prose stay manual and are printed as a follow-up list.
+Performs the judgment-free subset of `meta/versioning.md` behind one command: the scoped `pyproject.toml` version bump with `uv lock`, the `CHANGELOG.md` `[Unreleased]` conversion, a reviewed-never-rewritten report of outgoing-version references, and the wiring verification chain ending in `packages check-release`. It refuses a dirty or non-`main` worktree so the mutations belong to the release commit. It prints, but does not execute, the mandatory pre-tag locked `uv sync`, `npm ci`, read-only projection proof, isolated candidate-wheel, full-gate, dogfood, package-contract, and release-classification sequence. Tags, publication, and MAJOR-only prose stay manual.
 
 ```bash
 uv run python scripts/release_prep.py X.Y.Z [--dry-run]
@@ -40,7 +40,7 @@ This byte-locked dogfood artifact remains the generic consumer gate. The reposit
 `scripts/check.py` is the **dogfooded copy** of the Python Tooling bundle artifact:
 
 ```text
-standards/python-tooling/versions/1.4/resources/check.py  ←→  scripts/check.py
+standards/python-tooling/versions/1.10/resources/check.py  ←→  scripts/check.py
 ```
 
 `test_adopt_dogfood.py` asserts that the root artifact matches the current V2 reconciliation output. If you edit either file, update the package manifest and generated integrity metadata together — the test will catch any divergence in CI.

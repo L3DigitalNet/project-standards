@@ -40,6 +40,7 @@ project-standards init --catalog <major> [--migrate [--apply]] [--repo <dir>] [-
 project-standards reconcile [--check | --apply] [--allow-major <standard>@<major>]... [--repair-state] [--repo <dir>] [--json]
 project-standards reconcile --restore-managed <path> [--apply] [--repo <dir>] [--json]
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
+project-standards mcp [--root-boundary <dir>]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
 project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
 project-standards list [--json]
@@ -52,13 +53,13 @@ project-standards {--help | --version}
 
 ## DESCRIPTION
 
-`project-standards` is the unified command-line surface for this repository's tooling. It exposes 31 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
+`project-standards` is the unified command-line surface for this repository's tooling. It exposes 32 leaf commands under one entry point: two frontmatter operations (`validate`, `fix`), 5 control/adoption operations (`init`, `reconcile`, `render`, `adopt`, `list`), the `mcp` server, eleven `standards` operations, one repository-only `packages` release check, six `spec` verbs, and six `agent-handoff` verbs.
 
 Under unified authority, `validate` and `fix` invoke the provider selected by the applied Markdown Frontmatter package. Read-only validation consumes one immutable file snapshot; `fix` applies only the provider's typed plan through the platform executor and then revalidates. After `project-standards fix`, run `project-standards reconcile --check`, review the digest-only plan, and run `project-standards reconcile --apply` before the final `project-standards validate`. The standalone schema, ID, reference, ID-fix, and format-write surfaces use the same selected payload while retaining their narrower output contracts. In v5 legacy-only repositories, these commands warn and retain the local validator sequence as a bounded compatibility path. The six standalone console-script names documented under [Standalone commands](#standalone-commands) remain installed for scripting and back-compatibility.
 
-Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 31 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
+Profile selection (recorded adopter judgment, per the CLI Documentation Standard §3): **Packaged** — 32 leaf commands plus the `spec`, `standards`, `packages`, and `agent-handoff` group overviews, documented on this single page because the group nesting stays navigable at this command count. The deep profile's generated per-command pages are not warranted here.
 
-Output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. There is no interactive prompt; every command is non-interactive and driven entirely by arguments.
+Except for `mcp`, output goes to standard output for success and results; validation violations, notes, and error summaries go to standard error. The MCP server reserves standard output for JSON-RPC protocol frames and writes diagnostics to standard error. There is no interactive prompt; commands are non-interactive, while `mcp` serves client protocol requests on standard input after its launch arguments are parsed.
 
 `--version` is recognized only as the **first** argument (`project-standards --version`). The control-plane commands (`init`, `reconcile`, and `render`), `validate`, `fix`, `spec`, `standards`, `packages`, `agent-handoff`, and specialized Agent Handoff adoption are dispatched before the top-level argument parser runs. A `--version` placed after one of those commands belongs to the dispatched command rather than the top level — see [NOTES](#notes).
 
@@ -200,6 +201,22 @@ mkdir -p "$(dirname "$workflow_path")"
 If rendering or validation fails, `set -e` stops before publication and the trap removes the scratch file. If the destination already exists, Bash's `noclobber` open fails without truncating or overwriting the consumer file. The bounded provider runner also rejects an undeclared provider, a non-render operation, or a payload-selection mismatch.
 
 Exit status: `0` content rendered · `2` invalid arguments, uninitialized or disabled state, unavailable package/provider, provider refusal, or non-UTF-8 content.
+
+### `mcp`
+
+Serve the installed Catalog 5 standards over local stdio through the Model Context Protocol. The server is read-only: it exposes resources and six read-only tools, never applies a plan, and never infers a repository from its working directory. See [`docs/mcp-server.md`](mcp-server.md) for client configuration, the complete resource and tool schemas, security rules, and troubleshooting.
+
+```text
+project-standards mcp [--root-boundary <dir>]
+```
+
+Options:
+
+- **`--root-boundary <dir>`** — Optional existing absolute directory that narrows the roots repository-scoped MCP tools may inspect. It never supplies a tool's required explicit `repo_root` argument and never widens access.
+
+The server writes only JSON-RPC protocol messages to standard output after it starts; launch refusals, warnings, and logs go to standard error. It runs until the client closes standard input. There are no `--repo`, server-name, or server-version launch options: each repository-scoped tool receives its absolute `repo_root` in the MCP request.
+
+Exit status: `0` normal server shutdown after standard input closes · `1` structured launch refusal (invalid boundary or invalid installed distribution/catalog) · `2` invalid command-line arguments.
 
 ### `adopt`
 
@@ -727,7 +744,7 @@ Options:
 - **`--version`** — Print the version and exit 0.
 - **`--schema <path>`** — JSON Schema file to validate against; overrides the config schema.
 - **`--glob <pattern>`** — Validate files matching the pattern (relative to the current directory) instead of the config include list; combines with explicit files.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug configuration. Under unified `.standards/` authority, the selected package configuration is used and this override is rejected. Otherwise, the supplied path is read, or `.project-standards.yml` is used when omitted. A supplied non-existent path exits 2.
 - **`--no-require-frontmatter`** — Do not fail files with no frontmatter block.
 - **`-q`, `--quiet`** — Suppress success output.
 
@@ -745,7 +762,7 @@ Options:
 
 - **`<file>...`** — Markdown files to validate. Omit to use the config include list.
 - **`--version`** — Print the version and exit 0.
-- **`--config <path>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <path>`** — Explicit legacy/debug configuration. Under unified `.standards/` authority, the selected package configuration is used and this override is rejected. Otherwise, the supplied path is read, or `.project-standards.yml` is used when omitted. A supplied non-existent path exits 2.
 - **`--quiet`** — Suppress per-file output; exit code only.
 - **`--glob <pattern>`** — Validate files matching the pattern instead of the include list; combines with explicit files.
 - **`--schema <path>`** — Custom schema override; when provided, id-format validation is skipped entirely (custom schemas may define different id conventions), and the command exits 0 with a note.
@@ -807,7 +824,7 @@ Options:
 
 - **`<file>...`** — Markdown files to format. Omit to use the config include list.
 - **`--version`** — Print the version and exit 0.
-- **`--config <config>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <config>`** — Explicit legacy/debug configuration. Under unified `.standards/` authority, the selected package configuration is used and this override is rejected. Otherwise, the supplied path is read, or `.project-standards.yml` is used when omitted. A supplied non-existent path exits 2.
 - **`--schema <schema>`** — Custom schema override; when set (or configured as a path) formatting is skipped with a note and exit 0.
 - **`--glob <pattern>`** — Format files matching the pattern instead of the include list.
 - **`--check`** — Report files that would change without writing. Mutually exclusive with `--write`. This is the default mode.
@@ -834,7 +851,7 @@ Options:
 
 - **`<file>...`** — Accepted and ignored for scoping (forwarded compatibility); the pass always indexes the full configured set.
 - **`--version`** — Print the version and exit 0.
-- **`--config <config>`** — Project config file. Default: `.project-standards.yml`. A non-existent `--config` exits 2.
+- **`--config <config>`** — Explicit legacy/debug configuration. Under unified `.standards/` authority, the selected package configuration is used and this override is rejected. Otherwise, the supplied path is read, or `.project-standards.yml` is used when omitted. A supplied non-existent path exits 2.
 - **`--schema <schema>`** — Custom schema override; when set (or configured as a path) reference validation is skipped with a note to standard error (even under `--quiet`) and exit 0.
 - **`--glob <pattern>`** — Accepted and ignored for scoping (see `<file>`).
 - **`-q`, `--quiet`** — Suppress the clean-run success line. Warnings and the custom-schema skip note still print.

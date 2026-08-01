@@ -34,17 +34,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ## Agent tasks
 
-### Release v5.13.0
-
-- [x] **Important:** cut release-gate verification wall-clock; implement with the v5.13.0 train. _(Done 2026-07-31: spike + adoption shipped. Gate green at 10:23 under real-usage load, 5.3× vs the 55:31 baseline; quiet floor in the 5–8 min target band. Evidence and adopted configuration: `docs/research/2026-07-31-release-gate-wall-clock-spike.md`; runner: `scripts/verify.sh`; MCP fixture-reduction lever not needed.)_
-
-- [ ] ~~Move repository CI to the self-hosted runner; ship with the v5.13.0 train.~~ **Deferred from v5.13.0** _(owner decision 2026-07-31)_ after an adversarial security review refuted the design; hosted minutes are free for public repos, so speed was the only payoff.
-
-  Revisit under the `agent-managed-repo`/governance program using the approved dedicated-group architecture and the ten-item hardening program in `docs/research/2026-07-31-self-hosted-runner-security-review.md` (several items are homelab-repo VM 200/Ansible work; two GitHub behaviors need empirical verification first).
-
-- [x] Evaluate further release-process efficiency candidates for the v5.13.0 efficiency train. _(Done 2026-07-31, all five dispositioned: SHIPPED — trimmed local verification policy (fast gate for intermediate legs, `--full` at release prep), `scripts/release_prep.py`, local `prettier --cache`. REJECTED — frozen-venv/per-lane parallel suites (xdist in one venv already delivers the win) and diff-scoped test selection (catalog-wide couplings make it unsafe; the fast gate subsumes it); wheel-runtime build caching rejected inside the caching candidate (build+extract ≈1 s). Rationale: `docs/research/2026-07-31-release-gate-wall-clock-spike.md` §Rejected levers.)_
-
 ### Maintenance
+
+- [ ] Define whether owner-designated release levels may exceed `check-release` and `meta/versioning.md` classification.
+
+- [ ] Authorize a Python Tooling successor that replaces the selected 1.10 package's stale V1-authority statement.
+
+- [ ] Reconcile the Agent Handoff plan, approved specification revision, package state, and remaining retirement work.
+
+- [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
 - [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency. _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_
 
@@ -63,6 +61,12 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 - [ ] Decide whether Python Coding 0.6 remains reference-only or proceeds toward consumer adoption.
 
 ### Future programs
+
+#### Agent-managed repository
+
+- [ ] Revisit self-hosted CI under `agent-managed-repo`; owner deferred it from v5.13.0 on 2026-07-31.
+
+  Use the approved dedicated-group architecture and hardening program in `docs/research/2026-07-31-self-hosted-runner-security-review.md`.
 
 - [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
 

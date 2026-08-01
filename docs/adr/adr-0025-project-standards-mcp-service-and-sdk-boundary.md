@@ -6,8 +6,8 @@ description: 'Freezes the exact official MCP SDK dependency, the one-way adapter
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-28'
-reviewed: '2026-07-28'
+updated: '2026-07-31'
+reviewed: '2026-07-31'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -22,7 +22,6 @@ aliases:
 related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
-  - 'docs/plans/2026-07-24-project-standards-mcp-server-plan.md'
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
   - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
@@ -31,7 +30,6 @@ supersedes: []
 superseded_by: null
 source:
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
-  - 'docs/plans/2026-07-24-project-standards-mcp-server-plan.md'
 confidence: 'high'
 visibility: 'internal'
 license: null
@@ -91,7 +89,7 @@ There is exactly one direction of dependency:
 
 ### Frozen service facade
 
-The interface table in §5.5 of the [implementation plan](../plans/2026-07-24-project-standards-mcp-server-plan.md) and its protocol-neutral DTO table are frozen by reference: those names, inputs, and required results are the implementation contract, and an implementer must not invent parallel models. The frozen names are:
+This ADR freezes the service-facade and protocol-neutral DTO boundary directly: these names, inputs, and required results are the implementation contract, and an implementer must not invent parallel models. The frozen names are:
 
 - `McpServiceFacade.from_installed` and `McpServiceFacade.from_source` for construction.
 - `McpServiceFacade.catalog`, `McpServiceFacade.standard`, and `McpServiceFacade.resource` for exact package facts and verified resource bytes.
@@ -100,7 +98,7 @@ The interface table in §5.5 of the [implementation plan](../plans/2026-07-24-pr
 - `resolve_effective_root` for root normalization and containment.
 - `create_server` and `run_stdio` in the adapter.
 
-Changing any of these names or shapes requires an approved amendment to this record and a plan update through the discovered-work checkpoint before the affected task starts.
+Changing any of these names or shapes requires an approved amendment to this record and corresponding specification, implementation, and test updates.
 
 ### Provider execution boundary
 
@@ -176,4 +174,5 @@ An IPC-cleanup test asserts that after each of the four completion paths — suc
 - Transport, scope, and registry decision: [`adr-0026-project-standards-mcp-local-read-only-transport.md`](adr-0026-project-standards-mcp-local-read-only-transport.md)
 - Sequencing precedent: [`adr-0012-mcp-readiness-before-server-implementation.md`](adr-0012-mcp-readiness-before-server-implementation.md)
 - Dispatcher and control-plane authority: [`adr-0023-unified-consumer-standards-control-plane.md`](adr-0023-unified-consumer-standards-control-plane.md)
-- Interface contract: §5.5 of [`2026-07-24-project-standards-mcp-server-plan.md`](../plans/2026-07-24-project-standards-mcp-server-plan.md)
+- Server contract: [`SPEC-MS01`](../specs/2026-07-07-project-standards-mcp-server-implementation-spec.md)
+- Operator reference: [`docs/mcp-server.md`](../mcp-server.md)

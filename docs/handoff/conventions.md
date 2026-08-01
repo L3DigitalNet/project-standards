@@ -62,15 +62,17 @@ PYTHONPATH="$PWD/build/wheel-runtime" uv run project-standards validate
 **Code:**
 
 ```bash
-uv sync --all-groups
+uv sync --all-groups --locked
 npm ci
-uv build --wheel --out-dir dist
-uv run python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+uv run project-standards standards sync-payload-projection --root . --check --json
+uv build --clear --wheel --out-dir build/release-wheel
+rm -rf -- build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-X.Y.Z-py3-none-any.whl build/wheel-runtime
 scripts/verify.sh          # fast gate: concurrent lanes, then performance alone
 scripts/verify.sh --full   # legacy serial battery / release-prep cross-check
 ```
 
-**Why:** `main` must stay releasable; consumers pin to tags. Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
+**Why:** `main` must stay releasable; consumers pin to tags. The isolated, cleared wheel directory and fresh runtime extraction keep the candidate wheel that the gates import identical to the release commit being proved. Direct commands used to keep the lanes visible without a repository-specific orchestrator, but the 2026-07-31 wall-clock spike made concurrency worth 5.3× and the environment it needs (§14, per-lane basetemps, lane ordering) too easy to get wrong by hand.
 
 **Sources:** pre-v3 `AGENTS.md`.
 

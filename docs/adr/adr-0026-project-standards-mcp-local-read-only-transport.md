@@ -6,8 +6,8 @@ description: 'Freezes the v1 local stdio read-only scope, CLI form, resource URI
 doc_type: 'adr'
 status: 'active'
 created: '2026-07-28'
-updated: '2026-07-28'
-reviewed: '2026-07-28'
+updated: '2026-07-31'
+reviewed: '2026-07-31'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
 tags:
@@ -22,7 +22,6 @@ aliases:
 related:
   - 'docs/specs/2026-07-07-project-standards-mcp-enablement-roadmap-spec.md'
   - 'docs/specs/2026-07-07-project-standards-mcp-server-implementation-spec.md'
-  - 'docs/plans/2026-07-24-project-standards-mcp-server-plan.md'
   - 'docs/research/2026-07-28-project-standards-mcp-protocol-sdk-client-matrix.md'
   - 'docs/adr/adr-0010-standard-resource-uris-and-index.md'
   - 'docs/adr/adr-0012-mcp-readiness-before-server-implementation.md'
@@ -155,7 +154,7 @@ Prompts are registered only from declared prompt-role resources. The server inve
 `create_server` is constructed with exactly this configuration; it is not implementer-tunable in v1 beyond the items listed here.
 
 - **Server name:** `project-standards`.
-- **Configured root boundary:** one **optional** launch-time boundary, exposed as a CLI option on the `project-standards mcp` form, default none. When supplied it is passed to `resolve_effective_root` as the configured boundary input declared in §5.5 of the implementation plan, and it narrows containment exactly as client-advertised roots do. When absent, containment rests on the mandatory explicit `repo_root` argument together with any client-advertised roots. It never supplies a missing `repo_root` and never widens the boundary.
+- **Configured root boundary:** one **optional** launch-time boundary, exposed as a CLI option on the `project-standards mcp` form, default none. When supplied it is passed to `resolve_effective_root` as the configured boundary input, and it narrows containment exactly as client-advertised roots do. When absent, containment rests on the mandatory explicit `repo_root` argument together with any client-advertised roots. It never supplies a missing `repo_root` and never widens the boundary.
 - **Capabilities:** exactly the set frozen in the capability-semantics section above — resources without `subscribe`, tools, and prompts only when prompt-role resources are registered, all three with `listChanged` false.
 - **Logging:** every log record, warning, and traceback goes to `stderr`. Nothing but protocol messages is written to `stdout`, and the server declares no logging capability.
 - **Instructions:** one static string, unchanged for the process lifetime. Codex CLI 0.145.0 documents server instructions as a supported feature (see the evidence matrix), so this string is a real client-visible surface rather than decoration. The frozen draft text is:

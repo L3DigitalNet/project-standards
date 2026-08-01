@@ -34,7 +34,7 @@ The server is optional and replaces nothing: the CLI and the CI gates remain the
 
 ## Prerequisites
 
-- **Python 3.10 or newer.** The distribution declares `requires-python >=3.10`; this repository develops on 3.14.
+- **Python 3.14 or newer.** The distribution declares `requires-python >=3.14`.
 - **The `project-standards` distribution installed into an environment your client can execute.** The MCP SDK (`mcp==2.0.0`) ships as a standard dependency, so no extra is required.
 - **One supported primary client.** The evidence register covers Codex 0.146.0 and Claude Code 2.1.220; other MCP clients may work but are not exercised.
 - **A consumer repository you want inspected**, if you intend to use the repository-scoped tools. Every one of them takes an explicit absolute path.

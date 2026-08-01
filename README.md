@@ -6,6 +6,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
 - **Adopting the standards in your own repo?** See [Consuming the standards](#consuming-the-standards).
 - **Adopting or updating with an agent?** Copy the [agent adoption/update prompt](docs/adoption-prompt.md).
 - **Using the CLI?** See the complete [`project-standards` usage reference](docs/usage.md).
+- **Planning a release?** See the [roadmap](ROADMAP.md).
 
 ## Table of Contents
 
@@ -25,6 +26,7 @@ Shared standards, schemas, templates, and tooling for documentation, Python proj
   - [Consuming the standards](#consuming-the-standards)
     - [Current consumer packages](#current-consumer-packages)
     - [Pin to a release tag, not `main`](#pin-to-a-release-tag-not-main)
+      - [Reusable workflow inputs](#reusable-workflow-inputs)
     - [Pre-commit hooks](#pre-commit-hooks)
   - [MCP server](#mcp-server)
   - [Versioning](#versioning)
@@ -49,7 +51,7 @@ project-standards/
 ├── meta/                      # repository policy, including release/versioning
 ├── src/project_standards/     # CLI/control plane + installed package projections
 ├── tests/                     # implementation, package, compatibility, and coherence tests
-├── scripts/                   # optional helper — check.py runs the verification gate
+├── scripts/                   # repository gate, release preparation, and helper tools
 ├── docs/                      # usage, ADRs, maintained specs, and handoff knowledge
 └── .github/                   # repository and reusable consumer workflows
 ```
@@ -135,7 +137,7 @@ The "standard for standards" — the V2 family/payload/catalog contract every pa
 Project Standards 5.13.0 requires Python 3.14 or newer. Install the exact release from its immutable Git tag, then verify the installed command before changing a repository:
 
 ```bash
-uv tool install "git+https://github.com/L3DigitalNet/project-standards@v5.13.0"
+uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.13.0"
 project-standards --version || project-standards --version
 ```
 
@@ -260,11 +262,12 @@ See [`meta/versioning.md`](meta/versioning.md) for the full classification table
 Repository CI is enumerated in [`tests/README.md` § CI relationship](tests/README.md#ci-relationship) — the developer gate, the coherence gate, the standards-graph gate, and the dogfood caller, plus the reusable consumer workflows. Working on the standards or the validator itself, set up once:
 
 ```bash
-uv sync --all-groups                                         # Python environment
+uv sync --all-groups --locked                                # Python environment
 npm ci                                                       # Prettier and markdownlint oracles
-uv run project-standards standards sync-payload-projection --root . # required before the build
-uv build --wheel --out-dir dist
-uv run python -m zipfile -e dist/project_standards-*.whl build/wheel-runtime
+uv run project-standards standards sync-payload-projection --root . --check --json # must pass before the build
+uv build --clear --wheel --out-dir build/release-wheel
+rm -rf -- build/wheel-runtime
+uv run python -m zipfile -e build/release-wheel/project_standards-5.13.0-py3-none-any.whl build/wheel-runtime
 export PYTHONPATH="$PWD/build/wheel-runtime"
 ```
 
@@ -276,7 +279,7 @@ scripts/verify.sh --full             # legacy serial battery (release prep and t
 uv run project-standards validate    # dogfood: schema, id, and references
 ```
 
-The fast gate is the everyday verification; the serial `--full` battery runs after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against. Run `sync-payload-projection` before `uv build --wheel`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
+The fast gate is the everyday verification; the serial `--full` battery runs after a train's last content change and at release preparation, where it cross-checks the parallel configuration against the baseline it was proven against. The release path uses `build/release-wheel` with `--clear` and replaces only the generated runtime extraction, so no stale wheel can satisfy the candidate-runtime gate. Require `sync-payload-projection --check` before `uv build`: the projection is what puts the catalog and payload bytes inside the distribution, and a wheel built without it serves `validate` but fails `init`/`reconcile` with `CP-INIT-STATE`.
 
 ## License
 
