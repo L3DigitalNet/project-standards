@@ -1,6 +1,6 @@
 # Build Backend Mechanics
 
-> **Historical V4 mechanism reference.** This unversioned file is migration evidence only. For the current package contract, use [Build Backend Guidance for `python-tooling@1.2`](versions/1.2/build-backend.md). Commands and artifact versions below describe the former V3/V4 delivery path and are not current adoption instructions.
+> **Historical V4 mechanism reference.** This unversioned file is migration evidence only. For the current package contract, use [Build Backend Guidance for `python-tooling@1.10`](versions/1.10/build-backend.md). Commands and artifact versions below describe the former V3/V4 delivery path and are not current adoption instructions.
 
 The [Python Tooling SSOT Standard](README.md) names `uv_build` as the default build backend (§3, §6) but does not explain what a build backend _does_. This reference fills that gap: it traces how four lines of `[build-system]` turn a `src/` tree into a command a user can type, using this repository as the worked example.
 

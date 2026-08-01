@@ -28,6 +28,7 @@ from project_standards.adopt.manifest import (
     available_standards,
     load_manifest,
 )
+from project_standards.cli_contract import PUBLIC_COMMAND_EXIT_CODES, validate_public_exit_code
 from project_standards.control_plane.models import ConsumerCatalog
 from project_standards.registry import Registry, RegistryError, load_registry
 
@@ -323,14 +324,30 @@ def _cmd_adopt(standards: list[str], dest: Path, force: bool, dry_run: bool) -> 
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def _fix_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="project-standards fix",
+        description=(
+            "Format frontmatter, fix ids, then re-validate references. Custom schemas skip the fix."
+        ),
+    )
+    parser.add_argument("files", nargs="*", type=Path, metavar="FILE")
+    parser.add_argument("--config", type=Path, default=None, metavar="PATH")
+    parser.add_argument("--schema", type=Path, default=None, metavar="PATH")
+    parser.add_argument("--glob", metavar="PATTERN")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("--no-require-frontmatter", action="store_true")
+    return parser
+
+
+def _run_main(argv: list[str]) -> int:
     """CLI entry point for project-standards.
 
     `validate` is early-dispatched before argparse runs — argparse's REMAINDER cannot
     capture flags like `--config` that look like top-level options. All other subcommands
     go through the normal argparse path inside the error boundary below.
     """
-    args_list = list(sys.argv[1:] if argv is None else argv)
+    args_list = argv
 
     if args_list and args_list[0] == "--version":
         print(f"project-standards {package_version()}")
@@ -483,26 +500,14 @@ def main(argv: list[str] | None = None) -> int:
     if args_list and args_list[0] == "fix":
         fix_args = args_list[1:]
         if "--help" in fix_args or "-h" in fix_args:
-            print(
-                "usage: project-standards fix [FILE ...] [--config PATH] [--schema PATH] "
-                "[--glob PATTERN] [--no-require-frontmatter] [--quiet]\n"
-                "Format frontmatter (--write), fix ids, then re-validate (incl. references).\n"
-                "Skips entirely under a custom schema."
-            )
+            _fix_argument_parser().print_help()
             return 0
         from project_standards.frontmatter_commands import run_fix as _run_v2_fix
 
         v2_result = _run_v2_fix(fix_args)
         if v2_result is not None:
             return v2_result
-        fix_parser = argparse.ArgumentParser(prog="project-standards fix", add_help=False)
-        fix_parser.add_argument("files", nargs="*", type=Path)
-        fix_parser.add_argument("--config", type=Path, default=None)
-        fix_parser.add_argument("--schema", type=Path, default=None)
-        fix_parser.add_argument("--glob")
-        fix_parser.add_argument("--quiet", "-q", action="store_true")
-        fix_parser.add_argument("--no-require-frontmatter", action="store_true")
-        parsed_fix = fix_parser.parse_args(fix_args)
+        parsed_fix = _fix_argument_parser().parse_args(fix_args)
         if parsed_fix.config is not None and not parsed_fix.config.exists():
             print(f"error: config file not found: {parsed_fix.config}", file=sys.stderr)
             return 2
@@ -665,6 +670,41 @@ def main(argv: list[str] | None = None) -> int:
     except AdoptError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return exc.exit_code
+
+
+def _exit_contract_command(argv: list[str]) -> str:
+    if not argv or argv[0].startswith("-"):
+        return "project-standards"
+    command = argv[0]
+    if command == "standards":
+        if len(argv) > 1 and f"standards {argv[1]}" in PUBLIC_COMMAND_EXIT_CODES:
+            return f"standards {argv[1]}"
+        return "standards"
+    if command == "spec":
+        if len(argv) > 1 and f"spec {argv[1]}" in PUBLIC_COMMAND_EXIT_CODES:
+            return f"spec {argv[1]}"
+        return "spec"
+    if command == "packages":
+        if len(argv) > 1 and f"packages {argv[1]}" in PUBLIC_COMMAND_EXIT_CODES:
+            return f"packages {argv[1]}"
+        return "packages"
+    if command == "agent-handoff":
+        return "agent-handoff"
+    return command if command in PUBLIC_COMMAND_EXIT_CODES else "project-standards"
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the public entry point and enforce its documented exit-code surface."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    try:
+        result = _run_main(args)
+    except SystemExit as exc:
+        status = exc.code if isinstance(exc.code, int) else 0 if exc.code is None else 1
+        validate_public_exit_code(_exit_contract_command(args), status)
+        raise
+    checked = validate_public_exit_code(_exit_contract_command(args), result)
+    assert isinstance(checked, int)
+    return checked
 
 
 if __name__ == "__main__":

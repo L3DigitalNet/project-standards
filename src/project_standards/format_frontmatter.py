@@ -23,6 +23,7 @@ import yaml
 from yaml.tokens import AliasToken, AnchorToken, Token
 
 from project_standards._version import package_version
+from project_standards.cli_contract import enforce_public_exit_codes
 from project_standards.id_format import random_token, slugify
 
 # Leading frontmatter block; groups: open fence, body (between fences), close fence.
@@ -795,6 +796,7 @@ def _parse_arguments(arguments: list[str]) -> argparse.Namespace:
     return args
 
 
+@enforce_public_exit_codes("format-frontmatter")
 def main(
     argv: list[str] | None = None,
     *,

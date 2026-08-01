@@ -52,6 +52,7 @@ from project_standards._filesystem import (
     collect_paths,
 )
 from project_standards._version import package_version
+from project_standards.cli_contract import enforce_public_exit_codes
 from project_standards.control_plane.command_resolution import (
     CommandResolutionError,
     SelectedCommandPackage,
@@ -799,6 +800,7 @@ def reconfigure_output_streams() -> None:
             stream.reconfigure(errors="replace")
 
 
+@enforce_public_exit_codes("validate-frontmatter")
 def main(
     argv: list[str] | None = None,
     *,

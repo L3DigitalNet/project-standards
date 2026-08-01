@@ -72,7 +72,6 @@ from project_standards.specs.registry import (
 )
 
 _DEFAULT_CONFIG = Path(".project-standards.yml")
-_USAGE = "usage: project-standards spec {validate|lint|extract|next|new|upgrade} ..."
 _TIER_ORDER = {"light": 0, "standard": 1, "full": 2}
 
 
@@ -200,12 +199,17 @@ def _finding_payload(finding: Finding | ControlFinding) -> dict[str, object]:
     }
 
 
-def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
+def _setwide_argument_parser(*, lint: bool) -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog=f"project-standards spec {'lint' if lint else 'validate'}")
     ap.add_argument("files", nargs="*", type=Path)
     ap.add_argument("--config", type=Path, default=_DEFAULT_CONFIG)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
+    return ap
+
+
+def _run_setwide(argv: list[str], *, lint: bool, runtime: _SpecRuntime) -> int:
+    ap = _setwide_argument_parser(lint=lint)
     args = ap.parse_args(argv)
     if runtime.payload is None:
         reg = load_registry()
@@ -302,11 +306,16 @@ def _invoke_selected(
     )
 
 
-def _run_extract(argv: list[str], runtime: _SpecRuntime) -> int:
+def _extract_argument_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="project-standards spec extract")
     ap.add_argument("file", type=Path)
     ap.add_argument("selector")
     ap.add_argument("--json", action="store_true")
+    return ap
+
+
+def _run_extract(argv: list[str], runtime: _SpecRuntime) -> int:
+    ap = _extract_argument_parser()
     args = ap.parse_args(argv)
     if runtime.payload is None:
         doc = parse_document(str(args.file), _read(args.file))
@@ -363,11 +372,16 @@ def _run_extract(argv: list[str], runtime: _SpecRuntime) -> int:
     return 0 if payload["found"] else 1
 
 
-def _run_next(argv: list[str], runtime: _SpecRuntime) -> int:
+def _next_argument_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="project-standards spec next")
     ap.add_argument("file", type=Path)
     ap.add_argument("prefix")
     ap.add_argument("--json", action="store_true")
+    return ap
+
+
+def _run_next(argv: list[str], runtime: _SpecRuntime) -> int:
+    ap = _next_argument_parser()
     args = ap.parse_args(argv)
     if runtime.payload is None:
         doc = parse_document(str(args.file), _read(args.file))
@@ -1219,7 +1233,39 @@ def _run_upgrade(argv: list[str], runtime: _SpecRuntime) -> int:
         return _emit_new_failure(json_mode, err)
 
 
-_VERBS = frozenset({"validate", "lint", "extract", "next", "new", "upgrade"})
+_VERB_HELP = {
+    "validate": "validate project specification documents",
+    "lint": "lint project specification documents",
+    "extract": "print one selected specification slice",
+    "next": "print the next free tracked-item id",
+    "new": "scaffold a new specification",
+    "upgrade": "upgrade a specification to a higher tier",
+}
+_VERBS = frozenset(_VERB_HELP)
+
+
+def _group_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="project-standards spec")
+    subparsers = parser.add_subparsers(dest="verb")
+    for verb, help_text in _VERB_HELP.items():
+        subparsers.add_parser(verb, help=help_text, add_help=False)
+    return parser
+
+
+def _leaf_argument_parser(verb: str) -> argparse.ArgumentParser:
+    if verb == "validate":
+        return _setwide_argument_parser(lint=False)
+    if verb == "lint":
+        return _setwide_argument_parser(lint=True)
+    if verb == "extract":
+        return _extract_argument_parser()
+    if verb == "next":
+        return _next_argument_parser()
+    if verb == "new":
+        return _new_argument_parser()
+    if verb == "upgrade":
+        return _upgrade_argument_parser()
+    raise ValueError(f"unknown spec verb: {verb}")
 
 
 def _explicit_config(argv: list[str]) -> Path | None:
@@ -1261,15 +1307,18 @@ def run(
 ) -> int:
     """Run the nested spec command group."""
     if argv[:1] in (["-h"], ["--help"]):
-        print(_USAGE)
+        _group_argument_parser().print_help()
         return 0
     if not argv:
-        print(_USAGE, file=sys.stderr)
+        _group_argument_parser().print_usage(sys.stderr)
         return 2
     verb, rest = argv[0], argv[1:]
     if verb not in _VERBS:
         print(f"error: unknown spec verb {verb!r}", file=sys.stderr)
         return 2
+    if "--help" in rest or "-h" in rest:
+        _leaf_argument_parser(verb).parse_args(rest)
+        raise AssertionError("argparse help did not exit")
     try:
         root = repo or Path.cwd()
         mode = _operation_lock_mode(verb, rest)

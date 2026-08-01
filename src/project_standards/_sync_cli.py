@@ -6,6 +6,7 @@ this exact color, so a single definition makes drift impossible.
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -27,14 +28,21 @@ def repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
-def resolve_tool_paths(help_text: str) -> tuple[Path, Path, Path]:
-    """Handle --version/--help, then resolve and require the two tool paths."""
-    if "--version" in sys.argv[1:]:
-        print(f"{Path(sys.argv[0]).name} {package_version()}")
-        raise SystemExit(0)
+def _argument_parser(description: str) -> argparse.ArgumentParser:
+    prog = Path(sys.argv[0]).name
+    parser = argparse.ArgumentParser(prog=prog, description=description)
+    parser.add_argument("standards_file", nargs="?", metavar="standards-file")
+    parser.add_argument("settings_file", nargs="?", metavar="settings-file")
+    parser.add_argument("--version", action="version", version=f"{prog} {package_version()}")
+    return parser
+
+
+def resolve_tool_paths(description: str) -> tuple[Path, Path, Path]:
+    """Render parser-owned help/version, then resolve the raw positional contract."""
     if "--help" in sys.argv[1:] or "-h" in sys.argv[1:]:
-        print(help_text)
-        raise SystemExit(0)
+        _argument_parser(description).parse_args(sys.argv[1:])
+    if "--version" in sys.argv[1:]:
+        _argument_parser(description).parse_args(sys.argv[1:])
 
     root = repo_root()
     standards_path = Path(sys.argv[1]) if len(sys.argv) > 1 else root / ".project-standards.yml"

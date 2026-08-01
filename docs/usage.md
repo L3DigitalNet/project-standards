@@ -42,7 +42,7 @@ project-standards reconcile --restore-managed <path> [--apply] [--repo <dir>] [-
 project-standards render <standard-id> <provider-id> [--repo <dir>] [--json]
 project-standards mcp [--root-boundary <dir>]
 project-standards adopt <standard>... [--dest <dir>] [--force] [--dry-run]
-project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
+project-standards adopt agent-handoff [<standard>...] [--dest <dir> | --repo <dir>] (--manual | --harness {claude-code | codex}...) [--force] [--dry-run] [--json]
 project-standards list [--json]
 project-standards spec <verb> [<args>...]
 project-standards standards <verb> [<args>...]
@@ -200,7 +200,7 @@ mkdir -p "$(dirname "$workflow_path")"
 
 If rendering or validation fails, `set -e` stops before publication and the trap removes the scratch file. If the destination already exists, Bash's `noclobber` open fails without truncating or overwriting the consumer file. The bounded provider runner also rejects an undeclared provider, a non-render operation, or a payload-selection mismatch.
 
-Exit status: `0` content rendered · `2` invalid arguments, uninitialized or disabled state, unavailable package/provider, provider refusal, or non-UTF-8 content.
+Exit status: `0` content rendered · `1` another standards operation holds the repository lock · `2` invalid arguments, uninitialized or disabled state, unavailable package/provider, provider refusal, or non-UTF-8 content.
 
 ### `mcp`
 
@@ -232,7 +232,7 @@ project-standards adopt agent-handoff [<standard>...] [--dest <dir>] (--manual |
 Options:
 
 - **`<standard>...`** — One or more standard ids to adopt (for example `markdown-frontmatter`, `python-tooling`, `markdown-tooling`, `adr`, `cli-documentation`, `agent-handoff`). Required.
-- **`--dest <dir>`** — Destination directory to write artifacts into. Default: the current directory. Must already exist unless `--dry-run` is given (a non-existent `--dest` without `--dry-run` exits 2).
+- **`--dest <dir>`, `--repo <dir>`** — Destination directory to write artifacts into. `--repo` is the Agent Handoff compatibility alias. Default: the current directory. Must already exist unless `--dry-run` is given (a non-existent destination without `--dry-run` exits 2).
 - **`--force`** — Overwrite existing managed files that would otherwise be skipped. Create-only artifacts remain skipped. Safety: destructive for generic managed files — prefer `--dry-run` first.
 - **`--dry-run`** — Show what the V1 bundle path would write without changing files. For a V5-advertised package, use explicit `init`, `standards enable`, and `reconcile` preview instead; the wrapper refuses V5 `--dry-run` so it cannot create the initial scaffold during a nominally read-only call.
 - **`--manual`** — Agent Handoff only. Select manual startup and declare no automatic harness. Mutually exclusive with `--harness`; one selection is required.
@@ -255,7 +255,7 @@ Options:
 
 - **`--json`** — Emit the standards, their contract versions, and their artifacts as a JSON array instead of the default human-readable listing. Default: off (text).
 
-Exit status: `0` success · `2` registry/bundle drift.
+Exit status: `0` success · `2` registry/bundle drift · `3` a bundle manifest is missing or malformed.
 
 ### `agent-handoff`
 
@@ -338,6 +338,8 @@ project-standards standards {list | show | enable | disable | version | validate
 
 There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
 
+Exit status: `0` inspection/edit succeeded · `1` another standards operation holds the repository lock · `2` invalid invocation, unknown or non-selectable standard, unavailable version, or unsafe control state.
+
 ### `standards list`
 
 List the complete committed catalog with desired and applied summaries.
@@ -383,8 +385,6 @@ project-standards standards version <standard> <latest|major.minor> [--repo <dir
 ```
 
 Every successful selection edit reports that reconciliation remains pending. Run `reconcile` to preview the resulting repository changes. The package selector (`version = "latest"` or an exact `major.minor`) chooses an immutable payload. Package-owned options such as `contract_version` independently choose a supported document/schema behavior inside that resolved payload; `standards version` never rewrites those options.
-
-Exit status: `0` inspection/edit succeeded · `2` invalid invocation, unknown or non-selectable standard, unavailable version, or unsafe control state.
 
 ### `standards validate-graph`
 
@@ -494,6 +494,10 @@ Repository-only release workflow group. It is separate from reusable standard-pa
 project-standards packages {check-release} [<args>...]
 ```
 
+Running `project-standards packages` with no verb prints usage to standard error and exits 2; `project-standards packages --help` prints help and exits 0. An unrecognized verb exits 2.
+
+Exit status: `0` group help displayed · `2` missing or unrecognized verb.
+
 ### `packages check-release`
 
 Compare every previously released payload and catalog selection with a tagged baseline, then classify the proposed change under ADR 0024.
@@ -522,6 +526,8 @@ project-standards spec {validate | lint | extract | next | new | upgrade} [<args
 ```
 
 The six verbs are documented individually below. There are no group-level options other than `-h` / `--help`; each verb defines its own flags. An unrecognized verb exits 2.
+
+Exit status: `0` group help displayed · `2` missing or unrecognized verb.
 
 ### `spec validate`
 

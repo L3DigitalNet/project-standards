@@ -111,7 +111,7 @@ def test_agent_handoff_adopt_attempts_v5_before_legacy_dispatch(
         unsupported_options: bool = False,
     ) -> int:
         seen.append((standards, destination, force, dry_run, unsupported_options))
-        return 7
+        return 1
 
     monkeypatch.setattr("project_standards.cli._try_v5_adopt", capture)
 
@@ -123,7 +123,7 @@ def test_agent_handoff_adopt_attempts_v5_before_legacy_dispatch(
         fail_legacy,
     )
 
-    assert main(["adopt", "agent-handoff", "--dest", str(tmp_path)]) == 7
+    assert main(["adopt", "agent-handoff", "--dest", str(tmp_path)]) == 1
     assert seen == [(["agent-handoff"], tmp_path, False, False, False)]
 
 

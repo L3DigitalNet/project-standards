@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from project_standards._version import package_version
+from project_standards.cli_contract import enforce_public_exit_codes
 from project_standards.control_plane.command_resolution import (
     SelectedCommandPackage,
     reenter_selected_command,
@@ -270,6 +271,7 @@ def check_adr_sequence(index: Index) -> list[str]:
     ]
 
 
+@enforce_public_exit_codes("validate-references")
 def main(
     argv: list[str] | None = None,
     *,

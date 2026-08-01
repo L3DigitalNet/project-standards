@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards.adopt.errors import ManifestError
+from project_standards.cli_contract import PACKAGE_AUTHORING_COMMAND_HELP
 from project_standards.control_plane.diagnostics import ControlPlaneError
 from project_standards.control_plane.locking import ControlPlaneBusyError
 from project_standards.standard_manifest import StandardManifestError
@@ -18,12 +19,16 @@ from project_standards.standards_graph.discovery import build_graph
 from project_standards.standards_graph.model import findings_to_jsonable, format_findings
 from project_standards.standards_graph.validators import validate_graph
 
-_USAGE = (
-    "usage: project-standards standards "
-    "{list,show,enable,disable,version,validate-graph,render-catalog,"
-    "validate-packages,render-consumer-catalog,generate-package-schemas,"
-    "sync-payload-projection} ..."
-)
+_COMMAND_HELP = {
+    "list": "show the complete installed catalog inventory",
+    "show": "show catalog, desired, and applied state for one standard",
+    "enable": "enable one consumer-selectable standard",
+    "disable": "disable one standard while preserving its configuration",
+    "version": "set one standard's desired version selector",
+    "validate-graph": "validate standard manifests as one graph",
+    "render-catalog": "write or freshness-check standards/catalog.md",
+    **PACKAGE_AUTHORING_COMMAND_HELP,
+}
 
 
 class _ArgparseError(Exception):
@@ -33,6 +38,14 @@ class _ArgparseError(Exception):
 class _Parser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         raise _ArgparseError(message)
+
+
+def _group_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="project-standards standards")
+    subparsers = parser.add_subparsers(dest="command")
+    for command, help_text in _COMMAND_HELP.items():
+        subparsers.add_parser(command, help=help_text, add_help=False)
+    return parser
 
 
 def _emit_error(
@@ -260,21 +273,10 @@ def run(argv: list[str] | None = None) -> int:
     """Run the nested standards command group."""
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
-        print(_USAGE, file=sys.stderr)
+        _group_argument_parser().print_usage(sys.stderr)
         return 2
     if args[0] in {"--help", "-h"}:
-        print(_USAGE)
-        print("  list             show the complete installed catalog inventory")
-        print("  show             show catalog, desired, and applied state for one standard")
-        print("  enable           enable one consumer-selectable standard")
-        print("  disable          disable one standard while preserving its configuration")
-        print("  version          set one standard's desired version selector")
-        print("  validate-graph   validate standard manifests as one graph")
-        print("  render-catalog   write or freshness-check standards/catalog.md")
-        print("  validate-packages          validate V2 package repositories")
-        print("  render-consumer-catalog    render or check a selected V2 consumer catalog")
-        print("  generate-package-schemas   write or check V2 JSON Schemas")
-        print("  sync-payload-projection    write or check installed payload projection")
+        _group_argument_parser().print_help()
         return 0
     command, rest = args[0], args[1:]
     if command in {"list", "show"}:
@@ -294,5 +296,5 @@ def run(argv: list[str] | None = None) -> int:
         from project_standards.package_contract.cli import run_standards
 
         return run_standards([command, *rest])
-    print(_USAGE, file=sys.stderr)
+    _group_argument_parser().print_usage(sys.stderr)
     return 2

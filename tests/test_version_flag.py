@@ -64,11 +64,10 @@ def test_sync_mains_help_flag(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # These mains parse raw positionals with no option library, so --help/-h must be
-    # intercepted before the first argv slot is read as <standards-file> — otherwise
-    # it is treated as a filename and the command exits 1 with "not found".
+    # These mains preserve raw positional parsing, but argparse owns help/version;
+    # help must exit before the first argv slot is read as <standards-file>.
     monkeypatch.setattr("sys.argv", [module.__name__, flag])
     with pytest.raises(SystemExit) as exc:
         module.main()
     assert exc.value.code == 0
-    assert "Usage:" in capsys.readouterr().out
+    assert "usage:" in capsys.readouterr().out

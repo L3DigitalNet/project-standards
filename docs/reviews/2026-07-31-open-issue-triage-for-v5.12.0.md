@@ -4,10 +4,10 @@ id: 'reference-o8k0xv-open-issue-triage-for-v5-12-0'
 title: 'Open-Issue Triage for the v5.12.0 Release Train'
 description: 'Owner-approved roll-in/defer disposition for all 32 open issues ahead of the v5.12.0 release that ships the MCP server.'
 doc_type: 'reference'
-status: 'active'
+status: 'archived'
 created: '2026-07-31'
-updated: '2026-07-31'
-reviewed: '2026-07-31'
+updated: '2026-08-01'
+reviewed: '2026-08-01'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'agent'
 tags:
@@ -16,6 +16,8 @@ tags:
 ---
 
 # Open-Issue Triage for the v5.12.0 Release Train
+
+> **Historical disposition:** v5.12.0 shipped on 2026-07-31. This document preserves the pre-release issue decisions; it is not the current work queue. Current issue sequencing lives in the [open-issue resolution program](../plans/2026-08-01-open-issue-resolution-program-plan.md), and published release facts live in [deployed state](../handoff/deployed.md).
 
 Owner decision 2026-07-31: roll the Tier 1 and Tier 2 sets below into v5.12.0 in a fresh session. Tier 3 is conditional on timeline; Tier 4 defers. All 32 open issues (#55, #62, #75–#77, #78–#104) were distilled with per-issue source verification; #75/#76/#77, #88/#95, #100 were grep-confirmed unfixed on `testing` at commit `d180570`.
 

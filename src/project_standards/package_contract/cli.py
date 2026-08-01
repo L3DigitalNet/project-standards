@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 
 from project_standards._version import package_version
+from project_standards.cli_contract import PACKAGE_AUTHORING_COMMAND_HELP
 from project_standards.package_contract.catalog import (
     _discover_catalog_sources,  # pyright: ignore[reportPrivateUsage]  # package-internal discovery
     load_catalog_source,
@@ -44,12 +45,9 @@ from project_standards.package_contract.repository import (
 from project_standards.package_contract.schemas import generate_package_schemas
 
 _SEMVER_TAG = re.compile(r"^v?((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$")
-_STANDARDS_USAGE = (
-    "usage: project-standards standards "
-    "{validate-packages,render-consumer-catalog,generate-package-schemas,"
-    "sync-payload-projection} ..."
-)
-_PACKAGES_USAGE = "usage: project-standards packages {check-release} ..."
+_PACKAGES_COMMAND_HELP = {
+    "check-release": "compare working payloads with a released tag",
+}
 
 
 class _ArgparseError(Exception):
@@ -63,6 +61,17 @@ class _OutputPathError(PackageContractError):
 class _Parser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         raise _ArgparseError(message)
+
+
+def _group_argument_parser(
+    prog: str,
+    commands: dict[str, str],
+) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=prog)
+    subparsers = parser.add_subparsers(dest="command")
+    for command, help_text in commands.items():
+        subparsers.add_parser(command, help=help_text, add_help=False)
+    return parser
 
 
 def _positive_int(value: str) -> int:
@@ -392,15 +401,15 @@ def _run_check_release(argv: list[str]) -> int:
 
 def run_standards(argv: list[str]) -> int:
     """Run V2 commands nested under `project-standards standards`."""
+    group_parser = _group_argument_parser(
+        "project-standards standards",
+        PACKAGE_AUTHORING_COMMAND_HELP,
+    )
     if not argv:
-        print(_STANDARDS_USAGE, file=sys.stderr)
+        group_parser.print_usage(sys.stderr)
         return 2
     if argv[0] in {"--help", "-h"}:
-        print(_STANDARDS_USAGE)
-        print("  validate-packages          validate V2 package repositories")
-        print("  render-consumer-catalog    render or check a selected V2 consumer catalog")
-        print("  generate-package-schemas   write or check V2 JSON Schemas")
-        print("  sync-payload-projection    write or check installed payload projection")
+        group_parser.print_help()
         return 0
     command, rest = argv[0], argv[1:]
     if command == "validate-packages":
@@ -411,20 +420,23 @@ def run_standards(argv: list[str]) -> int:
         return _run_generate_package_schemas(rest)
     if command == "sync-payload-projection":
         return _run_sync_payload_projection(rest)
-    print(_STANDARDS_USAGE, file=sys.stderr)
+    group_parser.print_usage(sys.stderr)
     return 2
 
 
 def run_packages(argv: list[str]) -> int:
     """Run repository-only package release workflows."""
+    group_parser = _group_argument_parser(
+        "project-standards packages",
+        _PACKAGES_COMMAND_HELP,
+    )
     if not argv:
-        print(_PACKAGES_USAGE, file=sys.stderr)
+        group_parser.print_usage(sys.stderr)
         return 2
     if argv[0] in {"--help", "-h"}:
-        print(_PACKAGES_USAGE)
-        print("  check-release   compare working payloads with a released tag")
+        group_parser.print_help()
         return 0
     if argv[0] == "check-release":
         return _run_check_release(argv[1:])
-    print(_PACKAGES_USAGE, file=sys.stderr)
+    group_parser.print_usage(sys.stderr)
     return 2

@@ -250,12 +250,9 @@ See [`docs/mcp-server.md`](docs/mcp-server.md) for prerequisites, per-client std
 
 ## Versioning
 
-Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html), but the contract is the **consuming repo's validation outcome** — a release's level reflects the worst-case impact of any change across the standard, schema, validator, and workflow.
+Releases use Semantic Versioning syntax with a catalog-composition classifier. The owner designates a matching tool and catalog **MAJOR**. Otherwise, introducing a package or advertising a version above that package's prior maximum requires exactly **MINOR**; a release without either requires exactly **PATCH**. Advertised package versions remain permanent.
 
-- **PATCH / MINOR** → safe to inherit on a moving major pin (`@v5`); a repo that passed yesterday still passes today.
-- **MAJOR** → may newly-fail a previously-passing repo (a new required field, a stricter rule, even a validator bug fix); old `vN.x` tags stay intact, and consumers migrate intentionally.
-
-See [`meta/versioning.md`](meta/versioning.md) for the full classification table, the previously-passing rule, and release requirements.
+See [`meta/versioning.md`](meta/versioning.md) for the complete classification and release requirements.
 
 ## Developing this repository
 

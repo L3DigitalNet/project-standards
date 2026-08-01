@@ -25,6 +25,7 @@ import yaml
 
 from project_standards._sync_cli import SYNC_COLOR as _COLOR
 from project_standards._sync_cli import resolve_tool_paths
+from project_standards.cli_contract import enforce_public_exit_codes
 from project_standards.jsonc import sanitize_jsonc
 
 _PATH_COLORS_KEY = "folder-color.pathColors"
@@ -230,12 +231,12 @@ def rewrite_settings(settings_path: Path, path_colors: list[dict[str, str]]) -> 
     settings_path.write_text(rewritten, encoding="utf-8", newline="")
 
 
+@enforce_public_exit_codes("sync-vscode-colors")
 def main() -> None:
     root, standards_path, settings_path = resolve_tool_paths(
-        help_text=(
+        description=(
             f"{Path(sys.argv[0]).name} — sync folder-color.pathColors in .vscode/settings.json "
-            "from the markdown.frontmatter.include list in .project-standards.yml.\n"
-            "Usage: sync-vscode-colors [standards-file] [settings-file]"
+            "from the markdown.frontmatter.include list in .project-standards.yml."
         )
     )
 

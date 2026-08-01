@@ -30,7 +30,7 @@ The v5 tool keeps a warned fallback for a repository that still has only `.proje
 
 - Upgrade on a branch with a clean, reviewed working tree.
 - Use Python 3.14 or newer.
-- Install or invoke the exact v5 release you intend to pin. For 5.12.0:
+- Install or invoke the exact v5 release you intend to pin. For 5.13.0:
 
   ```bash
   uv tool install --force "git+https://github.com/L3DigitalNet/project-standards@v5.13.0"

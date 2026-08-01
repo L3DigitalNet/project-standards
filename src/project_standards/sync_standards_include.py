@@ -30,6 +30,7 @@ from typing import Any, cast
 
 from project_standards._sync_cli import SYNC_COLOR as _COLOR
 from project_standards._sync_cli import resolve_tool_paths
+from project_standards.cli_contract import enforce_public_exit_codes
 from project_standards.jsonc import sanitize_jsonc
 
 
@@ -95,13 +96,13 @@ def update_include_list(standards_path: Path, new_patterns: list[str]) -> None:
     standards_path.write_text(updated, encoding="utf-8")
 
 
+@enforce_public_exit_codes("sync-standards-include")
 def main() -> None:
     root, standards_path, settings_path = resolve_tool_paths(
-        help_text=(
+        description=(
             f"{Path(sys.argv[0]).name} — sync markdown.frontmatter.include in "
             ".project-standards.yml from the folder-color.pathColors entries in "
-            ".vscode/settings.json.\n"
-            "Usage: sync-standards-include [standards-file] [settings-file]"
+            ".vscode/settings.json."
         )
     )
 

@@ -57,13 +57,33 @@ from project_standards.package_contract.payload import (
 from project_standards.provider_runner import run_packaged_providers
 from project_standards.standard_manifest import ProviderOperation as LegacyProviderOperation
 
-_COMMANDS: dict[str, tuple[LegacyProviderOperation, tuple[str, ...]]] = {
-    "validate": (LegacyProviderOperation.VALIDATE, ()),
-    "size-report": (LegacyProviderOperation.VALIDATE, ("--view", "size")),
-    "shape-check": (LegacyProviderOperation.VALIDATE, ("--view", "shape")),
-    "drift-check": (LegacyProviderOperation.DRIFT_CHECK, ()),
-    "legacy-report": (LegacyProviderOperation.EXTRACT, ()),
-    "upgrade": (LegacyProviderOperation.UPGRADE, ()),
+_COMMANDS: dict[str, tuple[LegacyProviderOperation, tuple[str, ...], str]] = {
+    "validate": (LegacyProviderOperation.VALIDATE, (), "validate full repository conformance"),
+    "size-report": (
+        LegacyProviderOperation.VALIDATE,
+        ("--view", "size"),
+        "report managed document byte budgets",
+    ),
+    "shape-check": (
+        LegacyProviderOperation.VALIDATE,
+        ("--view", "shape"),
+        "check managed document shapes",
+    ),
+    "drift-check": (
+        LegacyProviderOperation.DRIFT_CHECK,
+        (),
+        "check standard-owned artifacts and integrations",
+    ),
+    "legacy-report": (
+        LegacyProviderOperation.EXTRACT,
+        (),
+        "report legacy handoff evidence without mutation",
+    ),
+    "upgrade": (
+        LegacyProviderOperation.UPGRADE,
+        (),
+        "refresh clean standard-owned artifacts",
+    ),
 }
 
 _FIXED_VIEWS = {
@@ -95,17 +115,12 @@ class _V2Args:
     view: str
 
 
-def _print_help() -> None:
-    print(
-        "usage: project-standards agent-handoff COMMAND [OPTIONS]\n\n"
-        "commands:\n"
-        "  validate       validate full repository conformance\n"
-        "  size-report    report managed document byte budgets\n"
-        "  shape-check    check managed document shapes\n"
-        "  drift-check    check standard-owned artifacts and integrations\n"
-        "  legacy-report  report legacy handoff evidence without mutation\n"
-        "  upgrade        refresh clean standard-owned artifacts"
-    )
+def _group_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="project-standards agent-handoff")
+    subparsers = parser.add_subparsers(dest="command")
+    for command, (_operation, _prefix, help_text) in _COMMANDS.items():
+        subparsers.add_parser(command, help=help_text, add_help=False)
+    return parser
 
 
 def _run_provider(operation: LegacyProviderOperation, argv: list[str]) -> int:
@@ -132,13 +147,10 @@ def _repository_argument(argv: list[str]) -> Path:
     return selected
 
 
-def _parse_v2(
+def _v2_argument_parser(
     command: str,
     operation: V2ProviderOperation,
-    argv: list[str],
-    *,
-    fixed_view: str | None = None,
-) -> _V2Args:
+) -> _Parser:
     parser = _Parser(prog=f"project-standards agent-handoff {command}")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")
@@ -146,6 +158,17 @@ def _parse_v2(
         parser.add_argument("--view", choices=("full", "size", "shape"), default="full")
     if operation is V2ProviderOperation.UPGRADE:
         parser.add_argument("--dry-run", action="store_true")
+    return parser
+
+
+def _parse_v2(
+    command: str,
+    operation: V2ProviderOperation,
+    argv: list[str],
+    *,
+    fixed_view: str | None = None,
+) -> _V2Args:
+    parser = _v2_argument_parser(command, operation)
     parsed = parser.parse_args(argv)
     return _V2Args(
         parsed.repo,
@@ -548,23 +571,27 @@ def run(
     """Map package subcommands to generic provider operations."""
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] in {"--help", "-h"}:
-        _print_help()
+        _group_argument_parser().print_help()
         return 0
     command = args[0]
     mapped = _COMMANDS.get(command)
     if mapped is None:
         print(f"error: unknown agent-handoff command: {command}", file=sys.stderr)
         return 2
-    operation, prefix = mapped
+    operation, prefix, _help_text = mapped
     command_args = args[1:]
     fixed_view = _FIXED_VIEWS.get(command)
+    v2_operation = V2ProviderOperation(operation.value)
+    if "--help" in command_args or "-h" in command_args:
+        _v2_argument_parser(command, v2_operation).parse_args(command_args)
+        raise AssertionError("argparse help did not exit")
     try:
         if fixed_view is not None:
             # Parse aliases before authority selection so selected and legacy routes
             # expose the same fixed-view command line and help surface.
             _parse_v2(
                 command,
-                V2ProviderOperation.VALIDATE,
+                v2_operation,
                 command_args,
                 fixed_view=fixed_view,
             )
@@ -587,7 +614,7 @@ def run(
             return _run_selected(
                 selected,
                 command,
-                V2ProviderOperation(operation.value),
+                v2_operation,
                 command_args,
                 fixed_view=fixed_view,
             )
