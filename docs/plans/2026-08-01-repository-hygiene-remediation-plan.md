@@ -57,7 +57,7 @@ The review found three high, five medium, and two low repository findings. The r
 | --- | --- | --- | --- | --- | --- |
 | REQ-001 | Reconcile maintained lifecycle documents and remove competing stale authority. | HYG-003, HYG-005, HYG-006 | must | T1 | TC-T1-001 |
 | REQ-002 | Make the local gate reuse one exact candidate wheel and test its orchestration. | HYG-004, HYG-008 | must | T2 | TC-T2-001 |
-| REQ-003 | Add recurring npm maintenance and immutable external-action pins. | HYG-007, HYG-009 | must | T3 | TC-T3-001 |
+| REQ-003 | Add recurring npm maintenance and immutable external-action pins. | HYG-007, HYG-009 | must | T3, T9 | TC-T3-001, TC-T9-001 |
 | REQ-004 | Remove accidental executable modes only from mutable files and prevent recurrence. | HYG-010 | must | T4 | TC-T4-001 |
 | REQ-005 | Consolidate Agent Handoff optional reads without changing security semantics. | S-001 | should | T5 | TC-T5-001 |
 | REQ-006 | Consolidate adapter newline/offset helpers with byte-layout parity. | S-002 | should | T6 | TC-T6-001 |
@@ -90,6 +90,7 @@ Package, schema, projection, dependency, formatting, lint, and type checks pass.
 | mutable mode-bearing files and mode test | modify | executable-mode hygiene | T4 |
 | Agent Handoff and adapter modules/tests | modify | safe simplifications | T5, T6 |
 | release/catalog/lock/README/changelog surfaces | modify | 5.14 candidate and dogfood refresh | T7 |
+| three managed workflow package successors and projections | add/modify | make action pins authoritative payload content | T9 |
 
 ### 5.4 Dependencies
 
@@ -116,8 +117,9 @@ Each executable change receives a failing observable regression, verified for th
 | T4 | Normalize mutable executable modes | P1 | None | REQ-004 | mode-policy test |
 | T5 | Share Agent Handoff optional reads | P2 | T1 | REQ-005 | Agent Handoff tests |
 | T6 | Share adapter text primitives | P2 | T2 | REQ-006 | adapter tests |
-| T7 | Prepare and reconcile 5.14.0 | P3 | T1, T2, T3, T4, T5, T6 | REQ-007 | release/full gate |
+| T7 | Prepare and reconcile 5.14.0 | P3 | T1, T2, T3, T4, T5, T6, T9 | REQ-007 | release/full gate |
 | T8 | Close verification and local cleanup | P3 | T7 | REQ-008 | parity and hygiene inspection |
+| T9 | Author managed workflow successors | P2 | T3, T4 | REQ-003 | package/control-plane gates |
 
 ## 8. Implementation Tasks
 
@@ -207,7 +209,7 @@ Each executable change receives a failing observable regression, verified for th
 
 #### T7: Prepare and reconcile 5.14.0
 
-- **goal:** one clean 5.14.0 candidate whose public docs, catalog, lock, managed registrations, and release classification agree · **depends_on:** [T1, T2, T3, T4, T5, T6] · **requirements:** [REQ-007] · **priority:** must
+- **goal:** one clean 5.14.0 candidate whose public docs, catalog, lock, managed registrations, and release classification agree · **depends_on:** [T1, T2, T3, T4, T5, T6, T9] · **requirements:** [REQ-007] · **priority:** must
 - **files:** release metadata, README, catalog/lock, managed harness registrations, changelog
 - **acceptance:** exact v5.13 catalog lineage is restored before candidate reconcile; 5.14 candidate preview/apply converges; README installs 5.14 and names AH 1.8; full source/candidate/package/release gates pass (TC-T7-001)
 - **sub-tasks:**
@@ -231,6 +233,21 @@ Each executable change receives a failing observable regression, verified for th
   - **T8.5 REFACTOR** — none.
   - **T8.6 Verify Task** — final repository gates and plan closeout evidence.
 
+### Discovered Work
+
+#### T9: Author managed workflow successors
+
+- **goal:** make the approved immutable action pins authoritative managed payload content rather than root-only drift · **depends_on:** [T3, T4] · **requirements:** [REQ-003] · **priority:** must
+- **files:** successor package versions for Markdown Frontmatter, Markdown Tooling, and Project Spec; package declarations, non-versioned mirrors, projections, catalog tests
+- **acceptance:** each changed managed workflow is sourced from a new immutable successor version; every predecessor remains byte/mode-identical; package/catalog/projection checks pass; root reconciliation reports no `CP-MODIFIED-MANAGED` findings for the pinned workflows (TC-T9-001)
+- **sub-tasks:**
+  - **T9.1 RED** — add package-policy tests proving root managed workflow pins must match advertised payload sources; expected failure names the four root-only modified-managed paths.
+  - **T9.2 Verify RED** — candidate reconciliation remains non-applicable only for the intended package-authority mismatch.
+  - **T9.3 GREEN** — author the three smallest successor packages through the established package-version procedure, update mutable mirrors/declarations, and regenerate projections without altering predecessors.
+  - **T9.4 Verify GREEN** — focused package tests and candidate reconciliation no longer report modified-managed findings.
+  - **T9.5 REFACTOR** — normalize generated metadata only; do not broaden package behavior.
+  - **T9.6 Verify Task** — predecessor proof plus package, graph, schema, projection, catalog, Ruff, and BasedPyright gates; commit with IDs.
+
 ## 9. Cross-Cutting Requirements
 
 | Concern | Applies? | How verified | Owning task |
@@ -244,7 +261,7 @@ Each executable change receives a failing observable regression, verified for th
 ## 10. Integration or Migration
 
 - **Migration required:** yes · **Rollback supported:** yes before publication · **Idempotent:** yes after reconcile
-- Sequence: implement/commit T1-T6 on `testing`; fast-forward local `main`; prepare 5.14; restore exact v5.13 catalog lineage; reconcile with the fresh candidate; verify and commit exact result.
+- Sequence: implement/commit T1-T6 on `testing`; implement/commit discovered T9 after T3/T4; fast-forward local `main`; prepare 5.14; restore exact v5.13 catalog lineage; reconcile with the fresh candidate; verify and commit exact result.
 - No remote branch, tag, release, or issue is mutated.
 
 ## 11. Risks and Decisions
@@ -255,6 +272,7 @@ Each executable change receives a failing observable regression, verified for th
 | R-002 | Action SHA belongs to fork/wrong tag | low | high | verify each SHA against official repository tag before edit | T3 |
 | R-003 | Mode changes touch immutable payloads | medium | high | explicit mutable allowlist plus predecessor-byte check | T4 |
 | R-004 | Refactor changes byte semantics | low | high | characterization and exact adapter/handoff suites | T5, T6 |
+| R-005 | Root-only security pins violate managed package ownership | high | high | ship pins in new immutable successor payloads and re-run candidate reconciliation | T9, T7 |
 
 | ID | Decision | Rationale | Affected task(s) |
 | --- | --- | --- | --- |
@@ -263,6 +281,7 @@ Each executable change receives a failing observable regression, verified for th
 | D-003 | Retain active scratch evidence | It is not a repository defect and still supports release work. | T8 |
 | D-004 | Combine all approved repository corrections into 5.14 before final qualification | The owner's “Correct all” supersedes the review's conservative post-release deferral for HYG-010/S-001/S-002 and avoids an otherwise unnecessary second release. | T4, T5, T6, T7 |
 | D-005 | Delete four verified merged branches and run ordinary Git maintenance | The owner's “Correct all” is the explicit retention decision requested by J-001/J-002; deletion remains conditional on fresh target proof and excludes active worktrees/evidence. | T8 |
+| D-006 | Add three managed workflow package successors to the 5.14 train | Candidate reconciliation proved root-only pinning is rejected as modified managed content; successors preserve ownership and complete the authorized correction. | T9, T7 |
 
 ## 12. Open Questions
 
