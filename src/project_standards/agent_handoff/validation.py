@@ -31,7 +31,11 @@ from project_standards.agent_handoff.integrations.markers import (
 )
 from project_standards.agent_handoff.integrations.project_config import merge_project_config
 from project_standards.agent_handoff.model import AgentHandoffConfig, Finding, Harness, StartupMode
-from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
+from project_standards.agent_handoff.paths import (
+    RepositoryBoundaryError,
+    RepositoryRoot,
+    _read_optional,  # pyright: ignore[reportPrivateUsage]  # package-internal path primitive
+)
 from project_standards.agent_handoff.planning import check_provenance_lock
 from project_standards.agent_handoff.policy import (
     HandoffPolicy,
@@ -83,13 +87,6 @@ def _finding(
 
 def _sorted(findings: list[Finding]) -> tuple[Finding, ...]:
     return tuple(sorted(findings, key=lambda item: (item.code, *item.sort_key)))
-
-
-def _read_optional(repository: RepositoryRoot, relative: str) -> bytes | None:
-    target = repository.consumer_path(relative)
-    if not target.exists():
-        return None
-    return repository.read_bytes(relative)
 
 
 def _load_policy(findings: list[Finding]) -> HandoffPolicy | None:

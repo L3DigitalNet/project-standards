@@ -11,6 +11,7 @@ from project_standards.control_plane.adapters.base import (
     UnitChange,
     decode_utf8,
     line_end_without_newline,
+    preferred_newline,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -175,10 +176,6 @@ def _fragment(content: bytes) -> tuple[str, str]:
     return physical, _normalized_value(physical)
 
 
-def _newline(text: str) -> str:
-    return "\r\n" if "\r\n" in text and "\n" not in text.replace("\r\n", "") else "\n"
-
-
 def _apply(text: str, start: int, end: int, replacement: str) -> str:
     return f"{text[:start]}{replacement}{text[end:]}"
 
@@ -201,7 +198,7 @@ def _insert_property(
     spec: ScopeSpec,
     value: str,
 ) -> str:
-    newline = _newline(document.text)
+    newline = preferred_newline(document.text)
     position = _insertion_position(document, spec.section)
     assignment = f"{spec.key} = {value}{newline}"
     if position is not None:

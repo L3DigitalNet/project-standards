@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 
+import project_standards.agent_handoff.paths as paths
+import project_standards.agent_handoff.planning as planning
+import project_standards.agent_handoff.validation as validation
 from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
 
 
@@ -24,6 +27,46 @@ def test_consumer_path_rejects_unsafe_lexical_path(tmp_path: Path, relative: str
 def test_consumer_path_rejects_null_byte(tmp_path: Path) -> None:
     with pytest.raises(RepositoryBoundaryError, match="null byte"):
         RepositoryRoot(tmp_path).consumer_path("docs/bad\x00.md")
+
+
+def test_private_read_optional__present_path__returns_exact_bytes(tmp_path: Path) -> None:
+    root = RepositoryRoot(tmp_path)
+    root.write_bytes("docs/state.md", b"\x00state\r\n")
+
+    assert paths._read_optional(root, "docs/state.md") == b"\x00state\r\n"  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
+
+
+def test_private_read_optional__absent_path__returns_none(tmp_path: Path) -> None:
+    assert paths._read_optional(RepositoryRoot(tmp_path), "docs/state.md") is None  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
+
+
+@pytest.mark.parametrize("relative", ["../outside", "docs/bad\x00.md"])
+def test_private_read_optional__unsafe_path__propagates_boundary_error(
+    tmp_path: Path, relative: str
+) -> None:
+    with pytest.raises(RepositoryBoundaryError):
+        paths._read_optional(RepositoryRoot(tmp_path), relative)  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
+
+
+def test_private_read_optional__read_failure__propagates_boundary_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = RepositoryRoot(tmp_path)
+    root.write_bytes("docs/state.md", b"state\n")
+
+    def fail_read(_root: RepositoryRoot, _relative: str) -> bytes:
+        raise RepositoryBoundaryError("read failure")
+
+    monkeypatch.setattr(RepositoryRoot, "read_bytes", fail_read)
+
+    with pytest.raises(RepositoryBoundaryError, match="read failure"):
+        paths._read_optional(root, "docs/state.md")  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
+
+
+def test_private_read_optional__shared_owner__uses_paths_primitive() -> None:
+    assert not hasattr(paths, "read_optional")
+    assert planning._read_optional is paths._read_optional  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
+    assert validation._read_optional is paths._read_optional  # pyright: ignore[reportPrivateUsage]  # focused package-internal contract
 
 
 def test_consumer_path_rejects_symlink_escape(tmp_path: Path) -> None:

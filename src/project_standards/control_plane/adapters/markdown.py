@@ -11,6 +11,7 @@ from project_standards.control_plane.adapters.base import (
     UnitChange,
     decode_utf8,
     line_end_without_newline,
+    preferred_newline,
 )
 from project_standards.control_plane.codec import content_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -236,10 +237,6 @@ def _desired(content: bytes) -> tuple[str, bytes]:
     return normalized.decode(), normalized
 
 
-def _newline(text: str) -> str:
-    return "\r\n" if "\r\n" in text and "\n" not in text.replace("\r\n", "") else "\n"
-
-
 def _physical(value: str, newline: str) -> str:
     return value.replace("\r\n", "\n").replace("\n", newline)
 
@@ -260,7 +257,7 @@ def _apply(text: str, start: int, end: int, replacement: str) -> str:
 
 
 def _remove_span(document: MarkdownDocument, block: MarkdownBlock) -> tuple[int, int]:
-    newline = _newline(document.text)
+    newline = preferred_newline(document.text)
     start = block.envelope_start
     end = block.envelope_end
     consumed_preceding_separator = False
@@ -273,7 +270,7 @@ def _remove_span(document: MarkdownDocument, block: MarkdownBlock) -> tuple[int,
 
 
 def _insert(document: MarkdownDocument, envelope: str) -> str:
-    newline = _newline(document.text)
+    newline = preferred_newline(document.text)
     position = document.blocks[-1].envelope_end if document.blocks else len(document.text)
     before = document.text[:position]
     after = document.text[position:]
@@ -342,7 +339,7 @@ class MarkdownBlockAdapter:
             if change.kind is ActionKind.CREATE:
                 if current is not None:
                     raise ControlPlaneError("Markdown creation scope already exists")
-                newline = _newline(document.text)
+                newline = preferred_newline(document.text)
                 content = _insert(
                     document,
                     _envelope(scope.removeprefix("block:"), desired_text, newline),
@@ -355,7 +352,7 @@ class MarkdownBlockAdapter:
             raw = document.text[current.content_start : current.content_end]
             if _normalized(raw) == desired:
                 continue
-            physical = _physical(desired_text, _newline(document.text))
+            physical = _physical(desired_text, preferred_newline(document.text))
             content = _apply(
                 document.text,
                 current.content_start,

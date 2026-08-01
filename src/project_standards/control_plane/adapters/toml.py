@@ -17,6 +17,7 @@ from project_standards.control_plane.adapters.base import (
     apply_edits,
     decode_json_pointer,
     decode_utf8,
+    preferred_newline,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import (
@@ -719,10 +720,6 @@ def _unit_for_scope(
     return AdapterUnit(spec.normalized, normalized, raw, semantic_digest(normalized))
 
 
-def _newline(text: str) -> str:
-    return "\r\n" if "\r\n" in text and "\n" not in text.replace("\r\n", "") else "\n"
-
-
 def _canonical_key(value: str) -> str:
     return value if _BARE_KEY.fullmatch(value) else json.dumps(value, ensure_ascii=False)
 
@@ -892,7 +889,7 @@ def _replacement_edits(
     fragment when the anchor no longer exists, so consumer commentary is never
     displaced under an unrelated statement.
     """
-    newline = _newline(text)
+    newline = preferred_newline(text)
     anchored, gap_spans = _collect_replaced_comments(text, selected)
     woven = _weave_comments(fragment, anchored, newline)
     if not woven.endswith("\n"):
@@ -1032,7 +1029,7 @@ def _dotted_key_insertion(
         return None
     anchor = max(siblings, key=lambda statement: statement.source_end)
     relative = path[len(anchor.table) :]
-    newline = _newline(text)
+    newline = preferred_newline(text)
     return (
         anchor.source_end,
         anchor.source_end,
@@ -1210,7 +1207,7 @@ class TomlAdapter:
                         text[statement.value_start : statement.value_end]
                     )
                     if interior:
-                        newline = _newline(text)
+                        newline = preferred_newline(text)
                         line_start = text.rfind("\n", 0, statement.start) + 1
                         indent = text[line_start : statement.start]
                         block = "".join(f"{indent}{line}{newline}" for line in interior)
@@ -1227,7 +1224,7 @@ class TomlAdapter:
                 edits.extend(_replacement_edits(text, selected, fragment))
 
         updated = apply_edits(text, edits)
-        newline = _newline(updated)
+        newline = preferred_newline(updated)
         new_keys = [
             (path, value.replace("\r\n", "\n").replace("\n", newline)) for path, value in new_keys
         ]

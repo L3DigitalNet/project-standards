@@ -18,6 +18,14 @@ def line_end_without_newline(line: str) -> int:
     return len(line)
 
 
+def preferred_newline(text: str) -> str:
+    return "\r\n" if "\r\n" in text and "\n" not in text.replace("\r\n", "") else "\n"
+
+
+def line_start(text: str, index: int) -> int:
+    return text.rfind("\n", 0, index) + 1
+
+
 def decode_utf8(content: bytes, label: str) -> str:
     try:
         return content.decode("utf-8")

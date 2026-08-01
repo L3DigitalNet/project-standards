@@ -44,7 +44,11 @@ from project_standards.agent_handoff.model import (
     ProvenanceLock,
     StartupMode,
 )
-from project_standards.agent_handoff.paths import RepositoryBoundaryError, RepositoryRoot
+from project_standards.agent_handoff.paths import (
+    RepositoryBoundaryError,
+    RepositoryRoot,
+    _read_optional,  # pyright: ignore[reportPrivateUsage]  # package-internal path primitive
+)
 
 _STANDARD_VERSION = "1.0"
 _LOCK_PATH = ".agents/agent-handoff/manifest.json"
@@ -93,13 +97,6 @@ def _finding(code: str, path: str, message: str, guidance: str) -> Finding:
         message=message,
         guidance=guidance,
     )
-
-
-def _read_optional(repository: RepositoryRoot, relative: str) -> bytes | None:
-    target = repository.consumer_path(relative)
-    if not target.exists():
-        return None
-    return repository.read_bytes(relative)
 
 
 def _normalized_mapping(data: object) -> bytes:

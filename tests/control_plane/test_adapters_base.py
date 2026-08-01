@@ -20,6 +20,8 @@ from project_standards.control_plane.adapters.base import (
     decode_json_pointer,
     decode_utf8,
     line_end_without_newline,
+    line_start,
+    preferred_newline,
 )
 from project_standards.control_plane.diagnostics import ControlPlaneError
 
@@ -37,6 +39,39 @@ def test_line_end_without_newline_preserves_only_real_line_endings(
     line: str, expected: int
 ) -> None:
     assert line_end_without_newline(line) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        pytest.param("", "\n", id="empty"),
+        pytest.param("value", "\n", id="no-newline"),
+        pytest.param("first\nsecond\n", "\n", id="lf"),
+        pytest.param("first\r\nsecond\r\n", "\r\n", id="crlf"),
+        pytest.param("first\r\nsecond\n", "\n", id="mixed-crlf-then-lf"),
+        pytest.param("first\nsecond\r\n", "\n", id="mixed-lf-then-crlf"),
+    ],
+)
+def test_preferred_newline_preserves_existing_adapter_selection(text: str, expected: str) -> None:
+    assert preferred_newline(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "index", "expected"),
+    [
+        pytest.param("", 0, 0, id="empty"),
+        pytest.param("value", 3, 0, id="no-newline"),
+        pytest.param("first\nsecond", 0, 0, id="first-line"),
+        pytest.param("first\nsecond", 5, 0, id="lf-at-index"),
+        pytest.param("first\nsecond", 6, 6, id="after-lf"),
+        pytest.param("first\r\nsecond", 7, 7, id="after-crlf"),
+        pytest.param("first\r\nsecond\nthird", 14, 14, id="mixed-after-lf"),
+    ],
+)
+def test_line_start_preserves_character_offsets_across_line_endings(
+    text: str, index: int, expected: int
+) -> None:
+    assert line_start(text, index) == expected
 
 
 def test_decode_json_pointer_unescapes_rfc_6901_tokens() -> None:

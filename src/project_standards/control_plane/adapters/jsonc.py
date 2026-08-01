@@ -26,6 +26,8 @@ from project_standards.control_plane.adapters.base import (
     apply_edits,
     decode_json_pointer,
     decode_utf8,
+    line_start,
+    preferred_newline,
 )
 from project_standards.control_plane.codec import semantic_digest
 from project_standards.control_plane.diagnostics import ActionKind, ControlPlaneError
@@ -807,8 +809,8 @@ def _emptied_line_span(
     (issue #78). The line is consumed only when nothing but whitespace would
     survive on it, so a shared line's comment or code keeps its bytes.
     """
-    line_start = _line_start(text, start)
-    if text[line_start:start].strip():
+    start_of_line = line_start(text, start)
+    if text[start_of_line:start].strip():
         return None
     newline = text.find("\n", end)
     line_end = len(text) if newline == -1 else newline + 1
@@ -819,7 +821,7 @@ def _emptied_line_span(
     )
     if trailing.strip():
         return None
-    return line_start, line_end
+    return start_of_line, line_end
 
 
 def _deletion_edits(
@@ -907,14 +909,6 @@ def _prune_empty_object_ancestors(
     return content
 
 
-def _newline(text: str) -> str:
-    return "\r\n" if "\r\n" in text and "\n" not in text.replace("\r\n", "") else "\n"
-
-
-def _line_start(text: str, index: int) -> int:
-    return text.rfind("\n", 0, index) + 1
-
-
 def _item_start(container: JsonNode, index: int) -> int:
     if container.kind == "object":
         return container.members[index].key_token.start
@@ -947,21 +941,21 @@ def _container_nodes(node: JsonNode) -> tuple[JsonNode, ...]:
 
 
 def _layout(document: JsonDocument) -> JsonLayout:
-    newline = _newline(document.text)
+    newline = preferred_newline(document.text)
     for container in _container_nodes(document.root):
         if container.opening is None or container.closing is None:
             continue
         body = document.text[container.opening.end : container.closing.start]
         if "\n" not in body:
             continue
-        closing_line = _line_start(document.text, container.closing.start)
+        closing_line = line_start(document.text, container.closing.start)
         closing_indent = document.text[closing_line : container.closing.start]
         if closing_indent.strip():
             continue
         count = len(container.members) if container.kind == "object" else len(container.elements)
         starts = tuple(_item_start(container, index) for index in range(count))
         for start in starts:
-            line = _line_start(document.text, start)
+            line = line_start(document.text, start)
             child_indent = document.text[line:start]
             if (
                 not child_indent.strip()
@@ -1008,7 +1002,7 @@ def _located_layout(
     layout: JsonLayout,
 ) -> tuple[str, int]:
     start = located.member.key_token.start if located.member is not None else located.node.start
-    line = _line_start(document.text, start)
+    line = line_start(document.text, start)
     line_prefix = document.text[line:start]
     if not line_prefix.strip():
         indent = line_prefix
@@ -1226,13 +1220,13 @@ def _append(
         end = _item_end(container, count - 1)
         return apply_edits(text, [(end, end, f", {fragment}")])
 
-    closing_line = _line_start(text, container.closing.start)
+    closing_line = line_start(text, container.closing.start)
     closing_indent = text[closing_line : container.closing.start]
     if closing_indent.strip():
         raise ControlPlaneError("JSON closing delimiter is not independently addressable")
     if count:
         first_start = _item_start(container, 0)
-        first_line = _line_start(text, first_start)
+        first_line = line_start(text, first_start)
         child_indent = text[first_line:first_start]
         if child_indent.strip():
             child_indent = f"{closing_indent}{layout.indent_unit}"

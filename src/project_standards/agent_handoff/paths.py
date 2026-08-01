@@ -211,3 +211,13 @@ class RepositoryRoot:
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise RepositoryBoundaryError("Git command failed before completion") from exc
+
+
+def _read_optional(  # pyright: ignore[reportUnusedFunction]  # package-internal path primitive
+    repository: RepositoryRoot, relative: str
+) -> bytes | None:
+    """Return contained file bytes, or None only when the path is absent."""
+    target = repository.consumer_path(relative)
+    if not target.exists():
+        return None
+    return repository.read_bytes(relative)
