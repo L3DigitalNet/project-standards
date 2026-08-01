@@ -40,21 +40,23 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 ### Maintenance
 
-- [ ] Define whether owner-designated release levels may exceed `check-release` and `meta/versioning.md` classification.
+- [x] Define whether owner-designated release levels may exceed `check-release` and `meta/versioning.md` classification.
+
+  Resolved 2026-08-01: only the owner designates MAJOR. Otherwise, a newly introduced package or an advertised version above that package's prior advertised maximum is exactly MINOR; no package advance is exactly PATCH. Internal and reference-only packages count; retained older versions and unadvertised payloads do not. Advertised versions are permanent and cannot be removed, even in a MAJOR release. T30 implemented the contract in `e10083ad`.
 
 - [ ] Authorize a Python Tooling successor that replaces the selected 1.10 package's stale V1-authority statement.
 
 - [ ] Finish Agent Handoff consumer retirement.
 
-- [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md); begin with T30, the release-classification alignment.
+  Two consumers owe protected merges to `main`: `website-aboutme` and `website-l3digital.net` from `testing`. `docmend` and `hw-radar` are already merged; unrelated catalog drift is outside this retirement closeout.
+
+  `control-center` stays on legacy config, blocked by issue #83, owner-handled — not engine-blocked. Details: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.
+
+- [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md); T30 is complete, so continue with T1 Agent Handoff qualification/release or the independent T32 consumer-retirement closeout.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
 - [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency. _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_
-
-  Two consumers owe protected merges to `main`: `website-aboutme` and `website-l3digital.net` from `testing`. `docmend` and `hw-radar` are already merged; unrelated catalog drift is outside this retirement closeout.
-
-  `control-center` stays on legacy config, blocked by issue #83, owner-handled — not engine-blocked. Details: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.
 
 - [ ] Retire `control_plane/provider_inputs.py` in favour of payload-declared provider input shapes.
 

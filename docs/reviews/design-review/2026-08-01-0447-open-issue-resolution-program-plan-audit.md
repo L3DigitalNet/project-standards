@@ -4,7 +4,7 @@ id: 'reference-q4vt7m-open-issue-resolution-program-plan-audit'
 title: 'Open-Issue Resolution Program Plan — Adversarial Plan Audit'
 description: 'Read-only adversarial audit of the open-issue resolution program implementation plan against live repository, catalog, consumer, and GitHub evidence.'
 doc_type: 'reference'
-status: 'active'
+status: 'archived'
 created: '2026-08-01'
 updated: '2026-08-01'
 reviewed: '2026-08-01'
@@ -22,6 +22,22 @@ related:
 ---
 
 # Open-Issue Resolution Program Plan — Adversarial Plan Audit
+
+## Historical disposition
+
+This document preserves the first audit of an earlier 32-task, 23-issue plan snapshot. It is not the current program verdict. The maintained plan now contains 33 tasks covering 24 frozen issues and makes T1 and T32 ready after T30. The live checklist records T30 as complete.
+
+The correction round resolved or superseded the findings as follows:
+
+- CR-001 admitted issue #109 as T33.
+- CR-002 and CR-005 were resolved by the owner's release-classification decision and T30 implementation in `e10083ad`.
+- CR-003 was superseded by owner-verified retirement scope: only `website-aboutme` and `website-l3digital.net` remain.
+- CR-004 and CR-010 were resolved by making T30 the sole initial entrypoint and reconciling the plan to 33 tasks.
+- CR-006 and CR-008 were resolved by explicit release recovery rules and complete qualification/closeout traceability.
+- CR-007 remains a historical risk observation; T1's isolated source and installed-wheel evidence completed successfully.
+- CR-009 was resolved by preserving and committing the identified documentation inputs.
+
+Use the maintained plan and its live checklists for current execution state. The body below remains unchanged as point-in-time review evidence.
 
 ## Executive summary
 
@@ -70,7 +86,7 @@ Needs major correction before execution.
 - Status: Confirmed
 - Adversarial angle: The plan asserts a live refresh result as fact; a live refresh performed during this audit should reproduce it exactly.
 - Plan reference: §2 ("Live refresh on 2026-08-01 found the same 23 open issues and no closures"), §3.1, §3.2, REQ-901, T29 acceptance ("all 23 issues"), §11, Appendix B.
-- Finding: There are 24 open issues, not 23. Issue #109, "[upgrade] Python Tooling fresh adoption emits no PEP 621 project metadata for required uv lock", was created 2026-08-01T07:35:59Z and is open. It appears in no scope list, no requirement, no train, and no task. Appendix B's boundary — "An issue opened after 2026-08-01 is not automatically part of this program" — does not cleanly exclude it, because #109 was opened *on* 2026-08-01, not after it; the freeze is expressed as a date while the collision is at the hour level. Separately, #109 is a Python Tooling adoption defect in the exact surface train D rewrites (T17 `source_layout`/import roots, T18 Ruff roots, T20 root modelling). Train D will publish a Python Tooling successor that still carries #109, forcing a fifth release train for a defect that was open before the successor was cut.
+- Finding: There are 24 open issues, not 23. Issue #109, "[upgrade] Python Tooling fresh adoption emits no PEP 621 project metadata for required uv lock", was created 2026-08-01T07:35:59Z and is open. It appears in no scope list, no requirement, no train, and no task. Appendix B's boundary — "An issue opened after 2026-08-01 is not automatically part of this program" — does not cleanly exclude it, because #109 was opened _on_ 2026-08-01, not after it; the freeze is expressed as a date while the collision is at the hour level. Separately, #109 is a Python Tooling adoption defect in the exact surface train D rewrites (T17 `source_layout`/import roots, T18 Ruff roots, T20 root modelling). Train D will publish a Python Tooling successor that still carries #109, forcing a fifth release train for a defect that was open before the successor was cut.
 - Repository evidence: `gh issue list --state open` returns 24 issues; `gh issue view 109` gives `createdAt=2026-08-01T07:35:59Z`, `state=OPEN`. Its body reports `uv lock` failing with `No project table found` after `project-standards reconcile --apply` generates a `pyproject.toml` with `[dependency-groups]`, `[build-system]`, and `[tool.*]` but no `[project]` table, against Python Tooling 1.10 with `source_layout = "src"` — the same package and option surface T17/T18/T20 modify. §8's own effort estimates total roughly 58–112 active days, so the inventory will drift much further before T29 runs.
 - External research evidence: Not applicable.
 - Why it matters: REQ-901 ("Leave no frozen issue open without an accepted disposition") and §11 ("GitHub has no frozen issue open without an accepted monitoring disposition") are both satisfiable while #109 sits open, because #109 is not in the frozen set. The program can therefore report completion against a tracker that still has an open, in-scope-shaped defect — the precise outcome REQ-901 exists to prevent.
@@ -83,7 +99,7 @@ Needs major correction before execution.
 - Status: Confirmed
 - Adversarial angle: A proposed classification rule must be checked against both the documented contract it replaces and the specific releases this plan intends to ship under it.
 - Plan reference: REQ-902, T30 acceptance, T30.3, §8, §10 R-007, §11.
-- Finding: REQ-902 says releases with a standard-package version advance are MINOR and releases without one are PATCH, with only "package removal/downgrade and immutable-byte violations" carved out as forbidden. `meta/versioning.md:127` states the opposite as an absolute: "If any change can turn a **previously-passing** consumer document or workflow run into a **failure**, the release is **MAJOR** — without exception", and the line immediately after it says this holds *even when the change is a genuine bug fix*. Several of this plan's corrections are exactly that case. T6's acceptance is that "matcher-less and differently matched legacy groups cannot yield a green double injection" — consumers whose `reconcile`/`validate`/`drift-check` are green today go red. T12's acceptance is that "invalid IDs block before lock publication" — migrations that succeed today are blocked. T19 changes ownership of `[tool.ruff]` sub-tables, T7 changes which secret references are flagged, and T5 changes pre-apply refusal behavior; each can flip a consumer outcome. The plan never classifies any of the 20 corrective tasks against the previously-passing rule, and R-007's mitigation covers only forbidden-transition detection, not this rule.
+- Finding: REQ-902 says releases with a standard-package version advance are MINOR and releases without one are PATCH, with only "package removal/downgrade and immutable-byte violations" carved out as forbidden. `meta/versioning.md:127` states the opposite as an absolute: "If any change can turn a **previously-passing** consumer document or workflow run into a **failure**, the release is **MAJOR** — without exception", and the line immediately after it says this holds _even when the change is a genuine bug fix_. Several of this plan's corrections are exactly that case. T6's acceptance is that "matcher-less and differently matched legacy groups cannot yield a green double injection" — consumers whose `reconcile`/`validate`/`drift-check` are green today go red. T12's acceptance is that "invalid IDs block before lock publication" — migrations that succeed today are blocked. T19 changes ownership of `[tool.ruff]` sub-tables, T7 changes which secret references are flagged, and T5 changes pre-apply refusal behavior; each can flip a consumer outcome. The plan never classifies any of the 20 corrective tasks against the previously-passing rule, and R-007's mitigation covers only forbidden-transition detection, not this rule.
 - Repository evidence: `meta/versioning.md:111` ("Classify each release by the highest-severity change it contains"), `:116` (Validator CLI MAJOR column: "Any change that makes a previously-passing document fail"), `:127` (the previously-passing rule), `:53` ("a change that newly fails a consumer or changes an ordinary default incompatibly requires a new MAJOR and catalog-major transition"). In `src/project_standards/package_contract/release.py:137-255`, `classify_catalog_diff` inspects only catalog and payload composition — it never sees engine behavior changes — so it cannot detect the previously-passing violations these tasks introduce; today that gap is closed by the documented rule and human classification, which REQ-902 would remove.
 - External research evidence: Not applicable.
 - Why it matters: Under REQ-902 as written, trains B, C, and D each carry a package advance and therefore classify as exactly MINOR, shipping consumer-breaking behavior on the moving `v5` tag that every `@v5` consumer inherits without opting in. That inverts the repository's headline compatibility guarantee, and it does so silently, because `check-release` would return green.
@@ -124,7 +140,7 @@ Needs major correction before execution.
 - Status: Confirmed
 - Adversarial angle: Compare the proposed rule both to the implementation it replaces and to the owner question the plan cites as its source.
 - Plan reference: REQ-902 ("Source: `docs/TODO.md`; owner decision 2026-08-01"), T30 acceptance, T30.2, T30.5.
-- Finding: Three distinct mismatches. First, `docs/TODO.md` asks a narrower question than REQ-902 answers: "Define whether owner-designated release levels may **exceed** `check-release` and `meta/versioning.md` classification" — that is about permitting a *higher* level than computed, whereas REQ-902 redefines the computation itself. Second, the working-tree `docs/TODO.md` still carries that line unchanged, so the cited source does not record the decision REQ-902 attributes to it (the same applies more weakly to REQ-903, whose TODO line is still phrased as pending authorization). Third, today's implementation treats `required` as a floor — `_release_boundary_error` only rejects a release *below* the computed level, and returns `None` unconditionally when `required` is PATCH — whereas T30's acceptance demands "exactly MINOR" and "exactly PATCH". Converting a floor to an equality newly forbids a legitimate case: `meta/versioning.md:116` classifies "a new opt-in flag or command" on the Validator CLI as MINOR, and the Reusable workflow row does the same for a new optional input, but neither advances a standard package, so REQ-902 would force them to PATCH.
+- Finding: Three distinct mismatches. First, `docs/TODO.md` asks a narrower question than REQ-902 answers: "Define whether owner-designated release levels may **exceed** `check-release` and `meta/versioning.md` classification" — that is about permitting a _higher_ level than computed, whereas REQ-902 redefines the computation itself. Second, the working-tree `docs/TODO.md` still carries that line unchanged, so the cited source does not record the decision REQ-902 attributes to it (the same applies more weakly to REQ-903, whose TODO line is still phrased as pending authorization). Third, today's implementation treats `required` as a floor — `_release_boundary_error` only rejects a release _below_ the computed level, and returns `None` unconditionally when `required` is PATCH — whereas T30's acceptance demands "exactly MINOR" and "exactly PATCH". Converting a floor to an equality newly forbids a legitimate case: `meta/versioning.md:116` classifies "a new opt-in flag or command" on the Validator CLI as MINOR, and the Reusable workflow row does the same for a new optional input, but neither advances a standard package, so REQ-902 would force them to PATCH.
 - Repository evidence: `docs/TODO.md` "Maintenance" section, first bullet (unchanged in `git diff`); `src/project_standards/package_contract/release.py:145` (`required` initialized to PATCH), `:267-290` (`_release_boundary_error`, with no PATCH branch), `:286-289` (the MINOR branch, which also rejects a major bump when only MINOR is required); `meta/versioning.md:116` (Validator CLI MINOR column).
 - External research evidence: Not applicable.
 - Why it matters: T30.2 asks the implementer to confirm RED failures "expose the current highest-severity/minimum-floor contract". "Minimum floor" is accurate; "highest-severity" describes `meta/versioning.md`'s documented rule, not `classify_catalog_diff`, which never sees engine changes. An implementer working from that characterization will look for a highest-severity mechanism in `release.py` that is not there, and may widen the change while searching for it — the outcome T30.5 explicitly tries to avoid.
@@ -177,7 +193,7 @@ Needs major correction before execution.
 - Adversarial angle: A preservation constraint is only as good as its enumeration of what must be preserved.
 - Plan reference: §3.3 first constraint ("Preserve the existing `docs/adoption-prompt.md` working-tree change and later unrelated work").
 - Finding: `docs/adoption-prompt.md` is one of four modified tracked files. `docs/STATUS.md`, `docs/TODO.md`, and `docs/handoff/specs-plans.md` are also modified, and `docs/handoff/sessions/2026-08.md` is untracked. Three of those four carry changes this plan itself depends on or must correct (see CR-004), so an implementing agent that reverts or overwrites them loses the plan's own entry-point wiring.
-- Repository evidence: `git status --short` returns ` M docs/STATUS.md`, ` M docs/TODO.md`, ` M docs/adoption-prompt.md`, ` M docs/handoff/specs-plans.md`, `?? docs/handoff/sessions/2026-08.md`, `?? docs/plans/2026-08-01-open-issue-resolution-program-plan.md`.
+- Repository evidence: `git status --short` returns `M docs/STATUS.md`, `M docs/TODO.md`, `M docs/adoption-prompt.md`, `M docs/handoff/specs-plans.md`, `?? docs/handoff/sessions/2026-08.md`, `?? docs/plans/2026-08-01-open-issue-resolution-program-plan.md`.
 - External research evidence: Not applicable.
 - Why it matters: The repository's non-negotiables forbid `git add .`, so staging is by explicit name; a constraint that enumerates one of five in-flight changes invites an incomplete or destructive first commit.
 - Recommended action for the authoring agent: Enumerate all in-flight paths in §3.3, noting which are this plan's own wiring (`docs/STATUS.md`, `docs/TODO.md`, `docs/handoff/specs-plans.md`, `docs/handoff/sessions/2026-08.md`) and which are genuinely unrelated (`docs/adoption-prompt.md`).
@@ -199,7 +215,7 @@ Needs major correction before execution.
 ## Missing considerations
 
 - **Previously-passing classification per corrective task** — blocking (CR-002). No task states whether its fix flips a consumer outcome, yet at least T5, T6, T7, T12, and T19 plausibly do.
-- **Disposition for #109** — blocking (CR-001). Also missing: a stated policy for issues opened *during* the program's 58–112 day span, beyond Appendix B's owner-approval clause.
+- **Disposition for #109** — blocking (CR-001). Also missing: a stated policy for issues opened _during_ the program's 58–112 day span, beyond Appendix B's owner-approval clause.
 - **Third consumer and the two residuals** — blocking (CR-003). `hw-radar` has no task; `~/scripts` and `llm-wiki` have neither a task nor an exclusion.
 - **Rollback and release withdrawal** — non-blocking (CR-006).
 - **Traceability for release-integrity and closeout requirements** — non-blocking (CR-008).
