@@ -116,9 +116,9 @@ User-facing CLI usage documentation — help text, the canonical usage reference
 
 Repository-local project knowledge and bounded session continuity for coding agents. Agent Handoff creates consumer-owned status, task, and lifetime-routed knowledge under `docs/`; installs a repo-local `agent-handoff` skill; optionally registers one shared SessionStart hook for Claude Code and Codex; and validates layout, drift, provenance, document budgets, and credential references without owning workstation-global state.
 
-- **Standard:** [`standards/agent-handoff/versions/1.7/README.md`](standards/agent-handoff/versions/1.7/README.md)
-- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.7/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
-- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.7/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.7/resources/legacy-migration.md)
+- **Standard:** [`standards/agent-handoff/versions/1.8/README.md`](standards/agent-handoff/versions/1.8/README.md)
+- **Skill:** [`skills/agent-handoff/`](standards/agent-handoff/versions/1.8/skills/agent-handoff/) — installed repo-local at `.agents/skills/agent-handoff/`.
+- **Adopt:** [`adopt.md`](standards/agent-handoff/versions/1.8/adopt.md) · **Migration:** [`resources/legacy-migration.md`](standards/agent-handoff/versions/1.8/resources/legacy-migration.md)
 
 ### Python Coding Standard (draft)
 
@@ -173,7 +173,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Markdown Tooling | `1.11` | [`standards/markdown-tooling/versions/1.11/adopt.md`](standards/markdown-tooling/versions/1.11/adopt.md) |
 | Project Specification | `1.5` | [`standards/project-spec/versions/1.5/adopt.md`](standards/project-spec/versions/1.5/adopt.md) |
 | CLI Documentation | `1.5` | [`standards/cli-documentation/versions/1.5/adopt.md`](standards/cli-documentation/versions/1.5/adopt.md) |
-| Agent Handoff | `1.7` | [`standards/agent-handoff/versions/1.7/adopt.md`](standards/agent-handoff/versions/1.7/adopt.md) |
+| Agent Handoff | `1.8` | [`standards/agent-handoff/versions/1.8/adopt.md`](standards/agent-handoff/versions/1.8/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:
 

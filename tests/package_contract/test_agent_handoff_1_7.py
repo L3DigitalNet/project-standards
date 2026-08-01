@@ -311,8 +311,8 @@ def test_agent_handoff_1_7__activated_successor__is_complete_default_and_immutab
         migration.to_endpoint.value == "package:1.7" for migration in successor_manifest.migrations
     )
 
-    # Catalog 5 selects 1.7 and keeps 1.6 advertised as retained. The dogfood lock
-    # tracks this default only after the release-prep reconcile, so that assertion
+    # Catalog 5 retains 1.7 after 1.8 becomes the default. The dogfood lock tracks
+    # the new default only after release-prep reconciliation, so that assertion
     # stays in tests/agent_handoff/test_packaging.py rather than here.
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -320,7 +320,7 @@ def test_agent_handoff_1_7__activated_successor__is_complete_default_and_immutab
         for package in catalog["packages"]
         if package["id"] == "agent-handoff"
     }
-    assert roles[successor_manifest.payload.version.value] == "default"
+    assert roles[successor_manifest.payload.version.value] == "retained"
     assert roles[predecessor_manifest.payload.version.value] == "retained"
 
 

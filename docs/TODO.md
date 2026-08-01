@@ -42,7 +42,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Authorize a Python Tooling successor that replaces the selected 1.10 package's stale V1-authority statement.
 
-- [ ] Reconcile the Agent Handoff plan, approved specification revision, package state, and remaining retirement work.
+- [ ] Release Agent Handoff 1.8 from clean `main`, then reconcile this repository's managed Claude Code and Codex registrations.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 

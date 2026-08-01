@@ -6,7 +6,7 @@ description: 'Notable changes to the project-standards repository.'
 doc_type: 'log'
 status: 'active'
 created: '2026-06-02'
-updated: '2026-07-31'
+updated: '2026-08-01'
 reviewed: '2026-07-27'
 owner: 'Chris Purcell / L3DigitalNet'
 consumer: 'mix'
@@ -36,6 +36,10 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Fixed
+
+- **Agent Handoff 1.8 starts both Codex and Claude Code sessions when a `uv-strict-python` shim rejects direct hook execution.** The 1.7 registrations executed the shared hook's `python3` shebang directly, so a policy shim exited before the hook could parse its SessionStart event or emit context. Both 1.8 registrations now use the same bounded launcher: a usable Python 3.14 runs the hook directly; otherwise `uv run --no-project --python 3.14 --no-python-downloads` selects an already-installed interpreter without inheriting the consumer project's Python constraint or downloading at startup. The interpreter probe reads `/dev/null`, preserving the original event on stdin for the hook. If neither route is available, the launcher emits one prerequisite diagnostic on stderr and no context on stdout. Executable regressions cover both harnesses through the direct, shim-fallback, and unavailable-runtime paths (issue #80).
 
 ## [5.13.0] — 2026-07-31
 

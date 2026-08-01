@@ -6,7 +6,7 @@ profile: full
 owner: 'Chris Purcell / L3DigitalNet'
 implementer: 'Coding agent under human review'
 created: '2026-07-09'
-last_reviewed: '2026-07-19'
+last_reviewed: '2026-08-01'
 supersedes: null
 superseded_by: null
 related:
@@ -19,7 +19,8 @@ related:
     - 'docs/adr/adr-0022-standard-packaged-hook-installation-methodology.md'
     - 'docs/adr/adr-0023-unified-consumer-standards-control-plane.md'
     - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
-  tickets: []
+  tickets:
+    - 'https://github.com/L3DigitalNet/project-standards/issues/80'
   repositories:
     - 'L3DigitalNet/project-standards'
   prior_specs:
@@ -40,10 +41,11 @@ related:
 | 0.6 | 2026-07-18 | Codex with owner direction | Record the approved Catalog 5/V2 supersession, current package `1.1` implementation, approved/change-controlled lifecycle, and remaining legacy-engine retirement gate without rewriting the V1 baseline. |
 | 0.7 | 2026-07-19 | Codex with owner approval | Record the `legacy-report` successful-inventory exit `0` exception while retaining every finding in human and JSON output. |
 | 0.8 | 2026-07-19 | Codex with owner approval | Record corrected package `1.2`, the shebang-resolved Python 3.14 floor, and the declared installed-artifact mode contract. |
+| 0.9 | 2026-08-01 | Codex with owner approval | Require an adaptive Python 3.14 launcher for both automatic harness profiles after the managed hook failed under `uv-strict-python` shims. |
 
 **Spec lifecycle:** This document is approved and change-controlled. Post-approval scope changes require a revision row and owner re-approval; implementation deviations are recorded in the [Deviations Log](#deviations-log), not silently patched into requirements. The standard defined here starts at package version `1.0`; it does not continue any legacy engine or schema version line.
 
-**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The accepted successor implementation is the `agent-handoff` `1.2` payload selected in `.standards/config.toml` and recorded in the central lock. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Technical implementation is complete under that successor contract; Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
+**Normative precedence and current implementation:** This specification preserves the approved V1 baseline and its stable requirement IDs. For Catalog 5 package anatomy, configuration, version selection, adoption, reconciliation, and lifecycle mechanics, [SPEC-CP01](2026-07-10-consumer-standards-control-plane-spec.md), [SPEC-BA02](2026-07-10-standard-bundle-authoring-v2-spec.md), [ADR 0023](../adr/adr-0023-unified-consumer-standards-control-plane.md), and [ADR 0024](../adr/adr-0024-catalog-scoped-package-version-channels.md) take precedence over conflicting V1 mechanics below. The currently released successor is immutable payload `agent-handoff@1.7`; the adaptive launcher correction specified by revision 0.9 requires new payload `1.8`. The repository-local ownership, knowledge layout, safety, validation, and migration principles remain normative unless one of those authorities explicitly supersedes them. Task 18 legacy-engine retirement remains pending its consumer-validation, dependency-search, and owner-deletion gates.
 
 ---
 
@@ -157,7 +159,7 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | ID | Assumption | Impact if False |
 | --- | --- | --- |
 | A-001 | Consumers can invoke a released `project-standards` CLI through `uvx`, an installed tool, or equivalent packaging. | Adoption and validation need another supported package runner, but still must not require a source checkout. |
-| A-002 | Supported consumer environments resolve the hook shebang's `python3` to Python 3.14 or newer. | The hook needs another dependency-free runtime or a harness-native implementation. |
+| A-002 | Supported automatic-startup environments provide either a usable `python3` version 3.14 or newer on `PATH`, or `uv` able to resolve an already-installed Python 3.14 interpreter outside the consumer project. | The affected automatic profile is unsupported until one launcher path is available; manual startup remains available. |
 | A-003 | Claude Code and Codex continue to support trusted project-local SessionStart command hooks. | The affected profile must be revised or temporarily marked unsupported in a package release. |
 | A-004 | Git is available in repositories that want branch, commit, and working-tree context. | The hook degrades to document-only context and reports Git context as unavailable. |
 | A-005 | Consumer agents can make semantic decisions while following a migration guide. | Legacy migration becomes manual owner work; automatic transformation remains unsafe. |
@@ -235,8 +237,8 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | FR-005 | Adoption shall create missing consumer-knowledge files but shall never overwrite existing consumer-knowledge content during adoption, repair, drift checking, or package upgrade. | Project knowledge belongs to the consumer. | Fixtures with existing content remain byte-identical after every mutation command. | Must |
 | FR-006 | Adoption shall install the standard-owned skill only at `.agents/skills/agent-handoff/` and validation shall detect missing or drifted skill files. | Agents need the operating procedure that matches the adopted standard version. | Package parity, installation, drift, and invalid-global-destination tests pass. | Must |
 | FR-007 | Automatic-mode adoption shall install one dependency-free shared hook at `.agents/hooks/agent-handoff/session_start.py`; manual mode shall not require or register it. | One repo-local hook avoids duplicated harness copies and external sources without adding unused runtime files to manual consumers. | Both supported profiles reference the same file and hook parity validation passes; manual fixtures conform without it. | Must |
-| FR-008 | The Claude Code profile shall register the shared hook as a project-local `SessionStart` command hook and shall inject startup context through a documented Claude Code output path. | Claude Code is a first-class v1 harness. | A Claude-shaped input probe receives valid context for startup, resume, clear, and compact sources. | Must |
-| FR-009 | The Codex profile shall register the shared hook in the trusted project `.codex/config.toml` layer and shall inject startup context through a documented Codex output path. | Codex is a first-class v1 harness. | A Codex-shaped input probe receives valid context, and the adoption guide documents project trust and hook review. | Must |
+| FR-008 | The Claude Code profile shall register the shared hook as a project-local `SessionStart` command hook and shall inject startup context through a documented Claude Code output path. | Claude Code is a first-class v1 harness. | A Claude-shaped input probe receives valid context for startup, resume, clear, and compact sources, including when a rejecting `python3` shim is first on `PATH`. | Must |
+| FR-009 | The Codex profile shall register the shared hook in the trusted project `.codex/config.toml` layer and shall inject startup context through a documented Codex output path. | Codex is a first-class v1 harness. | A Codex-shaped input probe receives valid context when a rejecting `python3` shim is first on `PATH`, and the adoption guide documents project trust and hook review. | Must |
 | FR-010 | The system shall record startup mode and selected harness profiles in the `agent_handoff` namespace of `.project-standards.yml`; automatic mode shall require working injection for each declared supported profile, while manual mode shall claim no automatic profile. | Declared conformance must be mechanically testable without excluding unsupported agents. | Validation rejects unknown keys inside `agent_handoff`, fails when automatic mode lacks a registration, hook, or expected output behavior, and fails when manual mode declares an automatic profile; it makes no whole-file unknown-key claim. | Must |
 | FR-011 | Adoption shall add or update one delimiter-bounded `agent-handoff` block in each selected profile's root instruction file, or in `AGENTS.md` for manual mode, while preserving all content outside the markers. | The skill and session-end procedure must be reliably discoverable without owning the entire file. | First-run, update, automatic/manual, duplicate-marker, malformed-marker, and byte-preservation fixtures pass. | Must |
 | FR-012 | Adoption shall structurally merge only the required hook registration into existing Claude Code and Codex project configuration while preserving unrelated values. | Consumer configurations are often bespoke. | Semantic before/after comparisons prove unrelated configuration unchanged; malformed or ambiguous input blocks all mutation. | Must |
@@ -260,8 +262,8 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | NFR-001 | Isolation | The system shall perform no consumer-state access or mutation outside the resolved repository root; read-only access to its installed package resources and execution of declared toolchain binaries are the only exceptions. | Instrumented boundary tests observe no outside-root consumer reads and no outside-root writes, while package-resource loading remains functional. | Must |
 | NFR-002 | Idempotency | Repeating a successful adoption or repair with the same inputs shall produce no further diff. | All fresh and existing-config fixtures are clean on the second run. | Must |
 | NFR-003 | Context efficiency | `state.md` input shall not exceed 2 KiB and total injected context shall not exceed 4 KiB, counted as UTF-8 bytes with truncation on a valid boundary. | Boundary tests cover ASCII, multibyte Unicode, exact caps, and over-cap inputs. | Must |
-| NFR-004 | Startup performance | The hook shall finish within 2 seconds at the 95th percentile across 100 local fixture runs on the repository's supported Linux test environment. | Benchmark test records p95 below 2 seconds with network disabled. | Should |
-| NFR-005 | Portability | The hook shall use only the Python standard library, shall not import `project_standards`, and shall retain Python 3.14 as its minimum runtime. | An isolated hook test succeeds with only a shebang-resolved Python 3.14 or newer `python3`, Git, and fixture repository. | Must |
+| NFR-004 | Startup performance | The launcher and hook together shall finish within 2 seconds at the 95th percentile across 100 local fixture runs on the repository's supported Linux test environment. | Direct-Python and `uv`-fallback benchmarks record p95 below 2 seconds with network disabled. | Should |
+| NFR-005 | Portability | The hook shall use only the Python standard library, shall not import `project_standards`, and shall retain Python 3.14 as its minimum runtime. Each automatic harness launcher shall prefer a usable `python3` version 3.14 or newer, then fall back to `uv run --no-project --python 3.14 --no-python-downloads` without consuming hook input during interpreter selection. | Isolated command tests succeed with a valid `python3` and no `uv`, and with a rejecting or older `python3` plus `uv`; neither path accesses the network or adopts the consumer project's Python constraint. | Must |
 | NFR-006 | Diagnostics | Human errors shall name the path, violated rule, and safe next action; JSON findings shall have stable codes and loci. | Error-contract tests cover every expected failure class. | Must |
 | NFR-007 | Maintainability | New Python code shall satisfy the repository's Ruff, BasedPyright, pytest, coverage, and audit gates. | The complete repository verification gate passes with coverage not reduced below the enforced threshold. | Must |
 | NFR-008 | Determinism | Identical repository content and command arguments shall produce identical plans, findings, and generated artifacts. | Snapshot and repeated-run tests match byte-for-byte except explicitly documented timestamps. | Must |
@@ -274,8 +276,8 @@ The standard-owned hook and skill are reproducible, upgradeable copies. The know
 | IR-001 | Adoption CLI | Scaffold the standard with explicit automatic profiles or explicit manual mode. | `project-standards adopt agent-handoff --dest PATH (--harness {claude-code,codex}... \| --manual) [--dry-run] [--json]` | At least one repeated harness is required for automatic mode; `--manual` is mutually exclusive and claims no automatic profile. The manifest maps this mutation to generic `scaffold`. |
 | IR-002 | Command group | Expose package-specific read and maintenance operations without a second executable. | `project-standards agent-handoff {validate,drift-check,size-report,shape-check,legacy-report,upgrade}` | Help, human output, JSON output, and exit-code tests pass. `validate`, `size-report`, and `shape-check` use the generic `validate` provider; `drift-check` uses `drift-check`; `legacy-report` uses read-only `extract`; and `upgrade` uses `upgrade`. Diagnostic view names are CLI subcommands, not new manifest operations. |
 | IR-003 | Consumer config | Declare contract version, startup mode, and selected profiles. | `.project-standards.yml` key `agent_handoff` with quoted `version: "1.0"`, `startup: automatic\|manual`, and `harnesses` list | Automatic mode requires one or more unique known harnesses; manual mode requires an empty list; unknown keys inside this namespace fail validation. Other top-level namespaces remain outside this parser's authority. |
-| IR-004 | Claude Code hook | Register one project `SessionStart` command hook. | `.claude/settings.json` points to `.agents/hooks/agent-handoff/session_start.py` using a repository-anchored command | Official input/output fixtures and real smoke probe pass. |
-| IR-005 | Codex hook | Register one trusted project `SessionStart` command hook. | `.codex/config.toml` inline hook table points to `.agents/hooks/agent-handoff/session_start.py` | Official schema fixtures, trust guidance, and real smoke probe pass. |
+| IR-004 | Claude Code hook | Register one project `SessionStart` command hook. | `.claude/settings.json` uses the adaptive launcher with `${CLAUDE_PROJECT_DIR}/.agents/hooks/agent-handoff/session_start.py` | Official input/output fixtures and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
+| IR-005 | Codex hook | Register one trusted project `SessionStart` command hook. | `.codex/config.toml` uses the adaptive launcher with the Git-rooted `.agents/hooks/agent-handoff/session_start.py` path | Official schema fixtures, trust guidance, and real smoke probes pass through direct-Python and `uv`-fallback lanes. |
 | IR-006 | Instruction integration | Own one marked block without owning the file. | HTML-comment start/end markers containing the exact token `agent-handoff` | Duplicate, nested, missing-end, and reordered markers fail closed. |
 | IR-007 | Validation output | Report all conformance findings. | Human text by default; JSON schema with repository, standard version, findings, and summary | Exit `0` clean, `1` findings, `2` usage/config error, `3` prerequisite/internal failure. |
 | IR-008 | Legacy output | Report recognized evidence without mutation. | Human text or JSON findings with `kind`, `path`, `evidence`, `severity`, and `guidance` | Unknown layouts are reported as unclassified evidence, not guessed migrations. A successfully emitted inventory exits `0` even when it contains findings; every finding remains in the selected output format. This exception does not alter the `validate` or `drift-check` exit contracts. |
@@ -359,6 +361,7 @@ flowchart TB
 | Integration adapters | Parse, recognize, and update owned Claude/Codex/instruction surfaces | JSON/TOML/Markdown boundary rules |
 | Validator | Accumulate conformance, shape, budget, drift, and reference findings | Shared policy and recognizers |
 | Legacy detector | Identify known old repo-local evidence without mutation | Version-neutral signature registry |
+| SessionStart launcher | Select a usable Python 3.14 interpreter without consuming event input or inheriting the consumer project's runtime constraint | POSIX shell, optional `uv` fallback |
 | SessionStart hook | Emit bounded eager project context | Python standard library, optional Git |
 | Repo-local skill | Teach fact routing, startup behavior, closeout, and validation | Standard resources and consumer paths |
 
@@ -375,6 +378,7 @@ flowchart TB
 | D-007 | Keep all operations repository-confined. | The standard governs project knowledge, not workstation state. | Fleet rollout and global cleanup remain separate owner operations. |
 | D-008 | Start at standard package version `1.0`. | The new contract is independent of legacy lineage. | No compatibility promise is inferred from old version numbers. |
 | D-009 | Map package-specific commands onto the existing generic provider vocabulary. | Generic operations should remain stable while a standard may expose focused diagnostic views. | The manifest declares `scaffold`, `validate`, `drift-check`, `extract`, and `upgrade`; `size-report`, `shape-check`, and `legacy-report` remain CLI names mapped to those operations. |
+| D-010 | Use the same adaptive interpreter-selection policy in the Claude Code and Codex registrations. | Direct shebang execution is intercepted by supported `uv-strict-python` shims, while an unconditional `uv` or `/usr/bin/python3` command would break previously working consumers. | Each launcher probes `python3` for version 3.14 or newer, otherwise uses project-independent `uv` with downloads disabled, and fails without writing stdout when neither route is available. |
 
 ### 8.4 Solution Alternatives Considered
 
@@ -384,6 +388,9 @@ flowchart TB
 | Standard plus separate runtime package | Avoids a source clone while retaining implementation separation | Preserves two ownership and release surfaces contrary to the deletion and SSOT goals. |
 | Move the legacy repository wholesale into this repository | Retains existing scripts with less initial rewrite | Imports workstation/global behavior, inconsistent names, and a factory model that violates package boundaries. |
 | Deterministic all-version migration command | Potentially fast for uniform consumers | Unsafe and high-friction across structurally divergent historical repositories. |
+| Always launch through `uv` | Ignores consumer-project Python constraints when combined with `--no-project`. | Makes `uv` a new unconditional runtime dependency for consumers whose existing Python path already works. |
+| Launch through `/usr/bin/python3` | Matches current Codex examples and bypasses `PATH` shims. | Hard-codes a platform path that may be absent or may contain Python older than 3.14. |
+| Put `uv` directly in the hook shebang | Corrects both harnesses through one source line. | Depends on multi-argument `env -S` shebang behavior and makes every direct invocation require `uv`. |
 
 ### 8.5 Design Constraints
 
@@ -403,7 +410,7 @@ flowchart TB
 
 `agent-handoff` is independently adoptable. It consumes generic `project-standards` platform capabilities for package resources, scaffold providers, validation, drift checking, and graph discovery; it does not require adoption of another standard.
 
-The provider implementation should reuse existing package dependencies where they preserve configuration safely. A new dependency requires documented need, maintenance review, license compatibility, and `pip-audit` coverage. The installed hook uses only the Python standard library and optional `git` subprocess calls with fixed argument arrays. It performs no shell interpolation and no network access.
+The provider implementation should reuse existing package dependencies where they preserve configuration safely. A new dependency requires documented need, maintenance review, license compatibility, and `pip-audit` coverage. The installed hook uses only the Python standard library and optional `git` subprocess calls with fixed argument arrays. It performs no shell interpolation and no network access. The harness-owned launcher is a bounded POSIX-shell command: it validates `python3` before the hook reads stdin, uses project-independent `uv` only as a fallback, disables Python downloads, and passes the repository-anchored hook path as a positional argument rather than interpolating event data.
 
 ---
 
@@ -459,14 +466,17 @@ Consumer knowledge follows lifetime-specific document profiles:
 
 #### Session start
 
-1. A declared harness invokes the shared hook with its lifecycle input.
-2. The hook derives the repository root from its canonical installed path under `.agents/hooks/agent-handoff/`; event working-directory and environment paths are untrusted metadata and may not broaden that authority.
-3. The hook reads and byte-clamps `docs/handoff/state.md`.
-4. It gathers bounded Git branch, recent-commit, and status output with fixed timeouts.
-5. It adds lazy pointers to canonical knowledge files.
-6. It wraps repository-derived text as untrusted session data.
-7. It UTF-8-clamps the complete payload and emits the harness-specific transport.
-8. The agent uses the repo-local skill for on-demand reads and session closeout.
+1. A declared harness invokes its package-rendered launcher with lifecycle input on stdin and a repository-anchored hook path as a positional argument.
+2. The launcher probes `python3` without reading stdin and uses it only when it is Python 3.14 or newer.
+3. If that probe fails, the launcher uses `uv run --no-project --python 3.14 --no-python-downloads`; if neither route is available, it emits one bounded stderr diagnostic, writes no stdout, and exits nonzero.
+4. The selected interpreter runs the shared hook with the original lifecycle input unchanged.
+5. The hook derives the repository root from its canonical installed path under `.agents/hooks/agent-handoff/`; event working-directory and environment paths are untrusted metadata and may not broaden that authority.
+6. The hook reads and byte-clamps `docs/handoff/state.md`.
+7. It gathers bounded Git branch, recent-commit, and status output with fixed timeouts.
+8. It adds lazy pointers to canonical knowledge files.
+9. It wraps repository-derived text as untrusted session data.
+10. It UTF-8-clamps the complete payload and emits the harness-specific transport.
+11. The agent uses the repo-local skill for on-demand reads and session closeout.
 
 #### Session closeout
 
@@ -500,6 +510,7 @@ Consumer knowledge follows lifetime-specific document profiles:
 | EC-010 | Legacy artifacts are unknown. | Report unclassified evidence and direct the local agent to inspect manually. |
 | EC-011 | Both old and new hooks are active. | Report duplicate startup injection as a migration blocker. |
 | EC-012 | A declared Codex project is untrusted or its hook is unapproved. | Explain the trust prerequisite without modifying user-global trust state. |
+| EC-013 | The first `python3` on `PATH` is a rejecting policy shim or is older than Python 3.14. | Preserve stdin and execute the hook through project-independent `uv` using an already-installed Python 3.14 interpreter. |
 
 ### 10.4 State Transitions
 
@@ -558,6 +569,7 @@ All commands accept an explicit repository path, default to the current reposito
 | ERR-007 | Unsupported harness selected for automatic mode | Reject profile selection. | Name the unsupported profile and supported alternatives. | Use the manual path or wait for a supported profile. |
 | ERR-008 | Legacy uncertainty | Report evidence without a proposed transform. | Emit deterministic classified or unclassified findings. | Let the local agent inspect and reconcile. |
 | ERR-009 | Upstream hook contract drift | Fail the profile smoke/release gate. | Preserve fixture/schema mismatch evidence in test or release output. | Update the profile and package version before release. |
+| ERR-010 | Neither usable Python 3.14 nor a non-downloading `uv` fallback is available | Exit nonzero before the hook runs and write no context to stdout. | Emit one bounded stderr diagnostic naming the Python 3.14 or `uv` prerequisite; create no persistent log. | Install or expose a supported Python 3.14 interpreter, or use manual startup. |
 
 ### 12.2 Retry and Idempotency
 
@@ -687,7 +699,7 @@ The completed items below are accepted through the Catalog 5 successor recorded 
 | --- | --- |
 | Unit | Config models, path containment, byte clamps, marker parsing, harness adapters, policy parsing, legacy signatures, finding codes, plan ordering |
 | Provider integration | Fresh manual/automatic adoption, existing configs, dry-run/apply parity, idempotency, owned upgrades, conflicts, partial I/O diagnostics |
-| Hook contract | Claude and Codex input/output schemas, lifecycle sources, Git degradation, Unicode boundaries, timeouts, inert adversarial content |
+| Hook contract | Claude and Codex rendered-command execution, direct-Python and rejecting-shim fallback lanes, input/output schemas, lifecycle sources, Git degradation, Unicode boundaries, timeouts, inert adversarial content |
 | Packaging | Wheel contents, resource loading, artifact parity, executable modes, no-checkout operation |
 | Dogfood fixtures | Individual `agent-handoff`, pairwise composition with existing standards, and all-standard composition |
 | Security | Traversal, absolute paths, symlink leaves/ancestors, null bytes, secret patterns, command injection, outside-root instrumentation |
@@ -712,7 +724,7 @@ Every bug found during implementation receives a regression test at the narrowes
 | FR-021 | Unsupported-harness documentation and manual-procedure review |
 | FR-022 | Release checklist and final consumer/dependency inventory |
 | IR-001–IR-008, DR-001–DR-008 | CLI/provider mapping, manifest/config/artifact schemas, package data, and output-contract tests |
-| AW-001–AW-003, EC-001–EC-012, ERR-001–ERR-009 | Workflow acceptance, edge-case regression, and error-contract fixtures |
+| AW-001–AW-003, EC-001–EC-013, ERR-001–ERR-010 | Workflow acceptance, edge-case regression, and error-contract fixtures |
 | Cross-cutting quality | NFR-002, NFR-006, NFR-007, NFR-008, and NFR-009: idempotency, diagnostics, full toolchain, snapshots, and release evidence |
 
 ---
@@ -721,14 +733,14 @@ Every bug found during implementation receives a regression test at the narrowes
 
 ### 18.1 Runtime Environment
 
-The standard ships inside the `project-standards` Python distribution. Adoption and validation use the repository's supported Python/tooling environment, commonly through `uvx` or `uv run`. The installed hook is a standalone executable Python file using the standard library and optional Git commands.
+The standard ships inside the `project-standards` Python distribution. Adoption and validation use the repository's supported Python/tooling environment, commonly through `uvx` or `uv run`. The installed hook is a standalone executable Python file using the standard library and optional Git commands. Automatic profiles wrap that hook with an adaptive launcher that preserves a usable Python 3.14 path and uses non-downloading, project-independent `uv` only when the path probe fails.
 
 The supported harness profiles are:
 
 | Profile | Project Integration | Runtime Requirement |
 | --- | --- | --- |
-| `claude-code` | `.claude/settings.json` `SessionStart` command hook | Trusted project hook support and shebang-resolved Python 3.14 or newer |
-| `codex` | `.codex/config.toml` inline `SessionStart` hook | Trusted project layer, hook approval, enabled hooks, and shebang-resolved Python 3.14 or newer |
+| `claude-code` | `.claude/settings.json` `SessionStart` command hook | Trusted project hook support plus usable Python 3.14 or a non-downloading `uv` fallback to an installed Python 3.14 |
+| `codex` | `.codex/config.toml` inline `SessionStart` hook | Trusted project layer, hook approval, enabled hooks, plus usable Python 3.14 or a non-downloading `uv` fallback to an installed Python 3.14 |
 
 The release process re-verifies both profiles against current authoritative documentation and schemas.
 
@@ -793,6 +805,19 @@ The old repository remains available until the retirement gate proves all necess
 ## 19. Implementation Plan
 
 Implementation is split into dependency-ordered milestones. A detailed executable plan follows only after this specification is approved.
+
+Revision 0.9 adds one corrective milestone to the completed package baseline:
+
+### MS-6 — Adaptive SessionStart Launcher
+
+- Create immutable `agent-handoff@1.8` from released predecessor `1.7`; do not alter retained payload bytes.
+- Render the same interpreter-selection policy into the Claude Code and Codex registrations while preserving each harness's repository-root expression.
+- Preserve direct execution for a usable Python 3.14 or newer with no `uv` dependency.
+- Fall back through `uv run --no-project --python 3.14 --no-python-downloads` when the `python3` probe is rejected or too old.
+- Execute both rendered commands with a rejecting shim first on `PATH`, verify exit `0` and exactly one context envelope, and retain the no-`uv` direct-Python lane.
+- Prove package integrity, successor/predecessor immutability, source projection, installed-wheel behavior, harness validation, and the complete repository gate.
+
+The waves below record the original V1 implementation sequence and remain historical context for the stable requirement IDs.
 
 ### Waves
 
@@ -930,14 +955,15 @@ No implementation-blocking questions remain after design approval.
 
 ### Harness Contracts
 
-- [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks)
-- [Claude Code Hooks Guide](https://code.claude.com/docs/en/hooks-guide)
-- [Codex Hooks Reference](https://learn.chatgpt.com/docs/hooks)
-- [Codex Configuration Basics](https://learn.chatgpt.com/docs/config-file/config-basic)
+- [Claude Code Hooks Reference](https://docs.anthropic.com/en/docs/claude-code/hooks)
+- [Claude Code Hooks Guide](https://docs.anthropic.com/en/docs/claude-code/hooks-guide)
+- [Codex Hooks Reference](https://developers.openai.com/codex/config-advanced/#hooks)
+- [Codex Configuration Reference](https://developers.openai.com/codex/config-reference/)
 - [Codex SessionStart Command Input Schema](https://raw.githubusercontent.com/openai/codex/main/codex-rs/hooks/schema/generated/session-start.command.input.schema.json)
 
 ### Project References
 
+- [Issue 80 — Codex SessionStart hook exits 1 when uv-strict-python shims are active](https://github.com/L3DigitalNet/project-standards/issues/80)
 - Legacy ingestion baseline: repository commit `56b24df7279572c485c2512783b0cc7e5395429b`.
 - [Prior repository-local handoff migration design](archive/2026-06-05-handoff-v3-migration-design.md) — legacy context only, not the v1 contract.
 - [MCP meta-repository readiness specification](2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md)
