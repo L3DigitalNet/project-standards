@@ -610,7 +610,7 @@ Preferred:
 
 ````
 
-See [the command reference](commands.md). See [configuration reference](../../reference/configuration.md).```
+See [the command reference](../../../future-standards/commands.md). See [configuration reference](../../../../reference/configuration.md).```
 
 Avoid links to generated `.html` files in source Markdown.
 
@@ -629,7 +629,7 @@ Bad:
 
 ````
 
-[[Quickstart]] [Quickstart](quickstart.html) [Quickstart](/site/tools/tool-name/quickstart.html)```
+[[Quickstart]] [Quickstart](../../../future-standards/quickstart.html) [Quickstart](/site/tools/tool-name/quickstart.html)```
 
 MkDocs supports regular Markdown files in nested directories, and the file layout determines the generated page URLs.
 
@@ -2469,7 +2469,7 @@ Bad:
 
 ````
 
-[[Command reference]] [Command reference](commands.html) [Command reference](/site/tools/tool-name/commands.html)```
+[[Command reference]] [Command reference](../../../future-standards/commands.html) [Command reference](/site/tools/tool-name/commands.html)```
 
 Do not use Obsidian-style wikilinks.
 
@@ -3108,11 +3108,11 @@ Do not use `<tool-name>` when...
 
 ## Next
 
-- [Quickstart](quickstart.md)
-- [Usage guide](usage.md)
-- [Command reference](commands.md)
-- [Examples](examples.md)
-- [Troubleshooting](troubleshooting.md)```
+- [Quickstart](../../../future-standards/quickstart.md)
+- [Usage guide](../../../future-standards/usage.md)
+- [Command reference](../../../future-standards/commands.md)
+- [Examples](../../../future-standards/examples.md)
+- [Troubleshooting](../../../future-standards/troubleshooting.md)```
 
 ## Example quickstart page
 
@@ -3145,7 +3145,7 @@ The tool should...
 
 ## Next
 
-See [usage](usage.md) for common workflows.```
+See [usage](../../../future-standards/usage.md) for common workflows.```
 
 ## Example command reference page
 
@@ -3627,7 +3627,7 @@ Good:
 
 ````
 
-See [the command reference](commands.md). See [global troubleshooting](../../troubleshooting/index.md).```
+See [the command reference](../../../future-standards/commands.md). See [global troubleshooting](../../../../troubleshooting/index.md).```
 
 Do not use Obsidian-style wikilinks.
 

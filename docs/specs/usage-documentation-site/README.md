@@ -36,6 +36,10 @@ related:
 
 ---
 
+## 0. Context
+
+See the original [design session transcript](./resources/design-session-transcript.md).
+
 ## 1. Purpose & Background
 
 This document indexes the Project Specification Standard conformant specification set for implementing `usage-documentation-site` as a distributable standard in `L3DigitalNet/project-standards`.
