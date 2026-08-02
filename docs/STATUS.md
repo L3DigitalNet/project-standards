@@ -2,12 +2,12 @@
 
 ## Current snapshot
 
-- Project Standards 5.13.0 remains the published release; signed `v5.13.0`/`v5` tags and byte-verified assets are live.
-- A local 5.14.0 candidate at `cb89ce24` reconciles Agent Handoff 1.8 and the completed repository-hygiene train.
-- The exact candidate wheel passed the 4,323-test ordinary lane, 133 compatibility tests, five performance tests, and 90% coverage.
-- Package, graph, schema, projection, catalog, release-classification, managed-document, and Agent Handoff gates pass locally.
-- Local `main` holds candidate `cb89ce24`; `testing` adds only this documentation closeout. No publication or issue mutation occurred.
+- Project Standards 5.14.0 is the published release at `b4be9d2e`; signed `v5.14.0` and `v5` tags are live.
+- The exact release commit passed 4,323 ordinary tests, 133 compatibility tests, five performance tests, and 90% coverage locally.
+- Hosted Check run `30725509522` passed the same release commit, including the corrected Agent Handoff launcher fixtures.
+- Package, graph, schema, projection, catalog, release-classification, managed-document, and Agent Handoff gates passed.
+- GitHub's latest stable release carries the byte-verified wheel (`02d989a5…`) and sdist (`139808e7…`) assets.
 - The 33-task open-issue plan retains the Python Tooling successor and Agent Handoff consumer retirement as pending work.
 - Draft SPEC-GSF3 and its 14-task implementation plan define optional durable document-reference tooling; T1 is ready for a fresh implementation session.
 - Self-hosted CI was deferred by owner decision; the reviewed future design belongs to `agent-managed-repo` governance.
-- Next: authorize publication of 5.14.0 separately, continue the open-issue plan, or resume SPEC-GSF3.
+- Next: continue the open-issue plan or resume SPEC-GSF3.
