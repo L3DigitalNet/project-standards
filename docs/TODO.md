@@ -56,6 +56,8 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   The owner-approved v5.15.0 boundary is T9–T14, T17, T18, T20, T23, T31, T33–T35. Start with T9, T10, T23, or T34. T1 closeout and T32 remain independent; the Agent Handoff authority train follows T35.
 
+  Execution preflight is blocked because `scripts/plan.py` lacks the `state` command required by `execute-plan`. The owning fix is in progress; rerun preflight after it lands rather than starting a task manually.
+
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
 - [ ] Benchmark the fast release gate under controlled conditions and dial in worker counts and lane concurrency. _(Owner 2026-07-31: the spike measured under real-usage load; `VERIFY_ORDINARY_WORKERS`/`VERIFY_COMPAT_WORKERS` overrides in `scripts/verify.sh` exist for the sweep.)_

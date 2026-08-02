@@ -12,5 +12,7 @@
 - Go is supported alongside Python under ADR 0027 with a pinned module, Make gate, VS Code tasks, and path-filtered CI; language selection remains neutral.
 - CLI Documentation 1.6 is an unreleased candidate with language-neutral rules, explicit Go mappings, and a built-executable Go CI profile.
 - The approved v5.15.0 boundary combines CLI Documentation 1.6 with twelve control-plane, migration, and Python Tooling issues; 5.14.0 remains published truth.
+- v5.15.0 implementation is prepared but no task has started: the repository plan bridge lacks the `state` command required by `execute-plan`.
 - Self-hosted CI was deferred by owner decision; the reviewed future design belongs to `agent-managed-repo` governance.
-- Next: begin v5.15.0 with T9, T10, T23, or T34; T1 tracker closeout and T32 consumer retirement remain independent.
+- Next: rerun execution preflight after the plan-bridge fix, then select T9, T10, T23, or T34 from validated state.
+- T1 tracker closeout and T32 consumer retirement remain independent.
