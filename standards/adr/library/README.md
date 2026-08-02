@@ -16,7 +16,8 @@ tags:
 aliases: []
 related:
   - 'docs/TODO.md'
-  - 'docs/adr-library/git/branch-integration-and-protection.md'
+  - 'standards/adr/library/development/go-and-python-neutral-tooling.md'
+  - 'standards/adr/library/git/branch-integration-and-protection.md'
   - 'standards/adr/README.md'
 source: []
 confidence: 'unknown'
@@ -31,6 +32,12 @@ license: null
 This directory collects draft Architectural Decision Record (ADR) templates for common repository management, software development, and operations practices. The drafts are reference inputs for a future versioned ADR package library; they are not released package payloads or accepted project decisions.
 
 Before adoption, review and adapt each draft for the target repository, add the metadata required by that repository, resolve its placeholders, and record explicit acceptance.
+
+## Development and language architecture
+
+### [Go and Python Coexistence with Neutral Tooling](development/go-and-python-neutral-tooling.md)
+
+Provides a draft for adopting Go alongside an existing Python implementation while keeping language selection neutral and defining one canonical Go tooling lane.
 
 ## Git and branch management
 

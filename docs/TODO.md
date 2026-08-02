@@ -32,7 +32,7 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] In the python-coding package: Move governance of the Python expert skill (from the current owner `agent-configs` repo) to the python-coding standard.
 
-- [ ] In the ADR standards package: Turn the docs-only [ADR Library](adr-library/README.md) drafts into a set of pre-written ADR templates for common decisions. The released library must be versioned and maintained by the ADR standards package; the current drafts are reference input, not package payloads.
+- [ ] In the ADR standards package: Turn the docs-only [ADR Library](../standards/adr/library/README.md) drafts into a set of pre-written ADR templates for common decisions. The released library must be versioned and maintained by the ADR standards package; the current drafts are reference input, not package payloads.
 
 - [ ] In the ADRE standards package: Provide tigher guidance on how to write ADRs that are clear, concise, properly scoped, bounded to prevent forcing requirements on non-relevant stakeholders, etc. Particularly for scope, boundaries, and awareness of potentially affected stakeholders, provide a checklist or template for authors to follow. Agents have been quite terrible at writing properly scoped ADRs, and this is a major source of friction, ammendments, superseding, etc.
 

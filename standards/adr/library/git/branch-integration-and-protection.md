@@ -16,7 +16,7 @@ tags:
   - 'policy'
 aliases: []
 related:
-  - 'docs/adr-library/README.md'
+  - 'standards/adr/library/README.md'
   - 'standards/adr/versions/1.3/templates/adr.md'
 source: []
 confidence: 'unknown'

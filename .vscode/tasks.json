@@ -39,6 +39,56 @@
 			"command": "npx prettier --check . && npx markdownlint-cli2 \"**/*.md\"",
 			"group": "test",
 			"problemMatcher": []
+		},
+		{
+			"label": "go: tools",
+			"type": "shell",
+			"command": "make go-tools",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: format",
+			"type": "shell",
+			"command": "make go-format",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: vet",
+			"type": "shell",
+			"command": "make go-vet",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: lint",
+			"type": "shell",
+			"command": "make go-lint",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: test",
+			"type": "shell",
+			"command": "make go-test",
+			"group": "test",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: build",
+			"type": "shell",
+			"command": "make go-build",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: audit",
+			"type": "shell",
+			"command": "make go-audit",
+			"problemMatcher": []
+		},
+		{
+			"label": "go: check",
+			"type": "shell",
+			"command": "make go-check",
+			"group": "test",
+			"problemMatcher": []
 		}
 	]
 }

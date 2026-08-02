@@ -24,6 +24,10 @@ venv/
 
 # Node (Prettier toolchain)
 node_modules/
+
+# Repository-local executable Go tools installed by `make go-tools`.
+.tools/
+
 # Transient Prettier probe dirs created inside the repo tree by the parity oracle
 # (mkdtemp needs an in-tree path so the `**/*.md` singleQuote override applies —
 # an out-of-tree probe silently uses the wrong config). They now live under the

@@ -20,6 +20,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 12 | Managed Markdown ranges use paired Prettier guards | Composing formatter-stable package blocks in consumer Markdown |
 | 13 | Keep documentation-only closeout proportional | Closing a documentation-only session |
 | 14 | Move TMPDIR, basetemp, and COVERAGE_FILE off /tmp and the repo root | Running a whole-battery pytest |
+| 15 | Go tooling follows the neutral coexistence ADR | Adding or changing Go tooling, CI, or source |
 
 ## 1. Dogfood the standards
 
@@ -261,3 +262,17 @@ Use the affected focused or full gate when documentation changes a byte-locked s
 **Sources:** MCP plan §14 close-out (J-P/P14); `.workflow/lessons/tmpfs-seal-hygiene-enospc.md`; the 2026-07-31 release-gate wall-clock spike.
 
 **Related:** 3, 13.
+
+## 15. Go tooling follows the neutral coexistence ADR
+
+**Applies when:** adding or changing Go tooling, CI, module boundaries, or source.
+
+**Rule:** follow ADR 0027. Go and Python are neutral supported peers. `go.mod` owns the root module and toolchain, the root `Makefile` owns canonical Go commands, and local users, VS Code, and CI delegate to `make go-check`. Install pinned third-party executables under ignored `.tools/`; keep `go vet` first-party and `govulncheck` module-tracked.
+
+Do not infer permission for Python migration, freeze, retirement, or language preference from the Go lane. A second module or workspace requires a separately justified ownership or distribution boundary.
+
+**Why:** tooling readiness is an architectural prerequisite for safe Go work, but it does not settle which language is appropriate for future components.
+
+**Sources:** ADR 0027; `go.mod`; `Makefile`; `.golangci.yml`.
+
+**Related:** 3, 5, 6.

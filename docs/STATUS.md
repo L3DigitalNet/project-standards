@@ -9,5 +9,6 @@
 - GitHub's latest stable release carries the byte-verified wheel (`02d989a5…`) and sdist (`139808e7…`) assets.
 - The 33-task open-issue plan retains the Python Tooling successor and Agent Handoff consumer retirement as pending work.
 - Draft SPEC-GSF3 and its 14-task implementation plan define optional durable document-reference tooling; T1 is ready for a fresh implementation session.
+- Go is supported alongside Python under ADR 0027 with a pinned module, Make gate, VS Code tasks, and path-filtered CI; language selection remains neutral.
 - Self-hosted CI was deferred by owner decision; the reviewed future design belongs to `agent-managed-repo` governance.
 - Next: continue the open-issue plan or resume SPEC-GSF3.

@@ -27,13 +27,14 @@ related:
   - 'docs/adr/adr-0024-catalog-scoped-package-version-channels.md'
   - 'docs/adr/adr-0025-project-standards-mcp-service-and-sdk-boundary.md'
   - 'docs/adr/adr-0026-project-standards-mcp-local-read-only-transport.md'
+  - 'docs/adr/adr-0027-adopt-go-alongside-python-with-neutral-tooling.md'
 ---
 
 # Architecture Decision Records
 
 Decisions governing the `project-standards` repository, recorded in [MADR](https://adr.github.io/madr/) form. See the [ADR 1.3 standard](../../standards/adr/versions/1.3/README.md) for the format and the id/filename convention (the `id` embeds the repo name; the filename omits it).
 
-ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate.
+ADRs **0001–0013** capture the original meta-repository readiness decisions from [SPEC-MT01](../specs/2026-07-07-project-standards-meta-repo-mcp-readiness-spec.md) §8.3. They were accepted on 2026-07-07; later decisions preserve that history through explicit amendment or supersession. ADRs **0014–0022** record repository field-value policy, local scope, packaged skills and hooks, adoption, lifecycle, provenance, and package versioning. ADR **0023** establishes the unified consumer control plane and supersedes ADRs 0003, 0008, and 0017. ADR **0024** establishes catalog-scoped package channels and supersedes ADR 0020. ADRs **0025** and **0026** record the MCP-server decisions (SPEC-MS01 §8.3): the service and SDK boundary, and the v1 local read-only transport surface. Both were accepted on 2026-07-28 at the `SPEC-RD01` Step 09 decision gate. ADR **0027** adopts a neutral Go tooling lane alongside Python.
 
 | ADR | Title | Decision | Status |
 | --- | --- | --- | --- |
@@ -63,3 +64,4 @@ ADRs **0001–0013** capture the original meta-repository readiness decisions fr
 | [0024](adr-0024-catalog-scoped-package-version-channels.md) | Catalog-Scoped Package Version Channels | local | active |
 | [0025](adr-0025-project-standards-mcp-service-and-sdk-boundary.md) | MCP Service and SDK Boundary | local | active |
 | [0026](adr-0026-project-standards-mcp-local-read-only-transport.md) | MCP Local Read-Only Transport | local | active |
+| [0027](adr-0027-adopt-go-alongside-python-with-neutral-tooling.md) | Adopt Go Alongside Python with Neutral Tooling | local | active |

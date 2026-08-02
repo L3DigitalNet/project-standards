@@ -1,0 +1,18 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - gosec
+    - misspell
+  disable:
+    # `make go-vet` owns vet output so local and CI runs use the declared Go toolchain's analyzer version.
+    - govet
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
