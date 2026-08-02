@@ -95,6 +95,12 @@ role = "retained"
 id = "cli-documentation"
 version = "1.5"
 digest = "sha256:90bd59f457ec467da0990bbf89667f534753768be79530c7bfdde9c791d3b618"
+role = "retained"
+
+[[packages]]
+id = "cli-documentation"
+version = "1.6"
+digest = "sha256:7c6e609bdccdf526cb1426b817b26efcc5622552138ac5e826d917aad91c09ba"
 role = "default"
 
 [[packages]]

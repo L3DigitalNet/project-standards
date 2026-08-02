@@ -107,10 +107,10 @@ Tiered format (Light ⊂ Standard ⊂ Full), stable canonical numbering, typed I
 
 ### CLI Documentation Standard
 
-User-facing CLI usage documentation — help text, the canonical usage reference, man pages, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
+User-facing CLI usage documentation — help text, the canonical usage reference, man pages, shell completion, and CI checks that catch drift. A strict profile ladder (**Script ⊂ Packaged ⊂ Packaged-deep**) scales the requirement to a CLI's distribution shape across Python, Go, and other implementations. The V5 package creates the usage scaffold once and verifies a reviewed consumer-owned workflow rendered by its selected provider.
 
-- **Standard:** [`standards/cli-documentation/versions/1.5/README.md`](standards/cli-documentation/versions/1.5/README.md)
-- **Templates:** [`templates/`](standards/cli-documentation/versions/1.5/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.5/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.5/adopt.md)
+- **Standard:** [`standards/cli-documentation/versions/1.6/README.md`](standards/cli-documentation/versions/1.6/README.md)
+- **Templates:** [`templates/`](standards/cli-documentation/versions/1.6/templates/) · **Example:** [`examples/usage.example.md`](standards/cli-documentation/versions/1.6/examples/usage.example.md) · **Adopt:** [`adopt.md`](standards/cli-documentation/versions/1.6/adopt.md)
 
 ### Agent Handoff Standard
 
@@ -172,7 +172,7 @@ The path must be one exact repo-relative, non-glob path with exclusive whole-fil
 | Python Tooling | `1.10` | [`standards/python-tooling/versions/1.10/adopt.md`](standards/python-tooling/versions/1.10/adopt.md) |
 | Markdown Tooling | `1.12` | [`standards/markdown-tooling/versions/1.12/adopt.md`](standards/markdown-tooling/versions/1.12/adopt.md) |
 | Project Specification | `1.6` | [`standards/project-spec/versions/1.6/adopt.md`](standards/project-spec/versions/1.6/adopt.md) |
-| CLI Documentation | `1.5` | [`standards/cli-documentation/versions/1.5/adopt.md`](standards/cli-documentation/versions/1.5/adopt.md) |
+| CLI Documentation | `1.6` | [`standards/cli-documentation/versions/1.6/adopt.md`](standards/cli-documentation/versions/1.6/adopt.md) |
 | Agent Handoff | `1.8` | [`standards/agent-handoff/versions/1.8/adopt.md`](standards/agent-handoff/versions/1.8/adopt.md) |
 
 For a V4 repository, do not create `.standards/` separately. Preview the complete migration, resolve every ambiguity, then apply the same command explicitly:

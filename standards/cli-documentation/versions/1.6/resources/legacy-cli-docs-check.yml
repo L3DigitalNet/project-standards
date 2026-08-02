@@ -1,0 +1,33 @@
+# CLI documentation drift checks — copy-adopt template from the CLI Documentation
+# Standard (project-standards). Edit the env block for your tool, then delete this header.
+name: cli-docs-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # Your installed command name ([project.scripts] key), not the module path.
+  TOOL: toolname
+  NO_COLOR: "1"
+
+jobs:
+  cli-docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # SHA-pinned per this repo's action-hardening policy (docs/handoff/bugs/001-setup-uv-
+      # v8-tag-withdrawn.md: moving tags broke CI once). Re-verify the pin when copying.
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - name: Build and install the wheel into a clean venv
+        run: |
+          uv build --wheel --out-dir dist/
+          uv venv .cli-docs-venv
+          uv pip install --python .cli-docs-venv dist/*.whl
+      - name: Smoke the installed wrapper
+        run: |
+          .cli-docs-venv/bin/"$TOOL" --help
+          .cli-docs-venv/bin/"$TOOL" --version
+      # Optional: add normalized help-snapshot or docs-parity steps per the
+      # standard's CI section (fix terminal width, keep NO_COLOR set).

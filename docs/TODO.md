@@ -46,15 +46,15 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Resolved 2026-08-01: only the owner designates MAJOR. Otherwise, a newly introduced package or an advertised version above that package's prior advertised maximum is exactly MINOR; no package advance is exactly PATCH. Internal and reference-only packages count; retained older versions and unadvertised payloads do not. Advertised versions are permanent and cannot be removed, even in a MAJOR release. T30 implemented the contract in `e10083ad`.
 
-- [ ] Authorize a Python Tooling successor that replaces the selected 1.10 package's stale V1-authority statement.
-
 - [ ] Finish Agent Handoff consumer retirement.
 
   Two consumers owe protected merges to `main`: `website-aboutme` and `website-l3digital.net` from `testing`. `docmend` and `hw-radar` are already merged; unrelated catalog drift is outside this retirement closeout.
 
   `control-center` stays on legacy config, blocked by issue #83, owner-handled — not engine-blocked. Details: `docs/research/2026-07-09-agent-handoff-retirement-inventory.md`.
 
-- [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md); T30 is complete, so continue with T1 Agent Handoff qualification/release or the independent T32 consumer-retirement closeout.
+- [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
+
+  The owner-approved v5.15.0 boundary is T9–T14, T17, T18, T20, T23, T31, T33–T35. Start with T9, T10, T23, or T34. T1 closeout and T32 remain independent; the Agent Handoff authority train follows T35.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 

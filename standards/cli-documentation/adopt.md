@@ -1,13 +1,13 @@
 # Adopt the CLI Documentation Standard
 
-The current consumer package is [`cli-documentation@1.5`](versions/1.5/adopt.md). Use it for a create-only CLI usage reference and, when selected, a consumer-owned CI workflow verified against provider-rendered bytes.
+The current consumer package is [`cli-documentation@1.6`](versions/1.6/adopt.md). Use it for a create-only CLI usage reference and, when selected, a consumer-owned Python, Go, or generic CI workflow verified against provider-rendered bytes.
 
 ## Configure and reconcile
 
-Enable the package, then choose `profile`, `command_name`, `workflow_ownership`, and the closed `ci` options under `[standards.cli-documentation.config]`. Package version `1.5` and `contract_version = "1.0"` are independent selectors. `workflow_ownership = "referenced"` verifies and locks the reviewed workflow; `"consumer-owned"` preserves a customized legacy workflow without a reference or CI enablement.
+Enable the package, then choose `profile`, `command_name`, `workflow_ownership`, and the closed `ci` options under `[standards.cli-documentation.config]`. Package version `1.6` and `contract_version = "1.0"` are independent selectors. `workflow_ownership = "referenced"` verifies and locks the reviewed workflow; `"consumer-owned"` preserves a customized legacy workflow without a reference or CI enablement.
 
 ```bash
-project-standards standards enable cli-documentation --version 1.5
+project-standards standards enable cli-documentation --version 1.6
 project-standards reconcile
 project-standards reconcile --apply
 ```
@@ -31,4 +31,4 @@ project-standards reconcile --check
 project-standards validate
 ```
 
-A missing referenced workflow, unsafe command basename, output mismatch, or provider mutation is a refusal. Restore the reviewed consumer file and retry; never grant the provider a destination path. See the [version-specific guide](versions/1.5/adopt.md) for exact profiles, options, output publication, verification, and authoring review.
+A missing referenced workflow, unsafe command basename or Go package selector, output mismatch, or provider mutation is a refusal. Restore the reviewed consumer file and retry; never grant the provider a destination path. See the [version-specific guide](versions/1.6/adopt.md) for exact profiles, options, output publication, verification, and authoring review.

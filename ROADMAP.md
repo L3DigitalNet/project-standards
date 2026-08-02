@@ -4,22 +4,22 @@ This file tracks work planned for upcoming Project Standards releases. It is for
 
 - [Roadmap](#roadmap)
   - [Planned releases](#planned-releases)
-    - [5.14.0](#5140)
     - [5.15.0](#5150)
     - [5.16.0](#5160)
   - [Beyond](#beyond)
 
 ## Planned releases
 
-### 5.14.0
-
-- Promote Agent Handoff 1.8 as the Catalog 5 default while retaining 1.7. The new Claude Code and Codex SessionStart launchers select a usable Python 3.14 directly or through project-independent `uv`, fixing startup under rejecting Python shims ([issue #80](https://github.com/L3DigitalNet/project-standards/issues/80)).
-- Ship the release-preparation safeguards staged on `testing`: require clean `main`, print the complete candidate-wheel and pre-tag verification sequence, use a fresh isolated wheel runtime, and make release-consistency checks honor deleted completed plans without weakening other required-path checks.
-- Publish the post-5.13 documentation reconciliation: align MCP, CLI, release, and handoff documentation with shipped behavior; record the full drift audit; and prune completed implementation plans and stale release evidence from active documentation.
-- Carry the optional durable document-reference tooling [SPEC-GSF3](docs/specs/2026-07-31-durable-document-references-optional-tooling-spec.md) and its [active plan](docs/plans/2026-07-31-durable-document-references-optional-tooling-plan.md) as maintained design inputs. Runtime implementation and qualification are not part of 5.14.0 and remain pending.
-
 ### 5.15.0
 
+- Publish CLI Documentation 1.6 with language-neutral Python, Go, and generic profiles while retaining 1.5 unchanged and exactly selectable.
+- Correct control-plane and migration issues [#76](https://github.com/L3DigitalNet/project-standards/issues/76), [#77](https://github.com/L3DigitalNet/project-standards/issues/77), [#83](https://github.com/L3DigitalNet/project-standards/issues/83), [#87](https://github.com/L3DigitalNet/project-standards/issues/87), [#98](https://github.com/L3DigitalNet/project-standards/issues/98), [#105](https://github.com/L3DigitalNet/project-standards/issues/105), and [#106](https://github.com/L3DigitalNet/project-standards/issues/106).
+- Resolve or evidence-dispose the transient PyYAML failure in [#84](https://github.com/L3DigitalNet/project-standards/issues/84) before release qualification.
+- Publish a Python Tooling successor for [#86](https://github.com/L3DigitalNet/project-standards/issues/86), [#89](https://github.com/L3DigitalNet/project-standards/issues/89), [#95](https://github.com/L3DigitalNet/project-standards/issues/95), and [#109](https://github.com/L3DigitalNet/project-standards/issues/109), including the approved V5 authority correction; retain 1.10 unchanged and selectable.
+- Run one combined source, candidate-wheel, installed-consumer, full, hosted, recovery, artifact, and issue-closeout gate. Do not publish an intermediate control-plane or Python Tooling release.
+
 ### 5.16.0
+
+- Earliest planned home for deferred Markdown/Python Tooling issues [#88](https://github.com/L3DigitalNet/project-standards/issues/88) and [#99](https://github.com/L3DigitalNet/project-standards/issues/99); rebaseline after v5.15.0.
 
 ## Beyond

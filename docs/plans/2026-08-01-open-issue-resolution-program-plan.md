@@ -3,10 +3,10 @@ title: 'Open-Issue Resolution Program Plan'
 slug: 'open-issue-resolution-program'
 size: full
 status: active
-source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved TODO decisions'
+source: 'GitHub open-issue inventory frozen 2026-08-01T09:21:01Z; owner-approved TODO and v5.15.0 release decisions'
 spec_ref: ''
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-02
 owners:
   - 'Chris Purcell / L3DigitalNet'
   - 'Coding agent under human review'
@@ -15,24 +15,24 @@ test_framework: pytest
 
 # Open-Issue Resolution Program Plan
 
-> **This file is definition, not state.** It is the durable map for resolving the 24 issues open at the 2026-08-01T09:21:01Z inventory freeze and three owner-approved TODO tasks. Live progress belongs in phase checklists under `.project-pipeline/2026-08-01-open-issue-resolution-program/`. Large feature work receives an approved specification and child plan before implementation.
+> **This file is definition, not state.** It is the durable 36-task map for resolving the 24 issues open at the 2026-08-01T09:21:01Z inventory freeze, three owner-approved TODO tasks, and the approved v5.15.0 release boundary. Live progress belongs in phase checklists under `.project-pipeline/2026-08-01-open-issue-resolution-program/`. Large feature work receives an approved specification and child plan before implementation.
 
 ## 1. Objective
 
-Resolve the frozen open-issue inventory and the three owner-approved TODO tasks with the fewest practical release trains, without mixing uncertain feature design into corrective work, rewriting immutable payloads, or repeatedly paying full release qualification for isolated fixes.
+Resolve the frozen open-issue inventory and the three owner-approved TODO tasks with bounded release trains. The next minor release, v5.15.0, must combine CLI Documentation 1.6 with issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109 without rewriting immutable payloads or importing the deferred #88/#99 work.
 
 ## 2. Strategy
 
-The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. Issue #109 joined the Python Tooling train because fresh adoption can emit a tool-only `pyproject.toml` that the required `uv lock` step rejects. New comments on #80 and #55 strengthen existing acceptance criteria but add no task: #80 reproduces on the exact v5.13.0/Agent Handoff 1.7 release, and #55 confirms that adopting Project Spec for future documents while leaving a house-format corpus outside configured scope is a valid preservation-safe mode.
+The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. On 2026-08-02, the owner approved one combined v5.15.0 boundary: CLI Documentation 1.6, the six control-plane corrections, the #84 disposition, and Python Tooling issues #86, #89, #95, and #109. The root-model coupling makes #89 and #95 prerequisites for #86. Issues #88 and #99 remain in the program but move behind v5.15.0 into a later tooling release.
 
-1. Align the release-level contract before preparing another repository release.
-2. Publish the already-verified Agent Handoff 1.8 fix for #80 immediately.
-3. Batch Agent Handoff command authority, inventory, diagnostics, and duplicate-registration fixes.
-4. Batch migration, planner, and structured-adapter fixes in one control-plane train.
-5. Batch Markdown Tooling and Python Tooling successors in one repository release, including the Python Tooling authority and fresh-adoption corrections.
-6. Finish the two remaining Agent Handoff consumers as a small manual operational closeout.
-7. Dispose of the #84 transient before the control-plane release and resolve documentation independently.
-8. Treat #62 and #55 as separate feature programs with approval gates.
+1. Retain the completed release-level contract as the authority for every remaining release gate.
+2. Close #80 from the already-published Agent Handoff 1.8 evidence without preparing another release.
+3. Defer the Agent Handoff authority train until after v5.15.0 so no unselected issue release pre-empts the approved next-minor boundary.
+4. Implement the migration, planner, structured-adapter, and selected Python Tooling root/adoption corrections without publishing an intermediate control-plane release.
+5. Resolve #84 before qualification, verify the existing CLI Documentation 1.6 candidate, and publish all approved v5.15.0 content through one release gate.
+6. Defer #88 and #99 until after v5.15.0, then qualify their Markdown/Python Tooling successors in a bounded follow-up release.
+7. Finish the two remaining Agent Handoff consumers as a small manual operational closeout.
+8. Resolve documentation independently and treat #62 and #55 as separate feature programs with approval gates.
 9. Close issues only after published-artifact evidence or an accepted no-change disposition.
 
 ## 3. Scope
@@ -40,6 +40,7 @@ The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. Issue #109
 ### 3.1 In Scope
 
 - Issues #55, #62, #75–#77, #80, #83, #84, #86–#91, #95, #98, #99, #101, #102, and #105–#109.
+- v5.15.0 contains CLI Documentation 1.6 and issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109; #88 and #99 remain in scope for a later release.
 - Immutable successor payloads, engine releases, regression-ledger proofs, release qualification, and issue closeout.
 - Owner decisions required by #101, #107, #99, #62, and #55.
 - Catalog release-level alignment, the Python Tooling authority correction, and final Agent Handoff consumer retirement.
@@ -60,12 +61,13 @@ The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. Issue #109
 - Build and extract a fresh candidate wheel for installed-authority checks.
 - Retain every predecessor package version byte-for-byte and selectable.
 - Maintain one issue regression and ledger proof for every corrected defect.
+- Run one combined v5.15.0 release qualification only after every selected correction and the CLI Documentation 1.6 candidate are green.
 
 ## 4. Requirements
 
 | ID | Requirement | Source | Priority | Task(s) |
 | --- | --- | --- | --- | --- |
-| REQ-080 | Publish and close the verified SessionStart shim fix. | #80 | must | T1 |
+| REQ-080 | Close #80 from the published Agent Handoff 1.8 evidence. | #80 | must | T1 |
 | REQ-075 | Pair Agent Handoff enrichment by semantic rule. | #75 | must | T2 |
 | REQ-090 | Exclude lock-authenticated current artifacts from legacy findings. | #90 | must | T3 |
 | REQ-091 | Run read-only commands against the currently locked payload before refresh. | #91 | must | T4 |
@@ -86,14 +88,16 @@ The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. Issue #109
 | REQ-086 | Support or explicitly reject monorepos with no implicit Python root. | #86 | must | T20 |
 | REQ-108 | Prevent published MCP docs from presenting candidate installation as current. | #108 | must | T22 |
 | REQ-109 | Reject fresh Python Tooling adoption before writing when consumer-owned PEP 621 project metadata is absent. | #109; owner decision 2026-08-01 | must | T33 |
-| REQ-084 | Reproduce and fix, or evidence-dispose, the transient PyYAML failure. | #84 | should | T23 |
+| REQ-084 | Reproduce and fix, or evidence-dispose, the transient PyYAML failure. | #84 | must | T23 |
 | REQ-062 | Add an approved conformance surface for shared Project Spec boilerplate. | #62 | should | T24, T25 |
 | REQ-055 | Add an approved preservation-first house-format conversion path. | #55 | should | T26, T27 |
-| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | must | T1, T8, T15, T21, T28 |
+| REQ-900 | Preserve immutable predecessors and qualify each release train once. | Release contract | must | T8, T28, T35, T36 |
 | REQ-901 | Leave no frozen issue open without an accepted disposition. | Owner request | must | T29 |
 | REQ-902 | Classify owner-designated catalog majors as MAJOR, releases with a standard-package version advance as MINOR, and releases without one as PATCH. A newly introduced package or a newly advertised version above that package's prior advertised maximum is an advance; internal and reference-only packages count, while older retained history and unadvertised payloads do not. Advertised versions are permanent and cannot be removed in any release. | `docs/TODO.md`; owner decisions 2026-08-01 | must | T30 |
 | REQ-903 | Replace Python Tooling 1.10's stale V1-authority statement in the already-planned compatible successor without changing 1.10. | `docs/TODO.md`; owner decision 2026-08-01 | must | T31 |
 | REQ-904 | Manually converge and verify the two remaining Agent Handoff consumers, then close the retirement records. | `docs/TODO.md`; owner decision 2026-08-01 | must | T32 |
+| REQ-905 | Publish the selected twelve-issue correction set together in v5.15.0, with no intermediate control-plane or Python Tooling release. | Owner decision 2026-08-02 | must | T35 |
+| REQ-906 | Include the existing CLI Documentation 1.6 candidate in v5.15.0 while retaining 1.5 unchanged and selectable. | Owner decision 2026-08-02 | must | T34, T35 |
 
 ## 5. Architecture and Test Strategy
 
@@ -101,7 +105,7 @@ The inventory frozen at 2026-08-01T09:21:01Z contains 24 open issues. Issue #109
 | --- | --- | --- |
 | Agent Handoff | `src/project_standards/agent_handoff/`, `standards/agent-handoff/` | `tests/agent_handoff/`, Agent Handoff package contracts |
 | Control plane | `src/project_standards/control_plane/` | `tests/control_plane/`, migration fixtures |
-| Tooling packages | `standards/markdown-tooling/`, `standards/python-tooling/` | Markdown/Python Tooling package contracts and real-tool oracles |
+| Tooling packages | `standards/cli-documentation/`, `standards/markdown-tooling/`, `standards/python-tooling/` | CLI/Markdown/Python Tooling package contracts and real-tool oracles |
 | Project Spec | `src/project_standards/specs/`, `standards/project-spec/` | `tests/test_spec_*.py`, Project Spec reconstruction |
 | Release contract | `meta/versioning.md`, `src/project_standards/package_contract/release.py` | release-classification and CLI matrices |
 
@@ -111,41 +115,43 @@ For every issue: reproduce first, assert observable output, run the nearest subs
 
 | Task | Reason | Objective validation |
 | --- | --- | --- |
-| T1 | Implementation already exists; remaining work is release qualification. | Existing #80 regressions and release gates |
+| T1 | Agent Handoff 1.8 is already published; only tracker closeout remains. | Published v5.14.0 regressions, gates, and asset evidence |
 | T22 | Historical v5.12.0 is immutable. | Current-doc fix plus future-release contract test |
 | T23 | Investigation may establish no repository defect. | Bounded reproduction matrix |
 | T24, T26 | Specification and owner approval precede behavior. | Spec validation and child-plan validation |
 | T29 | Tracker reconciliation is operational closeout. | Live issue query and handoff/document gates |
 | T32 | Consumer retirement is an operational closeout, not new product behavior. | Per-consumer Agent Handoff validation, drift check, and authoritative-branch proof |
+| T34 | CLI Documentation 1.6 already exists as an uncommitted candidate; the task owns characterization, review, and qualification rather than redesign. | Predecessor-byte, provider, workflow, Go, and package-contract proof |
+| T35, T36 | Release qualification creates no new product behavior. | Prior-release reproductions, candidate/installed probes, full gate, hosted checks, and artifact parity |
 
 ## 6. Execution Summary
 
 | Task | Title | Phase | Depends on | Requirement(s) | Primary verification |
 | --- | --- | --- | --- | --- | --- |
-| T1 | Publish Agent Handoff 1.8 | P1 | T30 | REQ-080, REQ-900 | #80 installed probes and release gate |
-| T2 | Correct enrichment pairing | P2 | T1 | REQ-075 | Agent Handoff selected-routing tests |
-| T3 | Make legacy inventory lock-aware | P2 | T1 | REQ-090 | legacy and routing tests |
+| T1 | Close #80 from v5.14.0 evidence | P1 | T30 | REQ-080 | published regressions, gates, and assets |
+| T2 | Correct enrichment pairing | P2 | T1, T35 | REQ-075 | Agent Handoff selected-routing tests |
+| T3 | Make legacy inventory lock-aware | P2 | T1, T35 | REQ-090 | legacy and routing tests |
 | T4 | Route reads through locked payloads | P2 | T3 | REQ-091 | older-control-plane fixtures |
 | T5 | Restore pre-apply reports | P2 | T4 | REQ-101 | enabled-but-unlocked fixtures |
 | T6 | Detect duplicate startup injection | P2 | T3 | REQ-102 | Claude/Codex duplicate fixtures |
-| T7 | Align secret-reference policy | P2 | T1 | REQ-107 | engine/provider parity matrix |
+| T7 | Align secret-reference policy | P2 | T1, T35 | REQ-107 | engine/provider parity matrix |
 | T8 | Qualify Agent Handoff train | P2 | T2–T7 | REQ-900 | full release battery |
-| T9 | Correct absent-artifact planning | P3 | T8 | REQ-076, REQ-077 | planner/executor matrix |
-| T10 | Supply V4 transform evidence | P3 | T8 | REQ-083 | V4 migration fixture |
+| T9 | Correct absent-artifact planning | P3 | T30 | REQ-076, REQ-077 | planner/executor matrix |
+| T10 | Supply V4 transform evidence | P3 | T30 | REQ-083 | V4 migration fixture |
 | T11 | Make successor drift actionable | P3 | T9 | REQ-087 | diagnostic/transition tests |
 | T12 | Validate IDs before retirement | P3 | T10 | REQ-098 | migration verification fixture |
 | T13 | Coalesce TOML creates | P3 | T9 | REQ-105 | TOML adapter matrix |
 | T14 | Normalize JSONC deletion residue | P3 | T9 | REQ-106 | JSONC layout matrix |
-| T15 | Qualify control-plane train | P3 | T9–T14, T23 | REQ-900 | full release battery |
-| T16 | Bound Markdown formatting scope | P4 | T15 | REQ-088 | real Prettier corpus parity |
-| T17 | Fix Python import precedence | P4 | T15 | REQ-089 | real BasedPyright fixture |
-| T18 | Bound Ruff scope | P4 | T15 | REQ-095 | real Ruff corpus parity |
-| T19 | Preserve Ruff plugin config | P4 | T18 | REQ-099 | semantic ownership tests |
-| T20 | Add no-implicit-root layout | P4 | T17–T19 | REQ-086 | monorepo reconstruction |
-| T21 | Qualify tooling successors | P4 | T16–T20, T31, T33 | REQ-900 | full release battery |
+| T15 | Superseded control-plane qualifier | P3 | T9–T14, T23 | — | superseded by T35 |
+| T16 | Bound Markdown formatting scope | P4 | T35 | REQ-088 | real Prettier corpus parity |
+| T17 | Fix Python import precedence | P4 | T9–T14 | REQ-089 | real BasedPyright fixture |
+| T18 | Bound Ruff scope | P4 | T9–T14 | REQ-095 | real Ruff corpus parity |
+| T19 | Preserve Ruff plugin config | P4 | T35 | REQ-099 | semantic ownership tests |
+| T20 | Add no-implicit-root layout | P4 | T17, T18 | REQ-086 | monorepo reconstruction |
+| T21 | Superseded tooling qualifier | P4 | T16–T20, T31, T33 | — | superseded by T35/T36 |
 | T22 | Correct MCP release docs | P5 | T1 | REQ-108 | release-doc contract |
-| T23 | Dispose of PyYAML transient | P5 | T8 | REQ-084 | isolated install matrix |
-| T24 | Specify conformance lint | P6 | T21 | REQ-062 | approved spec/child plan |
+| T23 | Dispose of PyYAML transient | P5 | T30 | REQ-084 | isolated install matrix |
+| T24 | Specify conformance lint | P6 | T36 | REQ-062 | approved spec/child plan |
 | T25 | Implement conformance lint | P6 | T24 | REQ-062 | child plan and release gate |
 | T26 | Specify spec conversion | P7 | T25 | REQ-055 | approved spec/child plan |
 | T27 | Implement spec conversion | P7 | T26 | REQ-055 | child plan and semantic audit |
@@ -155,31 +161,34 @@ For every issue: reproduce first, assert observable output, run the nearest subs
 | T31 | Correct Python Tooling authority | P9 | T20, T30 | REQ-903 | successor contract and predecessor immutability |
 | T32 | Finish Agent Handoff consumer retirement | P9 | T30 | REQ-904 | two consumer validation and drift checks |
 | T33 | Guard Python Tooling fresh adoption | P9 | T20, T31 | REQ-109 | no-write preflight and real uv lock fixture |
+| T34 | Verify CLI Documentation 1.6 candidate | P10 | T30 | REQ-906 | package/provider/Go workflow matrix |
+| T35 | Qualify and publish v5.15.0 | P10 | T9–T14, T17, T18, T20, T23, T31, T33, T34 | REQ-900, REQ-905, REQ-906 | combined release battery |
+| T36 | Qualify deferred tooling successors | P10 | T16, T19 | REQ-900 | two-issue follow-up release battery |
 
 ## 7. Implementation Tasks
 
-Task IDs are permanent and append-only; `depends_on` is the execution authority rather than numeric task or phase order. T30 is the sole program entrypoint. After it completes, T1 and the independent T32 operational closeout become ready.
+Task IDs are permanent and append-only; `depends_on` is the execution authority rather than numeric task or phase order. T30 is complete. The v5.15.0 entry set is T9, T10, T23, and T34; T1 tracker closeout and T32 consumer retirement remain independent. The Agent Handoff authority train begins only after T35 publishes v5.15.0.
 
-### Phase P1: Release the Completed Fix
+### Phase P1: Close the Published Fix
 
-#### T1: Publish Agent Handoff 1.8
+#### T1: Close #80 from v5.14.0 evidence
 
-- **goal:** Re-verify the existing #80 candidate, publish it from clean `main`, reconcile dogfood clients, and close #80. · **phase:** P1 · **depends_on:** [T30] · **requirements:** [REQ-080, REQ-900] · **priority:** must
-- **files:** `standards/agent-handoff/versions/1.8/`, catalog/projection/lock and release/handoff surfaces, `tests/package_contract/test_agent_handoff_1_8.py`
-- **acceptance:** exact v5.13.0/Agent Handoff 1.7 direct and harness-style launches reproduce the shim failure; direct, uv-fallback, and unavailable-runtime successor lanes behave correctly for both harnesses; predecessors and published assets verify; any failed prepublication gate aborts publication under §8.1.
+- **goal:** Close #80 from the already-published v5.14.0 evidence without modifying or republishing release artifacts. · **phase:** P1 · **depends_on:** [T30] · **requirements:** [REQ-080] · **priority:** must
+- **files:** issue #80 and repository tracker/handoff closeout documents only
+- **acceptance:** exact v5.13.0/Agent Handoff 1.7 direct and harness-style launches reproduce the shim failure; direct, uv-fallback, and unavailable-runtime successor lanes behave correctly for both harnesses in published v5.14.0; hosted gates and asset bytes verify; issue #80 closes with exact evidence.
 - **sub-tasks:**
   - **T1.1 RED** — reproduce the published v5.13.0/Agent Handoff 1.7 failure through both direct and harness-style launch.
   - **T1.2 Verify RED** — confirm published behavior, not environment drift.
   - **T1.3 GREEN** — prepare the existing verified successor for release without redesign.
   - **T1.4 Verify GREEN** — run source and installed-wheel harness probes.
-  - **T1.5 REFACTOR** — none; release work must not alter verified behavior.
-  - **T1.6 Verify Task** — package checks, fresh wheel, `scripts/verify.sh --full`, hosted checks, asset parity, recovery-gate check, authorized publication and closure.
+  - **T1.5 REFACTOR** — none; tracker closeout must not alter published release artifacts or verified behavior.
+  - **T1.6 Verify Task** — verify the recorded package, full, hosted, and asset evidence; close #80 and synchronize tracker/handoff documents.
 
 ### Phase P2: Agent Handoff Authority Train
 
 #### T2: Correct enrichment pairing for #75
 
-- **goal:** Attach engine coordinates only to the matching provider rule. · **phase:** P2 · **depends_on:** [T1] · **requirements:** [REQ-075] · **priority:** must
+- **goal:** Attach engine coordinates only to the matching provider rule. · **phase:** P2 · **depends_on:** [T1, T35] · **requirements:** [REQ-075] · **priority:** must
 - **files:** `src/project_standards/agent_handoff/cli.py`, `tests/agent_handoff/test_selected_routing.py`
 - **acceptance:** mixed forbidden/overlong paragraph findings keep correct rule, line, observed value, and limit regardless of order.
 - **sub-tasks:**
@@ -192,7 +201,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T3: Make legacy inventory lock-aware for #90
 
-- **goal:** Suppress legacy signatures authenticated as current by the applied lock. · **phase:** P2 · **depends_on:** [T1] · **requirements:** [REQ-090] · **priority:** must
+- **goal:** Suppress legacy signatures authenticated as current by the applied lock. · **phase:** P2 · **depends_on:** [T1, T35] · **requirements:** [REQ-090] · **priority:** must
 - **files:** `src/project_standards/agent_handoff/legacy.py`, routing code, legacy/routing tests
 - **acceptance:** managed hook/registration evidence is clean while unowned duplicates remain visible.
 - **sub-tasks:**
@@ -244,7 +253,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T7: Align secret-reference policy for #107
 
-- **goal:** Apply the owner-selected uppercase-reference policy in engine and provider. · **phase:** P2 · **depends_on:** [T1] · **requirements:** [REQ-107] · **priority:** must
+- **goal:** Apply the owner-selected uppercase-reference policy in engine and provider. · **phase:** P2 · **depends_on:** [T1, T35] · **requirements:** [REQ-107] · **priority:** must
 - **files:** `src/project_standards/agent_handoff/policy.py`, successor provider, parity tests
 - **acceptance:** env-reference and command-substitution cases produce identical safe findings; compatibility impact is documented.
 - **sub-tasks:**
@@ -272,7 +281,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T9: Correct absent-artifact planning for #76/#77
 
-- **goal:** Create empty managed files and converge create-only→managed absent targets in one apply. · **phase:** P3 · **depends_on:** [T8] · **requirements:** [REQ-076, REQ-077] · **priority:** must
+- **goal:** Create empty managed files and converge create-only→managed absent targets in one apply. · **phase:** P3 · **depends_on:** [T30] · **requirements:** [REQ-076, REQ-077] · **priority:** must
 - **files:** `src/project_standards/control_plane/planner.py`, planner/executor tests
 - **acceptance:** empty `py.typed`/`.gitkeep` and deleted-container policy transitions converge while verification stays fail-closed.
 - **sub-tasks:**
@@ -285,7 +294,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T10: Supply V4 transform evidence for #83
 
-- **goal:** Produce a Python Tooling migration plan or actionable package-specific finding. · **phase:** P3 · **depends_on:** [T8] · **requirements:** [REQ-083] · **priority:** must
+- **goal:** Produce a Python Tooling migration plan or actionable package-specific finding. · **phase:** P3 · **depends_on:** [T30] · **requirements:** [REQ-083] · **priority:** must
 - **files:** `src/project_standards/control_plane/migration.py`, evidence models, V4 fixtures/tests
 - **acceptance:** the issue fixture previews in human/JSON modes; missing evidence names package, transform, input, and safe action.
 - **sub-tasks:**
@@ -348,24 +357,17 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
   - **T14.5 REFACTOR** — centralize post-deletion whitespace analysis.
   - **T14.6 Verify Task** — JSONC/control-plane tests and `scripts/verify.sh`.
 
-#### T15: Qualify the control-plane train
+#### T15: Superseded control-plane qualifier
 
-- **goal:** Publish T9–T14 together and close seven issues after #84 has a verified disposition. · **phase:** P3 · **depends_on:** [T9, T10, T11, T12, T13, T14, T23] · **requirements:** [REQ-900] · **priority:** must
-- **files:** regression ledger, release/version/handoff docs
-- **acceptance:** original reproductions, the #84 disposition, compatibility matrix, full gate, hosted checks, assets, recovery decision, and closures verify.
-- **sub-tasks:**
-  - **T15.1 RED** — run original reproductions against the prior release.
-  - **T15.2 Verify RED** — map failures to train regressions.
-  - **T15.3 GREEN** — prepare release metadata only.
-  - **T15.4 Verify GREEN** — run fresh candidate migration/adapter/planner probes.
-  - **T15.5 REFACTOR** — generated normalization only.
-  - **T15.6 Verify Task** — `scripts/verify.sh --full`, release/hosted/artifact proof, §8.1 recovery-gate check, authorized publication and closure.
+- **goal:** Preserve the retired intermediate control-plane release boundary. · **phase:** P3 · **depends_on:** [T9, T10, T11, T12, T13, T14, T23] · **requirements:** [] · **priority:** must
+- **superseded_by:** T35 under the owner-approved 2026-08-02 v5.15.0 boundary.
+- **acceptance:** do not execute or publish an intermediate control-plane release; T35 owns combined qualification and closure.
 
 ### Phase P4: Tooling Scope and Configuration Train
 
 #### T16: Bound Markdown formatting scope for #88
 
-- **goal:** Make local/workflow Prettier commands select only configured Markdown/structured text. · **phase:** P4 · **depends_on:** [T15] · **requirements:** [REQ-088] · **priority:** must
+- **goal:** Make local/workflow Prettier commands select only configured Markdown/structured text. · **phase:** P4 · **depends_on:** [T35] · **requirements:** [REQ-088] · **priority:** must
 - **files:** Markdown Tooling successor provider/docs and real-tool tests
 - **acceptance:** languages and ignored scratch outside configured globs are never traversed.
 - **sub-tasks:**
@@ -378,7 +380,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T17: Fix Python import precedence for #89
 
-- **goal:** Resolve managed `src` code as first-party typed source. · **phase:** P4 · **depends_on:** [T15] · **requirements:** [REQ-089] · **priority:** must
+- **goal:** Resolve managed `src` code as first-party typed source. · **phase:** P4 · **depends_on:** [T9, T10, T11, T12, T13, T14] · **requirements:** [REQ-089] · **priority:** must
 - **files:** Python Tooling successor provider/schema/docs and BasedPyright tests
 - **acceptance:** strict tests do not resolve an untyped editable install first; other layouts remain compatible.
 - **sub-tasks:**
@@ -391,7 +393,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T18: Bound Ruff scope for #95
 
-- **goal:** Select only declared first-party source/test roots. · **phase:** P4 · **depends_on:** [T15] · **requirements:** [REQ-095] · **priority:** must
+- **goal:** Select only declared first-party source/test roots. · **phase:** P4 · **depends_on:** [T9, T10, T11, T12, T13, T14] · **requirements:** [REQ-095] · **priority:** must
 - **files:** Python Tooling successor provider/docs/scripts/workflows and Ruff tests
 - **acceptance:** nested projects and undeclared scripts remain untouched; every declared root is covered.
 - **sub-tasks:**
@@ -404,7 +406,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T19: Preserve Ruff plugin configuration for #99
 
-- **goal:** Keep undeclared plugin sub-tables consumer-owned or expose a bounded typed option. · **phase:** P4 · **depends_on:** [T18] · **requirements:** [REQ-099] · **priority:** must
+- **goal:** Keep undeclared plugin sub-tables consumer-owned or expose a bounded typed option. · **phase:** P4 · **depends_on:** [T35] · **requirements:** [REQ-099] · **priority:** must
 - **files:** Python Tooling successor provider/schema/docs and ownership tests
 - **acceptance:** Typer's targeted B008 configuration reconciles without global suppression, source churn, or split-file workaround.
 - **sub-tasks:**
@@ -417,7 +419,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T20: Add a no-implicit-root layout for #86
 
-- **goal:** Support explicit roots without forcing `src` or `.` and reject empty unsuitable configurations. · **phase:** P4 · **depends_on:** [T17, T18, T19] · **requirements:** [REQ-086] · **priority:** must
+- **goal:** Support explicit roots without forcing `src` or `.` and reject empty unsuitable configurations. · **phase:** P4 · **depends_on:** [T17, T18] · **requirements:** [REQ-086] · **priority:** must
 - **files:** Python Tooling successor schema/provider/docs/migration and monorepo tests
 - **acceptance:** explicit-root consumers get a bounded gate; src/flat predecessors remain unchanged.
 - **sub-tasks:**
@@ -428,18 +430,11 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
   - **T20.5 REFACTOR** — use one normalized root model.
   - **T20.6 Verify Task** — package/real-tool tests and `scripts/verify.sh`.
 
-#### T21: Qualify tooling successors
+#### T21: Superseded tooling qualifier
 
-- **goal:** Publish T16–T20, T31, and T33 in one repository release and close six issues. · **phase:** P4 · **depends_on:** [T16, T17, T18, T19, T20, T31, T33] · **requirements:** [REQ-900] · **priority:** must
-- **files:** family indexes, catalog/projection/lock, ledger, release/handoff docs
-- **acceptance:** predecessors, corrected Python Tooling authority and fresh-adoption preflight, real-tool scopes, full gate, hosted checks, assets, recovery decision, and six closures verify.
-- **sub-tasks:**
-  - **T21.1 RED** — run six reproductions against prior defaults.
-  - **T21.2 Verify RED** — map failures to successor tests.
-  - **T21.3 GREEN** — activate successors/release metadata.
-  - **T21.4 Verify GREEN** — run package/candidate consumer probes.
-  - **T21.5 REFACTOR** — generated normalization only.
-  - **T21.6 Verify Task** — `scripts/verify.sh --full`, release/hosted/artifact proof, §8.1 recovery-gate check, authorized publication and closure.
+- **goal:** Preserve the retired six-issue tooling release boundary. · **phase:** P4 · **depends_on:** [T16, T17, T18, T19, T20, T31, T33] · **requirements:** [] · **priority:** must
+- **superseded_by:** T35 for the selected v5.15.0 Python Tooling work and T36 for deferred issues #88/#99.
+- **acceptance:** do not execute; T35 and T36 own the replacement release boundaries and their qualification evidence.
 
 ### Phase P5: Documentation and Pre-Release Investigation
 
@@ -458,9 +453,9 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T23: Dispose of the PyYAML transient for #84
 
-- **goal:** Reproduce a repository-owned defect and fix it, or record a bounded no-reproduction disposition before the control-plane release. · **phase:** P5 · **depends_on:** [T8] · **requirements:** [REQ-084] · **priority:** should
+- **goal:** Reproduce a repository-owned defect and fix it, or record a bounded no-reproduction disposition before v5.15.0. · **phase:** P5 · **depends_on:** [T30] · **requirements:** [REQ-084] · **priority:** must
 - **files:** isolated reproduction harness; source/tests only after proven cause
-- **acceptance:** fresh installs, concurrent install/launch, and repeated paired previews establish cause or a documented threshold; T15 remains blocked until the evidence-backed disposition is accepted.
+- **acceptance:** fresh installs, concurrent install/launch, and repeated paired previews establish cause or a documented threshold; T35 remains blocked until the evidence-backed disposition is accepted.
 - **sub-tasks:**
   - **T23.1 RED** — run the bounded isolated matrix.
   - **T23.2 Verify RED** — prove missing/partial installed bytes if reproduced.
@@ -473,7 +468,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 #### T24: Specify conformance linting for #62
 
-- **goal:** Approve exact surfaces, phrasing policy, compatibility mode, and rollout. · **phase:** P6 · **depends_on:** [T21] · **requirements:** [REQ-062] · **priority:** should
+- **goal:** Approve exact surfaces, phrasing policy, compatibility mode, and rollout. · **phase:** P6 · **depends_on:** [T36] · **requirements:** [REQ-062] · **priority:** should
 - **files:** new `docs/specs/` specification, child `docs/plans/` plan, issue #62
 - **acceptance:** byte-exact/structural/advisory checks and existing-consumer impact are explicit and reviewed.
 - **sub-tasks:**
@@ -572,8 +567,8 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 #### T31: Correct the Python Tooling successor's authority statement
 
 - **goal:** Make the already-planned compatible Python Tooling successor state the current V5 package/control-plane authority without altering immutable 1.10. · **phase:** P9 · **depends_on:** [T20, T30] · **requirements:** [REQ-903] · **priority:** must
-- **files:** planned Python Tooling successor README and focused package-contract test; activation remains in T21
-- **acceptance:** Python Tooling 1.10 remains byte-identical; its planned successor contains no claim that the V1 root manifest is current authority, consistently identifies the selected V5 package/control plane as authoritative, and is activated and qualified by T21 rather than a separate release train.
+- **files:** planned Python Tooling successor README and focused package-contract test; activation remains in T35
+- **acceptance:** Python Tooling 1.10 remains byte-identical; its planned successor contains no claim that the V1 root manifest is current authority, consistently identifies the selected V5 package/control plane as authoritative, and is activated and qualified by T35 rather than a separate release train.
 - **sub-tasks:**
   - **T31.1 RED** — add a successor contract test that rejects the stale V1-authority statement and requires the current V5 authority statement.
   - **T31.2 Verify RED** — confirm the planned successor still carries the copied 1.10 contradiction.
@@ -598,7 +593,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 #### T33: Guard Python Tooling fresh adoption for #109
 
 - **goal:** Reject fresh adoption before any write when Python Tooling would create `pyproject.toml` without consumer-owned PEP 621 project metadata. · **phase:** P9 · **depends_on:** [T20, T31] · **requirements:** [REQ-109] · **priority:** must
-- **files:** planned Python Tooling successor provider/findings/docs, package-contract and real-uv consumer fixtures; activation remains in T21
+- **files:** planned Python Tooling successor provider/findings/docs, package-contract and real-uv consumer fixtures; activation remains in T35
 - **acceptance:** an absent `pyproject.toml` or missing `[project]` table produces an actionable no-write finding that names the required consumer decision and installable/non-installable routes; existing valid `[project]` metadata is preserved; the documented apply → `uv lock` flow succeeds with the lock-resolved uv version; Python Tooling 1.10 remains byte-identical.
 - **sub-tasks:**
   - **T33.1 RED** — add fresh installable and non-installable fixtures that currently reconcile a tool-only `pyproject.toml` and fail `uv lock`.
@@ -608,15 +603,56 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
   - **T33.5 REFACTOR** — share metadata-presence checks only within the successor boundary; do not add project-identity inference.
   - **T33.6 Verify Task** — run Python Tooling package/real-uv tests, predecessor-byte checks, package contracts, and `scripts/verify.sh`.
 
+### Phase P10: Owner-Approved v5.15.0 Boundary
+
+#### T34: Verify the CLI Documentation 1.6 candidate
+
+- **goal:** Review and qualify the existing CLI Documentation 1.6 candidate for inclusion in v5.15.0 without redesigning or overwriting unrelated in-flight work. · **phase:** P10 · **depends_on:** [T30] · **requirements:** [REQ-906] · **priority:** must
+- **files:** existing CLI Documentation 1.6 family/payload/projection/test changes; T35 owns final catalog, release, and handoff aggregation
+- **acceptance:** 1.5 remains byte-identical/selectable; 1.6's Python, Go, and generic profiles validate; the Go workflow builds one explicit package and verifies the built command; package, graph, schema, projection, Markdown, and focused real-tool checks pass; any correction stays within the candidate contract.
+- **sub-tasks:**
+  - **T34.0 CHARACTERIZE** — inventory the in-flight candidate, its prior task evidence, shared-file ownership, and any unverified surface.
+  - **T34.1 RED** — prove CLI Documentation 1.5 lacks the approved Go contract and exercise candidate negative controls.
+  - **T34.2 Verify RED** — distinguish predecessor behavior and intentional negative controls from candidate defects.
+  - **T34.3 GREEN** — preserve the existing candidate or apply only evidence-required corrections within its approved contract.
+  - **T34.4 Verify GREEN** — run provider, workflow, Go, predecessor-byte, package, and projection matrices.
+  - **T34.5 REFACTOR** — none unless candidate verification exposes duplicated contract material.
+  - **T34.6 Verify Task** — run focused tests, package/graph/schema/projection checks, Markdown gates, and `scripts/verify.sh`.
+
+#### T35: Qualify and publish v5.15.0
+
+- **goal:** Publish the owner-approved combined v5.15.0 release and close or disposition its twelve selected issues. · **phase:** P10 · **depends_on:** [T9, T10, T11, T12, T13, T14, T17, T18, T20, T23, T31, T33, T34] · **requirements:** [REQ-900, REQ-905, REQ-906] · **priority:** must
+- **files:** release metadata, family indexes, catalog/projection/lock, regression ledger, changelog/roadmap/status/TODO/handoff, GitHub issues and release assets after explicit authorization
+- **acceptance:** prior-release reproductions fail for the expected reasons; every selected correction and accepted #84 disposition passes source, candidate-wheel, installed, migration, adapter, real-tool, and predecessor-byte proofs; CLI Documentation 1.6 and the Python Tooling successor are advertised without altering predecessors; full local and hosted gates pass; signed tags and byte-verified assets are published only after authorization; issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109 close or receive the accepted disposition.
+- **sub-tasks:**
+  - **T35.1 RED** — run the twelve issue reproductions and CLI Documentation predecessor controls against v5.14.0.
+  - **T35.2 Verify RED** — map each failure or #84 non-reproduction threshold to its owning task evidence.
+  - **T35.3 GREEN** — aggregate the approved successors and engine corrections into v5.15.0 release metadata.
+  - **T35.4 Verify GREEN** — run source, fresh candidate-wheel, installed consumer, migration, adapter, and real-tool probes.
+  - **T35.5 REFACTOR** — generated normalization only; do not broaden the approved release surface.
+  - **T35.6 Verify Task** — run `scripts/verify.sh --full`, package/graph/schema/projection/release checks, hosted checks, artifact parity, §8.1 recovery gate, authorized publication, and issue closure.
+
+#### T36: Qualify deferred tooling successors
+
+- **goal:** Publish the post-v5.15.0 Markdown/Python Tooling successors for deferred issues #88 and #99. · **phase:** P10 · **depends_on:** [T16, T19] · **requirements:** [REQ-900] · **priority:** must
+- **files:** family indexes, catalog/projection/lock, regression ledger, release/handoff docs, issue #88 and issue #99
+- **acceptance:** v5.15.0 and every predecessor remain byte-identical/selectable; the bounded Prettier corpus and Ruff plugin-ownership contracts pass source/candidate/installed proofs; full and hosted gates pass; publication and both closures follow explicit authorization.
+- **sub-tasks:**
+  - **T36.1 RED** — run #88/#99 reproductions against v5.15.0 defaults.
+  - **T36.2 Verify RED** — map failures to T16/T19 evidence.
+  - **T36.3 GREEN** — activate only the two deferred successors and release metadata.
+  - **T36.4 Verify GREEN** — run package, real-tool, candidate, and installed probes.
+  - **T36.5 REFACTOR** — generated normalization only.
+  - **T36.6 Verify Task** — run the full release battery, hosted checks, asset parity, §8.1 recovery gate, authorized publication, and issue closure.
+
 ## 8. Release Boundaries and Effort
 
 | Release/train | Issues | Active effort |
 | --- | --- | --: |
-| A — ready fix | #80; #108 may ride | 0.5–1.5 days |
-| B — Agent Handoff authority | #75, #90, #91, #101, #102, #107 | 10–20 days |
-| C — control plane | #76, #77, #83, #87, #98, #105, #106 | 18–31 days |
-| D — tooling successors | #86, #88, #89, #95, #99, #109 | 14–26 days |
-| Pre-release investigation | #84 | 1–2 days before fix estimate |
+| Published v5.14.0 follow-through | #80 tracker closeout; #108 documentation | 0.25–0.5 days |
+| v5.15.0 — combined correction release | #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, #109; CLI Documentation 1.6 | Rebaseline after T23/T34 |
+| B — Agent Handoff authority, after v5.15.0 | #75, #90, #91, #101, #102, #107 | 10–20 days |
+| D2 — deferred tooling successors | #88, #99 | Rebaseline after v5.15.0 |
 | E — conformance feature | #62 | 5–10 days after approval |
 | F — conversion feature | #55 | 10–20 days after approval |
 | Owner TODOs | Release policy, Python Tooling authority, Agent Handoff retirement | 1–3 days plus protected-branch review latency |
@@ -633,6 +669,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 | --- | --- | --- |
 | Catalog release classification | T30 | **Resolved:** owner designation is the only MAJOR route; a newly introduced package or newly advertised version above that package's prior maximum is exactly MINOR; no such advance is exactly PATCH. Internal/reference-only advances count; older retained history and unadvertised payloads do not. Advertised versions are permanent even across MAJOR releases. This replaces the prior highest-severity and previously-passing override rules and amends ADR 0024. |
 | Python Tooling fresh adoption | T33 | **Resolved:** preserve consumer ownership of `[project]`; reject before writing and guide installable/non-installable setup instead of generating or inferring identity. |
+| v5.15.0 release boundary | T35 | **Resolved:** one release contains CLI Documentation 1.6 and issues #76, #77, #83, #84, #86, #87, #89, #95, #98, #105, #106, and #109; #88/#99 follow later. |
 | Bare uppercase references | T7 | Preserve explicit env-var references; reject command-substitution laundering. |
 | Desired-state versus reordered reports | T5 | Prefer desired-state read-only reports if provenance stays fail-closed. |
 | Ruff sub-table ownership | T19 | Prefer consumer ownership for undeclared plugin keys. |
@@ -643,7 +680,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 | ID | Risk | Mitigation | Owner task |
 | --- | --- | --- | --- |
-| R-001 | One giant train becomes unreviewable. | Fixed release boundaries and one issue regression per task. | T8, T15, T21 |
+| R-001 | The combined v5.15.0 train becomes unreviewable. | Keep one issue regression per task, prohibit intermediate publication, and aggregate only in T35 after task-local gates. | T9–T14, T17, T18, T20, T23, T31, T33–T35 |
 | R-002 | Predecessor bytes drift. | Successor-only package edits and byte gates. | Qualification tasks |
 | R-003 | #55/#62 block corrections. | Separate post-correction approval gates. | T24–T27 |
 | R-004 | Adapter cleanup damages consumer bytes. | Layout/property matrices and byte controls. | T13, T14 |
@@ -652,8 +689,9 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 | R-007 | Release semantics accidentally weaken immutable-package or catalog-history enforcement. | Separate level selection from forbidden findings, retain the mutation matrix, forbid advertised-version removal and downgrade, and amend ADR 0024 in the same task. | T30 |
 | R-008 | Small consumer retirement expands into generalized migration work. | Limit T32 to the two named consumers and manual verified updates. | T32 |
 | R-009 | A compatibility-breaking correction receives MINOR because the owner has not designated MAJOR. | Present the change surface at every release gate and require an explicit owner MAJOR decision before publication; never infer MAJOR in tooling. | Qualification tasks |
-| R-010 | A release fails after metadata preparation or publication. | Apply §8.1; preserve immutable artifacts and issue a fully requalified successor. | T1, T8, T15, T21, T28 |
+| R-010 | A release fails after metadata preparation or publication. | Apply §8.1; preserve immutable artifacts and issue a fully requalified successor. | T8, T28, T35, T36 |
 | R-011 | Fresh Python Tooling adoption writes an unusable partial project. | Block before writes when `[project]` is absent and prove the guided valid path with real uv. | T33 |
+| R-012 | Deferred #88/#99 changes leak into v5.15.0 through shared tooling files. | Make T35 reject unapproved Markdown scope or Ruff plugin-ownership changes and hold T16/T19 behind T35. | T16, T19, T35 |
 
 ## 11. Definition of Done
 
@@ -665,6 +703,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 - Status, TODO, handoff, roadmap, changelog, release notes, and GitHub agree.
 - Catalog release-level documentation and `check-release` agree with the owner/package-composition policy.
 - Python Tooling's selected successor contains the corrected V5-authority statement and no-write fresh-adoption guard, and the two remaining Agent Handoff consumers are verified retired.
+- v5.15.0 contains exactly the approved twelve-issue correction set plus CLI Documentation 1.6; #88 and #99 remain open until T36 publishes their successor release.
 - Closeout notes are harvested, this plan is marked complete, and its `.project-pipeline/` directory is removed.
 
 ## 12. Close-out
@@ -679,7 +718,7 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 
 | Test ID | Requirement(s) | Task | Test surface | Type |
 | --- | --- | --- | --- | --- |
-| TC-T1-001 | REQ-080, REQ-900 | T1 | Agent Handoff 1.8 harness probes and release qualification | release regression |
+| TC-T1-001 | REQ-080 | T1 | published Agent Handoff 1.8 regressions, gates, assets, and issue closeout | release evidence |
 | TC-T2-001 | REQ-075 | T2 | enrichment pairing | regression |
 | TC-T3-001 | REQ-090 | T3 | lock-aware legacy inventory | regression |
 | TC-T4-001 | REQ-091 | T4 | old-control-plane routing | integration |
@@ -693,13 +732,13 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 | TC-T12-001 | REQ-098 | T12 | pre-retirement validation | integration |
 | TC-T13-001 | REQ-105 | T13 | TOML CREATE permutations | property/regression |
 | TC-T14-001 | REQ-106 | T14 | JSONC layouts | property/regression |
-| TC-T15-001 | REQ-900 | T15 | control-plane qualification, #84 disposition, and recovery gate | release contract |
+| TC-T15-001 | — | T15 | superseded intermediate control-plane release boundary | superseded by TC-T35-001 |
 | TC-T16-001 | REQ-088 | T16 | Prettier corpus parity | contract |
 | TC-T17-001 | REQ-089 | T17 | BasedPyright resolution | integration |
 | TC-T18-001 | REQ-095 | T18 | Ruff corpus parity | contract |
 | TC-T19-001 | REQ-099 | T19 | Ruff plugin ownership | contract |
 | TC-T20-001 | REQ-086 | T20 | mixed-monorepo reconstruction | integration |
-| TC-T21-001 | REQ-900 | T21 | tooling-successor qualification and recovery gate | release contract |
+| TC-T21-001 | — | T21 | superseded six-issue tooling release boundary | superseded by TC-T35-001/TC-T36-001 |
 | TC-T22-001 | REQ-108 | T22 | release-state docs | contract |
 | TC-T23-001 | REQ-084 | T23 | isolated install matrix | investigation |
 | TC-T24-001 | REQ-062 | T24 | approved conformance specification and child-plan validation | design gate |
@@ -712,6 +751,9 @@ Task IDs are permanent and append-only; `depends_on` is the execution authority 
 | TC-T31-001 | REQ-903 | T31 | Python Tooling successor authority prose and predecessor bytes | package contract |
 | TC-T32-001 | REQ-904 | T32 | two consumer validate/drift and authoritative-branch proof | operational |
 | TC-T33-001 | REQ-109 | T33 | no-write preflight and valid real-uv lock path | contract/integration |
+| TC-T34-001 | REQ-906 | T34 | CLI Documentation 1.6 predecessor/provider/Go workflow matrix | package/integration |
+| TC-T35-001 | REQ-900, REQ-905, REQ-906 | T35 | combined v5.15.0 qualification, recovery, publication, and closure | release contract |
+| TC-T36-001 | REQ-900 | T36 | deferred #88/#99 successor qualification and recovery gate | release contract |
 
 ## Appendix B. Discovered Work Policy
 

@@ -3,7 +3,7 @@ schema_version = "2.0"
 [standard]
 id = "cli-documentation"
 name = "CLI Documentation Standard"
-summary = "Profile-based user-facing CLI help, usage-reference, man-page, and drift-check documentation."
+summary = "Profile-based user-facing CLI help, usage-reference, man-page, shell-completion, and drift-check documentation."
 status = "active"
 
 [[versions]]
@@ -30,3 +30,8 @@ digest = "sha256:8c2f1e9cd6538954d8ace67146133c6864a149ae0a1a97d6aba75560d5ecf34
 version = "1.5"
 payload = "versions/1.5/payload.toml"
 digest = "sha256:90bd59f457ec467da0990bbf89667f534753768be79530c7bfdde9c791d3b618"
+
+[[versions]]
+version = "1.6"
+payload = "versions/1.6/payload.toml"
+digest = "sha256:7c6e609bdccdf526cb1426b817b26efcc5622552138ac5e826d917aad91c09ba"

@@ -1,0 +1,1 @@
+../../../../../../standards/cli-documentation/versions/1.6/providers/cli_documentation.py
