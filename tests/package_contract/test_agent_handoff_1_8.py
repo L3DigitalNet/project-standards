@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -195,7 +196,7 @@ def test_agent_handoff_1_8__rejecting_python_shim__uses_project_independent_uv(
         'printf \'%s\\n\' "$@" >"$UV_ARGUMENTS"\n'
         'while [ "$1" != python3 ]; do shift; done\n'
         "shift\n"
-        'exec /usr/bin/python3 "$@"\n',
+        f'exec {shlex.quote(sys.executable)} "$@"\n',
     )
     _provide_shell_and_git(binaries)
 
@@ -231,7 +232,7 @@ def test_agent_handoff_1_8__valid_python_without_uv__executes_hook_directly(
     _install_hook(repo)
     binaries = tmp_path / "bin"
     binaries.mkdir()
-    (binaries / "python3").symlink_to("/usr/bin/python3")
+    (binaries / "python3").symlink_to(sys.executable)
     _provide_shell_and_git(binaries)
 
     result = _run(_commands()[harness], repo, binaries, harness)
