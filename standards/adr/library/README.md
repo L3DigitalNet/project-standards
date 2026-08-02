@@ -18,6 +18,7 @@ related:
   - 'docs/TODO.md'
   - 'standards/adr/library/development/go-and-python-neutral-tooling.md'
   - 'standards/adr/library/git/branch-integration-and-protection.md'
+  - 'standards/adr/library/repository-organization/archive-archived-material-as-zip.md'
   - 'standards/adr/README.md'
 source: []
 confidence: 'unknown'
@@ -44,3 +45,9 @@ Provides a draft for adopting Go alongside an existing Python implementation whi
 ### [Branch Integration and Protection Strategy](git/branch-integration-and-protection.md)
 
 Provides a draft for a simple `dev`/`main` branch relationship and local Git-hook safeguards intended to prevent ordinary development from being committed directly to `main`.
+
+## Repository organization
+
+### [Archive Archived Material as ZIP Files](repository-organization/archive-archived-material-as-zip.md)
+
+Provides a draft for storing historical material in compressed `.zip` files under a default repository-root `.archived/` path, with a repository-specific alternative allowed.
