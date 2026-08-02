@@ -78,7 +78,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
   Use the approved dedicated-group architecture and hardening program in `docs/research/2026-07-31-self-hosted-runner-security-review.md`.
 
-- [ ] Review and approve the Usage Documentation Site specification set before implementation planning.
+- [ ] Author and approve v5.16.0 Usage Documentation Site specs from the [approved V2 design brief](specs/2026-08-02-usage-documentation-site-v2-design.md).
+
+  Give the new specifications new IDs, dates, and filenames; preserve the original SPEC-U000 through SPEC-U007 bundle and transcript unchanged. Include the compatible CLI Documentation successor needed for a site-contained canonical CLI reference, then review the new set before implementation planning.
 
 - [ ] Specify and release the provider-neutral `project-toolbox` standard, including its proven workflows and routing skill.
   - [ ] After release, design template-repository autopopulation against `project-toolbox`.

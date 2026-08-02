@@ -11,6 +11,7 @@
 - Draft SPEC-GSF3 and its 14-task implementation plan define optional durable document-reference tooling; T1 is ready for a fresh implementation session.
 - Go is supported alongside Python under ADR 0027 with a pinned module, Make gate, VS Code tasks, and path-filtered CI; language selection remains neutral.
 - CLI Documentation 1.6 is an unreleased candidate with language-neutral rules, explicit Go mappings, and a built-executable Go CI profile.
+- Usage Documentation Site V2 has an approved v5.16.0 design; new specs are queued, and SPEC-U000 through SPEC-U007 remain historical input.
 - The approved v5.15.0 boundary combines CLI Documentation 1.6 with twelve control-plane, migration, and Python Tooling issues; 5.14.0 remains published truth.
 - v5.15.0 implementation is prepared but no task has started: the repository plan bridge lacks the `state` command required by `execute-plan`.
 - Self-hosted CI was deferred by owner decision; the reviewed future design belongs to `agent-managed-repo` governance.
