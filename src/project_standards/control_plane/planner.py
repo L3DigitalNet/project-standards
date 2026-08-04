@@ -1305,6 +1305,15 @@ def _classify_desired(
             message="locked unit identity does not match the selected declaration",
         )
     if previous.policy is ArtifactPolicy.CREATE_ONLY:
+        # The desired payload policy governs classification; the locked policy
+        # is history. On a create-only→managed flip whose unit is absent, the
+        # managed declaration must be recreated in the same cycle (issue #76):
+        # keeping PRESERVE here while absence detection keys on the current
+        # policy left the unit neither live nor disclaimed, so the lock dropped
+        # it and convergence took a second apply. A present unit still plans
+        # PRESERVE, adopting the consumer's bytes as the managed baseline.
+        if group.policy is not ArtifactPolicy.CREATE_ONLY and current is None:
+            return _unit_plan(ActionKind.CREATE, group, current), None
         return _unit_plan(ActionKind.PRESERVE, group, current), None
     if current is None:
         if entry.kind is EntryKind.MISSING and previous.created_container:
@@ -1420,7 +1429,16 @@ def _target_action(
     remove_container: bool = False,
 ) -> ControlAction:
     if entry.kind is EntryKind.MISSING:
-        kind = ActionKind.CREATE if rendered else ActionKind.NOOP
+        # Empty rendered bytes are not evidence of "nothing to do": a managed
+        # artifact may legitimately declare zero-byte content (`py.typed`,
+        # `.gitkeep` — issue #77). Creation over a missing path is decided by
+        # whether any unit plans CREATE; a disclaimed create-only absence plans
+        # PRESERVE and correctly stays NOOP.
+        kind = (
+            ActionKind.CREATE
+            if rendered or any(unit.kind is ActionKind.CREATE for unit in units)
+            else ActionKind.NOOP
+        )
     elif remove_container or (
         adapter is AdapterKind.WHOLE_FILE
         and rendered == b""

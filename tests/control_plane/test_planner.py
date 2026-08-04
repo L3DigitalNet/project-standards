@@ -32,7 +32,11 @@ from project_standards.control_plane.providers import (
 from project_standards.control_plane.resolution import DeclaredTransition
 from project_standards.control_plane.schemas import ReconciliationPlanSchema
 from project_standards.package_contract.paths import PackageVersion, Sha256Digest
-from project_standards.package_contract.payload import JsonValue, ProviderEffect
+from project_standards.package_contract.payload import (
+    ArtifactPolicy,
+    JsonValue,
+    ProviderEffect,
+)
 from tests.control_plane.planner_helpers import (
     ContributionFixture,
     digest,
@@ -1377,3 +1381,98 @@ def test_consumer_conflict_finding_preserves_json_null_values(tmp_path: Path) ->
     assert "expected" in jsonable and jsonable["expected"] is None
     assert jsonable["actual"] == 2
     assert "null_values" not in jsonable
+
+
+def test_empty_managed_artifact_plans_create_over_missing_path(tmp_path: Path) -> None:
+    """A managed artifact whose declared content is empty still plans CREATE (issue #77).
+
+    `py.typed`-style markers are empty by design. Deciding CREATE by rendered
+    truthiness planned them as NOOP with no after-digest, so the file was never
+    created and apply failed closed (CP-VERIFY) instead of converging.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = write_payload(
+        tmp_path / "payload",
+        "demo",
+        artifacts=[
+            {
+                "id": "marker",
+                "target": "py.typed",
+                "content": b"",
+                "policy": "managed",
+            }
+        ],
+    )
+
+    plan = plan_reconciliation(_request(repo, (payload,)))
+
+    action = _action(plan, "py.typed")
+    assert action.kind is ActionKind.CREATE
+    assert action.after_digest is not None
+    assert plan.proposed_content("py.typed") == b""
+    assert [unit.path.original for unit in plan.next_lock.artifacts] == ["py.typed"]
+
+
+def test_deleted_create_only_target_converges_when_policy_turns_managed(
+    tmp_path: Path,
+) -> None:
+    """A create-only→managed flip over a deleted file plans CREATE in one cycle (issue #76).
+
+    Classification keyed on the locked policy while absence detection keyed on
+    the payload policy, so the flip planned PRESERVE with no absence record and
+    the managed-declared artifact was never recreated; convergence needed a
+    second apply cycle after the lock dropped the unit.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    path = repo / "notes.md"
+    create_only = write_payload(
+        tmp_path / "payload-create-only",
+        "demo",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "create-only",
+            }
+        ],
+    )
+    initial = plan_reconciliation(_request(repo, (create_only,)))
+    path.write_bytes(initial.proposed_content("notes.md"))
+    lock = initial.next_lock
+    path.unlink()
+    managed = write_payload(
+        tmp_path / "payload-managed",
+        "demo",
+        version="1.1",
+        artifacts=[
+            {
+                "id": "notes",
+                "target": "notes.md",
+                "content": b"installed\n",
+                "policy": "managed",
+            }
+        ],
+    )
+
+    flipped = plan_reconciliation(_request(repo, (managed,), lock=lock))
+
+    assert _action(flipped, "notes.md").kind is ActionKind.CREATE
+    assert flipped.proposed_content("notes.md") == b"installed\n"
+    assert flipped.next_lock.create_only_absences == []
+    locked = [unit for unit in flipped.next_lock.artifacts if unit.path.original == "notes.md"]
+    assert len(locked) == 1
+    assert locked[0].policy is ArtifactPolicy.MANAGED
+
+    path.write_bytes(flipped.proposed_content("notes.md"))
+    settled = plan_reconciliation(_request(repo, (managed,), lock=flipped.next_lock))
+
+    # One apply converges: the republished lock is steady state, not a second
+    # mutation cycle.
+    assert settled.next_lock == flipped.next_lock
+    assert all(
+        action.kind not in {ActionKind.CREATE, ActionKind.UPDATE, ActionKind.REMOVE}
+        for action in settled.actions
+    )

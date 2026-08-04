@@ -14,7 +14,7 @@ import pytest
 
 import project_standards.control_plane.executor as executor
 from project_standards.control_plane.codec import parse_lock, render_lock
-from project_standards.control_plane.diagnostics import ControlFinding
+from project_standards.control_plane.diagnostics import ActionKind, ControlFinding
 from project_standards.control_plane.executor import (
     ApplyRequest,
     ApplyResult,
@@ -787,43 +787,42 @@ def _empty_managed_fixture(tmp_path: Path) -> tuple[Path, PlannerRequest, Reconc
     return repo, planner, plan_reconciliation(planner)
 
 
-def test_apply_refuses_an_empty_managed_artifact_that_was_never_written(
+def test_apply_creates_an_empty_managed_artifact_and_locks_it_live(
     tmp_path: Path,
 ) -> None:
-    """An unwritten managed target must never be locked as live (issue #70 follow-up).
+    """An empty managed declaration converges in one apply (issue #77).
 
-    `_target_action` reads `rendered` for truthiness, so a managed artifact whose
-    declared content is zero bytes (`py.typed`, `.gitkeep`, an empty
-    `__init__.py`) plans NOOP with no after-digest over a missing path — the same
-    public action shape a consumer-deleted create-only unit produces. The lock,
-    however, records it as a live artifact with the empty-string digest. Skipping
-    verification on the action shape alone would publish that false lock and then
-    report `drift: false` forever, so the skip must additionally require the plan
-    to disclaim the path.
+    The planner now decides CREATE over a missing path by unit action rather
+    than rendered truthiness, so a zero-byte managed artifact (`py.typed`,
+    `.gitkeep`, an empty `__init__.py`) is staged, written, and locked live in
+    a single cycle. The f476c41 verification predicate is untouched: any plan
+    that still records a live artifact it never staged keeps failing closed.
     """
     repo, planner, plan = _empty_managed_fixture(tmp_path)
     assert not (repo / "py.typed").exists()
+    assert next(action for action in plan.actions if action.target == "py.typed").kind is (
+        ActionKind.CREATE
+    )
     assert [unit.path.original for unit in plan.next_lock.artifacts] == ["py.typed"]
 
     result = _apply(planner, plan)
 
-    assert not result.success
-    assert result.error_code == "CP-VERIFY"
-    assert not result.lock_written
-    assert parse_lock((repo / ".standards/lock.toml").read_bytes()).artifacts == []
-    assert not (repo / "py.typed").exists()
+    assert result.success
+    assert result.lock_written
+    assert (repo / "py.typed").read_bytes() == b""
+    published = parse_lock((repo / ".standards/lock.toml").read_bytes())
+    assert [unit.path.original for unit in published.artifacts] == ["py.typed"]
 
 
-def test_apply_refuses_a_deleted_create_only_target_whose_policy_turned_managed(
+def test_apply_converges_a_deleted_create_only_target_whose_policy_turned_managed(
     tmp_path: Path,
 ) -> None:
-    """A policy flip over a deleted create-only file must not lock a phantom artifact.
+    """A create-only→managed flip over a deleted file converges in one apply (issue #76).
 
-    The unit still classifies PRESERVE from the prior lock's create-only policy,
-    so the target keeps the NOOP-over-missing action shape, but the new managed
-    policy stops the planner recording an absence and `_locked_after` writes a
-    live artifact for bytes that are not on disk. Verification has to fail closed
-    here; only a path the plan records as a create-only absence may be skipped.
+    The desired payload policy now governs classification, so the absent unit
+    plans CREATE instead of PRESERVE-from-history: the managed bytes are
+    recreated, the lock records them live, and no second apply cycle is needed.
+    Only a path the plan records as a create-only absence skips verification.
     """
     repo = tmp_path / "repo"
     control = repo / ".standards"
@@ -861,11 +860,12 @@ def test_apply_refuses_a_deleted_create_only_target_whose_policy_turned_managed(
 
     result = _apply(flipped_planner, flipped)
 
-    assert not result.success
-    assert result.error_code == "CP-VERIFY"
-    assert not result.lock_written
-    assert parse_lock((control / "lock.toml").read_bytes()) == installed.next_lock
-    assert not (repo / "notes.md").exists()
+    assert result.success
+    assert result.lock_written
+    assert (repo / "notes.md").read_bytes() == b"installed\n"
+    published = parse_lock((control / "lock.toml").read_bytes())
+    assert [unit.path.original for unit in published.artifacts] == ["notes.md"]
+    assert published.create_only_absences == []
 
 
 def test_apply_refuses_a_disclaimed_target_that_reappears_before_verification(
