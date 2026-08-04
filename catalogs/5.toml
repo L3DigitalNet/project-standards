@@ -323,6 +323,12 @@ role = "retained"
 id = "python-tooling"
 version = "1.10"
 digest = "sha256:1f397497be8e925d79f46003d7297813a7d02ea7ff0112cf523354e0a4300398"
+role = "retained"
+
+[[packages]]
+id = "python-tooling"
+version = "1.11"
+digest = "sha256:5ec38129faa09997ba73c4c7009d938de54e14e2bb7d46f6e685d28479a3902f"
 role = "default"
 
 [[packages]]

@@ -293,12 +293,13 @@ def test_python_tooling_1_10__package_registration__succeeds_1_9_without_touchin
     assert successor.integrity.aggregate_digest.value in family
 
 
-def test_python_tooling_1_10__catalog_role__selects_the_successor_as_default() -> None:
-    """Catalog 5 must actually select the successor these tests pin.
+def test_python_tooling_1_10__catalog_role__stays_selectable_as_retained() -> None:
+    """Catalog 5 must keep this payload selectable once a successor takes default.
 
-    The payload can be complete and valid while the catalog still selects its
-    predecessor; only this row makes the successor the default a consumer on
-    `version = "latest"` resolves to.
+    1.11 (issue #89) claimed the default role, so this row now pins the other
+    half of that contract: an advertised version is permanent, so 1.10 and every
+    earlier payload stay resolvable by an explicit selector. The successor's own
+    suite owns the default-role pin.
     """
     catalog = tomllib.loads((_ROOT / "catalogs/5.toml").read_text(encoding="utf-8"))
     roles = {
@@ -307,5 +308,5 @@ def test_python_tooling_1_10__catalog_role__selects_the_successor_as_default() -
         if package["id"] == "python-tooling"
     }
 
-    assert roles["1.10"] == "default"
+    assert roles["1.10"] == "retained"
     assert roles["1.9"] == "retained"
