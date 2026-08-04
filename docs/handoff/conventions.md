@@ -22,6 +22,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 14 | Move TMPDIR, basetemp, and COVERAGE_FILE off /tmp and the repo root | Running a whole-battery pytest |
 | 15 | Go tooling follows the neutral coexistence ADR | Adding or changing Go tooling, CI, or source |
 | 16 | Ownership decides Python lint scope, not byte-locking | Vendoring a file, or triaging a lint finding on immutable bytes |
+| 17 | Naming a supersession replacement pins that task active forever | Retiring a plan task or changing an unfinished acceptance target |
 
 ## 1. Dogfood the standards
 
@@ -302,3 +303,22 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 **Sources:** 2026-08-04 session; `pyproject.toml`; `e1ea40a6`.
 
 **Related:** 1, 5, 7, 11.
+
+## 17. Naming a supersession replacement pins that task active forever
+
+**Applies when:** retiring a plan task, or changing an unfinished acceptance target.
+
+**Rule:** before naming task X in another task's `superseded_by`, accept that X can never itself be retired.
+
+- A superseded task's replacement must be active and terminal history is immutable, so the pointer freezes X active for the life of the plan.
+- An active task's acceptance may not change without supersession, so a pinned task's acceptance is frozen too.
+- Widen a pinned task's `depends_on` instead — that changes what a release contains, not what it must prove — and append a task to own the new acceptance.
+- Retire straight to the live replacement; a chain must terminate at an active task.
+
+**Why:** the rules are individually reasonable and jointly binding. Revision 4 tried to retire T35 and re-issue it widened, but T15 had named T35 its replacement in revision 3, which made T35 un-retirable.
+
+**Gotcha:** `blocked` returns only to `in-progress` or `skipped`, never `not-started`. A task blocked on a decision resolved while its dependencies are still incomplete keeps stale blocker text.
+
+**Sources:** 2026-08-04 session; `scripts/plan.py` `_TRANSITIONS`; plan revision 4.
+
+**Related:** 13, 16.
