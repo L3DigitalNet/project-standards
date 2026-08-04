@@ -72,7 +72,7 @@ An exact known workflow migrates according to the selected ownership. An unknown
 
 Instruction and shared configuration targets (`CLAUDE.md`, `AGENTS.md`, `.editorconfig`, `.vscode/extensions.json`, `.vscode/settings.json`, `.vscode/tasks.json`) declare `unknown_content_disposition = "preserve"`: consumer-modified content at those paths is preserved instead of blocking, the preview reports a `CP-MIGRATION-BOUNDED-TAKEOVER` warning per file, and steady-state reconciliation manages only the bounded package-owned units inside the preserved file. Superseded V1 boilerplate inside a preserved file is left for the consumer to remove. Modified `scripts/check.py`, `.python-version`, or a modified managed workflow remains blocking.
 
-The V1 root family manifest remains authoritative in this source checkout until the atomic v5 release commit.
+The selected V5 package payload and the `.standards/` control plane are the sole package authority; the retired V1 root family manifest has no remaining authority.
 
 ## Update process
 

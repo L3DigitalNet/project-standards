@@ -495,3 +495,21 @@ def test_python_tooling_1_11__managed_ruff_format__rewrites_only_declared_roots(
         f"{_TOOLING_ROOT}/helper.py",
     ):
         assert (repo / relative).read_bytes() != before[relative], relative
+
+
+def test_python_tooling_1_11__authority_statement__names_the_v5_control_plane() -> None:
+    """The successor must not repeat 1.10's stale V1-authority claim (REQ-903).
+
+    1.10 (authored pre-release) states the V1 root family manifest remains
+    authoritative "until the atomic v5 release commit" — a contradiction once
+    copied into a successor that ships long after v5. The successor's authority
+    statement must name the selected V5 package payload and the `.standards/`
+    control plane instead. 1.10 itself keeps its exact bytes.
+    """
+    readme = (_V111 / "README.md").read_text(encoding="utf-8")
+    assert "remains authoritative in this source checkout" not in readme
+    assert "V1 root family manifest" not in readme or "no remaining authority" in readme
+    assert ".standards/" in readme
+    assert "selected" in readme and "payload" in readme
+    predecessor = (_V110 / "README.md").read_text(encoding="utf-8")
+    assert "The V1 root family manifest remains authoritative" in predecessor
