@@ -74,6 +74,7 @@ from project_standards.package_contract.payload import (
     ProviderEffect,
     ProviderOperation,
 )
+from project_standards.validate_id import validate_id
 from tests.control_plane.helpers import installed_distribution
 from tests.control_plane.planner_helpers import previous_lock, resolution_request, write_payload
 from tests.package_compatibility.matrix import source_distribution
@@ -2570,6 +2571,91 @@ def test_provider_config_is_validated_against_the_selected_payload_schema(
         and finding.hint == "correct the legacy values or the migration provider mapping"
         for finding in plan.findings
     )
+
+
+_LEGACY_FRONTMATTER_CONFIG = """\
+standards_version: v4
+markdown:
+  frontmatter:
+    version: "1.1"
+    schema: markdown-frontmatter
+    required: true
+    include: ["README.md", "docs/**/*.md"]
+"""
+
+# V1-era identifiers: schema-valid strings that predate the selected package's
+# {doc_type}-{base36-6}-{slug} contract, so legacy validation passes them.
+_LEGACY_FRONTMATTER_CORPUS = {
+    "README.md": ("index", "my-old-readme", "Project"),
+    "docs/guide.md": ("note", "old-guide", "Guide"),
+}
+
+
+def _legacy_frontmatter_document(doc_type: str, identifier: str, title: str) -> bytes:
+    return (
+        "---\n"
+        'schema_version: "1.1"\n'
+        f"id: {identifier}\n"
+        f"title: {title}\n"
+        "description: Legacy corpus document predating the current id contract.\n"
+        f"doc_type: {doc_type}\n"
+        "status: active\n"
+        "created: 2026-01-15\n"
+        "updated: 2026-01-15\n"
+        "tags: []\n"
+        "aliases: []\n"
+        "related: []\n"
+        "---\n"
+        "\n"
+        f"# {title}\n"
+    ).encode()
+
+
+def _legacy_frontmatter_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "frontmatter-consumer"
+    (repo / "docs").mkdir(parents=True)
+    (repo / ".project-standards.yml").write_text(_LEGACY_FRONTMATTER_CONFIG, encoding="utf-8")
+    for path, (doc_type, identifier, title) in _LEGACY_FRONTMATTER_CORPUS.items():
+        (repo / path).write_bytes(_legacy_frontmatter_document(doc_type, identifier, title))
+    return repo
+
+
+# Issue #98: the selected package declares a validate provider that migration
+# never invokes, so a corpus the legacy validator accepts migrates with exit 0,
+# retires legacy authority, publishes the unified lock — and fails the package's
+# own required validation immediately afterwards. The complete validation
+# contract must run before retirement, blocking the plan with reviewed repair
+# guidance and changing no consumer document.
+def test_legacy_frontmatter_migration_blocks_on_the_selected_id_contract(
+    tmp_path: Path,
+) -> None:
+    distribution = source_distribution(tmp_path / "distribution")
+    repo = _legacy_frontmatter_repo(tmp_path)
+    before = _tree(repo)
+    assert all(
+        validate_id(identifier, doc_type)
+        for doc_type, identifier, _title in _LEGACY_FRONTMATTER_CORPUS.values()
+    )
+
+    plan = plan_legacy_migration(repo, distribution, "5")
+
+    assert not plan.applicable
+    blocking = [
+        finding
+        for finding in plan.findings
+        if finding.standard_id == "markdown-frontmatter" and finding.severity == "error"
+    ]
+    assert set(_LEGACY_FRONTMATTER_CORPUS) <= {finding.path for finding in blocking}
+    for path in _LEGACY_FRONTMATTER_CORPUS:
+        guidance = " ".join(
+            f"{finding.message} {finding.hint}" for finding in blocking if finding.path == path
+        )
+        assert "id" in guidance.lower()
+        assert "project-standards fix" in guidance
+    assert apply_legacy_migration(plan).error_code == "CP-STALE-PLAN"
+    assert not (repo / ".standards").exists()
+    assert (repo / ".project-standards.yml").exists()
+    assert _tree(repo) == before
 
 
 def test_overlapping_provider_discovery_results_block_the_package(

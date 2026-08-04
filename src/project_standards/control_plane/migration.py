@@ -70,7 +70,11 @@ from project_standards.control_plane.resolution import (
     ResolutionPayload,
     ResolutionRequest,
 )
-from project_standards.control_plane.state import StateKind, detect_control_plane_state
+from project_standards.control_plane.state import (
+    ControlPlaneState,
+    StateKind,
+    detect_control_plane_state,
+)
 from project_standards.package_contract.catalog import CatalogRole
 from project_standards.package_contract.diagnostics import PackageContractError
 from project_standards.package_contract.family import KebabId, StrictModel
@@ -1786,6 +1790,105 @@ def _control_file_actions(
     return tuple(sort_actions(actions))
 
 
+def _validate_selected_packages(
+    repo: Path,
+    reconciliation: ReconciliationPlan,
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+    *,
+    state: ControlPlaneState,
+    distribution: InstalledDistribution,
+) -> tuple[ControlFinding, ...]:
+    """Run every selected package's declared validation before legacy retirement.
+
+    Issue #98: migration published the unified lock and retired legacy authority
+    while the selected payload's own validate providers had never run, so a green
+    apply could be followed immediately by a failing `project-standards validate`
+    on documents the legacy validator accepted. Planning is the last point before
+    any write, and `next_lock` is the lock apply would publish, so each package's
+    declared corpus — including locked referenced inputs such as a custom
+    frontmatter schema — resolves exactly as it will after retirement.
+
+    Findings arrive already typed from the provider runner and are surfaced
+    verbatim rather than through the legacy-state rewrite above: the provider's
+    own remediation is the operator's repair path, and this seam only reports.
+    It never applies a fix or touches a consumer document.
+    """
+    # Deferred for the import cycle the executor documents at its own dispatch
+    # site: provider_inputs imports command_resolution, which imports the CLI.
+    from project_standards.control_plane.command_resolution import (
+        CommandResolutionError,
+        SelectedCommandPackage,
+        invoke_selected_provider,
+    )
+    from project_standards.control_plane.provider_inputs import (
+        NoDeclaredProviderInput,
+        provider_dispatch_input,
+    )
+
+    findings: list[ControlFinding] = []
+    for package in reconciliation.resolution.packages:
+        version = package.applied.resolved
+        payload = payloads.get((package.standard_id, version.value))
+        if payload is None:
+            continue
+        selected = SelectedCommandPackage(
+            repo=repo,
+            payload=payload,
+            resolved=version,
+            effective_config=package.effective_config,
+            lock=reconciliation.next_lock,
+            state=state,
+            distribution=distribution,
+        )
+        for provider in payload.manifest.providers:
+            if provider.operation is not ProviderOperation.VALIDATE:
+                continue
+            try:
+                snapshots = provider_dispatch_input(
+                    selected,
+                    ProviderOperation.VALIDATE,
+                    provider_id=provider.id,
+                )
+                if "documents" not in snapshots:
+                    # The declared input is package-installation state — Agent
+                    # Handoff's hooks, skills, and required layout — rather than a
+                    # consumer corpus. That state does not exist until apply, so
+                    # validating it here would report exactly the gaps this
+                    # migration is about to fill; post-apply verification owns it.
+                    # Only documents, which the package governs but never authors,
+                    # are meaningful before retirement. Deciding on the input this
+                    # seam returned keeps the family table in its one owner.
+                    continue
+                result = invoke_selected_provider(
+                    selected,
+                    ProviderOperation.VALIDATE,
+                    snapshots,
+                    provider_id=provider.id,
+                )
+            except NoDeclaredProviderInput:
+                # No authority declares which corpus this provider reads, so there
+                # is nothing to validate here. That is a gap in the seam's family
+                # table, never evidence about the consumer's repository.
+                continue
+            except CommandResolutionError as exc:
+                # Fail closed: an input this seam cannot build is exactly the state
+                # that used to migrate unvalidated. Report it instead of skipping.
+                findings.append(
+                    _finding(
+                        "CP-MIGRATION-VALIDATE",
+                        path=".project-standards.yml",
+                        identity=provider.id,
+                        standard_id=package.standard_id,
+                        version=version.value,
+                        message=f"selected package validation could not run: {exc.message}",
+                        hint="resolve the reported provider input before migrating",
+                    )
+                )
+                continue
+            findings.extend(result.findings)
+    return tuple(findings)
+
+
 def _plan_legacy_migration(
     repo: Path,
     distribution: InstalledDistribution,
@@ -2036,6 +2139,17 @@ def _plan_legacy_migration(
     replacement_targets = frozenset(target.target for target in reconciliation.targets)
     if reconciliation.applicable and not any(finding.severity == "error" for finding in findings):
         findings.extend(_bounded_orphan_findings(ordered_reports, payloads, replacement_targets))
+        # Last gate before the plan may be declared applicable, and therefore
+        # before any lock publication or legacy retirement (issue #98).
+        findings.extend(
+            _validate_selected_packages(
+                normalized,
+                reconciliation,
+                payloads,
+                state=state,
+                distribution=distribution,
+            )
+        )
     legacy_preconditions = tuple(
         (path, content_digest(content)) for path, content in sorted(legacy_files.items())
     )
