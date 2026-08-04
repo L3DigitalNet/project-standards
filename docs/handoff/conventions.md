@@ -21,6 +21,7 @@ LLM-targeted pattern library for this repo. Check this file before adding a pers
 | 13 | Keep documentation-only closeout proportional | Closing a documentation-only session |
 | 14 | Move TMPDIR, basetemp, and COVERAGE_FILE off /tmp and the repo root | Running a whole-battery pytest |
 | 15 | Go tooling follows the neutral coexistence ADR | Adding or changing Go tooling, CI, or source |
+| 16 | Ownership decides Python lint scope, not byte-locking | Vendoring a file, or triaging a lint finding on immutable bytes |
 
 ## 1. Dogfood the standards
 
@@ -276,3 +277,21 @@ Do not infer permission for Python migration, freeze, retirement, or language pr
 **Sources:** ADR 0027; `go.mod`; `Makefile`; `.golangci.yml`.
 
 **Related:** 3, 5, 6.
+
+## 16. Ownership decides Python lint scope, not byte-locking
+
+**Applies when:** vendoring a file into this repository, or triaging a Ruff finding against bytes that cannot be edited in place.
+
+**Rule:** ask who owns the standard governing the bytes, not whether the bytes are frozen.
+
+- Foreign vendored bytes are excluded in the commit that lands them. `scripts/plan.py` is the byte-identical `plan-authoring` bridge from `agent-configs`; a finding on it is unfixable here and proves nothing about these standards. It is the only `scripts/` entry in `[tool.ruff] extend-exclude`.
+- Bytes governed by a standard this repository owns stay in scope even when immutable. `standards/**` payloads and the deployed `scripts/check.py` are never excluded.
+- Verify identity with `cmp -s` against the source after any tooling change.
+
+**Why:** the dogfood exists so a change to one standard cannot silently break another. A Ruff rule that flags a released payload's provider is that report, and must reach a human; suppressing it makes the repository unable to detect its own cross-standard breakage. A finding on repo-owned bytes is resolvable through the owning payload and reconcile, so it is never unfixable.
+
+**Gotcha:** BasedPyright never covered `scripts/` — `[tool.basedpyright] include` is `src` and `tests`. Confirm a gate's real scope before recording it as a blocker; `docs/STATUS.md` carried a BasedPyright failure that only reproduced when the file was named explicitly, and that false blocker stalled the v5.15.0 preflight.
+
+**Sources:** 2026-08-04 session; `pyproject.toml`; `e1ea40a6`.
+
+**Related:** 1, 5, 7, 11.
