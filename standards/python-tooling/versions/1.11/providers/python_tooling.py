@@ -119,14 +119,37 @@ def _test_paths(config: Mapping[str, object]) -> list[str]:
     return cast("list[str]", resolved)
 
 
-def _layout_root(config: Mapping[str, object]) -> str:
-    """Return the one repository-relative root the declared layout owns."""
+def _layout_root(config: Mapping[str, object]) -> str | None:
+    """Return the one repository-relative root the declared layout owns, if any.
+
+    Issue #86: a mixed monorepo keeps Python only under selected subproject
+    roots, so both published layouts misdescribe it — "src" invents a root that
+    does not exist and "." sweeps every unrelated nested project, and
+    additional_source_roots can only append to either. The "explicit" layout
+    owns no root at all and returns None: it is the one place the three modes
+    differ, so every downstream root list drops the implicit entry and keeps
+    its existing composition rule unchanged.
+    """
     layout = config.get("source_layout")
     if layout == "src":
         return "src"
     if layout == "flat":
         return "."
+    if layout == "explicit":
+        return None
     raise ValueError("config.source_layout is unsupported")
+
+
+def _declared_roots_or_fail(roots: list[str]) -> list[str]:
+    """Refuse a hollow gate: the explicit layout must declare where the code is.
+
+    The option schema already rejects `explicit` without additional_source_roots,
+    so this only guards a caller that reached the provider with unresolved
+    options — a gate over no roots would otherwise render as a clean pass.
+    """
+    if not roots:
+        raise ValueError("config.source_layout explicit requires a declared source root")
+    return roots
 
 
 def _import_roots(config: Mapping[str, object]) -> list[str]:
@@ -144,16 +167,18 @@ def _import_roots(config: Mapping[str, object]) -> list[str]:
     includes them, but tests are not importable package roots, and adding them
     would let a test package shadow a real distribution.
     """
-    roots = [_layout_root(config)]
+    layout_root = _layout_root(config)
+    roots = [] if layout_root is None else [layout_root]
     for root, _coverage in _declared_source_roots(config):
         if root not in roots:
             roots.append(root)
-    return roots
+    return _declared_roots_or_fail(roots)
 
 
 def _source_roots(config: Mapping[str, object]) -> tuple[list[str], list[str]]:
     root = _layout_root(config)
-    include, sources = [root], [root]
+    include: list[str] = [] if root is None else [root]
+    sources: list[str] = list(include)
     # 5.8.0 FR-001..004 / issue #31: pytest collection roots join the checker
     # include (and Ruff src) right after the layout-derived source root, before
     # additional_source_roots, with first-wins dedupe. They never enter
@@ -172,7 +197,7 @@ def _source_roots(config: Mapping[str, object]) -> tuple[list[str], list[str]]:
             include.append(root)
         if coverage and root not in sources:
             sources.append(root)
-    return include, sources
+    return _declared_roots_or_fail(include), sources
 
 
 def _toml_array(values: Sequence[str]) -> str:

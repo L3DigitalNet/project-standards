@@ -27,7 +27,7 @@ The closed option schema controls:
 
 - the independently selected `1.0` or `1.1` consumer contract and supported Python versions;
 - build backend (`uv_build`, `hatchling`, `setuptools`, or the non-installable `none` mode);
-- `src` or flat source layout;
+- `src`, flat, or `explicit` source layout — `explicit` owns no implicit root, so the declared collection roots and `additional_source_roots` entries are the entire gate. It is the mixed-monorepo mode: neither an invented `src` root nor a repository-wide `.` sweep. A repository that selects it must declare at least one `additional_source_roots` entry; an empty declaration fails option resolution rather than planning a gate over nothing.
 - pytest collection roots as `pytest.test_paths` (default `["tests"]`) — they drive pytest `testpaths`, the checker `include`, Ruff `src`, and the VS Code `pytestArgs` in declared order, but never `coverage.run.source` or the checker `extraPaths` on their own;
 - extra first-party source roots as `additional_source_roots` entries — plain strings join the checker `include`, checker `extraPaths`, Ruff `src`, and `coverage.run.source` values, while `{ path = "...", coverage = false }` tables keep a strictly-typed tooling root out of coverage measurement;
 - Ruff line length plus additive include, select, and ignore lists;

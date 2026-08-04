@@ -4,7 +4,7 @@ Python Tooling 1.11 is reconciled by the V5 control plane; do not copy payload f
 
 ## Suitability
 
-Use this package for a Python project that wants one declared uv/build/layout/tooling baseline with managed CI and bounded editor/agent integration. It supports `uv_build`, Hatchling, setuptools, or a deliberately non-installable mode and `src` or flat layouts; select only options that match the repository's deliberate toolchain intent.
+Use this package for a Python project that wants one declared uv/build/layout/tooling baseline with managed CI and bounded editor/agent integration. It supports `uv_build`, Hatchling, setuptools, or a deliberately non-installable mode and `src`, flat, or `explicit` layouts; select only options that match the repository's deliberate toolchain intent.
 
 ## Enable
 
@@ -109,5 +109,6 @@ During a V4 → V5 migration, `.standards/config.toml` does not exist yet: set t
 | Tests live somewhere other than `tests/` (or in more than one directory) | Set `pytest.test_paths` to the collection roots — for example `test_paths = ["qa/unit", "qa/integration"]`. They drive pytest `testpaths`, the checker `include`, the Ruff `src` value, and the VS Code `pytestArgs`, but never `coverage.run.source` on their own. |
 | First-party Python lives outside the layout roots (repository tooling, an extra package root) | Declare each extra root in `additional_source_roots`; it merges after the collection roots into the checker `include`, the Ruff `src` value, and `coverage.run.source`, and after the layout root into the checker `extraPaths`. |
 | The strict gate reports `reportMissingTypeStubs` for the repository's own package | The layout root now renders into the checker `extraPaths`, so local source resolves before the editable installation of the same distribution. Preview and apply 1.11; if the repository owned `extraPaths` itself, move those roots into `additional_source_roots` first. Shipping a `py.typed` marker remains a valid alternative and stays compatible. |
+| Python lives only under selected subprojects and there is no repository-wide Python root | Set `source_layout = "explicit"` and declare every root in `additional_source_roots` plus `pytest.test_paths`. No `src` or `.` root is rendered, so unrelated nested projects and undeclared scripts stay outside the checker, Ruff, coverage, and pytest scopes. The mode requires at least one declared source root; an empty declaration fails option resolution. |
 | An extra root is strictly typed but has no unit tests, so declaring it fails the coverage gate | Declare it as a table with `coverage = false` — for example `additional_source_roots = ["docs/handoff/bugs", { path = "scripts", coverage = false }]`. The root stays in the checker `include` and Ruff `src` values but is excluded from `coverage.run.source`. Plain strings keep the both-scope meaning. |
 | Shared EditorConfig or VS Code unit conflicts | Reconcile only the package-owned semantic property; preserve unrelated consumer settings. |

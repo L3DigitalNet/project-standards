@@ -22,14 +22,14 @@ id = "readme"
 role = "canonical-standard"
 path = "README.md"
 media_type = "text/markdown"
-digest = "sha256:bb18609608ded7be0cb886a6d726b1963a8ad58c3d84584d9da3df29268a8067"
+digest = "sha256:4dafea7aad0297869f37b97298d78f864debee852b163c7fa6da6383973b8241"
 
 [[resources]]
 id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:fcf2659144f854aa24d0ee2954df83da079e75b51b8c94bbb4a1deccd76d133f"
+digest = "sha256:bf75a3d0a4df689c60958c929c37c1d3e0adacf608e320cd4782fd2747d2b524"
 
 [[resources]]
 id = "agent-summary"
@@ -50,7 +50,7 @@ id = "config-schema"
 role = "config-schema"
 path = "config.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:b9061764c45ca05d14e40eafa79170506bb66fce8f14108723fea625ff416cb6"
+digest = "sha256:38ebcd6edeffc18094f19b2c85a78383e21d34ae61a2f675140896d80c123099"
 
 [[resources]]
 id = "python-version-source"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:4e4e2b7908614aa7f187968e5348277335dc5db9bb99d6bdb42c607452cf5bec"
+digest = "sha256:b2789c04e2a5346ac26f1da12aae7b77276cfe26f21689392513490ceedcebf1"
 
 [[resources]]
 id = "config-transform-input"

@@ -13,7 +13,7 @@
 			"enum": ["uv_build", "hatchling", "setuptools", "none"],
 			"default": "uv_build"
 		},
-		"source_layout": { "enum": ["src", "flat"], "default": "src" },
+		"source_layout": { "enum": ["src", "flat", "explicit"], "default": "src" },
 		"additional_source_roots": {
 			"type": "array",
 			"items": {
@@ -218,6 +218,13 @@
 						"properties": { "parallel": { "const": true } }
 					}
 				}
+			}
+		},
+		{
+			"if": { "properties": { "source_layout": { "const": "explicit" } } },
+			"then": {
+				"required": ["additional_source_roots"],
+				"properties": { "additional_source_roots": { "minItems": 1 } }
 			}
 		}
 	]
