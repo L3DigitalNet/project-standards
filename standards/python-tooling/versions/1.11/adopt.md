@@ -6,6 +6,22 @@ Python Tooling 1.11 is reconciled by the V5 control plane; do not copy payload f
 
 Use this package for a Python project that wants one declared uv/build/layout/tooling baseline with managed CI and bounded editor/agent integration. It supports `uv_build`, Hatchling, setuptools, or a deliberately non-installable mode and `src`, flat, or `explicit` layouts; select only options that match the repository's deliberate toolchain intent.
 
+## Prerequisite: consumer-owned project metadata
+
+An installable adoption composes `[dependency-groups]`, `[build-system]`, and `[tool.*]` around metadata this package never authors. Declare the repository's own PEP 621 identity before enabling:
+
+```toml
+[project]
+name = "your-distribution-name"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = []
+```
+
+A repository that is deliberately not a distribution sets `build_backend = "none"` instead and needs no `[project]` table.
+
+Reconcile refuses before writing anything when neither decision is on record — an absent `pyproject.toml` or one with no `[project]` table blocks with `PT-PROJECT-METADATA`, because the alternative is a file the required `uv lock` step below cannot read (issue #109).
+
 ## Enable
 
 Add the package to `.standards/config.toml`:

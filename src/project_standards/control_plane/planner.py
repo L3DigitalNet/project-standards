@@ -2450,6 +2450,71 @@ def _catalog_refresh_target(
     )
 
 
+def _validate_consumer_state(
+    request: PlannerRequest,
+    resolution: ResolutionResult,
+    payloads: Mapping[tuple[str, str], InstalledPayload],
+) -> tuple[ControlFinding, ...]:
+    """Run every selected package's consumer-state validation before any write.
+
+    Issue #109: enabling a package could plan a file the package's own adoption
+    guide cannot use, because nothing consulted the repository state a package
+    depends on but does not own. Planning is the last point before a write, so
+    this is where an unauthorized adoption has to stop.
+
+    Scoping is structural, never by package id: `consumer_state_input` answers
+    only for families whose declared input is repository bytes that exist BEFORE
+    this package writes anything. Installed-state validators (Agent Handoff's
+    hooks and layout) and document-corpus validators would otherwise report the
+    very gaps the pending apply is about to fill, which is the regression T12
+    caught in migration planning. Findings are surfaced verbatim: the provider's
+    own remediation is the operator's decision, not a rewritten summary.
+    """
+    # Deferred for the import cycle the executor documents at its own dispatch
+    # site: provider_inputs imports command_resolution, which imports the CLI.
+    from project_standards.control_plane.provider_inputs import consumer_state_input
+
+    if request.migration_catalog is not None:
+        # Legacy migration planning owns its own validation pass and arrives here
+        # with legacy authority still standing.
+        return ()
+    runner = request.provider_runner or invoke_provider
+    findings: list[ControlFinding] = []
+    for package in resolution.packages:
+        version = package.applied.resolved
+        payload = payloads.get((package.standard_id, version.value))
+        if payload is None:
+            continue
+        if request.resolution.previous_lock.standards.get(package.standard_id) is not None:
+            # Fresh adoption only (REQ-089/#109 wording: "would CREATE"). An
+            # already-applied package — including one a V4 migration just
+            # published — writes nothing new here, so a repository condition it
+            # did not create must not become a new steady-state gate failure.
+            continue
+        snapshots = consumer_state_input(request.repo, package.standard_id)
+        if snapshots is None:
+            continue
+        for provider in payload.manifest.providers:
+            if provider.operation is not ProviderOperation.VALIDATE:
+                continue
+            result = runner(
+                ProviderInvocation(
+                    repo=request.repo,
+                    payload=payload,
+                    standard_id=package.standard_id,
+                    version=version,
+                    provider_id=provider.id,
+                    operation=ProviderOperation.VALIDATE,
+                    effective_config=package.effective_config,
+                    snapshots=snapshots,
+                )
+            )
+            if result.effect is not ProviderEffect.FINDINGS:
+                raise ControlPlaneError("consumer-state validation returned the wrong effect")
+            findings.extend(result.findings)
+    return tuple(findings)
+
+
 def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
     """Build one deterministic, complete, and read-only reconciliation plan."""
     original_request = request
@@ -2624,6 +2689,7 @@ def plan_reconciliation(request: PlannerRequest) -> ReconciliationPlan:
             targets = tuple(
                 sorted((*targets, catalog_target), key=lambda item: item.target.encode("utf-8"))
             )
+    findings.extend(_validate_consumer_state(request, resolution, payloads))
     ordered_findings = tuple(sort_findings(findings))
     applicable = not any(finding.severity == "error" for finding in ordered_findings)
     namespace_prunes = _namespace_prunes(

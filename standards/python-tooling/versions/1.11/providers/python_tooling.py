@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import re
 import shlex
+import tomllib
 from collections.abc import Mapping, Sequence
 from typing import cast
 
@@ -862,6 +864,96 @@ def _whole_content(
             raise ValueError("default rendered bytes differ from immutable static source")
         return source
     return rendered
+
+
+_PROJECT_METADATA_HINT = (
+    "declare consumer-owned PEP 621 metadata in pyproject.toml "
+    "(at minimum [project] with name, version, and requires-python), "
+    'or declare the repository deliberately non-installable with build_backend = "none"'
+)
+
+
+def run_validate(
+    request: Mapping[str, object],
+    _resources: Mapping[str, bytes],
+) -> dict[str, object]:
+    """Refuse an installable adoption the consumer has not authorized.
+
+    Issue #109: enabling this package in a repository with no pyproject.toml
+    rendered a tool-only file - dependency groups, build system, tool tables and
+    no [project] table - and the adoption guide's required `uv lock` then exited
+    2 with "No `project` table found". Project identity is consumer authority:
+    a package may not invent a distribution name, version, or Python floor, and
+    it must not leave the repository holding a file its own guide cannot use.
+
+    Both halves are the same defect: the file may be absent, or present without
+    the table. Neither is reported when the repository is deliberately
+    non-installable, because then no build system is rendered and `uv lock` is
+    not part of the documented flow.
+    """
+    config = _config(request)
+    snapshots = _table(request.get("snapshots"), name="snapshots")
+    observed_state = snapshots.get("consumer_state")
+    if not isinstance(observed_state, Mapping):
+        # No consumer-state input: nothing about the repository's own metadata was
+        # offered, so there is nothing to fault. The engine supplies this input
+        # only where the decision matters — fresh adoption during reconcile
+        # planning — and every other caller (post-apply verification sweeps,
+        # generic validator harnesses) legitimately dispatches a different input
+        # class. Inferring absence from an input that was never provided would
+        # fail an already-adopted consumer for a condition it did not create.
+        return {"findings": []}
+    state = cast("Mapping[str, object]", observed_state)
+    if config.get("build_backend") == "none":
+        return {"findings": []}
+    observed = state.get("pyproject.toml")
+    metadata: Mapping[str, object] = (
+        cast("Mapping[str, object]", observed) if isinstance(observed, Mapping) else {}
+    )
+    if metadata.get("kind") != "regular":
+        return {
+            "findings": [
+                {
+                    "code": "PT-PROJECT-METADATA",
+                    "severity": "error",
+                    "path": "pyproject.toml",
+                    "identity": "table:/project",
+                    "message": (
+                        "installable adoption requires a consumer-owned [project] table "
+                        "and this repository has no pyproject.toml"
+                    ),
+                    "hint": _PROJECT_METADATA_HINT,
+                    "line": None,
+                    "locus": None,
+                }
+            ]
+        }
+    content = metadata.get("content_base64")
+    if not isinstance(content, str):
+        raise ValueError("consumer_state pyproject.toml carries no content")
+    try:
+        document: Mapping[str, object] = tomllib.loads(base64.b64decode(content).decode("utf-8"))
+    except UnicodeDecodeError, ValueError:
+        raise ValueError("consumer pyproject.toml is not valid UTF-8 TOML") from None
+    if isinstance(document.get("project"), Mapping):
+        return {"findings": []}
+    return {
+        "findings": [
+            {
+                "code": "PT-PROJECT-METADATA",
+                "severity": "error",
+                "path": "pyproject.toml",
+                "identity": "table:/project",
+                "message": (
+                    "installable adoption requires a consumer-owned [project] table "
+                    "and this pyproject.toml declares none"
+                ),
+                "hint": _PROJECT_METADATA_HINT,
+                "line": None,
+                "locus": None,
+            }
+        ]
+    }
 
 
 def run_verify(

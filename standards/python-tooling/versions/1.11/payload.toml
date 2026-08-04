@@ -29,7 +29,7 @@ id = "adopt"
 role = "adoption-guide"
 path = "adopt.md"
 media_type = "text/markdown"
-digest = "sha256:bf75a3d0a4df689c60958c929c37c1d3e0adacf608e320cd4782fd2747d2b524"
+digest = "sha256:080d02da5d69d6c819270a498629ba8ae41d766248cbca98cc571e36607c8c14"
 
 [[resources]]
 id = "agent-summary"
@@ -78,7 +78,7 @@ id = "provider-code"
 role = "provider-resource"
 path = "providers/python_tooling.py"
 media_type = "text/x-python"
-digest = "sha256:b2789c04e2a5346ac26f1da12aae7b77276cfe26f21689392513490ceedcebf1"
+digest = "sha256:e47ce0f48c2a1da70ac70aec969ca8e6254c575aadb699cfd7f80822ac95182a"
 
 [[resources]]
 id = "config-transform-input"
@@ -99,7 +99,7 @@ id = "provider-input"
 role = "provider-resource"
 path = "schemas/provider-input.schema.json"
 media_type = "application/schema+json"
-digest = "sha256:750672c54d30057ff40d83d88bf503d5e246214971f0a8edc90b92775dea9530"
+digest = "sha256:e8d8a5464fb3fb899ce5e1f91c7344d93c22eddd909b0ca7e12f39cd015b831c"
 
 [[resources]]
 id = "provider-content"
@@ -701,6 +701,20 @@ entrypoint = "payload:provider-code#run_render_semantic"
 input_schema = "provider-input"
 output_schema = "provider-content"
 resources = ["check-script-source", "check-workflow-source", "python-version-source"]
+
+# Issue #109: consumer-state validation runs during reconcile planning, before
+# any write, so an adoption that would leave an unusable pyproject.toml is
+# refused with the two supported consumer decisions named.
+[[providers]]
+id = "validate-consumer-state"
+operation = "validate"
+kind = "python"
+phase = "validate"
+effect = "findings"
+entrypoint = "payload:provider-code#run_validate"
+input_schema = "provider-input"
+output_schema = "provider-findings"
+resources = []
 
 [[providers]]
 id = "verify-toolchain"

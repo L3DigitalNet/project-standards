@@ -89,6 +89,13 @@ _HANDOFF_OPERATIONS = frozenset(
     {ProviderOperation.VALIDATE, ProviderOperation.VERIFY, ProviderOperation.DRIFT_CHECK}
 )
 
+# Consumer-state families read repository bytes that exist BEFORE this package
+# writes anything, so their validation is the only class that may run during
+# reconcile planning (issue #109). The paths are the consumer-authored inputs a
+# family's adoption depends on — never its own managed outputs, which do not
+# exist yet at planning time.
+_CONSUMER_STATE_PATHS: dict[str, tuple[str, ...]] = {"python-tooling": ("pyproject.toml",)}
+
 # Relocated from `agent_handoff/cli.py` with `_walk_handoff_paths`: the declared
 # handoff read set is selection, and selection is half of this seam.
 _HANDOFF_READ_PATHS = (
@@ -510,3 +517,23 @@ def _verification_input(
         if standard_id in item.owners
     ]
     return result
+
+
+def consumer_state_input(repo: Path, standard_id: str) -> JsonObject | None:
+    """Build the pre-write consumer-state input for a family that declares one.
+
+    Answered as an explicit input CLASS rather than discovered by building every
+    family's input and inspecting the result: a caller that planned by building
+    first would capture whole document corpora on every reconcile just to throw
+    them away. `None` means "this family declares no consumer-state input", which
+    is the caller's whole selection rule — the family table stays here.
+
+    Takes a repository root and a standard id rather than a selected package: the
+    reconcile planner holds neither a resolved lock nor a command-selected
+    distribution when it must decide whether a write is authorized.
+    """
+    paths = _CONSUMER_STATE_PATHS.get(standard_id)
+    if paths is None:
+        return None
+    captured = capture_command_snapshot(repo, paths)
+    return {"consumer_state": {path: captured[path] for path in paths}}

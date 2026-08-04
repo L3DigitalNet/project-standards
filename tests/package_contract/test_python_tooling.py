@@ -259,3 +259,94 @@ def test_python_tooling__declared_layout_modes__are_exactly_the_supported_set() 
 
     assert _declared_layout_modes(root) == ["src", "flat", _EXPLICIT_LAYOUT]
     assert declaration["default"] == "src"
+
+
+_PROJECT_METADATA = (
+    "[project]\n"
+    'name = "consumer-owned"\n'
+    'version = "0.1.0"\n'
+    'requires-python = ">=3.14"\n'
+    "dependencies = []\n"
+)
+
+
+def _enabled_consumer(tmp_path: Path, *, pyproject: str | None) -> tuple[Path, object]:
+    """Return a Catalog 5 consumer with python-tooling enabled and nothing applied."""
+    from project_standards.control_plane.bootstrap import initialize_control_plane
+    from project_standards.control_plane.config_edit import set_standard_enabled
+    from tests.package_compatibility.matrix import source_distribution
+
+    distribution = source_distribution(tmp_path / "distribution")
+    repo = tmp_path / "consumer"
+    repo.mkdir()
+    if pyproject is not None:
+        (repo / "pyproject.toml").write_text(pyproject, encoding="utf-8")
+    initialize_control_plane(repo, "5", distribution=distribution)
+    set_standard_enabled(repo, "python-tooling", True)
+    return repo, distribution
+
+
+def _plan(repo: Path, distribution: object) -> object:
+    from project_standards.control_plane.cli import build_planner_request
+    from project_standards.control_plane.distribution import InstalledDistribution
+    from project_standards.control_plane.planner import plan_reconciliation
+
+    return plan_reconciliation(
+        build_planner_request(repo, cast("InstalledDistribution", distribution), frozenset())
+    )
+
+
+# Issue #109: enabling the package in a repository with no pyproject.toml plans a
+# tool-only file — [dependency-groups], [build-system], [tool.*] and no [project]
+# table — and the adoption guide's required `uv lock` then exits 2 with
+# "No `project` table found". PEP 621 metadata is a consumer decision the package
+# must not invent, so the only safe outcome is refusing before any write.
+def test_python_tooling__fresh_adoption_without_project_metadata__refuses_before_writing(
+    tmp_path: Path,
+) -> None:
+    from project_standards.control_plane.planner import ReconciliationPlan
+
+    repo, distribution = _enabled_consumer(tmp_path, pyproject=None)
+
+    plan = cast("ReconciliationPlan", _plan(repo, distribution))
+
+    assert not plan.applicable
+    findings = plan.findings
+    blocking = [
+        finding
+        for finding in findings
+        if finding.standard_id == "python-tooling" and finding.severity == "error"
+    ]
+    assert blocking, findings
+    guidance = " ".join(f"{finding.message} {finding.hint}" for finding in blocking)
+    assert "[project]" in guidance
+    # Both supported consumer decisions must be named, because the package cannot
+    # choose between them: declare PEP 621 metadata, or declare the repository
+    # deliberately non-installable.
+    assert "pyproject.toml" in guidance
+    assert 'build_backend = "none"' in guidance
+    assert not (repo / "pyproject.toml").exists()
+
+
+def test_python_tooling__adoption_with_consumer_project_metadata__proceeds_untouched(
+    tmp_path: Path,
+) -> None:
+    """Existing PEP 621 metadata is consumer authority: adoption composes around it."""
+    from project_standards.control_plane.cli import build_planner_request
+    from project_standards.control_plane.distribution import InstalledDistribution
+    from project_standards.control_plane.executor import ApplyRequest, apply_reconciliation
+    from project_standards.control_plane.planner import ReconciliationPlan
+
+    repo, distribution = _enabled_consumer(tmp_path, pyproject=_PROJECT_METADATA)
+
+    request = build_planner_request(repo, cast("InstalledDistribution", distribution), frozenset())
+    plan = cast("ReconciliationPlan", _plan(repo, distribution))
+
+    assert plan.applicable, plan.findings
+    assert apply_reconciliation(ApplyRequest(request, plan)).success
+    rendered = (repo / "pyproject.toml").read_text(encoding="utf-8")
+    document = tomllib.loads(rendered)
+    assert cast("JsonObject", document["project"])["name"] == "consumer-owned"
+    assert cast("JsonObject", document["project"])["version"] == "0.1.0"
+    assert "dependency-groups" in document
+    assert "basedpyright" in cast("JsonObject", document["tool"])

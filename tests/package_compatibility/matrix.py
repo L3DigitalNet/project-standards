@@ -115,6 +115,31 @@ def partial_legacy_config(
     return yaml.safe_dump(partial, sort_keys=False)
 
 
+# Issue #109: Python Tooling refuses a fresh adoption that would leave a
+# pyproject.toml its own `uv lock` step cannot read, so every synthetic consumer
+# declares the minimal consumer-owned PEP 621 identity a real repository must.
+_CONSUMER_PYPROJECT = (
+    b"# consumer project\n"
+    b"[project]\n"
+    b'name = "consumer"\n'
+    b'version = "0.1.0"\n'
+    b'requires-python = ">=3.14"\n'
+)
+
+
+def _write_migration_consumer_seed(repo: Path) -> None:
+    """Seed the pre-migration consumer state both migrated lifecycles start from."""
+    for relative in (
+        "docs/STATUS.md",
+        ".markdownlint-cli2.jsonc",
+        "config/custom-rules.toml",
+    ):
+        target = repo / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(_ARTIFACT_STATES / relative, target)
+    (repo / "pyproject.toml").write_bytes(_CONSUMER_PYPROJECT)
+
+
 def _write_consumer_seed(repo: Path) -> tuple[ConsumerSentinel, ...]:
     files = {
         ".editorconfig": b"# consumer editorconfig\n\n[*.txt]\nindent_style = space\n",
@@ -122,7 +147,7 @@ def _write_consumer_seed(repo: Path) -> tuple[ConsumerSentinel, ...]:
         ".vscode/extensions.json": (
             b'{\n  // consumer extension\n  "recommendations": ["consumer.extension"]\n}\n'
         ),
-        "pyproject.toml": b'# consumer project\n[project]\nname = "consumer"\n',
+        "pyproject.toml": _CONSUMER_PYPROJECT,
         "AGENTS.md": b"Consumer AGENTS instructions.\n",
         "CLAUDE.md": b"Consumer CLAUDE instructions.\n",
         "docs/STATUS.md": b"# Consumer status\n\nKeep this knowledge.\n",
@@ -575,14 +600,7 @@ def exercise_migrated_lifecycle(
 ) -> LifecycleResult:
     """Migrate all legacy namespaces, reduce to the row, and prove its lifecycle."""
     repo.mkdir(parents=True)
-    for relative in (
-        "docs/STATUS.md",
-        ".markdownlint-cli2.jsonc",
-        "config/custom-rules.toml",
-    ):
-        target = repo / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(_ARTIFACT_STATES / relative, target)
+    _write_migration_consumer_seed(repo)
     shutil.copyfile(_ALL_NAMESPACES, repo / ".project-standards.yml")
     sentinels = _migration_consumer_sentinels(repo)
     migration = plan_legacy_migration(repo, distribution, "5")
@@ -607,14 +625,7 @@ def exercise_partial_migrated_lifecycle(
 ) -> LifecycleResult:
     """Migrate only selected V4 namespaces and prove their complete lifecycle."""
     repo.mkdir(parents=True)
-    for relative in (
-        "docs/STATUS.md",
-        ".markdownlint-cli2.jsonc",
-        "config/custom-rules.toml",
-    ):
-        target = repo / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(_ARTIFACT_STATES / relative, target)
+    _write_migration_consumer_seed(repo)
     (repo / ".project-standards.yml").write_text(
         partial_legacy_config(standard_ids, empty_namespaces=empty_namespaces),
         encoding="utf-8",

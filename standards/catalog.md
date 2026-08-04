@@ -62,7 +62,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | [`python-tooling`](python-tooling/README.md) | active | 1.8 | retained | consumer | 13 | 3 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.9 | retained | consumer | 15 | 4 | 63 |
 | [`python-tooling`](python-tooling/README.md) | active | 1.10 | retained | consumer | 15 | 4 | 62 |
-| [`python-tooling`](python-tooling/README.md) | active | 1.11 | default | consumer | 15 | 4 | 64 |
+| [`python-tooling`](python-tooling/README.md) | active | 1.11 | default | consumer | 15 | 5 | 64 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.0 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.1 | internal | internal | 12 | 0 | 0 |
 | [`standard-bundle-authoring`](standard-bundle-authoring/README.md) | active | 2.2 | internal | internal | 12 | 0 | 0 |
@@ -1616,6 +1616,7 @@ Validated V2 family, payload, channel, relationship, resource, provider, and out
 | `python-tooling@1.10` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `python-tooling@1.10` | `migrate-config` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate_config` |
 | `python-tooling@1.11` | `render-semantic` | `render` | `plan` | `content` | `payload:provider-code#run_render_semantic` |
+| `python-tooling@1.11` | `validate-consumer-state` | `validate` | `validate` | `findings` | `payload:provider-code#run_validate` |
 | `python-tooling@1.11` | `verify-toolchain` | `verify` | `verify` | `findings` | `payload:provider-code#run_verify` |
 | `python-tooling@1.11` | `migrate-legacy` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate` |
 | `python-tooling@1.11` | `migrate-config` | `migrate` | `plan` | `migration-report` | `payload:provider-code#run_migrate_config` |
