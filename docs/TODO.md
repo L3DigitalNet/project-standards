@@ -54,9 +54,9 @@ This document is the user-visible and agent-visible work queue for the repo-loca
 
 - [ ] Execute the [open-issue resolution program](plans/2026-08-01-open-issue-resolution-program-plan.md).
 
-  The owner-approved v5.15.0 boundary is T9–T14, T17, T18, T20, T23, T31, T33–T35. T1 closeout and T32 remain independent; the Agent Handoff authority train follows T35.
+  The owner-approved v5.15.0 boundary is T9–T14, T17, T18, T20, T23, T31, T33–T35, and T37. T1 closeout and T32 remain independent; the Agent Handoff authority train follows T35.
 
-  Revision 2 integrates the bounded one-pass Opus audit corrections and validates with fresh execution state; no task has started, and T30 is solely ready. The required byte-identical upstream bridge passes its package self-test but fails this repository's Ruff and BasedPyright gates. Resolve that canonical incompatibility and redeploy before committing or starting T30; never credit legacy scratch state.
+  Revision 3 adds T37 to verify the merged `adr@1.4` candidate, alongside REQ-907 and TC-T37-001. Thirty-five active tasks remain, none started, and T30 is solely ready. The bridge blocker is resolved: Ruff excludes `scripts/plan.py` as foreign vendored bytes it cannot own, and BasedPyright never covered `scripts/`, so no upstream redeploy is required. Never credit legacy scratch state.
 
 - [ ] Authorize an MCP roadmap revision that distinguishes delivered v1 work from deferred write and remote phases.
 
